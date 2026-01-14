@@ -1,0 +1,37 @@
+{
+  "name": "diversifi-minipay",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "next dev -p 3001",
+    "build": "pnpm -r build && next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+  },
+  "dependencies": {
+    "@stable-station/mento-utils": "workspace:*",
+    "autoprefixer": "^10.4.0",
+    "chart.js": "^4.4.9",
+    "ethers": "^5.7",
+    "next": "^15.2.0",
+    "postcss": "^8.4.0",
+    "react": "^19.0.0",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.0.0",
+    "tailwindcss": "^3.4.1",
+    "viem": "^2.37.0",
+    "wagmi": "^2.14.15"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.6",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "15.2.0",
+    "typescript": "^5.6.3"
+  }
+}
