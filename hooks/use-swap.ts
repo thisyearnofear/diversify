@@ -43,9 +43,7 @@ export function useSwap() {
         detectEnvironment();
     }, []);
 
-    const swap = async (
-        params: SwapParams & SwapCallbacks
-    ): Promise<SwapResult> {
+    const swap = async (params: SwapParams & SwapCallbacks): Promise<SwapResult> => {
         const {
             fromToken,
             toToken,

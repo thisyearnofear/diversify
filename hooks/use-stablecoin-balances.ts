@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { CELO_TOKENS, ALFAJORES_TOKENS, MENTO_ABIS } from '../utils/mento-utils';
+import { getTokenAddresses, getNetworkConfig, ABIS } from '../config';
 
 interface StablecoinBalance {
   symbol: string;
@@ -351,13 +351,13 @@ export function useStablecoinBalances(address: string | undefined | null) {
           async (symbol) => {
             try {
               // Determine which token address list to use based on the network
-              const tokenList = isAlfajores ? ALFAJORES_TOKENS : CELO_TOKENS;
+              const tokenList = getTokenAddresses(isAlfajores ? 44787 : 42220);
               console.log(`Using ${isAlfajores ? 'Alfajores' : 'Mainnet'} token list for ${symbol}`);
 
               // Use type assertion to handle the index signature
               const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
-                                  tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
-                                  tokenList[symbol.toLowerCase() as keyof typeof tokenList];
+                tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
+                tokenList[symbol.toLowerCase() as keyof typeof tokenList];
 
               if (!tokenAddress) {
                 console.warn(`Token address not found for ${symbol} in ${isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
@@ -369,7 +369,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
               const contract = new ethers.Contract(
                 tokenAddress,
-                MENTO_ABIS.ERC20_BALANCE,
+                ABIS.ERC20,
                 provider
               );
 
@@ -390,8 +390,8 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
               // Get the exchange rate for this token
               const exchangeRate = EXCHANGE_RATES[symbol] ||
-                                  EXCHANGE_RATES[symbol.toUpperCase()] ||
-                                  EXCHANGE_RATES[symbol.toLowerCase()] || 1;
+                EXCHANGE_RATES[symbol.toUpperCase()] ||
+                EXCHANGE_RATES[symbol.toLowerCase()] || 1;
 
               // Calculate USD value - properly convert to USD
               // For tokens like cKES where 1 KES = $0.0078, we multiply the token amount by the rate
@@ -399,9 +399,9 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
               // Get token metadata - try both original case and uppercase
               const metadata = TOKEN_METADATA[symbol] ||
-                               TOKEN_METADATA[symbol.toUpperCase()] ||
-                               TOKEN_METADATA[symbol.toLowerCase()] ||
-                               { name: symbol, region: 'USA' }; // Default to USA instead of Unknown
+                TOKEN_METADATA[symbol.toUpperCase()] ||
+                TOKEN_METADATA[symbol.toLowerCase()] ||
+                { name: symbol, region: 'USA' }; // Default to USA instead of Unknown
 
               return {
                 symbol,
