@@ -1,29 +1,28 @@
 import { createContext, useContext, type ReactNode } from "react";
 import { useWallet } from "../hooks/use-wallet";
-import type { Address, WalletClient } from "viem";
 
 // Define the context type
 interface WalletContextType {
-  client: WalletClient | null;
-  address: Address | null;
+  address: string | null;
   isConnected: boolean;
   isConnecting: boolean;
   error: string | null;
   chainId: number | null;
   isMiniPay: boolean;
   connect: () => Promise<void>;
+  formatAddress: (addr: string) => string;
 }
 
 // Create the context with default values
 const WalletContext = createContext<WalletContextType>({
-  client: null,
   address: null,
   isConnected: false,
   isConnecting: false,
   error: null,
   chainId: null,
   isMiniPay: false,
-  connect: async () => {},
+  connect: async () => { },
+  formatAddress: (addr: string) => addr,
 });
 
 // Provider component

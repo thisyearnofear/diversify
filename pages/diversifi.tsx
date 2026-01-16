@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import { useWalletConnection } from "../hooks/wallet/use-wallet-connection";
+import { useWallet } from "../hooks/use-wallet";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
 import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
 import { useHistoricalPerformance } from "../hooks/use-historical-performance";
@@ -26,14 +26,14 @@ export default function DiversiFiPage() {
 
   // Wallet connection
   const {
-    isInMiniPay,
+    isMiniPay: isInMiniPay,
     address,
     chainId,
     isConnecting,
     error,
-    connectWallet,
+    connect: connectWallet,
     formatAddress,
-  } = useWalletConnection();
+  } = useWallet();
 
   // Use our custom hooks
   const { region: detectedRegion, isLoading: isRegionLoading } =

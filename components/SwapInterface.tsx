@@ -1,9 +1,9 @@
 import { useState, forwardRef, useImperativeHandle } from "react";
-import { handleMentoError } from "../utils/mento-utils";
 import { useInflationData } from "../hooks/use-inflation-data";
-import { useStablecoinSwap } from "../hooks/use-stablecoin-swap";
+import { useSwap } from "../hooks/use-swap";
 import { useExpectedAmountOut } from "../hooks/use-expected-amount-out";
 import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
+import { SwapErrorHandler } from "../services/swap/error-handler";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
 import { REGION_COLORS } from "../constants/regions";
 import TokenSelector from "./swap/TokenSelector";
@@ -45,16 +45,16 @@ const SwapInterface = forwardRef<
   // Find tokens from preferred regions if specified
   const defaultFromToken = preferredFromRegion
     ? availableTokens.find((token) => token.region === preferredFromRegion)
-        ?.symbol ||
-      availableTokens[0]?.symbol ||
-      ""
+      ?.symbol ||
+    availableTokens[0]?.symbol ||
+    ""
     : availableTokens[0]?.symbol || "";
 
   const defaultToToken = preferredToRegion
     ? availableTokens.find((token) => token.region === preferredToRegion)
-        ?.symbol ||
-      availableTokens[1]?.symbol ||
-      ""
+      ?.symbol ||
+    availableTokens[1]?.symbol ||
+    ""
     : availableTokens[1]?.symbol || "";
 
   // State for token selection and amount
@@ -91,14 +91,14 @@ const SwapInterface = forwardRef<
     dataSource: inflationDataSource,
   } = useInflationData();
 
-  // Use the stablecoin swap hook
+  // Use the swap hook
   const {
     swap: performSwap,
     error: swapError,
     txHash: swapTxHash,
-    isCompleted,
+    step: swapStep,
     chainId,
-  } = useStablecoinSwap();
+  } = useSwap();
 
   // Use the expected amount out hook
   const { expectedOutput } = useExpectedAmountOut({
@@ -157,7 +157,7 @@ const SwapInterface = forwardRef<
         if (swapError) {
           setError(swapError);
           setStatus("error");
-        } else if (isCompleted && !swapError) {
+        } else if (swapStep === 'completed' && !swapError) {
           // Only set to completed if there's no error
           setStatus("completed");
 
@@ -198,7 +198,7 @@ const SwapInterface = forwardRef<
       }
     } catch (error) {
       console.error("Swap error:", error);
-      setError(handleMentoError(error, "swap tokens"));
+      setError(SwapErrorHandler.handle(error, "swap tokens"));
       setStatus("error");
     } finally {
       setIsLoading(false);
@@ -221,11 +221,10 @@ const SwapInterface = forwardRef<
 
   return (
     <div
-      className={`relative bg-white p-5 rounded-lg shadow-md overflow-hidden SwapInterface ${
-        fromTokenRegion && toTokenRegion
-          ? `border-2 border-region-${toTokenRegion.toLowerCase()}-medium`
-          : "border border-gray-200"
-      }`}
+      className={`relative bg-white p-5 rounded-lg shadow-md overflow-hidden SwapInterface ${fromTokenRegion && toTokenRegion
+        ? `border-2 border-region-${toTokenRegion.toLowerCase()}-medium`
+        : "border border-gray-200"
+        }`}
     >
       {fromTokenRegion && toTokenRegion && (
         <div className="absolute inset-0">
@@ -263,21 +262,19 @@ const SwapInterface = forwardRef<
           <div className="flex justify-center my-3">
             <button
               onClick={handleSwitchTokens}
-              className={`p-3 rounded-full transition-colors shadow-md ${
-                fromTokenRegion && toTokenRegion
-                  ? `bg-gradient-to-b from-region-${fromTokenRegion.toLowerCase()}-light to-region-${toTokenRegion.toLowerCase()}-light hover:from-region-${fromTokenRegion.toLowerCase()}-medium hover:to-region-${toTokenRegion.toLowerCase()}-medium border-2 border-gray-200`
-                  : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
-              }`}
+              className={`p-3 rounded-full transition-colors shadow-md ${fromTokenRegion && toTokenRegion
+                ? `bg-gradient-to-b from-region-${fromTokenRegion.toLowerCase()}-light to-region-${toTokenRegion.toLowerCase()}-light hover:from-region-${fromTokenRegion.toLowerCase()}-medium hover:to-region-${toTokenRegion.toLowerCase()}-medium border-2 border-gray-200`
+                : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
+                }`}
               disabled={isLoading}
               aria-label="Switch tokens"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className={`size-7 ${
-                  fromTokenRegion && toTokenRegion
-                    ? `text-gray-800`
-                    : "text-gray-700"
-                }`}
+                className={`size-7 ${fromTokenRegion && toTokenRegion
+                  ? `text-gray-800`
+                  : "text-gray-700"
+                  }`}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -307,11 +304,10 @@ const SwapInterface = forwardRef<
           {/* Expected Output */}
           {expectedOutput && Number.parseFloat(expectedOutput) > 0 && (
             <div
-              className={`relative mt-4 p-4 rounded-lg overflow-hidden ${
-                toTokenRegion
-                  ? `bg-region-${toTokenRegion.toLowerCase()}-light/40 border-2 border-region-${toTokenRegion.toLowerCase()}-medium`
-                  : "bg-gray-100 border-2 border-gray-300"
-              } shadow-md`}
+              className={`relative mt-4 p-4 rounded-lg overflow-hidden ${toTokenRegion
+                ? `bg-region-${toTokenRegion.toLowerCase()}-light/40 border-2 border-region-${toTokenRegion.toLowerCase()}-medium`
+                : "bg-gray-100 border-2 border-gray-300"
+                } shadow-md`}
             >
               {toTokenRegion && (
                 <RegionalPattern
@@ -354,8 +350,8 @@ const SwapInterface = forwardRef<
                           style={{
                             backgroundColor: toTokenRegion
                               ? REGION_COLORS[
-                                  toTokenRegion as keyof typeof REGION_COLORS
-                                ]
+                              toTokenRegion as keyof typeof REGION_COLORS
+                              ]
                               : undefined,
                           }}
                         >
@@ -387,22 +383,20 @@ const SwapInterface = forwardRef<
           {/* Inflation benefit information */}
           {fromToken && toToken && hasInflationBenefit && (
             <div
-              className={`relative p-4 rounded-lg overflow-hidden border-2 shadow-md ${
-                toTokenRegion
-                  ? `border-region-${toTokenRegion.toLowerCase()}-medium bg-region-${toTokenRegion.toLowerCase()}-light/10`
-                  : "border-green-500 bg-green-50"
-              }`}
+              className={`relative p-4 rounded-lg overflow-hidden border-2 shadow-md ${toTokenRegion
+                ? `border-region-${toTokenRegion.toLowerCase()}-medium bg-region-${toTokenRegion.toLowerCase()}-light/10`
+                : "border-green-500 bg-green-50"
+                }`}
             >
               {toTokenRegion && (
                 <RegionalPattern region={toTokenRegion as any} />
               )}
               <div className="relative">
                 <h3
-                  className={`text-sm font-bold mb-2 flex items-center ${
-                    toTokenRegion
-                      ? `text-region-${toTokenRegion.toLowerCase()}-dark`
-                      : "text-green-800"
-                  }`}
+                  className={`text-sm font-bold mb-2 flex items-center ${toTokenRegion
+                    ? `text-region-${toTokenRegion.toLowerCase()}-dark`
+                    : "text-green-800"
+                    }`}
                 >
                   <span className="mr-2 text-lg">✨</span>
                   Inflation Protection Benefit
@@ -415,8 +409,8 @@ const SwapInterface = forwardRef<
                         style={{
                           backgroundColor: fromTokenRegion
                             ? REGION_COLORS[
-                                fromTokenRegion as keyof typeof REGION_COLORS
-                              ]
+                            fromTokenRegion as keyof typeof REGION_COLORS
+                            ]
                             : undefined,
                         }}
                       >
@@ -428,11 +422,10 @@ const SwapInterface = forwardRef<
                       </div>
                     )}
                     <span
-                      className={`font-bold mx-1 ${
-                        fromTokenRegion
-                          ? `text-region-${fromTokenRegion.toLowerCase()}-dark`
-                          : "text-gray-900"
-                      }`}
+                      className={`font-bold mx-1 ${fromTokenRegion
+                        ? `text-region-${fromTokenRegion.toLowerCase()}-dark`
+                        : "text-gray-900"
+                        }`}
                     >
                       {fromToken}
                     </span>
@@ -445,8 +438,8 @@ const SwapInterface = forwardRef<
                         style={{
                           backgroundColor: toTokenRegion
                             ? REGION_COLORS[
-                                toTokenRegion as keyof typeof REGION_COLORS
-                              ]
+                            toTokenRegion as keyof typeof REGION_COLORS
+                            ]
                             : undefined,
                         }}
                       >
@@ -458,22 +451,20 @@ const SwapInterface = forwardRef<
                       </div>
                     )}
                     <span
-                      className={`font-bold mx-1 ${
-                        toTokenRegion
-                          ? `text-region-${toTokenRegion.toLowerCase()}-dark`
-                          : "text-gray-900"
-                      }`}
+                      className={`font-bold mx-1 ${toTokenRegion
+                        ? `text-region-${toTokenRegion.toLowerCase()}-dark`
+                        : "text-gray-900"
+                        }`}
                     >
                       {toToken}
                     </span>
                   </div>
                 </div>
                 <p
-                  className={`text-sm ${
-                    toTokenRegion
-                      ? `text-region-${toTokenRegion.toLowerCase()}-dark`
-                      : "text-gray-700"
-                  }`}
+                  className={`text-sm ${toTokenRegion
+                    ? `text-region-${toTokenRegion.toLowerCase()}-dark`
+                    : "text-gray-700"
+                    }`}
                 >
                   You could save approximately{" "}
                   <span className="font-bold text-green-600 text-lg">
@@ -508,11 +499,10 @@ const SwapInterface = forwardRef<
                 <button
                   key={tolerance}
                   onClick={() => setSlippageTolerance(tolerance)}
-                  className={`px-4 py-2 text-sm rounded-md shadow-md ${
-                    slippageTolerance === tolerance
-                      ? `bg-blue-600 text-white border-2 border-blue-700 font-bold`
-                      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
-                  }`}
+                  className={`px-4 py-2 text-sm rounded-md shadow-md ${slippageTolerance === tolerance
+                    ? `bg-blue-600 text-white border-2 border-blue-700 font-bold`
+                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    }`}
                   disabled={isLoading}
                 >
                   {tolerance}%
@@ -532,13 +522,12 @@ const SwapInterface = forwardRef<
               status === "swapping" ||
               (status === "completed" && !error)) && (
               <div
-                className={`p-3 rounded-card ${
-                  status === "error"
-                    ? "bg-accent-error/5 text-accent-error border border-accent-error/10"
-                    : status === "completed"
+                className={`p-3 rounded-card ${status === "error"
+                  ? "bg-accent-error/5 text-accent-error border border-accent-error/10"
+                  : status === "completed"
                     ? "bg-accent-success/5 text-accent-success border border-accent-success/10"
                     : "bg-accent-info/5 text-accent-info border border-accent-info/10"
-                }`}
+                  }`}
               >
                 <div className="flex items-center">
                   {status === "approving" && (
@@ -727,8 +716,8 @@ const SwapInterface = forwardRef<
                       {status === "approving"
                         ? "Approving Transaction..."
                         : status === "swapping"
-                        ? "Swapping Tokens..."
-                        : "Processing..."}
+                          ? "Swapping Tokens..."
+                          : "Processing..."}
                     </span>
                   </span>
                 ) : (
@@ -740,8 +729,8 @@ const SwapInterface = forwardRef<
                           style={{
                             backgroundColor: fromTokenRegion
                               ? REGION_COLORS[
-                                  fromTokenRegion as keyof typeof REGION_COLORS
-                                ]
+                              fromTokenRegion as keyof typeof REGION_COLORS
+                              ]
                               : undefined,
                           }}
                         >
@@ -768,8 +757,8 @@ const SwapInterface = forwardRef<
                           style={{
                             backgroundColor: toTokenRegion
                               ? REGION_COLORS[
-                                  toTokenRegion as keyof typeof REGION_COLORS
-                                ]
+                              toTokenRegion as keyof typeof REGION_COLORS
+                              ]
                               : undefined,
                           }}
                         >

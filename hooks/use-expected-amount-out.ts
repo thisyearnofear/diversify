@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import {
-  CELO_TOKENS,
-  ALFAJORES_TOKENS,
-  MENTO_BROKER_ADDRESS,
-  ALFAJORES_BROKER_ADDRESS,
-  MENTO_ABIS,
-  DEFAULT_EXCHANGE_RATES,
-} from '../utils/mento-utils';
-import { EXCHANGE_RATES } from '../constants/regions';
+  getTokenAddresses,
+  getBrokerAddress,
+  getNetworkConfig,
+  ABIS,
+} from '../config';
+import { EXCHANGE_RATES } from '../config/constants';
 
 interface UseExpectedAmountOutParams {
   fromToken: string;
@@ -85,16 +83,12 @@ export function useExpectedAmountOut({
       // Determine if we're on Alfajores testnet
       const isAlfajores = chainId === 44787;
 
-      // Select the appropriate token list and broker address
-      const tokenList = isAlfajores ? ALFAJORES_TOKENS : CELO_TOKENS;
-      const brokerAddress = isAlfajores ? ALFAJORES_BROKER_ADDRESS : MENTO_BROKER_ADDRESS;
+      // Get configuration
+      const tokenList = getTokenAddresses(chainId || 42220);
+      const brokerAddress = getBrokerAddress(chainId || 42220);
+      const networkConfig = getNetworkConfig(chainId || 42220);
 
-      // Get provider URL based on network
-      const providerUrl = isAlfajores
-        ? 'https://alfajores-forno.celo-testnet.org'
-        : 'https://forno.celo.org';
-
-      console.log(`Using ${isAlfajores ? 'Alfajores' : 'Mainnet'} network for expected amount calculation`);
+      console.log(`Using ${networkConfig.name} for expected amount calculation`);
 
       // Get token addresses
       const fromTokenAddress = tokenList[fromToken as keyof typeof tokenList];
@@ -150,7 +144,7 @@ export function useExpectedAmountOut({
       }
 
       // Create a read-only provider for Celo
-      const provider = new ethers.providers.JsonRpcProvider(providerUrl);
+      const provider = new ethers.providers.JsonRpcProvider(networkConfig.rpcUrl);
 
       // Convert amount to wei
       const amountInWei = ethers.utils.parseUnits(amount, 18);
@@ -158,7 +152,7 @@ export function useExpectedAmountOut({
       // Find the exchange for the token pair
       const brokerContract = new ethers.Contract(
         brokerAddress,
-        MENTO_ABIS.BROKER_PROVIDERS,
+        ABIS.BROKER.PROVIDERS,
         provider
       );
 
@@ -173,7 +167,7 @@ export function useExpectedAmountOut({
       for (const providerAddress of exchangeProviders) {
         const exchangeContract = new ethers.Contract(
           providerAddress,
-          MENTO_ABIS.EXCHANGE,
+          ABIS.EXCHANGE,
           provider
         );
 
@@ -225,7 +219,7 @@ export function useExpectedAmountOut({
             for (const providerAddress of exchangeProviders) {
               const exchangeContract = new ethers.Contract(
                 providerAddress,
-                MENTO_ABIS.EXCHANGE,
+                ABIS.EXCHANGE,
                 provider
               );
 
@@ -261,7 +255,7 @@ export function useExpectedAmountOut({
             for (const providerAddress of exchangeProviders) {
               const exchangeContract = new ethers.Contract(
                 providerAddress,
-                MENTO_ABIS.EXCHANGE,
+                ABIS.EXCHANGE,
                 provider
               );
 
@@ -292,7 +286,7 @@ export function useExpectedAmountOut({
             // Step 3: Get expected amount out for fromToken to CELO
             const brokerRateContract = new ethers.Contract(
               brokerAddress,
-              MENTO_ABIS.BROKER_RATE,
+              ABIS.BROKER.RATE,
               provider
             );
 
@@ -371,7 +365,7 @@ export function useExpectedAmountOut({
       // Get the expected amount out
       const brokerRateContract = new ethers.Contract(
         brokerAddress,
-        MENTO_ABIS.BROKER_RATE,
+        ABIS.BROKER.RATE,
         provider
       );
 

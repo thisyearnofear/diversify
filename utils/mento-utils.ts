@@ -1,88 +1,24 @@
+/**
+ * Legacy Mento utilities
+ * Kept for backward compatibility - gradually migrate to services/
+ */
+
 import { ethers } from 'ethers';
+import {
+  MAINNET_TOKENS as CELO_TOKENS,
+  ALFAJORES_TOKENS,
+  BROKER_ADDRESSES,
+  ABIS as MENTO_ABIS,
+  EXCHANGE_RATES as DEFAULT_EXCHANGE_RATES,
+  CACHE_CONFIG as CACHE_DURATIONS,
+  TX_CONFIG,
+} from '../config';
 
-// Token addresses on Celo (Mainnet)
-export const CELO_TOKENS = {
-  CELO: '0x471ece3750da237f93b8e339c536989b8978a438',
-  CUSD: '0x765de816845861e75a25fca122bb6898b8b1282a',
-  CEUR: '0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73',
-  CREAL: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787',
-  CKES: '0x456a3d042c0dbd3db53d5489e98dfb038553b0d0',
-  CCOP: '0x8a567e2ae79ca692bd748ab832081c45de4041ea',
-  PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
-};
+// Re-export for backward compatibility
+export { CELO_TOKENS, ALFAJORES_TOKENS, MENTO_ABIS, DEFAULT_EXCHANGE_RATES };
 
-// Token addresses on Celo Alfajores (Testnet) for Mento v2.0
-export const ALFAJORES_TOKENS = {
-  CELO: '0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9',
-  CUSD: '0x874069fa1eb16d44d622f2e0ca25eea172369bc1',
-  CEUR: '0x10c892a6ec43a53e45d0b916b4b7d383b1b78c0f',
-  CREAL: '0xe4d517785d091d3c54818832db6094bcc2744545',
-  CXOF: '0xB0FA15e002516d0301884059c0aaC0F0C72b019D',
-  CKES: '0x1E0433C1769271ECcF4CFF9FDdD515eefE6CdF92',
-  CPESO: '0x5E0E3c9419C42a1B04e2525991FB1A2C467AB8bF',
-  CCOP: '0xe6A57340f0df6E020c1c0a80bC6E13048601f0d4',
-  CGHS: '0x295B66bE7714458Af45E6A6Ea142A5358A6cA375',
-  CGBP: '0x47f2Fb88105155a18c390641C8a73f1402B2BB12',
-  CZAR: '0x1e5b44015Ff90610b54000DAad31C89b3284df4d',
-  CCAD: '0x02EC9E0D2Fd73e89168C1709e542a48f58d7B133',
-  CAUD: '0x84CBD49F5aE07632B6B88094E81Cce8236125Fe0',
-
-  // Add PUSO to Alfajores tokens for consistency
-  PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
-};
-
-// Mento Broker addresses
-export const MENTO_BROKER_ADDRESS =
-  '0x777a8255ca72412f0d706dc03c9d1987306b4cad'; // Mainnet
-
-// Mento v2.0 Broker address on Alfajores
-export const ALFAJORES_BROKER_ADDRESS =
-  '0xD3Dff18E465bCa6241A244144765b4421Ac14D09';
-
-// ABIs
-export const MENTO_ABIS = {
-  // Standard ERC20 interface
-  ERC20_FULL: [
-    'function balanceOf(address owner) view returns (uint256)',
-    'function allowance(address owner, address spender) view returns (uint256)',
-    'function approve(address spender, uint256 amount) returns (bool)',
-    'function transfer(address to, uint256 amount) returns (bool)',
-    'function transferFrom(address from, address to, uint256 amount) returns (bool)',
-    'event Transfer(address indexed from, address indexed to, uint256 value)',
-    'event Approval(address indexed owner, address indexed spender, uint256 value)'
-  ],
-
-  // Individual function ABIs for specific use cases
-  ERC20_BALANCE: ['function balanceOf(address owner) view returns (uint256)'],
-  ERC20_ALLOWANCE: [
-    'function allowance(address owner, address spender) view returns (uint256)',
-  ],
-  ERC20_APPROVE: [
-    'function approve(address spender, uint256 amount) returns (bool)',
-  ],
-
-  // Mento specific ABIs
-  BROKER_PROVIDERS: [
-    'function getExchangeProviders() view returns (address[])',
-  ],
-  EXCHANGE: [
-    'function getExchanges() view returns ((bytes32 exchangeId, address[] assets)[])',
-  ],
-  BROKER_RATE: [
-    'function getAmountOut(address exchangeProvider, bytes32 exchangeId, address assetIn, address assetOut, uint256 amountIn) view returns (uint256)',
-  ],
-  BROKER_SWAP: [
-    'function swapIn(address exchangeProvider, bytes32 exchangeId, address assetIn, address assetOut, uint256 amountIn, uint256 minAmountOut) returns (uint256)',
-  ],
-};
-
-// Default exchange rates (USD to local currency)
-export const DEFAULT_EXCHANGE_RATES = {
-  CREAL: 5, // 1 USD ≈ 5 BRL
-  CKES: 140, // 1 USD ≈ 140 KES
-  CCOP: 4000, // 1 USD ≈ 4000 COP
-  PUSO: 56, // 1 USD ≈ 56 PHP
-};
+export const MENTO_BROKER_ADDRESS = BROKER_ADDRESSES.MAINNET;
+export const ALFAJORES_BROKER_ADDRESS = BROKER_ADDRESSES.ALFAJORES;
 
 // Cache keys
 export const CACHE_KEYS = {
@@ -92,21 +28,12 @@ export const CACHE_KEYS = {
   EXCHANGE_RATE_PUSO: 'mento-puso-exchange-rate-cache',
 };
 
-// Cache durations
-export const CACHE_DURATIONS = {
-  EXCHANGE_RATE: 1000 * 60 * 60, // 1 hour
-  BALANCE: 1000 * 60 * 5, // 5 minutes
-};
-
 /**
  * Get cached data or null if not found or expired
- * @param key Cache key
- * @param duration Cache duration in milliseconds
- * @returns Cached value or null
  */
 export const getCachedData = (
   key: string,
-  duration: number = CACHE_DURATIONS.EXCHANGE_RATE,
+  duration: number = CACHE_DURATIONS.EXCHANGE_RATE
 ): any => {
   try {
     if (typeof window === 'undefined') return null;
@@ -130,8 +57,6 @@ export const getCachedData = (
 
 /**
  * Set data in cache
- * @param key Cache key
- * @param value Value to cache
  */
 export const setCachedData = (key: string, value: any): void => {
   try {
@@ -150,8 +75,7 @@ export const setCachedData = (key: string, value: any): void => {
 
 /**
  * Get exchange rate for a Celo stablecoin using Mento Protocol
- * @param tokenSymbol Token symbol (CKES, CCOP, PUSO)
- * @returns Exchange rate (cUSD to token)
+ * @deprecated Use ExchangeDiscoveryService.getQuote instead
  */
 export const getMentoExchangeRate = async (
   tokenSymbol: string,
@@ -170,7 +94,7 @@ export const getMentoExchangeRate = async (
   // Default fallback rates
   const defaultRate =
     DEFAULT_EXCHANGE_RATES[
-      tokenSymbol as keyof typeof DEFAULT_EXCHANGE_RATES
+    tokenSymbol as keyof typeof DEFAULT_EXCHANGE_RATES
     ] || 1;
 
   try {
@@ -271,9 +195,7 @@ export const getMentoExchangeRate = async (
 
 /**
  * Handle common swap errors
- * @param error Error object
- * @param context Context string for error message
- * @returns User-friendly error message
+ * @deprecated Use SwapErrorHandler.handle instead
  */
 export const handleMentoError = (error: unknown, context: string): string => {
   const errorMsg = error instanceof Error ? error.message : String(error);

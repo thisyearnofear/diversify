@@ -5,7 +5,7 @@ import type { Region } from "../../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
 import RealLifeScenario from "../RealLifeScenario";
 import { REGION_COLORS } from "../../constants/regions";
-import { useStablecoinSwap } from "../../hooks/use-stablecoin-swap";
+import { useSwap } from "../../hooks/use-swap";
 
 interface SwapTabProps {
   address: string | null;
@@ -87,24 +87,24 @@ export default function SwapTab({
     userRegion === "Africa"
       ? "Europe"
       : userRegion === "Europe"
-      ? "USA"
-      : userRegion === "USA"
-      ? "Asia"
-      : userRegion === "Asia"
-      ? "LatAm"
-      : "Africa"
+        ? "USA"
+        : userRegion === "USA"
+          ? "Asia"
+          : userRegion === "Asia"
+            ? "LatAm"
+            : "Africa"
   );
 
-  // Use the stablecoin swap hook
+  // Use the swap hook
   const {
     swap: performSwap,
     isLoading: isSwapLoading,
     error: swapError,
     txHash: swapTxHash,
-    isCompleted: isSwapCompleted,
+    step: hookSwapStep,
     chainId,
     isMiniPay: isMiniPayDetected,
-  } = useStablecoinSwap();
+  } = useSwap();
 
   // State for transaction status
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
@@ -122,7 +122,7 @@ export default function SwapTab({
     if (swapError) {
       setSwapStatus(`Error: ${swapError}`);
       setSwapStep("error");
-    } else if (isSwapCompleted) {
+    } else if (hookSwapStep === 'completed') {
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
 
@@ -188,9 +188,8 @@ export default function SwapTab({
     swapError,
     swapTxHash,
     localSwapTxHash,
-    isSwapCompleted,
-    swapStep,
-    refreshBalances, // Added missing dependency
+    hookSwapStep,
+    refreshBalances,
   ]);
 
   // Get use case for the selected swap
@@ -392,9 +391,8 @@ export default function SwapTab({
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className={`size-4 ${
-                    isBalancesLoading ? "animate-spin" : ""
-                  }`}
+                  className={`size-4 ${isBalancesLoading ? "animate-spin" : ""
+                    }`}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -412,10 +410,10 @@ export default function SwapTab({
               {chainId === 44787
                 ? "Celo Alfajores"
                 : chainId === 42220
-                ? "Celo Mainnet"
-                : chainId
-                ? `Chain ID: ${chainId}`
-                : "Unknown"}
+                  ? "Celo Mainnet"
+                  : chainId
+                    ? `Chain ID: ${chainId}`
+                    : "Unknown"}
             </div>
             {inflationDataSource === "api" ? (
               <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium shadow-sm border border-green-200">
@@ -457,13 +455,12 @@ export default function SwapTab({
             {/* Display swap status */}
             {swapStatus && (
               <div
-                className={`mt-4 p-3 rounded-md text-sm font-medium ${
-                  swapStatus.includes("Error")
-                    ? "bg-red-50 text-red-700 border border-red-200"
-                    : swapStatus.includes("success")
+                className={`mt-4 p-3 rounded-md text-sm font-medium ${swapStatus.includes("Error")
+                  ? "bg-red-50 text-red-700 border border-red-200"
+                  : swapStatus.includes("success")
                     ? "bg-green-50 text-green-700 border border-green-200"
                     : "bg-blue-50 text-blue-700 border border-blue-200"
-                }`}
+                  }`}
               >
                 {swapStatus}
 
@@ -472,12 +469,10 @@ export default function SwapTab({
                     <a
                       href={
                         chainId === 44787
-                          ? `https://alfajores.celoscan.io/tx/${
-                              swapTxHash || localSwapTxHash
-                            }`
-                          : `https://explorer.celo.org/mainnet/tx/${
-                              swapTxHash || localSwapTxHash
-                            }`
+                          ? `https://alfajores.celoscan.io/tx/${swapTxHash || localSwapTxHash
+                          }`
+                          : `https://explorer.celo.org/mainnet/tx/${swapTxHash || localSwapTxHash
+                          }`
                       }
                       target="_blank"
                       rel="noopener noreferrer"
@@ -511,9 +506,8 @@ export default function SwapTab({
                     >
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className={`size-3 mr-1 ${
-                          isBalancesLoading ? "animate-spin" : ""
-                        }`}
+                        className={`size-3 mr-1 ${isBalancesLoading ? "animate-spin" : ""
+                          }`}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -533,10 +527,10 @@ export default function SwapTab({
                     {chainId === 42220
                       ? "Celo Mainnet"
                       : chainId === 44787
-                      ? "Celo Alfajores"
-                      : chainId
-                      ? `Chain ID: ${chainId}`
-                      : "Unknown"}
+                        ? "Celo Alfajores"
+                        : chainId
+                          ? `Chain ID: ${chainId}`
+                          : "Unknown"}
                   </span>
                 </div>
                 {isMiniPayDetected && (
@@ -631,11 +625,10 @@ export default function SwapTab({
                     .map((region) => (
                       <button
                         key={region}
-                        className={`p-3 text-xs rounded-md transition-colors flex flex-col items-center shadow-sm ${
-                          region === targetRegion
-                            ? `bg-region-${region.toLowerCase()}-light border-2 border-region-${region.toLowerCase()}-medium text-region-${region.toLowerCase()}-dark font-bold`
-                            : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                        }`}
+                        className={`p-3 text-xs rounded-md transition-colors flex flex-col items-center shadow-sm ${region === targetRegion
+                          ? `bg-region-${region.toLowerCase()}-light border-2 border-region-${region.toLowerCase()}-medium text-region-${region.toLowerCase()}-dark font-bold`
+                          : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                          }`}
                         onClick={() => setTargetRegion(region as Region)}
                       >
                         <RegionalIconography
@@ -660,11 +653,10 @@ export default function SwapTab({
                 ].map((scenario) => (
                   <button
                     key={scenario}
-                    className={`px-3 py-1.5 mr-2 text-xs rounded-md whitespace-nowrap shadow-sm ${
-                      selectedScenario === scenario
-                        ? `bg-blue-600 text-white font-medium border border-blue-700`
-                        : `bg-white text-gray-700 hover:bg-gray-50 border border-gray-200`
-                    }`}
+                    className={`px-3 py-1.5 mr-2 text-xs rounded-md whitespace-nowrap shadow-sm ${selectedScenario === scenario
+                      ? `bg-blue-600 text-white font-medium border border-blue-700`
+                      : `bg-white text-gray-700 hover:bg-gray-50 border border-gray-200`
+                      }`}
                     onClick={() => setSelectedScenario(scenario as any)}
                   >
                     {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
@@ -720,7 +712,7 @@ export default function SwapTab({
                         style={{
                           backgroundColor:
                             REGION_COLORS[
-                              userRegion as keyof typeof REGION_COLORS
+                            userRegion as keyof typeof REGION_COLORS
                             ],
                         }}
                       >
@@ -751,7 +743,7 @@ export default function SwapTab({
                         style={{
                           backgroundColor:
                             REGION_COLORS[
-                              targetRegion as keyof typeof REGION_COLORS
+                            targetRegion as keyof typeof REGION_COLORS
                             ],
                         }}
                       >
@@ -789,7 +781,7 @@ export default function SwapTab({
                             style={{
                               backgroundColor:
                                 REGION_COLORS[
-                                  userRegion as keyof typeof REGION_COLORS
+                                userRegion as keyof typeof REGION_COLORS
                                 ],
                             }}
                           ></div>
@@ -803,12 +795,12 @@ export default function SwapTab({
                               style={{
                                 backgroundColor:
                                   REGION_COLORS[
-                                    userRegion as keyof typeof REGION_COLORS
+                                  userRegion as keyof typeof REGION_COLORS
                                   ],
                                 color: "white",
                                 borderColor:
                                   REGION_COLORS[
-                                    userRegion as keyof typeof REGION_COLORS
+                                  userRegion as keyof typeof REGION_COLORS
                                   ],
                               }}
                             >
@@ -824,7 +816,7 @@ export default function SwapTab({
                             style={{
                               backgroundColor:
                                 REGION_COLORS[
-                                  targetRegion as keyof typeof REGION_COLORS
+                                targetRegion as keyof typeof REGION_COLORS
                                 ],
                             }}
                           ></div>
@@ -838,12 +830,12 @@ export default function SwapTab({
                               style={{
                                 backgroundColor:
                                   REGION_COLORS[
-                                    targetRegion as keyof typeof REGION_COLORS
+                                  targetRegion as keyof typeof REGION_COLORS
                                   ],
                                 color: "white",
                                 borderColor:
                                   REGION_COLORS[
-                                    targetRegion as keyof typeof REGION_COLORS
+                                  targetRegion as keyof typeof REGION_COLORS
                                   ],
                               }}
                             >
