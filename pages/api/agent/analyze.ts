@@ -20,6 +20,7 @@ export default async function handler(
         const { inflationData, userBalance, currentHoldings } = req.body;
 
         const genAI = new GoogleGenerativeAI(apiKey);
+        // Use a model that supports generateContent consistently
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
         const prompt = `
