@@ -13,7 +13,7 @@ export default async function handler(
     try {
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            console.error('SERVER: GEMINI_API_KEY not found');
+            console.error('SERVER: GEMINI_API_KEY not found in environment variables', process.env.NODE_ENV);
             return res.status(500).json({ error: 'Server configuration error' });
         }
 

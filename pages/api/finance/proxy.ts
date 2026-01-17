@@ -13,6 +13,7 @@ export default async function handler(
 
     // Basic validation to prevent arbitrary proxying
     if (!from_currency && !from_symbol) {
+        console.error('SERVER: Missing currency symbols', req.query);
         return res.status(400).json({ error: 'Missing currency symbols' });
     }
 
