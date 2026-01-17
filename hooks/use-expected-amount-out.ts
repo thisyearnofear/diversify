@@ -179,6 +179,7 @@ export function useExpectedAmountOut({
           const assets = exchange.assets.map((a: string) => a.toLowerCase());
 
           if (
+            fromTokenAddress && toTokenAddress &&
             assets.includes(fromTokenAddress.toLowerCase()) &&
             assets.includes(toTokenAddress.toLowerCase())
           ) {
