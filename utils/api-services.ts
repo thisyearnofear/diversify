@@ -26,11 +26,8 @@ export const AlphaVantageService = {
    * Get API key from environment variables
    */
   getApiKey: (): string => {
-    // In Next.js, process.env with NEXT_PUBLIC_ prefix is available in the browser
-    // We don't need to check if process is defined
-    const apiKey = process.env.NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY || '';
-    console.log('Alpha Vantage API Key:', apiKey ? 'Found (not showing for security)' : 'Not found');
-    return apiKey;
+    // Keys are now handled on the server side
+    return 'proxied';
   },
 
   /**
@@ -49,16 +46,9 @@ export const AlphaVantageService = {
         return { ...cachedData, source: 'cache' };
       }
 
-      // Get API key
-      const apiKey = AlphaVantageService.getApiKey();
-      if (!apiKey) {
-        console.warn('Alpha Vantage API key not found');
-        return getFallbackExchangeRate(fromCurrency, toCurrency);
-      }
-
-      // Make API request
+      // Call our internal API proxy
       const response = await fetch(
-        `https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency=${fromCurrency}&to_currency=${toCurrency}&apikey=${apiKey}`
+        `/api/finance/proxy?from_currency=${fromCurrency}&to_currency=${toCurrency}`
       );
 
       if (!response.ok) {
@@ -121,16 +111,9 @@ export const AlphaVantageService = {
         return { ...cachedData, source: 'cache' };
       }
 
-      // Get API key
-      const apiKey = AlphaVantageService.getApiKey();
-      if (!apiKey) {
-        console.warn('Alpha Vantage API key not found');
-        return getFallbackHistoricalRates(fromCurrency, toCurrency);
-      }
-
-      // Make API request
+      // Call our internal API proxy
       const response = await fetch(
-        `https://www.alphavantage.co/query?function=FX_DAILY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&outputsize=${outputSize}&apikey=${apiKey}`
+        `/api/finance/proxy?function=FX_DAILY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&outputsize=${outputSize}`
       );
 
       if (!response.ok) {
@@ -216,7 +199,7 @@ export const WorldBankService = {
       } else {
         // Get last 2 years of data to ensure we have recent data
         const currentYear = new Date().getFullYear();
-        url += `&date=${currentYear-2}:${currentYear}`;
+        url += `&date=${currentYear - 2}:${currentYear}`;
       }
 
       // Make API request
@@ -468,4 +451,56 @@ function setCachedData(key: string, value: any): void {
   } catch (error) {
     console.warn(`Error writing to cache (${key}):`, error);
   }
+}
+
+// Gemini API Service
+export const GeminiService = {
+  /**
+   * Analyze inflation data and providing wealth protection advice
+   */
+  analyzeWealthProtection: async (
+    inflationData: any,
+    userBalance: number,
+    currentHoldings: string[]
+  ): Promise<{
+    action: 'SWAP' | 'HOLD';
+    targetToken?: string;
+    reasoning: string;
+    confidence: number;
+    suggestedAmount?: number;
+  }> => {
+    try {
+      const response = await fetch('/api/agent/analyze', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inflationData,
+          userBalance,
+          currentHoldings
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Agent API error: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result;
+
+    } catch (error) {
+      console.error('Gemini Agent Error:', error);
+      return getFallbackAgentAdvice();
+    }
+  }
+};
+
+function getFallbackAgentAdvice() {
+  return {
+    action: 'HOLD',
+    reasoning: 'AI Agent unavailable, defaulting to conservative strategy.',
+    confidence: 0.0,
+    suggestedAmount: 0
+  } as const;
 }

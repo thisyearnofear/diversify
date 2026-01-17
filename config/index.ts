@@ -8,7 +8,7 @@ export const NETWORKS = {
     MAINNET: {
         chainId: 42220,
         name: 'Celo Mainnet',
-        rpcUrl: 'https://forno.celo.org',
+        rpcUrl: process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org',
         explorerUrl: 'https://explorer.celo.org/mainnet',
     },
     ALFAJORES: {
@@ -16,6 +16,12 @@ export const NETWORKS = {
         name: 'Celo Alfajores',
         rpcUrl: 'https://alfajores-forno.celo-testnet.org',
         explorerUrl: 'https://alfajores.celoscan.io',
+    },
+    ARC_TESTNET: {
+        chainId: 5042002,
+        name: 'Arc Testnet',
+        rpcUrl: process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network',
+        explorerUrl: 'https://explorer.testnet.arc.network', // Assumed explorer or placeholder
     },
 } as const;
 
@@ -48,10 +54,16 @@ export const ALFAJORES_TOKENS = {
     PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
 } as const;
 
+// Token Addresses - Arc Testnet
+export const ARC_TOKENS = {
+    USDC: '0x3600000000000000000000000000000000000000', // Native USDC ERC20 interface
+} as const;
+
 // Broker Addresses
 export const BROKER_ADDRESSES = {
     MAINNET: '0x777a8255ca72412f0d706dc03c9d1987306b4cad',
     ALFAJORES: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
+    ARC_TESTNET: '0x0000000000000000000000000000000000000000', // Placeholder
 } as const;
 
 // Transaction Configuration
@@ -66,6 +78,7 @@ export const TX_CONFIG = {
     CONFIRMATIONS: {
         MAINNET: 1,
         TESTNET: 2,
+        ARC: 1,
     },
 } as const;
 
@@ -100,6 +113,7 @@ export const REGIONS = {
     LATAM: 'LatAm',
     AFRICA: 'Africa',
     ASIA: 'Asia',
+    GLOBAL: 'Global',
 } as const;
 
 export const REGION_COLORS = {
@@ -108,6 +122,7 @@ export const REGION_COLORS = {
     LatAm: '#F59E0B',
     Africa: '#EF4444',
     Asia: '#D946EF',
+    Global: '#2563EB',
 } as const;
 
 // Token Metadata
@@ -125,6 +140,7 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
     CZAR: { name: 'South African Rand', region: 'AFRICA' },
     CCAD: { name: 'Canadian Dollar', region: 'USA' },
     CAUD: { name: 'Australian Dollar', region: 'ASIA' },
+    USDC: { name: 'USD Coin', region: 'GLOBAL' },
 } as const;
 
 // ABIs
@@ -153,15 +169,22 @@ export const ABIS = {
 
 // Helper functions
 export function getTokenAddresses(chainId: number) {
+    if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
     return chainId === NETWORKS.ALFAJORES.chainId ? ALFAJORES_TOKENS : MAINNET_TOKENS;
 }
 
 export function getBrokerAddress(chainId: number) {
     return chainId === NETWORKS.ALFAJORES.chainId
         ? BROKER_ADDRESSES.ALFAJORES
-        : BROKER_ADDRESSES.MAINNET;
+        : chainId === NETWORKS.ARC_TESTNET.chainId
+            ? BROKER_ADDRESSES.ARC_TESTNET
+            : BROKER_ADDRESSES.MAINNET;
 }
 
 export function getNetworkConfig(chainId: number) {
-    return chainId === NETWORKS.ALFAJORES.chainId ? NETWORKS.ALFAJORES : NETWORKS.MAINNET;
+    return chainId === NETWORKS.ALFAJORES.chainId
+        ? NETWORKS.ALFAJORES
+        : chainId === NETWORKS.ARC_TESTNET.chainId
+            ? NETWORKS.ARC_TESTNET
+            : NETWORKS.MAINNET;
 }

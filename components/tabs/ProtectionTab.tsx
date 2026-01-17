@@ -1,6 +1,7 @@
 import React from "react";
 import InflationProtectionInfo from "../InflationProtectionInfo";
 import RegionalRecommendations from "../RegionalRecommendations";
+import AgentWealthGuard from "../AgentWealthGuard";
 import type { Region } from "@/hooks/use-user-region";
 
 interface ProtectionTabProps {
@@ -8,6 +9,7 @@ interface ProtectionTabProps {
   setUserRegion: (region: Region) => void;
   regionData: Array<{ region: string; value: number; color: string }>;
   totalValue: number;
+  setActiveTab?: (tab: string) => void;
 }
 
 export default function ProtectionTab({
@@ -15,6 +17,7 @@ export default function ProtectionTab({
   setUserRegion,
   regionData,
   totalValue,
+  setActiveTab
 }: ProtectionTabProps) {
   // Convert regionData to the format needed by our components
   const currentRegions = Object.entries(regionData)
@@ -25,8 +28,27 @@ export default function ProtectionTab({
     regionData.map((item) => [item.region, item.value / 100])
   );
 
+  const handleAgentSwap = (targetToken: string) => {
+    // In a real implementation, we would pass the target token to the SwapTab
+    // For now, we just switch to the tab. 
+    // Ideally, we would use a global state manager (Zustand/Context) to set the 'toToken'
+    if (setActiveTab) {
+      setActiveTab("swap");
+    } else {
+      console.warn("Navigation not available");
+    }
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Agentic Wealth Protection - PREMIUM UI */}
+      <AgentWealthGuard
+        amount={totalValue || 1000}
+        currentRegions={currentRegions}
+        userRegion={userRegion}
+        onExecuteSwap={handleAgentSwap}
+      />
+
       {/* Inflation Protection Info */}
       <InflationProtectionInfo
         homeRegion={userRegion}
@@ -43,3 +65,4 @@ export default function ProtectionTab({
     </div>
   );
 }
+

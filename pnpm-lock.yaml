@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@google/generative-ai':
+        specifier: 0.24.1
+        version: 0.24.1
       '@stable-station/mento-utils':
         specifier: workspace:*
         version: link:packages/mento-utils
@@ -20,6 +23,9 @@ importers:
       ethers:
         specifier: ^5.7
         version: 5.8.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      framer-motion:
+        specifier: 12.26.2
+        version: 12.26.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       next:
         specifier: ^15.2.0
         version: 15.5.9(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -242,6 +248,10 @@ packages:
     resolution: {integrity: sha512-Z4aHi3ECFf5oWYWM3F1rW83GJfB9OvhBYPTmb5q+VyK3uvzvS48lwo+jwh2eOoCRWEuT/crpb9Vwp2QaS5JqgQ==, tarball: https://registry.npmjs.org/@gemini-wallet/core/-/core-0.3.2.tgz}
     peerDependencies:
       viem: '>=2.0.0'
+
+  '@google/generative-ai@0.24.1':
+    resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==, tarball: https://registry.npmjs.org/@google/generative-ai/-/generative-ai-0.24.1.tgz}
+    engines: {node: '>=18.0.0'}
 
   '@humanwhocodes/config-array@0.13.0':
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==, tarball: https://registry.npmjs.org/@humanwhocodes/config-array/-/config-array-0.13.0.tgz}
@@ -2185,6 +2195,20 @@ packages:
   fraction.js@5.3.4:
     resolution: {integrity: sha512-1X1NTtiJphryn/uLQz3whtY6jK3fTqoE3ohKs0tT+Ujr1W59oopxmoEh7Lu5p6vBaPbgoM0bzveAW4Qi5RyWDQ==, tarball: https://registry.npmjs.org/fraction.js/-/fraction.js-5.3.4.tgz}
 
+  framer-motion@12.26.2:
+    resolution: {integrity: sha512-lflOQEdjquUi9sCg5Y1LrsZDlsjrHw7m0T9Yedvnk7Bnhqfkc89/Uha10J3CFhkL+TCZVCRw9eUGyM/lyYhXQA==, tarball: https://registry.npmjs.org/framer-motion/-/framer-motion-12.26.2.tgz}
+    peerDependencies:
+      '@emotion/is-prop-valid': '*'
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      '@emotion/is-prop-valid':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==, tarball: https://registry.npmjs.org/fs.realpath/-/fs.realpath-1.0.0.tgz}
 
@@ -2649,6 +2673,12 @@ packages:
     peerDependenciesMeta:
       typescript:
         optional: true
+
+  motion-dom@12.26.2:
+    resolution: {integrity: sha512-KLMT1BroY8oKNeliA3JMNJ+nbCIsTKg6hJpDb4jtRAJ7nCKnnpg/LTq/NGqG90Limitz3kdAnAVXecdFVGlWTw==, tarball: https://registry.npmjs.org/motion-dom/-/motion-dom-12.26.2.tgz}
+
+  motion-utils@12.24.10:
+    resolution: {integrity: sha512-x5TFgkCIP4pPsRLpKoI86jv/q8t8FQOiM/0E8QKBzfMozWHfkKap2gA1hOki+B5g3IsBNpxbUnfOum1+dgvYww==, tarball: https://registry.npmjs.org/motion-utils/-/motion-utils-12.24.10.tgz}
 
   ms@2.1.2:
     resolution: {integrity: sha512-sGkPx+VjMtmA6MX27oA4FBFELFCZZ4S4XqeGOXCv68tT+jb3vk/RyaKWP0PTKyWtmLSM0b+adUTEvbs1PEaH2w==, tarball: https://registry.npmjs.org/ms/-/ms-2.1.2.tgz}
@@ -4168,6 +4198,8 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@google/generative-ai@0.24.1': {}
+
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
@@ -4463,7 +4495,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.3.4
+      debug: 4.4.3
       pony-cause: 2.1.11
       semver: 7.7.3
       uuid: 9.0.1
@@ -4477,7 +4509,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
       '@types/debug': 4.1.12
-      debug: 4.3.4
+      debug: 4.4.3
       pony-cause: 2.1.11
       semver: 7.7.3
       uuid: 9.0.1
@@ -7166,6 +7198,15 @@ snapshots:
 
   fraction.js@5.3.4: {}
 
+  framer-motion@12.26.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3):
+    dependencies:
+      motion-dom: 12.26.2
+      motion-utils: 12.24.10
+      tslib: 2.8.1
+    optionalDependencies:
+      react: 19.2.3
+      react-dom: 19.2.3(react@19.2.3)
+
   fs.realpath@1.0.0: {}
 
   fsevents@2.3.3:
@@ -7644,6 +7685,12 @@ snapshots:
   mipd@0.0.7(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
+
+  motion-dom@12.26.2:
+    dependencies:
+      motion-utils: 12.24.10
+
+  motion-utils@12.24.10: {}
 
   ms@2.1.2: {}
 

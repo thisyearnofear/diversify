@@ -13,10 +13,12 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
   },
   "dependencies": {
+    "@google/generative-ai": "0.24.1",
     "@stable-station/mento-utils": "workspace:*",
     "autoprefixer": "^10.4.0",
     "chart.js": "^4.4.9",
     "ethers": "^5.7",
+    "framer-motion": "12.26.2",
     "next": "^15.2.0",
     "postcss": "^8.4.0",
     "react": "^19.0.0",

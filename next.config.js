@@ -15,7 +15,12 @@ const nextConfig = {
     return [
       {
         source: "/diversifi/index",
-        destination: "/diversifi",
+        destination: "/",
+        permanent: true,
+      },
+      {
+        source: "/diversifi",
+        destination: "/",
         permanent: true,
       },
     ];

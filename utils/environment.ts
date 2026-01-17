@@ -26,8 +26,8 @@ export function isMiniPayEnvironment(): boolean {
   // Check for referrer from MiniPay domains
   const referrer = document.referrer || '';
   const hasMiniPayReferrer = referrer.includes('minipay.app') ||
-                             referrer.includes('celo.org') ||
-                             referrer.includes('opera.com');
+    referrer.includes('celo.org') ||
+    referrer.includes('opera.com');
 
   // Check if we're in an iframe (MiniPay loads apps in iframes)
   const isInIframe = window !== window.parent;
@@ -63,7 +63,7 @@ export function isMiniPayEnvironment(): boolean {
   });
 
   return hasMiniPayProperty || hasMiniPayUserAgent || hasMiniPayParam ||
-         (isInIframe && (hasMiniPayReferrer || hasOperaMini));
+    (isInIframe && (hasMiniPayReferrer || hasOperaMini));
 }
 
 /**
@@ -94,8 +94,8 @@ export function shouldRenderDiversiFiUI(): boolean {
   // Check if in MiniPay
   const isInMiniPay = isMiniPayEnvironment();
 
-  // Check if on the diversifi path
-  const isOnDiversiFiPath = window.location.pathname.startsWith('/diversifi');
+  // Check if on the diversifi path or root
+  const isOnDiversiFiPath = window.location.pathname.startsWith('/diversifi') || window.location.pathname === '/';
 
   return isInMiniPay || isOnDiversiFiPath;
 }

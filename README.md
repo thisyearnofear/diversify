@@ -171,203 +171,61 @@ DiversiFi provides a seamless user journey:
 4. User swaps to the recommended stablecoin
 5. User can then send the stablecoin to the recipient
 
+## 🤖 Agentic Commerce on Arc
+This project now features a cutting-edge **Autonomous Wealth Protection Agent** powered by **Google Gemini 3.0 Flash Preview**.
+
+### How It Works (The "Agentic" Layer)
+1. **Real-Time Monitoring**: The agent continuously ingests global inflation data (World Bank API) and monitors your wallet balance on **Arc Network**.
+2. **Intelligent Reasoning**: Gemini 1.5 Flash analyzes these economic indicators to answer: *"Is the user's purchasing power currently at risk?"*
+3. **Autonomous Execution**: If a risk is detected (e.g., hyperinflation in a specific region), the Agent proposes an optimized stablecoin swap (e.g., swapping local currency stablecoins for USDC) and prepares the transaction for instant settlement on Arc.
+
+### Why This Matters
+- **Proactive vs. Reactive**: Users no longer need to stare at charts. The Agent acts as a 24/7 financial guardian.
+- **USDC on Arc**: Leveraging Arc's sub-second finality and USDC as the native gas token ensures these protective swaps are fast, cheap, and reliable.
+
 ## 🏆 Hackathon Submission Details
 
-### Primary Track: Inflation Protection and Swapping
+### Primary Track: Agentic Commerce on Arc
+- **Agent Intelligence**: Gemini 3.0 Flash Preview via Google AI Studio.
+- **Settlement Layer**: Arc Network Testnet (Chain ID 5042002).
+- **Payment Currency**: USDC (Native on Arc).
+- **Key Feature**: Autonomous Wealth Protection Agent.
 
+### Secondary Track: Inflation Protection and Swapping
 DiversiFi directly addresses the Inflation Protection and Swapping track by enabling MiniPay users to:
-
 - Swap between different Mento stablecoins based on personal financial needs
 - Visualize inflation impacts across different regions
 - Receive personalized portfolio recommendations
 - See real-world use cases demonstrating how local stablecoins solve specific pain points
 
 ### Technical Requirements Compliance
-
 - **Mento Integration**: Uses Mento's decentralized stablecoins and broker contract
 - **MiniPay Compatibility**: Mobile responsive, uses viem/wagmi, auto-connects in MiniPay
-- **Documentation**: Comprehensive README with setup instructions and code organization
+- **Google AI**: Deep integration with Gemini models for financial reasoning.
 
 ### Demo Resources
-
 - **Live Demo**: [https://stable-station.netlify.app/diversifi](https://stable-station.netlify.app/diversifi)
 - **GitHub Repository**: [https://github.com/yourusername/stables-station](https://github.com/yourusername/stables-station)
-- **Video Demo**: [Link to 4-minute demo video](https://youtu.be/your-video-id)
-
-## MiniPay Integration Learnings
-
-### Key Requirements for MiniPay Compatibility
-
-1. **Headers Configuration**:
-
-   - Set `X-Frame-Options: SAMEORIGIN` instead of `DENY` to allow embedding in MiniPay
-   - Add `Content-Security-Policy: frame-ancestors 'self' *.minipay.app *.celo.org *.opera.com;`
-
-2. **Meta Tags**:
-
-   ```html
-   <meta
-     name="viewport"
-     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-   />
-   <meta name="mobile-web-app-capable" content="yes" />
-   <meta name="apple-mobile-web-app-capable" content="yes" />
-   <meta
-     name="apple-mobile-web-app-status-bar-style"
-     content="black-translucent"
-   />
-   ```
-
-3. **Wallet Connection**:
-
-   - Use the basic `window.ethereum.request({ method: "eth_requestAccounts" })` approach
-   - Auto-connect when MiniPay is detected: `window.ethereum.isMiniPay === true`
-   - Add a small delay (e.g., 500ms) before checking for MiniPay to ensure everything is loaded
-   - Hide connect button when in MiniPay environment
-
-4. **Chain Configuration**:
-
-   - MiniPay only supports Celo and Celo Alfajores Testnet
-   - Chain IDs: 42220 (Celo Mainnet), 44787 (Celo Alfajores Testnet)
-
-5. **Transaction Requirements**:
-
-   - MiniPay uses Custom Fee Abstraction based transactions
-   - Support the `feeCurrency` property when sending transactions
-   - Only accept legacy transactions (not EIP-1559)
-
-6. **UI/UX Considerations**:
-   - Mobile-first design with simple, clean UI
-   - Avoid heavy animations or complex interactions
-   - Use tabs for navigation on small screens
-   - Ensure all interactive elements are large enough for touch
-
-### Debugging MiniPay Integration
-
-1. **Environment Detection**:
-
-   ```javascript
-   const isMiniPay = window.ethereum && window.ethereum.isMiniPay === true;
-   const isInIframe = window !== window.parent;
-   const userAgent = navigator.userAgent;
-   const referrer = document.referrer || "None";
-   ```
-
-2. **Console Logging**:
-
-   - Log detection results to console: `console.log('MiniPay detection:', { isMiniPay, userAgent, isInIframe, referrer });`
-   - Log connection results: `console.log('Connected to wallet:', { address, chainId });`
-
-3. **Visual Indicators**:
-
-   - Show MiniPay badge when detected
-   - Display connection status clearly
-   - Show chain ID and network name
-
-4. **Testing Approach**:
-   - Start with simple static HTML files to verify basic functionality
-   - Test wallet connection separately from app functionality
-   - Create a dedicated debug page with detailed environment information
-
-## 🏗️ Project Structure
-
-The DiversiFi app follows a modular architecture for better maintainability:
-
-```
-/apps/diversifi/
-├── components/           # UI components
-│   ├── tabs/             # Tab-specific components
-│   │   ├── OverviewTab.tsx
-│   │   ├── ProtectionTab.tsx
-│   │   ├── AnalyticsTab.tsx
-│   │   ├── StrategiesTab.tsx
-│   │   ├── SwapTab.tsx
-│   │   └── InfoTab.tsx
-│   └── ...               # Other shared components
-├── constants/            # Application constants
-│   └── regions.ts        # Region and token data
-├── hooks/                # Custom React hooks
-│   ├── wallet/           # Wallet-related hooks
-│   │   └── use-wallet-connection.ts
-│   ├── use-diversification.ts
-│   ├── use-inflation-data.ts
-│   └── ...               # Other domain-specific hooks
-├── pages/                # Next.js pages
-│   ├── _app.tsx          # App wrapper
-│   ├── diversifi.tsx     # Main application page
-│   └── index.tsx         # Redirect to main app
-├── utils/                # Utility functions
-│   ├── api-services.ts   # API integration
-│   ├── environment.ts    # Environment detection
-│   └── mento-utils.ts    # Mento protocol utilities
-└── types/                # TypeScript type definitions
-```
-
-## ✅ Implementation Status
-
-### Completed Features
-
-- ✅ MiniPay compatibility with auto-detection and connection
-- ✅ Mobile-first UI with touch-friendly interactions
-- ✅ Wallet connection with support for Celo and Alfajores networks
-- ✅ Stablecoin balance fetching with regional categorization
-- ✅ Portfolio visualization with regional distribution charts
-- ✅ Inflation data integration with World Bank API
-- ✅ Currency performance tracking with Alpha Vantage API
-- ✅ Personalized portfolio recommendations based on user region
-- ✅ Inflation impact visualizations showing value erosion over time
-- ✅ Stablecoin swap interface with Mento protocol integration
-- ✅ Real-world use case scenarios for different regions
-- ✅ Educational components explaining inflation protection
-- ✅ Portfolio diversification metrics (HHI, Shannon Entropy, Geographic Spread)
-- ✅ Transaction status tracking and error handling
-- ✅ Comprehensive API services with caching for performance
-
-### Upcoming Features
-
-- 📅 Transaction history tracking
-- 📅 Offline support for basic functionality
-- 📅 Multi-language support for regional users
-- 📅 Push notifications for portfolio alerts
-- 📅 Social sharing of portfolio performance
-- 📅 Enhanced analytics with historical performance tracking
-
-## 🔍 Differentiation Strategy
-
-DiversiFi stands out from similar applications by focusing on:
-
-1. **Practical Approach**: Instead of abstract financial concepts, we focus on concrete benefits and real-world use cases that users can immediately understand.
-
-2. **Educational Value**: We help users understand inflation and currency dynamics through simple visualizations that make complex economic concepts accessible.
-
-3. **Regional Personalization**: All recommendations and insights are tailored to the user's specific region, making the app immediately relevant to their financial situation.
-
-4. **MiniPay Optimization**: Built specifically for the MiniPay environment with careful attention to mobile UX, ensuring a seamless experience for users in emerging markets.
-
-5. **Data-Driven Decisions**: All recommendations are based on real economic data from trusted sources like the World Bank and Alpha Vantage, not arbitrary allocations.
 
 ## 🛠️ Technologies Used
 
-- **Frontend**: Next.js, React, Tailwind CSS
-- **Blockchain Integration**: viem/wagmi, Mento Protocol
-- **Data Visualization**: Chart.js
-- **API Integration**: World Bank API, Alpha Vantage API
-- **Deployment**: Netlify with CI/CD
+- **AI/Agents**: Google Gemini 3.0 Flash Preview, Google AI Studio
+- **Blockchain**: Arc Network (Testnet), Celo (Mainnet/Alfajores)
+- **Stablecoins**: USDC (Circle), Mento Stablecoins (cUSD, cEUR, cREAL, etc.)
+- **Frontend**: Next.js, React, Tailwind CSS, Framer Motion
+- **Web3 Integration**: viem/wagmi
+- **Data APIs**: World Bank API, Alpha Vantage API
 
 ## 🔮 Future Roadmap
 
-1. **Enhanced Analytics**: Add more sophisticated portfolio analysis tools
-2. **Multi-Chain Support**: Expand beyond Celo to other networks with stablecoins
-3. **Fiat On/Off Ramps**: Integrate with local payment methods for easier access
-4. **AI-Powered Recommendations**: Use machine learning to improve portfolio suggestions
-5. **Community Features**: Add social elements for sharing strategies and performance
+1. **Fully Autonomous Mode**: Allow the Agent to execute swaps without user confirmation (using ERC-7715 permissions).
+2. **Multi-Agent Systems**: Agents that negotiate best swap rates across multiple DEXs.
+3. **Visual Verification**: Use Gemini Pro Vision to verify physical assets before releasing payments.
+4. **Enhanced Analytics**: Add more sophisticated portfolio analysis tools.
+5. **Multi-Chain Support**: Expand beyond Celo to other networks with stablecoins.
 
 ## 📝 Conclusion
-
-DiversiFi transforms how MiniPay users interact with stablecoins, moving beyond simple payments to intelligent portfolio management for inflation protection. By making it easy to diversify across Mento's local stablecoins, DiversiFi helps users in emerging markets preserve their purchasing power and make more informed financial decisions.
-
-The app demonstrates the power of local stablecoins to solve real-world problems, particularly in regions with high inflation or currency volatility. By combining educational elements with practical tools, DiversiFi makes sophisticated financial strategies accessible to everyday users.
+DiversiFi transforms how MiniPay users interact with stablecoins, moving beyond simple payments to intelligent portfolio management for inflation protection. By combining the speed of Arc, the stability of USDC, and the intelligence of Gemini, we are building the future of **Agentic Commerce**.
 
 ## 📄 License
-
 This project is licensed under the MIT License.

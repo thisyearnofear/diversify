@@ -52,6 +52,9 @@ export const AVAILABLE_TOKENS = [
   { symbol: "CZAR", name: "South African Rand", region: "Africa" },
   { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
   { symbol: "CAUD", name: "Australian Dollar", region: "Asia" },
+
+  // Arc Mainnet
+  { symbol: "USDC", name: "USD Coin", region: "USA" },
 ];
 
 // Mock data for region visualization (used as initial state)
@@ -96,4 +99,8 @@ export const EXCHANGE_RATES: Record<string, number> = {
   czar: 0.055,
   ccad: 0.74,
   caud: 0.66,
+  
+  // USDC
+  USDC: 1,
+  usdc: 1,
 };
