@@ -84,7 +84,7 @@ export function useExpectedAmountOut({
       const isAlfajores = chainId === 44787;
 
       // Get configuration
-      const tokenList = getTokenAddresses(chainId || 42220);
+      const tokenList = getTokenAddresses(chainId || 42220) as Record<string, string>;
       const brokerAddress = getBrokerAddress(chainId || 42220);
       const networkConfig = getNetworkConfig(chainId || 42220);
 
