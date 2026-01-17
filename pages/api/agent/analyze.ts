@@ -22,14 +22,14 @@ const GEMINI_MODELS_FALLBACK = [
  */
 async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string) {
     const errors: Array<{ model: string; error: string }> = [];
-    
+
     for (const modelName of GEMINI_MODELS_FALLBACK) {
         try {
             console.log(`Attempting with model: ${modelName}`);
             const model = genAI.getGenerativeModel({ model: modelName });
             const result = await model.generateContent(prompt);
             const response = await result.response;
-            
+
             console.log(`✅ Success with model: ${modelName}`);
             return {
                 text: response.text(),
@@ -39,12 +39,12 @@ async function generateWithFallback(genAI: GoogleGenerativeAI, prompt: string) {
             const errorMsg = error.message || 'Unknown error';
             console.warn(`❌ Model ${modelName} failed:`, errorMsg.substring(0, 100));
             errors.push({ model: modelName, error: errorMsg });
-            
+
             // Continue to next model
             continue;
         }
     }
-    
+
     // All models failed
     throw new Error(`All models failed. Errors: ${JSON.stringify(errors)}`);
 }
@@ -64,13 +64,17 @@ export default async function handler(
             return res.status(500).json({ error: 'Server configuration error' });
         }
 
-        const { inflationData, userBalance, currentHoldings } = req.body;
+        const { inflationData, userBalance, currentHoldings, config } = req.body;
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
         const prompt = `
       You are an expert Wealth Protection Agent running on the Arc network.
-      Your goal is to protect the user's purchasing power using stablecoins.
+      Your goal is to protect the user's purchasing power using stablecoins based on their specific strategy.
+      
+      User Configuration:
+      - Risk Tolerance: ${config?.riskTolerance || 'Balanced'}
+      - Primary Goal: ${config?.goal || 'Inflation Hedge'}
 
       Context:
       - User Balance: ${userBalance} USD
@@ -79,6 +83,16 @@ export default async function handler(
 
       Analyze the inflation trends. If a specific region (like Africa or LatAm) has high inflation (>5%) and the user holds that currency, recommend swapping to USDC or cEUR.
       If the user holds USDC and inflation is low, recommend HOLD.
+      
+      Adjust your recommendation based on the Risk Tolerance:
+      - Conservative: Prioritize capital preservation (HOLD or swap to USDC).
+      - Balanced: Moderate risk/reward.
+      - Aggressive: Maximize protection even with higher swap frequencies.
+
+      Adjust based on Goal:
+      - Capital Preservation: Focus on low volatility.
+      - Inflation Hedge: Focus on currencies with lowest inflation rates.
+      - Growth: Suggest regions with strengthening currencies.
 
       Return strictly valid JSON:
       {
@@ -110,16 +124,16 @@ export default async function handler(
 
     } catch (error: any) {
         console.error('Agent API Error:', error);
-        
+
         // Handle quota exceeded errors gracefully
         if (error.message?.includes('quota') || error.message?.includes('429')) {
-            return res.status(429).json({ 
+            return res.status(429).json({
                 error: 'API quota exceeded. Please try again later.',
                 retryAfter: 60, // seconds
                 fallbackAction: 'HOLD' // Safe default recommendation
             });
         }
-        
+
         return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 }

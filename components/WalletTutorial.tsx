@@ -18,14 +18,17 @@ export const WalletTutorial: React.FC<{
   isMiniPay?: boolean;
 }> = ({ isOpen, onClose, onConnect, isMiniPay = false }) => {
   const [step, setStep] = useState(1);
+  const { chainId } = useWalletContext();
+  const isArc = chainId === 5042002;
+
   const totalSteps = isMiniPay ? 3 : 4;
-  
+
   useEffect(() => {
     if (isOpen) {
       setStep(1);
     }
   }, [isOpen]);
-  
+
   const handleConnect = async () => {
     try {
       await onConnect();
@@ -34,7 +37,7 @@ export const WalletTutorial: React.FC<{
       console.error('Connection failed:', error);
     }
   };
-  
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -81,9 +84,9 @@ export const WalletTutorial: React.FC<{
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">👛 Connect Your Wallet</h3>
                   <p className="text-gray-600 mb-6">
-                    Connect your wallet to start protecting your savings and swapping stablecoins across regions.
+                    Connect your wallet to start protecting your savings. We support Celo and Arc networks for multi-region stablecoins.
                   </p>
-                  
+
                   <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100">
                     <p className="text-blue-700 font-medium mb-2">✨ Why connect?</p>
                     <ul className="text-blue-600 text-sm space-y-1">
@@ -93,7 +96,7 @@ export const WalletTutorial: React.FC<{
                       <li>• Access advanced wealth strategies</li>
                     </ul>
                   </div>
-                  
+
                   <div className="grid grid-cols-3 gap-4 mb-6">
                     <div className="flex flex-col items-center">
                       <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-2">
@@ -123,7 +126,7 @@ export const WalletTutorial: React.FC<{
                   <p className="text-gray-600 mb-6">
                     Your security is our priority. We never store your private keys.
                   </p>
-                  
+
                   <div className="space-y-4 mb-6">
                     <div className="flex items-start p-3 bg-gray-50 rounded-lg">
                       <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
@@ -134,7 +137,7 @@ export const WalletTutorial: React.FC<{
                         <p className="text-sm text-gray-600">Only you control your funds</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start p-3 bg-gray-50 rounded-lg">
                       <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
                         <span className="text-green-600 text-sm">✓</span>
@@ -144,7 +147,7 @@ export const WalletTutorial: React.FC<{
                         <p className="text-sm text-gray-600">We only see balances, never move funds</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start p-3 bg-gray-50 rounded-lg">
                       <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3 mt-1">
                         <span className="text-green-600 text-sm">✓</span>
@@ -155,7 +158,7 @@ export const WalletTutorial: React.FC<{
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-100">
                     <p className="text-yellow-700 font-medium mb-2">💡 Good to know</p>
                     <p className="text-yellow-600 text-sm">
@@ -171,7 +174,7 @@ export const WalletTutorial: React.FC<{
                   <p className="text-gray-600 mb-6">
                     {isMiniPay ? 'MiniPay detected! Ready to connect.' : 'Select your preferred wallet provider.'}
                   </p>
-                  
+
                   {isMiniPay ? (
                     <div className="mb-6">
                       <div className="bg-blue-50 rounded-lg p-6 border-2 border-blue-200">
@@ -196,7 +199,7 @@ export const WalletTutorial: React.FC<{
                       ))}
                     </div>
                   )}
-                  
+
                   <div className="bg-gray-50 rounded-lg p-4">
                     <p className="text-gray-700 font-medium mb-2">📲 Mobile users</p>
                     <p className="text-gray-600 text-sm">
@@ -212,7 +215,7 @@ export const WalletTutorial: React.FC<{
                   <p className="text-gray-600 mb-6">
                     Click below to connect your wallet and start your wealth protection journey.
                   </p>
-                  
+
                   <div className="space-y-3 mb-6">
                     <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-100">
                       <span className="text-green-700 font-medium">Instant access</span>
@@ -241,7 +244,7 @@ export const WalletTutorial: React.FC<{
                   ← Back
                 </button>
               )}
-              
+
               {step < totalSteps ? (
                 <button
                   onClick={() => setStep(step + 1)}
@@ -268,10 +271,10 @@ export const WalletTutorial: React.FC<{
 export const useWalletTutorial = () => {
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const { isMiniPay } = useWalletContext();
-  
+
   const openTutorial = () => setIsTutorialOpen(true);
   const closeTutorial = () => setIsTutorialOpen(false);
-  
+
   return {
     isTutorialOpen,
     openTutorial,

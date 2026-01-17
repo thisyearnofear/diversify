@@ -44,6 +44,8 @@ const TOKEN_METADATA: Record<string, { name: string; region: string }> = {
   czar: { name: 'South African Rand', region: 'Africa' },
   ccad: { name: 'Canadian Dollar', region: 'USA' },
   caud: { name: 'Australian Dollar', region: 'Asia' },
+  USDC: { name: 'USD Coin', region: 'Global' },
+  usdc: { name: 'USD Coin', region: 'Global' },
 };
 
 // Updated exchange rates to USD for Mento stablecoins
@@ -79,6 +81,8 @@ const EXCHANGE_RATES: Record<string, number> = {
   czar: 0.055,
   ccad: 0.74,
   caud: 0.66,
+  USDC: 1,
+  usdc: 1,
 };
 
 function getCachedBalances(address: string): Record<string, StablecoinBalance> | null {
@@ -123,6 +127,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
   const [regionTotals, setRegionTotals] = useState<Record<string, number>>({});
   const [totalValue, setTotalValue] = useState(0);
   const [chainId, setChainId] = useState<number | null>(null);
+  const [isMockData, setIsMockData] = useState(false);
 
   useEffect(() => {
     if (!address) {
@@ -154,9 +159,10 @@ export function useStablecoinBalances(address: string | undefined | null) {
             // Update chainId state
             setChainId(currentChainId);
 
-            // If not on Celo (42220) or Alfajores (44787), use mock data
-            if (currentChainId !== 42220 && currentChainId !== 44787) {
-              console.log('Not on Celo network, using mock data');
+            // If not on Celo (42220), Alfajores (44787), or Arc (5042002), use mock data
+            if (currentChainId !== 42220 && currentChainId !== 44787 && currentChainId !== 5042002) {
+              console.log('Not on supported network, using mock data');
+              setIsMockData(true);
 
               // Create realistic mock balances based on the network
               const mockBalances: Record<string, StablecoinBalance> = {};
@@ -306,6 +312,8 @@ export function useStablecoinBalances(address: string | undefined | null) {
               calculateTotals(mockBalances);
               setIsLoading(false);
               return;
+            } else {
+              setIsMockData(false);
             }
           } catch (err) {
             console.warn('Error checking chain ID, proceeding with API calls:', err);
@@ -332,17 +340,24 @@ export function useStablecoinBalances(address: string | undefined | null) {
         console.log('Using chain ID for balance fetching:', currentChainId);
 
         const isAlfajores = currentChainId === 44787;
-        const providerUrl = isAlfajores
-          ? 'https://alfajores-forno.celo-testnet.org' // Alfajores testnet
-          : 'https://forno.celo.org'; // Mainnet
+        const isArc = currentChainId === 5042002;
 
-        console.log(`Using ${isAlfajores ? 'Alfajores' : 'Mainnet'} provider for balance fetching`);
+        let providerUrl = 'https://forno.celo.org'; // Default
+        if (isAlfajores) providerUrl = 'https://alfajores-forno.celo-testnet.org';
+        if (isArc) providerUrl = 'https://rpc.testnet.arc.network';
+
+        console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} provider for balance fetching`);
         const provider = new ethers.providers.JsonRpcProvider(providerUrl);
 
         // Determine which tokens to fetch based on the network
-        const tokensToFetch = isAlfajores
-          ? ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'] // Alfajores tokens
-          : ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO']; // Mainnet tokens
+        let tokensToFetch: string[] = [];
+        if (isArc) {
+          tokensToFetch = ['USDC'];
+        } else if (isAlfajores) {
+          tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
+        } else {
+          tokensToFetch = ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO'];
+        }
 
         console.log(`Fetching balances for tokens: ${tokensToFetch.join(', ')}`);
 
@@ -351,8 +366,8 @@ export function useStablecoinBalances(address: string | undefined | null) {
           async (symbol) => {
             try {
               // Determine which token address list to use based on the network
-              const tokenList = getTokenAddresses(isAlfajores ? 44787 : 42220);
-              console.log(`Using ${isAlfajores ? 'Alfajores' : 'Mainnet'} token list for ${symbol}`);
+              const tokenList = getTokenAddresses(currentChainId as number);
+              console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list for ${symbol}`);
 
               // Use type assertion to handle the index signature
               const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
@@ -360,7 +375,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
                 tokenList[symbol.toLowerCase() as keyof typeof tokenList];
 
               if (!tokenAddress) {
-                console.warn(`Token address not found for ${symbol} in ${isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
+                console.warn(`Token address not found for ${symbol} in ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
                 console.log('Available tokens:', Object.keys(tokenList).join(', '));
                 return null;
               }
@@ -401,7 +416,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
               const metadata = TOKEN_METADATA[symbol] ||
                 TOKEN_METADATA[symbol.toUpperCase()] ||
                 TOKEN_METADATA[symbol.toLowerCase()] ||
-                { name: symbol, region: 'USA' }; // Default to USA instead of Unknown
+                { name: symbol, region: 'Global' }; // Default to Global
 
               return {
                 symbol,
@@ -429,6 +444,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
         setBalances(balanceMap);
         calculateTotals(balanceMap);
+        setIsMockData(false);
 
         // Cache the results
         setCachedBalances(address, balanceMap);
@@ -527,9 +543,10 @@ export function useStablecoinBalances(address: string | undefined | null) {
               // Update chainId state
               setChainId(currentChainId);
 
-              // If not on Celo (42220) or Alfajores (44787), use mock data
-              if (currentChainId !== 42220 && currentChainId !== 44787) {
-                console.log('Not on Celo network, using mock data');
+              // If not on Celo (42220), Alfajores (44787), or Arc (5042002), use mock data
+              if (currentChainId !== 42220 && currentChainId !== 44787 && currentChainId !== 5042002) {
+                console.log('Not on supported network, using mock data');
+                setIsMockData(true);
 
                 // Create realistic mock balances based on the network
                 const mockBalances: Record<string, StablecoinBalance> = {};
@@ -560,6 +577,8 @@ export function useStablecoinBalances(address: string | undefined | null) {
                 calculateTotals(mockBalances);
                 setIsLoading(false);
                 return;
+              } else {
+                setIsMockData(false);
               }
             } catch (err) {
               console.warn('Error checking chain ID, proceeding with API calls:', err);
@@ -590,6 +609,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
     regionTotals,
     totalValue,
     chainId,
+    isMockData,
     refreshBalances,
     refreshChainId
   };

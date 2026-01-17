@@ -10,6 +10,7 @@ interface WalletContextType {
   chainId: number | null;
   isMiniPay: boolean;
   connect: () => Promise<void>;
+  switchNetwork: (chainId: number) => Promise<void>;
   formatAddress: (addr: string) => string;
 }
 
@@ -22,6 +23,7 @@ const WalletContext = createContext<WalletContextType>({
   chainId: null,
   isMiniPay: false,
   connect: async () => { },
+  switchNetwork: async () => { },
   formatAddress: (addr: string) => addr,
 });
 

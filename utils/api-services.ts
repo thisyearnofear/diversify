@@ -166,8 +166,12 @@ export const AlphaVantageService = {
       setCachedData(cacheKey, result);
 
       return result;
-    } catch (error) {
-      console.error('Error fetching historical exchange rates:', error);
+    } catch (error: any) {
+      if (error.message?.includes('No time series data found')) {
+        console.warn(`Note: Alpha Vantage historical data not available for ${fromCurrency}-${toCurrency}, using fallback.`);
+      } else {
+        console.error('Error fetching historical exchange rates:', error);
+      }
       return getFallbackHistoricalRates(fromCurrency, toCurrency);
     }
   }
@@ -461,13 +465,15 @@ export const GeminiService = {
   analyzeWealthProtection: async (
     inflationData: any,
     userBalance: number,
-    currentHoldings: string[]
+    currentHoldings: string[],
+    config?: any
   ): Promise<{
     action: 'SWAP' | 'HOLD';
     targetToken?: string;
     reasoning: string;
     confidence: number;
     suggestedAmount?: number;
+    _meta?: { modelUsed: string };
   }> => {
     try {
       const response = await fetch('/api/agent/analyze', {
@@ -478,7 +484,8 @@ export const GeminiService = {
         body: JSON.stringify({
           inflationData,
           userBalance,
-          currentHoldings
+          currentHoldings,
+          config
         }),
       });
 

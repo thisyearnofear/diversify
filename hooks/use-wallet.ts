@@ -107,6 +107,64 @@ export function useWallet() {
     }
   };
 
+  // Switch network function
+  const switchNetwork = async (targetChainId: number) => {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      setError('No Ethereum provider found');
+      return;
+    }
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+      });
+    } catch (switchError: any) {
+      // This error code indicates that the chain has not been added to MetaMask.
+      if (switchError.code === 4902) {
+        try {
+          let networkConfig;
+          if (targetChainId === 44787) {
+            networkConfig = {
+              chainId: '0xaf13',
+              chainName: 'Celo Alfajores',
+              nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+              rpcUrls: ['https://alfajores-forno.celo-testnet.org'],
+              blockExplorerUrls: ['https://alfajores.celoscan.io'],
+            };
+          } else if (targetChainId === 5042002) {
+            networkConfig = {
+              chainId: '0x4ce6e6',
+              chainName: 'Arc Testnet',
+              nativeCurrency: { name: 'ARC', symbol: 'ARC', decimals: 18 },
+              rpcUrls: ['https://rpc.testnet.arc.network'],
+              blockExplorerUrls: ['https://explorer.testnet.arc.network'],
+            };
+          } else {
+            networkConfig = {
+              chainId: '0xa4ec',
+              chainName: 'Celo Mainnet',
+              nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+              rpcUrls: ['https://forno.celo.org'],
+              blockExplorerUrls: ['https://explorer.celo.org/mainnet'],
+            };
+          }
+
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [networkConfig],
+          });
+        } catch (addError) {
+          console.error('Error adding network:', addError);
+          setError('Failed to add network');
+        }
+      } else {
+        console.error('Error switching network:', switchError);
+        setError('Failed to switch network');
+      }
+    }
+  };
+
   // Format address for display
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -120,6 +178,7 @@ export function useWallet() {
     chainId,
     isMiniPay,
     connect,
+    switchNetwork,
     formatAddress,
   };
 }
