@@ -7,19 +7,22 @@ interface InflationVisualizerProps {
   inflationRate: number;
   years?: number;
   initialAmount?: number;
+  safeHavenYield?: number; // Typical RWA yield (e.g. 5.2% for Treasuries)
 }
 
 /**
  * Component that visualizes how inflation affects the value of money over time
+ * and compares it with Agent-recommended Safe Havens.
  */
 export default function InflationVisualizer({
   region,
   inflationRate,
   years = 5,
   initialAmount = 100,
+  safeHavenYield = 5.2,
 }: InflationVisualizerProps) {
   // Calculate the value of money over time with compound inflation
-  const valueOverTime = Array.from({ length: years + 1 }, (_, i) => {
+  const cashValueOverTime = Array.from({ length: years + 1 }, (_, i) => {
     const value = initialAmount * Math.pow(1 - inflationRate / 100, i);
     return {
       year: i,
@@ -28,104 +31,138 @@ export default function InflationVisualizer({
     };
   });
 
+  // Calculate the value of money over time in a Safe Haven (yield + hedge)
+  const safeHavenValueOverTime = Array.from({ length: years + 1 }, (_, i) => {
+    // safeHavenYield is added, inflation is subtracted (assuming target stable is USD)
+    // For simplicity, we show nominal growth of safe haven vs erosion of local cash
+    const value = initialAmount * Math.pow(1 + safeHavenYield / 100, i);
+    return {
+      year: i,
+      value: Math.round(value * 100) / 100,
+    };
+  });
+
   // Calculate total loss over the period
-  const totalLoss = initialAmount - valueOverTime[years].value;
-  const totalLossPercentage = Math.round((totalLoss / initialAmount) * 100);
+  const totalLoss = initialAmount - cashValueOverTime[years].value;
+  const wealthPreserved = safeHavenValueOverTime[years].value - cashValueOverTime[years].value;
 
   return (
-    <div className="relative overflow-hidden bg-white rounded-lg shadow-md p-4 mb-4 border border-gray-200">
+    <div className="relative overflow-hidden bg-white rounded-2xl shadow-xl p-5 mb-6 border border-gray-200">
       <RegionalPattern region={region} />
       <div className="relative">
-        <div className="flex justify-between items-center mb-3">
-          <div className="flex items-center">
-            <h3 className="font-bold text-gray-900">
-              Value of ${initialAmount} Over Time
+        <div className="flex justify-between items-center mb-5">
+          <div>
+            <h3 className="font-black text-gray-900 text-lg tracking-tight uppercase">
+              Wealth Preservation Gap
             </h3>
+            <p className="text-xs font-bold text-gray-500">Projected: ${initialAmount} over {years} years</p>
           </div>
-          <div className="flex items-center">
-            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded-full font-medium border border-red-200">
-              {inflationRate.toFixed(2)}% Inflation
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-black bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200 uppercase mb-1">
+              Local: {inflationRate.toFixed(1)}% Infl.
+            </span>
+            <span className="text-[10px] font-black bg-green-100 text-green-700 px-2 py-0.5 rounded-full border border-green-200 uppercase">
+              Vault: {safeHavenYield.toFixed(1)}% APY
             </span>
           </div>
         </div>
 
-        <div className="mb-4">
-          <div className="flex justify-between text-sm text-gray-900 font-medium mb-1">
-            <span className="bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100">
-              Today
-            </span>
-            <span className="bg-white px-2 py-0.5 rounded shadow-sm border border-gray-100">
-              {years} Years
-            </span>
-          </div>
-          <div className="relative h-10 bg-gray-100 rounded-md overflow-hidden">
-            <div
-              className={`absolute top-0 left-0 h-full bg-region-${region.toLowerCase()}-medium rounded-md`}
-              style={{ width: "100%" }}
-            >
-              <div className="h-full flex items-center justify-start pl-3">
-                <span className="text-white font-bold text-base bg-black/30 px-2 py-0.5 rounded">
-                  ${initialAmount}
-                </span>
-              </div>
+        {/* COMPARISON BARS */}
+        <div className="space-y-6 mb-8">
+          <div>
+            <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase mb-1.5">
+              <span>Local Cash / Stablecoins</span>
+              <span className="text-red-600">Eroding</span>
             </div>
-            <div
-              className="absolute top-0 right-0 h-full bg-gray-200 rounded-r-md flex items-center justify-end pr-2"
-              style={{ width: `${100 - valueOverTime[years].percentage}%` }}
-            >
-              <span className="text-white font-bold bg-red-600 px-2 py-0.5 rounded shadow-sm">
-                -${totalLoss.toFixed(2)}
-              </span>
-            </div>
-          </div>
-          <div className="flex justify-between text-xs text-gray-700 font-medium mt-1">
-            <span>Full Value</span>
-            <span>
-              ${valueOverTime[years].value.toFixed(2)} (
-              {valueOverTime[years].percentage}% of original)
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-6 gap-1">
-          {valueOverTime.map((data) => (
-            <div key={data.year} className="text-center">
-              <div className="text-xs font-medium text-gray-700 mb-1">
-                Year {data.year}
-              </div>
+            <div className="relative h-10 bg-gray-100 rounded-xl overflow-hidden shadow-inner border border-gray-200">
               <div
-                className={`mx-auto rounded-full flex items-center justify-center text-xs font-bold shadow-sm ${
-                  data.year === 0
-                    ? `bg-region-${region.toLowerCase()}-dark text-white border-2 border-white`
-                    : `bg-region-${region.toLowerCase()}-light border border-gray-300`
-                }`}
-                style={{
-                  width: data.year === 0 ? "42px" : "36px",
-                  height: data.year === 0 ? "42px" : "36px",
-                  opacity: data.year === 0 ? 1 : 1 - (data.year / years) * 0.2,
-                }}
+                className={`absolute top-0 left-0 h-full bg-gradient-to-r from-red-600 to-red-400 opacity-20`}
+                style={{ width: "100%" }}
+              />
+              <div
+                className={`absolute top-0 left-0 h-full bg-region-${region.toLowerCase()}-medium shadow-lg transition-all duration-1000 ease-out`}
+                style={{ width: `${cashValueOverTime[years].percentage}%` }}
               >
-                <span className="text-black">${data.value.toFixed(0)}</span>
+                <div className="h-full flex items-center pl-3">
+                  <span className="text-white font-black text-sm drop-shadow-md">
+                    ${cashValueOverTime[years].value.toFixed(0)}
+                  </span>
+                </div>
               </div>
-              <div className="text-xs mt-1 font-bold bg-white px-1 rounded text-gray-900 shadow-sm border border-gray-100">
-                {data.percentage}%
+              <div className="absolute inset-y-0 right-3 flex items-center">
+                <span className="text-[10px] font-bold text-gray-400">-{years}Y Erosion</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between text-[10px] font-black text-gray-400 uppercase mb-1.5">
+              <span>Agent Recommended RWAs</span>
+              <span className="text-green-600">Appreciating</span>
+            </div>
+            <div className="relative h-10 bg-gray-100 rounded-xl overflow-hidden shadow-inner border border-gray-200">
+              <div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-emerald-600 to-teal-500 shadow-xl transition-all duration-1000 ease-out"
+                style={{ width: "100%" }}
+              >
+                <div className="h-full flex items-center justify-between px-3">
+                  <span className="text-white font-black text-sm drop-shadow-md">
+                    ${safeHavenValueOverTime[years].value.toFixed(0)}
+                  </span>
+                  <span className="text-[10px] font-black bg-white/20 text-white px-2 py-0.5 rounded-full">
+                    SAFE HAVEN
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* YEARLY BREAKDOWN DOTS */}
+        <div className="grid grid-cols-6 gap-2 mb-6">
+          {cashValueOverTime.map((data, idx) => (
+            <div key={data.year} className="text-center group">
+              <div className="text-[9px] font-black text-gray-400 mb-2 uppercase group-hover:text-gray-900 transition-colors">
+                Yr {data.year}
+              </div>
+              <div className="relative flex flex-col items-center gap-1">
+                {/* Safe Haven Ghost */}
+                <div
+                  className="w-10 h-10 rounded-full border border-emerald-200 bg-emerald-50/50 flex items-center justify-center text-[9px] font-black text-emerald-700"
+                >
+                  ${safeHavenValueOverTime[idx].value.toFixed(0)}
+                </div>
+                {/* Eroding Cash */}
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-[9px] font-bold shadow-sm transition-all ${data.year === 0
+                      ? `bg-region-${region.toLowerCase()}-dark text-white scale-110`
+                      : `bg-white border-2 border-red-100 text-red-600`
+                    }`}
+                  style={{
+                    opacity: 1 - (data.year / (years + 1)) * 0.1,
+                  }}
+                >
+                  <span>${data.value.toFixed(0)}</span>
+                </div>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200 shadow-sm">
-          <p className="text-sm text-gray-900 font-medium">
-            With{" "}
-            <span className="text-red-700 font-bold">
-              {inflationRate.toFixed(2)}%
-            </span>{" "}
-            annual inflation in {region}, your ${initialAmount} will lose{" "}
-            <span className="text-red-700 font-bold">
-              ${totalLoss.toFixed(2)} ({totalLossPercentage}%)
-            </span>{" "}
-            of its purchasing power over {years} years.
-          </p>
+        {/* IMPACT SUMMARY */}
+        <div className="relative bg-black rounded-xl p-4 overflow-hidden shadow-2xl">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
+          <div className="relative flex items-center gap-4">
+            <div className="flex-shrink-0 size-12 bg-emerald-500/20 rounded-full flex items-center justify-center text-2xl">
+              🛡️
+            </div>
+            <div>
+              <h4 className="text-emerald-400 font-black text-xs uppercase tracking-widest mb-1">Protection Outcome</h4>
+              <p className="text-white font-bold text-[13px] leading-tight">
+                By deploying to the Oracle's RWA Safe Haven, you preserve <span className="text-emerald-400">${wealthPreserved.toFixed(2)}</span> in wealth that would otherwise be lost to inflation.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

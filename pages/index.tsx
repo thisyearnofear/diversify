@@ -179,6 +179,8 @@ export default function DiversiFiPage() {
             setActiveTab={setActiveTab}
             refreshBalances={refreshBalances}
             refreshChainId={refreshChainId}
+            balances={balances}
+            inflationData={inflationData}
           />
         )}
 

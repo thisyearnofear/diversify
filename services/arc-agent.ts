@@ -5,6 +5,7 @@
  */
 
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
+import { rwaService } from './rwa-service';
 
 export interface Payment {
     amount: string;
@@ -191,6 +192,15 @@ export class ArcAgent {
             const yieldResult = await this.fetchYieldData(steps, dataSources);
             Object.assign(paymentHashes, yieldResult.hashes);
 
+            // Step 5b: Get RWA opportunities (Wealth Protection)
+            steps.push("Analyzing Arbitrum RWA wealth protection options...");
+            const rwaOptions = rwaService.getRWARecommendations({
+                riskTolerance: userPreferences.riskTolerance?.toLowerCase() || 'medium',
+                investmentAmount: portfolioData.balance,
+                preferredNetwork: 'arbitrum'
+            });
+            dataSources.push("RWA Registry");
+
             // Step 6: Run AI analysis with comprehensive data
             steps.push("Processing comprehensive analysis with Gemini AI...");
             const analysis = await this.runAIAnalysis({
@@ -199,6 +209,7 @@ export class ArcAgent {
                 inflation: inflationResult.data,
                 economic: economicResult.data,
                 yields: yieldResult.data,
+                rwa: rwaOptions,
                 preferences: userPreferences
             }, networkInfo);
 
@@ -327,7 +338,7 @@ export class ArcAgent {
                     response = await fetch(`${source.url}/pools`);
                 }
 
-                if (response.ok) {
+                if (response && response.ok) {
                     data[source.name] = await response.json();
                     sources.push(source.name);
                     steps.push(`✓ Retrieved yield data from ${source.name}`);
@@ -497,19 +508,27 @@ export class ArcAgent {
     Real Inflation Data: ${JSON.stringify(data.inflation)}
     Economic Indicators: ${JSON.stringify(data.economic)}
     DeFi Yield Data: ${JSON.stringify(data.yields)}
+    RWA Opportunities: ${JSON.stringify(data.rwa)}
     User Preferences: ${JSON.stringify(data.preferences)}
     
     Provide a JSON response with:
     - action: "SWAP" | "HOLD" | "REBALANCE"
-    - targetToken: string (if SWAP/REBALANCE)
+    - targetToken: string (If RWA recommendation, use the symbol like "PAXG", "OUSG", "USDY")
+    - targetNetwork: "Celo" | "Arbitrum" | "Ethereum"
     - confidence: number (0-1)
-    - reasoning: string (1-2 sentences)
+    - reasoning: string (1-2 sentences focusing on wealth protection vs inflation)
     - expectedSavings: number (USD)
     - timeHorizon: string
     - riskLevel: "LOW" | "MEDIUM" | "HIGH"
     
     Base your analysis on the real data provided, considering Arc Network's advantages:
     autonomous payments, USDC gas efficiency, and cross-chain capabilities.
+    
+    STRATEGIC GUIDANCE:
+    1. If inflation data is high (>4%), prioritize USDY or OUSG on Arbitrum for yield-bearing wealth protection.
+    2. If macro sentiment is bearish, recommend PAXG (Gold) on Arbitrum as a safe haven.
+    3. If user is in a high-inflation region (Africa/LatAm), prioritize moving value from local stables to Arbitrum RWAs.
+    4. Always consider gas efficiency - if amount is <$500, stick to Arbitrum or Celo.
     `;
 
         try {

@@ -4,7 +4,9 @@ import { useWealthProtectionAgent, RiskTolerance, InvestmentGoal } from "../hook
 import { useInflationData } from "../hooks/use-inflation-data";
 import { Region } from "../hooks/use-user-region";
 import { useWalletContext } from "./WalletProvider";
-import { NETWORKS } from "../config";
+import { NETWORKS, MAINNET_TOKENS, ARBITRUM_TOKENS } from "../config";
+import { BridgeService } from "../services/swap/bridge-service";
+import { ethers } from "ethers";
 
 interface AgentWealthGuardProps {
     amount: number;
@@ -80,6 +82,11 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
     const [showConfig, setShowConfig] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [showHint, setShowHint] = useState(true);
+    const [bridgeState, setBridgeState] = useState<{
+        status: 'idle' | 'checking' | 'approving' | 'bridging' | 'success' | 'error';
+        error?: string;
+        txHash?: string;
+    }>({ status: 'idle' });
 
     if (!inflationData) return null;
 
@@ -93,6 +100,45 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
             holdings,
             { chainId: chainId || 0, name: networkName }
         );
+    };
+
+    const handleExecuteAction = async (targetToken: string) => {
+        if (!advice) return;
+
+        // If advice is for Arbitrum but user is on Celo, trigger BRIDGE
+        if (advice.targetNetwork === 'Arbitrum' && chainId === 42220) {
+            try {
+                setBridgeState({ status: 'checking' });
+
+                if (!window.ethereum) throw new Error("No wallet found");
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                const userAddress = await signer.getAddress();
+
+                // Map symbol to address
+                const toTokenAddr = (ARBITRUM_TOKENS as any)[targetToken] || ARBITRUM_TOKENS.USDC;
+
+                setBridgeState({ status: 'bridging' });
+                const result = await BridgeService.bridgeToWealth(
+                    signer,
+                    userAddress,
+                    amount.toString(),
+                    { address: MAINNET_TOKENS.CUSD, chainId: 42220 },
+                    { address: toTokenAddr, chainId: 42161 }
+                );
+
+                setBridgeState({
+                    status: 'success',
+                    txHash: result.steps?.[0]?.execution?.process?.[0]?.txHash
+                });
+            } catch (err: any) {
+                console.error("Bridge failed:", err);
+                setBridgeState({ status: 'error', error: err.message });
+            }
+        } else {
+            // Internal Celo swap logic
+            onExecuteSwap(targetToken);
+        }
     };
 
     const spendingStatus = getSpendingStatus();
@@ -249,11 +295,18 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                                             {advice.action === 'SWAP' ? 'Action Required' : 'Portfolio Protected'}
                                         </h3>
                                     </div>
-                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-100 md:bg-black/30 border">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                        <span className="text-xs font-mono text-blue-600 md:text-blue-200">
-                                            {(advice.confidence * 100).toFixed(0)}%
-                                        </span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-100 md:bg-black/30 border">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                            <span className="text-xs font-mono text-blue-600 md:text-blue-200">
+                                                {(advice.confidence * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        {advice.targetNetwork && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-bold">
+                                                {advice.targetNetwork}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                                 <p className="text-sm text-gray-700 md:text-slate-300 font-medium leading-relaxed italic border-l-2 border-gray-300 md:border-white/10 pl-3">
@@ -261,8 +314,33 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                                 </p>
 
                                 {advice.expectedSavings && (
-                                    <div className="mt-3 text-xs text-gray-600 md:text-slate-400">
-                                        Expected savings: <span className="font-bold text-green-600">${advice.expectedSavings}</span> over {advice.timeHorizon}
+                                    <div className="mt-3 flex items-center justify-between text-xs text-gray-600 md:text-slate-400">
+                                        <span>Expected protection: <span className="font-bold text-green-600">${advice.expectedSavings}</span></span>
+                                        <span className="opacity-60">{advice.timeHorizon} horizon</span>
+                                    </div>
+                                )}
+
+                                {/* RWA Specific Asset Card */}
+                                {advice.targetToken && (['PAXG', 'USDY', 'OUSG', 'PROP', 'GLP'].includes(advice.targetToken)) && (
+                                    <div className="mt-4 p-3 bg-white/50 md:bg-white/5 rounded-lg border border-white/10 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center text-xl shadow-inner">
+                                                {advice.targetToken === 'PAXG' ? '🏆' : advice.targetToken === 'PROP' ? '🏠' : '📈'}
+                                            </div>
+                                            <div>
+                                                <div className="text-xs font-bold">{advice.targetToken} Asset Info</div>
+                                                <div className="text-[10px] text-gray-500 md:text-slate-400">
+                                                    {advice.targetToken === 'PAXG' ? 'Physical Gold Hedge' :
+                                                        advice.targetToken === 'USDY' ? 'Ondo USD Yield (4.8%)' :
+                                                            advice.targetToken === 'OUSG' ? 'US Treasury Bills (5.2%)' :
+                                                                'RWA Yield Opportunity'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <div className="text-[10px] font-bold text-blue-600 md:text-blue-400">Arbitrum One</div>
+                                            <div className="text-[9px] text-gray-400">x402 Verified</div>
+                                        </div>
                                     </div>
                                 )}
 
@@ -292,12 +370,36 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                             </div>
 
                             {advice.action === 'SWAP' && advice.targetToken && (
-                                <button
-                                    onClick={() => onExecuteSwap(advice.targetToken!)}
-                                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-lg text-white rounded-xl font-bold transition-all active:scale-[0.97]"
-                                >
-                                    Deploy to {advice.targetToken}
-                                </button>
+                                <div className="space-y-3">
+                                    {bridgeState.status !== 'idle' && (
+                                        <div className={`p-3 rounded-lg text-xs font-bold flex items-center gap-3 ${bridgeState.status === 'success' ? 'bg-green-100 text-green-700' :
+                                            bridgeState.status === 'error' ? 'bg-red-100 text-red-700' :
+                                                'bg-blue-100 text-blue-700'
+                                            }`}>
+                                            {bridgeState.status === 'bridging' && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
+                                            <span>
+                                                {bridgeState.status === 'checking' && "🔍 Finding optimal route..."}
+                                                {bridgeState.status === 'bridging' && "🌉 Bridging to Arbitrum (Multi-step)..."}
+                                                {bridgeState.status === 'success' && "✅ Wealth Protection Deployed!"}
+                                                {bridgeState.status === 'error' && `❌ Error: ${bridgeState.error?.slice(0, 50)}`}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        disabled={['checking', 'bridging'].includes(bridgeState.status)}
+                                        onClick={() => handleExecuteAction(advice.targetToken!)}
+                                        className={`w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-lg text-white rounded-xl font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-2 ${['checking', 'bridging'].includes(bridgeState.status) ? 'opacity-50 grayscale' : ''
+                                            }`}
+                                    >
+                                        <span>
+                                            {bridgeState.status === 'success' ? 'View Deployment' : `Deploy to ${advice.targetToken}`}
+                                        </span>
+                                        {advice.targetNetwork && advice.targetNetwork !== 'Celo' && (
+                                            <span className="text-[10px] px-1.5 py-0.5 bg-black/20 rounded uppercase">via {advice.targetNetwork}</span>
+                                        )}
+                                    </button>
+                                </div>
                             )}
                         </motion.div>
                     )}

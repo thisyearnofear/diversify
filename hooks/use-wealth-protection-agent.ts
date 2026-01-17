@@ -5,6 +5,7 @@ import { ArcAgent } from '../services/arc-agent';
 export interface AgentAdvice {
     action: 'SWAP' | 'HOLD' | 'REBALANCE';
     targetToken?: string;
+    targetNetwork?: string;
     reasoning: string;
     confidence: number;
     suggestedAmount?: number;

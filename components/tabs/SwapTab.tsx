@@ -8,7 +8,9 @@ import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
-import { NETWORKS } from "../../config";
+import { NETWORKS, ARBITRUM_TOKENS } from "../../config";
+import { BridgeService } from "../../services/swap/bridge-service";
+import { ethers } from "ethers";
 
 interface SwapTabProps {
   availableTokens: Array<{
@@ -107,7 +109,7 @@ export default function SwapTab({
   const [approvalTxHash, setApprovalTxHash] = useState<string | null>(null);
   const [localSwapTxHash, setLocalSwapTxHash] = useState<string | null>(null);
   const [swapStep, setSwapStep] = useState<
-    "idle" | "approving" | "swapping" | "completed" | "error"
+    "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"
   >("idle");
 
   // Create a ref to the SwapInterface component
@@ -205,147 +207,76 @@ export default function SwapTab({
     toToken: string,
     amount: string
   ) => {
-    console.log(`Swapping ${amount} ${fromToken} to ${toToken}`);
+    console.log(`Analyzing swap/bridge for ${amount} ${fromToken} to ${toToken}`);
+
+    // Check if this is a cross-chain RWA bridge (to Arbitrum)
+    const isRwa = ["PAXG", "USDY", "OUSG"].includes(toToken);
+
+    if (isRwa) {
+      console.log("Cross-chain RWA deployment detected. Using BridgeService...");
+      setSwapStatus("Preparing cross-chain bridge to Arbitrum...");
+      setSwapStep("bridging");
+
+      try {
+        if (!window.ethereum) throw new Error("No wallet detected");
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const userAddress = await signer.getAddress();
+
+        // Map symbol to address for Arbitrum
+        const toTokenAddr = (ARBITRUM_TOKENS as any)[toToken] || ARBITRUM_TOKENS.USDC;
+
+        const result = await BridgeService.bridgeToWealth(
+          signer,
+          userAddress,
+          amount,
+          { address: fromToken, chainId: 42220 }, // Celo Mainnet source
+          { address: toTokenAddr, chainId: 42161 } // Arbitrum One target
+        );
+
+        if (result) {
+          // LI.FI execution result is in the result object
+          const txHash = result.steps?.[0]?.execution?.process?.find((p: any) => p.type === 'CROSS_CHAIN')?.txHash
+            || result.steps?.[0]?.execution?.process?.[0]?.txHash;
+
+          if (txHash) setLocalSwapTxHash(txHash);
+          setSwapStatus(`Success! Assets moved to Arbitrum ${toToken}. Check your wallet on Arbitrum.`);
+          setSwapStep("completed");
+        } else {
+          setSwapStatus("Bridge initiated. Please check your wallet for status.");
+          setSwapStep("completed");
+        }
+        return Promise.resolve();
+      } catch (err: any) {
+        console.error("Bridge failed:", err);
+        setSwapStatus(`Bridge Error: ${err.message}`);
+        setSwapStep("error");
+        return Promise.reject(err);
+      }
+    }
+
+    // Default internal swap logic...
+    console.log(`Executing standard swap for ${amount} ${fromToken} to ${toToken}`);
     setSwapStatus("Initiating swap process...");
     setSwapStep("approving");
 
     try {
-      // Reset state
-      setApprovalTxHash(null);
+      if (!address) throw new Error("Wallet not connected");
 
-      // Perform the swap with the two-step process
-      const result = await performSwap({
+      await performSwap({
         fromToken,
         toToken,
         amount,
-        slippageTolerance: 1.0, // 1% slippage tolerance for MiniPay
-        onApprovalSubmitted: (txHash) => {
-          console.log(`Approval transaction submitted: ${txHash}`);
-          setApprovalTxHash(txHash);
-          setSwapStatus(
-            `Approval transaction submitted. Waiting for confirmation...`
-          );
-        },
-        onApprovalConfirmed: () => {
-          console.log("Approval confirmed, proceeding to swap");
-          setSwapStatus("Approval confirmed. Now executing swap...");
-          setSwapStep("swapping");
-        },
-        onSwapSubmitted: (txHash) => {
-          console.log(`Swap transaction submitted: ${txHash}`);
-          setSwapStatus(
-            `Swap transaction submitted. Waiting for confirmation...`
-          );
-        },
+        onApprovalSubmitted: (hash) => setApprovalTxHash(hash),
+        onSwapSubmitted: (hash) => setLocalSwapTxHash(hash),
       });
 
-      // Note: Most status updates are handled by the useEffect and callbacks
-      if (result && result.swapTxHash) {
-        console.log(
-          `Swap completed with transaction hash: ${result.swapTxHash}`
-        );
-      }
-
-      return Promise.resolve();
-    } catch (error) {
-      console.error("Error in handleSwap:", error);
-
-      // Handle specific error cases
-      if (error instanceof Error) {
-        const errorMsg = error.message;
-
-        if (
-          errorMsg.includes("No exchange found") &&
-          (errorMsg.includes("Alfajores") || errorMsg.includes("testnet"))
-        ) {
-          // For Alfajores testnet, we'll show a more helpful message about simulated swaps
-          setSwapStatus(
-            `Note: This token pair (${fromToken}/${toToken}) doesn't have a direct exchange on Alfajores testnet. For demonstration purposes, the swap will be simulated.`
-          );
-
-          // Set a fake transaction hash for demonstration
-          const fakeHash = `0x${Array.from({ length: 64 }, () =>
-            Math.floor(Math.random() * 16).toString(16)
-          ).join("")}`;
-          setLocalSwapTxHash(fakeHash);
-
-          // Set the swap step to completed
-          setSwapStep("completed");
-        } else if (errorMsg.includes("No exchange found")) {
-          setSwapStatus(
-            `Error: This token pair (${fromToken}/${toToken}) cannot be swapped directly. Please try a different pair.`
-          );
-        } else if (errorMsg.includes("no valid median")) {
-          setSwapStatus(
-            `Error: No valid price data available for this token pair. This is common on testnets. Please try a different token pair.`
-          );
-        } else if (
-          errorMsg.includes("timeout") ||
-          errorMsg.includes("timed out")
-        ) {
-          setSwapStatus(
-            `Error: Transaction timed out. The network may be congested, but your transaction might still complete. Please check your wallet for updates.`
-          );
-        } else if (errorMsg.includes("insufficient funds")) {
-          setSwapStatus(
-            `Error: Insufficient funds for gas fees. Please add more CELO to your wallet.`
-          );
-        } else if (
-          errorMsg.includes("user rejected") ||
-          errorMsg.includes("User denied")
-        ) {
-          setSwapStatus(
-            `Transaction was rejected. Please try again when ready.`
-          );
-        } else if (
-          errorMsg.includes("Alfajores") ||
-          errorMsg.includes("testnet")
-        ) {
-          // For other Alfajores-related errors, show a more helpful message
-          setSwapStatus(
-            `Note: Alfajores testnet has limited liquidity for some token pairs. For demonstration purposes, some swaps will be simulated.`
-          );
-
-          // Set a fake transaction hash for demonstration
-          const fakeHash = `0x${Array.from({ length: 64 }, () =>
-            Math.floor(Math.random() * 16).toString(16)
-          ).join("")}`;
-          setLocalSwapTxHash(fakeHash);
-
-          // Set the swap step to completed
-          setSwapStep("completed");
-        } else if (errorMsg.includes("underpriced")) {
-          setSwapStatus(
-            `Error: Transaction underpriced. Please try again with a higher gas price or wait for network congestion to decrease.`
-          );
-        } else if (errorMsg.includes("simulated")) {
-          // For simulated swaps, show a success message
-          setSwapStatus(
-            `Success: The swap was simulated for demonstration purposes. In a production environment, this would use a multi-step swap process.`
-          );
-
-          // Set a fake transaction hash for demonstration
-          const fakeHash = `0x${Array.from({ length: 64 }, () =>
-            Math.floor(Math.random() * 16).toString(16)
-          ).join("")}`;
-          setLocalSwapTxHash(fakeHash);
-
-          // Set the swap step to completed
-          setSwapStep("completed");
-        } else {
-          // For any other error, show the message but truncate if too long
-          const truncatedMsg =
-            errorMsg.length > 100
-              ? errorMsg.substring(0, 100) + "..."
-              : errorMsg;
-          setSwapStatus(`Error: ${truncatedMsg}`);
-        }
-      } else {
-        setSwapStatus(`Error: Unknown error occurred. Please try again later.`);
-      }
-
+      setSwapStatus("Swap completed successfully!");
+      setSwapStep("completed");
+    } catch (err: any) {
+      console.error("Swap failed:", err);
+      setSwapStatus(`Error: ${err.message || "Unknown error"}`);
       setSwapStep("error");
-      return Promise.reject(error);
     }
   };
 

@@ -19,6 +19,8 @@ interface OverviewTabProps {
   setActiveTab: (tab: string) => void;
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
+  balances: any;
+  inflationData: any;
 }
 
 export default function OverviewTab({
@@ -33,6 +35,8 @@ export default function OverviewTab({
   setActiveTab,
   refreshBalances,
   refreshChainId,
+  balances,
+  inflationData,
 }: OverviewTabProps) {
   const { address, isConnecting, error, chainId, isMiniPay } = useWalletContext();
   const {
@@ -40,7 +44,12 @@ export default function OverviewTab({
     diversificationRating,
     diversificationDescription,
     diversificationTips,
-  } = useDiversification(regionData, userRegion);
+  } = useDiversification({
+    regionData,
+    balances,
+    userRegion,
+    inflationData
+  });
 
   return (
     <div className="space-y-4">
@@ -170,10 +179,10 @@ export default function OverviewTab({
                   {chainId === 44787
                     ? "Celo Alfajores"
                     : chainId === 42220
-                    ? "Celo Mainnet"
-                    : chainId
-                    ? `Chain ID: ${chainId}`
-                    : "Unknown"}
+                      ? "Celo Mainnet"
+                      : chainId
+                        ? `Chain ID: ${chainId}`
+                        : "Unknown"}
                 </div>
               </div>
             </div>
@@ -298,8 +307,8 @@ export default function OverviewTab({
                         </div>
                         <div className="text-sm ml-2 text-gray-500">/100</div>
                       </div>
-                      <div className="text-lg font-medium mb-1 text-gray-900">
-                        {diversificationRating} Diversification
+                      <div className="text-lg font-bold mb-1 text-gray-900">
+                        {diversificationRating} Wealth Protection
                       </div>
                       <div className="text-sm text-gray-700">
                         {diversificationDescription}
@@ -461,7 +470,7 @@ export default function OverviewTab({
                             width: `${(value / (totalValue || 1)) * 100}%`,
                             backgroundColor:
                               REGION_COLORS[
-                                region as keyof typeof REGION_COLORS
+                              region as keyof typeof REGION_COLORS
                               ] || "#CBD5E0",
                           }}
                         />
@@ -530,11 +539,10 @@ export default function OverviewTab({
                     <button
                       key={region}
                       onClick={() => setUserRegion(region)}
-                      className={`p-2 rounded-md transition-colors ${
-                        userRegion === region
-                          ? `bg-blue-600 border border-blue-700 text-white font-medium`
-                          : `bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100`
-                      }`}
+                      className={`p-2 rounded-md transition-colors ${userRegion === region
+                        ? `bg-blue-600 border border-blue-700 text-white font-medium`
+                        : `bg-gray-50 border border-gray-200 text-gray-700 hover:bg-gray-100`
+                        }`}
                     >
                       <div className="font-medium">{region}</div>
                     </button>

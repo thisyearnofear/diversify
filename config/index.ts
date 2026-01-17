@@ -23,20 +23,44 @@ export const NETWORKS = {
         rpcUrl: process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network',
         explorerUrl: 'https://testnet.arcscan.app',
     },
+    ARBITRUM_ONE: {
+        chainId: 42161,
+        name: 'Arbitrum One',
+        rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
+        explorerUrl: 'https://arbiscan.io',
+    },
 } as const;
 
 // Arc Data Hub Configuration (X402 Economy)
+// FREE APIs with usage-based micro-payments to prove the model
 export const ARC_DATA_HUB_CONFIG = {
     RECIPIENT_ADDRESS: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
     PRICING: {
-        'truflation': '0.05',
-        'glassnode': '0.15',
-        'heliostat': '0.02',
-        'defillama': '0.01',
-        'yearn': '0.02',
-        'messari': '0.08',
-        'alpha-vantage': '0.01',
-        'macro-regime': '0.10' // Premium aggregated signal
+        // Free APIs with enhanced processing (pay for compute/analysis)
+        'alpha_vantage_enhanced': '0.01',    // Enhanced analysis of free forex data
+        'world_bank_analytics': '0.015',     // AI analysis of free inflation data  
+        'defillama_realtime': '0.01',        // Real-time vs 5min delayed data
+        'yearn_optimizer': '0.02',           // Yield optimization algorithms
+        'coingecko_analytics': '0.015',      // Market analysis of free price data
+        'fred_insights': '0.01',             // Economic insights from free FRED data
+
+        // Usage-based charging (after free limits)
+        'alpha_vantage_premium': '0.02',     // After 25 free requests/day
+        'coingecko_premium': '0.025',        // After 50 free requests/day
+
+        // Value-added services using free data
+        'macro_analysis': '0.03',            // AI macro analysis combining free sources
+        'portfolio_optimization': '0.05',    // Advanced portfolio optimization
+        'risk_assessment': '0.02',           // Risk analysis using multiple free sources
+    },
+    FREE_LIMITS: {
+        // Daily free request limits before x402 kicks in
+        'alpha_vantage': 25,
+        'coingecko': 50,
+        'world_bank': 100,
+        'defillama': 200,
+        'yearn': 100,
+        'fred': 100
     },
     USDC_TESTNET: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
     CHAIN_ID: 5042002
@@ -74,6 +98,14 @@ export const ALFAJORES_TOKENS = {
 // Token Addresses - Arc Testnet
 export const ARC_TOKENS = {
     USDC: '0x3600000000000000000000000000000000000000', // Native USDC ERC20 interface
+} as const;
+
+// Token Addresses - Arbitrum One (RWAs)
+export const ARBITRUM_TOKENS = {
+    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    PAXG: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429', // Tokenized Gold
+    USDY: '0x96F6eF951840721AdBF46Ac996b59E0235CB985C', // Ondo USD Yield
+    OUSG: '0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92', // Ondo US Treasury
 } as const;
 
 // Broker Addresses
@@ -121,6 +153,8 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CZAR: 0.055,
     CCAD: 0.74,
     CAUD: 0.66,
+    PAXG: 2000, // Placeholder Gold Price - Should be fetched dynamically
+    USDY: 1.0,  // Yield-bearing dollar
 } as const;
 
 // Region Configuration
@@ -158,6 +192,9 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
     CCAD: { name: 'Canadian Dollar', region: 'USA' },
     CAUD: { name: 'Australian Dollar', region: 'ASIA' },
     USDC: { name: 'USD Coin', region: 'GLOBAL' },
+    PAXG: { name: 'Paxos Gold', region: 'GLOBAL' },
+    USDY: { name: 'Ondo US Dollar Yield', region: 'USA' },
+    OUSG: { name: 'Ondo US Treasury Bond', region: 'USA' },
 } as const;
 
 // ABIs
@@ -187,6 +224,7 @@ export const ABIS = {
 // Helper functions
 export function getTokenAddresses(chainId: number) {
     if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
+    if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
     return chainId === NETWORKS.ALFAJORES.chainId ? ALFAJORES_TOKENS : MAINNET_TOKENS;
 }
 
@@ -203,5 +241,7 @@ export function getNetworkConfig(chainId: number) {
         ? NETWORKS.ALFAJORES
         : chainId === NETWORKS.ARC_TESTNET.chainId
             ? NETWORKS.ARC_TESTNET
-            : NETWORKS.CELO_MAINNET;
+            : chainId === NETWORKS.ARBITRUM_ONE.chainId
+                ? NETWORKS.ARBITRUM_ONE
+                : NETWORKS.CELO_MAINNET;
 }

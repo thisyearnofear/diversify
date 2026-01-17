@@ -55,6 +55,11 @@ export const AVAILABLE_TOKENS = [
 
   // Arc Mainnet
   { symbol: "USDC", name: "USD Coin", region: "USA" },
+
+  // Arbitrum RWAs (Safe Havens)
+  { symbol: "PAXG", name: "Paxos Gold", region: "Commodity" },
+  { symbol: "USDY", name: "Ondo USD Yield", region: "Treasury" },
+  { symbol: "OUSG", name: "Ondo US Bonds", region: "Treasury" },
 ];
 
 // Mock data for region visualization (used as initial state)
@@ -99,7 +104,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
   czar: 0.055,
   ccad: 0.74,
   caud: 0.66,
-  
+
   // USDC
   USDC: 1,
   usdc: 1,

@@ -56,6 +56,30 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             description: 'Real yield from GMX trading fees and liquidations',
             minInvestment: 50,
             riskLevel: 'medium'
+        },
+        {
+            address: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
+            symbol: 'PAXG',
+            name: 'Paxos Gold',
+            type: 'commodity',
+            apy: 0,
+            tvl: 10000000,
+            chain: 'arbitrum',
+            description: 'Tokenized gold on Arbitrum - hedge against currency debasement',
+            minInvestment: 10,
+            riskLevel: 'medium'
+        },
+        {
+            address: '0xEstateProtocolPropertyAddr', // Placeholder for dynamic property tokens
+            symbol: 'PROP',
+            name: 'Estate Protocol Property',
+            type: 'real_estate',
+            apy: 8.5,
+            tvl: 5000000,
+            chain: 'arbitrum',
+            description: 'Fractional ownership of rental property with USDC payouts',
+            minInvestment: 250,
+            riskLevel: 'medium'
         }
     ],
     ethereum: [
@@ -188,8 +212,9 @@ export class RWAService {
         }
 
         // Filter by minimum APY
-        if (preferences.minAPY) {
-            tokens = tokens.filter(t => (t.apy || 0) >= preferences.minAPY);
+        if (preferences.minAPY !== undefined) {
+            const minAPY = preferences.minAPY;
+            tokens = tokens.filter(t => (t.apy || 0) >= minAPY);
         }
 
         // Filter by risk tolerance

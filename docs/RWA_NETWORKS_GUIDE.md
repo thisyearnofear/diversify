@@ -10,7 +10,7 @@
   - **GMX**: GLP (Real yield from trading fees)
   - **Radiant Capital**: Real yield lending
 - **TVL**: $2.5B+ in RWA protocols
-- **Integration**: Native support in your Arc Agent
+- **Integration**: LIVE integration in `SwapTab` and `AgentWealthGuard` via LI.FI SDK.
 
 ### 2. **Ethereum Mainnet** 
 - **Why it's good**: Most established RWA protocols

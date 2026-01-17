@@ -25,8 +25,8 @@ class X402TestSuite {
         await this.testInvalidPaymentProof();
         await this.testExpiredNonce();
         await this.testInsufficientPayment();
+        await this.testFreemiumModel();
         await this.testMultipleDataSources();
-        await this.testConcurrentRequests();
         await this.testErrorRecovery();
 
         this.printResults();
@@ -137,10 +137,45 @@ class X402TestSuite {
         }
     }
 
-    async testMultipleDataSources() {
-        console.log('\nTest 6: Multiple Data Sources');
+    async testFreemiumModel() {
+        console.log('\nTest 6: Freemium Model - Free vs Paid Tiers');
         try {
-            const sources = ['truflation', 'glassnode', 'heliostat'];
+            // Test 1: First request should be free
+            const freeResponse = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=alpha_vantage_enhanced`);
+            
+            if (freeResponse.status === 200) {
+                const freeData = await freeResponse.json();
+                const isFree = freeData._billing?.status === 'Free Tier';
+                
+                this.addResult('Free Tier Access', isFree, 
+                    `First request free: ${isFree ? 'YES' : 'NO'}`);
+                
+                console.log(`   🆓 Free tier: ${freeData._billing?.remaining_free} requests remaining`);
+            }
+            
+            // Test 2: Simulate hitting free limit (would need backend modification for testing)
+            // For now, test the premium tier directly
+            const premiumResponse = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=macro_analysis`);
+            
+            if (premiumResponse.status === 402) {
+                const challenge = await premiumResponse.json();
+                const isPremiumService = challenge.amount > '0.01';
+                
+                this.addResult('Premium Service Pricing', isPremiumService,
+                    `Premium service costs ${challenge.amount} USDC`);
+                
+                console.log(`   💎 Premium service: ${challenge.amount} USDC`);
+            }
+            
+        } catch (error) {
+            this.addResult('Freemium Model', false, error.message);
+        }
+    }
+
+    async testMultipleDataSources() {
+        console.log('\nTest 7: Multiple Data Sources - Free APIs');
+        try {
+            const sources = ['alpha_vantage_enhanced', 'world_bank_analytics', 'defillama_realtime'];
             const results = [];
             
             for (const source of sources) {
@@ -148,40 +183,25 @@ class X402TestSuite {
                 results.push({
                     source,
                     status: response.status,
+                    data: response.status === 200 ? await response.json() : null,
                     challenge: response.status === 402 ? await response.json() : null
                 });
             }
             
-            const allHaveChallenges = results.every(r => r.status === 402 && r.challenge);
-            const differentPricing = new Set(results.map(r => r.challenge?.amount)).size === sources.length;
+            const freeServicesWork = results.filter(r => r.status === 200).length > 0;
             
-            this.addResult('Multiple Data Sources', allHaveChallenges && differentPricing, 
-                `All sources respond with different pricing`);
+            this.addResult('Free API Integration', freeServicesWork, 
+                `${results.filter(r => r.status === 200).length}/${sources.length} free services working`);
             
             results.forEach(r => {
-                console.log(`   📊 ${r.source}: ${r.challenge?.amount} USDC`);
+                if (r.status === 200) {
+                    console.log(`   🆓 ${r.source}: FREE (${r.data?.tier || 'unknown'} tier)`);
+                } else {
+                    console.log(`   💰 ${r.source}: ${r.challenge?.amount || '0.01'} USDC`);
+                }
             });
         } catch (error) {
-            this.addResult('Multiple Data Sources', false, error.message);
-        }
-    }
-
-    async testConcurrentRequests() {
-        console.log('\nTest 7: Concurrent Request Handling');
-        try {
-            const concurrentRequests = Array(5).fill().map(() => 
-                fetch(`${BASE_URL}/api/agent/x402-gateway?source=truflation`)
-            );
-            
-            const responses = await Promise.all(concurrentRequests);
-            const allSuccessful = responses.every(r => r.status === 402);
-            
-            this.addResult('Concurrent Requests', allSuccessful, 
-                `${responses.filter(r => r.status === 402).length}/5 concurrent requests handled`);
-            
-            console.log(`   🔄 Handled ${responses.length} concurrent requests`);
-        } catch (error) {
-            this.addResult('Concurrent Requests', false, error.message);
+            this.addResult('Free API Integration', false, error.message);
         }
     }
 

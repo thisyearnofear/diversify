@@ -87,7 +87,7 @@ export default function AnalyticsTab({
   // Get emerging market data for the selected region
   const emergingMarketData =
     EMERGING_MARKETS_DATA[
-      selectedRegion as keyof typeof EMERGING_MARKETS_DATA
+    selectedRegion as keyof typeof EMERGING_MARKETS_DATA
     ] || EMERGING_MARKETS_DATA.Africa;
 
   // Log regional data for debugging
@@ -121,11 +121,10 @@ export default function AnalyticsTab({
           {Object.keys(inflationData).map((region) => (
             <button
               key={region}
-              className={`p-3 text-xs rounded-md transition-colors flex flex-col items-center shadow-sm ${
-                region === selectedRegion
-                  ? `bg-region-${region.toLowerCase()}-light border-2 border-region-${region.toLowerCase()}-medium text-region-${region.toLowerCase()}-dark font-bold`
-                  : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-              }`}
+              className={`p-3 text-xs rounded-md transition-colors flex flex-col items-center shadow-sm ${region === selectedRegion
+                ? `bg-region-${region.toLowerCase()}-light border-2 border-region-${region.toLowerCase()}-medium text-region-${region.toLowerCase()}-dark font-bold`
+                : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                }`}
               onClick={() => changeRegion(region as Region)}
             >
               <RegionalIconography
@@ -222,6 +221,7 @@ export default function AnalyticsTab({
                 inflationRate={selectedRegionInflationRate}
                 years={5}
                 initialAmount={100}
+                safeHavenYield={5.2}
               />
             </div>
 
@@ -241,6 +241,7 @@ export default function AnalyticsTab({
             inflationRate={selectedRegionInflationRate}
             years={5}
             initialAmount={100}
+            safeHavenYield={5.2} // Ondo OUSG benchmark
           />
 
           {/* Currency Performance Chart with better contrast */}

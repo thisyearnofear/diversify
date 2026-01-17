@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { ARBITRUM_TOKENS } from "../config";
 
 interface RegionData {
   region: string;
@@ -6,8 +7,15 @@ interface RegionData {
   color: string;
 }
 
-export function useDiversification(regionData: RegionData[], userRegion: string) {
-  // Calculate diversification score (0-100)
+interface WealthProtectionParams {
+  regionData: RegionData[];
+  balances: any;
+  userRegion: string;
+  inflationData?: any;
+}
+
+export function useDiversification({ regionData, balances, userRegion, inflationData }: WealthProtectionParams) {
+  // Calculate Wealth Protection Score (0-100)
   const diversificationScore = useMemo(() => {
     if (regionData.length === 0) return 0;
 
@@ -33,8 +41,28 @@ export function useDiversification(regionData: RegionData[], userRegion: string)
 
     // Combine metrics (weighted)
     const regionsScore = (significantRegions / 5) * 100;
-    return Math.round(regionsScore * 0.6 + distributionScore * 0.4);
-  }, [regionData]);
+    const baseScore = Math.round(regionsScore * 0.6 + distributionScore * 0.4);
+
+    // --- WEALTH PROTECTION ENHANCEMENTS ---
+    let protectionBonus = 0;
+
+    // 1. RWA Bonus (Gold/Treasuries)
+    const hasGold = balances?.PAXG || balances?.paxg;
+    const hasTreasuries = balances?.OUSG || balances?.ousg || balances?.USDY || balances?.usdy;
+
+    if (hasGold) protectionBonus += 15;
+    if (hasTreasuries) protectionBonus += 10;
+
+    // 2. Inflation Hedge Bonus
+    const userRegionInflation = inflationData?.[userRegion]?.avgRate || 3.0;
+    const isHedging = (hasGold || hasTreasuries) && userRegionInflation > 5;
+    if (isHedging) protectionBonus += 10;
+
+    // 3. Efficiency / Global Bonus
+    if (balances?.USDC || balances?.usdc) protectionBonus += 5;
+
+    return Math.min(100, baseScore + protectionBonus);
+  }, [regionData, balances, userRegion, inflationData]);
 
   // Get rating based on score
   const diversificationRating = useMemo(() => {
@@ -48,13 +76,13 @@ export function useDiversification(regionData: RegionData[], userRegion: string)
   // Get description based on score
   const diversificationDescription = useMemo(() => {
     if (diversificationScore >= 80)
-      return "well-diversified across multiple regions, providing excellent protection against regional economic risks.";
+      return "excellent wealth protection. Your portfolio is globally diversified and includes RWA hedges against inflation.";
     if (diversificationScore >= 60)
-      return "reasonably diversified, but could benefit from some adjustments to improve balance.";
+      return "good regional balance. Adding more Arbitrum RWAs could further insulate you from local currency volatility.";
     if (diversificationScore >= 40)
-      return "somewhat diversified, but has significant concentration in certain regions.";
-    if (diversificationScore >= 20) return "poorly diversified with high concentration risk.";
-    return "extremely concentrated and vulnerable to regional economic risks.";
+      return "fair diversification, but high exposure to local inflation risks detected.";
+    if (diversificationScore >= 20) return "poorly protected. Your savings are highly vulnerable to regional economic downturns.";
+    return "highly concentrated. Your wealth is extremely exposed to single-region risk.";
   }, [diversificationScore]);
 
   // Get improvement tips based on score and region
@@ -82,7 +110,8 @@ export function useDiversification(regionData: RegionData[], userRegion: string)
       tips.push(
         `Consider adding exposure to ${missingRegions.join(
           ", "
-        )} to improve diversification.`
+        )
+        } to improve diversification.`
       );
     }
 
@@ -95,16 +124,33 @@ export function useDiversification(regionData: RegionData[], userRegion: string)
       tips.push(
         `Reduce concentration in ${highConcentrationRegions.join(
           ", "
-        )} by swapping to other regions.`
+        )
+        } by swapping to other regions.`
       );
     }
 
     // User region specific advice (>50% in home region)
     if (userRegion && regionCounts[userRegion] && totalValue > 0 &&
-        (regionCounts[userRegion] / totalValue) * 100 > 50) {
-      tips.push(
-        `You have high exposure to your home region (${userRegion}). Consider diversifying more internationally.`
-      );
+      (regionCounts[userRegion] / totalValue) * 100 > 50) {
+      const inflation = inflationData?.[userRegion]?.avgRate || 0;
+      if (inflation > 5) {
+        tips.push(
+          `Alert: High inflation(${inflation} %) in ${userRegion} is eroding your savings.Move to Arbitrum Gold or Treasuries.`
+        );
+      } else {
+        tips.push(
+          `You have high exposure to your home region(${userRegion}).Consider diversifying internationally.`
+        );
+      }
+    }
+
+    // RWA Specific Tips
+    if (!balances?.PAXG && !balances?.paxg) {
+      tips.push("Add Paxos Gold (PAXG) on Arbitrum as a hedge against currency debasement.");
+    }
+
+    if (!balances?.USDY && !balances?.ousg) {
+      tips.push("Consider Ondo Treasuries (USDY/OUSG) for low-risk 5% USD yields.");
     }
 
     // If no specific tips, give general advice
