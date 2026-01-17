@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import { useWallet } from "../hooks/use-wallet";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
 import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
 import { useHistoricalPerformance } from "../hooks/use-historical-performance";
@@ -18,23 +17,27 @@ import AnalyticsTab from "../components/tabs/AnalyticsTab";
 import StrategiesTab from "../components/tabs/StrategiesTab";
 import SwapTab from "../components/tabs/SwapTab";
 import InfoTab from "../components/tabs/InfoTab";
-import { ConnectWalletButton } from "../components/ConnectWalletButton";
+import WalletButton from "../components/WalletButton";
+import { useWalletContext } from "../components/WalletProvider";
+import { useWalletTutorial, WalletTutorial } from "../components/WalletTutorial";
 
 export default function DiversiFiPage() {
   // Tab state
   const [activeTab, setActiveTab] = useState("protect");
   const [selectedStrategy, setSelectedStrategy] = useState("balanced");
 
-  // Wallet connection
+  // Wallet connection from context
   const {
     isMiniPay: isInMiniPay,
     address,
-    chainId,
-    isConnecting,
-    error,
     connect: connectWallet,
-    formatAddress,
-  } = useWallet();
+  } = useWalletContext();
+
+  // Wallet tutorial
+  const {
+    isTutorialOpen,
+    closeTutorial,
+  } = useWalletTutorial();
 
   // Use our custom hooks
   const { region: detectedRegion, isLoading: isRegionLoading } =
@@ -88,11 +91,11 @@ export default function DiversiFiPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <Head>
-        <title>DiversiFi - MiniPay</title>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-        />
+          <title>DiversiFi - MiniPay</title>
+          <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta
@@ -113,13 +116,7 @@ export default function DiversiFiPage() {
               </span>
             )}
           </div>
-          <ConnectWalletButton
-            address={address}
-            isConnecting={isConnecting}
-            connectWallet={connectWallet}
-            formatAddress={formatAddress}
-            isInMiniPay={isInMiniPay}
-          />
+          <WalletButton />
         </div>
 
         {/* Mobile tabs with icons */}
@@ -128,13 +125,6 @@ export default function DiversiFiPage() {
         {/* Tab Content */}
         {activeTab === "overview" && (
           <OverviewTab
-            address={address}
-            isConnecting={isConnecting}
-            error={error}
-            connectWallet={connectWallet}
-            isInMiniPay={isInMiniPay}
-            formatAddress={formatAddress}
-            chainId={chainId}
             regionData={regionData}
             regionTotals={regionTotals}
             totalValue={totalValue}
@@ -186,10 +176,6 @@ export default function DiversiFiPage() {
         {/* Swap Tab */}
         {activeTab === "swap" && (
           <SwapTab
-            address={address}
-            isConnecting={isConnecting}
-            connectWallet={connectWallet}
-            isInMiniPay={isInMiniPay}
             availableTokens={AVAILABLE_TOKENS}
             userRegion={userRegion}
             selectedStrategy={selectedStrategy}
@@ -204,13 +190,17 @@ export default function DiversiFiPage() {
         {activeTab === "info" && (
           <InfoTab
             availableTokens={AVAILABLE_TOKENS}
-            isInMiniPay={isInMiniPay}
-            chainId={chainId}
-            address={address}
-            formatAddress={formatAddress}
           />
         )}
       </div>
+      
+      {/* Wallet Tutorial Modal */}
+      <WalletTutorial
+        isOpen={isTutorialOpen}
+        onClose={closeTutorial}
+        onConnect={connectWallet}
+        isMiniPay={isInMiniPay}
+      />
     </div>
   );
 }

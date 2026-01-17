@@ -6,12 +6,10 @@ import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
 import RealLifeScenario from "../RealLifeScenario";
 import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
+import { useWalletContext } from "../WalletProvider";
+import WalletButton from "../WalletButton";
 
 interface SwapTabProps {
-  address: string | null;
-  isConnecting: boolean;
-  connectWallet: () => Promise<void>;
-  isInMiniPay: boolean;
   availableTokens: Array<{
     symbol: string;
     name: string;
@@ -67,10 +65,6 @@ const getSwapUseCase = (fromRegion: Region, toRegion: Region): string => {
 };
 
 export default function SwapTab({
-  address,
-  isConnecting,
-  connectWallet,
-  isInMiniPay,
   availableTokens,
   userRegion,
   selectedStrategy,
@@ -79,6 +73,7 @@ export default function SwapTab({
   refreshChainId,
   isBalancesLoading,
 }: SwapTabProps) {
+  const { address, isConnecting, isMiniPay } = useWalletContext();
   const { dataSource: inflationDataSource } = useInflationData();
   const [selectedScenario, setSelectedScenario] = useState<
     "education" | "remittance" | "business" | "travel" | "savings"
@@ -430,15 +425,10 @@ export default function SwapTab({
         {/* Swap Interface - Moved to the top */}
         {!address ? (
           <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 shadow-sm mb-4">
-            <p className="text-sm text-yellow-800 font-medium">
+            <p className="text-sm text-yellow-800 font-medium mb-3">
               Please connect your wallet to swap stablecoins.
             </p>
-            <button
-              onClick={connectWallet}
-              className="mt-2 bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-md transition-colors"
-            >
-              Connect Wallet
-            </button>
+            <WalletButton variant="inline" />
           </div>
         ) : (
           <div className="mb-6">
@@ -602,13 +592,8 @@ export default function SwapTab({
                   savings.
                 </p>
 
-                {!isInMiniPay && (
-                  <button
-                    onClick={connectWallet}
-                    className={`bg-region-${userRegion.toLowerCase()}-medium hover:bg-region-${userRegion.toLowerCase()}-dark text-white px-4 py-2 rounded-md transition-colors`}
-                  >
-                    Connect Wallet
-                  </button>
+                {!isMiniPay && (
+                  <WalletButton variant="inline" />
                 )}
               </div>
             </div>

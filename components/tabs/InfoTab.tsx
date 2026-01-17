@@ -1,5 +1,7 @@
 import React from "react";
 import { REGION_COLORS } from "../../constants/regions";
+import { useWalletContext } from "../WalletProvider";
+import { useToast } from "../Toast";
 
 interface InfoTabProps {
   availableTokens: Array<{
@@ -7,19 +9,13 @@ interface InfoTabProps {
     name: string;
     region: string;
   }>;
-  isInMiniPay: boolean;
-  chainId: number | null;
-  address: string | null;
-  formatAddress: (addr: string) => string;
 }
 
 export default function InfoTab({
   availableTokens,
-  isInMiniPay,
-  chainId,
-  address,
-  formatAddress,
 }: InfoTabProps) {
+  const { address, chainId, isMiniPay, formatAddress } = useWalletContext();
+  const { showToast } = useToast();
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
@@ -148,7 +144,7 @@ export default function InfoTab({
             <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200">
               <div className="text-xs text-gray-500 mb-1">MiniPay Status</div>
               <div className="font-bold flex items-center">
-                {isInMiniPay ? (
+                {isMiniPay ? (
                   <>
                     <span className="inline-block size-3 bg-green-500 rounded-full mr-2"></span>
                     <span className="text-green-700">Detected</span>
@@ -176,20 +172,21 @@ export default function InfoTab({
                           chainIdHex as string,
                           16
                         );
-                        alert(
+                        showToast(
                           `Network refreshed: ${
                             detectedChainId === 44787
                               ? "Celo Alfajores Testnet"
                               : detectedChainId === 42220
                               ? "Celo Mainnet"
                               : `Chain ID: ${detectedChainId}`
-                          }`
+                          }`,
+                          "info"
                         );
                         // Force a page refresh to update all components
                         window.location.reload();
                       } catch (err) {
                         console.warn("Error refreshing chain ID:", err);
-                        alert("Failed to refresh network information");
+                        showToast("Failed to refresh network information", "error");
                       }
                     }
                   }}
@@ -257,7 +254,7 @@ export default function InfoTab({
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(address);
-                      alert("Wallet address copied to clipboard!");
+                      showToast("Address copied to clipboard!", "success");
                     }}
                     className="flex items-center font-mono bg-gray-50 px-2 py-1 rounded hover:bg-gray-100 transition-colors"
                     title="Click to copy wallet address"

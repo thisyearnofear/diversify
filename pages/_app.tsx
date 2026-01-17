@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { WalletProvider } from "../components/WalletProvider";
+import { ToastProvider } from "../components/Toast";
 import { useRouter } from "next/router";
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -80,9 +81,11 @@ export default function App({ Component, pageProps }: AppProps) {
         {/* Debug overlay removed */}
 
         {/* Wrap with WalletProvider and pass isInMiniPay prop to all components */}
-        <WalletProvider>
-          <Component {...pageProps} isInMiniPay={isInMiniPay} />
-        </WalletProvider>
+        <ToastProvider>
+          <WalletProvider>
+            <Component {...pageProps} isInMiniPay={isInMiniPay} />
+          </WalletProvider>
+        </ToastProvider>
       </ErrorBoundary>
     </>
   );

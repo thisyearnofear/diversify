@@ -4,15 +4,10 @@ import { useDiversification } from "@/hooks/use-diversification";
 import { REGION_COLORS } from "@/constants/regions";
 import type { Region } from "@/hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
+import { useWalletContext } from "../WalletProvider";
+import WalletButton from "../WalletButton";
 
 interface OverviewTabProps {
-  address: string | null;
-  isConnecting: boolean;
-  error: string | null;
-  connectWallet: () => Promise<void>;
-  isInMiniPay: boolean;
-  formatAddress: (addr: string) => string;
-  chainId: number | null;
   regionData: Array<{ region: string; value: number; color: string }>;
   regionTotals: Record<string, number>;
   totalValue: number;
@@ -27,13 +22,6 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({
-  address,
-  isConnecting,
-  error,
-  connectWallet,
-  isInMiniPay,
-  formatAddress,
-  chainId,
   regionData,
   regionTotals,
   totalValue,
@@ -46,6 +34,7 @@ export default function OverviewTab({
   refreshBalances,
   refreshChainId,
 }: OverviewTabProps) {
+  const { address, isConnecting, error, chainId, isMiniPay } = useWalletContext();
   const {
     diversificationScore,
     diversificationRating,
@@ -79,20 +68,7 @@ export default function OverviewTab({
               Diversify your stablecoins across regions to hedge against
               inflation
             </p>
-            {isInMiniPay ? (
-              <div
-                className={`bg-region-${userRegion.toLowerCase()}-light p-3 rounded-md mb-4 text-region-${userRegion.toLowerCase()}-dark`}
-              >
-                MiniPay detected. Connecting automatically...
-              </div>
-            ) : (
-              <button
-                onClick={connectWallet}
-                className={`w-full bg-region-${userRegion.toLowerCase()}-medium hover:bg-region-${userRegion.toLowerCase()}-dark text-white font-medium py-3 px-4 rounded-md transition-colors`}
-              >
-                Connect Wallet
-              </button>
-            )}
+            <WalletButton variant="inline" className="w-full" />
           </div>
         </div>
       )}
