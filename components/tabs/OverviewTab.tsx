@@ -6,6 +6,7 @@ import type { Region } from "@/hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
+import NetworkSwitcher from "../NetworkSwitcher";
 
 interface OverviewTabProps {
   regionData: Array<{ region: string; value: number; color: string }>;
@@ -175,15 +176,15 @@ export default function OverviewTab({
                     </svg>
                   </button>
                 )}
-                <div className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium border border-blue-200">
-                  {chainId === 44787
-                    ? "Celo Alfajores"
-                    : chainId === 42220
-                      ? "Celo Mainnet"
-                      : chainId
-                        ? `Chain ID: ${chainId}`
-                        : "Unknown"}
-                </div>
+                <NetworkSwitcher
+                  currentChainId={chainId}
+                  onNetworkChange={async () => {
+                    // Refresh balances and chain ID after network switch
+                    if (refreshChainId) await refreshChainId();
+                    if (refreshBalances) await refreshBalances();
+                  }}
+                  compact
+                />
               </div>
             </div>
 

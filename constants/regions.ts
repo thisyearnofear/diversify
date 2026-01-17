@@ -53,7 +53,7 @@ export const AVAILABLE_TOKENS = [
   { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
   { symbol: "CAUD", name: "Australian Dollar", region: "Asia" },
 
-  // Arc Mainnet
+  // Arc Testnet (Mainnet planned for 2026)
   { symbol: "USDC", name: "USD Coin", region: "USA" },
 
   // Arbitrum RWAs (Safe Havens)

@@ -11,6 +11,7 @@ import WalletButton from "../WalletButton";
 import { NETWORKS, ARBITRUM_TOKENS } from "../../config";
 import { BridgeService } from "../../services/swap/bridge-service";
 import { ethers } from "ethers";
+import NetworkSwitcher from "../NetworkSwitcher";
 
 interface SwapTabProps {
   availableTokens: Array<{
@@ -333,17 +334,15 @@ export default function SwapTab({
                 </svg>
               </button>
             )}
-            <div className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium border border-blue-200">
-              {chainId === NETWORKS.ALFAJORES.chainId
-                ? "Celo Alfajores"
-                : chainId === NETWORKS.CELO_MAINNET.chainId
-                  ? "Celo Mainnet"
-                  : chainId === NETWORKS.ARC_TESTNET.chainId
-                    ? "Arc Testnet"
-                    : chainId
-                      ? `Chain ID: ${chainId}`
-                      : "Unknown"}
-            </div>
+            <NetworkSwitcher
+              currentChainId={chainId}
+              onNetworkChange={async () => {
+                // Refresh balances and chain ID after network switch
+                if (refreshChainId) await refreshChainId();
+                if (refreshBalances) await refreshBalances();
+              }}
+              compact
+            />
             {inflationDataSource === "api" ? (
               <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium shadow-sm border border-green-200">
                 Live Data
