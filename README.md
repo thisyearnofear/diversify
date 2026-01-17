@@ -82,4 +82,4 @@ Features autonomous wealth protection powered by Google Gemini 3.0 Flash:
 MIT License
 
 ---
-*Live Demo: [https://stable-station.netlify.app/diversifi](https://stable-station.netlify.app/diversifi)*
+*Live Demo: [https://diversifiapp.vercel.app/](https://diversifiapp.vercel.app/)*

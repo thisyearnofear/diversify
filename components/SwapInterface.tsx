@@ -7,6 +7,66 @@ import { SwapErrorHandler } from "../services/swap/error-handler";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
 import { REGION_COLORS } from "../constants/regions";
 import TokenSelector from "./swap/TokenSelector";
+import { NETWORKS } from "../config";
+
+interface Token {
+  symbol: string;
+  name: string;
+  icon?: string;
+  region: string;
+}
+
+interface SwapInterfaceProps {
+  availableTokens: Token[];
+  onSwap?: (
+    fromToken: string,
+    toToken: string,
+    amount: string
+  ) => Promise<void>;
+  title?: string;
+  address?: string | null;
+  preferredFromRegion?: string;
+  preferredToRegion?: string;
+}
+
+// Compact AI Insight Component for SwapInterface
+const SwapAIInsight = ({
+  fromToken,
+  toToken,
+  inflationDifference,
+  onAskAI
+}: {
+  fromToken: string;
+  toToken: string;
+  inflationDifference: number;
+  onAskAI: () => void;
+}) => {
+  if (inflationDifference <= 0) return null;
+
+  return (
+    <div className="bg-blue-50 border-l-2 border-blue-400 p-3 mb-4 rounded-r">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-blue-600">💡</span>
+          <div>
+            <p className="text-sm font-medium text-blue-800">
+              AI Insight: Swapping to {toToken} could save ~${(inflationDifference * 10).toFixed(0)} over 6 months
+            </p>
+            <p className="text-xs text-blue-600">
+              Based on {inflationDifference.toFixed(1)}% lower inflation rate
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onAskAI}
+          className="text-blue-600 text-xs px-2 py-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
+        >
+          Tell me more →
+        </button>
+      </div>
+    </div>
+  );
+};
 
 interface Token {
   symbol: string;
@@ -244,6 +304,19 @@ const SwapInterface = forwardRef<
           )}
         </div>
 
+        {/* AI Insight for beneficial swaps */}
+        {fromToken && toToken && hasInflationBenefit && (
+          <SwapAIInsight
+            fromToken={fromToken}
+            toToken={toToken}
+            inflationDifference={inflationDifference}
+            onAskAI={() => {
+              // This would trigger the AI chat interface
+              console.log('AI insight requested for swap analysis');
+            }}
+          />
+        )}
+
         {/* Network Nudge in Swap Interface */}
         {address && isMockData && (
           <div className="mb-4 bg-amber-50 border border-amber-200 rounded-lg p-3 shadow-sm animate-pulse-subtle">
@@ -263,7 +336,7 @@ const SwapInterface = forwardRef<
                       if (typeof window !== 'undefined' && window.ethereum) {
                         window.ethereum.request({
                           method: 'wallet_switchEthereumChain',
-                          params: [{ chainId: '0xa4ec' }], // Celo Mainnet
+                          params: [{ chainId: `0x${NETWORKS.CELO_MAINNET.chainId.toString(16)}` }], // Celo Mainnet
                         }).catch((e: any) => {
                           console.error("Error switching to Celo mainnet", e);
                         });
@@ -278,7 +351,7 @@ const SwapInterface = forwardRef<
                       if (typeof window !== 'undefined' && window.ethereum) {
                         window.ethereum.request({
                           method: 'wallet_switchEthereumChain',
-                          params: [{ chainId: '0x4ce6e6' }], // Arc Testnet (5042002)
+                          params: [{ chainId: `0x${NETWORKS.ARC_TESTNET.chainId.toString(16)}` }], // Arc Testnet
                         }).catch((e: any) => {
                           console.error("Error switching to Arc Testnet", e);
                         });
@@ -696,9 +769,11 @@ const SwapInterface = forwardRef<
                     <div className="mt-2">
                       <a
                         href={
-                          chainId === 44787
-                            ? `https://alfajores.celoscan.io/tx/${txHash}`
-                            : `https://explorer.celo.org/mainnet/tx/${txHash}`
+                          chainId === NETWORKS.ALFAJORES.chainId
+                            ? `${NETWORKS.ALFAJORES.explorerUrl}/tx/${txHash}`
+                            : chainId === NETWORKS.ARC_TESTNET.chainId
+                              ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${txHash}`
+                              : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`
                         }
                         target="_blank"
                         rel="noopener noreferrer"

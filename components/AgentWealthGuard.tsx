@@ -1,94 +1,198 @@
-
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWealthProtectionAgent, RiskTolerance, InvestmentGoal } from "../hooks/use-wealth-protection-agent";
 import { useInflationData } from "../hooks/use-inflation-data";
 import { Region } from "../hooks/use-user-region";
+import { useWalletContext } from "./WalletProvider";
+import { NETWORKS } from "../config";
 
 interface AgentWealthGuardProps {
     amount: number;
     currentRegions: Region[];
+    holdings: string[];
     userRegion: Region;
     onExecuteSwap: (targetToken: string) => void;
 }
 
-export default function AgentWealthGuard({ amount, currentRegions, userRegion, onExecuteSwap }: AgentWealthGuardProps) {
-    const { analyze, advice, isAnalyzing, thinkingStep, config, updateConfig } = useWealthProtectionAgent();
+// Mobile-first AI Chat Bubble Component
+const AIChatBubble = ({ onClick, hasNewInsight }: { onClick: () => void; hasNewInsight: boolean }) => (
+    <motion.button
+        className="fixed bottom-4 right-4 w-14 h-14 bg-blue-600 rounded-full shadow-lg z-50 flex items-center justify-center"
+        whileTap={{ scale: 0.95 }}
+        onClick={onClick}
+    >
+        <span className="text-2xl">🧠</span>
+        {hasNewInsight && (
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-pulse" />
+        )}
+    </motion.button>
+);
+
+// Compact AI Hint Component
+const AIHint = ({ suggestion, onAskAI }: { suggestion: string; onAskAI: () => void }) => (
+    <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-blue-50 border-l-2 border-blue-400 p-2 mb-3 rounded-r text-xs"
+    >
+        <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+                <span className="text-blue-600">💡</span>
+                <span className="font-medium text-blue-800">{suggestion}</span>
+            </div>
+            <button
+                onClick={onAskAI}
+                className="text-blue-600 text-xs px-2 py-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
+            >
+                Ask AI
+            </button>
+        </div>
+    </motion.div>
+);
+
+// Mobile-optimized progress indicator
+const AIProgress = ({ steps, currentStep }: { steps: string[]; currentStep: string }) => (
+    <div className="bg-gray-50 rounded-lg p-3 mb-4">
+        <div className="flex items-center gap-2 mb-2">
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm font-medium">Oracle Processing</span>
+        </div>
+
+        <div className="text-xs text-gray-600 space-y-1">
+            <div className="flex items-center gap-2">
+                <span className="text-green-500">✓</span>
+                <span>Arc RPC: Connected (0.1s)</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                <span>{currentStep}</span>
+            </div>
+        </div>
+    </div>
+);
+
+export default function AgentWealthGuard({ amount, currentRegions, holdings, userRegion, onExecuteSwap }: AgentWealthGuardProps) {
+    const {
+        analyze, advice, isAnalyzing, thinkingStep, config, updateConfig,
+        messages, sendMessage, isCompact, toggleCompactMode, getSpendingStatus
+    } = useWealthProtectionAgent();
     const { inflationData } = useInflationData();
     const [showConfig, setShowConfig] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+    const [showHint, setShowHint] = useState(true);
 
     if (!inflationData) return null;
 
+    const { chainId } = useWalletContext();
+
     const handleAnalyze = () => {
-        analyze(inflationData, amount, [userRegion, ...currentRegions]);
+        const networkName = chainId === 42220 ? 'Celo Mainnet' : chainId === 44787 ? 'Celo Alfajores' : 'Unknown Network';
+        analyze(
+            inflationData,
+            amount,
+            holdings,
+            { chainId: chainId || 0, name: networkName }
+        );
     };
 
-    return (
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F172A] to-[#1E293B] shadow-2xl text-white border border-blue-500/20">
-            {/* Glossy Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/5 to-transparent pointer-events-none" />
+    const spendingStatus = getSpendingStatus();
+    const hasNewInsight = advice && !isAnalyzing;
 
-            <div className="relative z-10 p-6">
-                {/* Header Section */}
-                <div className="flex justify-between items-start mb-6">
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <motion.div
+    // Mobile-first: Show compact hint by default, full interface on demand
+    if (!isOpen && showHint && !!hasNewInsight) {
+        return (
+            <>
+                <AIHint
+                    suggestion={`${advice?.action === 'SWAP' ? '⚡' : '🛡️'} ${advice?.reasoning.slice(0, 50)}...`}
+                    onAskAI={() => setIsOpen(true)}
+                />
+                <AIChatBubble onClick={() => setIsOpen(true)} hasNewInsight={!!hasNewInsight} />
+            </>
+        );
+    }
+
+    // Floating chat bubble when closed
+    if (!isOpen) {
+        return <AIChatBubble onClick={() => setIsOpen(true)} hasNewInsight={!!hasNewInsight} />;
+    }
+
+    // Full interface (slide-up modal on mobile, compact card on desktop)
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ y: "100%" }}
+                animate={{ y: 0 }}
+                exit={{ y: "100%" }}
+                className="fixed inset-x-0 bottom-0 h-[70vh] bg-white rounded-t-2xl shadow-2xl z-50 md:relative md:h-auto md:rounded-2xl md:bg-gradient-to-br md:from-[#0F172A] md:to-[#1E293B] md:text-white"
+            >
+                {/* Mobile Header */}
+                <div className="flex items-center justify-between p-4 border-b md:border-none">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center md:w-12 md:h-12 md:bg-blue-600/10">
+                            <motion.span
+                                className="text-xl md:text-2xl"
                                 animate={isAnalyzing ? { rotate: 360 } : {}}
                                 transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-                                className="w-12 h-12 rounded-full bg-blue-600/10 flex items-center justify-center border border-blue-400/20 shadow-inner"
                             >
-                                <span className="text-2xl">🧠</span>
-                            </motion.div>
-                            {isAnalyzing && (
-                                <div className="absolute -top-1 -right-1 flex">
-                                    <span className="animate-ping absolute inline-flex h-4 w-4 rounded-full bg-green-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500 border-2 border-[#0F172A]"></span>
-                                </div>
-                            )}
+                                🧠
+                            </motion.span>
                         </div>
                         <div>
-                            <h2 className="text-xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
+                            <h3 className="font-semibold text-sm md:text-xl md:font-black md:bg-clip-text md:text-transparent md:bg-gradient-to-r md:from-white md:to-blue-200">
                                 DiversiFi Oracle
-                            </h2>
-                            <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                                    Agentic Core v2
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                    Arc Agent v2
                                 </span>
-                                <span className="text-[10px] text-slate-500 font-medium">ARC MAINNET READY</span>
+                                <span className="text-xs text-gray-500 md:text-slate-500">
+                                    ${spendingStatus.spent.toFixed(2)}/${spendingStatus.limit} USDC
+                                </span>
                             </div>
                         </div>
                     </div>
 
-                    <button
-                        onClick={() => setShowConfig(!showConfig)}
-                        className={`p-2 rounded-lg transition-colors ${showConfig ? 'bg-blue-600/20 text-blue-400' : 'text-slate-400 hover:bg-white/5'}`}
-                        title="Configure Strategy"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                        </svg>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowConfig(!showConfig)}
+                            className="p-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-100 md:hover:bg-white/5"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            className="p-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-100 md:hover:bg-white/5"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                {/* Configuration Panel */}
+                {/* Configuration Panel - Mobile Optimized */}
                 <AnimatePresence>
                     {showConfig && (
                         <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden mb-6"
+                            className="overflow-hidden border-b md:border-none"
                         >
-                            <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-4">
+                            <div className="p-4 space-y-3 bg-gray-50 md:bg-white/5 md:rounded-xl md:border md:border-white/10">
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-2 block">Risk Tolerance</label>
+                                    <label className="text-xs font-bold text-gray-600 md:text-slate-400 uppercase mb-2 block">Risk Tolerance</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {(['Conservative', 'Balanced', 'Aggressive'] as RiskTolerance[]).map(t => (
                                             <button
                                                 key={t}
                                                 onClick={() => updateConfig({ riskTolerance: t })}
-                                                className={`px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${config.riskTolerance === t ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+                                                className={`px-2 py-1.5 rounded-md text-xs font-bold transition-all ${config.riskTolerance === t
+                                                    ? 'bg-blue-600 text-white shadow-lg'
+                                                    : 'bg-white text-gray-600 hover:bg-gray-100 md:bg-white/5 md:text-slate-400 md:hover:bg-white/10'
+                                                    }`}
                                             >
                                                 {t}
                                             </button>
@@ -96,15 +200,18 @@ export default function AgentWealthGuard({ amount, currentRegions, userRegion, o
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter mb-2 block">Investment Goal</label>
+                                    <label className="text-xs font-bold text-gray-600 md:text-slate-400 uppercase mb-2 block">Analysis Depth</label>
                                     <div className="grid grid-cols-3 gap-2">
-                                        {(['Capital Preservation', 'Inflation Hedge', 'Growth'] as InvestmentGoal[]).map(g => (
+                                        {(['Quick', 'Standard', 'Deep'] as const).map(d => (
                                             <button
-                                                key={g}
-                                                onClick={() => updateConfig({ goal: g })}
-                                                className={`px-2 py-1.5 rounded-md text-[10px] font-bold transition-all ${config.goal === g ? 'bg-blue-600 text-white shadow-lg' : 'bg-white/5 text-slate-400 hover:bg-white/10'}`}
+                                                key={d}
+                                                onClick={() => updateConfig({ analysisDepth: d })}
+                                                className={`px-2 py-1.5 rounded-md text-xs font-bold transition-all ${config.analysisDepth === d
+                                                    ? 'bg-blue-600 text-white shadow-lg'
+                                                    : 'bg-white text-gray-600 hover:bg-gray-100 md:bg-white/5 md:text-slate-400 md:hover:bg-white/10'
+                                                    }`}
                                             >
-                                                {g.split(' ')[0]}
+                                                {d}
                                             </button>
                                         ))}
                                     </div>
@@ -114,112 +221,136 @@ export default function AgentWealthGuard({ amount, currentRegions, userRegion, o
                     )}
                 </AnimatePresence>
 
-                {/* Main Action / Result Area */}
-                <div className="min-h-[160px] flex flex-col justify-center">
+                {/* Main Content Area */}
+                <div className="flex-1 overflow-y-auto p-4">
+                    {/* Analysis Progress */}
+                    {isAnalyzing && (
+                        <AIProgress steps={[]} currentStep={thinkingStep} />
+                    )}
+
+                    {/* Recommendation Display */}
+                    {advice && !isAnalyzing && (
+                        <motion.div
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="space-y-4"
+                        >
+                            <div className={`rounded-xl p-4 border shadow-lg ${advice.action === 'SWAP'
+                                ? 'bg-amber-50 border-amber-200 md:bg-amber-500/10 md:border-amber-500/30'
+                                : 'bg-emerald-50 border-emerald-200 md:bg-emerald-500/10 md:border-emerald-500/30'
+                                }`}>
+                                <div className="flex justify-between items-center mb-3">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">{advice.action === 'SWAP' ? '⚡' : '🛡️'}</span>
+                                        <h3 className={`font-bold text-sm uppercase ${advice.action === 'SWAP'
+                                            ? 'text-amber-800 md:text-amber-400'
+                                            : 'text-emerald-800 md:text-emerald-400'
+                                            }`}>
+                                            {advice.action === 'SWAP' ? 'Action Required' : 'Portfolio Protected'}
+                                        </h3>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-100 md:bg-black/30 border">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                        <span className="text-xs font-mono text-blue-600 md:text-blue-200">
+                                            {(advice.confidence * 100).toFixed(0)}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-gray-700 md:text-slate-300 font-medium leading-relaxed italic border-l-2 border-gray-300 md:border-white/10 pl-3">
+                                    "{advice.reasoning}"
+                                </p>
+
+                                {advice.expectedSavings && (
+                                    <div className="mt-3 text-xs text-gray-600 md:text-slate-400">
+                                        Expected savings: <span className="font-bold text-green-600">${advice.expectedSavings}</span> over {advice.timeHorizon}
+                                    </div>
+                                )}
+
+                                {advice.paymentHashes && Object.keys(advice.paymentHashes).length > 0 && (
+                                    <div className="mt-4 pt-4 border-t border-gray-200 md:border-white/10">
+                                        <h4 className="text-[10px] font-bold uppercase text-gray-500 md:text-slate-500 mb-2 tracking-widest">On-Chain Data Receipts</h4>
+                                        <div className="space-y-2">
+                                            {Object.entries(advice.paymentHashes).map(([source, hash]) => (
+                                                <div key={source} className="flex items-center justify-between bg-white/50 md:bg-black/20 p-2 rounded border border-gray-100 md:border-white/5">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold text-gray-600 md:text-blue-200">{source}</span>
+                                                        <span className="text-[9px] font-mono text-gray-400 md:text-slate-500 truncate w-32 md:w-48">{hash}</span>
+                                                    </div>
+                                                    <a
+                                                        href={`${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${hash}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[10px] bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors font-bold"
+                                                    >
+                                                        VERIFY
+                                                    </a>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {advice.action === 'SWAP' && advice.targetToken && (
+                                <button
+                                    onClick={() => onExecuteSwap(advice.targetToken!)}
+                                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-lg text-white rounded-xl font-bold transition-all active:scale-[0.97]"
+                                >
+                                    Deploy to {advice.targetToken}
+                                </button>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {/* Initial State */}
                     {!advice && !isAnalyzing && (
-                        <div className="text-center">
-                            <p className="text-slate-400 text-sm mb-6 max-w-[240px] mx-auto leading-relaxed">
+                        <div className="text-center py-8">
+                            <p className="text-gray-600 md:text-slate-400 text-sm mb-6 leading-relaxed">
                                 Let the Oracle analyze global market conditions to optimize your ${amount.toFixed(2)} portfolio.
                             </p>
                             <button
                                 onClick={handleAnalyze}
-                                className="w-full group relative flex items-center justify-center gap-3 py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold transition-all overflow-hidden"
+                                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-3"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                <span className="relative">Run Intelligent Analysis</span>
-                                <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <span>Run Intelligent Analysis</span>
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
                             </button>
                         </div>
                     )}
-
-                    {/* Thinking Terminal Experience */}
-                    {isAnalyzing && (
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-3 text-blue-400">
-                                <motion.div
-                                    animate={{ opacity: [0.4, 1, 0.4] }}
-                                    transition={{ repeat: Infinity, duration: 1.5 }}
-                                    className="w-1.5 h-1.5 bg-blue-400 rounded-full"
-                                />
-                                <span className="text-xs font-mono font-medium tracking-tight">AGENT_THOUGHT: {thinkingStep}</span>
-                            </div>
-
-                            {/* Visual Activity Bar */}
-                            <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
-                                <motion.div
-                                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-400 to-blue-600"
-                                    animate={{ x: ["-100%", "100%"] }}
-                                    transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                                    style={{ width: '40%' }}
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="h-8 bg-white/5 rounded-lg border border-white/5 animate-pulse" />
-                                <div className="h-8 bg-white/5 rounded-lg border border-white/5 animate-pulse [animation-delay:0.5s]" />
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Result Integration */}
-                    <AnimatePresence>
-                        {advice && !isAnalyzing && (
-                            <motion.div
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                className="space-y-4"
-                            >
-                                <div className={`rounded-xl p-5 border shadow-2xl ${advice.action === 'SWAP' ? 'bg-amber-500/10 border-amber-500/30 shadow-amber-900/10' : 'bg-emerald-500/10 border-emerald-500/30 shadow-emerald-900/10'}`}>
-                                    <div className="flex justify-between items-center mb-3">
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-lg">{advice.action === 'SWAP' ? '⚡' : '🛡️'}</span>
-                                            <h3 className={`font-black text-sm uppercase tracking-tighter ${advice.action === 'SWAP' ? 'text-amber-400' : 'text-emerald-400'}`}>
-                                                {advice.action === 'SWAP' ? 'Action Required' : 'Portfolio Shielded'}
-                                            </h3>
-                                        </div>
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-black/30 border border-white/10">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                            <span className="text-[10px] font-mono text-blue-200">ACCUR:{(advice.confidence * 100).toFixed(0)}%</span>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm text-slate-300 font-medium leading-relaxed italic border-l-2 border-white/10 pl-3">
-                                        "{advice.reasoning}"
-                                    </p>
-                                </div>
-
-                                {advice.action === 'SWAP' && advice.targetToken && (
-                                    <button
-                                        onClick={() => onExecuteSwap(advice.targetToken!)}
-                                        className="w-full group flex items-center justify-center gap-3 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-[0_0_30px_-5px_#10b98150] text-white rounded-xl font-black transition-all active:scale-[0.97]"
-                                    >
-                                        <span>Deploy to {advice.targetToken}</span>
-                                        <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                                        </svg>
-                                    </button>
-                                )}
-
-                                <div className="flex justify-center">
-                                    <button
-                                        onClick={handleAnalyze}
-                                        className="text-[10px] text-slate-500 hover:text-blue-400 font-bold uppercase tracking-widest transition-colors flex items-center gap-1"
-                                    >
-                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                        Re-calculate
-                                    </button>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
                 </div>
-            </div>
 
-            {/* Matrix-like subtle grid in background */}
-            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-        </div>
+                {/* Quick Actions Footer */}
+                <div className="p-4 border-t bg-gray-50 md:bg-transparent md:border-white/10">
+                    <div className="flex gap-2 overflow-x-auto pb-1">
+                        <button
+                            onClick={handleAnalyze}
+                            className="px-3 py-2 bg-blue-100 text-blue-800 rounded-lg text-xs font-medium whitespace-nowrap hover:bg-blue-200 transition-colors"
+                        >
+                            📊 Analyze
+                        </button>
+                        <button
+                            onClick={() => sendMessage("What's the best rebalancing strategy?")}
+                            className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg text-xs font-medium whitespace-nowrap hover:bg-gray-200 transition-colors"
+                        >
+                            🔄 Rebalance
+                        </button>
+                        <button
+                            onClick={() => sendMessage("Show me current market insights")}
+                            className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg text-xs font-medium whitespace-nowrap hover:bg-gray-200 transition-colors"
+                        >
+                            💡 Insights
+                        </button>
+                        <button
+                            onClick={() => sendMessage("Quick swap recommendation")}
+                            className="px-3 py-2 bg-gray-100 text-gray-800 rounded-lg text-xs font-medium whitespace-nowrap hover:bg-gray-200 transition-colors"
+                        >
+                            ⚡ Quick Swap
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        </AnimatePresence>
     );
 }

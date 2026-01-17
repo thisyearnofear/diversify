@@ -11,10 +11,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
  * - gemini-2.0-flash-exp: Experimental version fallback
  */
 const GEMINI_MODELS_FALLBACK = [
-    'gemini-2.5-flash',       // Primary: Latest 2.5 Flash (free tier)
-    'gemini-2.5-flash-lite',  // Backup: Lighter/faster variant
-    'gemini-2.0-flash',       // Fallback: Previous generation
-    'gemini-2.0-flash-exp',   // Last resort: Experimental
+    'gemini-3-flash-preview', // Hackathon Priority: Latest Gemini 3 Flash
+    'gemini-3-pro-preview',   // Secondary: Gemini 3 Pro (Higher reasoning, but lower quota)
+    'gemini-2.5-flash',       // Reliable Fallback: Latest 2.5 Flash
+    'gemini-2.5-flash-lite',  // Fast Fallback
+    'gemini-2.0-flash',       // Legacy Fallback
 ];
 
 /**
@@ -64,7 +65,7 @@ export default async function handler(
             return res.status(500).json({ error: 'Server configuration error' });
         }
 
-        const { inflationData, userBalance, currentHoldings, config } = req.body;
+        const { inflationData, userBalance, currentHoldings, config, realData, networkContext } = req.body;
 
         const genAI = new GoogleGenerativeAI(apiKey);
 
@@ -77,9 +78,11 @@ export default async function handler(
       - Primary Goal: ${config?.goal || 'Inflation Hedge'}
 
       Context:
+      - Current Network: ${networkContext?.name || 'Unknown'} (Chain ID: ${networkContext?.chainId || 'Unknown'})
       - User Balance: ${userBalance} USD
       - Current Holdings: ${currentHoldings.join(', ')}
       - Global Inflation Data: ${JSON.stringify(inflationData).slice(0, 1000)}... (truncated)
+      ${realData ? `- Premium Market Data: ${JSON.stringify(realData).slice(0, 1000)}` : ''}
 
       Analyze the inflation trends. If a specific region (like Africa or LatAm) has high inflation (>5%) and the user holds that currency, recommend swapping to USDC or cEUR.
       If the user holds USDC and inflation is low, recommend HOLD.
@@ -96,12 +99,16 @@ export default async function handler(
 
       Return strictly valid JSON:
       {
-        "action": "SWAP" | "HOLD",
-        "targetToken": "USDC" | "cEUR" | "cUSD" | null,
+        "action": "SWAP" | "HOLD" | "REBALANCE",
+        "targetToken": "USDC" | "cEUR" | "cUSD" | "cREAL" | "cKES" | null,
         "reasoning": "brief explanation...",
         "confidence": 0.0-1.0,
         "suggestedAmount": number (amount to swap, or 0)
       }
+
+      Note on Mento Assets: cUSD is often referred to as USDm, and cEUR as EURm on Mainnet. Use the ticker "cUSD" or "cEUR" in the JSON but feel free to use the "m-asset" names in your reasoning.
+
+      Strict Rule: If on Mainnet, be extremely conservative with high-value swaps. If on Testnet, explicitly mention that the action is a demonstration of the Arc Network's x402 capability.
     `;
 
         // Use cascading fallback to try multiple models

@@ -46,6 +46,7 @@ export default function DiversiFiPage() {
   const [userRegion, setUserRegion] = useState<Region>("Africa");
   const {
     isLoading: isBalancesLoading,
+    balances,
     regionTotals,
     totalValue,
     isMockData,
@@ -188,6 +189,7 @@ export default function DiversiFiPage() {
             setUserRegion={setUserRegion}
             regionData={regionData}
             totalValue={totalValue}
+            balances={balances}
             setActiveTab={setActiveTab}
           />
         )}

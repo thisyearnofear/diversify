@@ -8,6 +8,7 @@ import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
+import { NETWORKS } from "../../config";
 
 interface SwapTabProps {
   availableTokens: Array<{
@@ -402,13 +403,15 @@ export default function SwapTab({
               </button>
             )}
             <div className="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium border border-blue-200">
-              {chainId === 44787
+              {chainId === NETWORKS.ALFAJORES.chainId
                 ? "Celo Alfajores"
-                : chainId === 42220
+                : chainId === NETWORKS.CELO_MAINNET.chainId
                   ? "Celo Mainnet"
-                  : chainId
-                    ? `Chain ID: ${chainId}`
-                    : "Unknown"}
+                  : chainId === NETWORKS.ARC_TESTNET.chainId
+                    ? "Arc Testnet"
+                    : chainId
+                      ? `Chain ID: ${chainId}`
+                      : "Unknown"}
             </div>
             {inflationDataSource === "api" ? (
               <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium shadow-sm border border-green-200">
@@ -458,11 +461,11 @@ export default function SwapTab({
                   <div className="mt-2">
                     <a
                       href={
-                        chainId === 44787
-                          ? `https://alfajores.celoscan.io/tx/${swapTxHash || localSwapTxHash
-                          }`
-                          : `https://explorer.celo.org/mainnet/tx/${swapTxHash || localSwapTxHash
-                          }`
+                        chainId === NETWORKS.ALFAJORES.chainId
+                          ? `${NETWORKS.ALFAJORES.explorerUrl}/tx/${swapTxHash || localSwapTxHash}`
+                          : chainId === NETWORKS.ARC_TESTNET.chainId
+                            ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${swapTxHash || localSwapTxHash}`
+                            : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${swapTxHash || localSwapTxHash}`
                       }
                       target="_blank"
                       rel="noopener noreferrer"
@@ -514,13 +517,15 @@ export default function SwapTab({
                   )}
                   <span>
                     Network:{" "}
-                    {chainId === 42220
+                    {chainId === NETWORKS.CELO_MAINNET.chainId
                       ? "Celo Mainnet"
-                      : chainId === 44787
+                      : chainId === NETWORKS.ALFAJORES.chainId
                         ? "Celo Alfajores"
-                        : chainId
-                          ? `Chain ID: ${chainId}`
-                          : "Unknown"}
+                        : chainId === NETWORKS.ARC_TESTNET.chainId
+                          ? "Arc Testnet"
+                          : chainId
+                            ? `Chain ID: ${chainId}`
+                            : "Unknown"}
                   </span>
                 </div>
                 {isMiniPayDetected && (
@@ -1085,6 +1090,6 @@ export default function SwapTab({
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

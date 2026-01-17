@@ -10,7 +10,11 @@
     "build": "pnpm -r build && next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md,json}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
+    "setup-arc-agent": "node scripts/setup-arc-agent.js",
+    "test-x402": "node scripts/test-x402-hub.mjs",
+    "test-x402-comprehensive": "node scripts/test-x402-comprehensive.mjs",
+    "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\""
   },
   "dependencies": {
     "@google/generative-ai": "0.24.1",

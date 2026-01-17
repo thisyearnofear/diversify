@@ -3,26 +3,28 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export const Toast: React.FC<{
     message: string;
-    type?: 'success' | 'error' | 'info' | 'warning';
+    type?: 'success' | 'error' | 'info' | 'warning' | 'ai';
     onClose: () => void;
     duration?: number;
-}> = ({ message, type = 'info', onClose, duration = 3000 }) => {
-    
+    data?: any; // For AI-specific data like spending info
+}> = ({ message, type = 'info', onClose, duration = 3000, data }) => {
+
     useEffect(() => {
         const timer = setTimeout(() => {
             onClose();
         }, duration);
-        
+
         return () => clearTimeout(timer);
     }, [duration, onClose]);
-    
+
     const typeStyles = {
         success: 'bg-green-50 border-green-200 text-green-800',
         error: 'bg-red-50 border-red-200 text-red-800',
         info: 'bg-blue-50 border-blue-200 text-blue-800',
-        warning: 'bg-yellow-50 border-yellow-200 text-yellow-800'
+        warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+        ai: 'bg-purple-50 border-purple-200 text-purple-800'
     };
-    
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
@@ -53,7 +55,17 @@ export const Toast: React.FC<{
                             <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.493-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-4a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
                         </svg>
                     )}
-                    <span className="text-sm font-medium">{message}</span>
+                    {type === 'ai' && (
+                        <span className="text-lg">🧠</span>
+                    )}
+                    <div>
+                        <span className="text-sm font-medium">{message}</span>
+                        {type === 'ai' && data?.cost && (
+                            <div className="text-xs text-purple-600 mt-1">
+                                Cost: ${data.cost} USDC • Sources: {data.sources || 0}
+                            </div>
+                        )}
+                    </div>
                 </div>
                 <button
                     onClick={onClose}
@@ -69,17 +81,26 @@ export const Toast: React.FC<{
 };
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [toasts, setToasts] = useState<{ id: number; message: string; type: 'success' | 'error' | 'info' | 'warning' }[]>([]);
-    
-    const showToast = (message: string, type: 'success' | 'error' | 'info' | 'warning' = 'info') => {
+    const [toasts, setToasts] = useState<{
+        id: number;
+        message: string;
+        type: 'success' | 'error' | 'info' | 'warning' | 'ai';
+        data?: any;
+    }[]>([]);
+
+    const showToast = (
+        message: string,
+        type: 'success' | 'error' | 'info' | 'warning' | 'ai' = 'info',
+        data?: any
+    ) => {
         const id = Date.now();
-        setToasts(prev => [...prev, { id, message, type }]);
+        setToasts(prev => [...prev, { id, message, type, data }]);
     };
-    
+
     const removeToast = (id: number) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
     };
-    
+
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
@@ -89,6 +110,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                         key={toast.id}
                         message={toast.message}
                         type={toast.type}
+                        data={toast.data}
                         onClose={() => removeToast(toast.id)}
                     />
                 ))}
@@ -100,8 +122,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 // Create context
 import { createContext } from 'react';
 
-export const ToastContext = createContext<{ showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning') => void }>({
-    showToast: () => {}
+export const ToastContext = createContext<{
+    showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning' | 'ai', data?: any) => void
+}>({
+    showToast: () => { }
 });
 
 export const useToast = () => React.useContext(ToastContext);

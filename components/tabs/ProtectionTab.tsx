@@ -9,6 +9,7 @@ interface ProtectionTabProps {
   setUserRegion: (region: Region) => void;
   regionData: Array<{ region: string; value: number; color: string }>;
   totalValue: number;
+  balances: any;
   setActiveTab?: (tab: string) => void;
 }
 
@@ -17,6 +18,7 @@ export default function ProtectionTab({
   setUserRegion,
   regionData,
   totalValue,
+  balances,
   setActiveTab
 }: ProtectionTabProps) {
   // Convert regionData to the format needed by our components
@@ -43,8 +45,9 @@ export default function ProtectionTab({
     <div className="space-y-6">
       {/* Agentic Wealth Protection - PREMIUM UI */}
       <AgentWealthGuard
-        amount={totalValue || 1000}
+        amount={totalValue || 0}
         currentRegions={currentRegions}
+        holdings={Object.keys(balances || {})}
         userRegion={userRegion}
         onExecuteSwap={handleAgentSwap}
       />

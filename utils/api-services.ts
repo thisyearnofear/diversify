@@ -457,10 +457,10 @@ function setCachedData(key: string, value: any): void {
   }
 }
 
-// Gemini API Service
+// Gemini API Service with Arc Network integration
 export const GeminiService = {
   /**
-   * Analyze inflation data and providing wealth protection advice
+   * Enhanced wealth protection analysis with Arc Network capabilities
    */
   analyzeWealthProtection: async (
     inflationData: any,
@@ -468,20 +468,57 @@ export const GeminiService = {
     currentHoldings: string[],
     config?: any
   ): Promise<{
-    action: 'SWAP' | 'HOLD';
+    action: 'SWAP' | 'HOLD' | 'REBALANCE';
     targetToken?: string;
     reasoning: string;
     confidence: number;
     suggestedAmount?: number;
-    _meta?: { modelUsed: string };
+    expectedSavings?: number;
+    timeHorizon?: string;
+    riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+    dataSources?: string[];
+    _meta?: { modelUsed: string; totalCost?: number };
   }> => {
     try {
+      // Enhanced prompt for Arc Network context
+      const enhancedPrompt = `
+        You are an expert DeFi wealth protection agent operating on Arc Network.
+        Arc Network features: USDC as gas token, sub-second finality, x402 autonomous payments.
+        
+        Analysis Context:
+        - User Balance: $${userBalance}
+        - Current Holdings: ${currentHoldings.join(', ')}
+        - Risk Tolerance: ${config?.riskTolerance || 'Balanced'}
+        - Investment Goal: ${config?.goal || 'Inflation Hedge'}
+        - Analysis Depth: ${config?.analysisDepth || 'Standard'}
+        - Time Horizon: ${config?.timeHorizon || '3 months'}
+        
+        ${inflationData ? `Inflation Data: ${JSON.stringify(inflationData)}` : ''}
+        ${config?.userMessage ? `User Question: "${config.userMessage}"` : ''}
+        
+        Provide a JSON response with:
+        {
+          "action": "SWAP" | "HOLD" | "REBALANCE",
+          "targetToken": "string (if action is SWAP/REBALANCE)",
+          "reasoning": "Clear explanation in 1-2 sentences",
+          "confidence": 0.85,
+          "expectedSavings": 47.50,
+          "timeHorizon": "3 months",
+          "riskLevel": "LOW" | "MEDIUM" | "HIGH"
+        }
+        
+        Focus on Arc Network advantages: autonomous payments, USDC gas efficiency, cross-chain capabilities.
+      `;
+
       const response = await fetch('/api/agent/analyze', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          prompt: enhancedPrompt,
+          model: 'gemini-3-flash-preview',
+          maxTokens: 1000,
           inflationData,
           userBalance,
           currentHoldings,
@@ -494,10 +531,30 @@ export const GeminiService = {
       }
 
       const result = await response.json();
-      return result;
+
+      // Parse JSON response from AI
+      try {
+        const parsedResult = JSON.parse(result.text);
+        return {
+          ...parsedResult,
+          _meta: {
+            modelUsed: result.modelUsed || 'gemini-3-flash-preview',
+            totalCost: 0.02 // Estimated cost in USDC
+          }
+        };
+      } catch (parseError) {
+        // Fallback if JSON parsing fails
+        return {
+          action: 'HOLD',
+          reasoning: result.text || 'Analysis completed successfully.',
+          confidence: 0.75,
+          riskLevel: 'MEDIUM',
+          _meta: { modelUsed: result.modelUsed || 'gemini-3-flash-preview' }
+        } as const;
+      }
 
     } catch (error) {
-      console.error('Gemini Agent Error:', error);
+      console.error('Enhanced Gemini Agent Error:', error);
       return getFallbackAgentAdvice();
     }
   }

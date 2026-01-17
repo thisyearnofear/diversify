@@ -5,11 +5,11 @@
 
 // Network Configuration
 export const NETWORKS = {
-    MAINNET: {
+    CELO_MAINNET: {
         chainId: 42220,
         name: 'Celo Mainnet',
         rpcUrl: process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org',
-        explorerUrl: 'https://explorer.celo.org/mainnet',
+        explorerUrl: 'https://celo.blockscout.com',
     },
     ALFAJORES: {
         chainId: 44787,
@@ -21,9 +21,26 @@ export const NETWORKS = {
         chainId: 5042002,
         name: 'Arc Testnet',
         rpcUrl: process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network',
-        explorerUrl: 'https://explorer.testnet.arc.network', // Assumed explorer or placeholder
+        explorerUrl: 'https://testnet.arcscan.app',
     },
 } as const;
+
+// Arc Data Hub Configuration (X402 Economy)
+export const ARC_DATA_HUB_CONFIG = {
+    RECIPIENT_ADDRESS: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+    PRICING: {
+        'truflation': '0.05',
+        'glassnode': '0.15',
+        'heliostat': '0.02',
+        'defillama': '0.01',
+        'yearn': '0.02',
+        'messari': '0.08',
+        'alpha-vantage': '0.01',
+        'macro-regime': '0.10' // Premium aggregated signal
+    },
+    USDC_TESTNET: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+    CHAIN_ID: 5042002
+};
 
 // Token Addresses - Mainnet
 export const MAINNET_TOKENS = {
@@ -186,5 +203,5 @@ export function getNetworkConfig(chainId: number) {
         ? NETWORKS.ALFAJORES
         : chainId === NETWORKS.ARC_TESTNET.chainId
             ? NETWORKS.ARC_TESTNET
-            : NETWORKS.MAINNET;
+            : NETWORKS.CELO_MAINNET;
 }
