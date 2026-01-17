@@ -103,6 +103,15 @@ module.exports = {
       borderRadius: {
         card: "0.75rem",
       },
+      keyframes: {
+        shine: {
+          "0%": { transform: "translateX(-150%) skewX(25deg)" },
+          "100%": { transform: "translateX(150%) skewX(25deg)" },
+        },
+      },
+      animation: {
+        shine: "shine 1s infinite",
+      },
     },
   },
   plugins: [],
