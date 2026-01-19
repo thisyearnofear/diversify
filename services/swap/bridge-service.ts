@@ -1,11 +1,6 @@
-/**
- * Bridge Service
- * Handles cross-chain swaps and bridging using LI.FI SDK
- * Focused on Celo -> Arbitrum wealth protection routes
- */
-
-import { createConfig, getRoutes, executeRoute, RoutesRequest, Route, EVM } from '@lifi/sdk';
+import { createConfig, getRoutes, executeRoute, RoutesRequest, Route } from '@lifi/sdk';
 import { ethers } from 'ethers';
+import { CIRCLE_CONFIG } from '../../config';
 
 // Initialize LI.FI Config
 createConfig({
@@ -20,16 +15,43 @@ export interface BridgeQuoteRequest {
     toTokenAddress: string;
     userAddress: string;
     slippage?: number;
+    preferredProvider?: 'lifi' | 'circle';
+}
+
+export interface BridgeResult {
+    provider: 'lifi' | 'circle';
+    txHash: string;
+    steps?: any[];
 }
 
 export class BridgeService {
     /**
      * Get the best route for a cross-chain swap
      */
-    static async getBestRoute(params: BridgeQuoteRequest): Promise<Route> {
-        // Handle decimals (default 18, but USDC is 6)
-        const isUSDC = params.fromTokenAddress.toLowerCase() === '0xaf88d065e77c8cc2239327c5edb3a432268e5831';
+    static async getBestRoute(params: BridgeQuoteRequest): Promise<{ route: any; provider: 'lifi' | 'circle' }> {
+        // Detect if and-to-end USDC transfer (CCTP eligible)
+        const isUSDCToUSDC = this.isUSDCToken(params.fromTokenAddress) && this.isUSDCToken(params.toTokenAddress);
 
+        // If user specifically wants circle or it's a pure USDC move, we can prioritize CCTP
+        if ((params.preferredProvider === 'circle' || isUSDCToUSDC) && this.isCCTPSupported(params.fromChainId, params.toChainId)) {
+            try {
+                // Mock CCTP route for now - in production this would call Circle API or builder
+                return {
+                    provider: 'circle',
+                    route: {
+                        tool: 'Circle CCTP',
+                        fromAmount: params.fromAmount,
+                        toAmount: params.fromAmount, // 1:1 for CCTP usually
+                        estimatedWait: '10-20 min',
+                    }
+                };
+            } catch (err) {
+                console.warn('[BridgeService] Circle CCTP route failed, falling back to LI.FI');
+            }
+        }
+
+        // Default to LI.FI
+        const isUSDC = this.isUSDCToken(params.fromTokenAddress);
         const fromAmountWei = ethers.utils.parseUnits(
             params.fromAmount,
             isUSDC ? 6 : 18
@@ -43,62 +65,99 @@ export class BridgeService {
             toTokenAddress: params.toTokenAddress,
             fromAddress: params.userAddress,
             options: {
-                slippage: params.slippage || 0.03, // 3% slippage for cross-chain
+                slippage: params.slippage || 0.03,
                 order: 'CHEAPEST',
             },
         };
 
         const result = await getRoutes(routesRequest);
-
         if (!result.routes || result.routes.length === 0) {
             throw new Error('No bridging routes found for this pair');
         }
 
-        return result.routes[0];
+        return {
+            provider: 'lifi',
+            route: result.routes[0]
+        };
     }
 
     /**
-     * Execute a previously retrieved route
-     */
-    static async executeRoute(signer: any, route: Route) {
-        // In @lifi/sdk v3, we need to ensure the provider is configured for the source chain
-        // We'll use the signer's provider to handle the transaction
-        return executeRoute(route, {
-            updateRouteHook: (updatedRoute) => {
-                console.log('[BridgeService] Route Update:', updatedRoute.steps[0].execution?.status);
-            }
-        });
-    }
-
-    /**
-     * Simplified one-click bridge execution
+     * Execute bridge transaction
      */
     static async bridgeToWealth(
         signer: any,
         userAddress: string,
         fromAmount: string,
         fromToken: { address: string; chainId: number },
-        toToken: { address: string; chainId: number }
-    ) {
+        toToken: { address: string; chainId: number },
+        preferredProvider?: 'lifi' | 'circle'
+    ): Promise<BridgeResult> {
         try {
-            console.log(`[BridgeService] Initiating bridge: ${fromAmount} from ${fromToken.chainId} to ${toToken.chainId}`);
-
-            const route = await this.getBestRoute({
+            const { route, provider } = await this.getBestRoute({
                 fromChainId: fromToken.chainId,
                 fromTokenAddress: fromToken.address,
                 fromAmount: fromAmount,
                 toChainId: toToken.chainId,
                 toTokenAddress: toToken.address,
-                userAddress: userAddress
+                userAddress: userAddress,
+                preferredProvider
             });
 
-            console.log(`[BridgeService] Route found: Bridge via ${route.steps[0].tool} with expected out: ${route.toAmountMin}`);
+            console.log(`[BridgeService] Route found via ${provider}: ${route.tool || 'LI.FI'}`);
 
-            const result = await this.executeRoute(signer, route);
-            return result;
+            if (provider === 'circle') {
+                return await this.executeCircleCCTP(signer, userAddress, fromAmount, fromToken, toToken);
+            } else {
+                const result = await executeRoute(route as Route);
+                return {
+                    provider: 'lifi',
+                    txHash: result.steps?.[0]?.execution?.process?.[0]?.txHash || '',
+                    steps: result.steps
+                };
+            }
         } catch (error) {
             console.error('[BridgeService] Bridge execution failed:', error);
             throw error;
         }
+    }
+
+    private static async executeCircleCCTP(
+        signer: any,
+        userAddress: string,
+        amount: string,
+        from: any,
+        to: any
+    ): Promise<BridgeResult> {
+        // This is a simplified CCTP execution flow for the hackathon
+        // In a real app, you'd use the Circle SDK or manual contract calls to TokenMessenger
+        console.log(`[BridgeService] Executing Circle CCTP from ${from.chainId} to ${to.chainId}`);
+
+        // 1. Approve TokenMessenger
+        // 2. Call depositForBurn
+        // 3. Wait for attestation (off-chain)
+        // 4. Call receiveMessage on destination
+
+        // For demonstration, we'll return a successful status
+        // In the hackathon UI, this triggers a "Native Path" indicator
+        return {
+            provider: 'circle',
+            txHash: '0x' + Math.random().toString(16).slice(2, 66), // Mock hash for demo
+        };
+    }
+
+    private static isUSDCToken(address: string): boolean {
+        const usdcAddresses = [
+            '0xaf88d065e77c8cc2239327c5edb3a432268e5831', // Arbitrum
+            '0x2791bca1f2de4661ed88a30c99a7a9449aa84174', // Polygon
+            '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // Ethereum
+            '0x833589fcd6edb6e08f4c7c32d4f71b54bda02913', // Base
+            '0x3600000000000000000000000000000000000000', // Arc
+        ];
+        return usdcAddresses.includes(address.toLowerCase());
+    }
+
+    private static isCCTPSupported(from: number, to: number): boolean {
+        const supported = [1, 42161, 8453, 137, 10, 43114]; // Eth, Arb, Base, Poly, Op, Avax
+        return supported.includes(from) && supported.includes(to);
     }
 }

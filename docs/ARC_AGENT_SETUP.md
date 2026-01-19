@@ -8,6 +8,7 @@ The Arc Agent is an autonomous AI that:
 - Pays for its own API calls using x402 protocol
 - Accesses premium financial data (inflation, exchange rates, economic indicators)
 - Operates within configurable spending limits
+- **Scaleable Wallets**: Supports standard Private Keys or Circle's enterprise-grade Programmable Wallets.
 - Records analysis on Arc Network blockchain for transparency
 - Uses USDC as gas token for efficient operations
 
@@ -56,13 +57,15 @@ COINGECKO_API_KEY=your_key_here
 - [FRED](https://fred.stlouisfed.org/docs/api/api_key.html) - Free with registration
 - [CoinGecko Pro](https://www.coingecko.com/en/api/pricing) - Paid service
 
-### 4. Configure Spending Limits
-
-Set your agent's daily spending limit in `.env`:
+Set your agent's daily spending limit and infrastructure choice in `.env`:
 
 ```bash
 ARC_AGENT_DAILY_LIMIT=5.0  # 5 USDC per day
 ARC_AGENT_TESTNET=true     # Use testnet for development
+
+# OPTIONAL: Use Circle Programmable Wallets
+NEXT_PUBLIC_CIRCLE_WALLET_ID=your_circle_wallet_id
+NEXT_PUBLIC_CIRCLE_API_KEY=your_circle_api_key
 ```
 
 ## Manual Setup
@@ -150,9 +153,9 @@ Typical costs per analysis:
 
 ⚠️ **CRITICAL**: Your agent's private key controls autonomous spending
 
-- Never commit private keys to version control
 - Use environment variables only
 - Consider using a dedicated agent wallet
+- **Enterprise Tier**: Use Circle Programmable Wallets for server-side key management, social recovery, and vault-grade security.
 - Set reasonable spending limits
 
 ### Spending Controls

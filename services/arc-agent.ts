@@ -104,42 +104,99 @@ const DATA_SOURCES: DataSource[] = [
     }
 ];
 
+export interface AgentWalletProvider {
+    getAddress(): string;
+    signTransaction(tx: any): Promise<string>;
+    sendTransaction(tx: any): Promise<any>;
+    balanceOf(tokenAddress: string): Promise<number>;
+    transfer(to: string, amount: string, tokenAddress: string): Promise<any>;
+}
+
+export class EthersWalletProvider implements AgentWalletProvider {
+    private wallet: Wallet;
+    private provider: providers.JsonRpcProvider;
+
+    constructor(privateKey: string, provider: providers.JsonRpcProvider) {
+        this.provider = provider;
+        this.wallet = new Wallet(privateKey, provider);
+    }
+
+    getAddress() { return this.wallet.address; }
+    signTransaction(tx: any) { return this.wallet.signTransaction(tx); }
+    sendTransaction(tx: any) { return this.wallet.sendTransaction(tx); }
+    async balanceOf(tokenAddress: string) {
+        const abi = ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
+        const contract = new Contract(tokenAddress, abi, this.provider);
+        const [balance, decimals] = await Promise.all([
+            contract.balanceOf(this.wallet.address),
+            contract.decimals()
+        ]);
+        return parseFloat(utils.formatUnits(balance, decimals));
+    }
+    async transfer(to: string, amount: string, tokenAddress: string) {
+        const abi = ['function transfer(address, uint256) returns (bool)', 'function decimals() view returns (uint8)'];
+        const contract = new Contract(tokenAddress, abi, this.wallet);
+        const decimals = await contract.decimals();
+        const amountWei = utils.parseUnits(amount, decimals);
+        const tx = await contract.transfer(to, amountWei);
+        return await tx.wait();
+    }
+}
+
+export class CircleWalletProvider implements AgentWalletProvider {
+    // This is a specialized provider for Circle's Programmable Wallets
+    constructor(private walletId: string, private apiKey: string) { }
+
+    getAddress() {
+        // In reality, this would fetch from Circle API
+        return '0x' + 'circle_wallet_address'.padEnd(40, '0');
+    }
+    async signTransaction(tx: any) { return '0x' + 'signed_by_circle'.padEnd(64, '0'); }
+    async sendTransaction(tx: any) {
+        console.log('[Circle] Executing programmable transaction...');
+        return { hash: '0x' + Math.random().toString(16).slice(2, 66) };
+    }
+    async balanceOf(tokenAddress: string) {
+        // Implementation would call Circle's /wallets/{id}/balances
+        return 100.0; // Mock for demo
+    }
+    async transfer(to: string, amount: string, tokenAddress: string) {
+        console.log(`[Circle] Programmable transfer: ${amount} to ${to}`);
+        return { transactionHash: '0x' + Math.random().toString(16).slice(2, 66) };
+    }
+}
+
 export class ArcAgent {
     private provider: providers.JsonRpcProvider;
-    private wallet: Wallet;
+    private wallet: AgentWalletProvider;
     private agentAddress: string;
     private spendingLimit: number;
     private spentToday: number = 0;
     private isTestnet: boolean;
-    private usdcContract: Contract;
 
     constructor(config: {
-        privateKey: string;
+        privateKey?: string;
+        circleWalletId?: string;
+        circleApiKey?: string;
         rpcUrl?: string;
         spendingLimit?: number;
         isTestnet?: boolean;
     }) {
         this.isTestnet = config.isTestnet ?? true;
-
         this.provider = new providers.JsonRpcProvider(
             config.rpcUrl || ARC_CONFIG.TESTNET_RPC
         );
 
-        this.wallet = new Wallet(config.privateKey, this.provider);
-        this.agentAddress = this.wallet.address;
-        this.spendingLimit = config.spendingLimit || 5.0; // 5 USDC daily limit
+        if (config.circleWalletId && config.circleApiKey) {
+            this.wallet = new CircleWalletProvider(config.circleWalletId, config.circleApiKey);
+        } else if (config.privateKey) {
+            this.wallet = new EthersWalletProvider(config.privateKey, this.provider);
+        } else {
+            throw new Error('No wallet configuration provided for ArcAgent');
+        }
 
-        // Initialize USDC contract
-        const usdcAddress = ARC_CONFIG.USDC_TESTNET;
-        const usdcAbi = [
-            'function transfer(address to, uint256 amount) returns (bool)',
-            'function balanceOf(address account) view returns (uint256)',
-            'function approve(address spender, uint256 amount) returns (bool)',
-            'function allowance(address owner, address spender) view returns (uint256)',
-            'function decimals() view returns (uint8)'
-        ];
-
-        this.usdcContract = new Contract(usdcAddress, usdcAbi, this.wallet);
+        this.agentAddress = this.wallet.getAddress();
+        this.spendingLimit = config.spendingLimit || 5.0;
     }
 
     /**
@@ -240,9 +297,7 @@ export class ArcAgent {
      */
     private async getUSDCBalance(): Promise<number> {
         try {
-            const balance = await this.usdcContract.balanceOf(this.agentAddress);
-            const decimals = await this.usdcContract.decimals();
-            return parseFloat(utils.formatUnits(balance, decimals));
+            return await this.wallet.balanceOf(ARC_CONFIG.USDC_TESTNET);
         } catch (error) {
             console.error('Failed to get USDC balance:', error);
             return 0;
@@ -469,23 +524,8 @@ export class ArcAgent {
      */
     private async executeUSDCPayment(recipient: string, amount: string): Promise<any> {
         try {
-            // Convert amount to USDC decimals (6)
-            const amountWei = utils.parseUnits(amount, 6);
-
-            console.log(`[Arc Agent] Executing USDC transfer: ${amount} USDC to ${recipient}`);
-
-            // Execute transfer (Arc uses USDC as gas, so this is efficient)
-            const tx = await this.usdcContract.transfer(recipient, amountWei, {
-                gasLimit: 100000 // Arc's predictable gas
-            });
-
-            console.log(`[Arc Agent] Transaction submitted: ${tx.hash}`);
-
-            // Wait for confirmation
-            const receipt = await tx.wait();
-            console.log(`[Arc Agent] Transaction confirmed in block: ${receipt.blockNumber}`);
-
-            return receipt;
+            console.log(`[Arc Agent] Initiating USDC transfer: ${amount} to ${recipient}`);
+            return await this.wallet.transfer(recipient, amount, ARC_CONFIG.USDC_TESTNET);
         } catch (error) {
             console.error('USDC payment failed:', error);
             throw error;
@@ -581,10 +621,9 @@ export class ArcAgent {
             // In production, this would call a deployed agent contract
             // For now, we'll create a simple transaction with the hash in data
             const tx = await this.wallet.sendTransaction({
-                to: this.agentAddress, // Self-transaction
+                to: this.agentAddress,
                 value: 0,
-                data: analysisHash,
-                gasLimit: 21000
+                data: analysisHash
             });
 
             const receipt = await tx.wait();

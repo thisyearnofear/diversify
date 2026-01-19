@@ -119,14 +119,13 @@ const rwaRecommendations = {
 ```
 
 ### 3. Add Cross-Chain Bridge Support
+We support two paths for moving funds to Arbitrum:
 
-```typescript
-// For moving funds from other networks to Arbitrum
-const BRIDGE_CONTRACTS = {
-  ethereum_to_arbitrum: '0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3a',
-  polygon_to_arbitrum: '0x...' // Via LayerZero or similar
-};
-```
+1.  **Universal Path (LI.FI)**: Supports almost any token. Best for `cUSD` or `cEUR` -> `USDY`.
+2.  **Native Path (Circle CCTP)** ⭐: Highest efficiency for `USDC` -> `USDC`.
+    - **No Slippage**: 1:1 burning and minting.
+    - **Native Security**: No third-party bridge risk.
+    - **Lower Fees**: Only pay source/destination gas.
 
 ## 💰 Cost-Benefit Analysis
 

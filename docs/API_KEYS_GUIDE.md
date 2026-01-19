@@ -102,7 +102,10 @@ GLASSNODE_API_KEY=your_glassnode_key_here
 # Free APIs
 ALPHA_VANTAGE_API_KEY=your_alpha_vantage_key_here
 FRED_API_KEY=your_fred_key_here
-MESSARI_API_KEY=your_messari_key_here  # Optional
+
+# Circle Infrastructure (Optional)
+NEXT_PUBLIC_CIRCLE_WALLET_ID=your_id_here
+NEXT_PUBLIC_CIRCLE_API_KEY=your_key_here
 ```
 
 ### Step 3: Test Your Setup

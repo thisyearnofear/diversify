@@ -62,17 +62,21 @@ export function useWealthProtectionAgent() {
         if (!arcAgent) {
             try {
                 // Get agent configuration from environment
-                const privateKey = process.env.ARC_AGENT_PRIVATE_KEY;
-                const isTestnet = process.env.ARC_AGENT_TESTNET === 'true';
-                const spendingLimit = parseFloat(process.env.ARC_AGENT_DAILY_LIMIT || '5.0');
+                const privateKey = process.env.NEXT_PUBLIC_ARC_AGENT_PRIVATE_KEY || process.env.ARC_AGENT_PRIVATE_KEY;
+                const circleWalletId = process.env.NEXT_PUBLIC_CIRCLE_WALLET_ID;
+                const circleApiKey = process.env.NEXT_PUBLIC_CIRCLE_API_KEY;
+                const isTestnet = process.env.NEXT_PUBLIC_ARC_AGENT_TESTNET === 'true' || process.env.ARC_AGENT_TESTNET === 'true';
+                const spendingLimit = parseFloat(process.env.NEXT_PUBLIC_ARC_AGENT_DAILY_LIMIT || process.env.ARC_AGENT_DAILY_LIMIT || '5.0');
 
-                if (!privateKey) {
-                    console.warn('ARC_AGENT_PRIVATE_KEY not configured, Arc Agent features disabled');
+                if (!privateKey && (!circleWalletId || !circleApiKey)) {
+                    console.warn('Agent wallet not configured (needs Private Key or Circle Wallet ID), Arc Agent features disabled');
                     return;
                 }
 
                 const agent = new ArcAgent({
                     privateKey,
+                    circleWalletId,
+                    circleApiKey,
                     isTestnet,
                     spendingLimit
                 });

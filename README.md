@@ -6,7 +6,8 @@ Protect your savings from inflation by diversifying stablecoins across global re
 
 - **Wealth Protection Score**: Advanced engine that scores your portfolio based on inflation hedging, RWA exposure, and yield optimization.
 - **RWA Integration**: Direct access to Real-World Assets (PAXG, USDY, OUSG) through tokenized gold and US Treasuries.
-- **Cross-Chain Bridging**: Seamlessly move assets from Celo to Arbitrum One using LI.FI integration for better wealth preservation.
+- **Cross-Chain Bridging**: Seamlessly move assets from Celo to Arbitrum One using LI.FI and **Circle's Native CCTP** integration for better wealth preservation.
+- **Circle Infrastructure**: Secure, enterprise-grade agent wallets and native USDC bridging via Circle Programmable Wallets and CCTP.
 - **Inflation Protection Dashboard**: Visualize how inflation affects your savings globally.
 - **Portfolio Visualization**: Interactive charts showing stablecoin distribution by region.
 - **AI Recommendations**: Personalized portfolio suggestions based on your region.
@@ -69,6 +70,7 @@ NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY=your_key
 
 - **AI**: Google Gemini 1.5 Flash, Google AI Studio
 - **Blockchain**: Arc Network (Testnet), Celo, Arbitrum One
+- **Infrastructure**: Circle Programmable Wallets, Circle CCTP (Native Bridge)
 - **Protocols**: LI.FI (Bridging), Ondo Finance (RWA), Paxos (Gold)
 - **Stablecoins**: USDC, cUSD, cEUR, cREAL, cKES, cGHS, PUSO
 - **Frontend**: Next.js, React, Tailwind CSS

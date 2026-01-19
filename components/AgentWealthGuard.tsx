@@ -86,7 +86,9 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
         status: 'idle' | 'checking' | 'approving' | 'bridging' | 'success' | 'error';
         error?: string;
         txHash?: string;
+        provider?: 'lifi' | 'circle';
     }>({ status: 'idle' });
+    const [useCircleNative, setUseCircleNative] = useState(false);
 
     if (!inflationData) return null;
 
@@ -124,12 +126,14 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                     userAddress,
                     amount.toString(),
                     { address: MAINNET_TOKENS.CUSD, chainId: 42220 },
-                    { address: toTokenAddr, chainId: 42161 }
+                    { address: toTokenAddr, chainId: 42161 },
+                    useCircleNative ? 'circle' : 'lifi'
                 );
 
                 setBridgeState({
                     status: 'success',
-                    txHash: result.steps?.[0]?.execution?.process?.[0]?.txHash
+                    txHash: result.txHash,
+                    provider: result.provider
                 });
             } catch (err: any) {
                 console.error("Bridge failed:", err);
@@ -246,21 +250,22 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-600 md:text-slate-400 uppercase mb-2 block">Analysis Depth</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {(['Quick', 'Standard', 'Deep'] as const).map(d => (
-                                            <button
-                                                key={d}
-                                                onClick={() => updateConfig({ analysisDepth: d })}
-                                                className={`px-2 py-1.5 rounded-md text-xs font-bold transition-all ${config.analysisDepth === d
-                                                    ? 'bg-blue-600 text-white shadow-lg'
-                                                    : 'bg-white text-gray-600 hover:bg-gray-100 md:bg-white/5 md:text-slate-400 md:hover:bg-white/10'
-                                                    }`}
-                                            >
-                                                {d}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <label className="text-xs font-bold text-gray-600 md:text-slate-400 uppercase mb-2 block">Bridge Optionality</label>
+                                    <button
+                                        onClick={() => setUseCircleNative(!useCircleNative)}
+                                        className={`w-full px-3 py-2 rounded-md text-xs font-bold flex items-center justify-between transition-all ${useCircleNative
+                                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
+                                            : 'bg-white text-gray-600 md:bg-white/5 md:text-slate-400 border border-transparent'
+                                            }`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span>🔵</span>
+                                            <span>Circle Native (CCTP)</span>
+                                        </div>
+                                        <div className={`w-8 h-4 rounded-full relative transition-colors ${useCircleNative ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                                            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${useCircleNative ? 'left-4.5' : 'left-0.5'}`} />
+                                        </div>
+                                    </button>
                                 </div>
                             </div>
                         </motion.div>
@@ -379,8 +384,8 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                                             {bridgeState.status === 'bridging' && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
                                             <span>
                                                 {bridgeState.status === 'checking' && "🔍 Finding optimal route..."}
-                                                {bridgeState.status === 'bridging' && "🌉 Bridging to Arbitrum (Multi-step)..."}
-                                                {bridgeState.status === 'success' && "✅ Wealth Protection Deployed!"}
+                                                {bridgeState.status === 'bridging' && (bridgeState.provider === 'circle' ? "🔵 Circle CCTP Native Path..." : "🌉 Bridging via LI.FI (Multi-step)...")}
+                                                {bridgeState.status === 'success' && (bridgeState.provider === 'circle' ? "✅ Native Wealth Protection Deployed!" : "✅ Wealth Protection Deployed!")}
                                                 {bridgeState.status === 'error' && `❌ Error: ${bridgeState.error?.slice(0, 50)}`}
                                             </span>
                                         </div>

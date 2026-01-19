@@ -66,6 +66,32 @@ export const ARC_DATA_HUB_CONFIG = {
     CHAIN_ID: 5042002
 };
 
+// Circle Infrastructure Configuration
+export const CIRCLE_CONFIG = {
+    // Cross-Chain Transfer Protocol (CCTP)
+    CCTP: {
+        DOMAINS: {
+            ETHEREUM: 0,
+            AVALANCHE: 1,
+            OPTIMISM: 2,
+            ARBITRUM: 3,
+            BASE: 6,
+            POLYGON: 7,
+        },
+        // Mainnet Token Messenger Addresses
+        TOKEN_MESSENGER: {
+            ETHEREUM: '0xbd3fa81b58ba92a821df2201e99602b9e6e87292',
+            ARBITRUM: '0x19330d10D9Cc8751218eaf51E8885D058642E08A',
+            BASE: '0x1682Ae6375C4009baf3d690757d822C92fc556aE',
+        },
+    },
+    // Programmable Wallets (Entity Secret / API Key)
+    WALLET: {
+        API_BASE_URL: 'https://api.circle.com/v1/w3s',
+        USER_ID_PREFIX: 'diversifi_agent_',
+    }
+};
+
 // Token Addresses - Mainnet
 export const MAINNET_TOKENS = {
     CELO: '0x471ece3750da237f93b8e339c536989b8978a438',
