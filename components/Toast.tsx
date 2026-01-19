@@ -80,18 +80,24 @@ export const Toast: React.FC<{
     );
 };
 
+interface ToastData {
+    cost?: number;
+    sources?: number;
+    [key: string]: any; // Allow additional properties
+}
+
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<{
         id: number;
         message: string;
         type: 'success' | 'error' | 'info' | 'warning' | 'ai';
-        data?: any;
+        data?: ToastData;
     }[]>([]);
 
     const showToast = (
         message: string,
         type: 'success' | 'error' | 'info' | 'warning' | 'ai' = 'info',
-        data?: any
+        data?: ToastData
     ) => {
         const id = Date.now();
         setToasts(prev => [...prev, { id, message, type, data }]);
@@ -123,7 +129,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 import { createContext } from 'react';
 
 export const ToastContext = createContext<{
-    showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning' | 'ai', data?: any) => void
+    showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning' | 'ai', data?: ToastData) => void
 }>({
     showToast: () => { }
 });

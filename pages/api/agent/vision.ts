@@ -38,8 +38,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             modelUsed: 'gemini-1.5-flash'
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Gemini Vision Error:', error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: errorMessage });
     }
 }

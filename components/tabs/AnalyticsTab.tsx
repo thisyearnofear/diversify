@@ -7,15 +7,26 @@ import InflationVisualizer from "../InflationVisualizer";
 import { REGION_COLORS } from "@/constants/regions";
 
 interface AnalyticsTabProps {
-  performanceData: {
+  _performanceData: {
     dates: string[];
     values: number[];
     regions: Record<Region, number[]>;
     percentChange: number;
     volatility: number;
   };
-  isPerformanceLoading: boolean;
-  currencyPerformanceData: any;
+  _isPerformanceLoading: boolean;
+  currencyPerformanceData: {
+    dates: string[];
+    currencies: {
+      symbol: string;
+      name: string;
+      region: Region;
+      values: number[];
+      percentChange: number;
+    }[];
+    baseCurrency: string;
+    source?: "api" | "cache" | "fallback";
+  };
   isCurrencyPerformanceLoading: boolean;
   regionData: Array<{ region: string; value: number; color: string }>;
   totalValue: number;
@@ -52,8 +63,8 @@ const EMERGING_MARKETS_DATA = {
 };
 
 export default function AnalyticsTab({
-  performanceData,
-  isPerformanceLoading,
+  _performanceData,
+  _isPerformanceLoading,
   currencyPerformanceData,
   isCurrencyPerformanceLoading,
   regionData,

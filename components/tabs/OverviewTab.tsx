@@ -16,12 +16,12 @@ interface OverviewTabProps {
   userRegion: Region;
   setUserRegion: (region: Region) => void;
   REGIONS: readonly Region[];
-  isBalancesLoading: boolean;
+  _isBalancesLoading: boolean;
   setActiveTab: (tab: string) => void;
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
-  balances: any;
-  inflationData: any;
+  balances: Record<string, { formattedBalance: string; value: number }>;
+  inflationData: Record<string, { avgRate: number; data: any[] }>;
 }
 
 export default function OverviewTab({
@@ -32,7 +32,7 @@ export default function OverviewTab({
   userRegion,
   setUserRegion,
   REGIONS,
-  isBalancesLoading,
+  _isBalancesLoading,
   setActiveTab,
   refreshBalances,
   refreshChainId,
@@ -210,7 +210,7 @@ export default function OverviewTab({
                     No Stablecoins Found
                   </h3>
                   <p className="text-gray-800 mb-4">
-                    You don't have any stablecoins in your wallet yet.
+                    You don&#39;t have any stablecoins in your wallet yet.
                   </p>
 
                   <div
@@ -277,7 +277,7 @@ export default function OverviewTab({
                             d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                           />
                         </svg>
-                        <span>Track your portfolio's geographic exposure</span>
+                        <span>Track your portfolio&#39;s geographic exposure</span>
                       </li>
                     </ul>
                   </div>
@@ -441,7 +441,7 @@ export default function OverviewTab({
                   <p className="text-sm text-gray-700 mb-3">
                     This shows how your stablecoin holdings are distributed
                     across different geographic regions. The percentages show
-                    each region's share of your total portfolio value ($
+                    each region&#39;s share of your total portfolio value ($
                     {totalValue.toFixed(2)}).
                   </p>
                   {Object.entries(regionTotals).map(([region, value]) => (

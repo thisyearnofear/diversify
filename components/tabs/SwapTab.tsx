@@ -21,7 +21,7 @@ interface SwapTabProps {
   }>;
   userRegion: Region;
   selectedStrategy: string;
-  inflationData: any;
+  inflationData: Record<string, { avgRate: number; data: any[] }>;
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
   isBalancesLoading?: boolean;
@@ -114,7 +114,7 @@ export default function SwapTab({
   >("idle");
 
   // Create a ref to the SwapInterface component
-  const swapInterfaceRef = useRef<any>(null);
+  const swapInterfaceRef = useRef<{ refreshBalances: () => void }>(null);
 
   // Effect to update UI when swap status changes
   useEffect(() => {
@@ -189,6 +189,8 @@ export default function SwapTab({
     localSwapTxHash,
     hookSwapStep,
     refreshBalances,
+    refreshChainId,
+    swapStep,
   ]);
 
   // Get use case for the selected swap
@@ -237,7 +239,7 @@ export default function SwapTab({
 
         if (result) {
           // LI.FI execution result is in the result object
-          const txHash = result.steps?.[0]?.execution?.process?.find((p: any) => p.type === 'CROSS_CHAIN')?.txHash
+          const txHash = result.steps?.[0]?.execution?.process?.find((p: { type: string }) => p.type === 'CROSS_CHAIN')?.txHash
             || result.steps?.[0]?.execution?.process?.[0]?.txHash;
 
           if (txHash) setLocalSwapTxHash(txHash);
@@ -577,7 +579,7 @@ export default function SwapTab({
                       ? `bg-blue-600 text-white font-medium border border-blue-700`
                       : `bg-white text-gray-700 hover:bg-gray-50 border border-gray-200`
                       }`}
-                    onClick={() => setSelectedScenario(scenario as any)}
+                    onClick={() => setSelectedScenario(scenario as "remittance" | "education" | "business" | "travel" | "savings")}
                   >
                     {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
                   </button>

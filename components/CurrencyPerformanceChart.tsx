@@ -21,7 +21,7 @@ interface CurrencyPerformanceChartProps {
       percentChange: number;
     }[];
     baseCurrency: string;
-    source?: "api" | "cache";
+    source?: "api" | "cache" | "fallback";
   };
   title?: string;
 }

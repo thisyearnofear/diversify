@@ -9,7 +9,7 @@ interface ProtectionTabProps {
   setUserRegion: (region: Region) => void;
   regionData: Array<{ region: string; value: number; color: string }>;
   totalValue: number;
-  balances: any;
+  balances: Record<string, { formattedBalance: string; value: number }>;
   setActiveTab?: (tab: string) => void;
 }
 
@@ -30,7 +30,7 @@ export default function ProtectionTab({
     regionData.map((item) => [item.region, item.value / 100])
   );
 
-  const handleAgentSwap = (targetToken: string) => {
+  const handleAgentSwap = (_targetToken: string) => {
     // In a real implementation, we would pass the target token to the SwapTab
     // For now, we just switch to the tab. 
     // Ideally, we would use a global state manager (Zustand/Context) to set the 'toToken'
@@ -85,9 +85,9 @@ export default function ProtectionTab({
       {/* Agentic Wealth Protection - PREMIUM UI */}
       <AgentWealthGuard
         amount={totalValue || 0}
-        currentRegions={currentRegions}
+        _currentRegions={currentRegions}
         holdings={Object.keys(balances || {})}
-        userRegion={userRegion}
+        _userRegion={userRegion}
         onExecuteSwap={handleAgentSwap}
       />
 

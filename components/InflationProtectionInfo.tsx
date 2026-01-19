@@ -9,7 +9,7 @@ const calculateSavings = (
   amount: number,
   homeRegion: Region,
   diversifiedRegions: Array<Region>,
-  inflationData: any
+  inflationData: Record<string, { avgRate: number; data?: any[]; countries?: any[] }>
 ): number => {
   if (!diversifiedRegions.length) return 0;
 
@@ -248,7 +248,7 @@ export default function InflationProtectionInfo({
                 </p>
                 {savingsExample && (
                   <p className="text-xs text-text-secondary">
-                    That's {savingsExample}
+                    That&#39;s {savingsExample}
                   </p>
                 )}
               </div>

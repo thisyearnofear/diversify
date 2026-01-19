@@ -1,5 +1,6 @@
 import React from "react";
 import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
+import type { Region } from "@/hooks/use-user-region";
 import { REGION_COLORS } from "../../constants/regions";
 
 interface Token {
@@ -52,7 +53,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         {tokenRegion && (
           <div className="flex items-center bg-gray-100 px-2 py-1 rounded-md">
             <RegionalIconography
-              region={tokenRegion as any}
+              region={tokenRegion as Region}
               size="sm"
               className="mr-1"
             />
@@ -155,7 +156,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               : "bg-white border-2 border-gray-300"
           } shadow-md flex items-center`}
         >
-          <RegionalPattern region={tokenRegion as any} className="opacity-20" />
+          <RegionalPattern region={tokenRegion as Region} className="opacity-20" />
           <div className="relative flex w-full justify-between items-center">
             <div className="flex items-center">
               {tokenRegion && (
@@ -168,7 +169,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                   }}
                 >
                   <RegionalIconography
-                    region={tokenRegion as any}
+                    region={tokenRegion as Region}
                     size="sm"
                     className="text-white"
                   />

@@ -10,9 +10,9 @@ import { ethers } from "ethers";
 
 interface AgentWealthGuardProps {
     amount: number;
-    currentRegions: Region[];
+    _currentRegions: Region[];
     holdings: string[];
-    userRegion: Region;
+    _userRegion: Region;
     onExecuteSwap: (targetToken: string) => void;
 }
 
@@ -53,7 +53,7 @@ const AIHint = ({ suggestion, onAskAI }: { suggestion: string; onAskAI: () => vo
 );
 
 // Mobile-optimized progress indicator
-const AIProgress = ({ steps, currentStep }: { steps: string[]; currentStep: string }) => (
+const AIProgress = ({ _steps, currentStep }: { _steps: string[]; currentStep: string }) => (
     <div className="bg-gray-50 rounded-lg p-3 mb-4">
         <div className="flex items-center gap-2 mb-2">
             <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -73,28 +73,28 @@ const AIProgress = ({ steps, currentStep }: { steps: string[]; currentStep: stri
     </div>
 );
 
-export default function AgentWealthGuard({ amount, currentRegions, holdings, userRegion, onExecuteSwap }: AgentWealthGuardProps) {
+export default function AgentWealthGuard({ amount, _currentRegions, holdings, _userRegion, onExecuteSwap }: AgentWealthGuardProps) {
+    const hookResult = useWealthProtectionAgent();
     const {
         analyze, advice, isAnalyzing, thinkingStep, config, updateConfig,
-        messages, sendMessage, isCompact, toggleCompactMode, getSpendingStatus
-    } = useWealthProtectionAgent();
+        messages: _messages, sendMessage, isCompact: _isCompact, toggleCompactMode, getSpendingStatus: _getSpendingStatus
+    } = hookResult;
     const { inflationData } = useInflationData();
     const [showConfig, setShowConfig] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const [showHint, setShowHint] = useState(true);
+    const [showHint, _setShowHint] = useState(true);
     const [bridgeState, setBridgeState] = useState<{
         status: 'idle' | 'checking' | 'approving' | 'bridging' | 'success' | 'error';
         error?: string;
         txHash?: string;
         provider?: 'lifi' | 'circle';
     }>({ status: 'idle' });
+    const { chainId } = useWalletContext();
     const [useCircleNative, setUseCircleNative] = useState(false);
     const [isVisionLoading, setIsVisionLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!inflationData) return null;
-
-    const { chainId } = useWalletContext();
 
     const handleAnalyze = () => {
         const networkName = chainId === 42220 ? 'Celo Mainnet' : chainId === 44787 ? 'Celo Alfajores' : 'Unknown Network';
@@ -176,7 +176,6 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
         }
     };
 
-    const spendingStatus = getSpendingStatus();
     const hasNewInsight = advice && !isAnalyzing;
 
     // Mobile-first: Show compact hint by default, full interface on demand
@@ -225,9 +224,6 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                             <div className="flex items-center gap-2">
                                 <span className="text-xs px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                     Arc Agent v2
-                                </span>
-                                <span className="text-xs text-gray-500 md:text-slate-500">
-                                    ${spendingStatus.spent.toFixed(2)}/${spendingStatus.limit} USDC
                                 </span>
                             </div>
                         </div>
@@ -329,7 +325,7 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                 <div className="flex-1 overflow-y-auto p-4">
                     {/* Analysis Progress */}
                     {isAnalyzing && (
-                        <AIProgress steps={[]} currentStep={thinkingStep} />
+                        <AIProgress _steps={[]} currentStep={thinkingStep} />
                     )}
 
                     {/* Recommendation Display */}
@@ -380,7 +376,7 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                                     </div>
 
                                     <p className="text-sm text-gray-700 md:text-slate-300 font-medium leading-relaxed italic border-l-2 border-gray-300 md:border-white/10 pl-3">
-                                        "{advice.reasoning}"
+                                        &quot;{advice.reasoning}&quot;
                                     </p>
 
                                     {/* Thought Trace Display */}

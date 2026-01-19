@@ -40,8 +40,9 @@ export default async function handler(
         // Pass through the data
         return res.status(200).json(data);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Finance API Error:', error);
-        return res.status(500).json({ error: error.message || 'Internal Server Error' });
+        return res.status(500).json({ error: errorMessage || 'Internal Server Error' });
     }
 }

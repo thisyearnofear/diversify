@@ -458,7 +458,7 @@ const SwapInterface = forwardRef<
                   <div className="font-medium flex items-center justify-between">
                     <div>
                       <span className="text-sm text-gray-800 font-medium">
-                        You'll receive approximately
+                        You&#39;ll receive approximately
                       </span>
                       <div className="flex items-center">
                         <span className="font-bold text-2xl text-blue-700">

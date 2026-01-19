@@ -159,7 +159,7 @@ export default function InflationVisualizer({
             <div>
               <h4 className="text-emerald-400 font-black text-xs uppercase tracking-widest mb-1">Protection Outcome</h4>
               <p className="text-white font-bold text-[13px] leading-tight">
-                By deploying to the Oracle's RWA Safe Haven, you preserve <span className="text-emerald-400">${wealthPreserved.toFixed(2)}</span> in wealth that would otherwise be lost to inflation.
+                By deploying to the Oracle&#39;s RWA Safe Haven, you preserve <span className="text-emerald-400">${wealthPreserved.toFixed(2)}</span> in wealth that would otherwise be lost to inflation.
               </p>
             </div>
           </div>

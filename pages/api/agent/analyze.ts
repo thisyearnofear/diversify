@@ -92,16 +92,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     ...parsed,
                     _meta: { modelUsed: modelName }
                 });
-            } catch (err: any) {
-                console.warn(`[Gemini 3] ${modelName} logic failed, trying next...`, err.message);
+            } catch (err: unknown) {
+                const errorMessage = err instanceof Error ? err.message : String(err);
+                console.warn(`[Gemini 3] ${modelName} logic failed, trying next...`, errorMessage);
                 continue;
             }
         }
 
         throw new Error("All Gemini models failed to process structured output.");
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Gemini 3 Agent Error:', error);
-        return res.status(500).json({ error: error.message });
+        return res.status(500).json({ error: errorMessage });
     }
 }

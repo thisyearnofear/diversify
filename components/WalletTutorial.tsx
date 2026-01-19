@@ -19,7 +19,7 @@ export const WalletTutorial: React.FC<{
 }> = ({ isOpen, onClose, onConnect, isMiniPay = false }) => {
   const [step, setStep] = useState(1);
   const { chainId } = useWalletContext();
-  const isArc = chainId === 5042002;
+  const _isArc = chainId === 5042002;
 
   const totalSteps = isMiniPay ? 3 : 4;
 
@@ -162,7 +162,7 @@ export const WalletTutorial: React.FC<{
                   <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-100">
                     <p className="text-yellow-700 font-medium mb-2">💡 Good to know</p>
                     <p className="text-yellow-600 text-sm">
-                      You'll need to approve each transaction in your wallet app. We can't access your funds without your permission.
+                      You&#39;ll need to approve each transaction in your wallet app. We can&#39;t access your funds without your permission.
                     </p>
                   </div>
                 </div>
@@ -189,7 +189,7 @@ export const WalletTutorial: React.FC<{
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-3 mb-6">
-                      {Object.entries(WalletIcons).map(([name, icon]) => (
+                      {Object.entries(WalletIcons).map(([name]) => (
                         <div key={name} className="flex flex-col items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
                           <div className="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
                             <span className="text-gray-600 font-bold text-xs">{name.slice(0, 2)}</span>

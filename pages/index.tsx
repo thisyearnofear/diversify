@@ -134,7 +134,7 @@ export default function DiversiFiPage() {
               <div>
                 <h3 className="text-sm font-semibold text-amber-900">Unsupported Network</h3>
                 <p className="text-xs text-amber-700 mt-1">
-                  You are currently seeing mock data because you're not on a supported network (Celo or Arc).
+                  You are currently seeing mock data because you&#39;re not on a supported network (Celo or Arc).
                   Switch to a supported network to see your real balances.
                 </p>
                 <div className="mt-3 flex space-x-2">
@@ -175,12 +175,12 @@ export default function DiversiFiPage() {
             userRegion={userRegion}
             setUserRegion={setUserRegion}
             REGIONS={REGIONS}
-            isBalancesLoading={isBalancesLoading}
+            _isBalancesLoading={isBalancesLoading}
             setActiveTab={setActiveTab}
             refreshBalances={refreshBalances}
             refreshChainId={refreshChainId}
             balances={balances}
-            inflationData={inflationData}
+            inflationData={inflationData as Record<string, any>}
           />
         )}
 
@@ -208,8 +208,8 @@ export default function DiversiFiPage() {
         {/* Analytics Tab */}
         {activeTab === "analytics" && (
           <AnalyticsTab
-            performanceData={performanceData}
-            isPerformanceLoading={isPerformanceLoading}
+            _performanceData={performanceData}
+            _isPerformanceLoading={isPerformanceLoading}
             currencyPerformanceData={currencyPerformanceData}
             isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
             regionData={regionData}
@@ -225,7 +225,7 @@ export default function DiversiFiPage() {
             availableTokens={AVAILABLE_TOKENS}
             userRegion={userRegion}
             selectedStrategy={selectedStrategy}
-            inflationData={inflationData}
+            inflationData={inflationData as Record<string, any>}
             refreshBalances={refreshBalances}
             refreshChainId={refreshChainId}
             isBalancesLoading={isBalancesLoading}
