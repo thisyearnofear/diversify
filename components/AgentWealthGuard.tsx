@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWealthProtectionAgent, RiskTolerance, InvestmentGoal } from "../hooks/use-wealth-protection-agent";
 import { useInflationData } from "../hooks/use-inflation-data";
@@ -89,6 +89,8 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
         provider?: 'lifi' | 'circle';
     }>({ status: 'idle' });
     const [useCircleNative, setUseCircleNative] = useState(false);
+    const [isVisionLoading, setIsVisionLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     if (!inflationData) return null;
 
@@ -102,6 +104,35 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
             holdings,
             { chainId: chainId || 0, name: networkName }
         );
+    };
+
+    const handleVisionAnalysis = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsVisionLoading(true);
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            try {
+                const base64 = reader.result as string;
+                const response = await fetch('/api/agent/vision', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: base64 })
+                });
+                const data = await response.json();
+
+                // Show as an AI message
+                setIsOpen(true); // Open modal to show result
+                // Since sendMessage only takes content, we just send the text
+                sendMessage(data.text);
+                setIsVisionLoading(false);
+            } catch (err) {
+                console.error("Vision failed:", err);
+                setIsVisionLoading(false);
+            }
+        };
+        reader.readAsDataURL(file);
     };
 
     const handleExecuteAction = async (targetToken: string) => {
@@ -203,6 +234,28 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleVisionAnalysis}
+                            accept="image/*"
+                            className="hidden"
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isVisionLoading}
+                            className={`p-2 rounded-lg transition-all ${isVisionLoading ? 'animate-pulse bg-blue-500/20' : 'hover:bg-gray-100 md:hover:bg-white/5'} text-blue-500`}
+                            title="Scan Portfolio Screenshot (Gemini Vision)"
+                        >
+                            {isVisionLoading ? (
+                                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                            )}
+                        </button>
                         <button
                             onClick={() => setShowConfig(!showConfig)}
                             className="p-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-100 md:hover:bg-white/5"
@@ -314,9 +367,40 @@ export default function AgentWealthGuard({ amount, currentRegions, holdings, use
                                         )}
                                     </div>
                                 </div>
-                                <p className="text-sm text-gray-700 md:text-slate-300 font-medium leading-relaxed italic border-l-2 border-gray-300 md:border-white/10 pl-3">
-                                    "{advice.reasoning}"
-                                </p>
+                                <div className="bg-blue-600/5 rounded-xl p-4 border border-blue-500/20">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className="text-xl">🧠</span>
+                                        <div>
+                                            <h4 className="font-bold text-gray-800 md:text-white text-sm">Wealth Protection Strategy</h4>
+                                            <div className="flex items-center gap-2 text-[10px] text-blue-400 font-mono">
+                                                <span className="animate-pulse">●</span>
+                                                <span>Agent: {advice._meta?.modelUsed || 'Gemini 3 Flash'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <p className="text-sm text-gray-700 md:text-slate-300 font-medium leading-relaxed italic border-l-2 border-gray-300 md:border-white/10 pl-3">
+                                        "{advice.reasoning}"
+                                    </p>
+
+                                    {/* Thought Trace Display */}
+                                    {advice.thoughtChain && (
+                                        <div className="space-y-2 mt-4 pt-4 border-t border-blue-500/10">
+                                            <label className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">Logic Trace</label>
+                                            {advice.thoughtChain.map((thought, idx) => (
+                                                <motion.div
+                                                    initial={{ opacity: 0, x: -5 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    key={idx}
+                                                    className="flex items-start gap-2 text-[11px] text-gray-500 md:text-slate-400 font-medium"
+                                                >
+                                                    <span className="text-blue-500 mt-1">↪</span>
+                                                    <span>{thought}</span>
+                                                </motion.div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
 
                                 {advice.expectedSavings && (
                                     <div className="mt-3 flex items-center justify-between text-xs text-gray-600 md:text-slate-400">

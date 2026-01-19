@@ -7,6 +7,8 @@ Protect your savings from inflation by diversifying stablecoins across global re
 - **Wealth Protection Score**: Advanced engine that scores your portfolio based on inflation hedging, RWA exposure, and yield optimization.
 - **RWA Integration**: Direct access to Real-World Assets (PAXG, USDY, OUSG) through tokenized gold and US Treasuries.
 - **Cross-Chain Bridging**: Seamlessly move assets from Celo to Arbitrum One using LI.FI and **Circle's Native CCTP** integration for better wealth preservation.
+- **Gemini Vision Intelligence**: Multimodal analysis of portfolio screenshots and financial documents for instant health checks.
+- **Arc Network Integration**: Direct settlement on Arc Network with x402 automated payments and specialized USDC gas tokens.
 - **Circle Infrastructure**: Secure, enterprise-grade agent wallets and native USDC bridging via Circle Programmable Wallets and CCTP.
 - **Inflation Protection Dashboard**: Visualize how inflation affects your savings globally.
 - **Portfolio Visualization**: Interactive charts showing stablecoin distribution by region.
@@ -55,11 +57,11 @@ NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY=your_key
 
 ## 🏆 Hackathon Tracks
 
-**Primary**: Agentic Commerce on Arc
-- Gemini 1.5 Flash integration
-- Arc Network settlement (Chain ID 5042002)
-- Wealth Protection Score (WPS) engine
-- Cross-chain RWA integration (Arbitrum One)
+**Primary**: Agentic Commerce on Arc & Gemini 3 Hackathon
+- **Gemini 3 Flash & Pro**: Native JSON mode and System Instructions for deterministic financial reasoning.
+- **Multimodal (Vision)**: Real-time analysis of off-chain documents via Gemini Vision.
+- **Arc Network settlement** (Chain ID 5042002): High-efficiency transactional layer.
+- **Wealth Protection Score (WPS) engine**: Deterministic AI-driven portfolio scoring.
 
 **Secondary**: Inflation Protection and Swapping
 - Mento stablecoin integration

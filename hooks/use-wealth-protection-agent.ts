@@ -15,6 +15,7 @@ export interface AgentAdvice {
     dataSources?: string[];
     arcTxHash?: string;
     paymentHashes?: Record<string, string>;
+    thoughtChain?: string[];
     _meta?: {
         modelUsed: string;
         totalCost?: number;
