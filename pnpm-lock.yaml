@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@farcaster/frame-sdk':
+        specifier: 0.1.12
+        version: 0.1.12(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
       '@google/generative-ai':
         specifier: 0.24.1
         version: 0.24.1
@@ -271,6 +274,26 @@ packages:
 
   '@ethersproject/wordlists@5.8.0':
     resolution: {integrity: sha512-2df9bbXicZws2Sb5S6ET493uJ0Z84Fjr3pC4tu/qlnZERibZCeUVuqdtt+7Tv9xxhUxHoIekIA7avrKUWHrezg==, tarball: https://registry.npmjs.org/@ethersproject/wordlists/-/wordlists-5.8.0.tgz}
+
+  '@farcaster/frame-sdk@0.1.12':
+    resolution: {integrity: sha512-qlikvkxsrsvKGutr3PM3Yvsuni2Fku15aPagrCyHZWbYAJrZ4mRJM6u9S8eLAXMMnYd9gJ9yor6COYgmZMBOgQ==, tarball: https://registry.npmjs.org/@farcaster/frame-sdk/-/frame-sdk-0.1.12.tgz}
+    engines: {node: '>=22.11.0'}
+
+  '@farcaster/miniapp-core@0.4.1':
+    resolution: {integrity: sha512-20FxHTRToYUKx7CQ8PvIy9OoQ6XjdmF1pRMS7dsj37qdqjVDeEkYoK8yXwnoReZoJRcYwIg8P3i6V8bTWNR5mg==, tarball: https://registry.npmjs.org/@farcaster/miniapp-core/-/miniapp-core-0.4.1.tgz}
+
+  '@farcaster/miniapp-sdk@0.2.1':
+    resolution: {integrity: sha512-2SnDeOtDdlN1lGQt7UyH2jkrZRQDOkmhcrlzNWazYChyPh9XfV8+9fMS+Lr/E2pEws9Q40Xl9POrCzdpUC19lg==, tarball: https://registry.npmjs.org/@farcaster/miniapp-sdk/-/miniapp-sdk-0.2.1.tgz}
+
+  '@farcaster/quick-auth@0.0.6':
+    resolution: {integrity: sha512-tiZndhpfDtEhaKlkmS5cVDuS+A/tafqZT3y9I44rC69m3beJok6e8dIH2JhxVy3EvOWTyTBnrmNn6GOOh+qK6A==, tarball: https://registry.npmjs.org/@farcaster/quick-auth/-/quick-auth-0.0.6.tgz}
+    peerDependencies:
+      typescript: 5.8.3
+
+  '@farcaster/quick-auth@0.0.8':
+    resolution: {integrity: sha512-NRIq1BcbcQCC6xBF5owfckkY00xKQVpqhpLNl5rICVpl0xeDsiVbkenIrHaUuyjtCK2W28YVc2ZCFRyz9ERHKg==, tarball: https://registry.npmjs.org/@farcaster/quick-auth/-/quick-auth-0.0.8.tgz}
+    peerDependencies:
+      typescript: 5.8.3
 
   '@gemini-wallet/core@0.3.2':
     resolution: {integrity: sha512-Z4aHi3ECFf5oWYWM3F1rW83GJfB9OvhBYPTmb5q+VyK3uvzvS48lwo+jwh2eOoCRWEuT/crpb9Vwp2QaS5JqgQ==, tarball: https://registry.npmjs.org/@gemini-wallet/core/-/core-0.3.2.tgz}
@@ -1853,6 +1876,9 @@ packages:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==, tarball: https://registry.npmjs.org/combined-stream/-/combined-stream-1.0.8.tgz}
     engines: {node: '>= 0.8'}
 
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==, tarball: https://registry.npmjs.org/comlink/-/comlink-4.4.2.tgz}
+
   commander@13.1.0:
     resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==, tarball: https://registry.npmjs.org/commander/-/commander-13.1.0.tgz}
     engines: {node: '>=18'}
@@ -2678,6 +2704,9 @@ packages:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==, tarball: https://registry.npmjs.org/jiti/-/jiti-1.21.7.tgz}
     hasBin: true
 
+  jose@5.10.0:
+    resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==, tarball: https://registry.npmjs.org/jose/-/jose-5.10.0.tgz}
+
   jose@6.1.3:
     resolution: {integrity: sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==, tarball: https://registry.npmjs.org/jose/-/jose-6.1.3.tgz}
 
@@ -2971,6 +3000,14 @@ packages:
 
   ox@0.11.3:
     resolution: {integrity: sha512-1bWYGk/xZel3xro3l8WGg6eq4YEKlaqvyMtVhfMFpbJzK2F6rj4EDRtqDCWVEJMkzcmEi9uW2QxsqELokOlarw==, tarball: https://registry.npmjs.org/ox/-/ox-0.11.3.tgz}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  ox@0.4.4:
+    resolution: {integrity: sha512-oJPEeCDs9iNiPs6J0rTx+Y0KGeCGyCAA3zo94yZhm8G5WpOxrwUtn2Ie/Y8IyARSqqY/j9JTKA3Fc1xs1DvFnw==, tarball: https://registry.npmjs.org/ox/-/ox-0.4.4.tgz}
     peerDependencies:
       typescript: '>=5.4.0'
     peerDependenciesMeta:
@@ -4392,6 +4429,57 @@ snapshots:
       '@ethersproject/logger': 5.8.0
       '@ethersproject/properties': 5.8.0
       '@ethersproject/strings': 5.8.0
+
+  '@farcaster/frame-sdk@0.1.12(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)':
+    dependencies:
+      '@farcaster/miniapp-sdk': 0.2.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
+      '@farcaster/quick-auth': 0.0.8(typescript@5.9.3)
+      comlink: 4.4.2
+      eventemitter3: 5.0.1
+      ox: 0.4.4(typescript@5.9.3)(zod@4.3.5)
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
+      - zod
+
+  '@farcaster/miniapp-core@0.4.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)':
+    dependencies:
+      '@solana/web3.js': 1.98.4(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      ox: 0.4.4(typescript@5.9.3)(zod@3.25.76)
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
+
+  '@farcaster/miniapp-sdk@0.2.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)':
+    dependencies:
+      '@farcaster/miniapp-core': 0.4.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
+      '@farcaster/quick-auth': 0.0.6(typescript@5.9.3)
+      comlink: 4.4.2
+      eventemitter3: 5.0.1
+      ox: 0.4.4(typescript@5.9.3)(zod@4.3.5)
+    transitivePeerDependencies:
+      - bufferutil
+      - encoding
+      - typescript
+      - utf-8-validate
+      - zod
+
+  '@farcaster/quick-auth@0.0.6(typescript@5.9.3)':
+    dependencies:
+      jose: 5.10.0
+      typescript: 5.9.3
+      zod: 3.25.76
+
+  '@farcaster/quick-auth@0.0.8(typescript@5.9.3)':
+    dependencies:
+      jose: 5.10.0
+      typescript: 5.9.3
+      zod: 3.25.76
 
   '@gemini-wallet/core@0.3.2(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))':
     dependencies:
@@ -6913,6 +7001,8 @@ snapshots:
     dependencies:
       delayed-stream: 1.0.0
 
+  comlink@4.4.2: {}
+
   commander@13.1.0: {}
 
   commander@14.0.2: {}
@@ -7938,6 +8028,8 @@ snapshots:
 
   jiti@1.21.7: {}
 
+  jose@5.10.0: {}
+
   jose@6.1.3: {}
 
   js-sha3@0.8.0: {}
@@ -8257,6 +8349,34 @@ snapshots:
       '@adraffy/ens-normalize': 1.11.1
       '@noble/ciphers': 1.3.0
       '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.3.5)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - zod
+
+  ox@0.4.4(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.3(typescript@5.9.3)(zod@3.25.76)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - zod
+
+  ox@0.4.4(typescript@5.9.3)(zod@4.3.5):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0

@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { isMiniPayEnvironment } from '../utils/environment';
+import sdk, { type FrameContext } from '@farcaster/frame-sdk';
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
@@ -13,13 +14,28 @@ export function useWallet() {
   const [error, setError] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [isMiniPay, setIsMiniPay] = useState(false);
+  const [isFarcaster, setIsFarcaster] = useState(false);
+  const [farcasterContext, setFarcasterContext] = useState<FrameContext | null>(null);
 
-  // Initialize wallet
+  // Initialize wallet and environment
   useEffect(() => {
     const initWallet = async () => {
       if (typeof window === 'undefined') return;
 
-      // Detect MiniPay environment
+      // 1. Detect Farcaster Environment (Standard 2026)
+      try {
+        const context = await sdk.context;
+        if (context) {
+          setIsFarcaster(true);
+          setFarcasterContext(context);
+          sdk.actions.ready(); // Signal that frame is ready
+          console.log('[Farcaster] Frame initialized with context:', context);
+        }
+      } catch (err) {
+        // Not in Farcaster environment, continue
+      }
+
+      // 2. Detect MiniPay environment
       const inMiniPay = isMiniPayEnvironment();
       setIsMiniPay(inMiniPay);
 
@@ -36,7 +52,7 @@ export function useWallet() {
         console.warn('Error getting chain ID:', err);
       }
 
-      // Auto-connect if in MiniPay
+      // Auto-connect if in MiniPay or Farcaster
       if (inMiniPay) {
         connect();
       }
@@ -177,6 +193,8 @@ export function useWallet() {
     error,
     chainId,
     isMiniPay,
+    isFarcaster,
+    farcasterContext,
     connect,
     switchNetwork,
     formatAddress,

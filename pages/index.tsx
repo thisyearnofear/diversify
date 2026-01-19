@@ -105,6 +105,11 @@ export default function DiversiFiPage() {
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
+        {/* Farcaster v2 Meta Tags */}
+        <meta 
+          name="fc:frame" 
+          content='{"version":"next","imageUrl":"https://localhost:3000/splash.png"}' 
+        />
       </Head>
 
       <div className="max-w-md mx-auto">

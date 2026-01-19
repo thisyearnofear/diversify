@@ -17,6 +17,7 @@
     "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\""
   },
   "dependencies": {
+    "@farcaster/frame-sdk": "0.1.12",
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",
     "@stable-station/mento-utils": "workspace:*",
