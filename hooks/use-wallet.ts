@@ -5,7 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { isMiniPayEnvironment } from '../utils/environment';
-import sdk, { type FrameContext } from '@farcaster/frame-sdk';
+import sdk from '@farcaster/frame-sdk';
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
@@ -15,7 +15,7 @@ export function useWallet() {
   const [chainId, setChainId] = useState<number | null>(null);
   const [isMiniPay, setIsMiniPay] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
-  const [farcasterContext, setFarcasterContext] = useState<FrameContext | null>(null);
+  const [farcasterContext, setFarcasterContext] = useState<any | null>(null);
 
   // Initialize wallet and environment
   useEffect(() => {
@@ -60,7 +60,8 @@ export function useWallet() {
       // Event handlers
       const handleChainChanged = (chainId: string) => {
         setChainId(parseInt(chainId, 16));
-        window.location.reload();
+        // Removed page reload to preserve UI state
+        // Chain changes will be handled gracefully through state updates
       };
 
       const handleAccountsChanged = (accounts: string[]) => {

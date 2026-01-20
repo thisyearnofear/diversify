@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
+import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
 import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
 import { useHistoricalPerformance } from "../hooks/use-historical-performance";
@@ -22,8 +23,8 @@ import { useWalletContext } from "../components/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/WalletTutorial";
 
 export default function DiversiFiPage() {
-  // Tab state
-  const [activeTab, setActiveTab] = useState("protect");
+  // Use app state context for tab management
+  const { activeTab, setActiveTab } = useAppState();
   const [selectedStrategy, setSelectedStrategy] = useState("balanced");
 
   // Wallet connection from context

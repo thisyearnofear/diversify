@@ -129,338 +129,376 @@ export function useStablecoinBalances(address: string | undefined | null) {
   const [chainId, setChainId] = useState<number | null>(null);
   const [isMockData, setIsMockData] = useState(false);
 
-  useEffect(() => {
+  // Function to fetch balances
+  const fetchBalances = async () => {
     if (!address) {
       setIsLoading(false);
       return;
     }
 
-    const fetchBalances = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        // Check cache first
-        const cachedBalances = getCachedBalances(address);
-        if (cachedBalances) {
-          setBalances(cachedBalances);
-          calculateTotals(cachedBalances);
-          setIsLoading(false);
-          return;
-        }
+      // Check cache first
+      const cachedBalances = getCachedBalances(address);
+      if (cachedBalances) {
+        setBalances(cachedBalances);
+        calculateTotals(cachedBalances);
+        setIsLoading(false);
+        return;
+      }
 
-        // For demo/testing purposes, use mock data if we're not on Celo network
-        // This prevents unnecessary API calls that might fail
-        if (typeof window !== 'undefined' && window.ethereum) {
-          try {
-            const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-            const currentChainId = Number.parseInt(chainIdHex as string, 16);
+      // For demo/testing purposes, use mock data if we're not on Celo network
+      // This prevents unnecessary API calls that might fail
+      if (typeof window !== 'undefined' && window.ethereum) {
+        try {
+          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+          const currentChainId = Number.parseInt(chainIdHex as string, 16);
 
-            // Update chainId state
-            setChainId(currentChainId);
+          // Update chainId state
+          setChainId(currentChainId);
 
-            // If not on Celo (42220), Alfajores (44787), or Arc (5042002), use mock data
-            if (currentChainId !== 42220 && currentChainId !== 44787 && currentChainId !== 5042002) {
-              console.log('Not on supported network, using mock data');
-              setIsMockData(true);
+          // If not on Celo (42220), Alfajores (44787), or Arc (5042002), use mock data
+          if (currentChainId !== 42220 && currentChainId !== 44787 && currentChainId !== 5042002) {
+            console.log('Not on supported network, using mock data');
+            setIsMockData(true);
 
-              // Create realistic mock balances based on the network
-              const mockBalances: Record<string, StablecoinBalance> = {};
+            // Create realistic mock balances based on the network
+            const mockBalances: Record<string, StablecoinBalance> = {};
 
-              // Add basic stablecoins for all networks
-              mockBalances.CUSD = {
-                symbol: 'CUSD',
-                name: 'Celo Dollar',
-                balance: '50000000000000000000',
-                formattedBalance: '50',
-                value: 50, // $1 per CUSD
-                region: 'USA'
+            // Add basic stablecoins for all networks
+            mockBalances.CUSD = {
+              symbol: 'CUSD',
+              name: 'Celo Dollar',
+              balance: '50000000000000000000',
+              formattedBalance: '50',
+              value: 50, // $1 per CUSD
+              region: 'USA'
+            };
+
+            mockBalances.CEUR = {
+              symbol: 'CEUR',
+              name: 'Celo Euro',
+              balance: '30000000000000000000',
+              formattedBalance: '30',
+              value: 32.4, // $1.08 per CEUR
+              region: 'Europe'
+            };
+
+            // Add Mento v2.0 stablecoins if on Alfajores
+            if (currentChainId === 44787) {
+              // Add all Alfajores stablecoins
+              mockBalances.CREAL = {
+                symbol: 'CREAL',
+                name: 'Celo Brazilian Real',
+                balance: '100000000000000000000',
+                formattedBalance: '100',
+                value: 20, // $0.20 per CREAL
+                region: 'LatAm'
               };
 
-              mockBalances.CEUR = {
-                symbol: 'CEUR',
-                name: 'Celo Euro',
-                balance: '30000000000000000000',
-                formattedBalance: '30',
-                value: 32.4, // $1.08 per CEUR
+              mockBalances.CXOF = {
+                symbol: 'CXOF',
+                name: 'CFA Franc',
+                balance: '10000000000000000000000',
+                formattedBalance: '10000',
+                value: 16, // $0.0016 per CXOF
+                region: 'Africa'
+              };
+
+              mockBalances.CKES = {
+                symbol: 'CKES',
+                name: 'Celo Kenyan Shilling',
+                balance: '2000000000000000000000',
+                formattedBalance: '2000',
+                value: 15.6, // $0.0078 per CKES
+                region: 'Africa'
+              };
+
+              mockBalances.CPESO = {
+                symbol: 'CPESO',
+                name: 'Philippine Peso',
+                balance: '1000000000000000000000',
+                formattedBalance: '1000',
+                value: 17.9, // $0.0179 per CPESO
+                region: 'Asia'
+              };
+
+              mockBalances.CCOP = {
+                symbol: 'CCOP',
+                name: 'Celo Colombian Peso',
+                balance: '100000000000000000000000',
+                formattedBalance: '100000',
+                value: 25, // $0.00025 per CCOP
+                region: 'LatAm'
+              };
+
+              mockBalances.CGHS = {
+                symbol: 'CGHS',
+                name: 'Celo Ghana Cedi',
+                balance: '500000000000000000000',
+                formattedBalance: '500',
+                value: 34.5, // $0.069 per CGHS
+                region: 'Africa'
+              };
+
+              mockBalances.CGBP = {
+                symbol: 'CGBP',
+                name: 'British Pound',
+                balance: '20000000000000000000',
+                formattedBalance: '20',
+                value: 25.4, // $1.27 per CGBP
                 region: 'Europe'
               };
 
-              // Add Mento v2.0 stablecoins if on Alfajores
-              if (currentChainId === 44787) {
-                // Add all Alfajores stablecoins
-                mockBalances.CREAL = {
-                  symbol: 'CREAL',
-                  name: 'Celo Brazilian Real',
-                  balance: '100000000000000000000',
-                  formattedBalance: '100',
-                  value: 20, // $0.20 per CREAL
-                  region: 'LatAm'
-                };
-
-                mockBalances.CXOF = {
-                  symbol: 'CXOF',
-                  name: 'CFA Franc',
-                  balance: '10000000000000000000000',
-                  formattedBalance: '10000',
-                  value: 16, // $0.0016 per CXOF
-                  region: 'Africa'
-                };
-
-                mockBalances.CKES = {
-                  symbol: 'CKES',
-                  name: 'Celo Kenyan Shilling',
-                  balance: '2000000000000000000000',
-                  formattedBalance: '2000',
-                  value: 15.6, // $0.0078 per CKES
-                  region: 'Africa'
-                };
-
-                mockBalances.CPESO = {
-                  symbol: 'CPESO',
-                  name: 'Philippine Peso',
-                  balance: '1000000000000000000000',
-                  formattedBalance: '1000',
-                  value: 17.9, // $0.0179 per CPESO
-                  region: 'Asia'
-                };
-
-                mockBalances.CCOP = {
-                  symbol: 'CCOP',
-                  name: 'Celo Colombian Peso',
-                  balance: '100000000000000000000000',
-                  formattedBalance: '100000',
-                  value: 25, // $0.00025 per CCOP
-                  region: 'LatAm'
-                };
-
-                mockBalances.CGHS = {
-                  symbol: 'CGHS',
-                  name: 'Celo Ghana Cedi',
-                  balance: '500000000000000000000',
-                  formattedBalance: '500',
-                  value: 34.5, // $0.069 per CGHS
-                  region: 'Africa'
-                };
-
-                mockBalances.CGBP = {
-                  symbol: 'CGBP',
-                  name: 'British Pound',
-                  balance: '20000000000000000000',
-                  formattedBalance: '20',
-                  value: 25.4, // $1.27 per CGBP
-                  region: 'Europe'
-                };
-
-                mockBalances.CZAR = {
-                  symbol: 'CZAR',
-                  name: 'South African Rand',
-                  balance: '1000000000000000000000',
-                  formattedBalance: '1000',
-                  value: 55, // $0.055 per CZAR
-                  region: 'Africa'
-                };
-
-                mockBalances.CCAD = {
-                  symbol: 'CCAD',
-                  name: 'Canadian Dollar',
-                  balance: '30000000000000000000',
-                  formattedBalance: '30',
-                  value: 22.2, // $0.74 per CCAD
-                  region: 'USA'
-                };
-
-                mockBalances.CAUD = {
-                  symbol: 'CAUD',
-                  name: 'Australian Dollar',
-                  balance: '40000000000000000000',
-                  formattedBalance: '40',
-                  value: 26.4, // $0.66 per CAUD
-                  region: 'Asia'
-                };
-              } else {
-                // Add mainnet-only stablecoins
-                mockBalances.CKES = {
-                  symbol: 'CKES',
-                  name: 'Celo Kenyan Shilling',
-                  balance: '2000000000000000000000',
-                  formattedBalance: '2000',
-                  value: 15.6, // $0.0078 per CKES
-                  region: 'Africa'
-                };
-
-                mockBalances.CCOP = {
-                  symbol: 'CCOP',
-                  name: 'Celo Colombian Peso',
-                  balance: '100000000000000000000000',
-                  formattedBalance: '100000',
-                  value: 25, // $0.00025 per CCOP
-                  region: 'LatAm'
-                };
-
-                mockBalances.PUSO = {
-                  symbol: 'PUSO',
-                  name: 'Philippine Peso',
-                  balance: '1000000000000000000000',
-                  formattedBalance: '1000',
-                  value: 17.9, // $0.0179 per PUSO
-                  region: 'Asia'
-                };
-              }
-
-              setBalances(mockBalances);
-              calculateTotals(mockBalances);
-              setIsLoading(false);
-              return;
-            } else {
-              setIsMockData(false);
-            }
-          } catch (err) {
-            console.warn('Error checking chain ID, proceeding with API calls:', err);
-          }
-        }
-
-        // Get current chain ID from window.ethereum if not already set
-        if (!chainId && typeof window !== 'undefined' && window.ethereum) {
-          try {
-            const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-            const detectedChainId = Number.parseInt(chainIdHex as string, 16);
-            setChainId(detectedChainId);
-            console.log('Detected chain ID for balance fetching:', detectedChainId);
-          } catch (err) {
-            console.warn('Error detecting chain ID:', err);
-          }
-        }
-
-        // Create provider for Celo based on the network
-        // Use the most recently detected chainId
-        const currentChainId = chainId || (typeof window !== 'undefined' && window.ethereum ?
-          Number.parseInt(await window.ethereum.request({ method: 'eth_chainId' }) as string, 16) : null);
-
-        console.log('Using chain ID for balance fetching:', currentChainId);
-
-        const isAlfajores = currentChainId === 44787;
-        const isArc = currentChainId === 5042002;
-
-        let providerUrl = 'https://forno.celo.org'; // Default
-        if (isAlfajores) providerUrl = 'https://alfajores-forno.celo-testnet.org';
-        if (isArc) providerUrl = 'https://rpc.testnet.arc.network';
-
-        console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} provider for balance fetching`);
-        const provider = new ethers.providers.JsonRpcProvider(providerUrl);
-
-        // Determine which tokens to fetch based on the network
-        let tokensToFetch: string[] = [];
-        if (isArc) {
-          tokensToFetch = ['USDC'];
-        } else if (isAlfajores) {
-          tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
-        } else {
-          tokensToFetch = ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO'];
-        }
-
-        console.log(`Fetching balances for tokens: ${tokensToFetch.join(', ')}`);
-
-        // Fetch balances for each token
-        const tokenPromises = tokensToFetch.map(
-          async (symbol) => {
-            try {
-              // Determine which token address list to use based on the network
-              const tokenList = getTokenAddresses(currentChainId as number);
-              console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list for ${symbol}`);
-
-              // Use type assertion to handle the index signature
-              const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
-                tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
-                tokenList[symbol.toLowerCase() as keyof typeof tokenList];
-
-              if (!tokenAddress) {
-                console.warn(`Token address not found for ${symbol} in ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
-                console.log('Available tokens:', Object.keys(tokenList).join(', '));
-                return null;
-              }
-
-              console.log(`Found token address for ${symbol}: ${tokenAddress}`);
-
-              const contract = new ethers.Contract(
-                tokenAddress,
-                ABIS.ERC20,
-                provider
-              );
-
-              console.log(`Fetching balance for ${symbol} (${tokenAddress}) for address ${address}`);
-
-              let balance;
-              let formattedBalance;
-
-              try {
-                balance = await contract.balanceOf(address);
-                console.log(`Raw balance for ${symbol}: ${balance.toString()}`);
-                formattedBalance = ethers.utils.formatUnits(balance, 18);
-                console.log(`Formatted balance for ${symbol}: ${formattedBalance}`);
-              } catch (balanceError) {
-                console.error(`Error fetching balance for ${symbol}:`, balanceError);
-                return null;
-              }
-
-              // Get the exchange rate for this token
-              const exchangeRate = EXCHANGE_RATES[symbol] ||
-                EXCHANGE_RATES[symbol.toUpperCase()] ||
-                EXCHANGE_RATES[symbol.toLowerCase()] || 1;
-
-              // Calculate USD value - properly convert to USD
-              // For tokens like cKES where 1 KES = $0.0078, we multiply the token amount by the rate
-              const value = Number.parseFloat(formattedBalance) * exchangeRate;
-
-              // Get token metadata - try both original case and uppercase
-              const metadata = TOKEN_METADATA[symbol] ||
-                TOKEN_METADATA[symbol.toUpperCase()] ||
-                TOKEN_METADATA[symbol.toLowerCase()] ||
-                { name: symbol, region: 'Global' }; // Default to Global
-
-              return {
-                symbol,
-                name: metadata.name,
-                balance: balance.toString(),
-                formattedBalance,
-                value,
-                region: metadata.region,
+              mockBalances.CZAR = {
+                symbol: 'CZAR',
+                name: 'South African Rand',
+                balance: '1000000000000000000000',
+                formattedBalance: '1000',
+                value: 55, // $0.055 per CZAR
+                region: 'Africa'
               };
-            } catch (err) {
-              console.warn(`Error fetching balance for ${symbol}:`, err);
+
+              mockBalances.CCAD = {
+                symbol: 'CCAD',
+                name: 'Canadian Dollar',
+                balance: '30000000000000000000',
+                formattedBalance: '30',
+                value: 22.2, // $0.74 per CCAD
+                region: 'USA'
+              };
+
+              mockBalances.CAUD = {
+                symbol: 'CAUD',
+                name: 'Australian Dollar',
+                balance: '40000000000000000000',
+                formattedBalance: '40',
+                value: 26.4, // $0.66 per CAUD
+                region: 'Asia'
+              };
+            } else {
+              // Add mainnet-only stablecoins
+              mockBalances.CKES = {
+                symbol: 'CKES',
+                name: 'Celo Kenyan Shilling',
+                balance: '2000000000000000000000',
+                formattedBalance: '2000',
+                value: 15.6, // $0.0078 per CKES
+                region: 'Africa'
+              };
+
+              mockBalances.CCOP = {
+                symbol: 'CCOP',
+                name: 'Celo Colombian Peso',
+                balance: '100000000000000000000000',
+                formattedBalance: '100000',
+                value: 25, // $0.00025 per CCOP
+                region: 'LatAm'
+              };
+
+              mockBalances.PUSO = {
+                symbol: 'PUSO',
+                name: 'Philippine Peso',
+                balance: '1000000000000000000000',
+                formattedBalance: '1000',
+                value: 17.9, // $0.0179 per PUSO
+                region: 'Asia'
+              };
+            }
+
+            setBalances(mockBalances);
+            calculateTotals(mockBalances);
+            setIsLoading(false);
+            return;
+          } else {
+            setIsMockData(false);
+          }
+        } catch (err) {
+          console.warn('Error checking chain ID, proceeding with API calls:', err);
+        }
+      }
+
+      // Get current chain ID from window.ethereum if not already set
+      if (!chainId && typeof window !== 'undefined' && window.ethereum) {
+        try {
+          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+          const detectedChainId = Number.parseInt(chainIdHex as string, 16);
+          setChainId(detectedChainId);
+          console.log('Detected chain ID for balance fetching:', detectedChainId);
+        } catch (err) {
+          console.warn('Error detecting chain ID:', err);
+        }
+      }
+
+      // Create provider for Celo based on the network
+      // Use the most recently detected chainId
+      const currentChainId = chainId || (typeof window !== 'undefined' && window.ethereum ?
+        Number.parseInt(await window.ethereum.request({ method: 'eth_chainId' }) as string, 16) : null);
+
+      console.log('Using chain ID for balance fetching:', currentChainId);
+
+      const isAlfajores = currentChainId === 44787;
+      const isArc = currentChainId === 5042002;
+
+      let providerUrl = 'https://forno.celo.org'; // Default
+      if (isAlfajores) providerUrl = 'https://alfajores-forno.celo-testnet.org';
+      if (isArc) providerUrl = 'https://rpc.testnet.arc.network';
+
+      console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} provider for balance fetching`);
+      const provider = new ethers.providers.JsonRpcProvider(providerUrl);
+
+      // Determine which tokens to fetch based on the network
+      let tokensToFetch: string[] = [];
+      if (isArc) {
+        tokensToFetch = ['USDC'];
+      } else if (isAlfajores) {
+        tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
+      } else {
+        tokensToFetch = ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO'];
+      }
+
+      console.log(`Fetching balances for tokens: ${tokensToFetch.join(', ')}`);
+
+      // Fetch balances for each token
+      const tokenPromises = tokensToFetch.map(
+        async (symbol) => {
+          try {
+            // Determine which token address list to use based on the network
+            const tokenList = getTokenAddresses(currentChainId as number);
+            console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list for ${symbol}`);
+
+            // Use type assertion to handle the index signature
+            const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
+              tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
+              tokenList[symbol.toLowerCase() as keyof typeof tokenList];
+
+            if (!tokenAddress) {
+              console.warn(`Token address not found for ${symbol} in ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
+              console.log('Available tokens:', Object.keys(tokenList).join(', '));
               return null;
             }
+
+            console.log(`Found token address for ${symbol}: ${tokenAddress}`);
+
+            const contract = new ethers.Contract(
+              tokenAddress,
+              ABIS.ERC20,
+              provider
+            );
+
+            console.log(`Fetching balance for ${symbol} (${tokenAddress}) for address ${address}`);
+
+            let balance;
+            let formattedBalance;
+
+            try {
+              balance = await contract.balanceOf(address);
+              console.log(`Raw balance for ${symbol}: ${balance.toString()}`);
+              formattedBalance = ethers.utils.formatUnits(balance, 18);
+              console.log(`Formatted balance for ${symbol}: ${formattedBalance}`);
+            } catch (balanceError) {
+              console.error(`Error fetching balance for ${symbol}:`, balanceError);
+              return null;
+            }
+
+            // Get the exchange rate for this token
+            const exchangeRate = EXCHANGE_RATES[symbol] ||
+              EXCHANGE_RATES[symbol.toUpperCase()] ||
+              EXCHANGE_RATES[symbol.toLowerCase()] || 1;
+
+            // Calculate USD value - properly convert to USD
+            // For tokens like cKES where 1 KES = $0.0078, we multiply the token amount by the rate
+            const value = Number.parseFloat(formattedBalance) * exchangeRate;
+
+            // Get token metadata - try both original case and uppercase
+            const metadata = TOKEN_METADATA[symbol] ||
+              TOKEN_METADATA[symbol.toUpperCase()] ||
+              TOKEN_METADATA[symbol.toLowerCase()] ||
+              { name: symbol, region: 'Global' }; // Default to Global
+
+            return {
+              symbol,
+              name: metadata.name,
+              balance: balance.toString(),
+              formattedBalance,
+              value,
+              region: metadata.region,
+            };
+          } catch (err) {
+            console.warn(`Error fetching balance for ${symbol}:`, err);
+            return null;
           }
-        );
-
-        const results = await Promise.all(tokenPromises);
-        const validResults = results.filter(Boolean) as StablecoinBalance[];
-
-        // Convert to record
-        const balanceMap: Record<string, StablecoinBalance> = {};
-        for (const balance of validResults) {
-          balanceMap[balance.symbol] = balance;
         }
+      );
 
-        setBalances(balanceMap);
-        calculateTotals(balanceMap);
-        setIsMockData(false);
+      const results = await Promise.all(tokenPromises);
+      const validResults = results.filter(Boolean) as StablecoinBalance[];
 
-        // Cache the results
-        setCachedBalances(address, balanceMap);
+      // Convert to record
+      const balanceMap: Record<string, StablecoinBalance> = {};
+      for (const balance of validResults) {
+        balanceMap[balance.symbol] = balance;
+      }
 
-        setIsLoading(false);
-      } catch (err) {
-        console.error('Error fetching balances:', err);
-        setError('Failed to fetch balances');
-        setIsLoading(false);
+      setBalances(balanceMap);
+      calculateTotals(balanceMap);
+      setIsMockData(false);
+
+      // Cache the results
+      setCachedBalances(address, balanceMap);
+
+      setIsLoading(false);
+    } catch (err) {
+      console.error('Error fetching balances:', err);
+      setError('Failed to fetch balances');
+      setIsLoading(false);
+    }
+  };
+
+  // Effect to fetch balances when address or chainId changes
+  useEffect(() => {
+    fetchBalances();
+  }, [address, chainId]);
+
+  // Effect to listen for external chain changes and refresh balances
+  useEffect(() => {
+    if (!address) return;
+
+    const handleChainChanged = async () => {
+      // Refresh chain ID
+      if (typeof window !== 'undefined' && window.ethereum) {
+        try {
+          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+          const newChainId = Number.parseInt(chainIdHex as string, 16);
+
+          // Update state and refetch balances
+          setChainId(newChainId);
+
+          // Clear cache for this address to force refetch
+          localStorage.removeItem(`stablecoin-balances-${address}`);
+
+          // Refetch balances for the new chain
+          fetchBalances();
+        } catch (err) {
+          console.warn('Error refreshing chain ID after external change:', err);
+        }
       }
     };
 
+    // Listen for chain changes
+    if (window.ethereum) {
+      window.ethereum.on('chainChanged', handleChainChanged);
+    }
 
-
-    fetchBalances();
-  }, [address, chainId]);
+    // Cleanup listener
+    return () => {
+      if (window.ethereum) {
+        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      }
+    };
+  }, [address]);
 
   const refreshChainId = async () => {
     if (typeof window !== 'undefined' && window.ethereum) {
@@ -518,87 +556,8 @@ export function useStablecoinBalances(address: string | undefined | null) {
       // Refresh chain ID first
       await refreshChainId();
 
-      // Refetch
-      setIsLoading(true);
-      setError(null);
-
-      // Call fetchBalances to actually refresh the data
-      const fetchBalances = async () => {
-        try {
-          // Check cache first - we've already cleared it, so this will be skipped
-          const cachedBalances = getCachedBalances(address);
-          if (cachedBalances) {
-            setBalances(cachedBalances);
-            calculateTotals(cachedBalances);
-            setIsLoading(false);
-            return;
-          }
-
-          // For demo/testing purposes, use mock data if we're not on Celo network
-          if (typeof window !== 'undefined' && window.ethereum) {
-            try {
-              const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-              const currentChainId = Number.parseInt(chainIdHex as string, 16);
-
-              // Update chainId state
-              setChainId(currentChainId);
-
-              // If not on Celo (42220), Alfajores (44787), or Arc (5042002), use mock data
-              if (currentChainId !== 42220 && currentChainId !== 44787 && currentChainId !== 5042002) {
-                console.log('Not on supported network, using mock data');
-                setIsMockData(true);
-
-                // Create realistic mock balances based on the network
-                const mockBalances: Record<string, StablecoinBalance> = {};
-
-                // Add basic stablecoins for all networks
-                mockBalances.CUSD = {
-                  symbol: 'CUSD',
-                  name: 'Celo Dollar',
-                  balance: '50000000000000000000',
-                  formattedBalance: '50',
-                  value: 50, // $1 per CUSD
-                  region: 'USA'
-                };
-
-                mockBalances.CEUR = {
-                  symbol: 'CEUR',
-                  name: 'Celo Euro',
-                  balance: '30000000000000000000',
-                  formattedBalance: '30',
-                  value: 32.4, // $1.08 per CEUR
-                  region: 'Europe'
-                };
-
-                // Add more mock balances as needed...
-                // For brevity, we're only adding a few here
-
-                setBalances(mockBalances);
-                calculateTotals(mockBalances);
-                setIsLoading(false);
-                return;
-              } else {
-                setIsMockData(false);
-              }
-            } catch (err) {
-              console.warn('Error checking chain ID, proceeding with API calls:', err);
-            }
-          }
-
-          // Actual token balance fetching logic would go here
-          // For now, we'll just set isLoading to false after a delay to simulate fetching
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 1000);
-        } catch (err) {
-          console.error('Error fetching balances:', err);
-          setError('Failed to fetch balances');
-          setIsLoading(false);
-        }
-      };
-
-      // Execute the fetch
-      fetchBalances();
+      // Refetch balances using the main fetchBalances function
+      await fetchBalances();
     }
   };
 

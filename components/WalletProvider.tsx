@@ -1,5 +1,6 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useWallet } from "../hooks/use-wallet";
+import { useAppState } from "../context/AppStateContext";
 
 // Define the context type
 interface WalletContextType {
@@ -34,6 +35,16 @@ const WalletContext = createContext<WalletContextType>({
 // Provider component
 export function WalletProvider({ children }: { children: ReactNode }) {
   const wallet = useWallet();
+
+  // Integrate with app state context to sync chainId
+  const { setChainId } = useAppState();
+
+  // Update app state when wallet chainId changes
+  useEffect(() => {
+    if (wallet.chainId !== null) {
+      setChainId(wallet.chainId);
+    }
+  }, [wallet.chainId, setChainId]);
 
   return (
     <WalletContext.Provider value={wallet}>{children}</WalletContext.Provider>

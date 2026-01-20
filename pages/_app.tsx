@@ -6,6 +6,7 @@ import Head from "next/head";
 import ErrorBoundary from "../components/ErrorBoundary";
 import { WalletProvider } from "../components/WalletProvider";
 import { ToastProvider } from "../components/Toast";
+import { AppStateProvider } from "../context/AppStateContext";
 import { useRouter } from "next/router";
 
 export default function App({ Component, pageProps }: AppProps) {
@@ -80,12 +81,14 @@ export default function App({ Component, pageProps }: AppProps) {
       <ErrorBoundary>
         {/* Debug overlay removed */}
 
-        {/* Wrap with WalletProvider and pass isInMiniPay prop to all components */}
-        <ToastProvider>
-          <WalletProvider>
-            <Component {...pageProps} isInMiniPay={isInMiniPay} />
-          </WalletProvider>
-        </ToastProvider>
+        {/* Wrap with AppStateProvider and other providers */}
+        <AppStateProvider>
+          <ToastProvider>
+            <WalletProvider>
+              <Component {...pageProps} isInMiniPay={isInMiniPay} />
+            </WalletProvider>
+          </ToastProvider>
+        </AppStateProvider>
       </ErrorBoundary>
     </>
   );
