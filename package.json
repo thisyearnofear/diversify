@@ -2,6 +2,9 @@
   "name": "diversifi-minipay",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.11.0"
+  },
   "workspaces": [
     "packages/*"
   ],
@@ -17,7 +20,7 @@
     "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\""
   },
   "dependencies": {
-    "@farcaster/frame-sdk": "0.1.12",
+    "@farcaster/miniapp-sdk": "0.2.1",
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",
     "@stable-station/mento-utils": "workspace:*",

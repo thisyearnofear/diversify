@@ -121,7 +121,7 @@ export default function CurrencyPerformanceChart({
 
       // Draw shadow for depth effect
       ctx.beginPath();
-      ctx.strokeStyle = REGION_COLORS[currency.region] || "#A0AEC0";
+      ctx.strokeStyle = color;
       ctx.lineWidth = 2;
 
       for (let i = 0; i < currency.values.length; i++) {

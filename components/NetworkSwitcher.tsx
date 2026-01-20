@@ -69,9 +69,9 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             if (onNetworkChange) {
                 onNetworkChange();
             }
-        } catch (switchError: any) {
+        } catch (switchError: unknown) {
             // This error code indicates that the chain has not been added to MetaMask
-            if (switchError.code === 4902) {
+            if (switchError instanceof Error && 'code' in switchError && switchError.code === 4902) {
                 try {
                     const network = networks.find((n) => n.chainId === chainId);
                     if (!network) {
@@ -94,11 +94,13 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                     if (onNetworkChange) {
                         onNetworkChange();
                     }
-                } catch (addError: any) {
-                    setError(`Failed to add network: ${addError.message}`);
+                } catch (addError: unknown) {
+                    const errorMessage = addError instanceof Error ? addError.message : 'Unknown error';
+                    setError(`Failed to add network: ${errorMessage}`);
                 }
             } else {
-                setError(`Failed to switch network: ${switchError.message}`);
+                const errorMessage = switchError instanceof Error ? switchError.message : 'Unknown error';
+                setError(`Failed to switch network: ${errorMessage}`);
             }
         } finally {
             setIsSwitching(false);

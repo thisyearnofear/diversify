@@ -248,7 +248,7 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
 
 // --- Data Fetching (Preserved & Cleaned) ---
 async function getActualPremiumData(source: string, isFreeTier: boolean = false) {
-    const data: Record<string, Record<string, any>> = {
+    const data: Record<string, Record<string, unknown>> = {
         'alpha_vantage_enhanced': await getAlphaVantageData(isFreeTier),
         'world_bank_analytics': await getWorldBankData(isFreeTier),
         'defillama_realtime': await getDeFiLlamaData(isFreeTier),
@@ -293,7 +293,7 @@ async function getAlphaVantageData(isFreeTier: boolean) {
             }
             return { ...baseData, tier: 'free' };
         }
-    } catch (_) { console.warn('Alpha Vantage API unavailable'); }
+    } catch (error) { console.warn('Alpha Vantage API unavailable', error); }
     return { exchange_rate: '0.92', source: 'Fallback', tier: isFreeTier ? 'free' : 'premium' };
 }
 
@@ -302,7 +302,7 @@ async function getWorldBankData(isFreeTier: boolean) {
         const response = await fetch('https://api.worldbank.org/v2/country/US/indicator/FP.CPI.TOTL.ZG?format=json&per_page=5&date=2020:2024');
         if (response.ok) {
             const data = await response.json();
-            const inflationData = data[1]?.filter((item: any) => item.value !== null) || [];
+            const inflationData = data[1]?.filter((item: { value: number | null }) => item.value !== null) || [];
             const baseData = {
                 current_inflation: inflationData[0]?.value || 3.1,
                 historical_data: inflationData.slice(0, 3),
@@ -319,7 +319,7 @@ async function getWorldBankData(isFreeTier: boolean) {
             }
             return { ...baseData, tier: 'free' };
         }
-    } catch (_) { console.warn('World Bank API unavailable'); }
+    } catch (error) { console.warn('World Bank API unavailable', error); }
     return { current_inflation: 3.1, source: 'Fallback', tier: isFreeTier ? 'free' : 'premium' };
 }
 
@@ -329,11 +329,11 @@ async function getDeFiLlamaData(isFreeTier: boolean) {
         if (response.ok) {
             const pools = await response.json();
             const stablePools = pools.data
-                ?.filter((pool: any) => pool.symbol.includes('USDC') && pool.tvlUsd > 1000000)
-                .sort((a: any, b: any) => b.apy - a.apy)
+                ?.filter((pool: { symbol: string; tvlUsd: number }) => pool.symbol.includes('USDC') && pool.tvlUsd > 1000000)
+                .sort((a: { apy: number }, b: { apy: number }) => b.apy - a.apy)
                 .slice(0, isFreeTier ? 3 : 10) || [];
             const baseData = {
-                top_yields: stablePools.map((pool: any) => ({ protocol: pool.project, apy: pool.apy, tvl: pool.tvlUsd })),
+                top_yields: stablePools.map((pool: { project: string; apy: number; tvlUsd: number }) => ({ protocol: pool.project, apy: pool.apy, tvl: pool.tvlUsd })),
                 source: 'DeFiLlama Free API'
             };
             if (!isFreeTier) {
@@ -341,7 +341,7 @@ async function getDeFiLlamaData(isFreeTier: boolean) {
             }
             return { ...baseData, tier: 'free' };
         }
-    } catch (_) { console.warn('DeFiLlama API unavailable'); }
+    } catch (error) { console.warn('DeFiLlama API unavailable', error); }
     return { top_yields: [{ protocol: 'Aave', apy: 4.2 }], source: 'Fallback', tier: isFreeTier ? 'free' : 'premium' };
 }
 

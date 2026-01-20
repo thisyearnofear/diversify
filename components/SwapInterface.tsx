@@ -8,6 +8,7 @@ import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
 import { REGION_COLORS } from "../constants/regions";
 import TokenSelector from "./swap/TokenSelector";
 import { NETWORKS } from "../config";
+import type { Region } from "../hooks/use-user-region";
 
 interface Token {
   symbol: string;
@@ -28,6 +29,8 @@ interface SwapInterfaceProps {
   preferredFromRegion?: string;
   preferredToRegion?: string;
 }
+
+
 
 // Compact AI Insight Component for SwapInterface
 const SwapAIInsight = ({
@@ -68,25 +71,7 @@ const SwapAIInsight = ({
   );
 };
 
-interface Token {
-  symbol: string;
-  name: string;
-  icon?: string;
-  region: string;
-}
 
-interface SwapInterfaceProps {
-  availableTokens: Token[];
-  onSwap?: (
-    fromToken: string,
-    toToken: string,
-    amount: string
-  ) => Promise<void>;
-  title?: string;
-  address?: string | null;
-  preferredFromRegion?: string;
-  preferredToRegion?: string;
-}
 
 const SwapInterface = forwardRef<
   { refreshBalances: () => void },
@@ -289,7 +274,7 @@ const SwapInterface = forwardRef<
       {fromTokenRegion && toTokenRegion && (
         <div className="absolute inset-0">
           <RegionalPattern
-            region={toTokenRegion as any}
+            region={toTokenRegion as "USA" | "Europe" | "LatAm" | "Africa" | "Asia"}
             className="opacity-5"
           />
         </div>
@@ -337,7 +322,7 @@ const SwapInterface = forwardRef<
                         window.ethereum.request({
                           method: 'wallet_switchEthereumChain',
                           params: [{ chainId: `0x${NETWORKS.CELO_MAINNET.chainId.toString(16)}` }], // Celo Mainnet
-                        }).catch((e: any) => {
+                        }).catch((e: unknown) => {
                           console.error("Error switching to Celo mainnet", e);
                         });
                       }
@@ -352,7 +337,7 @@ const SwapInterface = forwardRef<
                         window.ethereum.request({
                           method: 'wallet_switchEthereumChain',
                           params: [{ chainId: `0x${NETWORKS.ARC_TESTNET.chainId.toString(16)}` }], // Arc Testnet
-                        }).catch((e: any) => {
+                        }).catch((e: unknown) => {
                           console.error("Error switching to Arc Testnet", e);
                         });
                       }
@@ -434,7 +419,7 @@ const SwapInterface = forwardRef<
             >
               {toTokenRegion && (
                 <RegionalPattern
-                  region={toTokenRegion as any}
+                  region={toTokenRegion as Region}
                   className="opacity-20"
                 />
               )}
@@ -479,7 +464,7 @@ const SwapInterface = forwardRef<
                           }}
                         >
                           <RegionalIconography
-                            region={toTokenRegion as any}
+                            region={toTokenRegion as Region}
                             size="sm"
                             className="text-white"
                           />
@@ -512,7 +497,7 @@ const SwapInterface = forwardRef<
                 }`}
             >
               {toTokenRegion && (
-                <RegionalPattern region={toTokenRegion as any} />
+                <RegionalPattern region={toTokenRegion as Region} />
               )}
               <div className="relative">
                 <h3
@@ -538,7 +523,7 @@ const SwapInterface = forwardRef<
                         }}
                       >
                         <RegionalIconography
-                          region={fromTokenRegion as any}
+                          region={fromTokenRegion as Region}
                           size="sm"
                           className="text-white scale-75"
                         />
@@ -567,7 +552,7 @@ const SwapInterface = forwardRef<
                         }}
                       >
                         <RegionalIconography
-                          region={toTokenRegion as any}
+                          region={toTokenRegion as Region}
                           size="sm"
                           className="text-white scale-75"
                         />
@@ -811,7 +796,7 @@ const SwapInterface = forwardRef<
             >
               {toTokenRegion && !isLoading && (
                 <div className="absolute inset-0 opacity-20">
-                  <RegionalPattern region={toTokenRegion as any} />
+                  <RegionalPattern region={toTokenRegion as Region} />
                 </div>
               )}
               <div className="relative">
@@ -860,7 +845,7 @@ const SwapInterface = forwardRef<
                           }}
                         >
                           <RegionalIconography
-                            region={fromTokenRegion as any}
+                            region={fromTokenRegion as Region}
                             size="sm"
                             className="text-white"
                           />
@@ -888,7 +873,7 @@ const SwapInterface = forwardRef<
                           }}
                         >
                           <RegionalIconography
-                            region={toTokenRegion as any}
+                            region={toTokenRegion as Region}
                             size="sm"
                             className="text-white"
                           />

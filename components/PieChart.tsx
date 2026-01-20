@@ -1,5 +1,5 @@
 
-import { Chart, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Chart, ArcElement, Tooltip, Legend, TooltipItem } from 'chart.js';
 import { Pie } from 'react-chartjs-2';
 
 // Register the required chart.js components
@@ -42,9 +42,9 @@ export default function PieChart({ data, title = 'Portfolio Distribution' }: Pie
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: TooltipItem<'pie'>) => {
             const label = context.label || '';
-            const value = context.raw || 0;
+            const value = typeof context.parsed === 'number' ? context.parsed : 0;
             const total = context.dataset.data.reduce((a: number, b: number) => a + b, 0);
             const percentage = Math.round((value / total) * 100);
             return `${label}: ${percentage}%`;

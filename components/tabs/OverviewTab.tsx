@@ -3,6 +3,7 @@ import SimplePieChart from "../SimplePieChart";
 import { useDiversification } from "@/hooks/use-diversification";
 import { REGION_COLORS } from "@/constants/regions";
 import type { Region } from "@/hooks/use-user-region";
+import type { RegionalInflationData } from "@/hooks/use-inflation-data";
 import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
@@ -21,7 +22,7 @@ interface OverviewTabProps {
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
   balances: Record<string, { formattedBalance: string; value: number }>;
-  inflationData: Record<string, { avgRate: number; data: any[] }>;
+  inflationData: Record<string, RegionalInflationData>;
 }
 
 export default function OverviewTab({

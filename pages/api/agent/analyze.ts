@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
+
+
 const GEMINI_MODELS_FALLBACK = [
     'gemini-3-flash-preview',
     'gemini-3-pro-preview',
@@ -9,11 +11,11 @@ const GEMINI_MODELS_FALLBACK = [
 ];
 
 // Define the response schema
-const responseSchema: any = {
+const responseSchema = {
     type: SchemaType.OBJECT,
     properties: {
         action: { type: SchemaType.STRING, enum: ['SWAP', 'HOLD', 'REBALANCE'] },
-        targetToken: { type: SchemaType.STRING, nullable: true },
+        targetToken: { type: SchemaType.STRING },
         targetNetwork: { type: SchemaType.STRING, enum: ['Celo', 'Arbitrum', 'Ethereum', 'Unknown'] },
         reasoning: { type: SchemaType.STRING },
         confidence: { type: SchemaType.NUMBER },
@@ -80,7 +82,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     systemInstruction: systemInstruction,
                     generationConfig: {
                         responseMimeType: "application/json",
-                        responseSchema: responseSchema,
+                        // responseSchema: responseSchema, // Temporarily remove strict schema enforcement
                     }
                 });
 

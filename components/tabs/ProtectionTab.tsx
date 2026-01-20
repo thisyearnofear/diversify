@@ -85,9 +85,7 @@ export default function ProtectionTab({
       {/* Agentic Wealth Protection - PREMIUM UI */}
       <AgentWealthGuard
         amount={totalValue || 0}
-        _currentRegions={currentRegions}
         holdings={Object.keys(balances || {})}
-        _userRegion={userRegion}
         onExecuteSwap={handleAgentSwap}
       />
 

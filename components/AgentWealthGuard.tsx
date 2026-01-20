@@ -1,8 +1,7 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useWealthProtectionAgent, RiskTolerance, InvestmentGoal } from "../hooks/use-wealth-protection-agent";
+import { useWealthProtectionAgent, RiskTolerance } from "../hooks/use-wealth-protection-agent";
 import { useInflationData } from "../hooks/use-inflation-data";
-import { Region } from "../hooks/use-user-region";
 import { useWalletContext } from "./WalletProvider";
 import { NETWORKS, MAINNET_TOKENS, ARBITRUM_TOKENS } from "../config";
 import { BridgeService } from "../services/swap/bridge-service";
@@ -10,9 +9,7 @@ import { ethers } from "ethers";
 
 interface AgentWealthGuardProps {
     amount: number;
-    _currentRegions: Region[];
     holdings: string[];
-    _userRegion: Region;
     onExecuteSwap: (targetToken: string) => void;
 }
 
@@ -53,7 +50,7 @@ const AIHint = ({ suggestion, onAskAI }: { suggestion: string; onAskAI: () => vo
 );
 
 // Mobile-optimized progress indicator
-const AIProgress = ({ _steps, currentStep }: { _steps: string[]; currentStep: string }) => (
+const AIProgress = ({ currentStep }: { currentStep: string }) => (
     <div className="bg-gray-50 rounded-lg p-3 mb-4">
         <div className="flex items-center gap-2 mb-2">
             <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -73,16 +70,16 @@ const AIProgress = ({ _steps, currentStep }: { _steps: string[]; currentStep: st
     </div>
 );
 
-export default function AgentWealthGuard({ amount, _currentRegions, holdings, _userRegion, onExecuteSwap }: AgentWealthGuardProps) {
+export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: AgentWealthGuardProps) {
     const hookResult = useWealthProtectionAgent();
     const {
         analyze, advice, isAnalyzing, thinkingStep, config, updateConfig,
-        messages: _messages, sendMessage, isCompact: _isCompact, toggleCompactMode, getSpendingStatus: _getSpendingStatus
+        sendMessage
     } = hookResult;
     const { inflationData } = useInflationData();
     const [showConfig, setShowConfig] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
-    const [showHint, _setShowHint] = useState(true);
+    const [showHint] = useState(true);
     const [bridgeState, setBridgeState] = useState<{
         status: 'idle' | 'checking' | 'approving' | 'bridging' | 'success' | 'error';
         error?: string;
@@ -149,7 +146,7 @@ export default function AgentWealthGuard({ amount, _currentRegions, holdings, _u
                 const userAddress = await signer.getAddress();
 
                 // Map symbol to address
-                const toTokenAddr = (ARBITRUM_TOKENS as any)[targetToken] || ARBITRUM_TOKENS.USDC;
+                const toTokenAddr = (ARBITRUM_TOKENS as Record<string, string>)[targetToken] || ARBITRUM_TOKENS.USDC;
 
                 setBridgeState({ status: 'bridging' });
                 const result = await BridgeService.bridgeToWealth(
@@ -166,9 +163,10 @@ export default function AgentWealthGuard({ amount, _currentRegions, holdings, _u
                     txHash: result.txHash,
                     provider: result.provider
                 });
-            } catch (err: any) {
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : 'Bridge operation failed';
                 console.error("Bridge failed:", err);
-                setBridgeState({ status: 'error', error: err.message });
+                setBridgeState({ status: 'error', error: errorMessage });
             }
         } else {
             // Internal Celo swap logic
@@ -325,7 +323,7 @@ export default function AgentWealthGuard({ amount, _currentRegions, holdings, _u
                 <div className="flex-1 overflow-y-auto p-4">
                     {/* Analysis Progress */}
                     {isAnalyzing && (
-                        <AIProgress _steps={[]} currentStep={thinkingStep} />
+                        <AIProgress currentStep={thinkingStep} />
                     )}
 
                     {/* Recommendation Display */}

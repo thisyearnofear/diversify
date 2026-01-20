@@ -3,6 +3,19 @@ import { useWallet } from "../hooks/use-wallet";
 import { useAppState } from "../context/AppStateContext";
 
 // Define the context type
+interface FarcasterContext {
+  fid?: number;
+  username?: string;
+  displayName?: string;
+  pfp?: {
+    url: string;
+    verified: boolean;
+  };
+  connectedAddress?: string;
+  // Add other fields as needed based on the actual SDK
+  [key: string]: unknown;
+}
+
 interface WalletContextType {
   address: string | null;
   isConnected: boolean;
@@ -11,7 +24,7 @@ interface WalletContextType {
   chainId: number | null;
   isMiniPay: boolean;
   isFarcaster: boolean;
-  farcasterContext: any | null;
+  farcasterContext: FarcasterContext | null;
   connect: () => Promise<void>;
   switchNetwork: (chainId: number) => Promise<void>;
   formatAddress: (addr: string) => string;

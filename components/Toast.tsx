@@ -6,7 +6,7 @@ export const Toast: React.FC<{
     type?: 'success' | 'error' | 'info' | 'warning' | 'ai';
     onClose: () => void;
     duration?: number;
-    data?: any; // For AI-specific data like spending info
+    data?: ToastData; // For AI-specific data like spending info
 }> = ({ message, type = 'info', onClose, duration = 3000, data }) => {
 
     useEffect(() => {
@@ -83,7 +83,7 @@ export const Toast: React.FC<{
 interface ToastData {
     cost?: number;
     sources?: number;
-    [key: string]: any; // Allow additional properties
+    [key: string]: unknown; // Allow additional properties
 }
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

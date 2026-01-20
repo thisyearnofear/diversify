@@ -4,12 +4,26 @@ import type { Region } from "../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
 import RealLifeScenario from "./RealLifeScenario";
 
+interface InflationDataEntry {
+  avgRate: number;
+  data?: unknown[];
+  countries?: unknown[];
+  stablecoins: string[];
+}
+
+interface InflationProtectionInfoProps {
+  homeRegion?: Region;
+  currentRegions?: Array<Region>;
+  amount?: number;
+  onChangeHomeRegion?: (region: Region) => void;
+}
+
 // Calculate potential savings from diversification
 const calculateSavings = (
   amount: number,
   homeRegion: Region,
   diversifiedRegions: Array<Region>,
-  inflationData: Record<string, { avgRate: number; data?: any[]; countries?: any[] }>
+  inflationData: Record<string, { avgRate: number; data?: unknown[]; countries?: unknown[] }>
 ): number => {
   if (!diversifiedRegions.length) return 0;
 
@@ -85,12 +99,7 @@ const getSavingsExample = (savings: number, region: Region): string => {
   }
 };
 
-interface InflationProtectionInfoProps {
-  homeRegion?: Region;
-  currentRegions?: Array<Region>;
-  amount?: number;
-  onChangeHomeRegion?: (region: Region) => void;
-}
+
 
 export default function InflationProtectionInfo({
   homeRegion = "Africa",
@@ -143,12 +152,7 @@ export default function InflationProtectionInfo({
     ? getRegionInsights(selectedRegion)
     : getRegionInsights(homeRegion);
 
-  // Handle changing home region
-  const handleChangeHomeRegion = (region: Region) => {
-    if (onChangeHomeRegion) {
-      onChangeHomeRegion(region);
-    }
-  };
+
 
   // Get savings example
   const savingsExample = getSavingsExample(savings, homeRegion);
@@ -264,7 +268,7 @@ export default function InflationProtectionInfo({
         </h3>
         <div className="grid grid-cols-2 gap-2">
           {Object.entries(inflationData).map(
-            ([region, data]: [string, any]) => (
+            ([region, data]: [string, InflationDataEntry]) => (
               <div
                 key={region}
                 className={`relative overflow-hidden p-3 rounded-card border cursor-pointer transition-colors ${
@@ -333,7 +337,7 @@ export default function InflationProtectionInfo({
                     ? `bg-region-${homeRegion.toLowerCase()}-medium text-white font-medium`
                     : `bg-region-${homeRegion.toLowerCase()}-light text-region-${homeRegion.toLowerCase()}-dark hover:bg-region-${homeRegion.toLowerCase()}-light hover:bg-opacity-70`
                 }`}
-                onClick={() => setActiveScenario(scenario as any)}
+                onClick={() => setActiveScenario(scenario as "education" | "remittance" | "business" | "travel" | "savings")}
               >
                 {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
               </button>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import SwapInterface from "../SwapInterface";
 import { useInflationData } from "../../hooks/use-inflation-data";
 import type { Region } from "../../hooks/use-user-region";
+import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
 import RealLifeScenario from "../RealLifeScenario";
 import { REGION_COLORS } from "../../constants/regions";
@@ -21,7 +22,7 @@ interface SwapTabProps {
   }>;
   userRegion: Region;
   selectedStrategy: string;
-  inflationData: Record<string, { avgRate: number; data: any[] }>;
+  inflationData: Record<string, RegionalInflationData>;
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
   isBalancesLoading?: boolean;
@@ -227,7 +228,7 @@ export default function SwapTab({
         const userAddress = await signer.getAddress();
 
         // Map symbol to address for Arbitrum
-        const toTokenAddr = (ARBITRUM_TOKENS as any)[toToken] || ARBITRUM_TOKENS.USDC;
+        const toTokenAddr = (ARBITRUM_TOKENS as Record<string, string>)[toToken] || ARBITRUM_TOKENS.USDC;
 
         const result = await BridgeService.bridgeToWealth(
           signer,
@@ -250,9 +251,10 @@ export default function SwapTab({
           setSwapStep("completed");
         }
         return Promise.resolve();
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Bridge failed:", err);
-        setSwapStatus(`Bridge Error: ${err.message}`);
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        setSwapStatus(`Bridge Error: ${errorMessage}`);
         setSwapStep("error");
         return Promise.reject(err);
       }
@@ -276,9 +278,10 @@ export default function SwapTab({
 
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Swap failed:", err);
-      setSwapStatus(`Error: ${err.message || "Unknown error"}`);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setSwapStatus(`Error: ${errorMessage}`);
       setSwapStep("error");
     }
   };

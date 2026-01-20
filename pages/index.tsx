@@ -4,7 +4,7 @@ import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
 import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
 import { useHistoricalPerformance } from "../hooks/use-historical-performance";
-import { useInflationData } from "../hooks/use-inflation-data";
+import { useInflationData, type RegionalInflationData } from "../hooks/use-inflation-data";
 import { useCurrencyPerformance } from "../hooks/use-currency-performance";
 import {
   AVAILABLE_TOKENS,
@@ -106,10 +106,10 @@ export default function DiversiFiPage() {
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        {/* Farcaster v2 Meta Tags */}
+        {/* Farcaster Mini App Meta Tag */}
         <meta 
-          name="fc:frame" 
-          content='{"version":"next","imageUrl":"https://localhost:3000/splash.png"}' 
+          name="fc:miniapp" 
+          content='{"version":"1","name":"DiversiFi","iconUrl":"/icon.png","splashImageUrl":"/splash.png"}' 
         />
       </Head>
 
@@ -186,7 +186,7 @@ export default function DiversiFiPage() {
             refreshBalances={refreshBalances}
             refreshChainId={refreshChainId}
             balances={balances}
-            inflationData={inflationData as Record<string, any>}
+            inflationData={inflationData as Record<string, RegionalInflationData>}
           />
         )}
 
@@ -231,7 +231,7 @@ export default function DiversiFiPage() {
             availableTokens={AVAILABLE_TOKENS}
             userRegion={userRegion}
             selectedStrategy={selectedStrategy}
-            inflationData={inflationData as Record<string, any>}
+            inflationData={inflationData as Record<string, RegionalInflationData>}
             refreshBalances={refreshBalances}
             refreshChainId={refreshChainId}
             isBalancesLoading={isBalancesLoading}

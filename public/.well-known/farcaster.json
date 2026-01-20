@@ -1,18 +1,18 @@
 {
   "accountAssociation": {
     "header": "eyJmaWQiOiAwLCB0eXBlOiAic2Vzc2lvbiIsICJrZXkiOiAiMHgwIn0",
-    "payload": "eyJkb21haW4iOiAibG9jYWxob3N0OjMwMDAifQ",
+    "payload": "eyJkb21haW4iOiAiaHR0cHM6Ly9kaXZlcnNpZmktbWluaXBheS5mcmFtZXMuZXhhbXBsZSJ9",
     "signature": "MHgw"
   },
   "frame": {
     "version": "1",
     "name": "DiversiFi",
-    "iconUrl": "https://localhost:3000/icon.png",
-    "homeUrl": "https://localhost:3000",
-    "imageUrl": "https://localhost:3000/splash.png",
+    "iconUrl": "/icon.png",
+    "homeUrl": "/",
+    "imageUrl": "/splash.png",
     "buttonTitle": "Launch DiversiFi",
-    "splashImageUrl": "https://localhost:3000/splash.png",
+    "splashImageUrl": "/splash.png",
     "splashBackgroundColor": "#ffffff",
-    "webhookUrl": "https://localhost:3000/api/webhook"
+    "webhookUrl": "/api/webhook"
   }
 }
