@@ -3,7 +3,6 @@ import Head from "next/head";
 import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
 import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
-import { useHistoricalPerformance } from "../hooks/use-historical-performance";
 import { useInflationData, type RegionalInflationData } from "../hooks/use-inflation-data";
 import { useCurrencyPerformance } from "../hooks/use-currency-performance";
 import {
@@ -54,8 +53,8 @@ export default function DiversiFiPage() {
     refreshBalances,
     refreshChainId,
   } = useStablecoinBalances(address);
-  const { data: performanceData, isLoading: isPerformanceLoading } =
-    useHistoricalPerformance(address);
+  // const { data: performanceData, isLoading: isPerformanceLoading } =
+  //   useHistoricalPerformance(address); // performanceData is not currently used
   // We use inflationData in the SwapTab component
   const { inflationData } = useInflationData();
   const {

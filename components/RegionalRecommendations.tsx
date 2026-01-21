@@ -291,6 +291,7 @@ export default function RegionalRecommendations({
 
           <div className="space-y-2">
             {Object.entries(difference.differences)
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               .filter(([_, diff]) => Math.abs(diff) >= 5) // Only show significant differences
               .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])) // Sort by absolute difference
               .map(([region, diff]) => (
