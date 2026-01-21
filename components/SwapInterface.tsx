@@ -28,6 +28,7 @@ interface SwapInterfaceProps {
   address?: string | null;
   preferredFromRegion?: string;
   preferredToRegion?: string;
+  chainId?: number | null;
 }
 
 
@@ -140,7 +141,7 @@ const SwapInterface = forwardRef<
     error: swapError,
     txHash: swapTxHash,
     step: swapStep,
-    chainId,
+    chainId: swapHookChainId,
   } = useSwap();
 
   // Use the expected amount out hook
@@ -701,9 +702,9 @@ const SwapInterface = forwardRef<
                     <div className="mt-2">
                       <a
                         href={
-                          chainId === NETWORKS.ALFAJORES.chainId
+                          swapHookChainId === NETWORKS.ALFAJORES.chainId
                             ? `${NETWORKS.ALFAJORES.explorerUrl}/tx/${txHash}`
-                            : chainId === NETWORKS.ARC_TESTNET.chainId
+                            : swapHookChainId === NETWORKS.ARC_TESTNET.chainId
                               ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${txHash}`
                               : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`
                         }

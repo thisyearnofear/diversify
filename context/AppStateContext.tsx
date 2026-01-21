@@ -25,7 +25,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
       : null;
     
     return {
-      activeTab: savedTab || 'protect',
+      activeTab: savedTab || 'info',
       chainId: null,
     };
   });

@@ -37,11 +37,17 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
     <div className="space-y-4">
       {/* Header Card */}
       <Card>
-        <TabHeader title="About" chainId={chainId} showNetworkSwitcher={false} />
-        
+        <TabHeader title="About DiversiFi" chainId={chainId} showNetworkSwitcher={false} />
+
         <p className="text-sm text-gray-700 mb-4">
-          Multi-chain wealth protection through regional stablecoins and real-world assets.
+          DiversiFi helps you protect your wealth from inflation by diversifying across regional stablecoins and real-world assets.
         </p>
+
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r">
+          <p className="text-sm text-blue-800">
+            <span className="font-medium">What is DiversiFi?</span> A multi-chain platform that enables geographic diversification of your stablecoin holdings to hedge against inflation and economic instability in your region.
+          </p>
+        </div>
 
         {/* Quick Features Grid */}
         <div className="grid grid-cols-2 gap-2">
@@ -57,6 +63,17 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
               <div className="text-xs text-gray-500">{feature.desc}</div>
             </div>
           ))}
+        </div>
+
+        {/* Educational Section */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+          <h3 className="font-bold text-gray-900 mb-2">Why Geographic Diversification?</h3>
+          <ul className="text-xs text-gray-700 space-y-1">
+            <li>• Different economies experience different inflation rates</li>
+            <li>• Economic cycles vary by region</li>
+            <li>• Political stability differs across countries</li>
+            <li>• Diversifying across regions reduces risk concentration</li>
+          </ul>
         </div>
       </Card>
 

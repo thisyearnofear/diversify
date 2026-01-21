@@ -112,7 +112,7 @@ export default function SwapTab({
   refreshChainId,
   isBalancesLoading,
 }: SwapTabProps) {
-  const { address } = useWalletContext();
+  const { address, chainId: walletChainId } = useWalletContext();
   useInflationData();
   const [selectedScenario, setSelectedScenario] = useState<
     "education" | "remittance" | "business" | "travel" | "savings"
@@ -152,19 +152,19 @@ export default function SwapTab({
 
   // Network-aware token filtering - show only tokens available on current chain
   const networkTokens = useMemo(() => {
-    const currentChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
+    const currentChainId = walletChainId || NETWORKS.CELO_MAINNET.chainId;
     const networkSpecificTokens = NETWORK_TOKENS[currentChainId];
-    
+
     if (networkSpecificTokens) {
       return networkSpecificTokens;
     }
-    
+
     // Fallback to passed tokens for unknown networks
     return availableTokens;
-  }, [chainId, availableTokens]);
+  }, [walletChainId, availableTokens]);
 
   // Check if on Arbitrum (different swap behavior)
-  const isArbitrum = chainId === NETWORKS.ARBITRUM_ONE.chainId;
+  const isArbitrum = walletChainId === NETWORKS.ARBITRUM_ONE.chainId;
 
   // Effect to update UI when swap status changes
   useEffect(() => {
@@ -350,7 +350,7 @@ export default function SwapTab({
       <Card>
         <TabHeader
           title="Swap"
-          chainId={chainId}
+          chainId={walletChainId}
           onRefresh={refreshBalances ? handleRefresh : undefined}
           isLoading={isBalancesLoading}
           onNetworkChange={handleRefresh}
@@ -381,6 +381,7 @@ export default function SwapTab({
               preferredFromRegion={isArbitrum ? "USA" : userRegion}
               preferredToRegion={isArbitrum ? "USA" : targetRegion}
               title=""
+              chainId={chainId}
             />
 
             {/* Swap status - only show when relevant */}
@@ -398,9 +399,9 @@ export default function SwapTab({
                 {(swapTxHash || localSwapTxHash) && (
                   <a
                     href={`${
-                      chainId === NETWORKS.ARBITRUM_ONE.chainId
+                      walletChainId === NETWORKS.ARBITRUM_ONE.chainId
                         ? NETWORKS.ARBITRUM_ONE.explorerUrl
-                        : chainId === NETWORKS.ALFAJORES.chainId
+                        : walletChainId === NETWORKS.ALFAJORES.chainId
                           ? NETWORKS.ALFAJORES.explorerUrl
                           : NETWORKS.CELO_MAINNET.explorerUrl
                     }/tx/${swapTxHash || localSwapTxHash}`}
