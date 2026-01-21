@@ -31,13 +31,13 @@ export default function App({ Component, pageProps }: AppProps) {
       // Log when app loads
       console.log("DiversiFi app loaded", {
         inMiniPay,
-        userAgent: navigator.userAgent,
-        hasEthereum: typeof window.ethereum !== "undefined",
-        ethereumIsMiniPay: window.ethereum?.isMiniPay || false,
-        inIframe: window !== window.parent,
-        referrer: document.referrer || "None",
-        url: window.location.href,
-        pathname: window.location.pathname,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+        hasEthereum: typeof window !== 'undefined' && typeof window.ethereum !== "undefined",
+        ethereumIsMiniPay: typeof window !== 'undefined' && window.ethereum?.isMiniPay || false,
+        inIframe: typeof window !== 'undefined' && window !== window.parent,
+        referrer: typeof document !== 'undefined' ? (document.referrer || "None") : 'N/A',
+        url: typeof window !== 'undefined' ? window.location.href : 'N/A',
+        pathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
       });
 
       // If in MiniPay and on the main page, redirect to the minipay-test page

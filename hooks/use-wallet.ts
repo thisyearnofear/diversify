@@ -46,6 +46,10 @@ export function useWallet() {
 
       // Get current chain ID
       try {
+        if (!window.ethereum.request) {
+          console.warn('window.ethereum.request is not available');
+          return;
+        }
         const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
         setChainId(parseInt(chainIdHex as string, 16));
       } catch (err) {
@@ -100,6 +104,11 @@ export function useWallet() {
     setError(null);
 
     try {
+      if (!window.ethereum.request) {
+        setError('Ethereum provider does not support request method');
+        setIsConnecting(false);
+        return;
+      }
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });

@@ -155,7 +155,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
       // For demo/testing purposes, use mock data if we're not on Celo network
       // This prevents unnecessary API calls that might fail
-      if (typeof window !== 'undefined' && window.ethereum) {
+      if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
         try {
           const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
           const currentChainId = Number.parseInt(chainIdHex as string, 16);
@@ -177,7 +177,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       }
 
       // Get current chain ID from window.ethereum if not already set
-      if (!chainId && typeof window !== 'undefined' && window.ethereum) {
+      if (!chainId && typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
         try {
           const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
           const detectedChainId = Number.parseInt(chainIdHex as string, 16);
@@ -190,7 +190,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
       // Create provider for Celo based on the network
       // Use the most recently detected chainId
-      const currentChainId = chainId || (typeof window !== 'undefined' && window.ethereum ?
+      const currentChainId = chainId || (typeof window !== 'undefined' && window.ethereum && window.ethereum.request ?
         Number.parseInt(await window.ethereum.request({ method: 'eth_chainId' }) as string, 16) : null);
 
       console.log('Using chain ID for balance fetching:', currentChainId);
@@ -318,10 +318,10 @@ export function useStablecoinBalances(address: string | undefined | null) {
   // Effect to listen for external chain changes and refresh balances
   useEffect(() => {
     if (!address) return;
-
+ 
     const handleChainChanged = async () => {
       // Refresh chain ID
-      if (typeof window !== 'undefined' && window.ethereum) {
+      if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
         try {
           const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
           const newChainId = Number.parseInt(chainIdHex as string, 16);
@@ -354,7 +354,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
   }, [address]);
 
   const refreshChainId = async () => {
-    if (typeof window !== 'undefined' && window.ethereum) {
+    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
       try {
         const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
         const detectedChainId = Number.parseInt(chainIdHex as string, 16);

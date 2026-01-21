@@ -120,10 +120,37 @@ export class RWAService {
     private providers: Record<string, ethers.providers.JsonRpcProvider> = {};
 
     constructor() {
-        // Initialize providers for each network
-        Object.entries(RWA_NETWORKS).forEach(([network, config]) => {
-            this.providers[network] = new ethers.providers.JsonRpcProvider(config.rpcUrl);
-        });
+        // Providers are now initialized lazily in getProvider()
+    }
+
+    private getProvider(network: string): ethers.providers.JsonRpcProvider {
+        if (!this.providers[network]) {
+            const config = RWA_NETWORKS[network as keyof typeof RWA_NETWORKS];
+            if (!config) throw new Error(`Network ${network} not supported`);
+
+            // For Ethereum, don't use the demo key if we're on the client side to avoid CORS issues
+            // Use public RPC fallbacks instead
+            let rpcUrl = config.rpcUrl;
+            if (network === 'ethereum' && rpcUrl.includes('alchemy.com/v2/demo') && typeof window !== 'undefined') {
+                console.warn('Using public RPC fallback for Ethereum to avoid CORS errors');
+                // Try multiple public RPCs in order of preference
+                const publicRpcs = [
+                    'https://eth.llamarpc.com',
+                    'https://rpc.ankr.com/eth',
+                    'https://eth.publicnode.com',
+                    'https://ethereum.publicnode.com'
+                ];
+                rpcUrl = publicRpcs[0];
+            }
+
+            try {
+                this.providers[network] = new ethers.providers.JsonRpcProvider(rpcUrl);
+            } catch (error) {
+                console.error(`Failed to create provider for ${network} with ${rpcUrl}`, error);
+                throw new Error(`Failed to connect to ${network} network`);
+            }
+        }
+        return this.providers[network];
     }
 
     /**
@@ -236,8 +263,7 @@ export class RWAService {
         network: string
     ): Promise<number> {
         try {
-            const provider = this.providers[network];
-            if (!provider) throw new Error(`Network ${network} not supported`);
+            const provider = this.getProvider(network);
 
             const tokenContract = new ethers.Contract(
                 tokenAddress,
@@ -333,8 +359,7 @@ export class RWAService {
         estimatedCost: number;
         estimatedCostUSD: number;
     }> {
-        const provider = this.providers[network];
-        if (!provider) throw new Error(`Network ${network} not supported`);
+        const provider = this.getProvider(network);
 
         try {
             const gasPrice = await provider.getGasPrice();
