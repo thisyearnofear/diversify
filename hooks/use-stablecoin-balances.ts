@@ -46,6 +46,9 @@ const TOKEN_METADATA: Record<string, { name: string; region: string }> = {
   caud: { name: 'Australian Dollar', region: 'Asia' },
   USDC: { name: 'USD Coin', region: 'Global' },
   usdc: { name: 'USD Coin', region: 'Global' },
+  PAXG: { name: 'Paxos Gold', region: 'Global' },
+  USDY: { name: 'Ondo US Dollar Yield', region: 'USA' },
+  OUSG: { name: 'Ondo US Treasury Bond', region: 'USA' },
 };
 
 // Updated exchange rates to USD for Mento stablecoins
@@ -83,6 +86,9 @@ const EXCHANGE_RATES: Record<string, number> = {
   caud: 0.66,
   USDC: 1,
   usdc: 1,
+  PAXG: 2000, // Placeholder Gold Price
+  USDY: 1.05, // Yield-bearing dollar
+  OUSG: 105,  // Treasury Bond
 };
 
 function getCachedBalances(address: string): Record<string, StablecoinBalance> | null {
@@ -127,7 +133,6 @@ export function useStablecoinBalances(address: string | undefined | null) {
   const [regionTotals, setRegionTotals] = useState<Record<string, number>>({});
   const [totalValue, setTotalValue] = useState(0);
   const [chainId, setChainId] = useState<number | null>(null);
-  const [isMockData, setIsMockData] = useState(false);
 
   // Function to fetch balances
   const fetchBalances = async () => {
@@ -159,161 +164,13 @@ export function useStablecoinBalances(address: string | undefined | null) {
           // Update chainId state
           setChainId(currentChainId);
 
-          // If not on Celo (42220), Alfajores (44787), or Arc (5042002), use mock data
-          if (currentChainId !== 42220 && currentChainId !== 44787 && currentChainId !== 5042002) {
-            console.log('Not on supported network, using mock data');
-            setIsMockData(true);
-
-            // Create realistic mock balances based on the network
-            const mockBalances: Record<string, StablecoinBalance> = {};
-
-            // Add basic stablecoins for all networks
-            mockBalances.CUSD = {
-              symbol: 'CUSD',
-              name: 'Celo Dollar',
-              balance: '50000000000000000000',
-              formattedBalance: '50',
-              value: 50, // $1 per CUSD
-              region: 'USA'
-            };
-
-            mockBalances.CEUR = {
-              symbol: 'CEUR',
-              name: 'Celo Euro',
-              balance: '30000000000000000000',
-              formattedBalance: '30',
-              value: 32.4, // $1.08 per CEUR
-              region: 'Europe'
-            };
-
-            // Add Mento v2.0 stablecoins if on Alfajores
-            if (currentChainId === 44787) {
-              // Add all Alfajores stablecoins
-              mockBalances.CREAL = {
-                symbol: 'CREAL',
-                name: 'Celo Brazilian Real',
-                balance: '100000000000000000000',
-                formattedBalance: '100',
-                value: 20, // $0.20 per CREAL
-                region: 'LatAm'
-              };
-
-              mockBalances.CXOF = {
-                symbol: 'CXOF',
-                name: 'CFA Franc',
-                balance: '10000000000000000000000',
-                formattedBalance: '10000',
-                value: 16, // $0.0016 per CXOF
-                region: 'Africa'
-              };
-
-              mockBalances.CKES = {
-                symbol: 'CKES',
-                name: 'Celo Kenyan Shilling',
-                balance: '2000000000000000000000',
-                formattedBalance: '2000',
-                value: 15.6, // $0.0078 per CKES
-                region: 'Africa'
-              };
-
-              mockBalances.CPESO = {
-                symbol: 'CPESO',
-                name: 'Philippine Peso',
-                balance: '1000000000000000000000',
-                formattedBalance: '1000',
-                value: 17.9, // $0.0179 per CPESO
-                region: 'Asia'
-              };
-
-              mockBalances.CCOP = {
-                symbol: 'CCOP',
-                name: 'Celo Colombian Peso',
-                balance: '100000000000000000000000',
-                formattedBalance: '100000',
-                value: 25, // $0.00025 per CCOP
-                region: 'LatAm'
-              };
-
-              mockBalances.CGHS = {
-                symbol: 'CGHS',
-                name: 'Celo Ghana Cedi',
-                balance: '500000000000000000000',
-                formattedBalance: '500',
-                value: 34.5, // $0.069 per CGHS
-                region: 'Africa'
-              };
-
-              mockBalances.CGBP = {
-                symbol: 'CGBP',
-                name: 'British Pound',
-                balance: '20000000000000000000',
-                formattedBalance: '20',
-                value: 25.4, // $1.27 per CGBP
-                region: 'Europe'
-              };
-
-              mockBalances.CZAR = {
-                symbol: 'CZAR',
-                name: 'South African Rand',
-                balance: '1000000000000000000000',
-                formattedBalance: '1000',
-                value: 55, // $0.055 per CZAR
-                region: 'Africa'
-              };
-
-              mockBalances.CCAD = {
-                symbol: 'CCAD',
-                name: 'Canadian Dollar',
-                balance: '30000000000000000000',
-                formattedBalance: '30',
-                value: 22.2, // $0.74 per CCAD
-                region: 'USA'
-              };
-
-              mockBalances.CAUD = {
-                symbol: 'CAUD',
-                name: 'Australian Dollar',
-                balance: '40000000000000000000',
-                formattedBalance: '40',
-                value: 26.4, // $0.66 per CAUD
-                region: 'Asia'
-              };
-            } else {
-              // Add mainnet-only stablecoins
-              mockBalances.CKES = {
-                symbol: 'CKES',
-                name: 'Celo Kenyan Shilling',
-                balance: '2000000000000000000000',
-                formattedBalance: '2000',
-                value: 15.6, // $0.0078 per CKES
-                region: 'Africa'
-              };
-
-              mockBalances.CCOP = {
-                symbol: 'CCOP',
-                name: 'Celo Colombian Peso',
-                balance: '100000000000000000000000',
-                formattedBalance: '100000',
-                value: 25, // $0.00025 per CCOP
-                region: 'LatAm'
-              };
-
-              mockBalances.PUSO = {
-                symbol: 'PUSO',
-                name: 'Philippine Peso',
-                balance: '1000000000000000000000',
-                formattedBalance: '1000',
-                value: 17.9, // $0.0179 per PUSO
-                region: 'Asia'
-              };
-            }
-
-            setBalances(mockBalances);
-            calculateTotals(mockBalances);
+          // If not on a supported network, we simply won't fetch balances
+          // The UI should handle the "unsupported network" state based on the chainId
+          const supportedChains = [42220, 44787, 5042002, 42161];
+          if (!supportedChains.includes(currentChainId)) {
+            console.log('Not on supported network, skipping balance fetch');
             setIsLoading(false);
             return;
-          } else {
-            setIsMockData(false);
           }
         } catch (err) {
           console.warn('Error checking chain ID, proceeding with API calls:', err);
@@ -341,18 +198,22 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
       const isAlfajores = currentChainId === 44787;
       const isArc = currentChainId === 5042002;
+      const isArbitrum = currentChainId === 42161;
 
       let providerUrl = 'https://forno.celo.org'; // Default
       if (isAlfajores) providerUrl = 'https://alfajores-forno.celo-testnet.org';
       if (isArc) providerUrl = 'https://rpc.testnet.arc.network';
+      if (isArbitrum) providerUrl = 'https://arb1.arbitrum.io/rpc';
 
-      console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} provider for balance fetching`);
+      console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : isArbitrum ? 'Arbitrum' : 'Mainnet'} provider for balance fetching`);
       const provider = new ethers.providers.JsonRpcProvider(providerUrl);
 
       // Determine which tokens to fetch based on the network
       let tokensToFetch: string[] = [];
       if (isArc) {
         tokensToFetch = ['USDC'];
+      } else if (isArbitrum) {
+        tokensToFetch = ['USDC', 'PAXG', 'USDY', 'OUSG'];
       } else if (isAlfajores) {
         tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
       } else {
@@ -444,7 +305,6 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
       setBalances(balanceMap);
       calculateTotals(balanceMap);
-      setIsMockData(false);
 
       // Cache the results
       setCachedBalances(address, balanceMap);
@@ -568,7 +428,6 @@ export function useStablecoinBalances(address: string | undefined | null) {
     regionTotals,
     totalValue,
     chainId,
-    isMockData,
     refreshBalances,
     refreshChainId
   };

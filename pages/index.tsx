@@ -8,7 +8,6 @@ import { useInflationData, type RegionalInflationData } from "../hooks/use-infla
 import { useCurrencyPerformance } from "../hooks/use-currency-performance";
 import {
   AVAILABLE_TOKENS,
-  MOCK_REGION_DATA,
   REGION_COLORS,
 } from "../constants/regions";
 import TabNavigation from "../components/TabNavigation";
@@ -50,7 +49,7 @@ export default function DiversiFiPage() {
     balances,
     regionTotals,
     totalValue,
-    isMockData,
+    chainId,
     refreshBalances,
     refreshChainId,
   } = useStablecoinBalances(address);
@@ -64,7 +63,7 @@ export default function DiversiFiPage() {
   } = useCurrencyPerformance();
 
   // Convert region totals to format needed for pie chart
-  const [regionData, setRegionData] = useState(MOCK_REGION_DATA);
+  const [regionData, setRegionData] = useState<Array<{ region: string; value: number; color: string }>>([]);
 
   // Update user region when detected
   useEffect(() => {
@@ -128,44 +127,58 @@ export default function DiversiFiPage() {
           <WalletButton />
         </div>
 
-        {/* Network Nudge */}
-        {address && isMockData && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 shadow-sm animate-pulse-subtle">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 bg-amber-100 rounded-full p-2 mr-3">
-                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-amber-900">Unsupported Network</h3>
-                <p className="text-xs text-amber-700 mt-1">
-                  You are currently seeing mock data because you&#39;re not on a supported network (Celo or Arc).
-                  Switch to a supported network to see your real balances.
+        {/* Unsupported Network State - Blocking */}
+        {address && balances && Object.keys(balances).length === 0 && (
+          // We can infer unsupported network if address is connected but no balances are fetched
+          // AND the chainId (if available) is not in our supported list.
+          // However, useStablecoinBalances now just returns empty balances for unsupported networks.
+          // A better check is needed. Let's use the wallet context's chainId if available, or just rely on the empty balances + explicit check.
+          
+          // Actually, let's look at the implementation in useStablecoinBalances again.
+          // It sets chainId state. 
+          
+          // Let's implement a robust check here.
+           (![42220, 44787, 5042002, 42161].includes(chainId || 0) && chainId !== null) && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4">
+              <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
+                <div className="mx-auto bg-amber-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Unsupported Network</h3>
+                <p className="text-gray-600 mb-6">
+                  DiversiFi operates on Celo, Arc, and Arbitrum. Please switch to a supported network to access your portfolio.
                 </p>
-                <div className="mt-3 flex space-x-2">
+                <div className="space-y-3">
                   <button
                     onClick={() => switchNetwork(42220)}
-                    className="bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-bold py-2 px-3 rounded-lg transition-colors shadow-sm"
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
                   >
-                    Celo
+                    <span>Switch to Celo</span>
                   </button>
                   <button
-                    onClick={() => switchNetwork(44787)}
-                    className="bg-white hover:bg-gray-50 text-amber-700 text-[10px] font-bold py-2 px-3 rounded-lg border border-amber-200 transition-colors shadow-sm"
+                    onClick={() => switchNetwork(42161)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
                   >
-                    Alfajores
+                    <span>Switch to Arbitrum One</span>
                   </button>
                   <button
                     onClick={() => switchNetwork(5042002)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold py-2 px-3 rounded-lg transition-colors shadow-sm"
+                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
                   >
-                    Arc Testnet
+                    <span>Switch to Arc Testnet</span>
+                  </button>
+                  <button
+                    onClick={() => switchNetwork(44787)}
+                    className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl border border-gray-200 transition-colors shadow-sm"
+                  >
+                    Switch to Alfajores (Testnet)
                   </button>
                 </div>
               </div>
             </div>
-          </div>
+          )
         )}
 
         {/* Mobile tabs with icons */}
