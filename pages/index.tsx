@@ -197,7 +197,6 @@ export default function DiversiFiPage() {
               userRegion={userRegion}
               setUserRegion={setUserRegion}
               REGIONS={REGIONS}
-              _isBalancesLoading={isBalancesLoading}
               setActiveTab={setActiveTab}
               refreshBalances={refreshBalances}
               refreshChainId={refreshChainId}
@@ -230,8 +229,6 @@ export default function DiversiFiPage() {
           {/* Analytics Tab */}
           {activeTab === "analytics" && (
             <AnalyticsTab
-              _performanceData={performanceData}
-              _isPerformanceLoading={isPerformanceLoading}
               currencyPerformanceData={currencyPerformanceData}
               isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
               regionData={regionData}

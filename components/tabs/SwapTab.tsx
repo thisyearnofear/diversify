@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import SwapInterface from "../SwapInterface";
 import { useInflationData } from "../../hooks/use-inflation-data";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
-import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
+import RegionalIconography from "../RegionalIconography";
 import RealLifeScenario from "../RealLifeScenario";
 import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
@@ -12,7 +12,41 @@ import WalletButton from "../WalletButton";
 import { NETWORKS, ARBITRUM_TOKENS } from "../../config";
 import { BridgeService } from "../../services/swap/bridge-service";
 import { ethers } from "ethers";
-import NetworkSwitcher from "../NetworkSwitcher";
+import { TabHeader, CollapsibleSection, Card, ConnectWalletPrompt } from "../shared/TabComponents";
+
+// Network-specific token configurations
+const NETWORK_TOKENS: Record<number, Array<{ symbol: string; name: string; region: string }>> = {
+  // Celo Mainnet
+  [NETWORKS.CELO_MAINNET.chainId]: [
+    { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
+    { symbol: "CEUR", name: "Celo Euro", region: "Europe" },
+    { symbol: "CREAL", name: "Celo Real", region: "LatAm" },
+    { symbol: "CKES", name: "Celo Kenyan Shilling", region: "Africa" },
+    { symbol: "CCOP", name: "Celo Colombian Peso", region: "LatAm" },
+    { symbol: "PUSO", name: "Philippine Peso", region: "Asia" },
+    { symbol: "CGHS", name: "Celo Ghana Cedi", region: "Africa" },
+    { symbol: "CGBP", name: "British Pound", region: "Europe" },
+    { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
+  ],
+  // Celo Alfajores
+  [NETWORKS.ALFAJORES.chainId]: [
+    { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
+    { symbol: "CEUR", name: "Celo Euro", region: "Europe" },
+    { symbol: "CREAL", name: "Celo Real", region: "LatAm" },
+    { symbol: "CKES", name: "Celo Kenyan Shilling", region: "Africa" },
+    { symbol: "CCOP", name: "Celo Colombian Peso", region: "LatAm" },
+    { symbol: "PUSO", name: "Philippine Peso", region: "Asia" },
+  ],
+  // Arbitrum One
+  [NETWORKS.ARBITRUM_ONE.chainId]: [
+    { symbol: "USDC", name: "USD Coin", region: "USA" },
+    { symbol: "USDY", name: "Ondo USD Yield", region: "USA" },
+    { symbol: "PAXG", name: "Paxos Gold", region: "Global" },
+    { symbol: "OUSG", name: "Ondo US Treasury", region: "USA" },
+  ],
+};
+
+
 
 interface SwapTabProps {
   availableTokens: Array<{
@@ -78,8 +112,8 @@ export default function SwapTab({
   refreshChainId,
   isBalancesLoading,
 }: SwapTabProps) {
-  const { address, isConnecting, isMiniPay } = useWalletContext();
-  const { dataSource: inflationDataSource } = useInflationData();
+  const { address } = useWalletContext();
+  useInflationData();
   const [selectedScenario, setSelectedScenario] = useState<
     "education" | "remittance" | "business" | "travel" | "savings"
   >("remittance");
@@ -103,12 +137,11 @@ export default function SwapTab({
     txHash: swapTxHash,
     step: hookSwapStep,
     chainId,
-    isMiniPay: isMiniPayDetected,
   } = useSwap();
 
   // State for transaction status
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
-  const [, setApprovalTxHash] = useState<string | null>(null); // approvalTxHash is unused but setApprovalTxHash is used
+  const [, setApprovalTxHash] = useState<string | null>(null);
   const [localSwapTxHash, setLocalSwapTxHash] = useState<string | null>(null);
   const [swapStep, setSwapStep] = useState<
     "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"
@@ -116,6 +149,22 @@ export default function SwapTab({
 
   // Create a ref to the SwapInterface component
   const swapInterfaceRef = useRef<{ refreshBalances: () => void }>(null);
+
+  // Network-aware token filtering - show only tokens available on current chain
+  const networkTokens = useMemo(() => {
+    const currentChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
+    const networkSpecificTokens = NETWORK_TOKENS[currentChainId];
+    
+    if (networkSpecificTokens) {
+      return networkSpecificTokens;
+    }
+    
+    // Fallback to passed tokens for unknown networks
+    return availableTokens;
+  }, [chainId, availableTokens]);
+
+  // Check if on Arbitrum (different swap behavior)
+  const isArbitrum = chainId === NETWORKS.ARBITRUM_ONE.chainId;
 
   // Effect to update UI when swap status changes
   useEffect(() => {
@@ -197,12 +246,12 @@ export default function SwapTab({
   // Get use case for the selected swap
   const swapUseCase = getSwapUseCase(userRegion, targetRegion);
 
-  // Get tokens for the selected regions
-  const fromTokens = availableTokens.filter(
-    (token) => token.region === userRegion
+  // Get tokens for the selected regions - filtered by network
+  const fromTokens = networkTokens.filter(
+    (token) => token.region === userRegion || token.region === "Global"
   );
-  const toTokens = availableTokens.filter(
-    (token) => token.region === targetRegion
+  const toTokens = networkTokens.filter(
+    (token) => token.region === targetRegion || token.region === "Global"
   );
 
   // Handle swap function
@@ -291,740 +340,261 @@ export default function SwapTab({
   const targetInflationRate = inflationData[targetRegion]?.avgRate || 0;
   const inflationDifference = homeInflationRate - targetInflationRate;
 
+  const handleRefresh = async () => {
+    if (refreshChainId) await refreshChainId();
+    if (refreshBalances) await refreshBalances();
+  };
+
   return (
     <div className="space-y-4">
-      <div className="relative overflow-hidden bg-white rounded-lg shadow-md p-5 mb-4 border border-gray-200">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center">
-            <RegionalIconography
-              region={userRegion}
-              size="sm"
-              className="mr-2"
-            />
-            <h2 className="text-lg font-bold text-gray-900">
-              Swap Stablecoins
-            </h2>
-          </div>
-          <div className="flex items-center space-x-2">
-            {refreshBalances && refreshChainId && (
-              <button
-                onClick={async () => {
-                  try {
-                    // First refresh the chain ID
-                    await refreshChainId();
-                    // Then refresh the balances
-                    await refreshBalances();
-                  } catch (err) {
-                    console.error("Error refreshing data:", err);
-                  }
-                }}
-                className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 p-1 rounded-full transition-colors"
-                title="Refresh balances and network"
-                disabled={isBalancesLoading}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className={`size-4 ${isBalancesLoading ? "animate-spin" : ""
-                    }`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
-              </button>
-            )}
-            <NetworkSwitcher
-              currentChainId={chainId}
-              onNetworkChange={async () => {
-                // Refresh balances and chain ID after network switch
-                if (refreshChainId) await refreshChainId();
-                if (refreshBalances) await refreshBalances();
-              }}
-              compact
-            />
-            {inflationDataSource === "api" ? (
-              <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium shadow-sm border border-green-200">
-                Live Data
-              </span>
-            ) : (
-              <span className="text-xs bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium shadow-sm border border-blue-200">
-                Cached Inflation Data
-              </span>
-            )}
-          </div>
-        </div>
+      <Card>
+        <TabHeader
+          title="Swap"
+          chainId={chainId}
+          onRefresh={refreshBalances ? handleRefresh : undefined}
+          isLoading={isBalancesLoading}
+          onNetworkChange={handleRefresh}
+        />
 
-        {/* Swap Interface - Moved to the top */}
+        {/* Wallet connection or Swap Interface */}
         {!address ? (
-          <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 shadow-sm mb-4">
-            <p className="text-sm text-yellow-800 font-medium mb-3">
-              Please connect your wallet to swap stablecoins.
-            </p>
-            <WalletButton variant="inline" />
-          </div>
+          <ConnectWalletPrompt
+            message="Connect your wallet to swap tokens."
+            WalletButtonComponent={<WalletButton variant="inline" />}
+          />
         ) : (
-          <div className="mb-6">
+          <>
+            {/* Arbitrum notice */}
+            {isArbitrum && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r">
+                <p className="text-sm text-blue-800">
+                  <span className="font-medium">Arbitrum Mode:</span> Swap between yield-bearing assets and RWAs.
+                </p>
+              </div>
+            )}
+
             <SwapInterface
               ref={swapInterfaceRef}
-              availableTokens={availableTokens}
+              availableTokens={networkTokens}
               address={address}
               onSwap={handleSwap}
-              preferredFromRegion={userRegion}
-              preferredToRegion={targetRegion}
-              title="" // Pass empty title to prevent duplicate header
+              preferredFromRegion={isArbitrum ? "USA" : userRegion}
+              preferredToRegion={isArbitrum ? "USA" : targetRegion}
+              title=""
             />
 
-            {/* Display swap status */}
+            {/* Swap status - only show when relevant */}
             {swapStatus && (
               <div
-                className={`mt-4 p-3 rounded-md text-sm font-medium ${swapStatus.includes("Error")
-                  ? "bg-red-50 text-red-700 border border-red-200"
-                  : swapStatus.includes("success")
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-blue-50 text-blue-700 border border-blue-200"
-                  }`}
+                className={`mt-3 p-3 rounded-md text-sm ${
+                  swapStatus.includes("Error")
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : swapStatus.includes("success")
+                      ? "bg-green-50 text-green-700 border border-green-200"
+                      : "bg-blue-50 text-blue-700 border border-blue-200"
+                }`}
               >
                 {swapStatus}
-
                 {(swapTxHash || localSwapTxHash) && (
-                  <div className="mt-2">
-                    <a
-                      href={
-                        chainId === NETWORKS.ALFAJORES.chainId
-                          ? `${NETWORKS.ALFAJORES.explorerUrl}/tx/${swapTxHash || localSwapTxHash}`
-                          : chainId === NETWORKS.ARC_TESTNET.chainId
-                            ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${swapTxHash || localSwapTxHash}`
-                            : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${swapTxHash || localSwapTxHash}`
-                      }
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      View transaction on explorer
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Display detected environment info */}
-            <div className="mt-4 p-3 bg-gray-50 rounded-md border border-gray-200 text-xs text-gray-600">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  {refreshBalances && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          if (refreshChainId) {
-                            await refreshChainId();
-                          }
-                          await refreshBalances();
-                        } catch (err) {
-                          console.error("Error refreshing data:", err);
-                        }
-                      }}
-                      className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors flex items-center"
-                      disabled={isBalancesLoading}
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className={`size-3 mr-1 ${isBalancesLoading ? "animate-spin" : ""
-                          }`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                        />
-                      </svg>
-                      {isBalancesLoading ? "Refreshing..." : "Refresh Balances"}
-                    </button>
-                  )}
-                  <span>
-                    Network:{" "}
-                    {chainId === NETWORKS.CELO_MAINNET.chainId
-                      ? "Celo Mainnet"
-                      : chainId === NETWORKS.ALFAJORES.chainId
-                        ? "Celo Alfajores"
-                        : chainId === NETWORKS.ARC_TESTNET.chainId
-                          ? "Arc Testnet"
-                          : chainId
-                            ? `Chain ID: ${chainId}`
-                            : "Unknown"}
-                  </span>
-                </div>
-                {isMiniPayDetected && (
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                    MiniPay Detected
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Real-world scenario */}
-        <div className="mt-8 mb-4">
-          <h3 className="font-bold text-gray-900 mb-3">
-            Why Swap Stablecoins?
-          </h3>
-
-          {/* Home region indicator */}
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm mb-4">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center">
-                <div
-                  className="size-8 rounded-full flex items-center justify-center mr-2 border-2 border-white shadow-sm"
-                  style={{
-                    backgroundColor:
-                      REGION_COLORS[userRegion as keyof typeof REGION_COLORS],
-                  }}
-                >
-                  <RegionalIconography
-                    region={userRegion}
-                    size="sm"
-                    className="text-white"
-                  />
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500 font-medium">
-                    Your Home Region
-                  </div>
-                  <div className="font-bold text-gray-900">{userRegion}</div>
-                </div>
-              </div>
-              <div>
-                <button
-                  onClick={() => {
-                    // This would ideally navigate to the overview tab
-                    alert(
-                      "To change your home region, please go to the Stable Station tab"
-                    );
-                  }}
-                  className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded-md transition-colors"
-                >
-                  Change Region
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {!address && !isConnecting ? (
-            <div
-              className={`relative overflow-hidden bg-region-${userRegion.toLowerCase()}-light bg-opacity-30 p-4 rounded-card mb-4`}
-            >
-              <RegionalPattern region={userRegion} />
-              <div className="relative">
-                <p
-                  className={`text-region-${userRegion.toLowerCase()}-dark font-medium mb-3`}
-                >
-                  Connect your wallet to swap stablecoins and protect your
-                  savings.
-                </p>
-
-                {!isMiniPay && (
-                  <WalletButton variant="inline" />
-                )}
-              </div>
-            </div>
-          ) : (
-            <div>
-              {/* Target region selector */}
-              <div className="mb-4">
-                <h3 className="font-bold text-gray-900 mb-3">
-                  Choose Target Region
-                </h3>
-                <div className="grid grid-cols-5 gap-2 mb-3">
-                  {Object.keys(inflationData)
-                    .filter((region) => region !== userRegion)
-                    .map((region) => (
-                      <button
-                        key={region}
-                        className={`p-3 text-xs rounded-md transition-colors flex flex-col items-center shadow-sm ${region === targetRegion
-                          ? `bg-region-${region.toLowerCase()}-light border-2 border-region-${region.toLowerCase()}-medium text-region-${region.toLowerCase()}-dark font-bold`
-                          : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                          }`}
-                        onClick={() => setTargetRegion(region as Region)}
-                      >
-                        <RegionalIconography
-                          region={region as Region}
-                          size="sm"
-                          className="mb-2"
-                        />
-                        <span className="font-medium">{region}</span>
-                      </button>
-                    ))}
-                </div>
-              </div>
-
-              {/* Scenario selector */}
-              <div className="flex overflow-x-auto mb-3 pb-1">
-                {[
-                  "remittance",
-                  "education",
-                  "business",
-                  "travel",
-                  "savings",
-                ].map((scenario) => (
-                  <button
-                    key={scenario}
-                    className={`px-3 py-1.5 mr-2 text-xs rounded-md whitespace-nowrap shadow-sm ${selectedScenario === scenario
-                      ? `bg-blue-600 text-white font-medium border border-blue-700`
-                      : `bg-white text-gray-700 hover:bg-gray-50 border border-gray-200`
-                      }`}
-                    onClick={() => setSelectedScenario(scenario as "remittance" | "education" | "business" | "travel" | "savings")}
+                  <a
+                    href={`${
+                      chainId === NETWORKS.ARBITRUM_ONE.chainId
+                        ? NETWORKS.ARBITRUM_ONE.explorerUrl
+                        : chainId === NETWORKS.ALFAJORES.chainId
+                          ? NETWORKS.ALFAJORES.explorerUrl
+                          : NETWORKS.CELO_MAINNET.explorerUrl
+                    }/tx/${swapTxHash || localSwapTxHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block mt-2 text-blue-600 hover:underline text-xs"
                   >
-                    {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
-                  </button>
-                ))}
-              </div>
-
-              <RealLifeScenario
-                region={userRegion}
-                targetRegion={targetRegion}
-                scenarioType={selectedScenario}
-                inflationRate={homeInflationRate}
-                targetInflationRate={targetInflationRate}
-                amount={1000}
-                monthlyAmount={100}
-              />
-            </div>
-          )}
-
-          {/* Inflation comparison */}
-          {address && targetRegion && (
-            <div
-              className={`relative overflow-hidden bg-white p-4 rounded-lg mb-4 border-2 shadow-md`}
-              style={{
-                borderColor:
-                  REGION_COLORS[targetRegion as keyof typeof REGION_COLORS],
-              }}
-            >
-              <div className="relative">
-                <h3
-                  className={`font-bold text-gray-900 mb-3 flex items-center`}
-                >
-                  <span className="mr-2">Swap Benefits</span>
-                  {inflationDifference > 0 && (
-                    <span className="text-xs bg-green-100 text-green-800 px-3 py-1 rounded-full font-medium border border-green-200">
-                      {inflationDifference.toFixed(1)}% Lower Inflation
-                    </span>
-                  )}
-                </h3>
-
-                <div className="bg-gray-50 p-4 rounded-md mb-4 border border-gray-200 shadow-sm">
-                  <p className="text-sm text-gray-800 mb-3 font-medium">
-                    <span className="font-bold text-gray-900">
-                      Real-world use:
-                    </span>{" "}
-                    {swapUseCase}
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center bg-white p-3 rounded-md border border-gray-200 shadow-sm">
-                      <div
-                        className="size-10 rounded-full mr-3 flex items-center justify-center"
-                        style={{
-                          backgroundColor:
-                            REGION_COLORS[
-                            userRegion as keyof typeof REGION_COLORS
-                            ],
-                        }}
-                      >
-                        <RegionalIconography
-                          region={userRegion}
-                          size="sm"
-                          className="text-white"
-                        />
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 font-medium">
-                          From
-                        </div>
-                        <div className="font-bold text-gray-900">
-                          {userRegion}
-                        </div>
-                        <div className="text-sm font-medium text-gray-700">
-                          {homeInflationRate.toFixed(1)}% inflation
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-blue-500 font-bold text-xl">→</div>
-
-                    <div className="flex items-center bg-white p-3 rounded-md border border-gray-200 shadow-sm">
-                      <div
-                        className="size-10 rounded-full mr-3 flex items-center justify-center"
-                        style={{
-                          backgroundColor:
-                            REGION_COLORS[
-                            targetRegion as keyof typeof REGION_COLORS
-                            ],
-                        }}
-                      >
-                        <RegionalIconography
-                          region={targetRegion}
-                          size="sm"
-                          className="text-white"
-                        />
-                      </div>
-                      <div>
-                        <div className="text-xs text-gray-500 font-medium">
-                          To
-                        </div>
-                        <div className="font-bold text-gray-900">
-                          {targetRegion}
-                        </div>
-                        <div className="text-sm font-medium text-gray-700">
-                          {targetInflationRate.toFixed(1)}% inflation
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {fromTokens.length > 0 && toTokens.length > 0 && (
-                  <div className="bg-white p-4 rounded-md border border-gray-200 shadow-sm">
-                    <div className="text-sm font-bold text-gray-900 mb-3">
-                      Available Tokens
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
-                        <div className="text-xs font-medium text-gray-700 mb-2 flex items-center">
-                          <div
-                            className="size-4 rounded-full mr-1"
-                            style={{
-                              backgroundColor:
-                                REGION_COLORS[
-                                userRegion as keyof typeof REGION_COLORS
-                                ],
-                            }}
-                          ></div>
-                          From {userRegion}:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {fromTokens.map((token) => (
-                            <span
-                              key={token.symbol}
-                              className="inline-block px-3 py-1 text-xs rounded-md font-medium border shadow-sm"
-                              style={{
-                                backgroundColor:
-                                  REGION_COLORS[
-                                  userRegion as keyof typeof REGION_COLORS
-                                  ],
-                                color: "white",
-                                borderColor:
-                                  REGION_COLORS[
-                                  userRegion as keyof typeof REGION_COLORS
-                                  ],
-                              }}
-                            >
-                              {token.symbol}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
-                        <div className="text-xs font-medium text-gray-700 mb-2 flex items-center">
-                          <div
-                            className="size-4 rounded-full mr-1"
-                            style={{
-                              backgroundColor:
-                                REGION_COLORS[
-                                targetRegion as keyof typeof REGION_COLORS
-                                ],
-                            }}
-                          ></div>
-                          To {targetRegion}:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {toTokens.map((token) => (
-                            <span
-                              key={token.symbol}
-                              className="inline-block px-3 py-1 text-xs rounded-md font-medium border shadow-sm"
-                              style={{
-                                backgroundColor:
-                                  REGION_COLORS[
-                                  targetRegion as keyof typeof REGION_COLORS
-                                  ],
-                                color: "white",
-                                borderColor:
-                                  REGION_COLORS[
-                                  targetRegion as keyof typeof REGION_COLORS
-                                  ],
-                              }}
-                            >
-                              {token.symbol}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                    View on explorer →
+                  </a>
                 )}
               </div>
+            )}
+          </>
+        )}
+      </Card>
+
+      {/* Progressive Disclosure Sections - Only show on Celo chains */}
+      {!isArbitrum && address && (
+        <div className="space-y-3">
+          {/* Why Swap - Collapsible */}
+          <CollapsibleSection
+            title={`Inflation Protection: ${userRegion} → ${targetRegion}`}
+            icon={
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: REGION_COLORS[userRegion as keyof typeof REGION_COLORS] }}
+                >
+                  <RegionalIconography region={userRegion} size="sm" className="text-white" />
+                </div>
+                <span className="text-gray-400">→</span>
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: REGION_COLORS[targetRegion as keyof typeof REGION_COLORS] }}
+                >
+                  <RegionalIconography region={targetRegion} size="sm" className="text-white" />
+                </div>
+              </div>
+            }
+          >
+            {/* Compact region selector */}
+            <div className="mb-4">
+              <p className="text-xs text-gray-500 mb-2">Target Region</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.keys(inflationData)
+                  .filter((region) => region !== userRegion)
+                  .map((region) => (
+                    <button
+                      key={region}
+                      className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
+                        region === targetRegion
+                          ? "text-white font-medium"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                      style={region === targetRegion ? { backgroundColor: REGION_COLORS[region as keyof typeof REGION_COLORS] } : {}}
+                      onClick={() => setTargetRegion(region as Region)}
+                    >
+                      {region}
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Inflation comparison - compact */}
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div className="text-center">
+                <p className="text-xs text-gray-500">{userRegion}</p>
+                <p className="font-bold text-lg">{homeInflationRate.toFixed(1)}%</p>
+              </div>
+              <div className="text-gray-400">→</div>
+              <div className="text-center">
+                <p className="text-xs text-gray-500">{targetRegion}</p>
+                <p className="font-bold text-lg">{targetInflationRate.toFixed(1)}%</p>
+              </div>
+              {inflationDifference > 0 && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                  Save {inflationDifference.toFixed(1)}%
+                </span>
+              )}
+            </div>
+
+            {/* Use case hint */}
+            {swapUseCase && (
+              <p className="text-xs text-gray-600 mt-3 italic">{swapUseCase}</p>
+            )}
+          </CollapsibleSection>
+
+          {/* Scenarios - Collapsible */}
+          <CollapsibleSection
+            title="Real-World Scenarios"
+            icon={<span className="text-lg">💡</span>}
+          >
+            <div className="flex flex-wrap gap-2 mb-3">
+              {["remittance", "education", "business", "travel", "savings"].map((scenario) => (
+                <button
+                  key={scenario}
+                  className={`px-3 py-1 text-xs rounded-full ${
+                    selectedScenario === scenario
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                  onClick={() => setSelectedScenario(scenario as "remittance" | "education" | "business" | "travel" | "savings")}
+                >
+                  {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
+                </button>
+              ))}
+            </div>
+            <RealLifeScenario
+              region={userRegion}
+              targetRegion={targetRegion}
+              scenarioType={selectedScenario}
+              inflationRate={homeInflationRate}
+              targetInflationRate={targetInflationRate}
+              amount={1000}
+              monthlyAmount={100}
+            />
+          </CollapsibleSection>
+
+          {/* Recommendations - Collapsible */}
+          <CollapsibleSection
+            title="Personalized Recommendations"
+            icon={<span className="text-lg">🎯</span>}
+          >
+            <p className="text-xs text-gray-600 mb-3">
+              Based on your <span className="font-medium">{selectedStrategy}</span> strategy in {userRegion}:
+            </p>
+            <div className="space-y-2">
+              {getRecommendations(userRegion, inflationData, homeInflationRate)}
+            </div>
+          </CollapsibleSection>
+
+          {/* Available Tokens - Compact display */}
+          {(fromTokens.length > 0 || toTokens.length > 0) && (
+            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-500">Available:</span>
+                  <div className="flex gap-1">
+                    {networkTokens.slice(0, 4).map((token) => (
+                      <span
+                        key={token.symbol}
+                        className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200"
+                      >
+                        {token.symbol}
+                      </span>
+                    ))}
+                    {networkTokens.length > 4 && (
+                      <span className="text-xs text-gray-400">+{networkTokens.length - 4} more</span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
-      </div>
-
-      <div
-        className={`relative overflow-hidden bg-white p-5 rounded-lg shadow-md border-2`}
-        style={{
-          borderColor: REGION_COLORS[userRegion as keyof typeof REGION_COLORS],
-        }}
-      >
-        <div className="relative">
-          <h3 className={`font-bold text-gray-900 mb-2`}>
-            Personalized Recommendations
-          </h3>
-          <p className="text-sm text-gray-700 mb-4 font-medium">
-            Based on your <span className="font-bold">{selectedStrategy}</span>{" "}
-            strategy and location in{" "}
-            <span
-              className="font-bold px-2 py-0.5 rounded text-white"
-              style={{
-                backgroundColor:
-                  REGION_COLORS[userRegion as keyof typeof REGION_COLORS],
-              }}
-            >
-              {userRegion}
-            </span>
-            , we recommend:
-          </p>
-
-          <div className="space-y-2">
-            {userRegion === "Africa" && (
-              <>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🌍➡️🇪🇺
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-blue-600">cKES</span> to{" "}
-                        <span className="text-green-600">cEUR</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        European inflation is{" "}
-                        <span className="font-bold">
-                          {(inflationData["Europe"]?.avgRate || 0).toFixed(1)}%
-                        </span>{" "}
-                        compared to{" "}
-                        <span className="font-bold">
-                          {homeInflationRate.toFixed(1)}%
-                        </span>{" "}
-                        in Africa. This swap could protect your savings from
-                        higher local inflation.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🌍➡️🇺🇸
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-blue-600">cGHS</span> to{" "}
-                        <span className="text-blue-600">cUSD</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Perfect for paying for online services or education
-                        expenses that are priced in USD.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {userRegion === "LatAm" && (
-              <>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🌎➡️🇺🇸
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-orange-600">cCOP</span> to{" "}
-                        <span className="text-blue-600">cUSD</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        US inflation is{" "}
-                        <span className="font-bold">
-                          {(inflationData["USA"]?.avgRate || 0).toFixed(1)}%
-                        </span>{" "}
-                        compared to{" "}
-                        <span className="font-bold">
-                          {homeInflationRate.toFixed(1)}%
-                        </span>{" "}
-                        in Latin America. This swap helps protect against local
-                        currency volatility.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🌎➡️🇪🇺
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-orange-600">cREAL</span> to{" "}
-                        <span className="text-green-600">cEUR</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Ideal for diversifying your savings and preparing for
-                        potential travel to Europe.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {userRegion === "USA" && (
-              <>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🇺🇸➡️🇪🇺
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-blue-600">cUSD</span> to{" "}
-                        <span className="text-green-600">cEUR</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Diversify your portfolio geographically and protect
-                        against USD-specific economic factors.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🇺🇸➡️🌏
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-blue-600">cUSD</span> to{" "}
-                        <span className="text-purple-600">PUSO</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Gain exposure to fast-growing Asian economies and
-                        prepare for potential travel to the region.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {userRegion === "Europe" && (
-              <>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🇪🇺➡️🌍
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-green-600">cEUR</span> to{" "}
-                        <span className="text-red-600">cKES</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Gain exposure to high-growth African markets and support
-                        economic development in the region.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🇪🇺➡️🇺🇸
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-green-600">cEUR</span> to{" "}
-                        <span className="text-blue-600">cUSD</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Useful for paying for US-based services or preparing for
-                        travel to the United States.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {userRegion === "Asia" && (
-              <>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🌏➡️🇺🇸
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-purple-600">PUSO</span> to{" "}
-                        <span className="text-blue-600">cUSD</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        US inflation is{" "}
-                        <span className="font-bold">
-                          {(inflationData["USA"]?.avgRate || 0).toFixed(1)}%
-                        </span>{" "}
-                        compared to{" "}
-                        <span className="font-bold">
-                          {homeInflationRate.toFixed(1)}%
-                        </span>{" "}
-                        in Asia. This swap provides more stability for your
-                        savings.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start">
-                    <div className="text-2xl mr-3 bg-gray-100 p-2 rounded-md">
-                      🌏➡️🇪🇺
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-900 mb-2">
-                        Swap <span className="text-purple-600">PUSO</span> to{" "}
-                        <span className="text-green-600">cEUR</span>
-                      </p>
-                      <p className="text-sm text-gray-700">
-                        Ideal for diversifying your portfolio and preparing for
-                        potential travel or business with Europe.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div >
+      )}
+    </div>
   );
+}
+
+// Helper function to generate recommendations based on region
+function getRecommendations(
+  userRegion: Region,
+  inflationData: Record<string, RegionalInflationData>,
+  homeInflationRate: number
+): React.ReactNode {
+  const recommendations: Record<Region, Array<{ from: string; to: string; reason: string }>> = {
+    Africa: [
+      { from: "cKES", to: "cEUR", reason: `Europe has ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation` },
+      { from: "cGHS", to: "cUSD", reason: "Pay for online services priced in USD" },
+    ],
+    LatAm: [
+      { from: "cCOP", to: "cUSD", reason: "Protect against local currency volatility" },
+      { from: "cREAL", to: "cEUR", reason: "Diversify for European travel" },
+    ],
+    USA: [
+      { from: "cUSD", to: "cEUR", reason: "Geographic diversification" },
+      { from: "cUSD", to: "PUSO", reason: "Exposure to Asian growth" },
+    ],
+    Europe: [
+      { from: "cEUR", to: "cKES", reason: "African market exposure" },
+      { from: "cEUR", to: "cUSD", reason: "US services and travel" },
+    ],
+    Asia: [
+      { from: "PUSO", to: "cUSD", reason: "More stable savings" },
+      { from: "PUSO", to: "cEUR", reason: "European diversification" },
+    ],
+  };
+
+  const recs = recommendations[userRegion] || [];
+  return recs.map((rec, idx) => (
+    <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border border-gray-100">
+      <span className="text-sm font-medium">{rec.from} → {rec.to}</span>
+      <span className="text-xs text-gray-500">{rec.reason}</span>
+    </div>
+  ));
 }

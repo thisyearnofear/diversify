@@ -4,6 +4,8 @@ import RegionalRecommendations from "../RegionalRecommendations";
 import AgentWealthGuard from "../AgentWealthGuard";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../WalletProvider";
+import { Card, TabHeader, FeatureCard, PrimaryButton, CollapsibleSection, StatBadge } from "../shared/TabComponents";
+import { NETWORKS } from "@/config";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -14,6 +16,13 @@ interface ProtectionTabProps {
   setActiveTab?: (tab: string) => void;
 }
 
+// RWA yield data
+const RWA_YIELDS = [
+  { symbol: "OUSG", apy: "5.2%", label: "T-Bills", description: "US Treasury Bonds" },
+  { symbol: "USDY", apy: "4.8%", label: "Yield USD", description: "Yield-bearing stablecoin" },
+  { symbol: "PAXG", apy: "—", label: "Gold", description: "Tokenized physical gold" },
+];
+
 export default function ProtectionTab({
   userRegion,
   setUserRegion,
@@ -23,101 +32,128 @@ export default function ProtectionTab({
   setActiveTab
 }: ProtectionTabProps) {
   const { chainId } = useWalletContext();
-  const isCelo = chainId === 42220 || chainId === 44787;
+  const isCelo = chainId === NETWORKS.CELO_MAINNET.chainId || chainId === NETWORKS.ALFAJORES.chainId;
+  const isArbitrum = chainId === NETWORKS.ARBITRUM_ONE.chainId;
 
-  // Convert regionData to the format needed by our components
-  const currentRegions = Object.entries(regionData)
-    .filter(([_, data]) => data.value > 0)
-    .map(([region]) => region as Region);
+  const currentRegions = regionData
+    .filter((item) => item.value > 0)
+    .map((item) => item.region as Region);
 
   const currentAllocations = Object.fromEntries(
     regionData.map((item) => [item.region, item.value / 100])
   );
 
-  const handleAgentSwap = (_: string) => {
-    // In a real implementation, we would pass the target token to the SwapTab
-    // For now, we just switch to the tab.
-    // Ideally, we would use a global state manager (Zustand/Context) to set the 'toToken'
-    if (setActiveTab) {
-      setActiveTab("swap");
-    } else {
-      console.warn("Navigation not available");
-    }
+  const handleNavigateToSwap = () => {
+    if (setActiveTab) setActiveTab("swap");
   };
 
   return (
-    <div className="space-y-6">
-      {/* Premium RWA Yield Opportunities - HOT ZONE */}
-      <div className="bg-gradient-to-br from-blue-900 to-indigo-900 rounded-2xl p-4 shadow-xl border border-blue-500/30 overflow-hidden relative">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16" />
-        <div className="relative">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">🏛️</span>
-              <h3 className="text-white font-bold text-sm tracking-tight">ARBITRUM RWA VAULTS</h3>
-            </div>
-            <span className="text-[10px] font-bold bg-blue-500 text-white px-2 py-0.5 rounded-full animate-pulse">LIVE YIELDS</span>
-          </div>
+    <div className="space-y-4">
+      {/* Main Protection Card */}
+      <Card>
+        <TabHeader
+          title="Protection"
+          chainId={chainId}
+          showNetworkSwitcher={false}
+        />
 
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { symbol: 'OUSG', apy: '5.2%', label: 'T-Bills' },
-              { symbol: 'USDY', apy: '4.8%', label: 'Yield USD' },
-              { symbol: 'GLP', apy: '12.5%', label: 'Real Yield' }
-            ].map((yieldItem) => (
-              <div key={yieldItem.symbol} className="bg-white/5 border border-white/10 rounded-xl p-2 text-center">
-                <div className="text-[10px] text-blue-300 font-bold mb-1">{yieldItem.symbol}</div>
-                <div className="text-sm font-black text-white">{yieldItem.apy}</div>
-                <div className="text-[8px] text-blue-200/50 uppercase tracking-wider">{yieldItem.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {isCelo && (
-            <div className="mt-3">
-              <button
-                onClick={() => setActiveTab && setActiveTab('swap')}
-                className="w-full bg-white text-blue-900 text-xs font-bold py-2 rounded-lg hover:bg-blue-50 transition-colors shadow-md flex items-center justify-center gap-2"
-              >
-                <span>🌉</span> Bridge to Invest on Arbitrum
-              </button>
-            </div>
-          )}
-
-          <div className="mt-4 flex items-center justify-between text-[10px] text-blue-200/60 font-medium">
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
-              Low Gas Fees ($0.50-$2.00)
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
-              x402 Verified
-            </div>
-          </div>
+        {/* Quick Stats */}
+        <div className="flex gap-2 mb-4">
+          <StatBadge label="Portfolio" value={`$${totalValue.toFixed(0)}`} color="blue" />
+          <StatBadge label="Regions" value={currentRegions.length} color="green" />
+          <StatBadge label="Strategy" value={isArbitrum ? "RWA" : "Stables"} color="gray" />
         </div>
-      </div>
 
-      {/* Agentic Wealth Protection - PREMIUM UI */}
-      <AgentWealthGuard
-        amount={totalValue || 0}
-        holdings={Object.keys(balances || {})}
-        onExecuteSwap={handleAgentSwap}
-      />
+        {/* Primary CTA based on network */}
+        {isCelo ? (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100">
+            <p className="text-sm text-gray-700 mb-2">
+              Access higher yields with Real-World Assets on Arbitrum.
+            </p>
+            <PrimaryButton onClick={handleNavigateToSwap} icon={<span>🌉</span>} size="sm">
+              Bridge to Arbitrum
+            </PrimaryButton>
+          </div>
+        ) : isArbitrum ? (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-100">
+            <p className="text-sm text-gray-700 mb-2">
+              You&apos;re on Arbitrum — explore yield-bearing RWAs below.
+            </p>
+          </div>
+        ) : null}
+      </Card>
 
-      {/* Inflation Protection Info */}
-      <InflationProtectionInfo
-        homeRegion={userRegion}
-        currentRegions={currentRegions}
-        amount={totalValue || 1000}
-        onChangeHomeRegion={setUserRegion}
-      />
+      {/* RWA Yields - Premium Feature Card */}
+      <FeatureCard
+        title="🏛️ RWA Vaults"
+        badge={<span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Live Yields</span>}
+        variant="premium"
+      >
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {RWA_YIELDS.map((item) => (
+            <div key={item.symbol} className="bg-white/10 border border-white/20 rounded-lg p-2 text-center">
+              <div className="text-xs text-blue-200 font-bold">{item.symbol}</div>
+              <div className="text-lg font-black text-white">{item.apy}</div>
+              <div className="text-xs text-blue-200/60">{item.label}</div>
+            </div>
+          ))}
+        </div>
+        
+        {isCelo && (
+          <PrimaryButton onClick={handleNavigateToSwap} fullWidth size="sm" icon={<span>🌉</span>}>
+            Bridge to Invest
+          </PrimaryButton>
+        )}
 
-      {/* Regional Recommendations */}
-      <RegionalRecommendations
-        userRegion={userRegion}
-        currentAllocations={currentAllocations}
-      />
+        <div className="flex items-center justify-between mt-3 text-xs text-blue-200/60">
+          <span className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-green-400 rounded-full" />
+            Low Gas ($0.50-$2)
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
+            Arbitrum One
+          </span>
+        </div>
+      </FeatureCard>
+
+      {/* AI Wealth Guard - Collapsible */}
+      <CollapsibleSection
+        title="AI Wealth Guard"
+        icon={<span>🤖</span>}
+        badge={<span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">AI</span>}
+        defaultOpen={totalValue > 0}
+      >
+        <AgentWealthGuard
+          amount={totalValue || 0}
+          holdings={Object.keys(balances || {})}
+          onExecuteSwap={handleNavigateToSwap}
+        />
+      </CollapsibleSection>
+
+      {/* Inflation Protection Info - Collapsible */}
+      <CollapsibleSection
+        title="Inflation Analysis"
+        icon={<span>📊</span>}
+      >
+        <InflationProtectionInfo
+          homeRegion={userRegion}
+          currentRegions={currentRegions}
+          amount={totalValue || 1000}
+          onChangeHomeRegion={setUserRegion}
+        />
+      </CollapsibleSection>
+
+      {/* Regional Recommendations - Collapsible */}
+      <CollapsibleSection
+        title="Regional Recommendations"
+        icon={<span>🌍</span>}
+      >
+        <RegionalRecommendations
+          userRegion={userRegion}
+          currentAllocations={currentAllocations}
+        />
+      </CollapsibleSection>
     </div>
   );
 }
-
