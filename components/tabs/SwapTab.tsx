@@ -108,7 +108,7 @@ export default function SwapTab({
 
   // State for transaction status
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
-  const [approvalTxHash, setApprovalTxHash] = useState<string | null>(null);
+  const [, setApprovalTxHash] = useState<string | null>(null); // approvalTxHash is unused but setApprovalTxHash is used
   const [localSwapTxHash, setLocalSwapTxHash] = useState<string | null>(null);
   const [swapStep, setSwapStep] = useState<
     "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"

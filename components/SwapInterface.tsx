@@ -34,12 +34,10 @@ interface SwapInterfaceProps {
 
 // Compact AI Insight Component for SwapInterface
 const SwapAIInsight = ({
-  fromToken,
   toToken,
   inflationDifference,
   onAskAI
 }: {
-  fromToken: string;
   toToken: string;
   inflationDifference: number;
   onAskAI: () => void;
@@ -292,7 +290,6 @@ const SwapInterface = forwardRef<
         {/* AI Insight for beneficial swaps */}
         {fromToken && toToken && hasInflationBenefit && (
           <SwapAIInsight
-            fromToken={fromToken}
             toToken={toToken}
             inflationDifference={inflationDifference}
             onAskAI={() => {

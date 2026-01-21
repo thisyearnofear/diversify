@@ -43,7 +43,7 @@ export default function InflationVisualizer({
   });
 
   // Calculate total loss over the period
-  const totalLoss = initialAmount - cashValueOverTime[years].value;
+  // const totalLoss = initialAmount - cashValueOverTime[years].value;
   const wealthPreserved = safeHavenValueOverTime[years].value - cashValueOverTime[years].value;
 
   return (

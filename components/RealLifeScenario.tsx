@@ -10,7 +10,7 @@ interface RealLifeScenarioProps {
   scenarioType: "education" | "remittance" | "business" | "travel" | "savings";
   inflationRate?: number;
   targetInflationRate?: number;
-  amount?: number;
+  amount?: number;  // Kept for API compatibility
   monthlyAmount?: number;
 }
 
@@ -24,17 +24,19 @@ export default function RealLifeScenario({
   scenarioType,
   inflationRate = 5,
   targetInflationRate,
-  amount = 1000,
+  amount = 1000,  // Unused but kept for API compatibility
   monthlyAmount = 100,
 }: RealLifeScenarioProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _amount = amount; // Mark as intentionally unused
   // Calculate the impact of inflation on the amount over 1 year
-  const yearlyAmount = monthlyAmount * 12;
-  const lostValue = yearlyAmount * (inflationRate / 100);
+  // const yearlyAmount = monthlyAmount * 12;
+  const lostValue = monthlyAmount * 12 * (inflationRate / 100);
 
   // Calculate potential savings if swapping to target region
   const targetInflation = targetInflationRate || (inflationRate > 2 ? 2 : 1);
-  const targetLostValue = yearlyAmount * (targetInflation / 100);
-  const potentialSavings = lostValue - targetLostValue;
+  // const targetLostValue = yearlyAmount * (targetInflation / 100);
+  const potentialSavings = lostValue - monthlyAmount * 12 * (targetInflation / 100);
   const hasSavings = potentialSavings > 0;
 
   // Get scenario-specific content
@@ -224,151 +226,151 @@ export default function RealLifeScenario({
 }
 
 // Region-specific education scenarios
-function getEducationScenario(region: Region, lostValue: number): string {
-  switch (region) {
-    case "Africa":
-      return `Inflation could reduce your child's school supplies budget by $${lostValue.toFixed(
-        0
-      )} this year, affecting their education quality.`;
-    case "USA":
-      return `Your college savings will lose $${lostValue.toFixed(
-        0
-      )} to inflation this year, potentially reducing future educational opportunities.`;
-    case "Europe":
-      return `Your university fund will lose $${lostValue.toFixed(
-        0
-      )} in value, which could mean fewer textbooks or resources for your studies.`;
-    case "LatAm":
-      return `High inflation could reduce your education budget by $${lostValue.toFixed(
-        0
-      )}, making it harder to afford quality courses or materials.`;
-    case "Asia":
-      return `Your education savings will lose $${lostValue.toFixed(
-        0
-      )} in purchasing power, potentially affecting your ability to pay for extra classes.`;
-    default:
-      return `Inflation will reduce your education fund by $${lostValue.toFixed(
-        0
-      )} this year.`;
-  }
-}
+// function getEducationScenario(region: Region, lostValue: number): string {
+//   switch (region) {
+//     case "Africa":
+//       return `Inflation could reduce your child's school supplies budget by $${lostValue.toFixed(
+//         0
+//       )} this year, affecting their education quality.`;
+//     case "USA":
+//       return `Your college savings will lose $${lostValue.toFixed(
+//         0
+//       )} to inflation this year, potentially reducing future educational opportunities.`;
+//     case "Europe":
+//       return `Your university fund will lose $${lostValue.toFixed(
+//         0
+//       )} in value, which could mean fewer textbooks or resources for your studies.`;
+//     case "LatAm":
+//       return `High inflation could reduce your education budget by $${lostValue.toFixed(
+//         0
+//       )}, making it harder to afford quality courses or materials.`;
+//     case "Asia":
+//       return `Your education savings will lose $${lostValue.toFixed(
+//         0
+//       )} in purchasing power, potentially affecting your ability to pay for extra classes.`;
+//     default:
+//       return `Inflation will reduce your education fund by $${lostValue.toFixed(
+//         0
+//       )} this year.`;
+//   }
+// }
 
 // Region-specific remittance scenarios
-function getRemittanceScenario(region: Region, lostValue: number): string {
-  switch (region) {
-    case "Africa":
-      return `When sending money to family, inflation could reduce the value by $${lostValue.toFixed(
-        0
-      )} yearly, affecting their ability to buy essentials.`;
-    case "USA":
-      return `Money sent to relatives abroad will lose $${lostValue.toFixed(
-        0
-      )} in value due to inflation, reducing their purchasing power.`;
-    case "Europe":
-      return `Your family support payments will lose $${lostValue.toFixed(
-        0
-      )} in value, potentially affecting your relatives' quality of life.`;
-    case "LatAm":
-      return `Money sent to family members could lose $${lostValue.toFixed(
-        0
-      )} in purchasing power, making it harder for them to cover basic needs.`;
-    case "Asia":
-      return `Your remittances will lose $${lostValue.toFixed(
-        0
-      )} in value due to inflation, potentially reducing the support you can provide to family.`;
-    default:
-      return `Inflation will reduce your remittances by $${lostValue.toFixed(
-        0
-      )} this year.`;
-  }
-}
+// function getRemittanceScenario(region: Region, lostValue: number): string {
+//   switch (region) {
+//     case "Africa":
+//       return `When sending money to family, inflation could reduce the value by $${lostValue.toFixed(
+//         0
+//       )} yearly, affecting their ability to buy essentials.`;
+//     case "USA":
+//       return `Money sent to relatives abroad will lose $${lostValue.toFixed(
+//         0
+//       )} in value due to inflation, reducing their purchasing power.`;
+//     case "Europe":
+//       return `Your family support payments will lose $${lostValue.toFixed(
+//         0
+//       )} in value, potentially affecting your relatives' quality of life.`;
+//     case "LatAm":
+//       return `Money sent to family members could lose $${lostValue.toFixed(
+//         0
+//       )} in purchasing power, making it harder for them to cover basic needs.`;
+//     case "Asia":
+//       return `Your remittances will lose $${lostValue.toFixed(
+//         0
+//       )} in value due to inflation, potentially reducing the support you can provide to family.`;
+//     default:
+//       return `Inflation will reduce your remittances by $${lostValue.toFixed(
+//         0
+//       )} this year.`;
+//   }
+// }
 
 // Region-specific business scenarios
-function getBusinessScenario(region: Region, lostValue: number): string {
-  switch (region) {
-    case "Africa":
-      return `Your small business inventory budget will lose $${lostValue.toFixed(
-        0
-      )} in purchasing power, potentially reducing your stock levels.`;
-    case "USA":
-      return `Your business operating funds will lose $${lostValue.toFixed(
-        0
-      )} to inflation, potentially affecting your ability to invest in growth.`;
-    case "Europe":
-      return `Your business reserves will lose $${lostValue.toFixed(
-        0
-      )} in value, which could impact your ability to handle unexpected expenses.`;
-    case "LatAm":
-      return `High inflation could reduce your business capital by $${lostValue.toFixed(
-        0
-      )}, making it harder to maintain inventory levels.`;
-    case "Asia":
-      return `Your business savings will lose $${lostValue.toFixed(
-        0
-      )} in purchasing power, potentially affecting your ability to pay suppliers.`;
-    default:
-      return `Inflation will reduce your business funds by $${lostValue.toFixed(
-        0
-      )} this year.`;
-  }
-}
+// function getBusinessScenario(region: Region, lostValue: number): string {
+//   switch (region) {
+//     case "Africa":
+//       return `Your small business inventory budget will lose $${lostValue.toFixed(
+//         0
+//       )} in purchasing power, potentially reducing your stock levels.`;
+//     case "USA":
+//       return `Your business operating funds will lose $${lostValue.toFixed(
+//         0
+//       )} to inflation, potentially affecting your ability to invest in growth.`;
+//     case "Europe":
+//       return `Your business reserves will lose $${lostValue.toFixed(
+//         0
+//       )} in value, which could impact your ability to handle unexpected expenses.`;
+//     case "LatAm":
+//       return `High inflation could reduce your business capital by $${lostValue.toFixed(
+//         0
+//       )}, making it harder to maintain inventory levels.`;
+//     case "Asia":
+//       return `Your business savings will lose $${lostValue.toFixed(
+//         0
+//       )} in purchasing power, potentially affecting your ability to pay suppliers.`;
+//     default:
+//       return `Inflation will reduce your business funds by $${lostValue.toFixed(
+//         0
+//       )} this year.`;
+//   }
+// }
 
 // Region-specific travel scenarios
-function getTravelScenario(region: Region, lostValue: number): string {
-  switch (region) {
-    case "Africa":
-      return `Your travel budget will lose $${lostValue.toFixed(
-        0
-      )} in value, potentially limiting your ability to visit family abroad.`;
-    case "USA":
-      return `Your vacation fund will lose $${lostValue.toFixed(
-        0
-      )} to inflation, which could mean fewer days traveling or less comfortable accommodations.`;
-    case "Europe":
-      return `Your holiday savings will lose $${lostValue.toFixed(
-        0
-      )} in value, potentially affecting your travel plans or destination choices.`;
-    case "LatAm":
-      return `Inflation could reduce your travel budget by $${lostValue.toFixed(
-        0
-      )}, making international trips more expensive.`;
-    case "Asia":
-      return `Your travel savings will lose $${lostValue.toFixed(
-        0
-      )} in purchasing power, potentially limiting your ability to explore new places.`;
-    default:
-      return `Inflation will reduce your travel budget by $${lostValue.toFixed(
-        0
-      )} this year.`;
-  }
-}
+// function getTravelScenario(region: Region, lostValue: number): string {
+//   switch (region) {
+//     case "Africa":
+//       return `Your travel budget will lose $${lostValue.toFixed(
+//         0
+//       )} in value, potentially limiting your ability to visit family abroad.`;
+//     case "USA":
+//       return `Your vacation fund will lose $${lostValue.toFixed(
+//         0
+//       )} to inflation, which could mean fewer days traveling or less comfortable accommodations.`;
+//     case "Europe":
+//       return `Your holiday savings will lose $${lostValue.toFixed(
+//         0
+//       )} in value, potentially affecting your travel plans or destination choices.`;
+//     case "LatAm":
+//       return `Inflation could reduce your travel budget by $${lostValue.toFixed(
+//         0
+//       )}, making international trips more expensive.`;
+//     case "Asia":
+//       return `Your travel savings will lose $${lostValue.toFixed(
+//         0
+//       )} in purchasing power, potentially limiting your ability to explore new places.`;
+//     default:
+//       return `Inflation will reduce your travel budget by $${lostValue.toFixed(
+//         0
+//       )} this year.`;
+//   }
+// }
 
 // Region-specific savings scenarios
-function getSavingsScenario(region: Region, lostValue: number): string {
-  switch (region) {
-    case "Africa":
-      return `Your emergency savings will lose $${lostValue.toFixed(
-        0
-      )} in purchasing power, reducing your financial safety net.`;
-    case "USA":
-      return `Your savings account will lose $${lostValue.toFixed(
-        0
-      )} to inflation this year, silently eroding your financial security.`;
-    case "Europe":
-      return `Your savings will lose $${lostValue.toFixed(
-        0
-      )} in value, which means less money for future needs or opportunities.`;
-    case "LatAm":
-      return `High inflation could reduce your savings by $${lostValue.toFixed(
-        0
-      )}, making it harder to achieve your financial goals.`;
-    case "Asia":
-      return `Your savings will lose $${lostValue.toFixed(
-        0
-      )} in purchasing power, potentially affecting your long-term financial plans.`;
-    default:
-      return `Inflation will reduce your savings by $${lostValue.toFixed(
-        0
-      )} this year.`;
-  }
-}
+// function getSavingsScenario(region: Region, lostValue: number): string {
+//   switch (region) {
+//     case "Africa":
+//       return `Your emergency savings will lose $${lostValue.toFixed(
+//         0
+//       )} in purchasing power, reducing your financial safety net.`;
+//     case "USA":
+//       return `Your savings account will lose $${lostValue.toFixed(
+//         0
+//       )} to inflation this year, silently eroding your financial security.`;
+//     case "Europe":
+//       return `Your savings will lose $${lostValue.toFixed(
+//         0
+//       )} in value, which means less money for future needs or opportunities.`;
+//     case "LatAm":
+//       return `High inflation could reduce your savings by $${lostValue.toFixed(
+//         0
+//       )}, making it harder to achieve your financial goals.`;
+//     case "Asia":
+//       return `Your savings will lose $${lostValue.toFixed(
+//         0
+//       )} in purchasing power, potentially affecting your long-term financial plans.`;
+//     default:
+//       return `Inflation will reduce your savings by $${lostValue.toFixed(
+//         0
+//       )} this year.`;
+//   }
+// }

@@ -349,7 +349,6 @@ export default function InflationProtectionInfo({
           region={homeRegion}
           scenarioType={activeScenario}
           inflationRate={homeInflationRate}
-          amount={amount}
         />
       </div>
 

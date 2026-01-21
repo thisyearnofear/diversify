@@ -63,8 +63,8 @@ const EMERGING_MARKETS_DATA = {
 };
 
 export default function AnalyticsTab({
-  _performanceData,
-  _isPerformanceLoading,
+  _performanceData: _unused_performanceData, // Unused but kept for API compatibility
+  _isPerformanceLoading: _unused_isPerformanceLoading, // Unused but kept for API compatibility
   currencyPerformanceData,
   isCurrencyPerformanceLoading,
   regionData,

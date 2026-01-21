@@ -8,6 +8,7 @@ import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
 import NetworkSwitcher from "../NetworkSwitcher";
+import WealthJourneyWidget from "../WealthJourneyWidget";
 
 interface OverviewTabProps {
   regionData: Array<{ region: string; value: number; color: string }>;
@@ -33,14 +34,14 @@ export default function OverviewTab({
   userRegion,
   setUserRegion,
   REGIONS,
-  _isBalancesLoading,
+  _isBalancesLoading: _unused_isBalancesLoading, // Unused but kept for API compatibility
   setActiveTab,
   refreshBalances,
   refreshChainId,
   balances,
   inflationData,
 }: OverviewTabProps) {
-  const { address, isConnecting, error, chainId, isMiniPay } = useWalletContext();
+  const { address, isConnecting, error, chainId, isMiniPay: _unused_isMiniPay } = useWalletContext(); // isMiniPay is unused but kept for API compatibility
   const {
     diversificationScore,
     diversificationRating,
@@ -140,6 +141,12 @@ export default function OverviewTab({
 
       {address && (
         <>
+          <WealthJourneyWidget 
+            totalValue={totalValue}
+            setActiveTab={setActiveTab}
+            userRegion={userRegion}
+          />
+
           <div className="bg-white rounded-lg shadow-md p-5 mb-4 border border-gray-200">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold text-gray-900">

@@ -18,8 +18,8 @@ export const WalletTutorial: React.FC<{
   isMiniPay?: boolean;
 }> = ({ isOpen, onClose, onConnect, isMiniPay = false }) => {
   const [step, setStep] = useState(1);
-  const { chainId } = useWalletContext();
-  const _isArc = chainId === 5042002;
+  const { chainId: _chainId } = useWalletContext(); // chainId is unused but kept for API compatibility
+  // const _isArc = __unused_chainId === 5042002; // Unused variable
 
   const totalSteps = isMiniPay ? 3 : 4;
 

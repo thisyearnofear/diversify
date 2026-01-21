@@ -3,6 +3,7 @@ import InflationProtectionInfo from "../InflationProtectionInfo";
 import RegionalRecommendations from "../RegionalRecommendations";
 import AgentWealthGuard from "../AgentWealthGuard";
 import type { Region } from "@/hooks/use-user-region";
+import { useWalletContext } from "../WalletProvider";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -21,6 +22,9 @@ export default function ProtectionTab({
   balances,
   setActiveTab
 }: ProtectionTabProps) {
+  const { chainId } = useWalletContext();
+  const isCelo = chainId === 42220 || chainId === 44787;
+
   // Convert regionData to the format needed by our components
   const currentRegions = Object.entries(regionData)
     .filter(([_, data]) => data.value > 0)
@@ -30,9 +34,9 @@ export default function ProtectionTab({
     regionData.map((item) => [item.region, item.value / 100])
   );
 
-  const handleAgentSwap = (_targetToken: string) => {
+  const handleAgentSwap = (_: string) => {
     // In a real implementation, we would pass the target token to the SwapTab
-    // For now, we just switch to the tab. 
+    // For now, we just switch to the tab.
     // Ideally, we would use a global state manager (Zustand/Context) to set the 'toToken'
     if (setActiveTab) {
       setActiveTab("swap");
@@ -68,6 +72,17 @@ export default function ProtectionTab({
               </div>
             ))}
           </div>
+
+          {isCelo && (
+            <div className="mt-3">
+              <button
+                onClick={() => setActiveTab && setActiveTab('swap')}
+                className="w-full bg-white text-blue-900 text-xs font-bold py-2 rounded-lg hover:bg-blue-50 transition-colors shadow-md flex items-center justify-center gap-2"
+              >
+                <span>🌉</span> Bridge to Invest on Arbitrum
+              </button>
+            </div>
+          )}
 
           <div className="mt-4 flex items-center justify-between text-[10px] text-blue-200/60 font-medium">
             <div className="flex items-center gap-1">

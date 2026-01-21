@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 
 
@@ -11,24 +11,24 @@ const GEMINI_MODELS_FALLBACK = [
 ];
 
 // Define the response schema
-const responseSchema = {
-    type: SchemaType.OBJECT,
-    properties: {
-        action: { type: SchemaType.STRING, enum: ['SWAP', 'HOLD', 'REBALANCE'] },
-        targetToken: { type: SchemaType.STRING },
-        targetNetwork: { type: SchemaType.STRING, enum: ['Celo', 'Arbitrum', 'Ethereum', 'Unknown'] },
-        reasoning: { type: SchemaType.STRING },
-        confidence: { type: SchemaType.NUMBER },
-        expectedSavings: { type: SchemaType.NUMBER },
-        riskLevel: { type: SchemaType.STRING, enum: ['LOW', 'MEDIUM', 'HIGH'] },
-        thoughtChain: {
-            type: SchemaType.ARRAY,
-            items: { type: SchemaType.STRING },
-            description: "Step-by-step logical reasoning process"
-        }
-    },
-    required: ['action', 'reasoning', 'confidence', 'thoughtChain', 'riskLevel']
-};
+// const responseSchema = {
+//     type: SchemaType.OBJECT,
+//     properties: {
+//         action: { type: SchemaType.STRING, enum: ['SWAP', 'HOLD', 'REBALANCE'] },
+//         targetToken: { type: SchemaType.STRING },
+//         targetNetwork: { type: SchemaType.STRING, enum: ['Celo', 'Arbitrum', 'Ethereum', 'Unknown'] },
+//         reasoning: { type: SchemaType.STRING },
+//         confidence: { type: SchemaType.NUMBER },
+//         expectedSavings: { type: SchemaType.NUMBER },
+//         riskLevel: { type: SchemaType.STRING, enum: ['LOW', 'MEDIUM', 'HIGH'] },
+//         thoughtChain: {
+//             type: SchemaType.ARRAY,
+//             items: { type: SchemaType.STRING },
+//             description: "Step-by-step logical reasoning process"
+//         }
+//     },
+//     required: ['action', 'reasoning', 'confidence', 'thoughtChain', 'riskLevel']
+// };
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
