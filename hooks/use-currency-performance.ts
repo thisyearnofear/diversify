@@ -31,17 +31,19 @@ const CURRENCY_METADATA: Record<string, { name: string; region: Region }> = {
 // Currencies to track (in addition to base currency)
 const TRACKED_CURRENCIES = ['EUR', 'KES', 'COP', 'PHP', 'BRL'];
 
-export function useCurrencyPerformance(baseCurrency = 'USD') {
+export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
   const [data, setData] = useState<PerformanceData>({
     dates: [],
     currencies: [],
     baseCurrency,
     source: 'fallback'
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
+
     const fetchCurrencyPerformance = async () => {
       try {
         setIsLoading(true);
@@ -167,7 +169,7 @@ export function useCurrencyPerformance(baseCurrency = 'USD') {
     };
 
     fetchCurrencyPerformance();
-  }, [baseCurrency]);
+  }, [baseCurrency, enabled]);
 
   // Generate fallback data when API fails
   const generateFallbackData = (
@@ -235,7 +237,7 @@ export function useCurrencyPerformance(baseCurrency = 'USD') {
       const dailyVolatility = volatility[currency.symbol] || 0.3;
 
       // Calculate daily trend factor (compounded)
-      const dailyTrendFactor = Math.pow(1 + annualTrend / 100, 1/365);
+      const dailyTrendFactor = Math.pow(1 + annualTrend / 100, 1 / 365);
 
       for (let i = 0; i < dates.length; i++) {
         // Apply trend and random volatility

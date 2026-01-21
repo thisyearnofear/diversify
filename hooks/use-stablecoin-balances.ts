@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { getTokenAddresses, getNetworkConfig, ABIS } from '../config';
 import { executeMulticall, type ContractCall } from '../utils/multicall';
@@ -133,8 +133,25 @@ export function useStablecoinBalances(address: string | undefined | null) {
   const [totalValue, setTotalValue] = useState(0);
   const [chainId, setChainId] = useState<number | null>(null);
 
+  // Define calculateTotals function at the hook level so it can be used by both useEffect and refreshBalances
+  const calculateTotals = useCallback((balanceMap: Record<string, StablecoinBalance>) => {
+    // Calculate region totals
+    const regions: Record<string, number> = {};
+    let total = 0;
+
+    for (const balance of Object.values(balanceMap)) {
+      const { region, value } = balance;
+      regions[region] = (regions[region] || 0) + value;
+      total += value;
+    }
+
+    // Set the actual USD values by region
+    setRegionTotals(regions);
+    setTotalValue(total);
+  }, []);
+
   // Function to fetch balances
-  const fetchBalances = async () => {
+  const fetchBalances = useCallback(async () => {
     if (!address) {
       setIsLoading(false);
       return;
@@ -167,12 +184,13 @@ export function useStablecoinBalances(address: string | undefined | null) {
           // The UI should handle the "unsupported network" state based on the chainId
           const supportedChains = [42220, 44787, 5042002, 42161];
           if (!supportedChains.includes(currentChainId)) {
-            console.log('Not on supported network, skipping balance fetch');
             setIsLoading(false);
             return;
           }
         } catch (err) {
-          console.warn('Error checking chain ID, proceeding with API calls:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Error checking chain ID, proceeding with API calls:', err);
+          }
         }
       }
 
@@ -182,9 +200,10 @@ export function useStablecoinBalances(address: string | undefined | null) {
           const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
           const detectedChainId = Number.parseInt(chainIdHex as string, 16);
           setChainId(detectedChainId);
-          console.log('Detected chain ID for balance fetching:', detectedChainId);
         } catch (err) {
-          console.warn('Error detecting chain ID:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Error detecting chain ID:', err);
+          }
         }
       }
 
@@ -193,7 +212,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       const currentChainId = chainId || (typeof window !== 'undefined' && window.ethereum && window.ethereum.request ?
         Number.parseInt(await window.ethereum.request({ method: 'eth_chainId' }) as string, 16) : null);
 
-      console.log('Using chain ID for balance fetching:', currentChainId);
+
 
       const isAlfajores = currentChainId === 44787;
       const isArc = currentChainId === 5042002;
@@ -204,7 +223,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       if (isArc) providerUrl = 'https://rpc.testnet.arc.network';
       if (isArbitrum) providerUrl = 'https://arb1.arbitrum.io/rpc';
 
-      console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : isArbitrum ? 'Arbitrum' : 'Mainnet'} provider for balance fetching`);
+
       const provider = new ethers.providers.JsonRpcProvider(providerUrl);
 
       // Determine which tokens to fetch based on the network
@@ -219,7 +238,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
         tokensToFetch = ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO'];
       }
 
-      console.log(`Fetching balances for tokens: ${tokensToFetch.join(', ')}`);
+
 
       // Prepare calls for multicall
       const calls: ContractCall[] = [];
@@ -235,7 +254,6 @@ export function useStablecoinBalances(address: string | undefined | null) {
           tokenList[symbol.toLowerCase() as keyof typeof tokenList];
 
         if (!tokenAddress) {
-          console.warn(`Token address not found for ${symbol} in ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
           return;
         }
 
@@ -261,7 +279,6 @@ export function useStablecoinBalances(address: string | undefined | null) {
       });
 
       // Execute multicall
-      console.log(`Executing multicall for ${calls.length} tokens...`);
       const results = await executeMulticall(provider, calls, currentChainId as number);
 
       // Process results
@@ -275,10 +292,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
         // Calculate USD value
         const value = Number.parseFloat(formattedBalance) * exchangeRate;
 
-        if (value <= 0 && formattedBalance === "0.0") return null; // Optional: Filter out zero balances to keep state clean? 
-        // Actually, let's keep zero balances but maybe filter them in the UI if needed, 
-        // or just return them so we know we checked. 
-        // For "No Stablecoins Found" state, we need to know we successfully checked but found 0.
+        if (value <= 0 && formattedBalance === "0.0") return null; 
         
         return {
           symbol,
@@ -308,17 +322,31 @@ export function useStablecoinBalances(address: string | undefined | null) {
       setError('Failed to fetch balances');
       setIsLoading(false);
     }
-  };
+  }, [address, chainId, calculateTotals]);
+
+  const refreshChainId = useCallback(async () => {
+    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
+      try {
+        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+        const detectedChainId = Number.parseInt(chainIdHex as string, 16);
+        setChainId(detectedChainId);
+        return detectedChainId;
+      } catch (err) {
+        console.warn('Error refreshing chain ID:', err);
+      }
+    }
+    return null;
+  }, []);
 
   // Effect to fetch balances when address or chainId changes
   useEffect(() => {
     fetchBalances();
-  }, [address, chainId]);
+  }, [address, chainId, fetchBalances]);
 
   // Effect to listen for external chain changes and refresh balances
   useEffect(() => {
     if (!address) return;
- 
+
     const handleChainChanged = async () => {
       // Refresh chain ID
       if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
@@ -351,57 +379,9 @@ export function useStablecoinBalances(address: string | undefined | null) {
         window.ethereum.removeListener('chainChanged', handleChainChanged);
       }
     };
-  }, [address]);
+  }, [address, fetchBalances]);
 
-  const refreshChainId = async () => {
-    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
-      try {
-        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-        const detectedChainId = Number.parseInt(chainIdHex as string, 16);
-        console.log('Refreshed chain ID:', detectedChainId);
-        setChainId(detectedChainId);
-        return detectedChainId;
-      } catch (err) {
-        console.warn('Error refreshing chain ID:', err);
-      }
-    }
-    return null;
-  };
-
-  // Define calculateTotals function at the hook level so it can be used by both useEffect and refreshBalances
-  const calculateTotals = (balanceMap: Record<string, StablecoinBalance>) => {
-    // Calculate region totals
-    const regions: Record<string, number> = {};
-    let total = 0;
-
-    // Log balances for debugging
-    console.log('Calculating totals from balances:', balanceMap);
-
-    for (const balance of Object.values(balanceMap)) {
-      const { region, value, symbol, formattedBalance } = balance;
-      regions[region] = (regions[region] || 0) + value;
-      total += value;
-
-      // Log each token's contribution to the total
-      console.log(`${symbol}: ${formattedBalance} tokens = $${value.toFixed(2)} USD`);
-    }
-
-    // Log the total value
-    console.log(`Total USD value: $${total.toFixed(2)}`);
-
-    // Store actual USD values by region, not percentages
-    for (const [region, value] of Object.entries(regions)) {
-      // Calculate percentage for logging purposes only
-      const percentage = total > 0 ? (value / total) * 100 : 0;
-      console.log(`Region ${region}: $${value.toFixed(2)} (${percentage.toFixed(1)}%)`);
-    }
-
-    // Set the actual USD values by region
-    setRegionTotals(regions);
-    setTotalValue(total);
-  };
-
-  const refreshBalances = async () => {
+  const refreshBalances = useCallback(async () => {
     if (address) {
       // Clear cache for this address
       localStorage.removeItem(`stablecoin-balances-${address}`);
@@ -412,7 +392,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       // Refetch balances using the main fetchBalances function
       await fetchBalances();
     }
-  };
+  }, [address, fetchBalances, refreshChainId]);
 
   return {
     balances,

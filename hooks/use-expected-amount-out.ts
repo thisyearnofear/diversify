@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ethers } from 'ethers';
 import {
   getTokenAddresses,
@@ -7,6 +7,54 @@ import {
   ABIS,
 } from '../config';
 import { EXCHANGE_RATES } from '../config/constants';
+
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+let exchangeProvidersCache: CacheEntry<string[]> | null = null;
+const exchangesCache: Map<string, CacheEntry<any[]>> = new Map();
+const resultCache: Map<string, CacheEntry<string>> = new Map();
+
+function getCachedResult(fromToken: string, toToken: string, amount: string, chainId: number | null): string | null {
+  const key = `${fromToken}-${toToken}-${amount}-${chainId}`;
+  const cached = resultCache.get(key);
+  if (cached && Date.now() - cached.timestamp < 30000) { // 30 seconds for result cache
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedResult(fromToken: string, toToken: string, amount: string, chainId: number | null, result: string) {
+  const key = `${fromToken}-${toToken}-${amount}-${chainId}`;
+  resultCache.set(key, { data: result, timestamp: Date.now() });
+}
+
+function getCachedExchangeProviders(): string[] | null {
+  if (exchangeProvidersCache && Date.now() - exchangeProvidersCache.timestamp < CACHE_TTL) {
+    return exchangeProvidersCache.data;
+  }
+  return null;
+}
+
+function setCachedExchangeProviders(providers: string[]) {
+  exchangeProvidersCache = { data: providers, timestamp: Date.now() };
+}
+
+function getCachedExchanges(providerAddress: string): any[] | null {
+  const cached = exchangesCache.get(providerAddress);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+  return null;
+}
+
+function setCachedExchanges(providerAddress: string, exchanges: any[]) {
+  exchangesCache.set(providerAddress, { data: exchanges, timestamp: Date.now() });
+}
 
 interface UseExpectedAmountOutParams {
   fromToken: string;
@@ -23,6 +71,24 @@ export function useExpectedAmountOut({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
+  const [debouncedAmount, setDebouncedAmount] = useState(amount);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounce the amount parameter
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+    debounceTimerRef.current = setTimeout(() => {
+      setDebouncedAmount(amount);
+    }, 500);
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [amount]);
 
   // Detect chain ID on mount
   useEffect(() => {
@@ -32,9 +98,10 @@ export function useExpectedAmountOut({
           const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
           const detectedChainId = Number.parseInt(chainIdHex as string, 16);
           setChainId(detectedChainId);
-          console.log('Detected chain ID:', detectedChainId);
         } catch (err) {
-          console.warn('Error detecting chain ID:', err);
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Error detecting chain ID:', err);
+          }
         }
       }
     };
@@ -47,8 +114,8 @@ export function useExpectedAmountOut({
       if (
         !fromToken ||
         !toToken ||
-        !amount ||
-        Number.parseFloat(amount) <= 0 ||
+        !debouncedAmount ||
+        Number.parseFloat(debouncedAmount) <= 0 ||
         fromToken === toToken
       ) {
         setExpectedOutput(null);
@@ -59,10 +126,12 @@ export function useExpectedAmountOut({
       setError(null);
 
       try {
-        const output = await getExpectedAmountOut(fromToken, toToken, amount);
+        const output = await getExpectedAmountOut(fromToken, toToken, debouncedAmount);
         setExpectedOutput(output);
       } catch (err) {
-        console.warn("Error getting expected output:", err);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn("Error getting expected output:", err);
+        }
         setError(err instanceof Error ? err.message : 'Failed to get expected output');
         setExpectedOutput(null);
       } finally {
@@ -71,14 +140,18 @@ export function useExpectedAmountOut({
     };
 
     getExpectedOutput();
-  }, [fromToken, toToken, amount, chainId]);
+  }, [fromToken, toToken, debouncedAmount, chainId]);
 
   // Get expected amount out for a swap
-  const getExpectedAmountOut = async (
+  const getExpectedAmountOut = useCallback(async (
     fromToken: string,
     toToken: string,
     amount: string
   ): Promise<string> => {
+    // Check result cache first
+    const cached = getCachedResult(fromToken, toToken, amount, chainId);
+    if (cached) return cached;
+
     try {
       // Determine if we're on Alfajores testnet
       const isAlfajores = chainId === 44787;
@@ -88,14 +161,15 @@ export function useExpectedAmountOut({
       const brokerAddress = getBrokerAddress(chainId || 42220);
       const networkConfig = getNetworkConfig(chainId || 42220);
 
-      console.log(`Using ${networkConfig.name} for expected amount calculation`);
 
       // Get token addresses
       const fromTokenAddress = tokenList[fromToken as keyof typeof tokenList];
       const toTokenAddress = tokenList[toToken as keyof typeof tokenList];
 
       if (!fromTokenAddress || !toTokenAddress) {
-        console.warn(`Invalid token selection: ${fromToken}/${toToken}`);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`Invalid token selection: ${fromToken}/${toToken}`);
+        }
 
         // Use fallback calculation based on exchange rates
         // This is useful when the Mento SDK can't find an exchange
@@ -138,9 +212,9 @@ export function useExpectedAmountOut({
         const amountNum = Number.parseFloat(amount);
         const expectedOutput = (amountNum * fromRate) / toRate;
 
-        console.log(`Using fallback calculation: ${amount} ${fromToken} (${fromRate}) -> ${expectedOutput.toFixed(6)} ${toToken} (${toRate})`);
-
-        return expectedOutput.toString();
+        const result = expectedOutput.toString();
+        setCachedResult(fromToken, toToken, amount, chainId, result);
+        return result;
       }
 
       // Create a read-only provider for Celo
@@ -156,8 +230,11 @@ export function useExpectedAmountOut({
         provider
       );
 
-      const exchangeProviders = await brokerContract.getExchangeProviders();
-      console.log(`Found ${exchangeProviders.length} exchange providers`);
+      let exchangeProviders = getCachedExchangeProviders();
+      if (!exchangeProviders) {
+        exchangeProviders = await brokerContract.getExchangeProviders();
+        setCachedExchangeProviders(exchangeProviders);
+      }
 
       // Find the exchange for the token pair
       let exchangeProvider = "";
@@ -165,14 +242,16 @@ export function useExpectedAmountOut({
 
       // Loop through providers to find the right exchange
       for (const providerAddress of exchangeProviders) {
-        const exchangeContract = new ethers.Contract(
-          providerAddress,
-          ABIS.EXCHANGE,
-          provider
-        );
-
-        const exchanges = await exchangeContract.getExchanges();
-        console.log(`Provider ${providerAddress.slice(0, 8)}... has ${exchanges.length} exchanges`);
+        let exchanges = getCachedExchanges(providerAddress);
+        if (!exchanges) {
+          const exchangeContract = new ethers.Contract(
+            providerAddress,
+            ABIS.EXCHANGE,
+            provider
+          );
+          exchanges = await exchangeContract.getExchanges();
+          setCachedExchanges(providerAddress, exchanges);
+        }
 
         // Check each exchange
         for (const exchange of exchanges) {
@@ -185,7 +264,6 @@ export function useExpectedAmountOut({
           ) {
             exchangeProvider = providerAddress;
             exchangeId = exchange.exchangeId;
-            console.log(`Found exchange for ${fromToken}/${toToken}: ${exchangeId}`);
             break;
           }
         }
@@ -194,7 +272,9 @@ export function useExpectedAmountOut({
       }
 
       if (!exchangeProvider || !exchangeId) {
-        console.warn(`No exchange found for ${fromToken}/${toToken}, checking for two-step swap`);
+        if (process.env.NODE_ENV === 'development') {
+          console.warn(`No exchange found for ${fromToken}/${toToken}, checking for two-step swap`);
+        }
 
         // Check if we can do a two-step swap via CELO for specific pairs
         const canUseViaSwap = (
@@ -209,8 +289,6 @@ export function useExpectedAmountOut({
         // Try two-step calculation on both mainnet and Alfajores
         if (canUseViaSwap) {
           try {
-            console.log(`Attempting two-step calculation via CELO for ${fromToken}/${toToken}`);
-
             // Step 1: Find exchange for fromToken to CELO
             let fromTokenToCeloExchangeProvider = '';
             let fromTokenToCeloExchangeId = '';
@@ -218,13 +296,16 @@ export function useExpectedAmountOut({
 
             // Loop through providers to find exchange for fromToken to CELO
             for (const providerAddress of exchangeProviders) {
-              const exchangeContract = new ethers.Contract(
-                providerAddress,
-                ABIS.EXCHANGE,
-                provider
-              );
-
-              const exchanges = await exchangeContract.getExchanges();
+              let exchanges = getCachedExchanges(providerAddress);
+              if (!exchanges) {
+                const exchangeContract = new ethers.Contract(
+                  providerAddress,
+                  ABIS.EXCHANGE,
+                  provider
+                );
+                exchanges = await exchangeContract.getExchanges();
+                setCachedExchanges(providerAddress, exchanges);
+              }
 
               // Check each exchange
               for (const exchange of exchanges) {
@@ -236,7 +317,6 @@ export function useExpectedAmountOut({
                 ) {
                   fromTokenToCeloExchangeProvider = providerAddress;
                   fromTokenToCeloExchangeId = exchange.exchangeId;
-                  console.log(`Found exchange for ${fromToken}/CELO: ${fromTokenToCeloExchangeId}`);
                   break;
                 }
               }
@@ -254,13 +334,16 @@ export function useExpectedAmountOut({
 
             // Loop through providers to find exchange for CELO to toToken
             for (const providerAddress of exchangeProviders) {
-              const exchangeContract = new ethers.Contract(
-                providerAddress,
-                ABIS.EXCHANGE,
-                provider
-              );
-
-              const exchanges = await exchangeContract.getExchanges();
+              let exchanges = getCachedExchanges(providerAddress);
+              if (!exchanges) {
+                const exchangeContract = new ethers.Contract(
+                  providerAddress,
+                  ABIS.EXCHANGE,
+                  provider
+                );
+                exchanges = await exchangeContract.getExchanges();
+                setCachedExchanges(providerAddress, exchanges);
+              }
 
               // Check each exchange
               for (const exchange of exchanges) {
@@ -272,7 +355,6 @@ export function useExpectedAmountOut({
                 ) {
                   celoToToTokenExchangeProvider = providerAddress;
                   celoToToTokenExchangeId = exchange.exchangeId;
-                  console.log(`Found exchange for CELO/${toToken}: ${celoToToTokenExchangeId}`);
                   break;
                 }
               }
@@ -291,7 +373,6 @@ export function useExpectedAmountOut({
               provider
             );
 
-            console.log(`Getting expected CELO amount for ${amount} ${fromToken}...`);
             const expectedCeloAmount = await brokerRateContract.getAmountOut(
               fromTokenToCeloExchangeProvider,
               fromTokenToCeloExchangeId,
@@ -299,8 +380,6 @@ export function useExpectedAmountOut({
               celoAddress,
               amountInWei
             );
-
-            console.log(`Expected CELO amount: ${ethers.utils.formatUnits(expectedCeloAmount, 18)} CELO`);
 
             // Step 4: Get expected amount out for CELO to toToken
             const expectedFinalAmount = await brokerRateContract.getAmountOut(
@@ -312,12 +391,13 @@ export function useExpectedAmountOut({
             );
 
             const formattedAmount = ethers.utils.formatUnits(expectedFinalAmount, 18);
-            console.log(`Expected final amount via two-step swap: ${formattedAmount} ${toToken}`);
 
+            setCachedResult(fromToken, toToken, amount, chainId, formattedAmount);
             return formattedAmount;
           } catch (error) {
-            console.error('Error calculating two-step expected amount:', error);
-            console.log('Falling back to direct rate calculation');
+            if (process.env.NODE_ENV === 'development') {
+              console.error('Error calculating two-step expected amount:', error);
+            }
           }
         }
 
@@ -358,9 +438,9 @@ export function useExpectedAmountOut({
         const amountNum = Number.parseFloat(amount);
         const expectedOutput = (amountNum * fromRate) / toRate;
 
-        console.log(`Fallback calculation: ${amount} ${fromToken} (${fromRate}) -> ${expectedOutput.toFixed(6)} ${toToken} (${toRate})`);
-
-        return expectedOutput.toString();
+        const result = expectedOutput.toString();
+        setCachedResult(fromToken, toToken, amount, chainId, result);
+        return result;
       }
 
       // Get the expected amount out
@@ -381,10 +461,12 @@ export function useExpectedAmountOut({
 
         // Format the amount
         const formattedAmount = ethers.utils.formatUnits(expectedAmountOut, 18);
-        console.log(`Expected output from Mento: ${formattedAmount} ${toToken}`);
+        setCachedResult(fromToken, toToken, amount, chainId, formattedAmount);
         return formattedAmount;
       } catch (rateError) {
-        console.error("Error getting rate from Mento:", rateError);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Error getting rate from Mento:", rateError);
+        }
 
         // If Mento rate call fails, use fallback calculation
         let fromRate = EXCHANGE_RATES[fromToken] || 1;
@@ -423,12 +505,14 @@ export function useExpectedAmountOut({
         const amountNum = Number.parseFloat(amount);
         const expectedOutput = (amountNum * fromRate) / toRate;
 
-        console.log(`Fallback after Mento error: ${amount} ${fromToken} (${fromRate}) -> ${expectedOutput.toFixed(6)} ${toToken} (${toRate})`);
-
-        return expectedOutput.toString();
+        const result = expectedOutput.toString();
+        setCachedResult(fromToken, toToken, amount, chainId, result);
+        return result;
       }
     } catch (err) {
-      console.error("Error getting expected amount out:", err);
+      if (process.env.NODE_ENV === 'development') {
+        console.error("Error getting expected amount out:", err);
+      }
 
       // Even if everything fails, try to return a reasonable estimate
       try {
@@ -466,15 +550,18 @@ export function useExpectedAmountOut({
         else if (toToken === 'PUSO') toRate = 0.0179;
 
         const expectedOutput = (amountNum * fromRate) / toRate;
-        console.log(`Last resort fallback: ${amount} ${fromToken} -> ${expectedOutput.toFixed(6)} ${toToken}`);
 
-        return expectedOutput.toString();
+        const result = expectedOutput.toString();
+        setCachedResult(fromToken, toToken, amount, chainId, result);
+        return result;
       } catch (fallbackErr) {
-        console.error("Even fallback calculation failed:", fallbackErr);
+        if (process.env.NODE_ENV === 'development') {
+          console.error("Even fallback calculation failed:", fallbackErr);
+        }
         return "0";
       }
     }
-  };
+  }, [chainId]);
 
   return {
     expectedOutput,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
 import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
@@ -57,13 +57,28 @@ export default function DiversiFiPage() {
   //   useHistoricalPerformance(address); // performanceData is not currently used
   // We use inflationData in the SwapTab component
   const { inflationData } = useInflationData();
+
+  // Only load currency performance data when on analytics tab to reduce initial load
+  const shouldLoadCurrencyPerformance = activeTab === 'analytics';
   const {
     data: currencyPerformanceData,
     isLoading: isCurrencyPerformanceLoading,
-  } = useCurrencyPerformance();
+  } = useCurrencyPerformance(shouldLoadCurrencyPerformance);
 
   // Convert region totals to format needed for pie chart
-  const [regionData, setRegionData] = useState<Array<{ region: string; value: number; color: string }>>([]);
+  const regionData = useMemo(() => {
+    if (!address || isBalancesLoading || Object.keys(regionTotals).length === 0) {
+      return [];
+    }
+    return Object.entries(regionTotals).map(
+      ([region, value]) => ({
+        region,
+        // Use actual USD value for the pie chart, not percentage
+        value: value,
+        color: REGION_COLORS[region as keyof typeof REGION_COLORS] || "#CBD5E0",
+      })
+    );
+  }, [address, isBalancesLoading, regionTotals]);
 
   // Update user region when detected
   useEffect(() => {
@@ -71,25 +86,6 @@ export default function DiversiFiPage() {
       setUserRegion(detectedRegion);
     }
   }, [detectedRegion, isRegionLoading]);
-
-  // Update region data when balances change
-  useEffect(() => {
-    if (address && !isBalancesLoading && Object.keys(regionTotals).length > 0) {
-      const newRegionData = Object.entries(regionTotals).map(
-        ([region, value]) => ({
-          region,
-          // Use actual USD value for the pie chart, not percentage
-          value: value,
-          color:
-            REGION_COLORS[region as keyof typeof REGION_COLORS] || "#CBD5E0",
-        })
-      );
-
-      if (newRegionData.length > 0) {
-        setRegionData(newRegionData);
-      }
-    }
-  }, [address, isBalancesLoading, regionTotals]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
