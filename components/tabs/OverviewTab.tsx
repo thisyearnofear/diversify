@@ -208,12 +208,14 @@ export default function OverviewTab({
                   <h3
                     className={`text-lg font-medium mb-2 text-region-${userRegion.toLowerCase()}-dark`}
                   >
-                    No Stablecoins Found
+                    {chainId === 42220 || chainId === 44787 
+                      ? "No Stablecoins Found"
+                      : "No RWAs Found"}
                   </h3>
                   <p className="text-gray-800 mb-4">
                     {chainId === 42220 || chainId === 44787 
                       ? "Deposit funds to start earning yield and protecting your savings."
-                      : "Bridge assets to this network to access exclusive opportunities."}
+                      : "Bridge assets to this network to access Real-World Assets (RWAs) like Gold and Treasuries."}
                   </p>
 
                   <div
@@ -245,7 +247,7 @@ export default function OverviewTab({
                         <span>
                           {chainId === 42220 || chainId === 44787 
                             ? "Deposit cUSD or local stablecoins via MiniPay"
-                            : "Bridge stablecoins from Celo to Arbitrum/Arc"}
+                            : "Bridge stablecoins from Celo to access RWAs"}
                         </span>
                       </li>
                       <li className="flex items-start">
@@ -281,7 +283,7 @@ export default function OverviewTab({
                             setActiveTab("swap");
                         }
                     }}
-                    className={`mt-6 w-full bg-region-${userRegion.toLowerCase()}-medium hover:bg-region-${userRegion.toLowerCase()}-dark text-white px-4 py-3 rounded-lg transition-colors font-bold shadow-md flex items-center justify-center`}
+                    className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg transition-colors font-bold shadow-md flex items-center justify-center"
                   >
                     {chainId === 42220 || chainId === 44787 
                         ? (
