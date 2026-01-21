@@ -10,6 +10,7 @@ import {
   AVAILABLE_TOKENS,
   REGION_COLORS,
 } from "../constants/regions";
+import ErrorBoundary from "../components/ErrorBoundary";
 import TabNavigation from "../components/TabNavigation";
 import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
@@ -185,78 +186,80 @@ export default function DiversiFiPage() {
         <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
 
         {/* Tab Content */}
-        {activeTab === "overview" && (
-          <OverviewTab
-            regionData={regionData}
-            regionTotals={regionTotals}
-            totalValue={totalValue}
-            isRegionLoading={isRegionLoading}
-            userRegion={userRegion}
-            setUserRegion={setUserRegion}
-            REGIONS={REGIONS}
-            _isBalancesLoading={isBalancesLoading}
-            setActiveTab={setActiveTab}
-            refreshBalances={refreshBalances}
-            refreshChainId={refreshChainId}
-            balances={balances}
-            inflationData={inflationData as Record<string, RegionalInflationData>}
-          />
-        )}
+        <ErrorBoundary>
+          {activeTab === "overview" && (
+            <OverviewTab
+              regionData={regionData}
+              regionTotals={regionTotals}
+              totalValue={totalValue}
+              isRegionLoading={isRegionLoading}
+              userRegion={userRegion}
+              setUserRegion={setUserRegion}
+              REGIONS={REGIONS}
+              _isBalancesLoading={isBalancesLoading}
+              setActiveTab={setActiveTab}
+              refreshBalances={refreshBalances}
+              refreshChainId={refreshChainId}
+              balances={balances}
+              inflationData={inflationData as Record<string, RegionalInflationData>}
+            />
+          )}
 
-        {/* Protection Tab */}
-        {activeTab === "protect" && (
-          <ProtectionTab
-            userRegion={userRegion}
-            setUserRegion={setUserRegion}
-            regionData={regionData}
-            totalValue={totalValue}
-            balances={balances}
-            setActiveTab={setActiveTab}
-          />
-        )}
+          {/* Protection Tab */}
+          {activeTab === "protect" && (
+            <ProtectionTab
+              userRegion={userRegion}
+              setUserRegion={setUserRegion}
+              regionData={regionData}
+              totalValue={totalValue}
+              balances={balances}
+              setActiveTab={setActiveTab}
+            />
+          )}
 
-        {/* Strategies Tab */}
-        {activeTab === "strategies" && (
-          <StrategiesTab
-            userRegion={userRegion}
-            regionData={regionData}
-            onSelectStrategy={setSelectedStrategy}
-          />
-        )}
+          {/* Strategies Tab */}
+          {activeTab === "strategies" && (
+            <StrategiesTab
+              userRegion={userRegion}
+              regionData={regionData}
+              onSelectStrategy={setSelectedStrategy}
+            />
+          )}
 
-        {/* Analytics Tab */}
-        {activeTab === "analytics" && (
-          <AnalyticsTab
-            _performanceData={performanceData}
-            _isPerformanceLoading={isPerformanceLoading}
-            currencyPerformanceData={currencyPerformanceData}
-            isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
-            regionData={regionData}
-            totalValue={totalValue}
-            userRegion={userRegion}
-            setUserRegion={setUserRegion}
-          />
-        )}
+          {/* Analytics Tab */}
+          {activeTab === "analytics" && (
+            <AnalyticsTab
+              _performanceData={performanceData}
+              _isPerformanceLoading={isPerformanceLoading}
+              currencyPerformanceData={currencyPerformanceData}
+              isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
+              regionData={regionData}
+              totalValue={totalValue}
+              userRegion={userRegion}
+              setUserRegion={setUserRegion}
+            />
+          )}
 
-        {/* Swap Tab */}
-        {activeTab === "swap" && (
-          <SwapTab
-            availableTokens={AVAILABLE_TOKENS}
-            userRegion={userRegion}
-            selectedStrategy={selectedStrategy}
-            inflationData={inflationData as Record<string, RegionalInflationData>}
-            refreshBalances={refreshBalances}
-            refreshChainId={refreshChainId}
-            isBalancesLoading={isBalancesLoading}
-          />
-        )}
+          {/* Swap Tab */}
+          {activeTab === "swap" && (
+            <SwapTab
+              availableTokens={AVAILABLE_TOKENS}
+              userRegion={userRegion}
+              selectedStrategy={selectedStrategy}
+              inflationData={inflationData as Record<string, RegionalInflationData>}
+              refreshBalances={refreshBalances}
+              refreshChainId={refreshChainId}
+              isBalancesLoading={isBalancesLoading}
+            />
+          )}
 
-        {/* Info Tab */}
-        {activeTab === "info" && (
-          <InfoTab
-            availableTokens={AVAILABLE_TOKENS}
-          />
-        )}
+          {/* Info Tab */}
+          {activeTab === "info" && (
+            <InfoTab
+              availableTokens={AVAILABLE_TOKENS}
+            />
+          )}
+        </ErrorBoundary>
       </div>
 
       {/* Wallet Tutorial Modal */}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import { getTokenAddresses, getNetworkConfig, ABIS } from '../config';
+import { executeMulticall, type ContractCall } from '../utils/multicall';
 
 interface StablecoinBalance {
   symbol: string;
@@ -222,80 +223,73 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
       console.log(`Fetching balances for tokens: ${tokensToFetch.join(', ')}`);
 
-      // Fetch balances for each token
-      const tokenPromises = tokensToFetch.map(
-        async (symbol) => {
-          try {
-            // Determine which token address list to use based on the network
-            const tokenList = getTokenAddresses(currentChainId as number);
-            console.log(`Using ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list for ${symbol}`);
+      // Prepare calls for multicall
+      const calls: ContractCall[] = [];
+      const tokenMetadataList: any[] = [];
 
-            // Use type assertion to handle the index signature
-            const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
-              tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
-              tokenList[symbol.toLowerCase() as keyof typeof tokenList];
+      tokensToFetch.forEach((symbol) => {
+        // Determine which token address list to use based on the network
+        const tokenList = getTokenAddresses(currentChainId as number);
+        
+        // Use type assertion to handle the index signature
+        const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
+          tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
+          tokenList[symbol.toLowerCase() as keyof typeof tokenList];
 
-            if (!tokenAddress) {
-              console.warn(`Token address not found for ${symbol} in ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
-              console.log('Available tokens:', Object.keys(tokenList).join(', '));
-              return null;
-            }
-
-            console.log(`Found token address for ${symbol}: ${tokenAddress}`);
-
-            const contract = new ethers.Contract(
-              tokenAddress,
-              ABIS.ERC20,
-              provider
-            );
-
-            console.log(`Fetching balance for ${symbol} (${tokenAddress}) for address ${address}`);
-
-            let balance;
-            let formattedBalance;
-
-            try {
-              balance = await contract.balanceOf(address);
-              console.log(`Raw balance for ${symbol}: ${balance.toString()}`);
-              formattedBalance = ethers.utils.formatUnits(balance, 18);
-              console.log(`Formatted balance for ${symbol}: ${formattedBalance}`);
-            } catch (balanceError) {
-              console.error(`Error fetching balance for ${symbol}:`, balanceError);
-              return null;
-            }
-
-            // Get the exchange rate for this token
-            const exchangeRate = EXCHANGE_RATES[symbol] ||
-              EXCHANGE_RATES[symbol.toUpperCase()] ||
-              EXCHANGE_RATES[symbol.toLowerCase()] || 1;
-
-            // Calculate USD value - properly convert to USD
-            // For tokens like cKES where 1 KES = $0.0078, we multiply the token amount by the rate
-            const value = Number.parseFloat(formattedBalance) * exchangeRate;
-
-            // Get token metadata - try both original case and uppercase
-            const metadata = TOKEN_METADATA[symbol] ||
-              TOKEN_METADATA[symbol.toUpperCase()] ||
-              TOKEN_METADATA[symbol.toLowerCase()] ||
-              { name: symbol, region: 'Global' }; // Default to Global
-
-            return {
-              symbol,
-              name: metadata.name,
-              balance: balance.toString(),
-              formattedBalance,
-              value,
-              region: metadata.region,
-            };
-          } catch (err) {
-            console.warn(`Error fetching balance for ${symbol}:`, err);
-            return null;
-          }
+        if (!tokenAddress) {
+          console.warn(`Token address not found for ${symbol} in ${isArc ? 'Arc' : isAlfajores ? 'Alfajores' : 'Mainnet'} token list`);
+          return;
         }
-      );
 
-      const results = await Promise.all(tokenPromises);
-      const validResults = results.filter(Boolean) as StablecoinBalance[];
+        calls.push({
+          address: tokenAddress,
+          abi: ABIS.ERC20,
+          method: 'balanceOf',
+          params: [address],
+        });
+
+        tokenMetadataList.push({
+          symbol,
+          // Get token metadata - try both original case and uppercase
+          metadata: TOKEN_METADATA[symbol] ||
+            TOKEN_METADATA[symbol.toUpperCase()] ||
+            TOKEN_METADATA[symbol.toLowerCase()] ||
+            { name: symbol, region: 'Global' },
+          // Get the exchange rate for this token
+          exchangeRate: EXCHANGE_RATES[symbol] ||
+            EXCHANGE_RATES[symbol.toUpperCase()] ||
+            EXCHANGE_RATES[symbol.toLowerCase()] || 1
+        });
+      });
+
+      // Execute multicall
+      console.log(`Executing multicall for ${calls.length} tokens...`);
+      const results = await executeMulticall(provider, calls, currentChainId as number);
+
+      // Process results
+      const validResults = results.map((balance, index) => {
+        if (!balance) return null;
+
+        const { symbol, metadata, exchangeRate } = tokenMetadataList[index];
+        const formattedBalance = ethers.utils.formatUnits(balance, 18);
+        
+        // Calculate USD value
+        const value = Number.parseFloat(formattedBalance) * exchangeRate;
+
+        if (value <= 0 && formattedBalance === "0.0") return null; // Optional: Filter out zero balances to keep state clean? 
+        // Actually, let's keep zero balances but maybe filter them in the UI if needed, 
+        // or just return them so we know we checked. 
+        // For "No Stablecoins Found" state, we need to know we successfully checked but found 0.
+        
+        return {
+          symbol,
+          name: metadata.name,
+          balance: balance.toString(),
+          formattedBalance,
+          value,
+          region: metadata.region,
+        };
+      }).filter(Boolean) as StablecoinBalance[];
 
       // Convert to record
       const balanceMap: Record<string, StablecoinBalance> = {};

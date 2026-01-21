@@ -62,15 +62,6 @@ export const AVAILABLE_TOKENS = [
   { symbol: "OUSG", name: "Ondo US Bonds", region: "Treasury" },
 ];
 
-// Mock data for region visualization (used as initial state)
-export const MOCK_REGION_DATA = [
-  { region: "USA", value: 25, color: REGION_COLORS.USA },
-  { region: "Europe", value: 22, color: REGION_COLORS.Europe },
-  { region: "LatAm", value: 18, color: REGION_COLORS.LatAm },
-  { region: "Africa", value: 26, color: REGION_COLORS.Africa },
-  { region: "Asia", value: 9, color: REGION_COLORS.Asia },
-];
-
 // Exchange rates for stablecoins to USD (for fallback calculations)
 export const EXCHANGE_RATES: Record<string, number> = {
   // Standard format - updated rates for mainnet tokens

@@ -211,7 +211,9 @@ export default function OverviewTab({
                     No Stablecoins Found
                   </h3>
                   <p className="text-gray-800 mb-4">
-                    You don&#39;t have any stablecoins in your wallet yet.
+                    {chainId === 42220 || chainId === 44787 
+                      ? "Deposit funds to start earning yield and protecting your savings."
+                      : "Bridge assets to this network to access exclusive opportunities."}
                   </p>
 
                   <div
@@ -220,7 +222,7 @@ export default function OverviewTab({
                     <h4
                       className={`font-medium text-region-${userRegion.toLowerCase()}-dark mb-2`}
                     >
-                      Get Started with Stablecoins
+                      Get Started
                     </h4>
                     <ul
                       className={`text-sm text-region-${userRegion.toLowerCase()}-dark space-y-2`}
@@ -237,11 +239,13 @@ export default function OverviewTab({
                             strokeLinecap="round"
                             strokeLinejoin="round"
                             strokeWidth={2}
-                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                            d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                           />
                         </svg>
                         <span>
-                          Swap to cUSD, cEUR, or other regional stablecoins
+                          {chainId === 42220 || chainId === 44787 
+                            ? "Deposit cUSD or local stablecoins via MiniPay"
+                            : "Bridge stablecoins from Celo to Arbitrum/Arc"}
                         </span>
                       </li>
                       <li className="flex items-start">
@@ -260,34 +264,37 @@ export default function OverviewTab({
                           />
                         </svg>
                         <span>
-                          Diversify across regions to protect against inflation
+                          Protect your savings from inflation
                         </span>
-                      </li>
-                      <li className="flex items-start">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className={`size-4 text-region-${userRegion.toLowerCase()}-medium mr-2 mt-0.5`}
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-                          />
-                        </svg>
-                        <span>Track your portfolio&#39;s geographic exposure</span>
                       </li>
                     </ul>
                   </div>
 
                   <button
-                    onClick={() => setActiveTab("swap")}
-                    className={`mt-6 bg-region-${userRegion.toLowerCase()}-medium hover:bg-region-${userRegion.toLowerCase()}-dark text-white px-4 py-2 rounded-md transition-colors`}
+                    onClick={() => {
+                        if (chainId === 42220 || chainId === 44787) {
+                            // For MiniPay, we might want to trigger their deposit flow if available, 
+                            // otherwise we just show the Swap tab as a proxy for "Action"
+                            setActiveTab("swap");
+                        } else {
+                            // For Bridging
+                            setActiveTab("swap");
+                        }
+                    }}
+                    className={`mt-6 w-full bg-region-${userRegion.toLowerCase()}-medium hover:bg-region-${userRegion.toLowerCase()}-dark text-white px-4 py-3 rounded-lg transition-colors font-bold shadow-md flex items-center justify-center`}
                   >
-                    Go to Swap
+                    {chainId === 42220 || chainId === 44787 
+                        ? (
+                            <>
+                                <span className="mr-2">➕</span> Deposit Funds
+                            </>
+                        ) 
+                        : (
+                            <>
+                                <span className="mr-2">🌉</span> Bridge Assets
+                            </>
+                        )
+                    }
                   </button>
                 </div>
               </div>
