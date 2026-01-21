@@ -553,7 +553,7 @@ export class ArcAgent {
     
     Provide a JSON response with:
     - action: "SWAP" | "HOLD" | "REBALANCE"
-    - targetToken: string (If RWA recommendation, use the symbol like "PAXG", "OUSG", "USDY")
+    - targetToken: string (If RWA recommendation, use the symbol like "PAXG", "GLP")
     - targetNetwork: "Celo" | "Arbitrum" | "Ethereum"
     - confidence: number (0-1)
     - reasoning: string (1-2 sentences focusing on wealth protection vs inflation)
@@ -565,7 +565,7 @@ export class ArcAgent {
     autonomous payments, USDC gas efficiency, and cross-chain capabilities.
     
     STRATEGIC GUIDANCE:
-    1. If inflation data is high (>4%), prioritize USDY or OUSG on Arbitrum for yield-bearing wealth protection.
+    1. If inflation data is high (>4%), prioritize PAXG or GLP on Arbitrum for yield-bearing wealth protection.
     2. If macro sentiment is bearish, recommend PAXG (Gold) on Arbitrum as a safe haven.
     3. If user is in a high-inflation region (Africa/LatAm), prioritize moving value from local stables to Arbitrum RWAs.
     4. Always consider gas efficiency - if amount is <$500, stick to Arbitrum or Celo.

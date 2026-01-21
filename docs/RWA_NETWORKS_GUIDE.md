@@ -6,8 +6,8 @@
 - **Why it's best**: Low fees, fast transactions, growing RWA ecosystem
 - **Gas costs**: ~$0.50-2.00 per transaction
 - **Major RWA protocols**:
-  - **Ondo Finance**: OUSG (US Treasury), USDY (Dollar Yield)
   - **GMX**: GLP (Real yield from trading fees)
+  - **Paxos**: PAXG (Tokenized Gold)
   - **Radiant Capital**: Real yield lending
 - **TVL**: $2.5B+ in RWA protocols
 - **Integration**: LIVE integration in `SwapTab` and `AgentWealthGuard` via LI.FI SDK.
@@ -35,19 +35,13 @@
 
 ### Arbitrum One (Recommended)
 ```
-1. OUSG - Ondo US Government Bond Fund
-   - APY: ~5.2%
-   - TVL: $150M+
-   - Type: US Treasury Bills
-   - Contract: 0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92
+1. PAXG - Paxos Gold
+   - APY: 0% (tracks gold price)
+   - TVL: $10M+
+   - Type: Tokenized gold (1 oz per token)
+   - Contract: 0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429
 
-2. USDY - Ondo US Dollar Yield  
-   - APY: ~4.8%
-   - TVL: $75M+
-   - Type: Treasury-backed stablecoin
-   - Contract: 0x96F6eF951840721AdBF46Ac996b59E0235CB985C
-
-3. GLP - GMX Liquidity Provider
+2. GLP - GMX Liquidity Provider
    - APY: ~12-15% (variable)
    - TVL: $400M+
    - Type: Real yield from trading fees
@@ -77,8 +71,8 @@
 - **Frequent rebalancing**: Agent can optimize without high gas costs
 
 ### Growing Ecosystem
-- **Ondo Finance**: Leading RWA protocol with $200M+ TVL
 - **GMX**: Proven real yield model with sustainable APYs
+- **Paxos**: Trusted gold tokenization
 - **Native USDC**: Perfect for your Arc Network integration
 
 ### Technical Advantages
@@ -101,8 +95,7 @@ const ARBITRUM_CONFIG = {
 
 // RWA token addresses on Arbitrum
 const ARBITRUM_RWA_TOKENS = {
-  OUSG: '0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92',
-  USDY: '0x96F6eF951840721AdBF46Ac996b59E0235CB985C',
+  PAXG: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
   GLP: '0x4277f8F2c384827B5273592FF7CeBd9f2C1ac258'
 };
 ```
@@ -112,8 +105,8 @@ const ARBITRUM_RWA_TOKENS = {
 ```typescript
 // Add RWA recommendations to your agent
 const rwaRecommendations = {
-  conservative: ['OUSG', 'USDY'], // 4-5% APY, low risk
-  balanced: ['OUSG', 'USDY', 'GLP'], // Mix of stable and variable yield
+  conservative: ['PAXG'], // Gold as inflation hedge
+  balanced: ['PAXG', 'GLP'], // Mix of gold and variable yield
   aggressive: ['GLP'] // Higher yield, more variable
 };
 ```
@@ -121,7 +114,7 @@ const rwaRecommendations = {
 ### 3. Add Cross-Chain Bridge Support
 We support two paths for moving funds to Arbitrum:
 
-1.  **Universal Path (LI.FI)**: Supports almost any token. Best for `cUSD` or `cEUR` -> `USDY`.
+1.  **Universal Path (LI.FI)**: Supports almost any token. Best for `cUSD` or `cEUR` -> `PAXG`.
 2.  **Native Path (Circle CCTP)** ⭐: Highest efficiency for `USDC` -> `USDC`.
     - **No Slippage**: 1:1 burning and minting.
     - **Native Security**: No third-party bridge risk.
@@ -150,13 +143,13 @@ We support two paths for moving funds to Arbitrum:
 
 ### Phase 1: Start with Arbitrum
 1. **Focus on Arbitrum One** for lowest costs
-2. **Integrate OUSG and USDY** for stable yield
+2. **Integrate PAXG** for gold exposure
 3. **Add GLP** for higher yield option
 4. **Test with small amounts** ($10-100)
 
 ### Phase 2: Add Ethereum for Premium Assets
 1. **Add FOBXX** for institutional-grade money market
-2. **Add PAXG** for gold exposure
+2. **Add PAXG** for gold exposure (already on Arbitrum)
 3. **Higher minimum amounts** due to gas costs ($1000+)
 
 ### Phase 3: Multi-Chain Optimization
@@ -167,7 +160,6 @@ We support two paths for moving funds to Arbitrum:
 ## 🔍 Due Diligence Notes
 
 ### Regulatory Considerations
-- **OUSG/USDY**: SEC-compliant, accredited investor requirements
 - **GLP**: DeFi protocol, no KYC required
 - **PAXG**: Regulated by NYDFS
 - **FOBXX**: SEC-registered money market fund
@@ -179,22 +171,22 @@ We support two paths for moving funds to Arbitrum:
 - **Counterparty risk**: Underlying asset management
 
 ### Recommended Allocation
-- **Conservative**: 70% OUSG/USDY, 20% FOBXX, 10% cash
-- **Balanced**: 50% OUSG/USDY, 30% GLP, 20% FOBXX
-- **Aggressive**: 40% GLP, 40% OUSG/USDY, 20% alternatives
+- **Conservative**: 70% PAXG, 20% FOBXX, 10% cash
+- **Balanced**: 50% PAXG, 30% GLP, 20% FOBXX
+- **Aggressive**: 40% GLP, 40% PAXG, 20% alternatives
 
 ## 📞 Getting Started
 
 ### Immediate Actions:
 1. **Set up Arbitrum RPC** in your agent configuration
 2. **Get small amounts of ETH** on Arbitrum for gas
-3. **Test with OUSG or USDY** (minimum $100)
+3. **Test with PAXG or GLP** (minimum $100)
 4. **Monitor performance** and gas costs
 
 ### Resources:
 - **Arbitrum Bridge**: https://bridge.arbitrum.io/
-- **Ondo Finance**: https://ondo.finance/
 - **GMX**: https://gmx.io/
+- **Paxos**: https://paxos.com/
 - **Arbitrum Explorer**: https://arbiscan.io/
 
 This setup gives your users access to professional-grade RWAs with minimal friction and cost!

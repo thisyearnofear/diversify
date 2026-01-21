@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { getTokenAddresses, getBrokerAddress, TX_CONFIG, NETWORKS } from '../config';
+import { getTokenAddresses, getBrokerAddress, TX_CONFIG, NETWORKS, TOKEN_METADATA } from '../config';
 import { ApprovalService } from '../services/swap/approval';
 import { ExchangeDiscoveryService } from '../services/swap/exchange-discovery';
 import { SwapExecutionService } from '../services/swap/execution';
@@ -98,8 +98,12 @@ export function useSwap() {
                 throw new Error(`Invalid token selection: ${fromToken}/${toToken}`);
             }
 
+            // Get decimals
+            const fromTokenMetadata = TOKEN_METADATA[fromToken] || TOKEN_METADATA[fromToken.toUpperCase()] || { decimals: 18 };
+            const decimals = fromTokenMetadata.decimals || 18;
+
             // Parse amount
-            const amountInWei = ethers.utils.parseUnits(amount, 18);
+            const amountInWei = ethers.utils.parseUnits(amount, decimals);
 
             // Transaction options
             const useLegacyTx = isMiniPay || isTestnet;
@@ -112,7 +116,8 @@ export function useSwap() {
                 userAddress,
                 brokerAddress,
                 amountInWei,
-                provider
+                provider,
+                decimals
             );
 
             if (!approvalStatus.isApproved) {

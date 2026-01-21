@@ -40,9 +40,7 @@ const NETWORK_TOKENS: Record<number, Array<{ symbol: string; name: string; regio
   // Arbitrum One
   [NETWORKS.ARBITRUM_ONE.chainId]: [
     { symbol: "USDC", name: "USD Coin", region: "USA" },
-    { symbol: "USDY", name: "Ondo USD Yield", region: "USA" },
     { symbol: "PAXG", name: "Paxos Gold", region: "Global" },
-    { symbol: "OUSG", name: "Ondo US Treasury", region: "USA" },
   ],
 };
 
@@ -263,7 +261,7 @@ export default function SwapTab({
     console.log(`Analyzing swap/bridge for ${amount} ${fromToken} to ${toToken}`);
 
     // Check if this is a cross-chain RWA bridge (to Arbitrum)
-    const isRwa = ["PAXG", "USDY", "OUSG"].includes(toToken);
+    const isRwa = ["PAXG"].includes(toToken);
 
     if (isRwa) {
       console.log("Cross-chain RWA deployment detected. Using BridgeService...");

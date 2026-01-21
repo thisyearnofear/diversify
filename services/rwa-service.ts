@@ -22,42 +22,6 @@ export interface RWAToken {
 export const RWA_TOKENS: Record<string, RWAToken[]> = {
     arbitrum: [
         {
-            address: '0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92',
-            symbol: 'OUSG',
-            name: 'Ondo US Government Bond Fund',
-            type: 'treasury',
-            apy: 5.2,
-            tvl: 150000000,
-            chain: 'arbitrum',
-            description: 'Tokenized US Treasury Bills with 5%+ yield',
-            minInvestment: 100,
-            riskLevel: 'low'
-        },
-        {
-            address: '0x96F6eF951840721AdBF46Ac996b59E0235CB985C',
-            symbol: 'USDY',
-            name: 'Ondo US Dollar Yield',
-            type: 'treasury',
-            apy: 4.8,
-            tvl: 75000000,
-            chain: 'arbitrum',
-            description: 'US Dollar-denominated yield token backed by Treasuries',
-            minInvestment: 100,
-            riskLevel: 'low'
-        },
-        {
-            address: '0x4277f8F2c384827B5273592FF7CeBd9f2C1ac258',
-            symbol: 'GLP',
-            name: 'GMX Liquidity Provider Token',
-            type: 'credit',
-            apy: 12.5,
-            tvl: 400000000,
-            chain: 'arbitrum',
-            description: 'Real yield from GMX trading fees and liquidations',
-            minInvestment: 50,
-            riskLevel: 'medium'
-        },
-        {
             address: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
             symbol: 'PAXG',
             name: 'Paxos Gold',
@@ -70,15 +34,15 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             riskLevel: 'medium'
         },
         {
-            address: '0xEstateProtocolPropertyAddr', // Placeholder for dynamic property tokens
-            symbol: 'PROP',
-            name: 'Estate Protocol Property',
-            type: 'real_estate',
-            apy: 8.5,
-            tvl: 5000000,
+            address: '0x4277f8F2c384827B5273592FF7CeBd9f2C1ac258',
+            symbol: 'GLP',
+            name: 'GMX Liquidity Provider Token',
+            type: 'credit',
+            apy: 12.5,
+            tvl: 400000000,
             chain: 'arbitrum',
-            description: 'Fractional ownership of rental property with USDC payouts',
-            minInvestment: 250,
+            description: 'Real yield from GMX trading fees and liquidations',
+            minInvestment: 50,
             riskLevel: 'medium'
         }
     ],
@@ -249,9 +213,9 @@ export class RWAService {
         if (tokens.length === 0) {
             reasoning = `No suitable RWA options found for $${preferences.investmentAmount}. Consider increasing investment amount or lowering requirements.`;
         } else if (preferences.investmentAmount < 100) {
-            reasoning = `For amounts under $100, consider Arbitrum-based tokens like OUSG or GLP to minimize gas costs.`;
+            reasoning = `For amounts under $100, consider Arbitrum-based tokens like PAXG or GLP to minimize gas costs.`;
         } else if (preferences.investmentAmount < 1000) {
-            reasoning = `Focus on Arbitrum for cost efficiency. OUSG offers stable 5.2% yield, GLP offers higher variable yield.`;
+            reasoning = `Focus on Arbitrum for cost efficiency. PAXG offers gold exposure, GLP offers higher variable yield.`;
         } else {
             reasoning = `With $${preferences.investmentAmount}, you can access premium options like FOBXX on Ethereum or diversify across multiple RWA tokens.`;
         }

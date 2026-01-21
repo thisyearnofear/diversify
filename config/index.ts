@@ -130,8 +130,6 @@ export const ARC_TOKENS = {
 export const ARBITRUM_TOKENS = {
     USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
     PAXG: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429', // Tokenized Gold
-    USDY: '0x96F6eF951840721AdBF46Ac996b59E0235CB985C', // Ondo USD Yield
-    OUSG: '0x1B19C19393e2d034D8Ff31ff34c81252FcBbee92', // Ondo US Treasury
 } as const;
 
 // Broker Addresses
@@ -180,7 +178,6 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CCAD: 0.74,
     CAUD: 0.66,
     PAXG: 2000, // Placeholder Gold Price - Should be fetched dynamically
-    USDY: 1.0,  // Yield-bearing dollar
 } as const;
 
 // Region Configuration
@@ -203,7 +200,7 @@ export const REGION_COLORS = {
 } as const;
 
 // Token Metadata
-export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof REGIONS }> = {
+export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof REGIONS; decimals?: number }> = {
     CUSD: { name: 'Celo Dollar', region: 'USA' },
     CEUR: { name: 'Celo Euro', region: 'EUROPE' },
     CREAL: { name: 'Celo Brazilian Real', region: 'LATAM' },
@@ -217,10 +214,8 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
     CZAR: { name: 'South African Rand', region: 'AFRICA' },
     CCAD: { name: 'Canadian Dollar', region: 'USA' },
     CAUD: { name: 'Australian Dollar', region: 'ASIA' },
-    USDC: { name: 'USD Coin', region: 'GLOBAL' },
-    PAXG: { name: 'Paxos Gold', region: 'GLOBAL' },
-    USDY: { name: 'Ondo US Dollar Yield', region: 'USA' },
-    OUSG: { name: 'Ondo US Treasury Bond', region: 'USA' },
+    USDC: { name: 'USD Coin', region: 'GLOBAL', decimals: 6 },
+    PAXG: { name: 'Paxos Gold', region: 'GLOBAL', decimals: 18 },
 } as const;
 
 // ABIs

@@ -58,8 +58,6 @@ export const AVAILABLE_TOKENS = [
 
   // Arbitrum RWAs (Safe Havens)
   { symbol: "PAXG", name: "Paxos Gold", region: "Commodity" },
-  { symbol: "USDY", name: "Ondo USD Yield", region: "Treasury" },
-  { symbol: "OUSG", name: "Ondo US Bonds", region: "Treasury" },
 ];
 
 // Exchange rates for stablecoins to USD (for fallback calculations)

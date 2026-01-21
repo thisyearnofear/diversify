@@ -18,8 +18,6 @@ interface ProtectionTabProps {
 
 // RWA yield data
 const RWA_YIELDS = [
-  { symbol: "OUSG", apy: "5.2%", label: "T-Bills", description: "US Treasury Bonds" },
-  { symbol: "USDY", apy: "4.8%", label: "Yield USD", description: "Yield-bearing stablecoin" },
   { symbol: "PAXG", apy: "—", label: "Gold", description: "Tokenized physical gold" },
 ];
 

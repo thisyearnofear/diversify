@@ -404,7 +404,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                 )}
 
                                 {/* RWA Specific Asset Card */}
-                                {advice.targetToken && (['PAXG', 'USDY', 'OUSG', 'PROP', 'GLP'].includes(advice.targetToken)) && (
+                                {advice.targetToken && (['PAXG', 'PROP', 'GLP'].includes(advice.targetToken)) && (
                                     <div className="mt-4 p-3 bg-white/50 md:bg-white/5 rounded-lg border border-white/10 flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center text-xl shadow-inner">
@@ -414,9 +414,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                                 <div className="text-xs font-bold">{advice.targetToken} Asset Info</div>
                                                 <div className="text-[10px] text-gray-500 md:text-slate-400">
                                                     {advice.targetToken === 'PAXG' ? 'Physical Gold Hedge' :
-                                                        advice.targetToken === 'USDY' ? 'Ondo USD Yield (4.8%)' :
-                                                            advice.targetToken === 'OUSG' ? 'US Treasury Bills (5.2%)' :
-                                                                'RWA Yield Opportunity'}
+                                                        'RWA Yield Opportunity'}
                                                 </div>
                                             </div>
                                         </div>

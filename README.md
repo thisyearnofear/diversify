@@ -5,7 +5,7 @@ Protect your savings from inflation by diversifying stablecoins across global re
 ## 🌟 Key Features
 
 - **Wealth Protection Score**: Advanced engine that scores your portfolio based on inflation hedging, RWA exposure, and yield optimization.
-- **RWA Integration**: Direct access to Real-World Assets (PAXG, USDY, OUSG) through tokenized gold and US Treasuries.
+- **RWA Integration**: Direct access to Real-World Assets (PAXG, GLP) through tokenized gold and DeFi yield.
 - **Cross-Chain Bridging**: Seamlessly move assets from Celo to Arbitrum One using LI.FI and **Circle's Native CCTP** integration for better wealth preservation.
 - **Gemini Vision Intelligence**: Multimodal analysis of portfolio screenshots and financial documents for instant health checks.
 - **Arc Network Integration**: Direct settlement on Arc Network with x402 automated payments and specialized USDC gas tokens.

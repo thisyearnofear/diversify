@@ -46,14 +46,14 @@ export function useDiversification({ regionData, balances, userRegion, inflation
     // --- WEALTH PROTECTION ENHANCEMENTS ---
     let protectionBonus = 0;
 
-    // 1. RWA Bonus (Gold/Treasuries)
+    //1. RWA Bonus (Gold/Treasuries)
     const hasGold = balances?.PAXG || balances?.paxg;
-    const hasTreasuries = balances?.OUSG || balances?.ousg || balances?.USDY || balances?.usdy;
+    const hasTreasuries = false;
 
     if (hasGold) protectionBonus += 15;
     if (hasTreasuries) protectionBonus += 10;
 
-    // 2. Inflation Hedge Bonus
+    //2. Inflation Hedge Bonus
     const userRegionInflation = inflationData?.[userRegion]?.avgRate || 3.0;
     const isHedging = (hasGold || hasTreasuries) && userRegionInflation > 5;
     if (isHedging) protectionBonus += 10;
@@ -147,10 +147,6 @@ export function useDiversification({ regionData, balances, userRegion, inflation
     // RWA Specific Tips
     if (!balances?.PAXG && !balances?.paxg) {
       tips.push("Add Paxos Gold (PAXG) on Arbitrum as a hedge against currency debasement.");
-    }
-
-    if (!balances?.USDY && !balances?.ousg) {
-      tips.push("Consider Ondo Treasuries (USDY/OUSG) for low-risk 5% USD yields.");
     }
 
     // If no specific tips, give general advice

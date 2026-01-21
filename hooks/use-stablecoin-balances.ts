@@ -13,7 +13,7 @@ interface StablecoinBalance {
 }
 
 // Token metadata mapping
-const TOKEN_METADATA: Record<string, { name: string; region: string }> = {
+const TOKEN_METADATA: Record<string, { name: string; region: string; decimals?: number }> = {
   // Standard format - Mainnet tokens
   CUSD: { name: 'Celo Dollar', region: 'USA' },
   CEUR: { name: 'Celo Euro', region: 'Europe' },
@@ -45,11 +45,10 @@ const TOKEN_METADATA: Record<string, { name: string; region: string }> = {
   czar: { name: 'South African Rand', region: 'Africa' },
   ccad: { name: 'Canadian Dollar', region: 'USA' },
   caud: { name: 'Australian Dollar', region: 'Asia' },
-  USDC: { name: 'USD Coin', region: 'Global' },
-  usdc: { name: 'USD Coin', region: 'Global' },
-  PAXG: { name: 'Paxos Gold', region: 'Global' },
-  USDY: { name: 'Ondo US Dollar Yield', region: 'USA' },
-  OUSG: { name: 'Ondo US Treasury Bond', region: 'USA' },
+  USDC: { name: 'USD Coin', region: 'Global', decimals: 6 },
+  usdc: { name: 'USD Coin', region: 'Global', decimals: 6 },
+  PAXG: { name: 'Paxos Gold', region: 'Global', decimals: 18 },
+  paxg: { name: 'Paxos Gold', region: 'Global', decimals: 18 },
 };
 
 // Updated exchange rates to USD for Mento stablecoins
@@ -87,9 +86,8 @@ const EXCHANGE_RATES: Record<string, number> = {
   caud: 0.66,
   USDC: 1,
   usdc: 1,
+  paxg: 2000, // Placeholder Gold Price
   PAXG: 2000, // Placeholder Gold Price
-  USDY: 1.05, // Yield-bearing dollar
-  OUSG: 105,  // Treasury Bond
 };
 
 function getCachedBalances(address: string): Record<string, StablecoinBalance> | null {
@@ -214,7 +212,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       if (isArc) {
         tokensToFetch = ['USDC'];
       } else if (isArbitrum) {
-        tokensToFetch = ['USDC', 'PAXG', 'USDY', 'OUSG'];
+        tokensToFetch = ['USDC', 'PAXG'];
       } else if (isAlfajores) {
         tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
       } else {
@@ -271,7 +269,8 @@ export function useStablecoinBalances(address: string | undefined | null) {
         if (!balance) return null;
 
         const { symbol, metadata, exchangeRate } = tokenMetadataList[index];
-        const formattedBalance = ethers.utils.formatUnits(balance, 18);
+        const decimals = metadata.decimals || 18;
+        const formattedBalance = ethers.utils.formatUnits(balance, decimals);
         
         // Calculate USD value
         const value = Number.parseFloat(formattedBalance) * exchangeRate;

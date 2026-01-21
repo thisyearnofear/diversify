@@ -16,15 +16,16 @@ export class ApprovalService {
         ownerAddress: string,
         spenderAddress: string,
         amount: ethers.BigNumber,
-        provider: ethers.providers.Provider
+        provider: ethers.providers.Provider,
+        decimals: number = 18
     ): Promise<ApprovalStatus> {
         const tokenContract = new ethers.Contract(tokenAddress, ABIS.ERC20, provider);
         const allowance = await tokenContract.allowance(ownerAddress, spenderAddress);
 
         return {
             isApproved: allowance.gte(amount),
-            currentAllowance: ethers.utils.formatUnits(allowance, 18),
-            requiredAllowance: ethers.utils.formatUnits(amount, 18),
+            currentAllowance: ethers.utils.formatUnits(allowance, decimals),
+            requiredAllowance: ethers.utils.formatUnits(amount, decimals),
         };
     }
 
