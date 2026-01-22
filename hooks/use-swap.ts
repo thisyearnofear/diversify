@@ -1,17 +1,26 @@
 /**
  * Orchestrator hook for swap functionality
- * Clean, modular, and testable
+ * Clean, modular, and testable - uses SwapOrchestrator
  */
 
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { getTokenAddresses, getBrokerAddress, TX_CONFIG, NETWORKS, TOKEN_METADATA } from '../config';
-import { ApprovalService } from '../services/swap/approval';
-import { ExchangeDiscoveryService } from '../services/swap/exchange-discovery';
-import { SwapExecutionService } from '../services/swap/execution';
+import { SwapOrchestratorService } from '../services/swap/swap-orchestrator.service';
+import { ProviderFactoryService } from '../services/swap/provider-factory.service';
+import { ChainDetectionService } from '../services/swap/chain-detection.service';
 import { SwapErrorHandler } from '../services/swap/error-handler';
 import { isMiniPayEnvironment } from '../utils/environment';
-import type { SwapParams, SwapCallbacks, SwapResult, SwapState } from '../types/swap';
+import { TX_CONFIG } from '../config';
+import type { SwapParams as OrchestratorSwapParams, SwapCallbacks, SwapResult, SwapState } from '../types/swap';
+
+interface HookSwapParams {
+    fromToken: string;
+    toToken: string;
+    amount: string;
+    slippageTolerance?: number;
+    onApprovalSubmitted?: (hash: string) => void;
+    onApprovalConfirmed?: () => void;
+    onSwapSubmitted?: (hash: string) => void;
+}
 
 export function useSwap() {
     const [state, setState] = useState<SwapState>({
@@ -30,29 +39,32 @@ export function useSwap() {
         const detectEnvironment = async () => {
             setIsMiniPay(isMiniPayEnvironment());
 
-            if (typeof window !== 'undefined' && window.ethereum) {
-                try {
-                    const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-                    setChainId(parseInt(chainIdHex as string, 16));
-                } catch (err) {
-                    console.warn('Error detecting chain ID:', err);
-                }
+            try {
+                const detectedChainId = await ProviderFactoryService.getCurrentChainId();
+                setChainId(detectedChainId);
+            } catch (err) {
+                console.warn('Error detecting chain ID:', err);
             }
         };
 
         detectEnvironment();
     }, []);
 
-    const swap = async (params: SwapParams & SwapCallbacks): Promise<SwapResult> => {
+    const swap = async (params: HookSwapParams): Promise<SwapResult> => {
         const {
             fromToken,
             toToken,
             amount,
-            slippageTolerance = isMiniPay ? TX_CONFIG.MINIPAY_SLIPPAGE : TX_CONFIG.DEFAULT_SLIPPAGE,
+            slippageTolerance,
             onApprovalSubmitted,
             onApprovalConfirmed,
             onSwapSubmitted,
         } = params;
+
+        // Determine slippage tolerance
+        const finalSlippage = slippageTolerance !== undefined 
+            ? slippageTolerance 
+            : (isMiniPay ? TX_CONFIG.MINIPAY_SLIPPAGE : TX_CONFIG.DEFAULT_SLIPPAGE);
 
         // Reset state
         setState({
@@ -66,166 +78,70 @@ export function useSwap() {
         const result: SwapResult = { success: false };
 
         try {
-            // Validate environment
-            if (!window.ethereum) {
+            // Validate wallet connection
+            if (!ProviderFactoryService.isWalletConnected()) {
                 throw new Error('No wallet detected');
             }
 
-            // Get accounts
-            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-            const userAddress = accounts[0];
-
             // Get current chain ID
-            const currentChainId = chainId || parseInt(
-                await window.ethereum.request({ method: 'eth_chainId' }) as string,
-                16
-            );
+            const currentChainId = chainId || await ProviderFactoryService.getCurrentChainId();
+            setChainId(currentChainId);
 
-            // Setup provider and signer
-            const provider = new ethers.providers.Web3Provider(window.ethereum);
-            const signer = provider.getSigner();
+            // Get user address
+            const signer = await ProviderFactoryService.getSigner();
+            const userAddress = await signer.getAddress();
 
-            // Get configuration
-            const tokens = getTokenAddresses(currentChainId);
-            const brokerAddress = getBrokerAddress(currentChainId);
-            const isTestnet = currentChainId === NETWORKS.ALFAJORES.chainId;
-            const isArbitrum = currentChainId === NETWORKS.ARBITRUM_ONE.chainId;
-
-            if (isArbitrum) {
-                // Mock swap for Arbitrum (RWA demo)
-                console.log(`Mocking Arbitrum swap for ${amount} ${fromToken} to ${toToken}...`);
-                setState((prev) => ({ ...prev, step: 'swapping' }));
-                
-                // Simulate some delay
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                const mockTxHash = "0x" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
-                onSwapSubmitted?.(mockTxHash);
-                
-                setState({
-                    step: 'completed',
-                    isLoading: false,
-                    error: null,
-                    txHash: mockTxHash,
-                    approvalTxHash: null,
-                });
-                
-                return { success: true, swapTxHash: mockTxHash };
-            }
-
-            // Get token addresses
-            const fromTokenAddress = tokens[fromToken as keyof typeof tokens];
-            const toTokenAddress = tokens[toToken as keyof typeof tokens];
-
-            if (!fromTokenAddress || !toTokenAddress) {
-                throw new Error(`Invalid token selection: ${fromToken}/${toToken}`);
-            }
-
-            // Get decimals
-            const fromTokenMetadata = TOKEN_METADATA[fromToken] || TOKEN_METADATA[fromToken.toUpperCase()] || { decimals: 18 };
-            const decimals = fromTokenMetadata.decimals || 18;
-
-            // Parse amount
-            const amountInWei = ethers.utils.parseUnits(amount, decimals);
-
-            // Transaction options
-            const useLegacyTx = isMiniPay || isTestnet;
-            const gasPrice = useLegacyTx ? await provider.getGasPrice() : undefined;
-            const txOptions = { useLegacyTx, gasPrice };
-
-            // Step 1: Check and handle approval
-            const approvalStatus = await ApprovalService.checkApproval(
-                fromTokenAddress,
+            // Prepare swap parameters for orchestrator
+            const swapParams: OrchestratorSwapParams = {
+                fromToken,
+                toToken,
+                amount,
+                fromChainId: currentChainId,
+                toChainId: currentChainId, // Same-chain swap by default
                 userAddress,
-                brokerAddress,
-                amountInWei,
-                provider,
-                decimals
-            );
+                slippageTolerance: finalSlippage,
+            };
 
-            if (!approvalStatus.isApproved) {
-                console.log(`Approving ${amount} ${fromToken}...`);
-
-                const approveTx = await ApprovalService.approve(
-                    fromTokenAddress,
-                    brokerAddress,
-                    amountInWei,
-                    signer,
-                    txOptions
+            // Check if swap is supported
+            if (!SwapOrchestratorService.isSwapSupported(swapParams)) {
+                throw new Error(
+                    `Swap not supported: ${fromToken} → ${toToken} on ${ChainDetectionService.getNetworkName(currentChainId)}`
                 );
-
-                result.approvalTxHash = approveTx.hash;
-                setState((prev) => ({ ...prev, approvalTxHash: approveTx.hash }));
-                onApprovalSubmitted?.(approveTx.hash);
-
-                const confirmations = isTestnet
-                    ? TX_CONFIG.CONFIRMATIONS.TESTNET
-                    : TX_CONFIG.CONFIRMATIONS.MAINNET;
-
-                await ApprovalService.waitForApproval(approveTx, confirmations);
-                onApprovalConfirmed?.();
             }
 
-            // Step 2: Find exchange
-            setState((prev) => ({ ...prev, step: 'swapping' }));
+            console.log(`[useSwap] Executing ${SwapOrchestratorService.getSwapType(swapParams)} swap`);
 
-            const exchangeInfo = await ExchangeDiscoveryService.findDirectExchange(
-                brokerAddress,
-                fromTokenAddress,
-                toTokenAddress,
-                provider
-            );
+            // Execute swap via orchestrator
+            const swapResult = await SwapOrchestratorService.executeSwap(swapParams, {
+                onApprovalSubmitted: (hash) => {
+                    setState((prev) => ({ ...prev, approvalTxHash: hash }));
+                    onApprovalSubmitted?.(hash);
+                },
+                onApprovalConfirmed: () => {
+                    setState((prev) => ({ ...prev, step: 'swapping' }));
+                    onApprovalConfirmed?.();
+                },
+                onSwapSubmitted: (hash) => {
+                    setState((prev) => ({ ...prev, txHash: hash }));
+                    onSwapSubmitted?.(hash);
+                },
+            });
 
-            if (!exchangeInfo) {
-                throw new Error(`No exchange found for ${fromToken}/${toToken}`);
+            if (!swapResult.success) {
+                throw new Error(swapResult.error || 'Swap failed');
             }
-
-            // Step 3: Get quote
-            const expectedAmountOut = await ExchangeDiscoveryService.getQuote(
-                brokerAddress,
-                exchangeInfo,
-                fromTokenAddress,
-                toTokenAddress,
-                amountInWei,
-                provider
-            );
-
-            const minAmountOut = SwapExecutionService.calculateMinAmountOut(
-                expectedAmountOut,
-                slippageTolerance
-            );
-
-            // Step 4: Execute swap
-            const swapTx = await SwapExecutionService.executeSwap(
-                brokerAddress,
-                exchangeInfo,
-                fromTokenAddress,
-                toTokenAddress,
-                amountInWei,
-                minAmountOut,
-                signer,
-                txOptions
-            );
-
-            result.swapTxHash = swapTx.hash;
-            setState((prev) => ({ ...prev, txHash: swapTx.hash }));
-            onSwapSubmitted?.(swapTx.hash);
-
-            // Step 5: Wait for confirmation
-            const confirmations = isTestnet
-                ? TX_CONFIG.CONFIRMATIONS.TESTNET
-                : TX_CONFIG.CONFIRMATIONS.MAINNET;
-
-            await SwapExecutionService.waitForSwap(swapTx, confirmations);
 
             // Success
             result.success = true;
+            result.swapTxHash = swapResult.txHash;
+            result.approvalTxHash = swapResult.approvalTxHash;
+
             setState({
                 step: 'completed',
                 isLoading: false,
                 error: null,
-                txHash: swapTx.hash,
-                approvalTxHash: result.approvalTxHash || null,
+                txHash: swapResult.txHash || null,
+                approvalTxHash: swapResult.approvalTxHash || null,
             });
 
             return result;

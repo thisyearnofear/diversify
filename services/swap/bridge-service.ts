@@ -1,4 +1,4 @@
-import { createConfig, getRoutes, executeRoute, RoutesRequest, Route } from '@lifi/sdk';
+import { createConfig, getRoutes, executeRoute, RoutesRequest, Route, config } from '@lifi/sdk';
 import { ethers } from 'ethers';
 import { CIRCLE_CONFIG, ARBITRUM_TOKENS } from '../../config';
 
@@ -27,28 +27,11 @@ export interface BridgeResult {
 export class BridgeService {
     /**
      * Get the best route for a cross-chain swap
+     * Note: Circle CCTP support is planned but not yet implemented
      */
     static async getBestRoute(params: BridgeQuoteRequest): Promise<{ route: any; provider: 'lifi' | 'circle' }> {
-        // Detect if and-to-end USDC transfer (CCTP eligible)
-        const isUSDCToUSDC = this.isUSDCToken(params.fromTokenAddress) && this.isUSDCToken(params.toTokenAddress);
-
-        // If user specifically wants circle or it's a pure USDC move, we can prioritize CCTP
-        if ((params.preferredProvider === 'circle' || isUSDCToUSDC) && this.isCCTPSupported(params.fromChainId, params.toChainId)) {
-            try {
-                // Mock CCTP route for now - in production this would call Circle API or builder
-                return {
-                    provider: 'circle',
-                    route: {
-                        tool: 'Circle CCTP',
-                        fromAmount: params.fromAmount,
-                        toAmount: params.fromAmount, // 1:1 for CCTP usually
-                        estimatedWait: '10-20 min',
-                    }
-                };
-            } catch (err) {
-                console.warn('[BridgeService] Circle CCTP route failed, falling back to LI.FI');
-            }
-        }
+        // TODO: Implement Circle CCTP when ready
+        // For now, always use LiFi for cross-chain swaps
 
         // Default to LI.FI
         const isUSDC = this.isUSDCToken(params.fromTokenAddress);
@@ -155,7 +138,20 @@ export class BridgeService {
         return result.routes[0] as Route;
     }
 
-    static async swapSingleChain(route: Route): Promise<BridgeResult> {
+    static async swapSingleChain(route: Route, signer?: ethers.Signer): Promise<BridgeResult> {
+        // Configure SDK with provider if signer is provided
+        if (signer && typeof window !== 'undefined' && window.ethereum) {
+            try {
+                // Set up EVM provider for LiFi SDK v3
+                const provider = signer.provider as ethers.providers.Web3Provider;
+                config.setProviders([
+                    window.ethereum as any
+                ]);
+            } catch (err) {
+                console.warn('Failed to configure LiFi provider:', err);
+            }
+        }
+
         const result = await executeRoute(route);
         return {
             provider: 'lifi',
@@ -189,7 +185,7 @@ export class BridgeService {
             fromAmount,
             userAddress
         });
-        const swap = await this.swapSingleChain(route);
+        const swap = await this.swapSingleChain(route, signer);
         return {
             provider: swap.provider,
             txHash: swap.txHash,
@@ -204,21 +200,14 @@ export class BridgeService {
         from: any,
         to: any
     ): Promise<BridgeResult> {
-        // This is a simplified CCTP execution flow for the hackathon
-        // In a real app, you'd use the Circle SDK or manual contract calls to TokenMessenger
-        console.log(`[BridgeService] Executing Circle CCTP from ${from.chainId} to ${to.chainId}`);
-
-        // 1. Approve TokenMessenger
-        // 2. Call depositForBurn
-        // 3. Wait for attestation (off-chain)
-        // 4. Call receiveMessage on destination
-
-        // For demonstration, we'll return a successful status
-        // In the hackathon UI, this triggers a "Native Path" indicator
-        return {
-            provider: 'circle',
-            txHash: '0x' + Math.random().toString(16).slice(2, 66), // Mock hash for demo
-        };
+        // TODO: Implement Circle CCTP integration
+        // Steps required:
+        // 1. Approve TokenMessenger contract
+        // 2. Call depositForBurn on source chain
+        // 3. Wait for Circle attestation (off-chain)
+        // 4. Call receiveMessage on destination chain
+        
+        throw new Error('Circle CCTP integration not yet implemented. Please use LiFi for cross-chain swaps.');
     }
 
     private static isUSDCToken(address: string): boolean {

@@ -9,10 +9,8 @@ import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
-import { NETWORKS, ARBITRUM_TOKENS, getTokenAddresses } from "../../config";
-import { BridgeService } from "../../services/swap/bridge-service";
-import type { Route } from '@lifi/sdk';
-import { ethers } from "ethers";
+import { NETWORKS, getTokenAddresses } from "../../config";
+import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import {
   TabHeader,
   CollapsibleSection,
@@ -169,7 +167,7 @@ export default function SwapTab({
   }, [walletChainId, availableTokens]);
 
   // Check if on Arbitrum (different swap behavior)
-  const isArbitrum = walletChainId === NETWORKS.ARBITRUM_ONE.chainId;
+  const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);
 
   // Effect to update UI when swap status changes
   useEffect(() => {
@@ -266,126 +264,32 @@ export default function SwapTab({
     amount: string,
   ) => {
     console.log(
-      `Analyzing swap/bridge for ${amount} ${fromToken} to ${toToken}`,
+      `Initiating swap: ${amount} ${fromToken} to ${toToken}`,
     );
 
-    // Check if this is a cross-chain RWA bridge (to Arbitrum)
-    // Only bridge if we are NOT already on Arbitrum
-    const isRwa = ["PAXG"].includes(toToken);
-    const isOnCelo =
-      walletChainId === NETWORKS.CELO_MAINNET.chainId ||
-      walletChainId === NETWORKS.ALFAJORES.chainId;
-
-    if (isRwa && isOnCelo) {
-      console.log(
-        "Cross-chain RWA deployment detected. Using BridgeService...",
-      );
-      setSwapStatus("Preparing cross-chain bridge to Arbitrum...");
-      setSwapStep("bridging");
-
-      try {
-        if (!window.ethereum) throw new Error("No wallet detected");
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
-        const userAddress = await signer.getAddress();
-
-        // Map symbol to address for Arbitrum
-        const toTokenAddr =
-          (ARBITRUM_TOKENS as Record<string, string>)[toToken] ||
-          ARBITRUM_TOKENS.USDC;
-
-        // Resolve source token address on Celo
-        const celoTokenAddresses = getTokenAddresses(
-          NETWORKS.CELO_MAINNET.chainId,
-        ) as Record<string, string>;
-        const fromTokenAddr = (celoTokenAddresses[fromToken] ||
-          celoTokenAddresses[fromToken.toUpperCase()] ||
-          celoTokenAddresses[fromToken.toLowerCase()]) as string;
-
-        const result = await BridgeService.bridgeThenSwap(
-          signer,
-          userAddress,
-          amount,
-          { address: fromTokenAddr, chainId: 42220 }, // Celo Mainnet source
-          { address: toTokenAddr, chainId: 42161 }, // Arbitrum One target
-        );
-
-        if (result) {
-          // LI.FI execution result is in the result object
-          const txHash =
-            result.steps?.[0]?.execution?.process?.find(
-              (p: { type: string }) => p.type === "CROSS_CHAIN",
-            )?.txHash || result.steps?.[0]?.execution?.process?.[0]?.txHash;
-
-          if (txHash) setLocalSwapTxHash(txHash);
-          setSwapStatus(
-            `Success! Assets moved to Arbitrum ${toToken}. Check your wallet on Arbitrum.`,
-          );
-          setSwapStep("completed");
-        } else {
-          setSwapStatus(
-            "Bridge initiated. Please check your wallet for status.",
-          );
-          setSwapStep("completed");
-        }
-        return Promise.resolve();
-      } catch (err: unknown) {
-        console.error("Bridge failed:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-        setSwapStatus(`Bridge Error: ${errorMessage}`);
-        setSwapStep("error");
-        return Promise.reject(err);
-      }
-    }
-
-    if (isArbitrum && fromToken === "USDC" && toToken === "PAXG") {
-      try {
-        if (!window.ethereum) throw new Error("No wallet detected");
-        const provider = new ethers.providers.Web3Provider(window.ethereum);
-        const signer = provider.getSigner();
-        const userAddress = await signer.getAddress();
-        setSwapStatus("Finding best route on Arbitrum...");
-        setSwapStep("swapping");
-        const route = await BridgeService.getSingleChainSwapRoute({
-          chainId: NETWORKS.ARBITRUM_ONE.chainId,
-          fromTokenAddress: ARBITRUM_TOKENS.USDC,
-          toTokenAddress: ARBITRUM_TOKENS.PAXG,
-          fromAmount: amount,
-          userAddress,
-        });
-        const result = await BridgeService.swapSingleChain(route as Route);
-        const txHash = result.steps?.[0]?.execution?.process?.[0]?.txHash || "";
-        if (txHash) setLocalSwapTxHash(txHash);
-        setSwapStatus("Swap completed successfully!");
-        setSwapStep("completed");
-        return Promise.resolve();
-      } catch (err: unknown) {
-        console.error("Arbitrum swap failed:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Unknown error";
-        setSwapStatus(`Error: ${errorMessage}`);
-        setSwapStep("error");
-        return Promise.reject(err);
-      }
-    }
-
-    // Default internal swap logic...
-    console.log(
-      `Executing standard swap for ${amount} ${fromToken} to ${toToken}`,
-    );
     setSwapStatus("Initiating swap process...");
     setSwapStep("approving");
 
     try {
       if (!address) throw new Error("Wallet not connected");
 
+      // Use the swap hook which now delegates to SwapOrchestrator
+      // The orchestrator will automatically determine if this is:
+      // - Celo same-chain (use Mento)
+      // - Arbitrum same-chain (use LiFi)
+      // - Cross-chain (use LiFi Bridge)
       await performSwap({
         fromToken,
         toToken,
         amount,
-        onApprovalSubmitted: (hash) => setApprovalTxHash(hash),
-        onSwapSubmitted: (hash) => setLocalSwapTxHash(hash),
+        onApprovalSubmitted: (hash) => {
+          setApprovalTxHash(hash);
+          setSwapStatus("Approval submitted, waiting for confirmation...");
+        },
+        onSwapSubmitted: (hash) => {
+          setLocalSwapTxHash(hash);
+          setSwapStatus("Swap submitted, waiting for confirmation...");
+        },
       });
 
       setSwapStatus("Swap completed successfully!");

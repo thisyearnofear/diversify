@@ -9,6 +9,7 @@ import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
 import WealthJourneyWidget from "../WealthJourneyWidget";
 import { TabHeader, Card, CollapsibleSection, EmptyState, StatBadge, PrimaryButton, SecondaryButton } from "../shared/TabComponents";
+import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 
 interface OverviewTabProps {
   regionData: Array<{ region: string; value: number; color: string }>;
@@ -105,15 +106,15 @@ export default function OverviewTab({
         {!hasHoldings ? (
           <EmptyState
             icon="💰"
-            title={chainId === 42161 ? "No RWAs Found" : "No Stablecoins Found"}
-            description={chainId === 42161 
+            title={ChainDetectionService.isArbitrum(chainId) ? "No RWAs Found" : "No Stablecoins Found"}
+            description={ChainDetectionService.isArbitrum(chainId) 
               ? "Bridge assets to access Real-World Assets like Gold and Treasuries."
               : "Deposit funds to start protecting your savings from inflation."
             }
             action={{
-              label: chainId === 42161 ? "Bridge Assets" : "Get Started",
+              label: ChainDetectionService.isArbitrum(chainId) ? "Bridge Assets" : "Get Started",
               onClick: () => setActiveTab("swap"),
-              icon: <span>{chainId === 42161 ? "🌉" : "➕"}</span>,
+              icon: <span>{ChainDetectionService.isArbitrum(chainId) ? "🌉" : "➕"}</span>,
             }}
           />
         ) : (

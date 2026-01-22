@@ -9,6 +9,8 @@ import {
 import { EXCHANGE_RATES } from '../config/constants';
 import { NETWORKS } from '../config';
 import { TokenPriceService } from '../utils/api-services';
+import { ChainDetectionService } from '../services/swap/chain-detection.service';
+import { ProviderFactoryService } from '../services/swap/provider-factory.service';
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -95,10 +97,9 @@ export function useExpectedAmountOut({
   // Detect chain ID on mount
   useEffect(() => {
     const detectChain = async () => {
-      if (typeof window !== 'undefined' && window.ethereum) {
+      if (ProviderFactoryService.isWalletConnected()) {
         try {
-          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-          const detectedChainId = Number.parseInt(chainIdHex as string, 16);
+          const detectedChainId = await ProviderFactoryService.getCurrentChainId();
           setChainId(detectedChainId);
         } catch (err) {
           if (process.env.NODE_ENV === 'development') {
@@ -156,7 +157,7 @@ export function useExpectedAmountOut({
 
     try {
       // Short-circuit for Arbitrum: use live prices when possible
-      if (chainId === NETWORKS.ARBITRUM_ONE.chainId) {
+      if (ChainDetectionService.isArbitrum(chainId)) {
         const amountNum = Number.parseFloat(amount);
         const tokens = getTokenAddresses(NETWORKS.ARBITRUM_ONE.chainId) as Record<string, string>;
         const fromAddr = tokens[fromToken] || tokens[fromToken.toUpperCase()] || tokens[fromToken.toLowerCase()];
@@ -181,7 +182,7 @@ export function useExpectedAmountOut({
         return arbResult;
       }
       // Determine if we're on Alfajores testnet or Arbitrum
-      const isAlfajores = chainId === 44787;
+      const isAlfajores = ChainDetectionService.isTestnet(chainId) && ChainDetectionService.isCelo(chainId);
 
       // Get configuration
       const tokenList = getTokenAddresses(chainId || 42220) as Record<string, string>;

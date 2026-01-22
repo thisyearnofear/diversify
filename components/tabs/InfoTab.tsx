@@ -3,6 +3,7 @@ import { REGION_COLORS } from "../../constants/regions";
 import { useWalletContext } from "../WalletProvider";
 import { Card, CollapsibleSection, TabHeader } from "../shared/TabComponents";
 import { NETWORKS } from "../../config";
+import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 
 interface InfoTabProps {
   availableTokens: Array<{
@@ -15,9 +16,9 @@ interface InfoTabProps {
 export default function InfoTab({ availableTokens }: InfoTabProps) {
   const { address, chainId, isMiniPay, formatAddress } = useWalletContext();
 
-  // Filter tokens by current network
-  const isCelo = chainId === NETWORKS.CELO_MAINNET.chainId || chainId === NETWORKS.ALFAJORES.chainId;
-  const isArbitrum = chainId === NETWORKS.ARBITRUM_ONE.chainId;
+  // Use ChainDetectionService for all chain checks
+  const isCelo = ChainDetectionService.isCelo(chainId);
+  const isArbitrum = ChainDetectionService.isArbitrum(chainId);
 
   const displayTokens = isCelo
     ? availableTokens.filter((t) => !["PAXG"].includes(t.symbol))
@@ -25,13 +26,7 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
       ? availableTokens.filter((t) => ["USDC", "PAXG"].includes(t.symbol))
       : availableTokens;
 
-  const networkName = chainId === NETWORKS.ARBITRUM_ONE.chainId
-    ? "Arbitrum One"
-    : chainId === NETWORKS.ALFAJORES.chainId
-      ? "Celo Alfajores"
-      : chainId === NETWORKS.ARC_TESTNET.chainId
-        ? "Arc Testnet"
-        : "Celo Mainnet";
+  const networkName = ChainDetectionService.getNetworkName(chainId);
 
   return (
     <div className="space-y-4">

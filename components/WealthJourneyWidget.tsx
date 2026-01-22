@@ -1,5 +1,6 @@
 import React from 'react';
 import { useWalletContext } from './WalletProvider';
+import { ChainDetectionService } from '../services/swap/chain-detection.service';
 
 interface WealthJourneyWidgetProps {
   totalValue: number;
@@ -14,19 +15,20 @@ export default function WealthJourneyWidget({
 }: WealthJourneyWidgetProps) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _userRegion = userRegion; // Mark as intentionally unused
-  const { chainId } = useWalletContext(); // Removed unused switchNetwork
+  const { chainId } = useWalletContext();
 
-  // Determine Stage
-  let stage = 'accumulation'; // Default
+  // Determine journey stage based on chain
+  const isCelo = ChainDetectionService.isCelo(chainId);
+  const isArbitrum = ChainDetectionService.isArbitrum(chainId);
+
+  // Default stage
+  let stage = 'accumulation';
   let title = 'Step 1: Accumulation';
   let description = 'Start by converting your local currency into digital dollars (stablecoins) to stop inflation loss.';
   let cta = 'Deposit cUSD';
   let action = () => setActiveTab('swap');
   let icon = '🛡️';
   let progress = 33;
-
-  const isCelo = chainId === 42220 || chainId === 44787;
-  const isArbitrum = chainId === 42161;
 
   if (totalValue > 0) {
     if (isCelo) {

@@ -6,6 +6,7 @@ import { useWalletContext } from "./WalletProvider";
 import { NETWORKS, MAINNET_TOKENS, ARBITRUM_TOKENS } from "../config";
 import { BridgeService } from "../services/swap/bridge-service";
 import { ethers } from "ethers";
+import { ChainDetectionService } from "../services/swap/chain-detection.service";
 
 interface AgentWealthGuardProps {
     amount: number;
@@ -94,7 +95,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
     if (!inflationData) return null;
 
     const handleAnalyze = () => {
-        const networkName = chainId === 42220 ? 'Celo Mainnet' : chainId === 44787 ? 'Celo Alfajores' : 'Unknown Network';
+        const networkName = ChainDetectionService.getNetworkName(chainId);
         analyze(
             inflationData,
             amount,
@@ -136,7 +137,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
         if (!advice) return;
 
         // If advice is for Arbitrum but user is on Celo, trigger BRIDGE
-        if (advice.targetNetwork === 'Arbitrum' && chainId === 42220) {
+        if (advice.targetNetwork === 'Arbitrum' && ChainDetectionService.isCelo(chainId)) {
             try {
                 setBridgeState({ status: 'checking' });
 

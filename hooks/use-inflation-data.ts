@@ -183,11 +183,11 @@ export function useInflationData() {
         // Try improved multi-source service first
         const improvedData = await inflationService.getInflationData();
         
-        if (improvedData.source !== 'fallback') {
+        if (improvedData.source !== 'fallback' && improvedData.data?.countries) {
           console.log(`Using improved data from ${improvedData.source}`);
           
-          // Process the improved data
-          const countryData: InflationData[] = improvedData.countries.map((item: any) => ({
+          // Process the improved data - ensure countries array exists
+          const countryData: InflationData[] = (improvedData.data.countries || []).map((item: any) => ({
             country: item.country,
             region: COUNTRY_TO_REGION[item.countryCode] || 'Global',
             currency: getCurrencyFromCountryCode(item.countryCode),

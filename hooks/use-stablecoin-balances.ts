@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { getTokenAddresses, getNetworkConfig, ABIS } from '../config';
+import { getTokenAddresses, getNetworkConfig, ABIS, NETWORKS } from '../config';
 import { executeMulticall, type ContractCall } from '../utils/multicall';
+import { ChainDetectionService } from '../services/swap/chain-detection.service';
+import { ProviderFactoryService } from '../services/swap/provider-factory.service';
 
 interface StablecoinBalance {
   symbol: string;
@@ -170,20 +172,15 @@ export function useStablecoinBalances(address: string | undefined | null) {
         return;
       }
 
-      // For demo/testing purposes, use mock data if we're not on Celo network
-      // This prevents unnecessary API calls that might fail
-      if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
+      // Detect current chain
+      if (ProviderFactoryService.isWalletConnected()) {
         try {
-          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-          const currentChainId = Number.parseInt(chainIdHex as string, 16);
-
-          // Update chainId state
-          setChainId(currentChainId);
+          const detectedChainId = await ProviderFactoryService.getCurrentChainId();
+          setChainId(detectedChainId);
 
           // If not on a supported network, we simply won't fetch balances
           // The UI should handle the "unsupported network" state based on the chainId
-          const supportedChains = [42220, 44787, 5042002, 42161];
-          if (!supportedChains.includes(currentChainId)) {
+          if (!ChainDetectionService.isSupported(detectedChainId)) {
             setIsLoading(false);
             return;
           }
@@ -207,21 +204,20 @@ export function useStablecoinBalances(address: string | undefined | null) {
         }
       }
 
-      // Create provider for Celo based on the network
-      // Use the most recently detected chainId
-      const currentChainId = chainId || (typeof window !== 'undefined' && window.ethereum && window.ethereum.request ?
-        Number.parseInt(await window.ethereum.request({ method: 'eth_chainId' }) as string, 16) : null);
+      // Create provider for the current chain
+      const currentChainId = chainId || (ProviderFactoryService.isWalletConnected() ?
+        await ProviderFactoryService.getCurrentChainId() : null);
 
 
 
-      const isAlfajores = currentChainId === 44787;
-      const isArc = currentChainId === 5042002;
-      const isArbitrum = currentChainId === 42161;
+      const isAlfajores = ChainDetectionService.isTestnet(currentChainId) && ChainDetectionService.isCelo(currentChainId);
+      const isArc = ChainDetectionService.isArc(currentChainId);
+      const isArbitrum = ChainDetectionService.isArbitrum(currentChainId);
 
-      let providerUrl = 'https://forno.celo.org'; // Default
-      if (isAlfajores) providerUrl = 'https://alfajores-forno.celo-testnet.org';
-      if (isArc) providerUrl = 'https://rpc.testnet.arc.network';
-      if (isArbitrum) providerUrl = 'https://arb1.arbitrum.io/rpc';
+      let providerUrl = NETWORKS.CELO_MAINNET.rpcUrl;
+      if (isAlfajores) providerUrl = NETWORKS.ALFAJORES.rpcUrl;
+      if (isArc) providerUrl = NETWORKS.ARC_TESTNET.rpcUrl;
+      if (isArbitrum) providerUrl = NETWORKS.ARBITRUM_ONE.rpcUrl;
 
 
       const provider = new ethers.providers.JsonRpcProvider(providerUrl);
@@ -325,10 +321,9 @@ export function useStablecoinBalances(address: string | undefined | null) {
   }, [address, chainId, calculateTotals]);
 
   const refreshChainId = useCallback(async () => {
-    if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
+    if (ProviderFactoryService.isWalletConnected()) {
       try {
-        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-        const detectedChainId = Number.parseInt(chainIdHex as string, 16);
+        const detectedChainId = await ProviderFactoryService.getCurrentChainId();
         setChainId(detectedChainId);
         return detectedChainId;
       } catch (err) {
@@ -349,10 +344,9 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
     const handleChainChanged = async () => {
       // Refresh chain ID
-      if (typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
+      if (ProviderFactoryService.isWalletConnected()) {
         try {
-          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
-          const newChainId = Number.parseInt(chainIdHex as string, 16);
+          const newChainId = await ProviderFactoryService.getCurrentChainId();
 
           // Update state and refetch balances
           setChainId(newChainId);

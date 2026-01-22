@@ -13,6 +13,8 @@ import ErrorBoundary from "../components/ErrorBoundary";
 import TabNavigation from "../components/TabNavigation";
 import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
+import { ChainDetectionService } from "../services/swap/chain-detection.service";
+import { NETWORKS } from "../config";
 import AnalyticsTab from "../components/tabs/AnalyticsTab";
 import StrategiesTab from "../components/tabs/StrategiesTab";
 import SwapTab from "../components/tabs/SwapTab";
@@ -135,7 +137,7 @@ export default function DiversiFiPage() {
           // It sets chainId state. 
           
           // Let's implement a robust check here.
-           (![42220, 44787, 5042002, 42161].includes(chainId || 0) && chainId !== null) && (
+           (!ChainDetectionService.isSupported(chainId) && chainId !== null) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
                 <div className="mx-auto bg-amber-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
@@ -149,25 +151,25 @@ export default function DiversiFiPage() {
                 </p>
                 <div className="space-y-3">
                   <button
-                    onClick={() => switchNetwork(42220)}
+                    onClick={() => switchNetwork(NETWORKS.CELO_MAINNET.chainId)}
                     className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
                   >
                     <span>Switch to Celo</span>
                   </button>
                   <button
-                    onClick={() => switchNetwork(42161)}
+                    onClick={() => switchNetwork(NETWORKS.ARBITRUM_ONE.chainId)}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
                   >
                     <span>Switch to Arbitrum One</span>
                   </button>
                   <button
-                    onClick={() => switchNetwork(5042002)}
+                    onClick={() => switchNetwork(NETWORKS.ARC_TESTNET.chainId)}
                     className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
                   >
                     <span>Switch to Arc Testnet</span>
                   </button>
                   <button
-                    onClick={() => switchNetwork(44787)}
+                    onClick={() => switchNetwork(NETWORKS.ALFAJORES.chainId)}
                     className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl border border-gray-200 transition-colors shadow-sm"
                   >
                     Switch to Alfajores (Testnet)

@@ -6,6 +6,7 @@ import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../WalletProvider";
 import { Card, TabHeader, FeatureCard, PrimaryButton, CollapsibleSection, StatBadge } from "../shared/TabComponents";
 import { NETWORKS } from "@/config";
+import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -30,8 +31,8 @@ export default function ProtectionTab({
   setActiveTab
 }: ProtectionTabProps) {
   const { chainId } = useWalletContext();
-  const isCelo = chainId === NETWORKS.CELO_MAINNET.chainId || chainId === NETWORKS.ALFAJORES.chainId;
-  const isArbitrum = chainId === NETWORKS.ARBITRUM_ONE.chainId;
+  const isCelo = ChainDetectionService.isCelo(chainId);
+  const isArbitrum = ChainDetectionService.isArbitrum(chainId);
 
   const currentRegions = regionData
     .filter((item) => item.value > 0)

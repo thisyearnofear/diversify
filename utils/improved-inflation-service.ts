@@ -138,8 +138,9 @@ export class ImprovedInflationService {
       }
     }
 
+    // Return empty array if no results, to avoid undefined
     return {
-      countries: results,
+      countries: results.length > 0 ? results : [],
       source: 'statbureau',
       lastUpdated: new Date().toISOString()
     };

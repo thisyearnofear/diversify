@@ -6,6 +6,9 @@ export interface SwapParams {
     fromToken: string;
     toToken: string;
     amount: string;
+    fromChainId: number;
+    toChainId: number;
+    userAddress: string;
     slippageTolerance?: number;
 }
 

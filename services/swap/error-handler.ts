@@ -3,6 +3,8 @@
  * Provides user-friendly error messages
  */
 
+import { ChainDetectionService } from './chain-detection.service';
+
 export class SwapErrorHandler {
     static handle(error: unknown, context: string = 'swap'): string {
         const errorMsg = error instanceof Error ? error.message : String(error);
@@ -82,6 +84,6 @@ export class SwapErrorHandler {
     }
 
     static shouldSimulateSwap(error: unknown, chainId: number): boolean {
-        return chainId === 44787 && this.isTestnetError(error);
+        return ChainDetectionService.isTestnet(chainId) && this.isTestnetError(error);
     }
 }
