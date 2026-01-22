@@ -5,7 +5,6 @@ import AgentWealthGuard from "../AgentWealthGuard";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../WalletProvider";
 import { Card, TabHeader, FeatureCard, PrimaryButton, CollapsibleSection, StatBadge } from "../shared/TabComponents";
-import { NETWORKS } from "@/config";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 
 interface ProtectionTabProps {

@@ -2,7 +2,6 @@ import React from "react";
 import { REGION_COLORS } from "../../constants/regions";
 import { useWalletContext } from "../WalletProvider";
 import { Card, CollapsibleSection, TabHeader } from "../shared/TabComponents";
-import { NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 
 interface InfoTabProps {

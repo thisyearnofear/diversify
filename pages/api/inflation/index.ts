@@ -127,6 +127,16 @@ async function fetchFromIMF(countryCodes: string[]) {
   };
 }
 
+interface WorldBankIndicatorItem {
+  countryiso3code: string;
+  date: string;
+  value: number | null;
+  country: {
+    id: string;
+    value: string;
+  };
+}
+
 async function fetchFromWorldBank(countryCodes: string[]) {
   const currentYear = new Date().getFullYear();
   const countryParam = countryCodes.join(';');
@@ -147,19 +157,26 @@ async function fetchFromWorldBank(countryCodes: string[]) {
   }
 
   // Group by country and get most recent value
-  const countryLatest: Record<string, any> = {};
+  const countryLatest: Record<string, {
+    country: string;
+    countryCode: string;
+    value: number;
+    year: number;
+    source: string;
+  }> = {};
   
   data[1]
-    .filter((item: any) => item.value !== null)
-    .forEach((item: any) => {
+    .filter((item: WorldBankIndicatorItem) => item.value !== null)
+    .forEach((item: WorldBankIndicatorItem) => {
       const code = item.countryiso3code;
       const year = parseInt(item.date);
+      const value = item.value as number;
       
       if (!countryLatest[code] || year > countryLatest[code].year) {
         countryLatest[code] = {
           country: item.country.value,
           countryCode: code,
-          value: parseFloat(item.value.toFixed(1)),
+          value: parseFloat(value.toFixed(1)),
           year,
           source: 'worldbank'
         };

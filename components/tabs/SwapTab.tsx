@@ -9,7 +9,7 @@ import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
-import { NETWORKS, getTokenAddresses } from "../../config";
+import { NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import {
   TabHeader,
