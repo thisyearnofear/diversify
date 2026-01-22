@@ -11,6 +11,7 @@ import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
 import { NETWORKS, ARBITRUM_TOKENS, getTokenAddresses } from "../../config";
 import { BridgeService } from "../../services/swap/bridge-service";
+import type { Route } from '@lifi/sdk';
 import { ethers } from "ethers";
 import {
   TabHeader,
@@ -353,7 +354,7 @@ export default function SwapTab({
           fromAmount: amount,
           userAddress,
         });
-        const result = await BridgeService.swapSingleChain(route as any);
+        const result = await BridgeService.swapSingleChain(route as Route);
         const txHash = result.steps?.[0]?.execution?.process?.[0]?.txHash || "";
         if (txHash) setLocalSwapTxHash(txHash);
         setSwapStatus("Swap completed successfully!");

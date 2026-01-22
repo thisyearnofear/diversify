@@ -42,35 +42,32 @@ export class ApiEfficiencyMonitor {
    * Warm up cache with frequently requested data
    */
   private async warmUpCache(): Promise<void> {
-    const warmupFunctions = [
-      // Popular exchange rates
-      () => unifiedCache.getOrFetch(
-        'exchange-USD-EUR',
-        () => this.mockApiCall('exchange', { from: 'USD', to: 'EUR' }),
-        'volatile'
-      ),
-      () => unifiedCache.getOrFetch(
-        'exchange-USD-GBP',
-        () => this.mockApiCall('exchange', { from: 'USD', to: 'GBP' }),
-        'volatile'
-      ),
-      
-      // Major inflation data
-      () => unifiedCache.getOrFetch(
-        'inflation-major',
-        () => this.mockApiCall('inflation', { countries: ['USA', 'DEU', 'GBR', 'JPN'] }),
-        'moderate'
-      ),
-      
-      // Common currency pairs
-      () => unifiedCache.getOrFetch(
-        'exchange-EUR-USD',
-        () => this.mockApiCall('exchange', { from: 'EUR', to: 'USD' }),
-        'volatile'
-      )
-    ];
-
-    await unifiedCache.warmCache(warmupFunctions);
+    // Popular exchange rates
+    await unifiedCache.getOrFetch(
+      'exchange-USD-EUR',
+      () => this.mockApiCall('exchange', { from: 'USD', to: 'EUR' }),
+      'volatile'
+    );
+    
+    await unifiedCache.getOrFetch(
+      'exchange-USD-GBP',
+      () => this.mockApiCall('exchange', { from: 'USD', to: 'GBP' }),
+      'volatile'
+    );
+    
+    // Major inflation data
+    await unifiedCache.getOrFetch(
+      'inflation-major',
+      () => this.mockApiCall('inflation', { countries: ['USA', 'DEU', 'GBR', 'JPN'] }),
+      'moderate'
+    );
+    
+    // Common currency pairs
+    await unifiedCache.getOrFetch(
+      'exchange-EUR-USD',
+      () => this.mockApiCall('exchange', { from: 'EUR', to: 'USD' }),
+      'volatile'
+    );
   }
 
   /**

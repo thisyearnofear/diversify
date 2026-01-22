@@ -215,8 +215,8 @@ export function useInflationData() {
         const countryData: InflationData[] = [];
 
         // Convert World Bank data to our format
-        if (worldBankData.countries && worldBankData.countries.length > 0) {
-          worldBankData.countries.forEach((item: {
+        if (worldBankData.data.countries && worldBankData.data.countries.length > 0) {
+          worldBankData.data.countries.forEach((item: {
             country: string;
             countryCode: string;
             value: number;
@@ -232,7 +232,8 @@ export function useInflationData() {
                 currency: getCurrencyFromCountryCode(countryCode),
                 rate: item.value,
                 year: item.year,
-                source: worldBankData.source
+                source: worldBankData.source.includes('api') ? 'api' : 
+                       worldBankData.source.includes('cache') ? 'cache' : 'fallback'
               });
             }
           });
@@ -241,7 +242,8 @@ export function useInflationData() {
         // Group by region and calculate average rates
         const regionalData = processCountryDataIntoRegions(countryData);
         setInflationData(regionalData);
-        setDataSource(worldBankData.source);
+        setDataSource(worldBankData.source.includes('api') ? 'api' : 
+                     worldBankData.source.includes('cache') ? 'cache' : 'fallback');
       } catch (err: any) {
         console.error('Error in inflation data hook:', err);
         setError(err.message || 'Failed to fetch inflation data');

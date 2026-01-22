@@ -115,7 +115,7 @@ export class ImprovedInflationService {
     }
 
     const countries = countryCodes
-      .map(code => COUNTRY_MAPPINGS[code]?.statbureau)
+      .map(code => COUNTRY_MAPPINGS[code as keyof typeof COUNTRY_MAPPINGS]?.statbureau)
       .filter(Boolean);
 
     const results = [];
@@ -249,27 +249,6 @@ export class ImprovedInflationService {
     return 'UNKNOWN';
   }
 
-  /**
-   * Clear cache for specific keys or all
-   */
-  clearCache(key?: string): void {
-    if (key) {
-      this.cache.delete(key);
-    } else {
-      this.cache.clear();
-    }
-  }
-
-  /**
-   * Get cache statistics
-   */
-  getCacheStats(): { size: number; oldest: number | null } {
-    const timestamps = Array.from(this.cache.values()).map(item => item.timestamp);
-    return {
-      size: this.cache.size,
-      oldest: timestamps.length > 0 ? Math.min(...timestamps) : null
-    };
-  }
 }
 
 // Export singleton instance

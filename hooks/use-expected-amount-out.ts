@@ -8,6 +8,7 @@ import {
 } from '../config';
 import { EXCHANGE_RATES } from '../config/constants';
 import { NETWORKS } from '../config';
+import { TokenPriceService } from '../utils/api-services';
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -154,18 +155,33 @@ export function useExpectedAmountOut({
     if (cached) return cached;
 
     try {
-      // Short-circuit for Arbitrum: use local price ratios, no Mento broker
+      // Short-circuit for Arbitrum: use live prices when possible
       if (chainId === NETWORKS.ARBITRUM_ONE.chainId) {
         const amountNum = Number.parseFloat(amount);
-        const fromRate = EXCHANGE_RATES[fromToken] ?? 1;
-        const toRate = EXCHANGE_RATES[toToken] ?? 1;
+        const tokens = getTokenAddresses(NETWORKS.ARBITRUM_ONE.chainId) as Record<string, string>;
+        const fromAddr = tokens[fromToken] || tokens[fromToken.toUpperCase()] || tokens[fromToken.toLowerCase()];
+        const toAddr = tokens[toToken] || tokens[toToken.toUpperCase()] || tokens[toToken.toLowerCase()];
+
+        const fromUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: NETWORKS.ARBITRUM_ONE.chainId,
+          address: fromAddr,
+          symbol: fromToken
+        });
+        const toUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: NETWORKS.ARBITRUM_ONE.chainId,
+          address: toAddr,
+          symbol: toToken
+        });
+
+        // Final fallback to static rates
+        const fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] ?? 1);
+        const toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] ?? 1);
         const arbResult = ((amountNum * fromRate) / toRate).toString();
         setCachedResult(fromToken, toToken, amount, chainId, arbResult);
         return arbResult;
       }
       // Determine if we're on Alfajores testnet or Arbitrum
       const isAlfajores = chainId === 44787;
-      const isArbitrum = chainId === 42161;
 
       // Get configuration
       const tokenList = getTokenAddresses(chainId || 42220) as Record<string, string>;
@@ -177,19 +193,23 @@ export function useExpectedAmountOut({
       const fromTokenAddress = tokenList[fromToken as keyof typeof tokenList];
       const toTokenAddress = tokenList[toToken as keyof typeof tokenList];
 
-      if (!fromTokenAddress || !toTokenAddress || isArbitrum) {
+      if (!fromTokenAddress || !toTokenAddress) {
         if (process.env.NODE_ENV === 'development') {
           console.warn(`Using fallback calculation for ${fromToken}/${toToken} on chain ${chainId}`);
         }
 
-        // Use fallback calculation based on exchange rates
-        // This is useful when the Mento SDK can't find an exchange
-        let fromRate = EXCHANGE_RATES[fromToken] || 1;
-        let toRate = EXCHANGE_RATES[toToken] || 1;
-
-        // For Alfajores testnet, use hardcoded rates for common tokens
+        const amountNum = Number.parseFloat(amount);
+        const fromUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          symbol: fromToken
+        });
+        const toUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          symbol: toToken
+        });
+        let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
+        let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
         if (isAlfajores) {
-          // Default rates for Alfajores testnet
           if (fromToken === 'CUSD') fromRate = 1;
           else if (fromToken === 'CEUR') fromRate = 1.08;
           else if (fromToken === 'CREAL') fromRate = 0.2;
@@ -202,7 +222,6 @@ export function useExpectedAmountOut({
           else if (fromToken === 'CCAD') fromRate = 0.74;
           else if (fromToken === 'CAUD') fromRate = 0.66;
           else if (fromToken === 'PUSO') fromRate = 0.0179;
-
           if (toToken === 'CUSD') toRate = 1;
           else if (toToken === 'CEUR') toRate = 1.08;
           else if (toToken === 'CREAL') toRate = 0.2;
@@ -216,14 +235,7 @@ export function useExpectedAmountOut({
           else if (toToken === 'CAUD') toRate = 0.66;
           else if (toToken === 'PUSO') toRate = 0.0179;
         }
-
-        // Calculate expected output based on exchange rates
-        // If fromToken is CUSD (rate=1) and toToken is CKES (rate=0.0078),
-        // and amount is 10 CUSD, then output would be 10 / 0.0078 = 1282.05 CKES
-        const amountNum = Number.parseFloat(amount);
-        const expectedOutput = (amountNum * fromRate) / toRate;
-
-        const result = expectedOutput.toString();
+        const result = ((amountNum * fromRate) / toRate).toString();
         setCachedResult(fromToken, toToken, amount, chainId, result);
         return result;
       }
@@ -416,13 +428,22 @@ export function useExpectedAmountOut({
           }
         }
 
-        // Use fallback calculation based on exchange rates
-        let fromRate = EXCHANGE_RATES[fromToken] || 1;
-        let toRate = EXCHANGE_RATES[toToken] || 1;
+        const amountNum = Number.parseFloat(amount);
+        const fromUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          address: tokenList[fromToken as keyof typeof tokenList],
+          symbol: fromToken
+        });
+        const toUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          address: tokenList[toToken as keyof typeof tokenList],
+          symbol: toToken
+        });
+        let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
+        let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
 
         // For Alfajores testnet, use hardcoded rates for common tokens
         if (isAlfajores) {
-          // Default rates for Alfajores testnet
           if (fromToken === 'CUSD') fromRate = 1;
           else if (fromToken === 'CEUR') fromRate = 1.08;
           else if (fromToken === 'CREAL') fromRate = 0.2;
@@ -450,7 +471,6 @@ export function useExpectedAmountOut({
           else if (toToken === 'PUSO') toRate = 0.0179;
         }
 
-        const amountNum = Number.parseFloat(amount);
         const expectedOutput = (amountNum * fromRate) / toRate;
 
         const result = expectedOutput.toString();
@@ -483,13 +503,22 @@ export function useExpectedAmountOut({
           console.error("Error getting rate from Mento:", rateError);
         }
 
-        // If Mento rate call fails, use fallback calculation
-        let fromRate = EXCHANGE_RATES[fromToken] || 1;
-        let toRate = EXCHANGE_RATES[toToken] || 1;
+        const amountNum = Number.parseFloat(amount);
+        const fromUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          address: tokenList[fromToken as keyof typeof tokenList],
+          symbol: fromToken
+        });
+        const toUsd = await TokenPriceService.getTokenUsdPrice({
+          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          address: tokenList[toToken as keyof typeof tokenList],
+          symbol: toToken
+        });
+        let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
+        let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
 
         // For Alfajores testnet, use hardcoded rates for common tokens
         if (isAlfajores) {
-          // Default rates for Alfajores testnet
           if (fromToken === 'CUSD') fromRate = 1;
           else if (fromToken === 'CEUR') fromRate = 1.08;
           else if (fromToken === 'CREAL') fromRate = 0.2;
@@ -517,7 +546,6 @@ export function useExpectedAmountOut({
           else if (toToken === 'PUSO') toRate = 0.0179;
         }
 
-        const amountNum = Number.parseFloat(amount);
         const expectedOutput = (amountNum * fromRate) / toRate;
 
         const result = expectedOutput.toString();

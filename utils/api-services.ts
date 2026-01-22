@@ -8,6 +8,7 @@
 
 import { unifiedCache, CacheCategory } from './unified-cache-service';
 import { circuitBreakerManager } from './circuit-breaker-service';
+import { EXCHANGE_RATES } from '../config/constants';
 
 // Cache durations
 const CACHE_DURATIONS = {
@@ -22,15 +23,78 @@ const CACHE_KEYS = {
 };
 
 /**
+ * World Bank API Service
+ */
+export const WorldBankService = {
+  /**
+   * Get inflation data for all countries
+   * @param year Year to get data for (defaults to most recent)
+   * @returns Inflation data by country
+   */
+  getInflationData: async (year?: number) => {
+    const cacheKey = `worldbank-inflation-${year || 'latest'}`;
+    
+    // Simple caching without circuit breaker for now
+    return unifiedCache.getOrFetch(
+      cacheKey,
+      () => WorldBankService.fetchInflationData(year),
+      'moderate'
+    );
+  },
+
+  /**
+   * Internal method to fetch data from World Bank API
+   */
+  fetchInflationData: async (year?: number): Promise<{ data: any; source: string }> => {
+    // Build URL
+    let url = 'https://api.worldbank.org/v2/country/all/indicator/FP.CPI.TOTL.ZG?format=json&per_page=300';
+    if (year) {
+      url += `&date=${year}`;
+    } else {
+      // Get last 2 years of data to ensure we have recent data
+      const currentYear = new Date().getFullYear();
+      url += `&date=${currentYear - 2}:${currentYear}`;
+    }
+
+    // Make API request
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`World Bank API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Check if API returned valid data
+    if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1])) {
+      throw new Error('Invalid World Bank API response format');
+    }
+
+    // Extract country inflation data
+    const countries = data[1]
+      .filter((item: any) => item.value !== null)
+      .map((item: any) => ({
+        country: item.country.value,
+        countryCode: item.countryiso3code,
+        value: item.value,
+        year: Number.parseInt(item.date)
+      }));
+
+    return {
+      data: {
+        countries,
+        source: 'worldbank',
+        lastUpdated: new Date().toISOString()
+      },
+      source: 'worldbank'
+    };
+  },
+};
+
+/**
  * Alpha Vantage API Service
  */
 export const AlphaVantageService = {
-  private readonly circuitBreaker = circuitBreakerManager.getCircuit('alphavantage', {
-    failureThreshold: 5,
-    timeout: 60000,
-    successThreshold: 3
-  }),
-
   /**
    * Get API key from environment variables
    */
@@ -48,22 +112,18 @@ export const AlphaVantageService = {
   getExchangeRate: async (fromCurrency: string, toCurrency: string) => {
     const cacheKey = `exchange-rate-${fromCurrency}-${toCurrency}`;
     
-    return this.circuitBreaker.callWithFallback(
-      async () => {
-        return unifiedCache.getOrFetch(
-          cacheKey,
-          () => this.fetchExchangeRate(fromCurrency, toCurrency),
-          'volatile' // Exchange rates change frequently
-        );
-      },
-      () => getFallbackExchangeRate(fromCurrency, toCurrency)
+    // Simple caching without circuit breaker for now
+    return unifiedCache.getOrFetch(
+      cacheKey,
+      () => AlphaVantageService.fetchExchangeRate(fromCurrency, toCurrency),
+      'volatile'
     );
   },
 
   /**
    * Internal method to fetch exchange rate
    */
-  private async fetchExchangeRate(fromCurrency: string, toCurrency: string): Promise<{ data: any; source: string }> {
+  fetchExchangeRate: async (fromCurrency: string, toCurrency: string): Promise<{ data: any; source: string }> => {
     // Call our internal API proxy
     const response = await fetch(
       `/api/finance/proxy?from_currency=${fromCurrency}&to_currency=${toCurrency}`
@@ -191,129 +251,167 @@ export const AlphaVantageService = {
 };
 
 /**
- * World Bank API Service
+ * Token Price Service
+ * Live USD pricing for on-chain tokens with caching and multi-provider fallback
  */
-export const WorldBankService = {
-  private readonly circuitBreaker = circuitBreakerManager.getCircuit('worldbank', {
-    failureThreshold: 3,
-    timeout: 30000,
-    successThreshold: 2
-  }),
-
+export const TokenPriceService = {
   /**
-   * Get inflation data for all countries
-   * @param year Year to get data for (defaults to most recent)
-   * @returns Inflation data by country
+   * Get USD price for a token by chain and address, with optional symbol hint
    */
-  getInflationData: async (year?: number) => {
-    const cacheKey = `worldbank-inflation-${year || 'latest'}`;
-    
-    return this.circuitBreaker.callWithFallback(
+  async getTokenUsdPrice(params: {
+    chainId: number;
+    address?: string;
+    symbol?: string;
+  }): Promise<number | null> {
+    const cacheKey = `token-usd-${params.chainId}-${(params.address || params.symbol || '').toLowerCase()}`;
+
+    const result = await unifiedCache.getOrFetch(
+      cacheKey,
       async () => {
-        return unifiedCache.getOrFetch(
-          cacheKey,
-          () => this.fetchInflationData(year),
-          'moderate'
-        );
+        // Try DefiLlama first for address-based lookups
+        if (params.address) {
+          const defiLlamaPrice = await this.fetchDefiLlamaPrice(params.chainId, params.address);
+          if (typeof defiLlamaPrice === 'number') {
+            return { data: defiLlamaPrice, source: 'defillama' as const };
+          }
+        }
+
+        // Try CoinGecko for symbol-based lookups
+        if (params.symbol) {
+          const cgId = this.mapToCoingeckoId(params.symbol);
+          if (cgId) {
+            const coingeckoPrice = await this.fetchCoingeckoPrice(cgId);
+            if (typeof coingeckoPrice === 'number') {
+              return { data: coingeckoPrice, source: 'coingecko' as const };
+            }
+          }
+        }
+
+        // Return null to trigger fallback logic in calling code
+        return { data: null, source: 'fallback' as const };
       },
-      () => getFallbackInflationData()
+      'volatile'
     );
+    
+    return result.data ?? null;
   },
 
   /**
-   * Internal method to fetch data from World Bank API
+   * Get expected amount out calculation with live prices
+   * This consolidates the pricing logic from use-expected-amount-out hook
    */
-  private async fetchInflationData(year?: number): Promise<{ data: any; source: string }> {
-    // Build URL
-    let url = 'https://api.worldbank.org/v2/country/all/indicator/FP.CPI.TOTL.ZG?format=json&per_page=300';
-    if (year) {
-      url += `&date=${year}`;
-    } else {
-      // Get last 2 years of data to ensure we have recent data
-      const currentYear = new Date().getFullYear();
-      url += `&date=${currentYear - 2}:${currentYear}`;
-    }
-
-    // Make API request
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`World Bank API error: ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    // Check if API returned valid data
-    if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1])) {
-      throw new Error('Invalid World Bank API response format');
-    }
-
-    // Extract country inflation data
-    const countries = data[1]
-      .filter((item: any) => item.value !== null)
-      .map((item: any) => ({
-        country: item.country.value,
-        countryCode: item.countryiso3code,
-        value: item.value,
-        year: Number.parseInt(item.date)
-      }));
-
-    return {
-      data: {
-        countries,
-        source: 'worldbank',
-        lastUpdated: new Date().toISOString()
-      },
-      source: 'worldbank'
-    };
-  },
-
-  /**
-   * Get inflation data for a specific region
-   * @param regionCode World Bank region code
-   * @param year Year to get data for (defaults to most recent)
-   * @returns Inflation data for countries in the region
-   */
-  getRegionalInflationData: async (
-    regionCode: string,
-    year?: number
-  ) => {
+  async getExpectedAmountOut(params: {
+    fromToken: string;
+    toToken: string;
+    amount: string;
+    chainId: number;
+    getTokenAddresses: (chainId: number) => Record<string, string>;
+  }): Promise<{ amount: string; source: string }> {
+    const { fromToken, toToken, amount, chainId, getTokenAddresses } = params;
+    
     try {
-      const cacheKey = `${CACHE_KEYS.WORLD_BANK_INFLATION}region-${regionCode}-${year || 'latest'}`;
-
-      // Check cache first
-      const cachedData = getCachedData(cacheKey, CACHE_DURATIONS.INFLATION_DATA);
-      if (cachedData) {
-        return { ...cachedData, source: 'cache' };
+      const amountNum = Number.parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        return { amount: "0", source: "invalid-input" };
       }
 
-      // Get all inflation data
-      const allData = await WorldBankService.getInflationData(year);
+      const tokens = getTokenAddresses(chainId);
+      const fromAddr = tokens[fromToken] || tokens[fromToken.toUpperCase()] || tokens[fromToken.toLowerCase()];
+      const toAddr = tokens[toToken] || tokens[toToken.toUpperCase()] || tokens[toToken.toLowerCase()];
 
-      // Filter by region (using our mapping)
-      const regionCountries = REGION_COUNTRY_MAPPING[regionCode] || [];
-      const countries = allData.countries.filter((country: {
-        country: string;
-        countryCode: string;
-        value: number;
-        year: number;
-      }) =>
-        regionCountries.includes(country.countryCode)
-      );
+      // Fetch live prices with proper fallback chain
+      const fromUsd = await this.getTokenUsdPrice({
+        chainId,
+        address: fromAddr,
+        symbol: fromToken
+      });
+      
+      const toUsd = await this.getTokenUsdPrice({
+        chainId,
+        address: toAddr,
+        symbol: toToken
+      });
 
-      const result = {
-        countries,
-        source: allData.source
-      };
-
-      // Cache the result
-      setCachedData(cacheKey, result);
-
-      return result;
+      // Use live prices when available, fallback to static rates
+      const fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] ?? 1);
+      const toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] ?? 1);
+      
+      const resultAmount = ((amountNum * fromRate) / toRate).toString();
+      const source = (typeof fromUsd === 'number' && typeof toUsd === 'number') 
+        ? 'live-prices' 
+        : 'mixed-prices';
+      
+      return { amount: resultAmount, source };
     } catch (error) {
-      console.error(`Error fetching regional inflation data for ${regionCode}:`, error);
-      return getFallbackRegionalInflationData(regionCode);
+      console.warn('Error in getExpectedAmountOut:', error);
+      // Ultimate fallback
+      return { amount: "0", source: "error" };
     }
+  },
+
+  /**
+   * DefiLlama price by chain/address
+   */
+  async fetchDefiLlamaPrice(chainId: number, address: string): Promise<number | null> {
+    try {
+      const prefix = this.getDefiLlamaPrefix(chainId);
+      if (!prefix) return null;
+      const url = `https://coins.llama.fi/prices/current/${prefix}:${address.toLowerCase()}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const key = `${prefix}:${address.toLowerCase()}`;
+      const price = data?.coins?.[key]?.price;
+      return typeof price === 'number' ? price : null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Coingecko simple price
+   */
+  async fetchCoingeckoPrice(id: string, vsCurrency = 'usd'): Promise<number | null> {
+    try {
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=${vsCurrency}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const price = data?.[id]?.[vsCurrency];
+      return typeof price === 'number' ? price : null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Map our symbols to Coingecko IDs (minimal, grow as needed)
+   */
+  mapToCoingeckoId(symbol?: string): string | null {
+    if (!symbol) return null;
+    const idMap: Record<string, string> = {
+      USDC: 'usd-coin',
+      PAXG: 'pax-gold',
+      CUSD: 'celo-dollar',
+      CEUR: 'celo-euro',
+    };
+    return idMap[symbol.toUpperCase()] || null;
+  },
+
+  /**
+   * DefiLlama chain prefix by chainId
+   */
+  getDefiLlamaPrefix(chainId: number): string | null {
+    const map: Record<number, string> = {
+      42161: 'arbitrum',
+      1: 'ethereum',
+      137: 'polygon',
+      10: 'optimism',
+      43114: 'avalanche',
+      42220: 'celo',
+      44787: 'celo', // DefiLlama may not have prices for testnets
+    };
+    return map[chainId] || null;
   }
 };
 

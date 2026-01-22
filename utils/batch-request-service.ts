@@ -70,7 +70,7 @@ export class BatchRequestService {
   /**
    * Execute a specific batch
    */
-  private async executeBatch(endpoint: string, batchKey: string): void {
+  private async executeBatch(endpoint: string, batchKey: string): Promise<void> {
     const endpointBatches = this.pendingBatches.get(endpoint);
     if (!endpointBatches) return;
 

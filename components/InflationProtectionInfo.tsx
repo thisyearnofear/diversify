@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { useInflationData } from "../hooks/use-inflation-data";
-import { useDataFreshness } from "../hooks/use-data-freshness";
 import type { Region } from "../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
 import RealLifeScenario from "./RealLifeScenario";
