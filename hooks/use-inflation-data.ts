@@ -342,11 +342,15 @@ export function useInflationData() {
     if (normalizedStablecoin === 'CXOF' || normalizedStablecoin === 'EXOF') {
       // Get the inflation rate for XOF directly
       const xofData = inflationData['Africa']?.countries.find(c => c.currency === 'XOF');
-      return xofData ? xofData.rate : inflationData['Africa']?.avgRate || 3.5; // Fallback to region average or 3.5%
+      const rate = xofData ? xofData.rate : inflationData['Africa']?.avgRate || 3.5;
+      console.log(`[Inflation] ${stablecoin} -> XOF rate: ${rate}`);
+      return rate;
     }
 
     if (normalizedStablecoin === 'USDC') {
-      return getInflationRateForCurrency('USD');
+      const rate = getInflationRateForCurrency('USD');
+      console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
+      return rate;
     }
 
     // Find the currency that corresponds to this stablecoin
@@ -354,9 +358,14 @@ export function useInflationData() {
       key => CURRENCY_TO_STABLECOIN[key].toUpperCase() === normalizedStablecoin
     );
 
-    if (!currency) return 0;
+    if (!currency) {
+      console.warn(`[Inflation] No currency mapping found for ${stablecoin}`);
+      return 0;
+    }
 
-    return getInflationRateForCurrency(currency);
+    const rate = getInflationRateForCurrency(currency);
+    console.log(`[Inflation] ${stablecoin} -> ${currency} rate: ${rate}`);
+    return rate;
   };
 
   // Get region for a specific stablecoin

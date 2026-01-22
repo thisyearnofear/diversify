@@ -199,7 +199,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                     : "text-green-600"
                 }`}
               >
-                {inflationRate.toFixed(1)}%
+                {isNaN(inflationRate) || inflationRate === undefined ? '—' : inflationRate.toFixed(1) + '%'}
               </span>
             </div>
           </div>

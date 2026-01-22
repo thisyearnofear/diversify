@@ -107,43 +107,38 @@ export class ImprovedInflationService {
   }
 
   /**
-   * Fetch from StatBureau API (Primary - Free)
+   * Fetch from StatBureau API (Primary - Free) via our proxy
    */
   private async fetchFromStatBureau(countryCodes: string[]): Promise<any> {
     if (countryCodes.length === 0) {
       countryCodes = Object.keys(COUNTRY_MAPPINGS);
     }
 
-    const countries = countryCodes
-      .map(code => COUNTRY_MAPPINGS[code as keyof typeof COUNTRY_MAPPINGS]?.statbureau)
-      .filter(Boolean);
-
-    const results = [];
-    
-    for (const country of countries) {
-      try {
-        const response = await fetch(`${DATA_SOURCES.STAT_BUREAU.baseUrl}?country=${country}`);
-        if (response.ok) {
-          const data = await response.json();
-          results.push({
-            country: this.normalizeCountryName(country),
-            countryCode: this.reverseLookupCountryCode(country),
-            value: parseFloat(data.inflation_rate),
-            year: new Date().getFullYear(),
-            source: 'statbureau'
-          });
-        }
-      } catch (error) {
-        console.warn(`StatBureau failed for ${country}:`, error);
+    try {
+      // Use our API proxy to avoid CORS issues
+      const response = await fetch(`/api/inflation/statbureau?countries=${countryCodes.join(',')}`);
+      
+      if (!response.ok) {
+        throw new Error(`Proxy API error: ${response.status}`);
       }
-    }
 
-    // Return empty array if no results, to avoid undefined
-    return {
-      countries: results.length > 0 ? results : [],
-      source: 'statbureau',
-      lastUpdated: new Date().toISOString()
-    };
+      const data = await response.json();
+      
+      // Return the data in expected format
+      return {
+        countries: data.countries || [],
+        source: 'statbureau',
+        lastUpdated: data.lastUpdated || new Date().toISOString()
+      };
+    } catch (error) {
+      console.warn('StatBureau proxy failed:', error);
+      // Return empty array instead of throwing
+      return {
+        countries: [],
+        source: 'statbureau',
+        lastUpdated: new Date().toISOString()
+      };
+    }
   }
 
   /**
