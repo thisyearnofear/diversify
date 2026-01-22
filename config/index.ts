@@ -177,6 +177,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CZAR: 0.055,
     CCAD: 0.74,
     CAUD: 0.66,
+    USDC: 1,
     PAXG: 2000, // Placeholder Gold Price - Should be fetched dynamically
 } as const;
 
@@ -250,6 +251,9 @@ export function getTokenAddresses(chainId: number) {
 }
 
 export function getBrokerAddress(chainId: number) {
+    if (chainId === NETWORKS.ARBITRUM_ONE.chainId) {
+        return '0x0000000000000000000000000000000000000000'; // No Mento on Arbitrum
+    }
     return chainId === NETWORKS.ALFAJORES.chainId
         ? BROKER_ADDRESSES.ALFAJORES
         : chainId === NETWORKS.ARC_TESTNET.chainId

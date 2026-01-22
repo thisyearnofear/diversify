@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useInflationData } from "../hooks/use-inflation-data";
+import { useDataFreshness } from "../hooks/use-data-freshness";
 import type { Region } from "../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
 import RealLifeScenario from "./RealLifeScenario";
@@ -108,12 +109,15 @@ export default function InflationProtectionInfo({
   onChangeHomeRegion,
 }: InflationProtectionInfoProps) {
   // Use our custom hook to get real inflation data
-  const { inflationData, dataSource } = useInflationData();
+  const { inflationData, dataSource, getDataFreshness } = useInflationData();
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [activeScenario, setActiveScenario] = useState<
     "education" | "remittance" | "business" | "travel" | "savings"
   >("savings");
 
+  // Get data freshness information
+  const freshnessInfo = getDataFreshness();
+  
   // Calculate potential savings
   const savings = calculateSavings(
     amount,
@@ -167,14 +171,19 @@ export default function InflationProtectionInfo({
           </h2>
         </div>
         <div className="flex items-center">
-          {dataSource === "api" && (
+          {dataSource.includes('api') && (
             <span className="text-xs bg-accent-success bg-opacity-10 text-accent-success px-2 py-1 rounded-full">
               Live Data
             </span>
           )}
-          {dataSource === "cache" && (
-            <span className="text-xs bg-accent-info bg-opacity-10 text-accent-info px-2 py-1 rounded-full">
-              Cached Data
+          {dataSource.includes('cache') && (
+            <span className="text-xs bg-accent-warning bg-opacity-10 text-accent-warning px-2 py-1 rounded-full">
+              Recent Cache
+            </span>
+          )}
+          {dataSource.includes('fallback') && (
+            <span className="text-xs bg-accent-error bg-opacity-10 text-accent-error px-2 py-1 rounded-full">
+              Backup Data
             </span>
           )}
         </div>
@@ -185,7 +194,9 @@ export default function InflationProtectionInfo({
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-medium text-text-primary">Your Location</h3>
           <span className="text-xs text-text-muted">
-            Based on World Bank data
+            {dataSource.includes('api') ? 'Real-time data' :
+             dataSource.includes('cache') ? 'Recently cached data' :
+             'Backup data sources'}
           </span>
         </div>
 
@@ -409,8 +420,15 @@ export default function InflationProtectionInfo({
       )}
 
       <div className="flex justify-between items-center text-xs text-text-muted mt-3">
-        <span>Data: World Bank, Alpha Vantage</span>
-        <span>Updated daily</span>
+        <span>
+          Data: {freshnessInfo.dataSources.join(', ') || 'World Bank'} 
+          {freshnessInfo.mostRecentYear !== 'Unknown' && ` (${freshnessInfo.mostRecentYear})`}
+        </span>
+        <span>
+          {dataSource.includes('api') ? 'Live data' : 
+           dataSource.includes('cache') ? 'Cached data' : 
+           'Backup data'}
+        </span>
       </div>
     </div>
   );

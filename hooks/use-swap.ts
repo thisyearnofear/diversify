@@ -89,6 +89,29 @@ export function useSwap() {
             const tokens = getTokenAddresses(currentChainId);
             const brokerAddress = getBrokerAddress(currentChainId);
             const isTestnet = currentChainId === NETWORKS.ALFAJORES.chainId;
+            const isArbitrum = currentChainId === NETWORKS.ARBITRUM_ONE.chainId;
+
+            if (isArbitrum) {
+                // Mock swap for Arbitrum (RWA demo)
+                console.log(`Mocking Arbitrum swap for ${amount} ${fromToken} to ${toToken}...`);
+                setState((prev) => ({ ...prev, step: 'swapping' }));
+                
+                // Simulate some delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                const mockTxHash = "0x" + Math.random().toString(16).slice(2) + Math.random().toString(16).slice(2);
+                onSwapSubmitted?.(mockTxHash);
+                
+                setState({
+                    step: 'completed',
+                    isLoading: false,
+                    error: null,
+                    txHash: mockTxHash,
+                    approvalTxHash: null,
+                });
+                
+                return { success: true, swapTxHash: mockTxHash };
+            }
 
             // Get token addresses
             const fromTokenAddress = tokens[fromToken as keyof typeof tokens];

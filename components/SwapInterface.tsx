@@ -1,4 +1,4 @@
-import { useState, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useInflationData } from "../hooks/use-inflation-data";
 import { useSwap } from "../hooks/use-swap";
 import { useExpectedAmountOut } from "../hooks/use-expected-amount-out";
@@ -114,6 +114,11 @@ const SwapInterface = forwardRef<
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [mounted, setMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Get token balances
   const { balances: tokenBalances, refreshBalances } = useStablecoinBalances(
@@ -358,7 +363,7 @@ const SwapInterface = forwardRef<
           />
 
           {/* Expected Output */}
-          {expectedOutput && Number.parseFloat(expectedOutput) > 0 && (
+          {mounted && expectedOutput && Number.parseFloat(expectedOutput) > 0 && (
             <div
               className={`relative mt-4 p-4 rounded-lg overflow-hidden ${toTokenRegion
                 ? `bg-region-${toTokenRegion.toLowerCase()}-light/40 border-2 border-region-${toTokenRegion.toLowerCase()}-medium`
@@ -394,7 +399,7 @@ const SwapInterface = forwardRef<
                         You&#39;ll receive approximately
                       </span>
                       <div className="flex items-center">
-                        <span className="font-bold text-2xl text-blue-700">
+                        <span className="font-bold text-2xl text-blue-700" suppressHydrationWarning>
                           {Number.parseFloat(expectedOutput).toFixed(4)}
                         </span>
                       </div>
@@ -426,7 +431,7 @@ const SwapInterface = forwardRef<
                 </div>
                 <div className="mt-2 text-xs text-gray-600">
                   Rate: 1 {fromToken} ≈{" "}
-                  {(
+                  {mounted && (
                     Number.parseFloat(expectedOutput) /
                     Number.parseFloat(amount)
                   ).toFixed(4)}{" "}

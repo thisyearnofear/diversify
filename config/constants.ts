@@ -51,6 +51,8 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CZAR: 0.055,
     CCAD: 0.74,
     CAUD: 0.66,
+    USDC: 1,
+    PAXG: 2000,
 };
 
 // Available tokens list for UI
@@ -69,4 +71,3 @@ export const AVAILABLE_TOKENS = [
     { symbol: 'CCAD', name: 'Canadian Dollar', region: 'USA' },
     { symbol: 'CAUD', name: 'Australian Dollar', region: 'Asia' },
 ] as const;
-

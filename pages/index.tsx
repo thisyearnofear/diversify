@@ -63,7 +63,7 @@ export default function DiversiFiPage() {
   const {
     data: currencyPerformanceData,
     isLoading: isCurrencyPerformanceLoading,
-  } = useCurrencyPerformance(shouldLoadCurrencyPerformance);
+  } = useCurrencyPerformance('USD', shouldLoadCurrencyPerformance);
 
   // Convert region totals to format needed for pie chart
   const regionData = useMemo(() => {

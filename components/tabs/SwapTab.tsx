@@ -9,13 +9,21 @@ import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../WalletProvider";
 import WalletButton from "../WalletButton";
-import { NETWORKS, ARBITRUM_TOKENS } from "../../config";
+import { NETWORKS, ARBITRUM_TOKENS, getTokenAddresses } from "../../config";
 import { BridgeService } from "../../services/swap/bridge-service";
 import { ethers } from "ethers";
-import { TabHeader, CollapsibleSection, Card, ConnectWalletPrompt } from "../shared/TabComponents";
+import {
+  TabHeader,
+  CollapsibleSection,
+  Card,
+  ConnectWalletPrompt,
+} from "../shared/TabComponents";
 
 // Network-specific token configurations
-const NETWORK_TOKENS: Record<number, Array<{ symbol: string; name: string; region: string }>> = {
+const NETWORK_TOKENS: Record<
+  number,
+  Array<{ symbol: string; name: string; region: string }>
+> = {
   // Celo Mainnet
   [NETWORKS.CELO_MAINNET.chainId]: [
     { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
@@ -43,8 +51,6 @@ const NETWORK_TOKENS: Record<number, Array<{ symbol: string; name: string; regio
     { symbol: "PAXG", name: "Paxos Gold", region: "Global" },
   ],
 };
-
-
 
 interface SwapTabProps {
   availableTokens: Array<{
@@ -124,7 +130,7 @@ export default function SwapTab({
           ? "Asia"
           : userRegion === "Asia"
             ? "LatAm"
-            : "Africa"
+            : "Africa",
   );
 
   // Use the swap hook
@@ -169,7 +175,7 @@ export default function SwapTab({
     if (swapError) {
       setSwapStatus(`Error: ${swapError}`);
       setSwapStep("error");
-    } else if (hookSwapStep === 'completed') {
+    } else if (hookSwapStep === "completed") {
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
 
@@ -246,25 +252,33 @@ export default function SwapTab({
 
   // Get tokens for the selected regions - filtered by network
   const fromTokens = networkTokens.filter(
-    (token) => token.region === userRegion || token.region === "Global"
+    (token) => token.region === userRegion || token.region === "Global",
   );
   const toTokens = networkTokens.filter(
-    (token) => token.region === targetRegion || token.region === "Global"
+    (token) => token.region === targetRegion || token.region === "Global",
   );
 
   // Handle swap function
   const handleSwap = async (
     fromToken: string,
     toToken: string,
-    amount: string
+    amount: string,
   ) => {
-    console.log(`Analyzing swap/bridge for ${amount} ${fromToken} to ${toToken}`);
+    console.log(
+      `Analyzing swap/bridge for ${amount} ${fromToken} to ${toToken}`,
+    );
 
     // Check if this is a cross-chain RWA bridge (to Arbitrum)
+    // Only bridge if we are NOT already on Arbitrum
     const isRwa = ["PAXG"].includes(toToken);
+    const isOnCelo =
+      walletChainId === NETWORKS.CELO_MAINNET.chainId ||
+      walletChainId === NETWORKS.ALFAJORES.chainId;
 
-    if (isRwa) {
-      console.log("Cross-chain RWA deployment detected. Using BridgeService...");
+    if (isRwa && isOnCelo) {
+      console.log(
+        "Cross-chain RWA deployment detected. Using BridgeService...",
+      );
       setSwapStatus("Preparing cross-chain bridge to Arbitrum...");
       setSwapStep("bridging");
 
@@ -275,40 +289,90 @@ export default function SwapTab({
         const userAddress = await signer.getAddress();
 
         // Map symbol to address for Arbitrum
-        const toTokenAddr = (ARBITRUM_TOKENS as Record<string, string>)[toToken] || ARBITRUM_TOKENS.USDC;
+        const toTokenAddr =
+          (ARBITRUM_TOKENS as Record<string, string>)[toToken] ||
+          ARBITRUM_TOKENS.USDC;
 
-        const result = await BridgeService.bridgeToWealth(
+        // Resolve source token address on Celo
+        const celoTokenAddresses = getTokenAddresses(
+          NETWORKS.CELO_MAINNET.chainId,
+        ) as Record<string, string>;
+        const fromTokenAddr = (celoTokenAddresses[fromToken] ||
+          celoTokenAddresses[fromToken.toUpperCase()] ||
+          celoTokenAddresses[fromToken.toLowerCase()]) as string;
+
+        const result = await BridgeService.bridgeThenSwap(
           signer,
           userAddress,
           amount,
-          { address: fromToken, chainId: 42220 }, // Celo Mainnet source
-          { address: toTokenAddr, chainId: 42161 } // Arbitrum One target
+          { address: fromTokenAddr, chainId: 42220 }, // Celo Mainnet source
+          { address: toTokenAddr, chainId: 42161 }, // Arbitrum One target
         );
 
         if (result) {
           // LI.FI execution result is in the result object
-          const txHash = result.steps?.[0]?.execution?.process?.find((p: { type: string }) => p.type === 'CROSS_CHAIN')?.txHash
-            || result.steps?.[0]?.execution?.process?.[0]?.txHash;
+          const txHash =
+            result.steps?.[0]?.execution?.process?.find(
+              (p: { type: string }) => p.type === "CROSS_CHAIN",
+            )?.txHash || result.steps?.[0]?.execution?.process?.[0]?.txHash;
 
           if (txHash) setLocalSwapTxHash(txHash);
-          setSwapStatus(`Success! Assets moved to Arbitrum ${toToken}. Check your wallet on Arbitrum.`);
+          setSwapStatus(
+            `Success! Assets moved to Arbitrum ${toToken}. Check your wallet on Arbitrum.`,
+          );
           setSwapStep("completed");
         } else {
-          setSwapStatus("Bridge initiated. Please check your wallet for status.");
+          setSwapStatus(
+            "Bridge initiated. Please check your wallet for status.",
+          );
           setSwapStep("completed");
         }
         return Promise.resolve();
       } catch (err: unknown) {
         console.error("Bridge failed:", err);
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
         setSwapStatus(`Bridge Error: ${errorMessage}`);
         setSwapStep("error");
         return Promise.reject(err);
       }
     }
 
+    if (isArbitrum && fromToken === "USDC" && toToken === "PAXG") {
+      try {
+        if (!window.ethereum) throw new Error("No wallet detected");
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const userAddress = await signer.getAddress();
+        setSwapStatus("Finding best route on Arbitrum...");
+        setSwapStep("swapping");
+        const route = await BridgeService.getSingleChainSwapRoute({
+          chainId: NETWORKS.ARBITRUM_ONE.chainId,
+          fromTokenAddress: ARBITRUM_TOKENS.USDC,
+          toTokenAddress: ARBITRUM_TOKENS.PAXG,
+          fromAmount: amount,
+          userAddress,
+        });
+        const result = await BridgeService.swapSingleChain(route as any);
+        const txHash = result.steps?.[0]?.execution?.process?.[0]?.txHash || "";
+        if (txHash) setLocalSwapTxHash(txHash);
+        setSwapStatus("Swap completed successfully!");
+        setSwapStep("completed");
+        return Promise.resolve();
+      } catch (err: unknown) {
+        console.error("Arbitrum swap failed:", err);
+        const errorMessage =
+          err instanceof Error ? err.message : "Unknown error";
+        setSwapStatus(`Error: ${errorMessage}`);
+        setSwapStep("error");
+        return Promise.reject(err);
+      }
+    }
+
     // Default internal swap logic...
-    console.log(`Executing standard swap for ${amount} ${fromToken} to ${toToken}`);
+    console.log(
+      `Executing standard swap for ${amount} ${fromToken} to ${toToken}`,
+    );
     setSwapStatus("Initiating swap process...");
     setSwapStep("approving");
 
@@ -327,7 +391,7 @@ export default function SwapTab({
       setSwapStep("completed");
     } catch (err: unknown) {
       console.error("Swap failed:", err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setSwapStatus(`Error: ${errorMessage}`);
       setSwapStep("error");
     }
@@ -366,7 +430,8 @@ export default function SwapTab({
             {isArbitrum && (
               <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r">
                 <p className="text-sm text-blue-800">
-                  <span className="font-medium">Arbitrum Mode:</span> Swap between yield-bearing assets and RWAs.
+                  <span className="font-medium">Arbitrum Mode:</span> Swap
+                  between yield-bearing assets and RWAs.
                 </p>
               </div>
             )}
@@ -426,16 +491,30 @@ export default function SwapTab({
               <div className="flex items-center gap-1">
                 <div
                   className="w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: REGION_COLORS[userRegion as keyof typeof REGION_COLORS] }}
+                  style={{
+                    backgroundColor:
+                      REGION_COLORS[userRegion as keyof typeof REGION_COLORS],
+                  }}
                 >
-                  <RegionalIconography region={userRegion} size="sm" className="text-white" />
+                  <RegionalIconography
+                    region={userRegion}
+                    size="sm"
+                    className="text-white"
+                  />
                 </div>
                 <span className="text-gray-400">→</span>
                 <div
                   className="w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: REGION_COLORS[targetRegion as keyof typeof REGION_COLORS] }}
+                  style={{
+                    backgroundColor:
+                      REGION_COLORS[targetRegion as keyof typeof REGION_COLORS],
+                  }}
                 >
-                  <RegionalIconography region={targetRegion} size="sm" className="text-white" />
+                  <RegionalIconography
+                    region={targetRegion}
+                    size="sm"
+                    className="text-white"
+                  />
                 </div>
               </div>
             }
@@ -454,7 +533,16 @@ export default function SwapTab({
                           ? "text-white font-medium"
                           : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                       }`}
-                      style={region === targetRegion ? { backgroundColor: REGION_COLORS[region as keyof typeof REGION_COLORS] } : {}}
+                      style={
+                        region === targetRegion
+                          ? {
+                              backgroundColor:
+                                REGION_COLORS[
+                                  region as keyof typeof REGION_COLORS
+                                ],
+                            }
+                          : {}
+                      }
                       onClick={() => setTargetRegion(region as Region)}
                     >
                       {region}
@@ -467,12 +555,16 @@ export default function SwapTab({
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="text-center">
                 <p className="text-xs text-gray-500">{userRegion}</p>
-                <p className="font-bold text-lg">{homeInflationRate.toFixed(1)}%</p>
+                <p className="font-bold text-lg">
+                  {homeInflationRate.toFixed(1)}%
+                </p>
               </div>
               <div className="text-gray-400">→</div>
               <div className="text-center">
                 <p className="text-xs text-gray-500">{targetRegion}</p>
-                <p className="font-bold text-lg">{targetInflationRate.toFixed(1)}%</p>
+                <p className="font-bold text-lg">
+                  {targetInflationRate.toFixed(1)}%
+                </p>
               </div>
               {inflationDifference > 0 && (
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
@@ -493,19 +585,30 @@ export default function SwapTab({
             icon={<span className="text-lg">💡</span>}
           >
             <div className="flex flex-wrap gap-2 mb-3">
-              {["remittance", "education", "business", "travel", "savings"].map((scenario) => (
-                <button
-                  key={scenario}
-                  className={`px-3 py-1 text-xs rounded-full ${
-                    selectedScenario === scenario
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                  onClick={() => setSelectedScenario(scenario as "remittance" | "education" | "business" | "travel" | "savings")}
-                >
-                  {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
-                </button>
-              ))}
+              {["remittance", "education", "business", "travel", "savings"].map(
+                (scenario) => (
+                  <button
+                    key={scenario}
+                    className={`px-3 py-1 text-xs rounded-full ${
+                      selectedScenario === scenario
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                    onClick={() =>
+                      setSelectedScenario(
+                        scenario as
+                          | "remittance"
+                          | "education"
+                          | "business"
+                          | "travel"
+                          | "savings",
+                      )
+                    }
+                  >
+                    {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
+                  </button>
+                ),
+              )}
             </div>
             <RealLifeScenario
               region={userRegion}
@@ -524,7 +627,9 @@ export default function SwapTab({
             icon={<span className="text-lg">🎯</span>}
           >
             <p className="text-xs text-gray-600 mb-3">
-              Based on your <span className="font-medium">{selectedStrategy}</span> strategy in {userRegion}:
+              Based on your{" "}
+              <span className="font-medium">{selectedStrategy}</span> strategy
+              in {userRegion}:
             </p>
             <div className="space-y-2">
               {getRecommendations(userRegion, inflationData, homeInflationRate)}
@@ -547,7 +652,9 @@ export default function SwapTab({
                       </span>
                     ))}
                     {networkTokens.length > 4 && (
-                      <span className="text-xs text-gray-400">+{networkTokens.length - 4} more</span>
+                      <span className="text-xs text-gray-400">
+                        +{networkTokens.length - 4} more
+                      </span>
                     )}
                   </div>
                 </div>
@@ -564,15 +671,30 @@ export default function SwapTab({
 function getRecommendations(
   userRegion: Region,
   inflationData: Record<string, RegionalInflationData>,
-  homeInflationRate: number
+  homeInflationRate: number,
 ): React.ReactNode {
-  const recommendations: Record<Region, Array<{ from: string; to: string; reason: string }>> = {
+  const recommendations: Record<
+    Region,
+    Array<{ from: string; to: string; reason: string }>
+  > = {
     Africa: [
-      { from: "cKES", to: "cEUR", reason: `Europe has ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation` },
-      { from: "cGHS", to: "cUSD", reason: "Pay for online services priced in USD" },
+      {
+        from: "cKES",
+        to: "cEUR",
+        reason: `Europe has ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation`,
+      },
+      {
+        from: "cGHS",
+        to: "cUSD",
+        reason: "Pay for online services priced in USD",
+      },
     ],
     LatAm: [
-      { from: "cCOP", to: "cUSD", reason: "Protect against local currency volatility" },
+      {
+        from: "cCOP",
+        to: "cUSD",
+        reason: "Protect against local currency volatility",
+      },
       { from: "cREAL", to: "cEUR", reason: "Diversify for European travel" },
     ],
     USA: [
@@ -591,8 +713,13 @@ function getRecommendations(
 
   const recs = recommendations[userRegion] || [];
   return recs.map((rec, idx) => (
-    <div key={idx} className="flex items-center justify-between p-2 bg-white rounded border border-gray-100">
-      <span className="text-sm font-medium">{rec.from} → {rec.to}</span>
+    <div
+      key={idx}
+      className="flex items-center justify-between p-2 bg-white rounded border border-gray-100"
+    >
+      <span className="text-sm font-medium">
+        {rec.from} → {rec.to}
+      </span>
       <span className="text-xs text-gray-500">{rec.reason}</span>
     </div>
   ));

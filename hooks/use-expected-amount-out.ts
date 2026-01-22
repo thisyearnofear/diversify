@@ -7,6 +7,7 @@ import {
   ABIS,
 } from '../config';
 import { EXCHANGE_RATES } from '../config/constants';
+import { NETWORKS } from '../config';
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -153,8 +154,18 @@ export function useExpectedAmountOut({
     if (cached) return cached;
 
     try {
-      // Determine if we're on Alfajores testnet
+      // Short-circuit for Arbitrum: use local price ratios, no Mento broker
+      if (chainId === NETWORKS.ARBITRUM_ONE.chainId) {
+        const amountNum = Number.parseFloat(amount);
+        const fromRate = EXCHANGE_RATES[fromToken] ?? 1;
+        const toRate = EXCHANGE_RATES[toToken] ?? 1;
+        const arbResult = ((amountNum * fromRate) / toRate).toString();
+        setCachedResult(fromToken, toToken, amount, chainId, arbResult);
+        return arbResult;
+      }
+      // Determine if we're on Alfajores testnet or Arbitrum
       const isAlfajores = chainId === 44787;
+      const isArbitrum = chainId === 42161;
 
       // Get configuration
       const tokenList = getTokenAddresses(chainId || 42220) as Record<string, string>;
@@ -166,9 +177,9 @@ export function useExpectedAmountOut({
       const fromTokenAddress = tokenList[fromToken as keyof typeof tokenList];
       const toTokenAddress = tokenList[toToken as keyof typeof tokenList];
 
-      if (!fromTokenAddress || !toTokenAddress) {
+      if (!fromTokenAddress || !toTokenAddress || isArbitrum) {
         if (process.env.NODE_ENV === 'development') {
-          console.warn(`Invalid token selection: ${fromToken}/${toToken}`);
+          console.warn(`Using fallback calculation for ${fromToken}/${toToken} on chain ${chainId}`);
         }
 
         // Use fallback calculation based on exchange rates
@@ -232,8 +243,9 @@ export function useExpectedAmountOut({
 
       let exchangeProviders = getCachedExchangeProviders();
       if (!exchangeProviders) {
-        exchangeProviders = await brokerContract.getExchangeProviders();
-        setCachedExchangeProviders(exchangeProviders);
+        const fetchedProviders: string[] = await brokerContract.getExchangeProviders();
+        setCachedExchangeProviders(fetchedProviders);
+        exchangeProviders = fetchedProviders;
       }
 
       // Find the exchange for the token pair
@@ -242,19 +254,20 @@ export function useExpectedAmountOut({
 
       // Loop through providers to find the right exchange
       for (const providerAddress of exchangeProviders) {
-        let exchanges = getCachedExchanges(providerAddress);
-        if (!exchanges) {
+        let exchangesCached = getCachedExchanges(providerAddress);
+        if (!exchangesCached) {
           const exchangeContract = new ethers.Contract(
             providerAddress,
             ABIS.EXCHANGE,
             provider
           );
-          exchanges = await exchangeContract.getExchanges();
-          setCachedExchanges(providerAddress, exchanges);
+          const fetchedExchanges: any[] = await exchangeContract.getExchanges();
+          setCachedExchanges(providerAddress, fetchedExchanges);
+          exchangesCached = fetchedExchanges;
         }
 
         // Check each exchange
-        for (const exchange of exchanges) {
+        for (const exchange of exchangesCached) {
           const assets = exchange.assets.map((a: string) => a.toLowerCase());
 
           if (
@@ -296,19 +309,20 @@ export function useExpectedAmountOut({
 
             // Loop through providers to find exchange for fromToken to CELO
             for (const providerAddress of exchangeProviders) {
-              let exchanges = getCachedExchanges(providerAddress);
-              if (!exchanges) {
+              let exchangesCached = getCachedExchanges(providerAddress);
+              if (!exchangesCached) {
                 const exchangeContract = new ethers.Contract(
                   providerAddress,
                   ABIS.EXCHANGE,
                   provider
                 );
-                exchanges = await exchangeContract.getExchanges();
-                setCachedExchanges(providerAddress, exchanges);
+                const fetchedExchanges: any[] = await exchangeContract.getExchanges();
+                setCachedExchanges(providerAddress, fetchedExchanges);
+                exchangesCached = fetchedExchanges;
               }
 
               // Check each exchange
-              for (const exchange of exchanges) {
+              for (const exchange of exchangesCached) {
                 const assets = exchange.assets.map((a: string) => a.toLowerCase());
 
                 if (
@@ -334,19 +348,20 @@ export function useExpectedAmountOut({
 
             // Loop through providers to find exchange for CELO to toToken
             for (const providerAddress of exchangeProviders) {
-              let exchanges = getCachedExchanges(providerAddress);
-              if (!exchanges) {
+              let exchangesCached2 = getCachedExchanges(providerAddress);
+              if (!exchangesCached2) {
                 const exchangeContract = new ethers.Contract(
                   providerAddress,
                   ABIS.EXCHANGE,
                   provider
                 );
-                exchanges = await exchangeContract.getExchanges();
-                setCachedExchanges(providerAddress, exchanges);
+                const fetchedExchanges2: any[] = await exchangeContract.getExchanges();
+                setCachedExchanges(providerAddress, fetchedExchanges2);
+                exchangesCached2 = fetchedExchanges2;
               }
 
               // Check each exchange
-              for (const exchange of exchanges) {
+              for (const exchange of exchangesCached2) {
                 const assets = exchange.assets.map((a: string) => a.toLowerCase());
 
                 if (

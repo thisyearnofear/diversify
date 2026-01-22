@@ -6,6 +6,9 @@
  * - World Bank API for inflation data
  */
 
+import { unifiedCache, CacheCategory } from './unified-cache-service';
+import { circuitBreakerManager } from './circuit-breaker-service';
+
 // Cache durations
 const CACHE_DURATIONS = {
   EXCHANGE_RATE: 1000 * 60 * 60, // 1 hour
@@ -22,6 +25,12 @@ const CACHE_KEYS = {
  * Alpha Vantage API Service
  */
 export const AlphaVantageService = {
+  private readonly circuitBreaker = circuitBreakerManager.getCircuit('alphavantage', {
+    failureThreshold: 5,
+    timeout: 60000,
+    successThreshold: 3
+  }),
+
   /**
    * Get API key from environment variables
    */
@@ -37,57 +46,61 @@ export const AlphaVantageService = {
    * @returns Exchange rate data
    */
   getExchangeRate: async (fromCurrency: string, toCurrency: string) => {
-    try {
-      const cacheKey = `${CACHE_KEYS.ALPHA_VANTAGE_FOREX}${fromCurrency}-${toCurrency}`;
+    const cacheKey = `exchange-rate-${fromCurrency}-${toCurrency}`;
+    
+    return this.circuitBreaker.callWithFallback(
+      async () => {
+        return unifiedCache.getOrFetch(
+          cacheKey,
+          () => this.fetchExchangeRate(fromCurrency, toCurrency),
+          'volatile' // Exchange rates change frequently
+        );
+      },
+      () => getFallbackExchangeRate(fromCurrency, toCurrency)
+    );
+  },
 
-      // Check cache first
-      const cachedData = getCachedData(cacheKey, CACHE_DURATIONS.EXCHANGE_RATE);
-      if (cachedData) {
-        return { ...cachedData, source: 'cache' };
-      }
+  /**
+   * Internal method to fetch exchange rate
+   */
+  private async fetchExchangeRate(fromCurrency: string, toCurrency: string): Promise<{ data: any; source: string }> {
+    // Call our internal API proxy
+    const response = await fetch(
+      `/api/finance/proxy?from_currency=${fromCurrency}&to_currency=${toCurrency}`
+    );
 
-      // Call our internal API proxy
-      const response = await fetch(
-        `/api/finance/proxy?from_currency=${fromCurrency}&to_currency=${toCurrency}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Alpha Vantage API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Check if API returned an error
-      if (data['Error Message']) {
-        throw new Error(`Alpha Vantage API error: ${data['Error Message']}`);
-      }
-
-      // Check if API returned rate limit error
-      if (data.Note?.includes('API call frequency')) {
-        console.warn('Alpha Vantage API rate limit reached');
-        return getFallbackExchangeRate(fromCurrency, toCurrency);
-      }
-
-      // Extract exchange rate data
-      const exchangeRateData = data['Realtime Currency Exchange Rate'];
-      if (!exchangeRateData) {
-        throw new Error('No exchange rate data found');
-      }
-
-      const result = {
-        rate: Number.parseFloat(exchangeRateData['5. Exchange Rate']),
-        timestamp: exchangeRateData['6. Last Refreshed'],
-        source: 'api' as const
-      };
-
-      // Cache the result
-      setCachedData(cacheKey, result);
-
-      return result;
-    } catch (error) {
-      console.error('Error fetching exchange rate:', error);
-      return getFallbackExchangeRate(fromCurrency, toCurrency);
+    if (!response.ok) {
+      throw new Error(`Alpha Vantage API error: ${response.status}`);
     }
+
+    const data = await response.json();
+
+    // Check if API returned an error
+    if (data['Error Message']) {
+      throw new Error(`Alpha Vantage API error: ${data['Error Message']}`);
+    }
+
+    // Check if API returned rate limit error
+    if (data.Note?.includes('API call frequency')) {
+      throw new Error('Alpha Vantage API rate limit exceeded');
+    }
+
+    // Extract exchange rate data
+    const exchangeRateData = data['Realtime Currency Exchange Rate'];
+    if (!exchangeRateData) {
+      throw new Error('No exchange rate data found');
+    }
+
+    const result = {
+      rate: Number.parseFloat(exchangeRateData['5. Exchange Rate']),
+      timestamp: exchangeRateData['6. Last Refreshed'],
+      source: 'alphavantage'
+    };
+
+    return {
+      data: result,
+      source: 'alphavantage'
+    };
   },
 
   /**
@@ -181,68 +194,78 @@ export const AlphaVantageService = {
  * World Bank API Service
  */
 export const WorldBankService = {
+  private readonly circuitBreaker = circuitBreakerManager.getCircuit('worldbank', {
+    failureThreshold: 3,
+    timeout: 30000,
+    successThreshold: 2
+  }),
+
   /**
    * Get inflation data for all countries
    * @param year Year to get data for (defaults to most recent)
    * @returns Inflation data by country
    */
   getInflationData: async (year?: number) => {
-    try {
-      const cacheKey = `${CACHE_KEYS.WORLD_BANK_INFLATION}all-${year || 'latest'}`;
+    const cacheKey = `worldbank-inflation-${year || 'latest'}`;
+    
+    return this.circuitBreaker.callWithFallback(
+      async () => {
+        return unifiedCache.getOrFetch(
+          cacheKey,
+          () => this.fetchInflationData(year),
+          'moderate'
+        );
+      },
+      () => getFallbackInflationData()
+    );
+  },
 
-      // Check cache first
-      const cachedData = getCachedData(cacheKey, CACHE_DURATIONS.INFLATION_DATA);
-      if (cachedData) {
-        return { ...cachedData, source: 'cache' };
-      }
-
-      // Build URL
-      let url = 'https://api.worldbank.org/v2/country/all/indicator/FP.CPI.TOTL.ZG?format=json&per_page=300';
-      if (year) {
-        url += `&date=${year}`;
-      } else {
-        // Get last 2 years of data to ensure we have recent data
-        const currentYear = new Date().getFullYear();
-        url += `&date=${currentYear - 2}:${currentYear}`;
-      }
-
-      // Make API request
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`World Bank API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Check if API returned valid data
-      if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1])) {
-        throw new Error('Invalid World Bank API response format');
-      }
-
-      // Extract country inflation data
-      const countries = data[1]
-        .filter((item: any) => item.value !== null)
-        .map((item: any) => ({
-          country: item.country.value,
-          countryCode: item.countryiso3code,
-          value: item.value,
-          year: Number.parseInt(item.date)
-        }));
-
-      const result = {
-        countries,
-        source: 'api' as const
-      };
-
-      // Cache the result
-      setCachedData(cacheKey, result);
-
-      return result;
-    } catch (error) {
-      console.error('Error fetching inflation data:', error);
-      return getFallbackInflationData();
+  /**
+   * Internal method to fetch data from World Bank API
+   */
+  private async fetchInflationData(year?: number): Promise<{ data: any; source: string }> {
+    // Build URL
+    let url = 'https://api.worldbank.org/v2/country/all/indicator/FP.CPI.TOTL.ZG?format=json&per_page=300';
+    if (year) {
+      url += `&date=${year}`;
+    } else {
+      // Get last 2 years of data to ensure we have recent data
+      const currentYear = new Date().getFullYear();
+      url += `&date=${currentYear - 2}:${currentYear}`;
     }
+
+    // Make API request
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`World Bank API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Check if API returned valid data
+    if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1])) {
+      throw new Error('Invalid World Bank API response format');
+    }
+
+    // Extract country inflation data
+    const countries = data[1]
+      .filter((item: any) => item.value !== null)
+      .map((item: any) => ({
+        country: item.country.value,
+        countryCode: item.countryiso3code,
+        value: item.value,
+        year: Number.parseInt(item.date)
+      }));
+
+    return {
+      data: {
+        countries,
+        source: 'worldbank',
+        lastUpdated: new Date().toISOString()
+      },
+      source: 'worldbank'
+    };
   },
 
   /**
@@ -405,7 +428,12 @@ function getFallbackHistoricalRates(fromCurrency: string, toCurrency: string) {
 }
 
 function getFallbackInflationData() {
-  return FALLBACK_INFLATION_DATA;
+  return {
+    ...FALLBACK_INFLATION_DATA,
+    source: 'fallback' as const,
+    lastUpdated: new Date().toISOString(),
+    warning: 'Using fallback data - real-time sources unavailable'
+  };
 }
 
 function getFallbackRegionalInflationData(regionCode: string) {

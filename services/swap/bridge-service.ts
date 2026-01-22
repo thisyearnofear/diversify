@@ -1,6 +1,6 @@
 import { createConfig, getRoutes, executeRoute, RoutesRequest, Route } from '@lifi/sdk';
 import { ethers } from 'ethers';
-import { CIRCLE_CONFIG } from '../../config';
+import { CIRCLE_CONFIG, ARBITRUM_TOKENS } from '../../config';
 
 // Initialize LI.FI Config
 createConfig({
@@ -119,6 +119,82 @@ export class BridgeService {
             console.error('[BridgeService] Bridge execution failed:', error);
             throw error;
         }
+    }
+
+    static async getSingleChainSwapRoute(params: {
+        chainId: number;
+        fromTokenAddress: string;
+        toTokenAddress: string;
+        fromAmount: string;
+        userAddress: string;
+        slippage?: number;
+    }): Promise<Route> {
+        const isUSDC = this.isUSDCToken(params.fromTokenAddress);
+        const fromAmountWei = ethers.utils.parseUnits(
+            params.fromAmount,
+            isUSDC ? 6 : 18
+        ).toString();
+
+        const request: RoutesRequest = {
+            fromChainId: params.chainId,
+            fromTokenAddress: params.fromTokenAddress,
+            fromAmount: fromAmountWei,
+            toChainId: params.chainId,
+            toTokenAddress: params.toTokenAddress,
+            fromAddress: params.userAddress,
+            options: {
+                slippage: params.slippage || 0.03,
+                order: 'CHEAPEST',
+            },
+        };
+
+        const result = await getRoutes(request);
+        if (!result.routes || result.routes.length === 0) {
+            throw new Error('No single-chain swap routes found');
+        }
+        return result.routes[0] as Route;
+    }
+
+    static async swapSingleChain(route: Route): Promise<BridgeResult> {
+        const result = await executeRoute(route);
+        return {
+            provider: 'lifi',
+            txHash: result.steps?.[0]?.execution?.process?.[0]?.txHash || '',
+            steps: result.steps
+        };
+    }
+
+    static async bridgeThenSwap(
+        signer: any,
+        userAddress: string,
+        fromAmount: string,
+        fromToken: { address: string; chainId: number },
+        toToken: { address: string; chainId: number },
+        preferredProvider?: 'lifi' | 'circle'
+    ): Promise<BridgeResult> {
+        const destUSDC = ARBITRUM_TOKENS.USDC;
+        const bridge = await this.bridgeToWealth(
+            signer,
+            userAddress,
+            fromAmount,
+            fromToken,
+            { address: destUSDC, chainId: 42161 },
+            preferredProvider
+        );
+
+        const route = await this.getSingleChainSwapRoute({
+            chainId: 42161,
+            fromTokenAddress: destUSDC,
+            toTokenAddress: toToken.address,
+            fromAmount,
+            userAddress
+        });
+        const swap = await this.swapSingleChain(route);
+        return {
+            provider: swap.provider,
+            txHash: swap.txHash,
+            steps: [...(bridge.steps || []), ...(swap.steps || [])]
+        };
     }
 
     private static async executeCircleCCTP(

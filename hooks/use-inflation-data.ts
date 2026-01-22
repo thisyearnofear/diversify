@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { WorldBankService } from '../utils/api-services';
+import { inflationService } from '../utils/improved-inflation-service';
+import { useDataFreshness } from './use-data-freshness';
 
 // Types
 export interface InflationData {
@@ -65,7 +67,15 @@ const FALLBACK_INFLATION_DATA: Record<string, RegionalInflationData> = {
       { country: 'Canada', region: 'USA', currency: 'CAD', rate: 3.4, year: 2023, source: 'fallback' },
     ],
     avgRate: 3.25,
-    stablecoins: ['cUSD', 'cCAD'],
+    stablecoins: ['cUSD', 'cCAD', 'USDC'],
+  },
+  Global: {
+    region: 'Global',
+    countries: [
+      { country: 'Gold', region: 'Global', currency: 'XAU', rate: 0.0, year: 2023, source: 'fallback' },
+    ],
+    avgRate: 0.0,
+    stablecoins: ['PAXG'],
   },
 };
 
@@ -155,6 +165,7 @@ const CURRENCY_TO_STABLECOIN: Record<string, string> = {
   'AUD': 'CAUD',
   'GBP': 'CGBP',
   'ZAR': 'CZAR',
+  'XAU': 'PAXG',
 };
 
 export function useInflationData() {
@@ -169,24 +180,41 @@ export function useInflationData() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch from World Bank API using our service
-        // Ideally we would want to fail here if the API is down to force "Real" usage, 
-        // but for a robust app we might want to alert the user rather than show empty state.
-        // However, based on the user request "no mock data", we will heavily de-prioritize fallback
-        // and add logging to ensure we know when we are hitting it.
+        // Try improved multi-source service first
+        const improvedData = await inflationService.getInflationData();
+        
+        if (improvedData.source !== 'fallback') {
+          console.log(`Using improved data from ${improvedData.source}`);
+          
+          // Process the improved data
+          const countryData: InflationData[] = improvedData.countries.map((item: any) => ({
+            country: item.country,
+            region: COUNTRY_TO_REGION[item.countryCode] || 'Global',
+            currency: getCurrencyFromCountryCode(item.countryCode),
+            rate: item.value,
+            year: item.year,
+            source: improvedData.source as 'api' | 'cache' | 'fallback'
+          }));
+
+          // Group by region (same logic as before)
+          const regionalData = processCountryDataIntoRegions(countryData);
+          setInflationData(regionalData);
+          setDataSource(improvedData.source as 'api' | 'cache' | 'fallback');
+          return;
+        }
+
+        // Fall back to World Bank service if improved service fails
+        console.warn("Improved service failed, falling back to World Bank");
         const worldBankData = await WorldBankService.getInflationData();
 
         if (worldBankData.source === 'fallback') {
           console.warn("Using Fallback Data - World Bank API might be down or rate limited.");
-          // We still set it because an app with data is better than an empty app, 
-          // but the UI will show "Cached Data" or similar warning.
         }
 
         // Process the API response
         const countryData: InflationData[] = [];
 
         // Convert World Bank data to our format
-        // ... (rest of logic remains similar, but we want to ensure we aren't just defaulting to MOCK)
         if (worldBankData.countries && worldBankData.countries.length > 0) {
           worldBankData.countries.forEach((item: {
             country: string;
@@ -210,50 +238,13 @@ export function useInflationData() {
           });
         }
 
-        // ... (rest of the processing logic)
-
         // Group by region and calculate average rates
-        const regionalData: Record<string, RegionalInflationData> = {};
-
-        // Initialize with regions
-        ['Africa', 'LatAm', 'Asia', 'Europe', 'USA'].forEach(region => {
-          regionalData[region] = {
-            region,
-            countries: [],
-            avgRate: 0,
-            stablecoins: FALLBACK_INFLATION_DATA[region].stablecoins
-          };
-        });
-
-        // Add countries to their regions
-        countryData.forEach(country => {
-          if (regionalData[country.region]) {
-            regionalData[country.region].countries.push(country);
-          }
-        });
-
-        // Calculate average rates for each region
-        Object.keys(regionalData).forEach(region => {
-          const countries = regionalData[region].countries;
-          if (countries.length > 0) {
-            const sum = countries.reduce((acc, country) => acc + country.rate, 0);
-            regionalData[region].avgRate = sum / countries.length;
-          } else {
-            // If we have absolutely no data for a region, we might have to leave it empty
-            // or fetch from a secondary real source. 
-            // For now, we will use the fallback ONLY if we have no data at all for that region
-            // to prevent the UI from breaking.
-            regionalData[region] = FALLBACK_INFLATION_DATA[region];
-          }
-        });
-
+        const regionalData = processCountryDataIntoRegions(countryData);
         setInflationData(regionalData);
         setDataSource(worldBankData.source);
       } catch (err: any) {
         console.error('Error in inflation data hook:', err);
         setError(err.message || 'Failed to fetch inflation data');
-        // In a "Real" production app, we might show a retry button here instead of SILENTLY falling back.
-        // But for the sake of the hackathon "working" demo, we fall back but with a toast/error state.
         setInflationData(FALLBACK_INFLATION_DATA);
         setDataSource('fallback');
       } finally {
@@ -263,6 +254,42 @@ export function useInflationData() {
 
     fetchInflationData();
   }, []);
+
+  // Helper function to process country data into regional structure
+  const processCountryDataIntoRegions = (countryData: InflationData[]): Record<string, RegionalInflationData> => {
+    const regionalData: Record<string, RegionalInflationData> = {};
+
+    // Initialize with regions
+    ['Africa', 'LatAm', 'Asia', 'Europe', 'USA', 'Global'].forEach(region => {
+      regionalData[region] = {
+        region,
+        countries: [],
+        avgRate: 0,
+        stablecoins: FALLBACK_INFLATION_DATA[region].stablecoins
+      };
+    });
+
+    // Add countries to their regions
+    countryData.forEach(country => {
+      if (regionalData[country.region]) {
+        regionalData[country.region].countries.push(country);
+      }
+    });
+
+    // Calculate average rates for each region
+    Object.keys(regionalData).forEach(region => {
+      const countries = regionalData[region].countries;
+      if (countries.length > 0) {
+        const sum = countries.reduce((acc, country) => acc + country.rate, 0);
+        regionalData[region].avgRate = sum / countries.length;
+      } else {
+        // If no data for region, use fallback
+        regionalData[region] = FALLBACK_INFLATION_DATA[region];
+      }
+    });
+
+    return regionalData;
+  };
 
   // Helper function to get currency from country code
   const getCurrencyFromCountryCode = (countryCode: string): string => {
@@ -316,6 +343,10 @@ export function useInflationData() {
       return xofData ? xofData.rate : inflationData['Africa']?.avgRate || 3.5; // Fallback to region average or 3.5%
     }
 
+    if (normalizedStablecoin === 'USDC') {
+      return getInflationRateForCurrency('USD');
+    }
+
     // Find the currency that corresponds to this stablecoin
     const currency = Object.keys(CURRENCY_TO_STABLECOIN).find(
       key => CURRENCY_TO_STABLECOIN[key].toUpperCase() === normalizedStablecoin
@@ -334,6 +365,7 @@ export function useInflationData() {
     // Try direct mapping first based on known stablecoin patterns
     // USA region (North America)
     if (stablecoinUpper === 'CUSD') return 'USA';
+    if (stablecoinUpper === 'USDC') return 'USA';
     if (stablecoinUpper === 'CCAD') return 'USA'; // Canadian Dollar (could be "North America" in future)
 
     // Europe region
@@ -355,6 +387,9 @@ export function useInflationData() {
     if (stablecoinUpper === 'CAUD') return 'Asia'; // Australian Dollar
     if (stablecoinUpper === 'CPESO') return 'Asia'; // Philippine Peso (alternative name)
 
+    // Global
+    if (stablecoinUpper === 'PAXG') return 'Global';
+
     // Fallback to the original lookup method (case-insensitive)
     const currency = Object.keys(CURRENCY_TO_STABLECOIN).find(
       key => CURRENCY_TO_STABLECOIN[key].toUpperCase() === stablecoinUpper
@@ -368,6 +403,31 @@ export function useInflationData() {
     return COUNTRY_TO_REGION[countryCode] || 'Unknown';
   };
 
+  // Get data freshness information
+  const getOverallDataFreshness = () => {
+    // Find the most recent data point
+    let mostRecentDate = '';
+    Object.values(inflationData).forEach(region => {
+      region.countries.forEach(country => {
+        if (country.year && (!mostRecentDate || country.year > parseInt(mostRecentDate))) {
+          mostRecentDate = country.year.toString();
+        }
+      });
+    });
+    
+    return {
+      mostRecentYear: mostRecentDate || 'Unknown',
+      dataSources: Array.from(new Set(
+        Object.values(inflationData).flatMap(region => 
+          region.countries.map(c => c.source)
+        )
+      )),
+      totalCountries: Object.values(inflationData).reduce((sum, region) => 
+        sum + region.countries.length, 0
+      )
+    };
+  };
+
   return {
     inflationData,
     isLoading,
@@ -375,6 +435,7 @@ export function useInflationData() {
     dataSource,
     getInflationRateForCurrency,
     getInflationRateForStablecoin,
-    getRegionForStablecoin
+    getRegionForStablecoin,
+    getDataFreshness: getOverallDataFreshness
   };
 }
