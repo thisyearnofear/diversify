@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useInflationData } from "../hooks/use-inflation-data";
 import type { Region } from "../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
@@ -115,7 +115,7 @@ export default function InflationProtectionInfo({
   >("savings");
 
   // Get data freshness information (memoized to prevent unnecessary recalculations)
-  const freshnessInfo = useMemo(() => getDataFreshness(), [getDataFreshness]);
+  const freshnessInfo = useMemo(() => getDataFreshness(), [getDataFreshness, inflationData]);
   
   // Calculate potential savings
   const savings = calculateSavings(
