@@ -82,8 +82,31 @@ export default async function handler(
 
         const data = await response.json();
         
-        // Extract inflation rate
-        const inflationRate = parseFloat(data.inflation_rate || data.value || '0');
+        // Log the raw response for debugging
+        console.log(`[StatBureau API] Response for ${countryName}:`, JSON.stringify(data).substring(0, 200));
+        
+        // Extract inflation rate - StatBureau returns an array with InflationRate field
+        let inflationRate = 0;
+        
+        if (Array.isArray(data) && data.length > 0) {
+          // Get the most recent inflation rate (first item in array)
+          const latestData = data[0];
+          if (latestData.InflationRate) {
+            inflationRate = parseFloat(latestData.InflationRate);
+          } else if (latestData.InflationRateRounded) {
+            inflationRate = parseFloat(latestData.InflationRateRounded);
+          }
+        } else if (data.inflation_rate) {
+          inflationRate = parseFloat(data.inflation_rate);
+        } else if (data.value) {
+          inflationRate = parseFloat(data.value);
+        } else if (data.rate) {
+          inflationRate = parseFloat(data.rate);
+        } else if (typeof data === 'number') {
+          inflationRate = data;
+        }
+        
+        console.log(`[StatBureau API] Extracted rate for ${code}: ${inflationRate}`);
         
         if (!isNaN(inflationRate)) {
           results.push({

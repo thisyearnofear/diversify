@@ -114,8 +114,8 @@ export default function InflationProtectionInfo({
     "education" | "remittance" | "business" | "travel" | "savings"
   >("savings");
 
-  // Get data freshness information
-  const freshnessInfo = getDataFreshness();
+  // Get data freshness information (memoized to prevent unnecessary recalculations)
+  const freshnessInfo = useMemo(() => getDataFreshness(), [getDataFreshness]);
   
   // Calculate potential savings
   const savings = calculateSavings(

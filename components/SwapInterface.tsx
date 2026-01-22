@@ -254,19 +254,22 @@ const SwapInterface = forwardRef<
     }
   };
 
-  // Get inflation rates for the selected tokens
-  const fromTokenInflationRate = fromToken
-    ? getInflationRateForStablecoin(fromToken)
-    : 0;
-  const toTokenInflationRate = toToken
-    ? getInflationRateForStablecoin(toToken)
-    : 0;
-  const fromTokenRegion = fromToken ? getRegionForStablecoin(fromToken) : "";
-  const toTokenRegion = toToken ? getRegionForStablecoin(toToken) : "";
+  // Get inflation rates for the selected tokens (memoized to prevent unnecessary recalculations)
+  const { fromTokenInflationRate, toTokenInflationRate, fromTokenRegion, toTokenRegion } = useMemo(() => {
+    const fromRate = fromToken ? getInflationRateForStablecoin(fromToken) : 0;
+    const toRate = toToken ? getInflationRateForStablecoin(toToken) : 0;
+    const fromRegion = fromToken ? getRegionForStablecoin(fromToken) : "";
+    const toRegion = toToken ? getRegionForStablecoin(toToken) : "";
+    
+    return { fromRate, toRate, fromRegion, toRegion };
+  }, [fromToken, toToken, getInflationRateForStablecoin, getRegionForStablecoin]);
 
-  // Calculate potential inflation savings
-  const inflationDifference = fromTokenInflationRate - toTokenInflationRate;
-  const hasInflationBenefit = inflationDifference > 0;
+  // Calculate potential inflation savings (memoized)
+  const { inflationDifference, hasInflationBenefit } = useMemo(() => {
+    const difference = fromTokenInflationRate - toTokenInflationRate;
+    const benefit = difference > 0;
+    return { difference, benefit };
+  }, [fromTokenInflationRate, toTokenInflationRate]);
 
   return (
     <div
