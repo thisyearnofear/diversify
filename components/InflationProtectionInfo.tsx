@@ -115,7 +115,7 @@ export default function InflationProtectionInfo({
   >("savings");
 
   // Get data freshness information (memoized to prevent unnecessary recalculations)
-  const freshnessInfo = useMemo(() => getDataFreshness(), [getDataFreshness, inflationData]);
+  const freshnessInfo = useMemo(() => getDataFreshness(), [getDataFreshness]);
   
   // Calculate potential savings
   const savings = calculateSavings(

@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from "react";
 import { useInflationData } from "../hooks/use-inflation-data";
 import { useSwap } from "../hooks/use-swap";
 import { useExpectedAmountOut } from "../hooks/use-expected-amount-out";
@@ -256,19 +256,19 @@ const SwapInterface = forwardRef<
 
   // Get inflation rates for the selected tokens (memoized to prevent unnecessary recalculations)
   const { fromTokenInflationRate, toTokenInflationRate, fromTokenRegion, toTokenRegion } = useMemo(() => {
-    const fromRate = fromToken ? getInflationRateForStablecoin(fromToken) : 0;
-    const toRate = toToken ? getInflationRateForStablecoin(toToken) : 0;
-    const fromRegion = fromToken ? getRegionForStablecoin(fromToken) : "";
-    const toRegion = toToken ? getRegionForStablecoin(toToken) : "";
-    
-    return { fromRate, toRate, fromRegion, toRegion };
+    const fromTokenInflationRate = fromToken ? getInflationRateForStablecoin(fromToken) : 0;
+    const toTokenInflationRate = toToken ? getInflationRateForStablecoin(toToken) : 0;
+    const fromTokenRegion = fromToken ? getRegionForStablecoin(fromToken) : "";
+    const toTokenRegion = toToken ? getRegionForStablecoin(toToken) : "";
+
+    return { fromTokenInflationRate, toTokenInflationRate, fromTokenRegion, toTokenRegion };
   }, [fromToken, toToken, getInflationRateForStablecoin, getRegionForStablecoin]);
 
   // Calculate potential inflation savings (memoized)
   const { inflationDifference, hasInflationBenefit } = useMemo(() => {
-    const difference = fromTokenInflationRate - toTokenInflationRate;
-    const benefit = difference > 0;
-    return { difference, benefit };
+    const inflationDifference = fromTokenInflationRate - toTokenInflationRate;
+    const hasInflationBenefit = inflationDifference > 0;
+    return { inflationDifference, hasInflationBenefit };
   }, [fromTokenInflationRate, toTokenInflationRate]);
 
   return (
