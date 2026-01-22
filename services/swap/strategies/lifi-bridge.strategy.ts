@@ -125,13 +125,6 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
             // Get signer
             const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
 
-            // Configure LiFi SDK with provider
-            if (typeof window !== 'undefined' && window.ethereum) {
-                lifiConfig.setProviders([
-                    window.ethereum as any
-                ]);
-            }
-
             // Get configuration
             const fromTokens = getTokenAddresses(params.fromChainId);
             const toTokens = getTokenAddresses(params.toChainId);
@@ -170,6 +163,7 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
             });
 
             // Execute route via LiFi SDK
+            // LiFi SDK v3 will automatically use window.ethereum
             this.log('Executing cross-chain route');
             const executedRoute = await executeRoute(route, {
                 updateRouteHook: (updatedRoute) => {

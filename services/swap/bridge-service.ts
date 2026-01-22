@@ -139,20 +139,9 @@ export class BridgeService {
     }
 
     static async swapSingleChain(route: Route, signer?: ethers.Signer): Promise<BridgeResult> {
-        // Configure SDK with provider if signer is provided
-        if (signer && typeof window !== 'undefined' && window.ethereum) {
-            try {
-                // Set up EVM provider for LiFi SDK v3
-                const provider = signer.provider as ethers.providers.Web3Provider;
-                config.setProviders([
-                    window.ethereum as any
-                ]);
-            } catch (err) {
-                console.warn('Failed to configure LiFi provider:', err);
-            }
-        }
-
+        // Execute route - LiFi SDK v3 will automatically use window.ethereum
         const result = await executeRoute(route);
+        
         return {
             provider: 'lifi',
             txHash: result.steps?.[0]?.execution?.process?.[0]?.txHash || '',
