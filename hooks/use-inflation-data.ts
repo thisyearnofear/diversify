@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { WorldBankService } from '../utils/api-services';
 import { inflationService } from '../utils/improved-inflation-service';
 import { useDataFreshness } from './use-data-freshness';
@@ -185,6 +185,7 @@ export function useInflationData() {
         
         if (improvedData.source !== 'fallback' && improvedData.data?.countries) {
           console.log(`Using improved data from ${improvedData.source}`);
+          console.log(`[Inflation] Loaded ${improvedData.data.countries.length} countries from ${improvedData.source}`);
           
           // Process the improved data - ensure countries array exists
           const countryData: InflationData[] = (improvedData.data.countries || []).map((item: any) => ({
@@ -196,8 +197,11 @@ export function useInflationData() {
             source: improvedData.source as 'api' | 'cache' | 'fallback'
           }));
 
+          console.log(`[Inflation] Processed country data:`, countryData.slice(0, 3)); // Log first 3 for debugging
+
           // Group by region (same logic as before)
           const regionalData = processCountryDataIntoRegions(countryData);
+          console.log(`[Inflation] Regional data:`, Object.keys(regionalData).map(r => `${r}: ${regionalData[r].countries.length} countries`));
           setInflationData(regionalData);
           setDataSource(improvedData.source as 'api' | 'cache' | 'fallback');
           return;
@@ -318,23 +322,38 @@ export function useInflationData() {
     return currencyMap[countryCode] || 'Unknown';
   };
 
-  // Get inflation rate for a specific currency
-  const getInflationRateForCurrency = (currency: string): number => {
+  // Get inflation rate for a specific currency (memoized)
+  const getInflationRateForCurrency = useCallback((currency: string): number => {
     const countryCode = CURRENCY_TO_COUNTRY[currency];
-    if (!countryCode) return 0;
+    if (!countryCode) {
+      console.warn(`[Inflation] No country code found for currency: ${currency}`);
+      return 0;
+    }
 
     const region = COUNTRY_TO_REGION[countryCode];
-    if (!region || !inflationData[region]) return 0;
+    if (!region || !inflationData[region]) {
+      console.warn(`[Inflation] No region found for country code: ${countryCode}`);
+      return 0;
+    }
 
+    // First try to find exact currency match
     const countryData = inflationData[region].countries.find(
       c => c.currency === currency
     );
 
-    return countryData ? countryData.rate : inflationData[region].avgRate;
-  };
+    if (countryData) {
+      console.log(`[Inflation] Found exact match for ${currency}: ${countryData.rate}%`);
+      return countryData.rate;
+    }
 
-  // Get inflation rate for a specific stablecoin
-  const getInflationRateForStablecoin = (stablecoin: string): number => {
+    // If no exact match, use region average
+    const avgRate = inflationData[region].avgRate;
+    console.log(`[Inflation] Using region average for ${currency}: ${avgRate}%`);
+    return avgRate;
+  }, [inflationData]);
+
+  // Get inflation rate for a specific stablecoin (memoized)
+  const getInflationRateForStablecoin = useCallback((stablecoin: string): number => {
     // Normalize stablecoin name (handle both CXOF and EXOF)
     const normalizedStablecoin = stablecoin.toUpperCase();
 
@@ -366,10 +385,10 @@ export function useInflationData() {
     const rate = getInflationRateForCurrency(currency);
     console.log(`[Inflation] ${stablecoin} -> ${currency} rate: ${rate}`);
     return rate;
-  };
+  }, [inflationData, getInflationRateForCurrency]);
 
-  // Get region for a specific stablecoin
-  const getRegionForStablecoin = (stablecoin: string): string => {
+  // Get region for a specific stablecoin (memoized)
+  const getRegionForStablecoin = useCallback((stablecoin: string): string => {
     // Make case-insensitive by converting to uppercase
     const stablecoinUpper = stablecoin.toUpperCase();
 
@@ -412,10 +431,10 @@ export function useInflationData() {
     if (!countryCode) return 'Unknown';
 
     return COUNTRY_TO_REGION[countryCode] || 'Unknown';
-  };
+  }, []);
 
-  // Get data freshness information
-  const getOverallDataFreshness = () => {
+  // Get data freshness information (memoized)
+  const getOverallDataFreshness = useCallback(() => {
     // Find the most recent data point
     let mostRecentDate = '';
     Object.values(inflationData).forEach(region => {
@@ -437,7 +456,7 @@ export function useInflationData() {
         sum + region.countries.length, 0
       )
     };
-  };
+  }, [inflationData]);
 
   return {
     inflationData,
