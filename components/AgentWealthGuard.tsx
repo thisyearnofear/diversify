@@ -12,6 +12,7 @@ interface AgentWealthGuardProps {
     amount: number;
     holdings: string[];
     onExecuteSwap: (targetToken: string) => void;
+    embedded?: boolean;
 }
 
 // Mobile-first AI Chat Bubble Component
@@ -71,7 +72,7 @@ const AIProgress = ({ currentStep }: { currentStep: string }) => (
     </div>
 );
 
-export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: AgentWealthGuardProps) {
+export default function AgentWealthGuard({ amount, holdings, onExecuteSwap, embedded = false }: AgentWealthGuardProps) {
     const hookResult = useWealthProtectionAgent();
     const {
         analyze, advice, isAnalyzing, thinkingStep, config, updateConfig,
@@ -79,7 +80,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
     } = hookResult;
     const { inflationData } = useInflationData();
     const [showConfig, setShowConfig] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(embedded); // Default to open if embedded
     const [showHint] = useState(true);
     const [bridgeState, setBridgeState] = useState<{
         status: 'idle' | 'checking' | 'approving' | 'bridging' | 'success' | 'error';
@@ -178,38 +179,46 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
     const hasNewInsight = advice && !isAnalyzing;
 
     // Mobile-first: Show compact hint by default, full interface on demand
-    if (!isOpen && showHint && !!hasNewInsight) {
-        return (
-            <>
-                <AIHint
-                    suggestion={`${advice?.action === 'SWAP' ? '⚡' : '🛡️'} ${advice?.reasoning.slice(0, 50)}...`}
-                    onAskAI={() => setIsOpen(true)}
-                />
-                <AIChatBubble onClick={() => setIsOpen(true)} hasNewInsight={!!hasNewInsight} />
-            </>
-        );
-    }
+    // ONLY if not embedded. If embedded, we skip this check and render the full UI.
+    if (!embedded) {
+        if (!isOpen && showHint && !!hasNewInsight) {
+            return (
+                <>
+                    <AIHint
+                        suggestion={`${advice?.action === 'SWAP' ? '⚡' : '🛡️'} ${advice?.reasoning.slice(0, 50)}...`}
+                        onAskAI={() => setIsOpen(true)}
+                    />
+                    <AIChatBubble onClick={() => setIsOpen(true)} hasNewInsight={!!hasNewInsight} />
+                </>
+            );
+        }
 
-    // Floating chat bubble when closed
-    if (!isOpen) {
-        return <AIChatBubble onClick={() => setIsOpen(true)} hasNewInsight={!!hasNewInsight} />;
+        // Floating chat bubble when closed
+        if (!isOpen) {
+            return <AIChatBubble onClick={() => setIsOpen(true)} hasNewInsight={!!hasNewInsight} />;
+        }
     }
 
     // Full interface (slide-up modal on mobile, compact card on desktop)
+    // If embedded, remove fixed positioning and modal behavior
+    const containerClasses = embedded
+        ? "w-full bg-white rounded-xl shadow-sm border border-gray-100"
+        : "fixed inset-x-0 bottom-0 h-[70vh] bg-white rounded-t-2xl shadow-2xl z-50 md:relative md:h-auto md:rounded-2xl md:bg-gradient-to-br md:from-[#0F172A] md:to-[#1E293B] md:text-white";
+
     return (
         <AnimatePresence>
             <motion.div
-                initial={{ y: "100%" }}
-                animate={{ y: 0 }}
-                exit={{ y: "100%" }}
-                className="fixed inset-x-0 bottom-0 h-[70vh] bg-white rounded-t-2xl shadow-2xl z-50 md:relative md:h-auto md:rounded-2xl md:bg-gradient-to-br md:from-[#0F172A] md:to-[#1E293B] md:text-white"
+                initial={embedded ? { opacity: 0 } : { y: "100%" }}
+                animate={embedded ? { opacity: 1 } : { y: 0 }}
+                exit={embedded ? { opacity: 0 } : { y: "100%" }}
+                className={containerClasses}
             >
                 {/* Mobile Header */}
-                <div className="flex items-center justify-between p-4 border-b md:border-none">
+                <div className={`flex items-center justify-between p-4 border-b ${embedded ? 'border-gray-100' : 'md:border-none'}`}>
                     <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center md:w-12 md:h-12 md:bg-blue-600/10">
+                        <div className={`w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center ${!embedded ? 'md:w-12 md:h-12 md:bg-blue-600/10' : ''}`}>
                             <motion.span
-                                className="text-xl md:text-2xl"
+                                className={`text-xl ${!embedded ? 'md:text-2xl' : ''}`}
                                 animate={isAnalyzing ? { rotate: 360 } : {}}
                                 transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
                             >
@@ -217,7 +226,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                             </motion.span>
                         </div>
                         <div>
-                            <h3 className="font-semibold text-sm md:text-xl md:font-black md:bg-clip-text md:text-transparent md:bg-gradient-to-r md:from-white md:to-blue-200">
+                            <h3 className={`font-semibold text-sm ${!embedded ? 'md:text-xl md:font-black md:bg-clip-text md:text-transparent md:bg-gradient-to-r md:from-white md:to-blue-200' : 'text-gray-900'}`}>
                                 DiversiFi Oracle
                             </h3>
                             <div className="flex items-center gap-2">
@@ -239,7 +248,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isVisionLoading}
-                            className={`p-2 rounded-lg transition-all ${isVisionLoading ? 'animate-pulse bg-blue-500/20' : 'hover:bg-gray-100 md:hover:bg-white/5'} text-blue-500`}
+                            className={`p-2 rounded-lg transition-all ${isVisionLoading ? 'animate-pulse bg-blue-500/20' : `hover:bg-gray-100 ${!embedded ? 'md:hover:bg-white/5' : ''}`} text-blue-500`}
                             title="Scan Portfolio Screenshot (Gemini Vision)"
                         >
                             {isVisionLoading ? (
@@ -253,20 +262,22 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                         </button>
                         <button
                             onClick={() => setShowConfig(!showConfig)}
-                            className="p-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-100 md:hover:bg-white/5"
+                            className={`p-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-100 ${!embedded ? 'md:hover:bg-white/5' : ''}`}
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                             </svg>
                         </button>
-                        <button
-                            onClick={() => setIsOpen(false)}
-                            className="p-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-100 md:hover:bg-white/5"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
+                        {!embedded && (
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="p-2 rounded-lg transition-colors text-gray-400 hover:bg-gray-100 md:hover:bg-white/5"
+                            >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -277,11 +288,11 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            className="overflow-hidden border-b md:border-none"
+                            className={`overflow-hidden border-b ${embedded ? 'border-gray-100' : 'md:border-none'}`}
                         >
-                            <div className="p-4 space-y-3 bg-gray-50 md:bg-white/5 md:rounded-xl md:border md:border-white/10">
+                            <div className={`p-4 space-y-3 bg-gray-50 ${!embedded ? 'md:bg-white/5 md:rounded-xl md:border md:border-white/10' : ''}`}>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-600 md:text-slate-400 uppercase mb-2 block">Risk Tolerance</label>
+                                    <label className={`text-xs font-bold text-gray-600 ${!embedded ? 'md:text-slate-400' : ''} uppercase mb-2 block`}>Risk Tolerance</label>
                                     <div className="grid grid-cols-3 gap-2">
                                         {(['Conservative', 'Balanced', 'Aggressive'] as RiskTolerance[]).map(t => (
                                             <button
@@ -289,7 +300,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                                 onClick={() => updateConfig({ riskTolerance: t })}
                                                 className={`px-2 py-1.5 rounded-md text-xs font-bold transition-all ${config.riskTolerance === t
                                                     ? 'bg-blue-600 text-white shadow-lg'
-                                                    : 'bg-white text-gray-600 hover:bg-gray-100 md:bg-white/5 md:text-slate-400 md:hover:bg-white/10'
+                                                    : `bg-white text-gray-600 hover:bg-gray-100 ${!embedded ? 'md:bg-white/5 md:text-slate-400 md:hover:bg-white/10' : ''}`
                                                     }`}
                                             >
                                                 {t}
@@ -298,12 +309,12 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="text-xs font-bold text-gray-600 md:text-slate-400 uppercase mb-2 block">Bridge Optionality</label>
+                                    <label className={`text-xs font-bold text-gray-600 ${!embedded ? 'md:text-slate-400' : ''} uppercase mb-2 block`}>Bridge Optionality</label>
                                     <button
                                         onClick={() => setUseCircleNative(!useCircleNative)}
                                         className={`w-full px-3 py-2 rounded-md text-xs font-bold flex items-center justify-between transition-all ${useCircleNative
                                             ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
-                                            : 'bg-white text-gray-600 md:bg-white/5 md:text-slate-400 border border-transparent'
+                                            : `bg-white text-gray-600 ${!embedded ? 'md:bg-white/5 md:text-slate-400' : ''} border border-transparent`
                                             }`}
                                     >
                                         <div className="flex items-center gap-2">
@@ -335,23 +346,23 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                             className="space-y-4"
                         >
                             <div className={`rounded-xl p-4 border shadow-lg ${advice.action === 'SWAP'
-                                ? 'bg-amber-50 border-amber-200 md:bg-amber-500/10 md:border-amber-500/30'
-                                : 'bg-emerald-50 border-emerald-200 md:bg-emerald-500/10 md:border-emerald-500/30'
+                                ? `bg-amber-50 border-amber-200 ${!embedded ? 'md:bg-amber-500/10 md:border-amber-500/30' : ''}`
+                                : `bg-emerald-50 border-emerald-200 ${!embedded ? 'md:bg-emerald-500/10 md:border-emerald-500/30' : ''}`
                                 }`}>
                                 <div className="flex justify-between items-center mb-3">
                                     <div className="flex items-center gap-2">
                                         <span className="text-lg">{advice.action === 'SWAP' ? '⚡' : '🛡️'}</span>
                                         <h3 className={`font-bold text-sm uppercase ${advice.action === 'SWAP'
-                                            ? 'text-amber-800 md:text-amber-400'
-                                            : 'text-emerald-800 md:text-emerald-400'
+                                            ? `text-amber-800 ${!embedded ? 'md:text-amber-400' : ''}`
+                                            : `text-emerald-800 ${!embedded ? 'md:text-emerald-400' : ''}`
                                             }`}>
                                             {advice.action === 'SWAP' ? 'Action Required' : 'Portfolio Protected'}
                                         </h3>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-100 md:bg-black/30 border">
+                                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded bg-gray-100 ${!embedded ? 'md:bg-black/30' : ''} border`}>
                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                                            <span className="text-xs font-mono text-blue-600 md:text-blue-200">
+                                            <span className={`text-xs font-mono text-blue-600 ${!embedded ? 'md:text-blue-200' : ''}`}>
                                                 {(advice.confidence * 100).toFixed(0)}%
                                             </span>
                                         </div>
@@ -362,11 +373,11 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                         )}
                                     </div>
                                 </div>
-                                <div className="bg-blue-600/5 rounded-xl p-4 border border-blue-500/20">
+                                <div className={`bg-blue-600/5 rounded-xl p-4 border border-blue-500/20`}>
                                     <div className="flex items-center gap-2 mb-3">
                                         <span className="text-xl">🧠</span>
                                         <div>
-                                            <h4 className="font-bold text-gray-800 md:text-white text-sm">Wealth Protection Strategy</h4>
+                                            <h4 className={`font-bold text-gray-800 ${!embedded ? 'md:text-white' : ''} text-sm`}>Wealth Protection Strategy</h4>
                                             <div className="flex items-center gap-2 text-[10px] text-blue-400 font-mono">
                                                 <span className="animate-pulse">●</span>
                                                 <span>Agent: {advice._meta?.modelUsed || 'Gemini 3 Flash'}</span>
@@ -374,7 +385,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                         </div>
                                     </div>
 
-                                    <p className="text-sm text-gray-700 md:text-slate-300 font-medium leading-relaxed italic border-l-2 border-gray-300 md:border-white/10 pl-3">
+                                    <p className={`text-sm text-gray-700 ${!embedded ? 'md:text-slate-300' : ''} font-medium leading-relaxed italic border-l-2 border-gray-300 ${!embedded ? 'md:border-white/10' : ''} pl-3`}>
                                         &quot;{advice.reasoning}&quot;
                                     </p>
 
@@ -387,7 +398,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                                     initial={{ opacity: 0, x: -5 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     key={idx}
-                                                    className="flex items-start gap-2 text-[11px] text-gray-500 md:text-slate-400 font-medium"
+                                                    className={`flex items-start gap-2 text-[11px] text-gray-500 ${!embedded ? 'md:text-slate-400' : ''} font-medium`}
                                                 >
                                                     <span className="text-blue-500 mt-1">↪</span>
                                                     <span>{thought}</span>
@@ -398,7 +409,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                                 </div>
 
                                 {advice.expectedSavings && (
-                                    <div className="mt-3 flex items-center justify-between text-xs text-gray-600 md:text-slate-400">
+                                    <div className={`mt-3 flex items-center justify-between text-xs text-gray-600 ${!embedded ? 'md:text-slate-400' : ''}`}>
                                         <span>Expected protection: <span className="font-bold text-green-600">${advice.expectedSavings}</span></span>
                                         <span className="opacity-60">{advice.timeHorizon} horizon</span>
                                     </div>
@@ -406,35 +417,35 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
 
                                 {/* RWA Specific Asset Card */}
                                 {advice.targetToken && (['PAXG', 'PROP', 'GLP'].includes(advice.targetToken)) && (
-                                    <div className="mt-4 p-3 bg-white/50 md:bg-white/5 rounded-lg border border-white/10 flex items-center justify-between">
+                                    <div className={`mt-4 p-3 bg-white/50 ${!embedded ? 'md:bg-white/5' : ''} rounded-lg border border-white/10 flex items-center justify-between`}>
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center text-xl shadow-inner">
                                                 {advice.targetToken === 'PAXG' ? '🏆' : advice.targetToken === 'PROP' ? '🏠' : '📈'}
                                             </div>
                                             <div>
                                                 <div className="text-xs font-bold">{advice.targetToken} Asset Info</div>
-                                                <div className="text-[10px] text-gray-500 md:text-slate-400">
+                                                <div className={`text-[10px] text-gray-500 ${!embedded ? 'md:text-slate-400' : ''}`}>
                                                     {advice.targetToken === 'PAXG' ? 'Physical Gold Hedge' :
                                                         'RWA Yield Opportunity'}
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="text-[10px] font-bold text-blue-600 md:text-blue-400">Arbitrum One</div>
+                                            <div className={`text-[10px] font-bold text-blue-600 ${!embedded ? 'md:text-blue-400' : ''}`}>Arbitrum One</div>
                                             <div className="text-[9px] text-gray-400">x402 Verified</div>
                                         </div>
                                     </div>
                                 )}
 
                                 {advice.paymentHashes && Object.keys(advice.paymentHashes).length > 0 && (
-                                    <div className="mt-4 pt-4 border-t border-gray-200 md:border-white/10">
-                                        <h4 className="text-[10px] font-bold uppercase text-gray-500 md:text-slate-500 mb-2 tracking-widest">On-Chain Data Receipts</h4>
+                                    <div className={`mt-4 pt-4 border-t border-gray-200 ${!embedded ? 'md:border-white/10' : ''}`}>
+                                        <h4 className={`text-[10px] font-bold uppercase text-gray-500 ${!embedded ? 'md:text-slate-500' : ''} mb-2 tracking-widest`}>On-Chain Data Receipts</h4>
                                         <div className="space-y-2">
                                             {Object.entries(advice.paymentHashes).map(([source, hash]) => (
-                                                <div key={source} className="flex items-center justify-between bg-white/50 md:bg-black/20 p-2 rounded border border-gray-100 md:border-white/5">
+                                                <div key={source} className={`flex items-center justify-between bg-white/50 ${!embedded ? 'md:bg-black/20' : ''} p-2 rounded border border-gray-100 ${!embedded ? 'md:border-white/5' : ''}`}>
                                                     <div className="flex flex-col">
-                                                        <span className="text-[10px] font-bold text-gray-600 md:text-blue-200">{source}</span>
-                                                        <span className="text-[9px] font-mono text-gray-400 md:text-slate-500 truncate w-32 md:w-48">{hash}</span>
+                                                        <span className={`text-[10px] font-bold text-gray-600 ${!embedded ? 'md:text-blue-200' : ''}`}>{source}</span>
+                                                        <span className={`text-[9px] font-mono text-gray-400 ${!embedded ? 'md:text-slate-500' : ''} truncate w-32 md:w-48`}>{hash}</span>
                                                     </div>
                                                     <a
                                                         href={`${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${hash}`}
@@ -489,7 +500,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                     {/* Initial State */}
                     {!advice && !isAnalyzing && (
                         <div className="text-center py-8">
-                            <p className="text-gray-600 md:text-slate-400 text-sm mb-6 leading-relaxed">
+                            <p className={`text-gray-600 ${!embedded ? 'md:text-slate-400' : ''} text-sm mb-6 leading-relaxed`}>
                                 Let the Oracle analyze global market conditions to optimize your ${amount.toFixed(2)} portfolio.
                             </p>
                             <button
@@ -506,7 +517,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap }: Ag
                 </div>
 
                 {/* Quick Actions Footer */}
-                <div className="p-4 border-t bg-gray-50 md:bg-transparent md:border-white/10">
+                <div className={`p-4 border-t bg-gray-50 ${!embedded ? 'md:bg-transparent md:border-white/10' : ''}`}>
                     <div className="flex gap-2 overflow-x-auto pb-1">
                         <button
                             onClick={handleAnalyze}

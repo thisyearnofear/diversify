@@ -19,7 +19,7 @@ interface ProtectionTabProps {
 
 // RWA yield data
 const RWA_YIELDS = [
-  { symbol: "PAXG", apy: "—", label: "Gold", description: "Tokenized physical gold" },
+  { symbol: "PAXG", apy: "Store of Value", label: "Inflation Hedge", description: "Tokenized physical gold" },
 ];
 
 export default function ProtectionTab({
@@ -85,14 +85,14 @@ export default function ProtectionTab({
       {/* RWA Yields - Premium Feature Card */}
       <FeatureCard
         title="🏛️ RWA Vaults"
-        badge={<span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Live Yields</span>}
+        badge={<span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Asset Stability</span>}
         variant="premium"
       >
         <div className="grid grid-cols-3 gap-2 mb-3">
           {RWA_YIELDS.map((item) => (
             <div key={item.symbol} className="bg-white/10 border border-white/20 rounded-lg p-2 text-center">
               <div className="text-xs text-blue-200 font-bold">{item.symbol}</div>
-              <div className="text-lg font-black text-white">{item.apy}</div>
+              <div className="text-sm font-bold text-white my-1">{item.apy}</div>
               <div className="text-xs text-blue-200/60">{item.label}</div>
             </div>
           ))}
@@ -127,6 +127,7 @@ export default function ProtectionTab({
           amount={totalValue || 0}
           holdings={Object.keys(balances || {})}
           onExecuteSwap={handleNavigateToSwap}
+          embedded={true}
         />
       </CollapsibleSection>
 

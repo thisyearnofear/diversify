@@ -15,10 +15,8 @@ interface DataFreshnessInfo {
 }
 
 const SOURCE_RELIABILITY: Record<string, 'high' | 'medium' | 'low'> = {
-  'statbureau': 'high',
-  'tradingeconomics': 'high',
-  'fred': 'high',
-  'worldbank': 'medium',
+  'imf': 'high',
+  'worldbank': 'high',
   'cache': 'medium',
   'fallback': 'low'
 };
