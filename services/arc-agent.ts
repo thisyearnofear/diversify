@@ -6,6 +6,8 @@
 
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
 import { rwaService } from './rwa-service';
+import { CircleGatewayService } from './circle-gateway';
+import { CircleBridgeKitService } from './circle-bridge-kit';
 
 export interface Payment {
     amount: string;
@@ -149,20 +151,66 @@ export class CircleWalletProvider implements AgentWalletProvider {
 
     getAddress() {
         // In reality, this would fetch from Circle API
-        return '0x' + 'circle_wallet_address'.padEnd(40, '0');
+        // For hackathon, we'll use a mock address that looks realistic
+        return '0x' + 'circle_wallet_' + this.walletId.slice(0, 10).padEnd(30, '0');
     }
-    async signTransaction(tx: any) { return '0x' + 'signed_by_circle'.padEnd(64, '0'); }
+    
+    async signTransaction(tx: any) {
+        console.log(`[Circle Wallet ${this.walletId}] Signing transaction...`);
+        // In reality, this would call Circle's transaction signing API
+        return '0x' + 'circle_signed_' + Math.random().toString(16).slice(2, 58);
+    }
+    
     async sendTransaction(tx: any) {
-        console.log('[Circle] Executing programmable transaction...');
-        return { hash: '0x' + Math.random().toString(16).slice(2, 66) };
+        console.log(`[Circle Wallet ${this.walletId}] Executing programmable transaction...`);
+        console.log(`  To: ${tx.to}, Value: ${tx.value}, Data: ${tx.data?.slice(0, 50)}...`);
+        
+        // In reality, this would call Circle's transaction execution API
+        return {
+            hash: '0x' + 'circle_tx_' + Math.random().toString(16).slice(2, 58),
+            from: this.getAddress(),
+            to: tx.to,
+            status: 'pending'
+        };
     }
+    
     async balanceOf(tokenAddress: string) {
         // Implementation would call Circle's /wallets/{id}/balances
+        console.log(`[Circle Wallet ${this.walletId}] Checking balance for token: ${tokenAddress}`);
+        
+        // For hackathon, return a realistic balance
+        // In production, this would be fetched from Circle API
         return 100.0; // Mock for demo
     }
+    
     async transfer(to: string, amount: string, tokenAddress: string) {
-        console.log(`[Circle] Programmable transfer: ${amount} to ${to}`);
-        return { transactionHash: '0x' + Math.random().toString(16).slice(2, 66) };
+        console.log(`[Circle Wallet ${this.walletId}] Programmable transfer: ${amount} USDC to ${to}`);
+        console.log(`  Using token: ${tokenAddress}`);
+        
+        // In reality, this would call Circle's transfer API
+        return {
+            transactionHash: '0x' + 'circle_transfer_' + Math.random().toString(16).slice(2, 58),
+            from: this.getAddress(),
+            to: to,
+            amount: amount,
+            token: tokenAddress,
+            status: 'completed'
+        };
+    }
+    
+    /**
+     * Get wallet status from Circle API
+     */
+    async getWalletStatus() {
+        console.log(`[Circle Wallet ${this.walletId}] Fetching wallet status...`);
+        
+        // In reality, this would call Circle's wallet status API
+        return {
+            walletId: this.walletId,
+            address: this.getAddress(),
+            status: 'active',
+            capabilities: ['programmable_transfers', 'cross_chain', 'batch_payments']
+        };
     }
 }
 
@@ -173,6 +221,7 @@ export class ArcAgent {
     private spendingLimit: number;
     private spentToday: number = 0;
     private isTestnet: boolean;
+    private circleGatewayService: CircleGatewayService;
 
     constructor(config: {
         privateKey?: string;
@@ -186,6 +235,8 @@ export class ArcAgent {
         this.provider = new providers.JsonRpcProvider(
             config.rpcUrl || ARC_CONFIG.TESTNET_RPC
         );
+        this.circleGatewayService = new CircleGatewayService();
+        this.circleBridgeKitService = new CircleBridgeKitService();
 
         if (config.circleWalletId && config.circleApiKey) {
             this.wallet = new CircleWalletProvider(config.circleWalletId, config.circleApiKey);
@@ -213,13 +264,73 @@ export class ArcAgent {
         let totalCost = 0;
 
         try {
-            // Step 1: Check USDC balance
-            steps.push("Checking USDC balance on Arc Network...");
-            const balance = await this.getUSDCBalance();
-            console.log(`[Arc Agent] USDC Balance: ${balance} USDC`);
+            // Step 1: Check USDC balance with Circle Gateway integration
+            steps.push("Checking unified USDC balance via Circle Gateway...");
+            const unifiedBalance = await this.getUnifiedUSDCBalance();
+            const balance = parseFloat(unifiedBalance.arcBalance || '0');
+            console.log(`[Arc Agent] Unified USDC Balance: ${unifiedBalance.totalUSDC} USDC`);
+            console.log(`[Arc Agent] Arc Network Balance: ${balance} USDC`);
+            console.log(`[Circle Gateway] Available on: ${unifiedBalance.chainBalances?.map((c: any) => c.chainName).join(', ') || 'Arc'}`);
 
             if (balance < this.spendingLimit) {
-                throw new Error(`Insufficient USDC balance. Have: ${balance}, Need: ${this.spendingLimit}`);
+                // Try to transfer USDC from other chains via Circle Gateway or Bridge Kit
+                if (parseFloat(unifiedBalance.totalUSDC) >= this.spendingLimit) {
+                    steps.push("Transferring USDC from other chains via Circle infrastructure...");
+                    
+                    // Check if we can use Circle Bridge Kit for better rates
+                    const bridgeKitStatus = await this.getBridgeKitStatus();
+                    if (bridgeKitStatus.arcIntegration === 'enabled') {
+                        steps.push("Using Circle Bridge Kit for optimal cross-chain transfer...");
+                        try {
+                            const bridgeResult = await this.bridgeUSDC(
+                                42161, // From Arbitrum
+                                5042002, // To Arc
+                                this.spendingLimit.toString()
+                            );
+                            
+                            console.log(`[Circle Bridge Kit] Bridge successful: ${bridgeResult.bridgeTransaction.transactionId}`);
+                            console.log(`[Circle Bridge Kit] Estimated time: ${bridgeResult.quote.estimatedTime}s, Fees: ${bridgeResult.quote.estimatedFees} USDC`);
+                            steps.push(`✓ Circle Bridge Kit transfer: ${bridgeResult.bridgeTransaction.transactionId}`);
+                            
+                            // For demo purposes, assume bridge is instant on Arc
+                            return this.getFallbackRecommendation();
+                            
+                        } catch (bridgeError) {
+                            console.warn('Circle Bridge Kit failed, falling back to Gateway:', bridgeError);
+                            // Fall back to Circle Gateway
+                            try {
+                                const transferHash = await this.transferUSDCViaGateway(
+                                    42161, // From Arbitrum
+                                    5042002, // To Arc
+                                    this.spendingLimit.toString()
+                                );
+                                console.log(`[Circle Gateway] Transfer initiated: ${transferHash}`);
+                                steps.push(`✓ Circle Gateway transfer: ${transferHash}`);
+                                return this.getFallbackRecommendation();
+                            } catch (gatewayError) {
+                                console.error('Both Circle Bridge Kit and Gateway failed:', gatewayError);
+                                throw new Error(`Insufficient USDC balance and all Circle transfer methods failed. Have: ${balance}, Need: ${this.spendingLimit}`);
+                            }
+                        }
+                    } else {
+                        // Use Circle Gateway if Bridge Kit is not available
+                        try {
+                            const transferHash = await this.transferUSDCViaGateway(
+                                42161, // From Arbitrum
+                                5042002, // To Arc
+                                this.spendingLimit.toString()
+                            );
+                            console.log(`[Circle Gateway] Transfer initiated: ${transferHash}`);
+                            steps.push(`✓ Circle Gateway transfer: ${transferHash}`);
+                            return this.getFallbackRecommendation();
+                        } catch (transferError) {
+                            console.error('Circle Gateway transfer failed:', transferError);
+                            throw new Error(`Insufficient USDC balance and Circle Gateway transfer failed. Have: ${balance}, Need: ${this.spendingLimit}`);
+                        }
+                    }
+                } else {
+                    throw new Error(`Insufficient USDC balance across all chains. Total: ${unifiedBalance.totalUSDC}, Need: ${this.spendingLimit}`);
+                }
             }
 
             // Step 2: Fetch Macro Regime (Highest fidelity signal)
@@ -302,6 +413,82 @@ export class ArcAgent {
             console.error('Failed to get USDC balance:', error);
             return 0;
         }
+    }
+
+    /**
+     * Get unified USDC balance across all chains via Circle Gateway
+     * This demonstrates the "unified USDC balance instantly accessible crosschain" feature
+     */
+    async getUnifiedUSDCBalance(): Promise<any> {
+        try {
+            return await this.circleGatewayService.getUnifiedUSDCBalance(this.agentAddress);
+        } catch (error) {
+            console.error('Failed to get unified USDC balance:', error);
+            return {
+                totalUSDC: '0.00',
+                arcBalance: '0.00',
+                error: 'Circle Gateway unavailable'
+            };
+        }
+    }
+
+    /**
+     * Transfer USDC using Circle Gateway for cross-chain operations
+     */
+    async transferUSDCViaGateway(
+        fromChainId: number,
+        toChainId: number,
+        amount: string
+    ): Promise<string> {
+        try {
+            return await this.circleGatewayService.transferUSDCViaGateway(
+                fromChainId, toChainId, amount, this.agentAddress
+            );
+        } catch (error) {
+            console.error('Circle Gateway transfer failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Bridge USDC using Circle Bridge Kit for cross-chain operations
+     */
+    async bridgeUSDC(
+        sourceChainId: number,
+        destinationChainId: number,
+        amount: string
+    ): Promise<any> {
+        try {
+            // Get bridge quote
+            const quote = await this.circleBridgeKitService.getBridgeQuote(
+                sourceChainId, destinationChainId, amount, this.agentAddress
+            );
+            
+            console.log(`[Circle Bridge Kit] Quote received: ${quote.estimatedAmountOut} USDC, Fees: ${quote.estimatedFees}, Time: ${quote.estimatedTime}s`);
+            
+            // Execute bridge transaction
+            const bridgeTx = await this.circleBridgeKitService.bridgeUSDC(
+                sourceChainId, destinationChainId, amount, this.agentAddress, quote.quoteId
+            );
+            
+            console.log(`[Circle Bridge Kit] Bridge transaction: ${bridgeTx.transactionId}, Status: ${bridgeTx.status}`);
+            
+            return {
+                bridgeTransaction: bridgeTx,
+                quote: quote
+            };
+            
+        } catch (error) {
+            console.error('Circle Bridge Kit operation failed:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get Circle Bridge Kit status and capabilities
+     */
+    async getBridgeKitStatus() {
+        return await this.circleBridgeKitService.getBridgeKitStatus();
     }
 
     /**

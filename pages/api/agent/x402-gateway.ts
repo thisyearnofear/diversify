@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
 import { ARC_DATA_HUB_CONFIG } from '../../../config';
 import { x402Analytics } from '../../../utils/x402-analytics';
+import { CircleGatewayService } from '../../../services/circle-gateway';
 
 /**
  * Arc Data Hub - Production Gateway (v2)
@@ -23,6 +24,9 @@ const USDC_MAINNET = '0xCa23545A2F2199b1307A0B2E15a0c1086da37798';
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 20; // Increased limit for batched users
 const BATCH_TOPUP_AMOUNT = '1.00'; // Suggest 1 USDC top-up
+
+// Initialize Circle Gateway Service for enhanced payment verification
+const circleGatewayService = new CircleGatewayService();
 
 // --- Types ---
 interface UserState {
@@ -131,15 +135,19 @@ export default async function handler(
     const freeLimit = freeLimits[baseSource] || 10;
     const isFreeTier = currentUsage <= freeLimit;
 
-    // 3. Payment Processing (Top-up)
+    // 3. Payment Processing (Top-up) - Enhanced with Circle Gateway
     if (paymentProof) {
         try {
-            const amountCredited = await verifyOnChainPayment(paymentProof);
+            // Use enhanced verification that supports both on-chain and Circle Gateway payments
+            const amountCredited = await verifyCircleGatewayPayment(paymentProof);
             if (amountCredited > 0) {
                 UserManager.addCredit(user, amountCredited);
                 console.log(`[Data Hub] User ${clientKey} deposited $${amountCredited}. New Balance: $${user.creditBalance}`);
+                
                 // Record deposit as a special payment event
-                x402Analytics.recordPayment('USDC_DEPOSIT', amountCredited, Date.now() - start);
+                const paymentMethod = paymentProof.startsWith('circle-gateway-') ? 'CIRCLE_GATEWAY' : 'ON_CHAIN';
+                x402Analytics.recordPayment('USDC_DEPOSIT', amountCredited, Date.now() - start, paymentMethod);
+                
                 // Don't return here; proceed to fulfill the request using the new credit
             }
         } catch (error: unknown) {
@@ -183,7 +191,7 @@ export default async function handler(
         });
     }
 
-    // 6. Payment Required (402) - Batch Request
+    // 6. Payment Required (402) - Enhanced with Circle Gateway options
     const nonce = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     user.nonces.set(nonce, Date.now() + 300000); // 5 min expiry
 
@@ -203,6 +211,20 @@ export default async function handler(
             method: 'USDC Transfer',
             network: 'Arc Network',
             note: 'Payment adds to your credit balance for multiple requests.'
+        },
+        circle_gateway: {
+            enabled: true,
+            description: 'Use Circle Gateway for unified USDC balance across chains',
+            supported_chains: [
+                { chainId: 1, name: 'Ethereum' },
+                { chainId: 42161, name: 'Arbitrum' },
+                { chainId: 5042002, name: 'Arc Testnet' }
+            ],
+            benefits: [
+                'Unified USDC balance across all supported chains',
+                'Instant settlement on Arc network',
+                'Lower gas fees with USDC as native gas token'
+            ]
         }
     });
 }
@@ -244,6 +266,31 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
     if (isReplay) throw new Error('Transaction already processed');
 
     return amountUSDC;
+}
+
+// Enhanced verification using Circle Gateway for cross-chain payments
+async function verifyCircleGatewayPayment(paymentProof: string): Promise<number> {
+    try {
+        // Check if this is a Circle Gateway transaction
+        if (paymentProof.startsWith('circle-gateway-')) {
+            const isValid = await circleGatewayService.verifyGatewayTransaction(paymentProof);
+            if (!isValid) {
+                throw new Error('Invalid Circle Gateway transaction');
+            }
+            
+            // For hackathon demo, we'll return a fixed amount
+            // In production, this would fetch the actual amount from Circle Gateway
+            return 1.00; // 1 USDC credited for Circle Gateway transactions
+        }
+        
+        // If not a Circle Gateway transaction, fall back to on-chain verification
+        return await verifyOnChainPayment(paymentProof);
+        
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('Circle Gateway payment verification failed:', errorMessage);
+        throw new Error(`Circle Gateway verification failed: ${errorMessage}`);
+    }
 }
 
 // --- Data Fetching (Preserved & Cleaned) ---

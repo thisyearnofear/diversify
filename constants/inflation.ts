@@ -83,6 +83,17 @@ export const FALLBACK_INFLATION_DATA: Record<string, InflationDataEntry> = {
     ],
     countries: ["BR", "AR", "MX", "CO", "CL"],
     stablecoins: ["USDT", "USDC", "DAI", "PAX"]
+  },
+  Global: {
+    avgRate: 5.0,
+    data: [
+      { year: 2020, rate: 3.2 },
+      { year: 2021, rate: 4.7 },
+      { year: 2022, rate: 8.8 },
+      { year: 2023, rate: 5.0 },
+    ],
+    countries: [],
+    stablecoins: ["PAXG", "USDC", "USDT"]
   }
 };
 

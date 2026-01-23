@@ -58,40 +58,25 @@ export function useWealthProtectionAgent() {
         spendingLimit: 5.0
     });
 
-    // Initialize Arc Agent
+    // Initialize Arc Agent - now delegates to server-side API
     const initializeArcAgent = useCallback(async () => {
         if (!arcAgent) {
             try {
-                // Get agent configuration from environment
-                const privateKey = process.env.NEXT_PUBLIC_ARC_AGENT_PRIVATE_KEY || process.env.ARC_AGENT_PRIVATE_KEY;
-                const circleWalletId = process.env.NEXT_PUBLIC_CIRCLE_WALLET_ID;
-                const circleApiKey = process.env.NEXT_PUBLIC_CIRCLE_API_KEY;
-                const isTestnet = process.env.NEXT_PUBLIC_ARC_AGENT_TESTNET === 'true' || process.env.ARC_AGENT_TESTNET === 'true';
-                const spendingLimit = parseFloat(process.env.NEXT_PUBLIC_ARC_AGENT_DAILY_LIMIT || process.env.ARC_AGENT_DAILY_LIMIT || '5.0');
-
-                if (!privateKey && (!circleWalletId || !circleApiKey)) {
-                    console.warn('Agent wallet not configured (needs Private Key or Circle Wallet ID), Arc Agent features disabled');
-                    return;
-                }
-
-                const agent = new ArcAgent({
-                    privateKey,
-                    circleWalletId,
-                    circleApiKey,
-                    isTestnet,
-                    spendingLimit
-                });
-
-                // Test network connection
-                const networkStatus = await agent.getNetworkStatus();
-                if (networkStatus) {
-                    console.log('[Arc Agent] Initialized:', networkStatus);
-                    setArcAgent(agent);
-                } else {
-                    console.error('[Arc Agent] Failed to connect to Arc Network');
+                // Check if server-side agent is available
+                const response = await fetch('/api/agent/status');
+                if (response.ok) {
+                    const status = await response.json();
+                    if (status.enabled) {
+                        console.log('[Arc Agent] Server-side agent available:', status);
+                        // Create a proxy agent that calls server APIs
+                        // For now, we just mark that deep analysis is available
+                        setArcAgent({ isProxy: true, ...status } as any);
+                    } else {
+                        console.warn('Agent wallet not configured on server, Arc Agent features disabled');
+                    }
                 }
             } catch (error) {
-                console.error('Failed to initialize Arc Agent:', error);
+                console.error('Failed to check Arc Agent status:', error);
             }
         }
     }, [arcAgent]);

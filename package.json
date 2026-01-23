@@ -15,11 +15,13 @@
     "lint": "next lint",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "setup-arc-agent": "node scripts/setup-arc-agent.js",
+    "create-wallet": "npx tsx --env-file=.env.local scripts/create-circle-wallet.ts",
     "test-x402": "node scripts/test-x402-hub.mjs",
     "test-x402-comprehensive": "node scripts/test-x402-comprehensive.mjs",
     "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\""
   },
   "dependencies": {
+    "@circle-fin/developer-controlled-wallets": "10.0.1",
     "@farcaster/miniapp-sdk": "0.2.1",
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",

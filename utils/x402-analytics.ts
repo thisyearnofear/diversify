@@ -11,6 +11,7 @@ export interface PaymentMetrics {
     failureReasons: Record<string, number>;
     dataSourceUsage: Record<string, number>;
     dailySpending: Record<string, number>;
+    paymentMethods?: Record<string, number>;
 }
 
 export interface DataQualityMetrics {
@@ -48,10 +49,16 @@ export class X402Analytics {
     /**
      * Record a successful payment
      */
-    recordPayment(source: string, amount: number, duration: number) {
+    recordPayment(source: string, amount: number, duration: number, paymentMethod: string = 'ON_CHAIN') {
         this.metrics.totalPayments++;
         this.metrics.totalSpent += amount;
         this.metrics.dataSourceUsage[source] = (this.metrics.dataSourceUsage[source] || 0) + 1;
+
+        // Track payment methods
+        if (!this.metrics.paymentMethods) {
+            this.metrics.paymentMethods = {};
+        }
+        this.metrics.paymentMethods[paymentMethod] = (this.metrics.paymentMethods[paymentMethod] || 0) + 1;
 
         // Update average payment time
         this.metrics.averagePaymentTime =
@@ -64,7 +71,7 @@ export class X402Analytics {
 
         this.updateSuccessRate();
 
-        console.log(`[X402 Analytics] Payment recorded: ${source} - $${amount} (${duration}ms)`);
+        console.log(`[X402 Analytics] Payment recorded: ${source} - $${amount} (${duration}ms) via ${paymentMethod}`);
     }
 
     /**
