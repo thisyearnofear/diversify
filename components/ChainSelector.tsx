@@ -8,6 +8,8 @@ interface ChainSelectorProps {
     label: string;
     disabled?: boolean;
     className?: string;
+    otherChainId?: number; // For bridge validation
+    isBridgeMode?: boolean; // Whether this is for bridging
 }
 
 const ChainSelector: React.FC<ChainSelectorProps> = ({
@@ -16,6 +18,8 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
     label,
     disabled = false,
     className = '',
+    otherChainId,
+    isBridgeMode = false,
 }) => {
     const networks = [
         {
@@ -23,26 +27,43 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
             label: 'Celo Mainnet',
             icon: '🌍',
             color: 'green',
+            isTestnet: false,
         },
         {
             ...NETWORKS.ALFAJORES,
             label: 'Celo Alfajores',
             icon: '🧪',
             color: 'amber',
+            isTestnet: true,
         },
         {
             ...NETWORKS.ARBITRUM_ONE,
             label: 'Arbitrum One',
             icon: '🔷',
             color: 'blue',
+            isTestnet: false,
         },
         {
             ...NETWORKS.ARC_TESTNET,
             label: 'Arc Testnet',
             icon: '⚡',
             color: 'purple',
+            isTestnet: true,
         },
     ];
+
+    // Helper function to check if a network combination is valid for bridging
+    const isValidBridgeCombination = (chainId: number): boolean => {
+        if (!isBridgeMode || !otherChainId) return true;
+
+        const currentNetwork = networks.find(n => n.chainId === chainId);
+        const otherNetwork = networks.find(n => n.chainId === otherChainId);
+
+        if (!currentNetwork || !otherNetwork) return true;
+
+        // Cannot bridge between testnet and mainnet
+        return currentNetwork.isTestnet === otherNetwork.isTestnet;
+    };
 
     const selectedNetwork = networks.find((n) => n.chainId === selectedChainId);
 
@@ -63,11 +84,25 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
                     backgroundSize: '1.5em 1.5em',
                 }}
             >
-                {networks.map((network) => (
-                    <option key={network.chainId} value={network.chainId}>
-                        {network.icon} {network.label}
-                    </option>
-                ))}
+                {networks.map((network) => {
+                    const isValidForBridge = isValidBridgeCombination(network.chainId);
+                    const isDisabledOption = isBridgeMode && !isValidForBridge;
+
+                    return (
+                        <option
+                            key={network.chainId}
+                            value={network.chainId}
+                            disabled={isDisabledOption}
+                            style={{
+                                color: isDisabledOption ? '#9CA3AF' : 'inherit',
+                                backgroundColor: isDisabledOption ? '#F3F4F6' : 'inherit'
+                            }}
+                        >
+                            {network.icon} {network.label}
+                            {isDisabledOption ? ' (Not available for bridging)' : ''}
+                        </option>
+                    );
+                })}
             </select>
 
             {selectedNetwork && (

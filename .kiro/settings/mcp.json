@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "zapier-automation": {
+      "command": "uvx",
+      "args": ["zapier-mcp-server@latest"],
+      "env": {
+        "ZAPIER_EMBED_ID": "060b059bca0e327d297b17197d9e2400",
+        "ZAPIER_EMBED_SECRET": "${ZAPIER_EMBED_SECRET}",
+        "FASTMCP_LOG_LEVEL": "INFO"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "send_email",
+        "create_webhook",
+        "trigger_zap",
+        "list_zaps",
+        "create_zap"
+      ]
+    },
+    "email-notifications": {
+      "command": "uvx", 
+      "args": ["email-mcp-server@latest"],
+      "env": {
+        "SENDGRID_API_KEY": "${SENDGRID_API_KEY}",
+        "RESEND_API_KEY": "${RESEND_API_KEY}",
+        "FASTMCP_LOG_LEVEL": "INFO"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "send_email",
+        "create_template",
+        "validate_email"
+      ]
+    }
+  }
+}

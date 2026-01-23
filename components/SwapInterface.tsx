@@ -400,12 +400,16 @@ const SwapInterface = forwardRef<
                 onChainSelect={setFromChainId}
                 label="From Chain"
                 disabled={isLoading}
+                otherChainId={toChainId}
+                isBridgeMode={enableCrossChain}
               />
               <ChainSelector
                 selectedChainId={toChainId}
                 onChainSelect={setToChainId}
                 label="To Chain"
                 disabled={isLoading}
+                otherChainId={fromChainId}
+                isBridgeMode={enableCrossChain}
               />
             </div>
             {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
@@ -441,6 +445,8 @@ const SwapInterface = forwardRef<
             inflationRate={fromTokenInflationRate}
             disabled={isLoading}
             tokenBalances={tokenBalances}
+            currentChainId={chainId}
+            tokenChainId={fromChainId}
           />
 
           <div className="flex justify-center my-3">
@@ -483,6 +489,8 @@ const SwapInterface = forwardRef<
             disabled={isLoading}
             showAmountInput={false}
             tokenBalances={tokenBalances}
+            currentChainId={chainId}
+            tokenChainId={toChainId}
           />
 
           {/* Expected Output */}

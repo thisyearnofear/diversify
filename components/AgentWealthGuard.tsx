@@ -6,6 +6,7 @@ import { useWalletContext } from "./WalletProvider";
 import { useAppState } from "../context/AppStateContext";
 import { NETWORKS } from "../config";
 import { ChainDetectionService } from "../services/swap/chain-detection.service";
+import { useToast } from "./Toast";
 
 interface AgentWealthGuardProps {
     amount: number;
@@ -49,22 +50,78 @@ const AIHint = ({ suggestion, onAskAI }: { suggestion: string; onAskAI: () => vo
     </motion.div>
 );
 
-// Mobile-optimized progress indicator
-const AIProgress = ({ currentStep }: { currentStep: string }) => (
-    <div className="bg-gray-50 rounded-lg p-3 mb-4">
-        <div className="flex items-center gap-2 mb-2">
-            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm font-medium">Oracle Processing</span>
+// Mobile-optimized progress indicator with real-time steps
+const AIProgress = ({ currentStep, steps, progress }: {
+    currentStep: string;
+    steps: string[];
+    progress: number;
+}) => (
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 mb-4 border border-blue-100">
+        {/* Header with animated brain */}
+        <div className="flex items-center gap-3 mb-4">
+            <motion.div
+                className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full flex items-center justify-center"
+                animate={{
+                    scale: [1, 1.1, 1],
+                    rotate: [0, 5, -5, 0]
+                }}
+                transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+            >
+                <span className="text-xl">🧠</span>
+            </motion.div>
+            <div>
+                <h4 className="font-bold text-gray-900">DiversiFi Oracle Processing</h4>
+                <div className="flex items-center gap-2">
+                    <div className="w-24 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                            className="h-full bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                        />
+                    </div>
+                    <span className="text-xs font-medium text-gray-600">{progress}%</span>
+                </div>
+            </div>
         </div>
 
-        <div className="text-xs text-gray-600 space-y-1">
+        {/* Current step with animation */}
+        <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white rounded-lg p-3 mb-3 border border-blue-200"
+        >
             <div className="flex items-center gap-2">
-                <span className="text-green-500">✓</span>
-                <span>Arc RPC: Connected (0.1s)</span>
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span className="text-sm font-medium text-gray-800">{currentStep}</span>
             </div>
-            <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
-                <span>{currentStep}</span>
+        </motion.div>
+
+        {/* Step history */}
+        <div className="space-y-1">
+            {steps.slice(-3).map((step, idx) => (
+                <motion.div
+                    key={`${step}-${idx}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-2 text-xs text-gray-600"
+                >
+                    <span className="text-green-500">✓</span>
+                    <span className="truncate">{step}</span>
+                </motion.div>
+            ))}
+        </div>
+
+        {/* Cost tracker */}
+        <div className="mt-3 pt-3 border-t border-blue-100">
+            <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-600">Analysis Cost</span>
+                <span className="font-mono text-blue-600">$0.43 USDC</span>
             </div>
         </div>
     </div>
@@ -73,7 +130,7 @@ const AIProgress = ({ currentStep }: { currentStep: string }) => (
 export default function AgentWealthGuard({ amount, holdings, embedded = false }: AgentWealthGuardProps) {
     const hookResult = useWealthProtectionAgent();
     const {
-        analyze, advice, isAnalyzing, thinkingStep, config, updateConfig,
+        analyze, advice, isAnalyzing, thinkingStep, analysisSteps, analysisProgress, config, updateConfig,
         sendMessage
     } = hookResult;
     const { inflationData } = useInflationData();
@@ -84,6 +141,7 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
     const { chainId } = useWalletContext();
     const [isVisionLoading, setIsVisionLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const { showToast } = useToast();
 
     // Navigate to swap with AI recommendation pre-filled
     const handleExecuteRecommendation = (targetToken: string) => {
@@ -101,19 +159,27 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
 
     const handleAnalyze = () => {
         const networkName = ChainDetectionService.getNetworkName(chainId);
+        const networkInfo = { chainId: chainId || 0, name: networkName };
+        showToast('Starting comprehensive wealth protection analysis...', 'ai', { cost: 0.43, sources: 5 });
         analyze(
             inflationData,
             amount,
             holdings,
-            { chainId: chainId || 0, name: networkName }
+            networkInfo
         );
     };
+
+    // Get network info for display
+    const networkName = ChainDetectionService.getNetworkName(chainId);
+    const networkInfo = { chainId: chainId || 0, name: networkName };
 
     const handleVisionAnalysis = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setIsVisionLoading(true);
+        showToast('Analyzing portfolio screenshot with Gemini Vision...', 'ai', { cost: 0.05, sources: 1 });
+
         const reader = new FileReader();
         reader.onloadend = async () => {
             try {
@@ -129,9 +195,11 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
                 setIsOpen(true); // Open modal to show result
                 // Since sendMessage only takes content, we just send the text
                 sendMessage(data.text);
+                showToast('Portfolio analysis complete!', 'success');
                 setIsVisionLoading(false);
             } catch (err) {
                 console.error("Vision failed:", err);
+                showToast('Vision analysis failed. Please try again.', 'error');
                 setIsVisionLoading(false);
             }
         };
@@ -280,7 +348,11 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
                 <div className="flex-1 overflow-y-auto p-4">
                     {/* Analysis Progress */}
                     {isAnalyzing && (
-                        <AIProgress currentStep={thinkingStep} />
+                        <AIProgress
+                            currentStep={thinkingStep}
+                            steps={analysisSteps}
+                            progress={analysisProgress}
+                        />
                     )}
 
                     {/* Recommendation Display */}
@@ -334,6 +406,66 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
                                         &quot;{advice.reasoning}&quot;
                                     </p>
 
+                                    {/* Action Steps - NEW */}
+                                    {advice.actionSteps && advice.actionSteps.length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-blue-500/10">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <span className="text-lg">📋</span>
+                                                <h4 className={`font-bold text-gray-800 ${!embedded ? 'md:text-white' : ''} text-sm`}>Action Plan</h4>
+                                                {advice.urgencyLevel && advice.urgencyLevel !== 'LOW' && (
+                                                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${advice.urgencyLevel === 'CRITICAL' ? 'bg-red-100 text-red-700' :
+                                                        advice.urgencyLevel === 'HIGH' ? 'bg-orange-100 text-orange-700' :
+                                                            'bg-yellow-100 text-yellow-700'
+                                                        }`}>
+                                                        {advice.urgencyLevel} PRIORITY
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2">
+                                                {advice.actionSteps.map((step, idx) => (
+                                                    <div key={idx} className={`flex items-start gap-3 p-2 rounded-lg bg-white/50 ${!embedded ? 'md:bg-white/5' : ''} border border-gray-100 ${!embedded ? 'md:border-white/10' : ''}`}>
+                                                        <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                                            {idx + 1}
+                                                        </div>
+                                                        <span className={`text-sm text-gray-700 ${!embedded ? 'md:text-slate-300' : ''} font-medium`}>
+                                                            {step}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Expected Savings Highlight - Enhanced */}
+                                    {advice.expectedSavings && (
+                                        <div className="mt-4 pt-4 border-t border-blue-500/10">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-lg">💰</span>
+                                                    <div>
+                                                        <div className={`text-sm font-bold text-gray-800 ${!embedded ? 'md:text-white' : ''}`}>
+                                                            Expected Protection
+                                                        </div>
+                                                        <div className="text-xs text-green-600 font-bold">
+                                                            +${advice.expectedSavings} saved
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={`text-xs text-gray-500 ${!embedded ? 'md:text-slate-400' : ''}`}>
+                                                        {advice.timeHorizon || '6 months'}
+                                                    </div>
+                                                    <div className={`text-xs font-bold ${advice.confidence > 0.8 ? 'text-green-600' :
+                                                        advice.confidence > 0.6 ? 'text-yellow-600' :
+                                                            'text-gray-600'
+                                                        }`}>
+                                                        {(advice.confidence * 100).toFixed(0)}% confidence
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Thought Trace Display */}
                                     {advice.thoughtChain && (
                                         <div className="space-y-2 mt-4 pt-4 border-t border-blue-500/10">
@@ -351,33 +483,96 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
                                             ))}
                                         </div>
                                     )}
+
+                                    {/* Action Buttons Row */}
+                                    <div className="mt-4 pt-4 border-t border-blue-500/10">
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => {
+                                                    const shareText = `DiversiFi Oracle Recommendation: ${advice.action} ${advice.targetToken || ''} - ${advice.reasoning.slice(0, 100)}...`;
+                                                    if (navigator.share) {
+                                                        navigator.share({
+                                                            title: 'DiversiFi Oracle Analysis',
+                                                            text: shareText,
+                                                            url: window.location.href
+                                                        }).then(() => {
+                                                            showToast('Analysis shared successfully!', 'success');
+                                                        }).catch(() => {
+                                                            navigator.clipboard.writeText(shareText);
+                                                            showToast('Analysis copied to clipboard', 'info');
+                                                        });
+                                                    } else {
+                                                        navigator.clipboard.writeText(shareText);
+                                                        showToast('Analysis copied to clipboard', 'info');
+                                                    }
+                                                }}
+                                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors bg-gray-100 hover:bg-gray-200 text-gray-700 ${!embedded ? 'md:bg-white/10 md:hover:bg-white/20 md:text-white' : ''} flex items-center justify-center gap-1`}
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                                                </svg>
+                                                Share
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    const analysisData = {
+                                                        timestamp: new Date().toISOString(),
+                                                        recommendation: advice,
+                                                        portfolio: { amount, holdings },
+                                                        network: networkInfo
+                                                    };
+                                                    localStorage.setItem(`diversifi_analysis_${Date.now()}`, JSON.stringify(analysisData));
+                                                    showToast('Analysis saved to local storage', 'success');
+                                                }}
+                                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors bg-gray-100 hover:bg-gray-200 text-gray-700 ${!embedded ? 'md:bg-white/10 md:hover:bg-white/20 md:text-white' : ''} flex items-center justify-center gap-1`}
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3-3m0 0l-3 3m3-3v12" />
+                                                </svg>
+                                                Save
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    // Toggle detailed view or open modal with more info
+                                                    sendMessage(`Tell me more details about this ${advice.action} recommendation for ${advice.targetToken}`);
+                                                    showToast('Requesting detailed analysis...', 'ai', { cost: 0.02, sources: 3 });
+                                                }}
+                                                className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-colors bg-gray-100 hover:bg-gray-200 text-gray-700 ${!embedded ? 'md:bg-white/10 md:hover:bg-white/20 md:text-white' : ''} flex items-center justify-center gap-1`}
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                Details
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {advice.expectedSavings && (
-                                    <div className={`mt-3 flex items-center justify-between text-xs text-gray-600 ${!embedded ? 'md:text-slate-400' : ''}`}>
-                                        <span>Expected protection: <span className="font-bold text-green-600">${advice.expectedSavings}</span></span>
-                                        <span className="opacity-60">{advice.timeHorizon} horizon</span>
-                                    </div>
-                                )}
-
-                                {/* RWA Specific Asset Card */}
-                                {advice.targetToken && (['PAXG', 'PROP', 'GLP'].includes(advice.targetToken)) && (
-                                    <div className={`mt-4 p-3 bg-white/50 ${!embedded ? 'md:bg-white/5' : ''} rounded-lg border border-white/10 flex items-center justify-between`}>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg flex items-center justify-center text-xl shadow-inner">
-                                                {advice.targetToken === 'PAXG' ? '🏆' : advice.targetToken === 'PROP' ? '🏠' : '📈'}
-                                            </div>
-                                            <div>
-                                                <div className="text-xs font-bold">{advice.targetToken} Asset Info</div>
-                                                <div className={`text-[10px] text-gray-500 ${!embedded ? 'md:text-slate-400' : ''}`}>
-                                                    {advice.targetToken === 'PAXG' ? 'Physical Gold Hedge' :
-                                                        'RWA Yield Opportunity'}
+                                {/* Arc Testnet Specific Features */}
+                                {networkInfo.chainId === 5042002 && (
+                                    <div className="mt-4 pt-4 border-t border-blue-500/10">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <span className="text-lg">🧪</span>
+                                            <h4 className={`font-bold text-gray-800 ${!embedded ? 'md:text-white' : ''} text-sm`}>Arc Testnet Demo</h4>
+                                            <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700 font-bold">
+                                                RISK-FREE
+                                            </span>
+                                        </div>
+                                        <div className={`text-sm text-gray-700 ${!embedded ? 'md:text-slate-300' : ''} space-y-2`}>
+                                            <p>Test real diversification strategies with:</p>
+                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                <div className="bg-blue-50 p-2 rounded border">
+                                                    <div className="font-bold">USDC</div>
+                                                    <div className="text-gray-600">Native gas</div>
+                                                </div>
+                                                <div className="bg-green-50 p-2 rounded border">
+                                                    <div className="font-bold">EURC</div>
+                                                    <div className="text-gray-600">EUR hedge</div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="text-right">
-                                            <div className={`text-[10px] font-bold text-blue-600 ${!embedded ? 'md:text-blue-400' : ''}`}>Arbitrum One</div>
-                                            <div className="text-[9px] text-gray-400">x402 Verified</div>
+                                            <div className="text-xs bg-blue-50 p-2 rounded border border-blue-200">
+                                                💡 Get free testnet funds: <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">faucet.circle.com</a>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -407,35 +602,125 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
                                 )}
                             </div>
 
-                            {advice.action === 'SWAP' && advice.targetToken && (
-                                <button
-                                    onClick={() => handleExecuteRecommendation(advice.targetToken!)}
-                                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-lg text-white rounded-xl font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
-                                >
-                                    <span>Execute: Swap to {advice.targetToken}</span>
-                                    {advice.targetNetwork && advice.targetNetwork !== 'Celo' && (
-                                        <span className="text-[10px] px-1.5 py-0.5 bg-black/20 rounded uppercase">via {advice.targetNetwork}</span>
+                            {(advice.action === 'SWAP' || advice.action === 'BRIDGE') && advice.targetToken && (
+                                <div className="space-y-3">
+                                    {advice.urgencyLevel && advice.urgencyLevel !== 'LOW' && (
+                                        <div className={`p-3 rounded-lg border-l-4 ${advice.urgencyLevel === 'CRITICAL' ? 'bg-red-50 border-red-500 text-red-800' :
+                                            advice.urgencyLevel === 'HIGH' ? 'bg-orange-50 border-orange-500 text-orange-800' :
+                                                'bg-yellow-50 border-yellow-500 text-yellow-800'
+                                            }`}>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-lg">⚠️</span>
+                                                <div>
+                                                    <div className="font-bold text-sm">
+                                                        {advice.urgencyLevel === 'CRITICAL' ? 'URGENT ACTION REQUIRED' :
+                                                            advice.urgencyLevel === 'HIGH' ? 'HIGH PRIORITY' :
+                                                                'RECOMMENDED ACTION'}
+                                                    </div>
+                                                    <div className="text-xs">
+                                                        {advice.urgencyLevel === 'CRITICAL' ? 'Immediate action recommended to protect wealth' :
+                                                            advice.urgencyLevel === 'HIGH' ? 'Action recommended within 24 hours' :
+                                                                'Consider taking action soon'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     )}
-                                </button>
+
+                                    <button
+                                        onClick={() => handleExecuteRecommendation(advice.targetToken!)}
+                                        className={`w-full py-4 rounded-xl font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-3 shadow-lg hover:shadow-xl ${advice.urgencyLevel === 'CRITICAL' ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white' :
+                                            advice.urgencyLevel === 'HIGH' ? 'bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-500 hover:to-orange-600 text-white' :
+                                                'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white'
+                                            }`}
+                                    >
+                                        <span>
+                                            {advice.action === 'BRIDGE' ? 'Bridge to' : 'Swap to'} {advice.targetToken}
+                                            {advice.expectedSavings ? ` (Save $${advice.expectedSavings})` : ''}
+                                        </span>
+                                        {advice.targetNetwork && advice.targetNetwork !== 'Celo' && (
+                                            <span className="text-[10px] px-2 py-1 bg-black/20 rounded-full uppercase font-bold">
+                                                via {advice.targetNetwork}
+                                            </span>
+                                        )}
+                                    </button>
+                                </div>
                             )}
                         </motion.div>
                     )}
 
-                    {/* Initial State */}
+                    {/* Initial State - Enhanced */}
                     {!advice && !isAnalyzing && (
-                        <div className="text-center py-8">
-                            <p className={`text-gray-600 ${!embedded ? 'md:text-slate-400' : ''} text-sm mb-6 leading-relaxed`}>
-                                Let the Oracle analyze global market conditions to optimize your ${amount.toFixed(2)} portfolio.
-                            </p>
-                            <button
-                                onClick={handleAnalyze}
-                                className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-3"
-                            >
-                                <span>Run Intelligent Analysis</span>
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                </svg>
-                            </button>
+                        <div className="space-y-6">
+                            <div className="text-center py-4">
+                                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <span className="text-2xl">🧠</span>
+                                </div>
+                                <h3 className={`font-bold text-lg text-gray-800 ${!embedded ? 'md:text-white' : ''} mb-2`}>
+                                    Wealth Protection Analysis
+                                </h3>
+                                <p className={`text-gray-600 ${!embedded ? 'md:text-slate-400' : ''} text-sm mb-6 leading-relaxed`}>
+                                    Get personalized recommendations to protect your ${amount.toFixed(2)} portfolio from inflation and market volatility.
+                                </p>
+                            </div>
+
+                            {/* Quick Scenarios */}
+                            <div className="space-y-3">
+                                <h4 className={`text-sm font-bold text-gray-700 ${!embedded ? 'md:text-slate-300' : ''} mb-3`}>
+                                    Quick Analysis Options:
+                                </h4>
+
+                                <button
+                                    onClick={() => sendMessage("I'm worried about inflation affecting my savings. What should I do?")}
+                                    className="w-full p-3 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg text-left transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">📈</span>
+                                        <div>
+                                            <div className="font-medium text-amber-800 text-sm">Inflation Protection</div>
+                                            <div className="text-xs text-amber-600">Protect against rising prices</div>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => sendMessage("Should I diversify across different stablecoins and networks?")}
+                                    className="w-full p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-left transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">🌍</span>
+                                        <div>
+                                            <div className="font-medium text-blue-800 text-sm">Portfolio Diversification</div>
+                                            <div className="text-xs text-blue-600">Spread risk across regions</div>
+                                        </div>
+                                    </div>
+                                </button>
+
+                                <button
+                                    onClick={() => sendMessage("What's the best strategy for my current holdings and risk tolerance?")}
+                                    className="w-full p-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg text-left transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">🎯</span>
+                                        <div>
+                                            <div className="font-medium text-green-800 text-sm">Personalized Strategy</div>
+                                            <div className="text-xs text-green-600">Tailored to your portfolio</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div className="pt-4 border-t border-gray-200">
+                                <button
+                                    onClick={handleAnalyze}
+                                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-3"
+                                >
+                                    <span>Run Complete Analysis</span>
+                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

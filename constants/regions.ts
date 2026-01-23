@@ -60,6 +60,12 @@ export const AVAILABLE_TOKENS = [
   { symbol: "PAXG", name: "Paxos Gold", region: "Commodity" },
 ];
 
+// Arc testnet tokens (available when connected to Arc testnet)
+export const ARC_TESTNET_TOKENS = [
+  { symbol: "USDC", name: "USD Coin", region: "USA", description: "Native gas token on Arc" },
+  { symbol: "EURC", name: "Euro Coin", region: "Europe", description: "Euro-backed stablecoin" },
+];
+
 // Exchange rates for stablecoins to USD (for fallback calculations)
 export const EXCHANGE_RATES: Record<string, number> = {
   // Standard format - updated rates for mainnet tokens
@@ -97,4 +103,8 @@ export const EXCHANGE_RATES: Record<string, number> = {
   // USDC
   USDC: 1,
   usdc: 1,
+
+  // Arc testnet tokens
+  EURC: 1.08, // Euro Coin
+  eurc: 1.08,
 };

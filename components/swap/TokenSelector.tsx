@@ -22,6 +22,8 @@ interface TokenSelectorProps {
   disabled?: boolean;
   showAmountInput?: boolean;
   tokenBalances?: Record<string, { formattedBalance: string; value: number }>;
+  currentChainId?: number; // Current wallet chain
+  tokenChainId?: number; // Chain where this token exists
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({
@@ -36,14 +38,51 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   disabled = false,
   showAmountInput = true,
   tokenBalances = {},
+  currentChainId,
+  tokenChainId,
 }) => {
+  // Determine if this is a cross-chain scenario
+  const isCrossChain = currentChainId && tokenChainId && currentChainId !== tokenChainId;
+
   // Get the current token balance if available
-  const currentBalance = tokenBalances[selectedToken]?.formattedBalance || "0";
+  const tokenBalance = tokenBalances[selectedToken];
+  const hasBalance = tokenBalance && parseFloat(tokenBalance.formattedBalance) > 0;
+
+  // Determine what to show for balance
+  const getBalanceDisplay = () => {
+    if (isCrossChain) {
+      if (hasBalance) {
+        // We have balance data from the other chain
+        return `${parseFloat(tokenBalance.formattedBalance).toFixed(4)} ${selectedToken}`;
+      } else {
+        // We don't have balance data for the other chain
+        return `— ${selectedToken}`;
+      }
+    } else {
+      // Same chain - show actual balance or 0
+      const balance = tokenBalance?.formattedBalance || "0";
+      return `${parseFloat(balance).toFixed(4)} ${selectedToken}`;
+    }
+  };
+
+  const getBalanceLabel = () => {
+    if (isCrossChain) {
+      return hasBalance ? "Balance (other chain):" : "Balance (switch to check):";
+    }
+    return "Balance:";
+  };
+
+  const getBalanceColor = () => {
+    if (isCrossChain && !hasBalance) {
+      return "text-amber-600"; // Amber for unknown cross-chain balance
+    }
+    return tokenRegion ? `text-region-${tokenRegion.toLowerCase()}-dark` : "text-gray-600";
+  };
 
   // Function to set max amount
   const setMaxAmount = () => {
-    if (onAmountChange && currentBalance) {
-      onAmountChange(currentBalance);
+    if (onAmountChange && hasBalance) {
+      onAmountChange(tokenBalance.formattedBalance);
     }
   };
   return (
@@ -65,14 +104,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           </div>
         )}
       </label>
-      {/* Balance display - show for all tokens */}
+      {/* Balance display - enhanced for cross-chain */}
       <div className="flex justify-end mb-1">
         <div
-          className={`text-xs ${
-            tokenRegion
-              ? `text-region-${tokenRegion.toLowerCase()}-dark`
-              : "text-gray-600"
-          } font-medium px-2 py-0.5 bg-gray-100 rounded-md flex items-center`}
+          className={`text-xs ${getBalanceColor()} font-medium px-2 py-0.5 bg-gray-100 rounded-md flex items-center ${isCrossChain && !hasBalance ? 'border border-amber-200' : ''
+            }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -88,8 +124,24 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
             />
           </svg>
-          <span className="mr-1">Balance:</span>
-          {parseFloat(currentBalance).toFixed(4)} {selectedToken}
+          <span className="mr-1">{getBalanceLabel()}</span>
+          {getBalanceDisplay()}
+          {isCrossChain && !hasBalance && (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="size-3 ml-1 text-amber-500"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          )}
         </div>
       </div>
 
@@ -97,13 +149,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         <select
           value={selectedToken}
           onChange={(e) => onTokenChange(e.target.value)}
-          className={`${
-            showAmountInput ? "w-1/3" : "w-full"
-          } rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold ${
-            tokenRegion
+          className={`${showAmountInput ? "w-1/3" : "w-full"
+            } rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold ${tokenRegion
               ? `border-region-${tokenRegion.toLowerCase()}-medium focus:border-region-${tokenRegion.toLowerCase()}-medium focus:ring-region-${tokenRegion.toLowerCase()}-light bg-white`
               : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-          }`}
+            }`}
           disabled={disabled}
         >
           {availableTokens.map((token) => (
@@ -123,11 +173,10 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               type="number"
               value={amount}
               onChange={(e) => onAmountChange(e.target.value)}
-              className={`w-full rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold pr-16 ${
-                tokenRegion
-                  ? `border-region-${tokenRegion.toLowerCase()}-medium focus:border-region-${tokenRegion.toLowerCase()}-medium focus:ring-region-${tokenRegion.toLowerCase()}-light bg-white`
-                  : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              }`}
+              className={`w-full rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold pr-16 ${tokenRegion
+                ? `border-region-${tokenRegion.toLowerCase()}-medium focus:border-region-${tokenRegion.toLowerCase()}-medium focus:ring-region-${tokenRegion.toLowerCase()}-light bg-white`
+                : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                }`}
               placeholder="Amount"
               min="0"
               step="0.01"
@@ -136,12 +185,19 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             <button
               type="button"
               onClick={setMaxAmount}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded ${
-                tokenRegion
-                  ? `bg-region-${tokenRegion.toLowerCase()}-light text-region-${tokenRegion.toLowerCase()}-dark hover:bg-region-${tokenRegion.toLowerCase()}-medium`
-                  : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-              } transition-colors`}
-              disabled={disabled}
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded ${tokenRegion
+                ? `bg-region-${tokenRegion.toLowerCase()}-light text-region-${tokenRegion.toLowerCase()}-dark hover:bg-region-${tokenRegion.toLowerCase()}-medium`
+                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                } transition-colors ${!hasBalance || isCrossChain ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              disabled={disabled || !hasBalance || isCrossChain}
+              title={
+                isCrossChain
+                  ? "MAX not available for cross-chain swaps"
+                  : !hasBalance
+                    ? "No balance available"
+                    : "Use maximum balance"
+              }
             >
               MAX
             </button>
@@ -150,11 +206,10 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       </div>
       {selectedToken && tokenRegion && (
         <div
-          className={`relative mt-2 text-sm px-3 py-2 rounded-md overflow-hidden ${
-            tokenRegion
-              ? `bg-region-${tokenRegion.toLowerCase()}-light/30 border-2 border-region-${tokenRegion.toLowerCase()}-medium`
-              : "bg-white border-2 border-gray-300"
-          } shadow-md flex items-center`}
+          className={`relative mt-2 text-sm px-3 py-2 rounded-md overflow-hidden ${tokenRegion
+            ? `bg-region-${tokenRegion.toLowerCase()}-light/30 border-2 border-region-${tokenRegion.toLowerCase()}-medium`
+            : "bg-white border-2 border-gray-300"
+            } shadow-md flex items-center`}
         >
           <RegionalPattern region={tokenRegion as Region} className="opacity-20" />
           <div className="relative flex w-full justify-between items-center">
@@ -191,13 +246,12 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 Inflation
               </span>
               <span
-                className={`font-bold text-base ${
-                  inflationRate > 5
-                    ? "text-red-600"
-                    : inflationRate > 3
+                className={`font-bold text-base ${inflationRate > 5
+                  ? "text-red-600"
+                  : inflationRate > 3
                     ? "text-amber-600"
                     : "text-green-600"
-                }`}
+                  }`}
               >
                 {isNaN(inflationRate) || inflationRate === undefined ? '—' : inflationRate.toFixed(1) + '%'}
               </span>

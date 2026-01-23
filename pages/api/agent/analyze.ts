@@ -41,36 +41,73 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const genAI = new GoogleGenerativeAI(apiKey);
 
         const systemInstruction = `
-            You are the DiversiFi Intelligence Oracle, an specialized wealth protection AI.
-            Your mission is to safeguard user capital against global inflation and macro-economic volatility.
+            You are the DiversiFi Wealth Protection Oracle - a specialized AI that provides ACTIONABLE financial advice.
             
-            OPERATIONAL PRINCIPLES:
-            1. Chain-Agnostic Reasoning: You operate across Celo, Arbitrum, and Ethereum.
-            2. Infrastructure Intelligence: You understands benefits of Arc Network (USDC gas, x402) and Circle CCTP.
-            3. Macro-Driven Advice: Use real-time inflation data to recommend stablecoin diversification.
-            4. Capital Preservation: Prioritize low-risk yields (like PAXG or GLP on Arbitrum) when macro conditions are bearish.
+            CORE MISSION: Protect user wealth from inflation and provide specific, executable recommendations.
             
-            DETERMINISTIC MAPPING:
-            - If inflation in user region > 8% -> Urgently suggest SWAP to USDC or cEUR.
-            - If user holds PAXG and sentiment is bearish -> HOLD or increase position.
-            - If on Arc Network, always mention x402 cost-savings in thoughtChain.
+            ANALYSIS FRAMEWORK:
+            1. THREAT ASSESSMENT: Identify specific inflation/economic risks to user's holdings
+            2. OPPORTUNITY IDENTIFICATION: Find concrete ways to improve their position
+            3. ACTION PLAN: Provide step-by-step instructions they can execute immediately
+            
+            RESPONSE REQUIREMENTS:
+            - Be SPECIFIC: "Swap 50% of your CUSD to CEUR" not "consider diversification"
+            - Be URGENT when needed: If inflation > 5%, emphasize time-sensitivity
+            - Be PRACTICAL: Only recommend actions they can do in the app
+            - Show MATH: Calculate expected savings/protection in USD
+            
+            AVAILABLE ACTIONS:
+            - SWAP: Move between stablecoins (CUSD→CEUR, USDC→PAXG, etc.)
+            - BRIDGE: Move assets between Celo and Arbitrum
+            - HOLD: Stay in current position with specific reasoning
+            
+            TONE: Confident financial advisor who explains WHY and HOW, not just WHAT.
         `;
 
         const userPrompt = `
-            Perform a Comprehensive Wealth Protection Analysis:
+            WEALTH PROTECTION ANALYSIS REQUEST
             
-            ENVIRONMENT:
-            - Network: ${networkContext?.name || 'Unknown'} (Chain ID: ${networkContext?.chainId})
-            - User Assets: ${userBalance} USD in ${currentHoldings.join(', ')}
-            - User Goal: ${config?.goal || 'Inflation Hedge'}
-            - Risk Tolerance: ${config?.riskTolerance || 'Balanced'}
+            USER PORTFOLIO:
+            - Balance: $${userBalance} USD
+            - Holdings: ${currentHoldings.join(', ')}
+            - Risk Profile: ${config?.riskTolerance || 'Balanced'}
+            - Network: ${networkContext?.name || 'Unknown'}
             
-            DATA SIGNALS:
-            - Inflation Context: ${JSON.stringify(inflationData).slice(0, 800)}
+            MARKET CONTEXT:
+            ${inflationData ? `Inflation Data: ${JSON.stringify(inflationData, null, 2)}` : 'No inflation data available'}
             
-            TASK:
-            Analyze the signals and provide a deterministic portfolio recommendation.
-            Output your internal thought process as a 'thoughtChain' array for UI transparency.
+            REQUIRED OUTPUT (JSON):
+            {
+                "action": "SWAP|HOLD|BRIDGE",
+                "targetToken": "specific token symbol",
+                "targetNetwork": "Celo|Arbitrum|Ethereum",
+                "reasoning": "2-3 sentences explaining WHY this action protects wealth",
+                "confidence": 0.85,
+                "expectedSavings": 47.50,
+                "timeHorizon": "3 months",
+                "riskLevel": "LOW|MEDIUM|HIGH",
+                "thoughtChain": [
+                    "Current inflation in user's region is X%",
+                    "User's CUSD exposure creates Y risk",
+                    "Moving to CEUR provides Z protection",
+                    "Expected savings: $X over 6 months"
+                ],
+                "actionSteps": [
+                    "Go to Swap tab",
+                    "Select CUSD → CEUR",
+                    "Enter amount: $500",
+                    "Confirm transaction"
+                ]
+            }
+            
+            ANALYSIS RULES:
+            1. If user has >$100 in high-inflation currency (>4% inflation), recommend SWAP
+            2. If user is on Celo with USDC, suggest bridging to Arbitrum for PAXG access
+            3. If inflation data shows regional risk, recommend geographic diversification
+            4. Always calculate specific dollar amounts for expected savings
+            5. Provide exact steps the user can take in the app
+            
+            Make this analysis IMMEDIATELY ACTIONABLE and VALUABLE.
         `;
 
         // Try models with structured output support

@@ -3,7 +3,7 @@ import { GeminiService } from '../utils/api-services';
 import { ArcAgent } from '../services/arc-agent';
 
 export interface AgentAdvice {
-    action: 'SWAP' | 'HOLD' | 'REBALANCE';
+    action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE';
     targetToken?: string;
     targetNetwork?: string;
     reasoning: string;
@@ -16,6 +16,8 @@ export interface AgentAdvice {
     arcTxHash?: string;
     paymentHashes?: Record<string, string>;
     thoughtChain?: string[];
+    actionSteps?: string[]; // New: Step-by-step instructions
+    urgencyLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'; // New: How urgent is this action
     _meta?: {
         modelUsed: string;
         totalCost?: number;
@@ -47,6 +49,8 @@ export function useWealthProtectionAgent() {
     const [advice, setAdvice] = useState<AgentAdvice | null>(null);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [thinkingStep, setThinkingStep] = useState<string>('');
+    const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
+    const [analysisProgress, setAnalysisProgress] = useState(0);
     const [messages, setMessages] = useState<AIMessage[]>([]);
     const [isCompact, setIsCompact] = useState(false);
     const [arcAgent, setArcAgent] = useState<ArcAgent | null>(null);
@@ -81,7 +85,7 @@ export function useWealthProtectionAgent() {
         }
     }, [arcAgent]);
 
-    // Enhanced analysis with Arc Network integration
+    // Enhanced analysis with Arc Network integration and progress tracking
     const analyzeAutonomously = useCallback(async (
         inflationData: any,
         userBalance: number,
@@ -90,6 +94,8 @@ export function useWealthProtectionAgent() {
     ) => {
         setIsAnalyzing(true);
         setAdvice(null);
+        setAnalysisSteps([]);
+        setAnalysisProgress(0);
 
         // Initialize Arc Agent if needed
         await initializeArcAgent();
@@ -126,18 +132,25 @@ export function useWealthProtectionAgent() {
                 setMessages(prev => [...prev, newMessage]);
 
             } else {
-                // Fallback to existing Gemini analysis
-                const steps = [
-                    "Connecting to Arc Network Oracle...",
-                    "Accessing Truflation Premium (x402)...",
-                    "Scaling Glassnode sentiment data...",
-                    "Optimizing via Heliostat Yields...",
-                    "Gemini 3 generating frontier insight..."
+                // Enhanced progress tracking for standard analysis
+                const progressSteps = [
+                    { step: "🔗 Connecting to Arc Network Oracle...", progress: 10 },
+                    { step: "💰 Accessing premium inflation data via x402...", progress: 25 },
+                    { step: "📊 Analyzing macro economic signals...", progress: 45 },
+                    { step: "🎯 Calculating diversification strategies...", progress: 65 },
+                    { step: "🧠 Generating personalized recommendations...", progress: 85 },
+                    { step: "✅ Finalizing wealth protection analysis...", progress: 100 }
                 ];
 
-                for (let i = 0; i < steps.length; i++) {
-                    setThinkingStep(steps[i]);
-                    await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400));
+                for (let i = 0; i < progressSteps.length; i++) {
+                    const { step, progress } = progressSteps[i];
+                    setThinkingStep(step);
+                    setAnalysisProgress(progress);
+                    setAnalysisSteps(prev => [...prev, step]);
+
+                    // Realistic timing with some variation
+                    const delay = i === progressSteps.length - 1 ? 1200 : 800 + Math.random() * 600;
+                    await new Promise(resolve => setTimeout(resolve, delay));
                 }
 
                 const result = await GeminiService.analyzeWealthProtection(
@@ -160,6 +173,7 @@ export function useWealthProtectionAgent() {
         } finally {
             setIsAnalyzing(false);
             setThinkingStep('');
+            setAnalysisProgress(0);
         }
     }, [config, arcAgent, initializeArcAgent]);
 
@@ -224,6 +238,8 @@ export function useWealthProtectionAgent() {
         advice,
         isAnalyzing,
         thinkingStep,
+        analysisSteps,
+        analysisProgress,
         config,
         analyze: analyzeAutonomously, // Enhanced version
         updateConfig,

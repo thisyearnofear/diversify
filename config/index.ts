@@ -133,6 +133,7 @@ export const ALFAJORES_TOKENS = {
 // Token Addresses - Arc Testnet
 export const ARC_TOKENS = {
     USDC: '0x3600000000000000000000000000000000000000', // Native USDC ERC20 interface
+    EURC: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a', // Euro Coin
 } as const;
 
 // Token Addresses - Arbitrum One (RWAs)
@@ -227,6 +228,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CJPY: 0.0067,
     CNGN: 0.00061,
     USDC: 1,
+    EURC: 1.08, // Euro Coin
     PAXG: 2000, // Placeholder Gold Price - Should be fetched dynamically
 } as const;
 
@@ -267,6 +269,7 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
     CJPY: { name: 'Japanese Yen', region: 'ASIA' },
     CNGN: { name: 'Nigerian Naira', region: 'AFRICA' },
     USDC: { name: 'USD Coin', region: 'GLOBAL', decimals: 6 },
+    EURC: { name: 'Euro Coin', region: 'EUROPE', decimals: 6 },
     PAXG: { name: 'Paxos Gold', region: 'GLOBAL', decimals: 18 },
 } as const;
 

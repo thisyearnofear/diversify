@@ -7,6 +7,7 @@ import { useInflationData, type RegionalInflationData } from "../hooks/use-infla
 import { useCurrencyPerformance } from "../hooks/use-currency-performance";
 import {
   AVAILABLE_TOKENS,
+  ARC_TESTNET_TOKENS,
   REGION_COLORS,
 } from "../constants/regions";
 import ErrorBoundary from "../components/ErrorBoundary";
@@ -27,6 +28,16 @@ export default function DiversiFiPage() {
   // Use app state context for tab management
   const { activeTab, setActiveTab } = useAppState();
   const [selectedStrategy, setSelectedStrategy] = useState("balanced");
+
+  // Dynamic token list based on network
+  const availableTokens = useMemo(() => {
+    if (chainId === 5042002) {
+      // Arc testnet - show testnet tokens
+      return ARC_TESTNET_TOKENS;
+    }
+    // Default to mainnet tokens
+    return AVAILABLE_TOKENS;
+  }, [chainId]);
 
   // Wallet connection from context
   const {
@@ -105,9 +116,9 @@ export default function DiversiFiPage() {
         />
         <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌍</text></svg>" />
         {/* Farcaster Mini App Meta Tag */}
-        <meta 
-          name="fc:miniapp" 
-          content='{"version":"1","name":"DiversiFi","iconUrl":"/icon.png","splashImageUrl":"/splash.png"}' 
+        <meta
+          name="fc:miniapp"
+          content='{"version":"1","name":"DiversiFi","iconUrl":"/icon.png","splashImageUrl":"/splash.png"}'
         />
       </Head>
 
@@ -132,12 +143,12 @@ export default function DiversiFiPage() {
           // AND the chainId (if available) is not in our supported list.
           // However, useStablecoinBalances now just returns empty balances for unsupported networks.
           // A better check is needed. Let's use the wallet context's chainId if available, or just rely on the empty balances + explicit check.
-          
+
           // Actually, let's look at the implementation in useStablecoinBalances again.
           // It sets chainId state. 
-          
+
           // Let's implement a robust check here.
-           (!ChainDetectionService.isSupported(chainId) && chainId !== null) && (
+          (!ChainDetectionService.isSupported(chainId) && chainId !== null) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
                 <div className="mx-auto bg-amber-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
@@ -238,7 +249,7 @@ export default function DiversiFiPage() {
           {/* Swap Tab */}
           {activeTab === "swap" && (
             <SwapTab
-              availableTokens={AVAILABLE_TOKENS}
+              availableTokens={availableTokens}
               userRegion={userRegion}
               selectedStrategy={selectedStrategy}
               inflationData={inflationData as Record<string, RegionalInflationData>}
@@ -251,7 +262,7 @@ export default function DiversiFiPage() {
           {/* Info Tab */}
           {activeTab === "info" && (
             <InfoTab
-              availableTokens={AVAILABLE_TOKENS}
+              availableTokens={availableTokens}
             />
           )}
         </ErrorBoundary>
