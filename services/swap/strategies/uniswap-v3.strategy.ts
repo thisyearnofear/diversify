@@ -15,6 +15,7 @@ import {
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } from '../../../config';
+import { ArbitrumTransactionService } from '../arbitrum-transaction.service';
 
 // Uniswap V3 Router addresses
 const UNISWAP_V3_ROUTER_ADDRESSES: Record<number, string> = {
@@ -209,7 +210,7 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
             this.log('Executing Uniswap V3 swap transaction');
             const deadline = Math.floor(Date.now() / 1000) + 1200; // 20 minutes
 
-            const tx = await router.exactInputSingle({
+            const swapParams = {
                 tokenIn: fromTokenAddress,
                 tokenOut: toTokenAddress,
                 fee,
@@ -218,7 +219,25 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
                 amountIn: amountIn.toString(),
                 amountOutMinimum: minAmountOut.toString(),
                 sqrtPriceLimitX96: 0,
-            });
+            };
+
+            let tx: ethers.ContractTransaction;
+            const chainId = await signer.getChainId();
+
+            if (ChainDetectionService.isArbitrum(chainId)) {
+                // Use ArbitrumTransactionService for Arbitrum chains
+                const swapCalldata = router.interface.encodeFunctionData('exactInputSingle', [swapParams]);
+
+                tx = await ArbitrumTransactionService.executeTransaction(signer, {
+                    to: routerAddress,
+                    data: swapCalldata,
+                    value: '0',
+                    gasLimit: '300000', // Conservative gas limit for Uniswap V3 swap
+                });
+            } else {
+                // Use regular ethers for non-Arbitrum chains (like Celo)
+                tx = await router.exactInputSingle(swapParams);
+            }
 
             callbacks?.onSwapSubmitted?.(tx.hash);
             this.log('Swap transaction submitted', { hash: tx.hash });
@@ -247,27 +266,58 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
         signer: ethers.Signer,
         callbacks?: SwapCallbacks
     ): Promise<void> {
-        const tokenContract = new ethers.Contract(
-            tokenAddress,
-            ['function allowance(address owner, address spender) view returns (uint256)',
-                'function approve(address spender, uint256 amount) returns (bool)'],
-            signer
-        );
-
+        const chainId = await signer.getChainId();
         const userAddress = await signer.getAddress();
-        const currentAllowance = await tokenContract.allowance(userAddress, spenderAddress);
 
-        if (currentAllowance.gte(amount)) {
-            return; // Sufficient allowance
+        // Use ArbitrumTransactionService for Arbitrum chains, regular ethers for others
+        if (ChainDetectionService.isArbitrum(chainId)) {
+            const currentAllowance = await ArbitrumTransactionService.checkAllowance(
+                tokenAddress,
+                userAddress,
+                spenderAddress,
+                signer
+            );
+
+            if (currentAllowance.gte(amount)) {
+                return; // Sufficient allowance
+            }
+
+            // Need approval using Arbitrum service
+            this.log('Approving token spend for Uniswap V3 (Arbitrum)');
+            const approveTx = await ArbitrumTransactionService.executeApproval(
+                tokenAddress,
+                spenderAddress,
+                amount,
+                signer
+            );
+            callbacks?.onApprovalSubmitted?.(approveTx.hash);
+
+            await approveTx.wait();
+            callbacks?.onApprovalConfirmed?.();
+            this.log('Approval confirmed');
+        } else {
+            // Use regular ethers for non-Arbitrum chains (like Celo)
+            const tokenContract = new ethers.Contract(
+                tokenAddress,
+                ['function allowance(address owner, address spender) view returns (uint256)',
+                    'function approve(address spender, uint256 amount) returns (bool)'],
+                signer
+            );
+
+            const currentAllowance = await tokenContract.allowance(userAddress, spenderAddress);
+
+            if (currentAllowance.gte(amount)) {
+                return; // Sufficient allowance
+            }
+
+            // Need approval
+            this.log('Approving token spend for Uniswap V3');
+            const approveTx = await tokenContract.approve(spenderAddress, amount);
+            callbacks?.onApprovalSubmitted?.(approveTx.hash);
+
+            await approveTx.wait();
+            callbacks?.onApprovalConfirmed?.();
+            this.log('Approval confirmed');
         }
-
-        // Need approval
-        this.log('Approving token spend for Uniswap V3');
-        const approveTx = await tokenContract.approve(spenderAddress, amount);
-        callbacks?.onApprovalSubmitted?.(approveTx.hash);
-
-        await approveTx.wait();
-        callbacks?.onApprovalConfirmed?.();
-        this.log('Approval confirmed');
     }
 }

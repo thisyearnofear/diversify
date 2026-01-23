@@ -15,6 +15,7 @@ import {
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } from '../../../config';
+import { ArbitrumTransactionService } from '../arbitrum-transaction.service';
 
 interface OneInchQuoteResponse {
     dstAmount: string;
@@ -169,13 +170,28 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
 
             // Execute the swap
             this.log('Executing swap transaction');
-            const tx = await signer.sendTransaction({
-                to: swapData.tx.to,
-                data: swapData.tx.data,
-                value: swapData.tx.value,
-                gasLimit: swapData.tx.gas,
-                gasPrice: swapData.tx.gasPrice,
-            });
+
+            const chainId = await signer.getChainId();
+            let tx: ethers.ContractTransaction;
+
+            if (ChainDetectionService.isArbitrum(chainId)) {
+                // Use ArbitrumTransactionService for Arbitrum chains
+                tx = await ArbitrumTransactionService.executeTransaction(signer, {
+                    to: swapData.tx.to,
+                    data: swapData.tx.data,
+                    value: swapData.tx.value,
+                    gasLimit: swapData.tx.gas,
+                });
+            } else {
+                // Use regular ethers for non-Arbitrum chains (like Celo)
+                tx = await signer.sendTransaction({
+                    to: swapData.tx.to,
+                    data: swapData.tx.data,
+                    value: swapData.tx.value,
+                    gasLimit: swapData.tx.gas,
+                    gasPrice: swapData.tx.gasPrice,
+                });
+            }
 
             callbacks?.onSwapSubmitted?.(tx.hash);
             this.log('Swap transaction submitted', { hash: tx.hash });
@@ -260,29 +276,63 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
         signer: ethers.Signer,
         callbacks?: SwapCallbacks
     ): Promise<boolean> {
-        const tokenContract = new ethers.Contract(
-            tokenAddress,
-            ['function allowance(address owner, address spender) view returns (uint256)',
-                'function approve(address spender, uint256 amount) returns (bool)'],
-            signer
-        );
-
+        const chainId = await signer.getChainId();
         const userAddress = await signer.getAddress();
-        const currentAllowance = await tokenContract.allowance(userAddress, spenderAddress);
 
-        if (currentAllowance.gte(amount)) {
-            return true; // Sufficient allowance
+        if (ChainDetectionService.isArbitrum(chainId)) {
+            // Use ArbitrumTransactionService for Arbitrum chains
+            const currentAllowance = await ArbitrumTransactionService.checkAllowance(
+                tokenAddress,
+                userAddress,
+                spenderAddress,
+                signer
+            );
+
+            if (currentAllowance.gte(amount)) {
+                return true; // Sufficient allowance
+            }
+
+            // Need approval
+            this.log('Approving token spend (Arbitrum)');
+            const approveTx = await ArbitrumTransactionService.executeApproval(
+                tokenAddress,
+                spenderAddress,
+                amount,
+                signer
+            );
+
+            callbacks?.onApprovalSubmitted?.(approveTx.hash);
+
+            await approveTx.wait();
+            callbacks?.onApprovalConfirmed?.();
+            this.log('Approval confirmed');
+
+            return false; // Approval was needed and completed
+        } else {
+            // Use regular ethers for non-Arbitrum chains (like Celo)
+            const tokenContract = new ethers.Contract(
+                tokenAddress,
+                ['function allowance(address owner, address spender) view returns (uint256)',
+                    'function approve(address spender, uint256 amount) returns (bool)'],
+                signer
+            );
+
+            const currentAllowance = await tokenContract.allowance(userAddress, spenderAddress);
+
+            if (currentAllowance.gte(amount)) {
+                return true; // Sufficient allowance
+            }
+
+            // Need approval
+            this.log('Approving token spend');
+            const approveTx = await tokenContract.approve(spenderAddress, amount);
+            callbacks?.onApprovalSubmitted?.(approveTx.hash);
+
+            await approveTx.wait();
+            callbacks?.onApprovalConfirmed?.();
+            this.log('Approval confirmed');
+
+            return false; // Approval was needed and completed
         }
-
-        // Need approval
-        this.log('Approving token spend');
-        const approveTx = await tokenContract.approve(spenderAddress, amount);
-        callbacks?.onApprovalSubmitted?.(approveTx.hash);
-
-        await approveTx.wait();
-        callbacks?.onApprovalConfirmed?.();
-        this.log('Approval confirmed');
-
-        return false; // Approval was needed and completed
     }
 }
