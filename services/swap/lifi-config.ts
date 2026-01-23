@@ -33,9 +33,10 @@ export function initializeLiFiConfig(): void {
                             throw new Error('No wallet provider available');
                         }
 
-                        // Ensure wallet is connected first
+                        // Ensure wallet is connected first and get accounts
+                        let accounts: string[];
                         try {
-                            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                            accounts = await window.ethereum.request({ method: 'eth_accounts' });
                             if (!accounts || accounts.length === 0) {
                                 throw new Error('Wallet not connected');
                             }
@@ -80,6 +81,12 @@ export function initializeLiFiConfig(): void {
                                 params: [{ chainId: `0x${chainId.toString(16)}` }],
                             });
 
+                            // Get accounts after chain switch
+                            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                            if (!accounts || accounts.length === 0) {
+                                throw new Error('Wallet not connected after chain switch');
+                            }
+
                             // Find the matching chain configuration
                             const chain = supportedChains.find(c => c.id === chainId) || arbitrum;
 
@@ -112,6 +119,12 @@ export function initializeLiFiConfig(): void {
                                             },
                                         }],
                                     });
+
+                                    // Get accounts after adding chain
+                                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                                    if (!accounts || accounts.length === 0) {
+                                        throw new Error('Wallet not connected after adding chain');
+                                    }
 
                                     return createWalletClient({
                                         account: accounts[0] as `0x${string}`, // Ensure account is properly set

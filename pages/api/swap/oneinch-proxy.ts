@@ -67,11 +67,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         return res.status(200).json(data);
 
-    } catch (error: any) {
-        console.error('[1inch Proxy] Error:', error);
+    } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('[1inch Proxy] Error:', errorMessage);
         return res.status(500).json({
             error: 'Proxy error',
-            details: error.message
+            details: errorMessage
         });
     }
 }
