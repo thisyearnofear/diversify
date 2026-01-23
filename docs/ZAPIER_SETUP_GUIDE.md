@@ -7,7 +7,7 @@ DiversiFi Oracle integrates with Zapier via Model Context Protocol (MCP) to trig
 
 You have been provided with:
 - **Embed ID**: `060b059bca0e327d297b17197d9e2400`
-- **Embed Secret**: `2AHVUHZtWwHarosoo7uBikqnNhXB5FEV2YjveGnuh3k`
+- **Embed Secret**:
 
 ⚠️ **Security Warning**: Treat the embed secret like a password. Never share it publicly.
 
@@ -19,7 +19,7 @@ Add these to your `.env.local` file:
 ```bash
 # Zapier MCP Integration
 ZAPIER_EMBED_ID=060b059bca0e327d297b17197d9e2400
-ZAPIER_EMBED_SECRET=2AHVUHZtWwHarosoo7uBikqnNhXB5FEV2YjveGnuh3k
+ZAPIER_EMBED_SECRET
 
 # Optional: Direct webhook for fallback
 ZAPIER_WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/your_webhook_id/

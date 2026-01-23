@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Head from "next/head";
 import WalletButton from "./WalletButton";
+import ThemeToggle from "./ThemeToggle";
+import { useAppState } from "../context/AppStateContext";
 
 interface LayoutProps {
   children: ReactNode;
@@ -13,8 +15,10 @@ export default function Layout({
   title = "DiversiFi - Stablecoin Portfolio Diversification",
   isInMiniPay = false,
 }: LayoutProps) {
+  const { darkMode } = useAppState();
+
   return (
-    <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+    <div className={`min-h-screen ${darkMode ? 'dark' : ''} bg-gray-100 dark:bg-gray-900`}>
       <Head>
         <title>{title}</title>
         <meta
@@ -38,7 +42,10 @@ export default function Layout({
                 </span>
               )}
             </h1>
-            <WalletButton />
+            <div className="flex items-center space-x-4">
+              <ThemeToggle />
+              <WalletButton />
+            </div>
           </div>
         </div>
       </header>

@@ -13,6 +13,7 @@ interface AppState {
   activeTab: string;
   chainId: number | null;
   swapPrefill: SwapPrefill | null;
+  darkMode: boolean;
 }
 
 // Define the context type
@@ -22,6 +23,8 @@ interface AppStateContextType extends AppState {
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
   initializeFromStorage: () => void;
+  toggleDarkMode: () => void;
+  setDarkMode: (darkMode: boolean) => void;
 }
 
 // Create the context with default values
@@ -34,11 +37,15 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     const savedTab = typeof window !== 'undefined' 
       ? localStorage.getItem('activeTab') 
       : null;
+    const savedDarkMode = typeof window !== 'undefined' 
+      ? localStorage.getItem('darkMode') 
+      : null;
     
     return {
       activeTab: savedTab || 'info',
       chainId: null,
       swapPrefill: null,
+      darkMode: savedDarkMode ? JSON.parse(savedDarkMode) : false,
     };
   });
 
@@ -67,6 +74,23 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     setState(prev => ({ ...prev, swapPrefill: null }));
   };
 
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setState(prev => {
+      const newDarkMode = !prev.darkMode;
+      localStorage.setItem('darkMode', JSON.stringify(newDarkMode));
+      return { ...prev, darkMode: newDarkMode };
+    });
+  };
+
+  // Set dark mode directly
+  const setDarkMode = (darkMode: boolean) => {
+    setState(prev => {
+      localStorage.setItem('darkMode', JSON.stringify(darkMode));
+      return { ...prev, darkMode };
+    });
+  };
+
   // Initialize from storage
   const initializeFromStorage = () => {
     const savedTab = localStorage.getItem('activeTab');
@@ -79,11 +103,14 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     activeTab: state.activeTab,
     chainId: state.chainId,
     swapPrefill: state.swapPrefill,
+    darkMode: state.darkMode,
     setActiveTab,
     setChainId,
     navigateToSwap,
     clearSwapPrefill,
     initializeFromStorage,
+    toggleDarkMode,
+    setDarkMode,
   };
 
   return (
