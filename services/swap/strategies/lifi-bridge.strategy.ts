@@ -15,8 +15,14 @@ import {
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } from '../../../config';
+import { initializeLiFiConfig } from '../lifi-config';
 
 export class LiFiBridgeStrategy extends BaseSwapStrategy {
+    constructor() {
+        super();
+        // Ensure LiFi SDK is configured
+        initializeLiFiConfig();
+    }
     getName(): string {
         return 'LiFiBridgeStrategy';
     }
@@ -100,7 +106,7 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
         const minimumOutput = this.calculateMinOutput(expectedOutput, slippage);
 
         // Estimate gas from route
-        const gasCostEstimate = route.gasCostUSD 
+        const gasCostEstimate = route.gasCostUSD
             ? ethers.utils.parseEther(route.gasCostUSD)
             : ethers.BigNumber.from(0);
 
@@ -157,7 +163,7 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
             }
 
             const route = result.routes[0] as Route;
-            this.log('Route found', { 
+            this.log('Route found', {
                 steps: route.steps.length,
                 tools: route.steps.map(s => s.tool).join(' -> ')
             });
@@ -171,7 +177,7 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
                     updatedRoute.steps.forEach((step, index) => {
                         if (step?.execution?.process) {
                             const latestProcess = step.execution.process[step.execution.process.length - 1];
-                            
+
                             if (latestProcess.type === 'TOKEN_ALLOWANCE' && latestProcess.txHash) {
                                 this.log(`Step ${index + 1}: Approval submitted`, { hash: latestProcess.txHash });
                                 callbacks?.onApprovalSubmitted?.(latestProcess.txHash);
@@ -196,9 +202,9 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
                 throw new Error('No transaction hash returned from LiFi');
             }
 
-            this.log('Bridge completed', { 
+            this.log('Bridge completed', {
                 txHash,
-                steps: executedRoute.steps.length 
+                steps: executedRoute.steps.length
             });
 
             return {

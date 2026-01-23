@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Region } from './use-user-region';
-import { AlphaVantageService } from '../utils/api-services';
+import { exchangeRateService } from '../utils/improved-data-services';
 
 interface CurrencyPerformance {
   symbol: string;
@@ -66,15 +66,15 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
           .filter(currency => currency.symbol !== baseCurrency) // Skip base currency
           .map(async (currency) => {
             try {
-              // Get historical exchange rates
-              const historicalData = await AlphaVantageService.getHistoricalExchangeRates(
+              // Get historical exchange rates using new centralized service
+              const result = await exchangeRateService.getHistoricalRates(
                 baseCurrency,
                 currency.symbol
               );
 
               return {
                 symbol: currency.symbol,
-                historicalData
+                historicalData: result.data
               };
             } catch (error) {
               console.error(`Error fetching data for ${currency.symbol}:`, error);
@@ -96,7 +96,7 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
         // If we have at least some real data, use it
         if (anyRealData) {
           // Get the dates from the first successful result
-          const firstValidResult = results.find(r => r.historicalData && r.historicalData.dates.length > 0);
+          const firstValidResult = results.find(r => r.historicalData && r.historicalData.dates && r.historicalData.dates.length > 0);
           const dates = firstValidResult?.historicalData?.dates || [];
 
           // Limit to last 30 days
@@ -111,7 +111,7 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
             if (currencyIndex === -1) return;
 
             // Get the rates for the last 30 days
-            const last30Rates = historicalData.rates.slice(-30);
+            const last30Rates = historicalData.rates ? historicalData.rates.slice(-30) : [];
 
             // Convert to "value of 1 base currency worth of this currency over time"
             const values = last30Rates.map((rate: number) => 1 / rate);

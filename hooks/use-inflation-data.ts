@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { inflationService } from '../utils/improved-inflation-service';
+import { inflationService } from '../utils/improved-data-services';
 import {
   FALLBACK_INFLATION_DATA,
   COUNTRY_TO_REGION,

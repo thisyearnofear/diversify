@@ -2,8 +2,8 @@
  * API Services for DiversiFi
  *
  * This file contains services for interacting with external APIs:
- * - Alpha Vantage API for currency exchange rates
- * - World Bank API for inflation data
+ * - World Bank API for inflation data (legacy, use improved-data-services.ts instead)
+ * - Token pricing services for DeFi integrations
  */
 
 import { unifiedCache, CacheCategory } from './unified-cache-service';
@@ -12,13 +12,11 @@ import { EXCHANGE_RATES } from '../config/constants';
 
 // Cache durations
 const CACHE_DURATIONS = {
-  EXCHANGE_RATE: 1000 * 60 * 60, // 1 hour
   INFLATION_DATA: 1000 * 60 * 60 * 24, // 24 hours
 };
 
 // Cache keys
 const CACHE_KEYS = {
-  ALPHA_VANTAGE_FOREX: 'alpha-vantage-forex-',
   WORLD_BANK_INFLATION: 'world-bank-inflation-',
 };
 
@@ -163,86 +161,6 @@ export const ExchangeRateService = {
    * @param outputSize Data points to return ('compact' = 100, 'full' = all)
    * @returns Historical exchange rate data
    */
-  getHistoricalExchangeRates: async (
-    fromCurrency: string,
-    toCurrency: string,
-    outputSize: 'compact' | 'full' = 'compact'
-  ) => {
-    try {
-      const cacheKey = `${CACHE_KEYS.ALPHA_VANTAGE_FOREX}historical-${fromCurrency}-${toCurrency}-${outputSize}`;
-
-      // Check cache first
-      const cachedData = getCachedData(cacheKey, CACHE_DURATIONS.EXCHANGE_RATE);
-      if (cachedData) {
-        return { ...cachedData, source: 'cache' };
-      }
-
-      // Call our internal API proxy
-      const response = await fetch(
-        `/api/finance/proxy?function=FX_DAILY&from_symbol=${fromCurrency}&to_symbol=${toCurrency}&outputsize=${outputSize}`
-      );
-
-      if (!response.ok) {
-        throw new Error(`Alpha Vantage API error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Check if API returned an error
-      if (data['Error Message']) {
-        throw new Error(`Alpha Vantage API error: ${data['Error Message']}`);
-      }
-
-      // Check if API returned rate limit error
-      if (data.Note?.includes('API call frequency')) {
-        console.warn('Alpha Vantage API rate limit reached');
-        return getFallbackHistoricalRates(fromCurrency, toCurrency);
-      }
-
-      // Extract time series data
-      const timeSeries = data['Time Series FX (Daily)'];
-      if (!timeSeries) {
-        throw new Error('No time series data found');
-      }
-
-      // Convert to arrays of dates and rates
-      const dates: string[] = [];
-      const rates: number[] = [];
-
-      Object.entries(timeSeries).forEach(([date, values]: [string, any]) => {
-        dates.push(date);
-        rates.push(Number.parseFloat(values['4. close']));
-      });
-
-      // Sort by date (oldest to newest)
-      const sortedIndices = dates.map((_, i) => i).sort((a, b) => {
-        return new Date(dates[a]).getTime() - new Date(dates[b]).getTime();
-      });
-
-      const sortedDates = sortedIndices.map(i => dates[i]);
-      const sortedRates = sortedIndices.map(i => rates[i]);
-
-      const result = {
-        dates: sortedDates,
-        rates: sortedRates,
-        source: 'api' as const
-      };
-
-      // Cache the result
-      setCachedData(cacheKey, result);
-
-      return result;
-    } catch (error: any) {
-      if (error.message?.includes('No time series data found')) {
-        console.warn(`Note: Alpha Vantage historical data not available for ${fromCurrency}-${toCurrency}, using fallback.`);
-      } else {
-        console.error('Error fetching historical exchange rates:', error);
-      }
-      return getFallbackHistoricalRates(fromCurrency, toCurrency);
-    }
-  }
-};
-
 /**
  * Token Price Service
  * Live USD pricing for on-chain tokens with caching and multi-provider fallback
@@ -417,26 +335,6 @@ const REGION_COUNTRY_MAPPING: Record<string, string[]> = {
   'USA': ['USA', 'CAN']
 };
 
-// Fallback data for when API calls fail
-const FALLBACK_EXCHANGE_RATES: Record<string, Record<string, number>> = {
-  'USD': {
-    'EUR': 0.92,
-    'KES': 130,
-    'COP': 4000,
-    'PHP': 56,
-    'GHS': 12.5,
-    'BRL': 5.2
-  },
-  'EUR': {
-    'USD': 1.09,
-    'KES': 141,
-    'COP': 4350,
-    'PHP': 61,
-    'GHS': 13.6,
-    'BRL': 5.7
-  }
-};
-
 // Fallback inflation data
 const FALLBACK_INFLATION_DATA = {
   countries: [
@@ -452,72 +350,6 @@ const FALLBACK_INFLATION_DATA = {
 };
 
 // Helper functions for fallback data
-function getFallbackExchangeRate(fromCurrency: string, toCurrency: string) {
-  // Direct rate
-  if (FALLBACK_EXCHANGE_RATES[fromCurrency]?.[toCurrency]) {
-    return {
-      rate: FALLBACK_EXCHANGE_RATES[fromCurrency][toCurrency],
-      timestamp: new Date().toISOString(),
-      source: 'fallback' as const
-    };
-  }
-
-  // Inverse rate
-  if (FALLBACK_EXCHANGE_RATES[toCurrency]?.[fromCurrency]) {
-    return {
-      rate: 1 / FALLBACK_EXCHANGE_RATES[toCurrency][fromCurrency],
-      timestamp: new Date().toISOString(),
-      source: 'fallback' as const
-    };
-  }
-
-  // USD as intermediate (if neither direct nor inverse is available)
-  if (fromCurrency !== 'USD' && toCurrency !== 'USD') {
-    const fromToUSD = FALLBACK_EXCHANGE_RATES.USD[fromCurrency]
-      ? 1 / FALLBACK_EXCHANGE_RATES.USD[fromCurrency]
-      : 1;
-    const usdToTarget = FALLBACK_EXCHANGE_RATES.USD[toCurrency] || 1;
-
-    return {
-      rate: fromToUSD * usdToTarget,
-      timestamp: new Date().toISOString(),
-      source: 'fallback' as const
-    };
-  }
-
-  // Default 1:1 if no data available
-  return {
-    rate: 1,
-    timestamp: new Date().toISOString(),
-    source: 'fallback' as const
-  };
-}
-
-function getFallbackHistoricalRates(fromCurrency: string, toCurrency: string) {
-  // Generate 30 days of mock data
-  const dates: string[] = [];
-  const rates: number[] = [];
-
-  const baseRate = getFallbackExchangeRate(fromCurrency, toCurrency).rate;
-  const today = new Date();
-
-  for (let i = 30; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    dates.push(date.toISOString().split('T')[0]);
-
-    // Add some random variation to the rate
-    const randomFactor = 0.95 + Math.random() * 0.1;
-    rates.push(baseRate * randomFactor);
-  }
-
-  return {
-    dates,
-    rates,
-    source: 'fallback' as const
-  };
-}
-
 function getFallbackInflationData() {
   return {
     ...FALLBACK_INFLATION_DATA,

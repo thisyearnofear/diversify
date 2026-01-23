@@ -15,8 +15,14 @@ import {
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } from '../../../config';
+import { initializeLiFiConfig, validateWalletProvider, checkExecutionProviders } from '../lifi-config';
 
 export class LiFiSwapStrategy extends BaseSwapStrategy {
+    constructor() {
+        super();
+        // Ensure LiFi SDK is configured
+        initializeLiFiConfig();
+    }
     getName(): string {
         return 'LiFiSwapStrategy';
     }
@@ -81,7 +87,7 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
         const minimumOutput = this.calculateMinOutput(expectedOutput, slippage);
 
         // Estimate gas from route
-        const gasCostEstimate = route.gasCostUSD 
+        const gasCostEstimate = route.gasCostUSD
             ? ethers.utils.parseEther(route.gasCostUSD)
             : ethers.BigNumber.from(0);
 
@@ -114,7 +120,23 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
             const amountInWei = this.parseAmount(params.amount, fromTokenMeta.decimals || 18);
 
             // Get route from LiFi
-            this.log('Requesting route from LiFi');
+            this.log('Requesting route from LiFi', {
+                fromChainId: params.fromChainId,
+                toChainId: params.toChainId,
+                fromTokenAddress,
+                toTokenAddress,
+                amount: amountInWei.toString(),
+                userAddress: params.userAddress
+            });
+
+            // Ensure LiFi is configured before making API calls
+            initializeLiFiConfig();
+
+            // Validate wallet provider is available
+            validateWalletProvider();
+
+            // Check execution providers
+            await checkExecutionProviders();
             const result = await getRoutes({
                 fromChainId: params.fromChainId,
                 fromTokenAddress,
@@ -129,22 +151,47 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
             });
 
             if (!result.routes || result.routes.length === 0) {
+                this.log('No routes found from LiFi', result);
                 throw new Error('No swap routes found');
             }
 
             const route = result.routes[0] as Route;
-            this.log('Route found', { tool: route.steps[0]?.tool });
+            this.log('Route found', {
+                tool: route.steps[0]?.tool,
+                steps: route.steps.length,
+                fromAmount: route.fromAmount,
+                toAmount: route.toAmount
+            });
+
+            // Check if we have window.ethereum available
+            if (typeof window === 'undefined' || !window.ethereum) {
+                throw new Error('No wallet provider available. Please ensure MetaMask or another Web3 wallet is installed and connected.');
+            }
 
             // Execute route via LiFi SDK
             // LiFi SDK v3 will automatically use window.ethereum
-            this.log('Executing route');
+            this.log('Executing route with LiFi SDK');
+
+            // Add additional debugging before execution
+            this.log('Pre-execution checks', {
+                hasWindowEthereum: typeof window !== 'undefined' && !!window.ethereum,
+                walletConnected: window.ethereum?.selectedAddress,
+                chainId: window.ethereum?.chainId
+            });
+
             const executedRoute = await executeRoute(route, {
                 updateRouteHook: (updatedRoute) => {
                     // Track execution progress
                     const step = updatedRoute.steps[0];
                     if (step?.execution?.process) {
                         const latestProcess = step.execution.process[step.execution.process.length - 1];
-                        
+
+                        this.log('Route execution progress', {
+                            type: latestProcess.type,
+                            status: latestProcess.status,
+                            txHash: latestProcess.txHash
+                        });
+
                         if (latestProcess.type === 'TOKEN_ALLOWANCE' && latestProcess.txHash) {
                             callbacks?.onApprovalSubmitted?.(latestProcess.txHash);
                         } else if (latestProcess.type === 'SWAP' && latestProcess.txHash) {
@@ -160,6 +207,7 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
             )?.txHash || executedRoute.steps?.[0]?.execution?.process?.[0]?.txHash;
 
             if (!txHash) {
+                this.logError('No transaction hash returned from LiFi', executedRoute);
                 throw new Error('No transaction hash returned from LiFi');
             }
 
@@ -172,6 +220,22 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
             };
         } catch (error: any) {
             this.logError('LiFi swap failed', error);
+
+            // Provide more specific error messages
+            if (error.message?.includes('SDK Execution Provider not found')) {
+                return {
+                    success: false,
+                    error: 'Wallet connection issue. Please ensure your wallet is connected and try again.',
+                };
+            }
+
+            if (error.message?.includes('No wallet provider')) {
+                return {
+                    success: false,
+                    error: 'No wallet detected. Please install MetaMask or another Web3 wallet.',
+                };
+            }
+
             return {
                 success: false,
                 error: error.message || 'LiFi swap execution failed',

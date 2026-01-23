@@ -24,10 +24,7 @@ Protect your savings from inflation by diversifying stablecoins across global re
 pnpm install
 
 # Start the app
-pnpm dev:diversifi
-
-# Or from app directory
-cd apps/diversifi && pnpm dev
+pnpm dev
 ```
 
 ### Environment Setup
@@ -43,7 +40,7 @@ NEXT_PUBLIC_ALPHA_VANTAGE_API_KEY=your_key
 
 ### Test with MiniPay
 
-1. Start dev server: `pnpm dev:diversifi`
+1. Start dev server: `pnpm dev`
 2. Expose with ngrok: `ngrok http 3003`
 3. In MiniPay → Settings → Developer Settings → Load Test Page
 4. Enter your ngrok URL

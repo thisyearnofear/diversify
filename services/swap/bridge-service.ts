@@ -1,11 +1,10 @@
 import { createConfig, getRoutes, executeRoute, RoutesRequest, Route, config } from '@lifi/sdk';
 import { ethers } from 'ethers';
 import { CIRCLE_CONFIG, ARBITRUM_TOKENS } from '../../config';
+import { initializeLiFiConfig } from './lifi-config';
 
 // Initialize LI.FI Config
-createConfig({
-    integrator: 'diversifi-minipay',
-});
+initializeLiFiConfig();
 
 export interface BridgeQuoteRequest {
     fromChainId: number;
@@ -141,7 +140,7 @@ export class BridgeService {
     static async swapSingleChain(route: Route, signer?: ethers.Signer): Promise<BridgeResult> {
         // Execute route - LiFi SDK v3 will automatically use window.ethereum
         const result = await executeRoute(route);
-        
+
         return {
             provider: 'lifi',
             txHash: result.steps?.[0]?.execution?.process?.[0]?.txHash || '',
@@ -195,7 +194,7 @@ export class BridgeService {
         // 2. Call depositForBurn on source chain
         // 3. Wait for Circle attestation (off-chain)
         // 4. Call receiveMessage on destination chain
-        
+
         throw new Error('Circle CCTP integration not yet implemented. Please use LiFi for cross-chain swaps.');
     }
 
