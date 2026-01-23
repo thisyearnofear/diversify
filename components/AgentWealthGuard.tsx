@@ -3,15 +3,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWealthProtectionAgent, RiskTolerance } from "../hooks/use-wealth-protection-agent";
 import { useInflationData } from "../hooks/use-inflation-data";
 import { useWalletContext } from "./WalletProvider";
-import { NETWORKS, MAINNET_TOKENS, ARBITRUM_TOKENS } from "../config";
-import { BridgeService } from "../services/swap/bridge-service";
-import { ethers } from "ethers";
+import { useAppState } from "../context/AppStateContext";
+import { NETWORKS } from "../config";
 import { ChainDetectionService } from "../services/swap/chain-detection.service";
 
 interface AgentWealthGuardProps {
     amount: number;
     holdings: string[];
-    onExecuteSwap: (targetToken: string) => void;
     embedded?: boolean;
 }
 
@@ -72,26 +70,32 @@ const AIProgress = ({ currentStep }: { currentStep: string }) => (
     </div>
 );
 
-export default function AgentWealthGuard({ amount, holdings, onExecuteSwap, embedded = false }: AgentWealthGuardProps) {
+export default function AgentWealthGuard({ amount, holdings, embedded = false }: AgentWealthGuardProps) {
     const hookResult = useWealthProtectionAgent();
     const {
         analyze, advice, isAnalyzing, thinkingStep, config, updateConfig,
         sendMessage
     } = hookResult;
     const { inflationData } = useInflationData();
+    const { navigateToSwap } = useAppState();
     const [showConfig, setShowConfig] = useState(false);
     const [isOpen, setIsOpen] = useState(embedded); // Default to open if embedded
     const [showHint] = useState(true);
-    const [bridgeState, setBridgeState] = useState<{
-        status: 'idle' | 'checking' | 'approving' | 'bridging' | 'success' | 'error';
-        error?: string;
-        txHash?: string;
-        provider?: 'lifi' | 'circle';
-    }>({ status: 'idle' });
     const { chainId } = useWalletContext();
-    const [useCircleNative, setUseCircleNative] = useState(false);
     const [isVisionLoading, setIsVisionLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Navigate to swap with AI recommendation pre-filled
+    const handleExecuteRecommendation = (targetToken: string) => {
+        // Determine source token based on current holdings
+        const sourceToken = holdings.length > 0 ? holdings[0] : 'CUSD';
+        navigateToSwap({
+            fromToken: sourceToken,
+            toToken: targetToken,
+            amount: amount.toString(),
+            reason: advice?.reasoning,
+        });
+    };
 
     if (!inflationData) return null;
 
@@ -132,48 +136,6 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap, embe
             }
         };
         reader.readAsDataURL(file);
-    };
-
-    const handleExecuteAction = async (targetToken: string) => {
-        if (!advice) return;
-
-        // If advice is for Arbitrum but user is on Celo, trigger BRIDGE
-        if (advice.targetNetwork === 'Arbitrum' && ChainDetectionService.isCelo(chainId)) {
-            try {
-                setBridgeState({ status: 'checking' });
-
-                if (!window.ethereum) throw new Error("No wallet found");
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                const signer = provider.getSigner();
-                const userAddress = await signer.getAddress();
-
-                // Map symbol to address
-                const toTokenAddr = (ARBITRUM_TOKENS as Record<string, string>)[targetToken] || ARBITRUM_TOKENS.USDC;
-
-                setBridgeState({ status: 'bridging' });
-                const result = await BridgeService.bridgeToWealth(
-                    signer,
-                    userAddress,
-                    amount.toString(),
-                    { address: MAINNET_TOKENS.CUSD, chainId: 42220 },
-                    { address: toTokenAddr, chainId: 42161 },
-                    useCircleNative ? 'circle' : 'lifi'
-                );
-
-                setBridgeState({
-                    status: 'success',
-                    txHash: result.txHash,
-                    provider: result.provider
-                });
-            } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : 'Bridge operation failed';
-                console.error("Bridge failed:", err);
-                setBridgeState({ status: 'error', error: errorMessage });
-            }
-        } else {
-            // Internal Celo swap logic
-            onExecuteSwap(targetToken);
-        }
     };
 
     const hasNewInsight = advice && !isAnalyzing;
@@ -308,24 +270,7 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap, embe
                                         ))}
                                     </div>
                                 </div>
-                                <div>
-                                    <label className={`text-xs font-bold text-gray-600 ${!embedded ? 'md:text-slate-400' : ''} uppercase mb-2 block`}>Bridge Optionality</label>
-                                    <button
-                                        onClick={() => setUseCircleNative(!useCircleNative)}
-                                        className={`w-full px-3 py-2 rounded-md text-xs font-bold flex items-center justify-between transition-all ${useCircleNative
-                                            ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
-                                            : `bg-white text-gray-600 ${!embedded ? 'md:bg-white/5 md:text-slate-400' : ''} border border-transparent`
-                                            }`}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <span>🔵</span>
-                                            <span>Circle Native (CCTP)</span>
-                                        </div>
-                                        <div className={`w-8 h-4 rounded-full relative transition-colors ${useCircleNative ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                                            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${useCircleNative ? 'left-4.5' : 'left-0.5'}`} />
-                                        </div>
-                                    </button>
-                                </div>
+
                             </div>
                         </motion.div>
                     )}
@@ -463,36 +408,15 @@ export default function AgentWealthGuard({ amount, holdings, onExecuteSwap, embe
                             </div>
 
                             {advice.action === 'SWAP' && advice.targetToken && (
-                                <div className="space-y-3">
-                                    {bridgeState.status !== 'idle' && (
-                                        <div className={`p-3 rounded-lg text-xs font-bold flex items-center gap-3 ${bridgeState.status === 'success' ? 'bg-green-100 text-green-700' :
-                                            bridgeState.status === 'error' ? 'bg-red-100 text-red-700' :
-                                                'bg-blue-100 text-blue-700'
-                                            }`}>
-                                            {bridgeState.status === 'bridging' && <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />}
-                                            <span>
-                                                {bridgeState.status === 'checking' && "🔍 Finding optimal route..."}
-                                                {bridgeState.status === 'bridging' && (bridgeState.provider === 'circle' ? "🔵 Circle CCTP Native Path..." : "🌉 Bridging via LI.FI (Multi-step)...")}
-                                                {bridgeState.status === 'success' && (bridgeState.provider === 'circle' ? "✅ Native Wealth Protection Deployed!" : "✅ Wealth Protection Deployed!")}
-                                                {bridgeState.status === 'error' && `❌ Error: ${bridgeState.error?.slice(0, 50)}`}
-                                            </span>
-                                        </div>
+                                <button
+                                    onClick={() => handleExecuteRecommendation(advice.targetToken!)}
+                                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-lg text-white rounded-xl font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-2"
+                                >
+                                    <span>Execute: Swap to {advice.targetToken}</span>
+                                    {advice.targetNetwork && advice.targetNetwork !== 'Celo' && (
+                                        <span className="text-[10px] px-1.5 py-0.5 bg-black/20 rounded uppercase">via {advice.targetNetwork}</span>
                                     )}
-
-                                    <button
-                                        disabled={['checking', 'bridging'].includes(bridgeState.status)}
-                                        onClick={() => handleExecuteAction(advice.targetToken!)}
-                                        className={`w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:shadow-lg text-white rounded-xl font-bold transition-all active:scale-[0.97] flex items-center justify-center gap-2 ${['checking', 'bridging'].includes(bridgeState.status) ? 'opacity-50 grayscale' : ''
-                                            }`}
-                                    >
-                                        <span>
-                                            {bridgeState.status === 'success' ? 'View Deployment' : `Deploy to ${advice.targetToken}`}
-                                        </span>
-                                        {advice.targetNetwork && advice.targetNetwork !== 'Celo' && (
-                                            <span className="text-[10px] px-1.5 py-0.5 bg-black/20 rounded uppercase">via {advice.targetNetwork}</span>
-                                        )}
-                                    </button>
-                                </div>
+                                </button>
                             )}
                         </motion.div>
                     )}

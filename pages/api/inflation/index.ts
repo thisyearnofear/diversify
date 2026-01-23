@@ -23,7 +23,7 @@ export default async function handler(
   }
 
   const { countries } = req.query;
-  const targetCountries = countries 
+  const targetCountries = countries
     ? (countries as string).split(',').filter(Boolean)
     : PRIORITY_COUNTRIES;
 
@@ -76,10 +76,14 @@ export default async function handler(
 async function fetchFromIMF(countryCodes: string[]) {
   const currentYear = new Date().getFullYear();
   const years = [currentYear - 1, currentYear, currentYear + 1];
-  
+
+  // Fetch both country-specific data and global data
+  // Include WEOWORLD for global inflation rate
+  const allCodes = [...countryCodes, 'WEOWORLD'];
+
   const response = await fetch(
     `${IMF_URL}?periods=${years.join(',')}`,
-    { 
+    {
       headers: { 'Accept': 'application/json' },
       signal: AbortSignal.timeout(8000)
     }
@@ -90,32 +94,36 @@ async function fetchFromIMF(countryCodes: string[]) {
   }
 
   const data = await response.json();
-  
+
   if (!data.values?.PCPIPCH) {
     throw new Error('Invalid IMF response');
   }
 
   const inflationData = data.values.PCPIPCH;
-  
-  const countries = countryCodes
+
+  const countries = allCodes
     .filter(code => inflationData[code])
     .map(code => {
       const countryData = inflationData[code];
       // Prefer current year, then previous, then forecast
-      const value = countryData[currentYear.toString()] ?? 
-                   countryData[(currentYear - 1).toString()] ??
-                   countryData[(currentYear + 1).toString()];
-      
-      const year = countryData[currentYear.toString()] !== undefined 
-        ? currentYear 
+      const value = countryData[currentYear.toString()] ??
+        countryData[(currentYear - 1).toString()] ??
+        countryData[(currentYear + 1).toString()];
+
+      const year = countryData[currentYear.toString()] !== undefined
+        ? currentYear
         : currentYear - 1;
 
+      // Special handling for WEOWORLD (global inflation)
+      const isGlobal = code === 'WEOWORLD';
+
       return {
-        country: COUNTRY_NAMES[code] || code,
+        country: isGlobal ? 'World' : (COUNTRY_NAMES[code] || code),
         countryCode: code,
         value: typeof value === 'number' ? parseFloat(value.toFixed(1)) : null,
         year,
-        source: 'imf'
+        source: 'imf',
+        isGlobal // Flag to identify global rate
       };
     })
     .filter(item => item.value !== null);
@@ -140,7 +148,7 @@ interface WorldBankIndicatorItem {
 async function fetchFromWorldBank(countryCodes: string[]) {
   const currentYear = new Date().getFullYear();
   const countryParam = countryCodes.join(';');
-  
+
   const response = await fetch(
     `${WORLD_BANK_URL}/country/${countryParam}/indicator/FP.CPI.TOTL.ZG?format=json&per_page=100&date=${currentYear - 2}:${currentYear}`,
     { signal: AbortSignal.timeout(8000) }
@@ -151,7 +159,7 @@ async function fetchFromWorldBank(countryCodes: string[]) {
   }
 
   const data = await response.json();
-  
+
   if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1])) {
     throw new Error('Invalid World Bank response');
   }
@@ -164,14 +172,14 @@ async function fetchFromWorldBank(countryCodes: string[]) {
     year: number;
     source: string;
   }> = {};
-  
+
   data[1]
     .filter((item: WorldBankIndicatorItem) => item.value !== null)
     .forEach((item: WorldBankIndicatorItem) => {
       const code = item.countryiso3code;
       const year = parseInt(item.date);
       const value = item.value as number;
-      
+
       if (!countryLatest[code] || year > countryLatest[code].year) {
         countryLatest[code] = {
           country: item.country.value,

@@ -73,7 +73,7 @@ const SwapAIInsight = ({
 
 
 const SwapInterface = forwardRef<
-  { refreshBalances: () => void },
+  { refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void },
   SwapInterfaceProps
 >(function SwapInterface(
   {
@@ -125,11 +125,27 @@ const SwapInterface = forwardRef<
     address || ""
   );
 
-  // Expose refreshBalances method to parent component
+  // Expose methods to parent component
   useImperativeHandle(ref, () => ({
     refreshBalances: () => {
       console.log("Refreshing token balances from SwapInterface");
       refreshBalances();
+    },
+    setTokens: (from: string, to: string, inputAmount?: string) => {
+      console.log(`[SwapInterface] Setting tokens: ${from} → ${to}, amount: ${inputAmount}`);
+      // Only set if the tokens are available
+      const fromExists = availableTokens.some(t => t.symbol.toUpperCase() === from.toUpperCase());
+      const toExists = availableTokens.some(t => t.symbol.toUpperCase() === to.toUpperCase());
+      
+      if (fromExists) {
+        setFromToken(from.toUpperCase());
+      }
+      if (toExists) {
+        setToToken(to.toUpperCase());
+      }
+      if (inputAmount) {
+        setAmount(inputAmount);
+      }
     },
   }));
 

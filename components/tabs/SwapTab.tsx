@@ -8,6 +8,7 @@ import RealLifeScenario from "../RealLifeScenario";
 import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../WalletProvider";
+import { useAppState } from "../../context/AppStateContext";
 import WalletButton from "../WalletButton";
 import { NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
@@ -116,6 +117,7 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId } = useWalletContext();
+  const { swapPrefill, clearSwapPrefill } = useAppState();
   useInflationData();
   const [selectedScenario, setSelectedScenario] = useState<
     "education" | "remittance" | "business" | "travel" | "savings"
@@ -150,8 +152,12 @@ export default function SwapTab({
     "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"
   >("idle");
 
+  // AI recommendation banner state
+  const [showAiRecommendation, setShowAiRecommendation] = useState(false);
+  const [aiRecommendationReason, setAiRecommendationReason] = useState<string | null>(null);
+
   // Create a ref to the SwapInterface component
-  const swapInterfaceRef = useRef<{ refreshBalances: () => void }>(null);
+  const swapInterfaceRef = useRef<{ refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void }>(null);
 
   // Network-aware token filtering - show only tokens available on current chain
   const networkTokens = useMemo(() => {
@@ -168,6 +174,27 @@ export default function SwapTab({
 
   // Check if on Arbitrum (different swap behavior)
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);
+
+  // Handle AI recommendation prefill from AppState
+  useEffect(() => {
+    if (swapPrefill && swapInterfaceRef.current?.setTokens) {
+      // Set the tokens in the swap interface
+      swapInterfaceRef.current.setTokens(
+        swapPrefill.fromToken || 'CUSD',
+        swapPrefill.toToken || 'CEUR',
+        swapPrefill.amount
+      );
+      
+      // Show the AI recommendation banner
+      if (swapPrefill.reason) {
+        setAiRecommendationReason(swapPrefill.reason);
+        setShowAiRecommendation(true);
+      }
+      
+      // Clear the prefill so it doesn't re-trigger
+      clearSwapPrefill();
+    }
+  }, [swapPrefill, clearSwapPrefill]);
 
   // Effect to update UI when swap status changes
   useEffect(() => {
@@ -331,6 +358,27 @@ export default function SwapTab({
           />
         ) : (
           <>
+            {/* AI Recommendation Banner */}
+            {showAiRecommendation && aiRecommendationReason && (
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 p-3 mb-4 rounded-lg">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-2">
+                    <span className="text-lg">🧠</span>
+                    <div>
+                      <p className="text-sm font-medium text-purple-900">AI Recommendation</p>
+                      <p className="text-xs text-purple-700 mt-1">{aiRecommendationReason.slice(0, 150)}{aiRecommendationReason.length > 150 ? '...' : ''}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAiRecommendation(false)}
+                    className="text-purple-400 hover:text-purple-600 text-lg leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Arbitrum notice */}
             {isArbitrum && (
               <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r">

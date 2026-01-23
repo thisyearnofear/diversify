@@ -90,14 +90,19 @@ export function useInflationData() {
           console.log(`[Inflation] Loaded ${improvedData.data.countries.length} countries from ${improvedData.source}`);
 
           // Process the improved data - ensure countries array exists
-          const countryData: InflationData[] = (improvedData.data.countries || []).map((item: any) => ({
-            country: item.country,
-            region: COUNTRY_TO_REGION[item.countryCode] || 'Global',
-            currency: getCurrencyFromCountryCode(item.countryCode),
-            rate: item.value,
-            year: item.year,
-            source: improvedData.source as 'api' | 'cache' | 'fallback'
-          }));
+          const countryData: InflationData[] = (improvedData.data.countries || []).map((item: any) => {
+            // Special handling for WEOWORLD (global inflation)
+            const isGlobal = item.countryCode === 'WEOWORLD' || item.isGlobal;
+
+            return {
+              country: item.country,
+              region: isGlobal ? 'Global' : (COUNTRY_TO_REGION[item.countryCode] || 'Global'),
+              currency: isGlobal ? 'XAU' : getCurrencyFromCountryCode(item.countryCode),
+              rate: item.value,
+              year: item.year,
+              source: improvedData.source as 'api' | 'cache' | 'fallback'
+            };
+          });
 
           console.log(`[Inflation] Processed country data:`, countryData.slice(0, 3)); // Log first 3 for debugging
 
@@ -260,6 +265,13 @@ export function useInflationData() {
       return rate;
     }
 
+    // Special case for PAXG and other Global region assets
+    if (normalizedStablecoin === 'PAXG') {
+      const rate = inflationData['Global']?.avgRate || 5.0;
+      console.log(`[Inflation] ${stablecoin} -> Global rate: ${rate}`);
+      return rate;
+    }
+
     // Find the currency that corresponds to this stablecoin
     const currency = Object.keys(CURRENCY_TO_STABLECOIN).find(
       key => CURRENCY_TO_STABLECOIN[key].toUpperCase() === normalizedStablecoin
@@ -332,15 +344,15 @@ export function useInflationData() {
         }
       });
     });
-    
+
     return {
       mostRecentYear: mostRecentDate || 'Unknown',
       dataSources: Array.from(new Set(
-        Object.values(inflationData).flatMap(region => 
+        Object.values(inflationData).flatMap(region =>
           region.countries.map(c => c.source)
         )
       )),
-      totalCountries: Object.values(inflationData).reduce((sum, region) => 
+      totalCountries: Object.values(inflationData).reduce((sum, region) =>
         sum + region.countries.length, 0
       )
     };

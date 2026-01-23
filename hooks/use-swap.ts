@@ -3,7 +3,7 @@
  * Clean, modular, and testable - uses SwapOrchestrator
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { SwapOrchestratorService } from '../services/swap/swap-orchestrator.service';
 import { ProviderFactoryService } from '../services/swap/provider-factory.service';
 import { ChainDetectionService } from '../services/swap/chain-detection.service';
@@ -34,21 +34,38 @@ export function useSwap() {
     const [chainId, setChainId] = useState<number | null>(null);
     const [isMiniPay, setIsMiniPay] = useState(false);
 
-    // Detect environment on mount
-    useEffect(() => {
-        const detectEnvironment = async () => {
-            setIsMiniPay(isMiniPayEnvironment());
-
-            try {
-                const detectedChainId = await ProviderFactoryService.getCurrentChainId();
-                setChainId(detectedChainId);
-            } catch (err) {
-                console.warn('Error detecting chain ID:', err);
-            }
-        };
-
-        detectEnvironment();
+    // Refresh chain ID from wallet
+    const refreshChainId = useCallback(async () => {
+        try {
+            const detectedChainId = await ProviderFactoryService.getCurrentChainId();
+            setChainId(detectedChainId);
+            return detectedChainId;
+        } catch (err) {
+            console.warn('Error detecting chain ID:', err);
+            return null;
+        }
     }, []);
+
+    // Detect environment on mount and listen for chain changes
+    useEffect(() => {
+        setIsMiniPay(isMiniPayEnvironment());
+        refreshChainId();
+
+        // Listen for chain changes from wallet
+        if (typeof window !== 'undefined' && window.ethereum) {
+            const handleChainChanged = (chainIdHex: string) => {
+                const newChainId = parseInt(chainIdHex, 16);
+                console.log('[useSwap] Chain changed to:', newChainId);
+                setChainId(newChainId);
+            };
+
+            window.ethereum.on('chainChanged', handleChainChanged);
+
+            return () => {
+                window.ethereum?.removeListener('chainChanged', handleChainChanged);
+            };
+        }
+    }, [refreshChainId]);
 
     const swap = async (params: HookSwapParams): Promise<SwapResult> => {
         const {
@@ -83,9 +100,12 @@ export function useSwap() {
                 throw new Error('No wallet detected');
             }
 
-            // Get current chain ID
-            const currentChainId = chainId || await ProviderFactoryService.getCurrentChainId();
-            setChainId(currentChainId);
+            // Always get fresh chain ID from wallet to ensure we're on the right network
+            const currentChainId = await ProviderFactoryService.getCurrentChainId();
+            if (currentChainId !== chainId) {
+                console.log(`[useSwap] Chain ID updated: ${chainId} -> ${currentChainId}`);
+                setChainId(currentChainId);
+            }
 
             // Get user address
             const signer = await ProviderFactoryService.getSigner();
@@ -168,5 +188,6 @@ export function useSwap() {
         ...state,
         chainId,
         isMiniPay,
+        refreshChainId,
     };
 }

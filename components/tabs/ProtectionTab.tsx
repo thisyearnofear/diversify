@@ -181,7 +181,6 @@ export default function ProtectionTab({
         <AgentWealthGuard
           amount={totalValue || 0}
           holdings={Object.keys(balances || {})}
-          onExecuteSwap={handleNavigateToSwap}
           embedded={true}
         />
       </CollapsibleSection>

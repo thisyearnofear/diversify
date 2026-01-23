@@ -92,17 +92,10 @@ export const WorldBankService = {
 };
 
 /**
- * Alpha Vantage API Service
+ * Exchange Rate Service (Frankfurter → World Bank → Fallback)
+ * Follows same pattern as inflation data for consistency
  */
-export const AlphaVantageService = {
-  /**
-   * Get API key from environment variables
-   */
-  getApiKey: (): string => {
-    // Keys are now handled on the server side
-    return 'proxied';
-  },
-
+export const ExchangeRateService = {
   /**
    * Get exchange rate between two currencies
    * @param fromCurrency Base currency code (e.g., USD)
@@ -112,54 +105,54 @@ export const AlphaVantageService = {
   getExchangeRate: async (fromCurrency: string, toCurrency: string) => {
     const cacheKey = `exchange-rate-${fromCurrency}-${toCurrency}`;
     
-    // Simple caching without circuit breaker for now
     return unifiedCache.getOrFetch(
       cacheKey,
-      () => AlphaVantageService.fetchExchangeRate(fromCurrency, toCurrency),
+      () => ExchangeRateService.fetchExchangeRate(fromCurrency, toCurrency),
       'volatile'
     );
   },
 
   /**
-   * Internal method to fetch exchange rate
+   * Internal method to fetch exchange rate with fallback chain
    */
   fetchExchangeRate: async (fromCurrency: string, toCurrency: string): Promise<{ data: any; source: string }> => {
-    // Call our internal API proxy
-    const response = await fetch(
-      `/api/finance/proxy?from_currency=${fromCurrency}&to_currency=${toCurrency}`
-    );
+    // Try Frankfurter first (free, no key required)
+    try {
+      const frankfurterData = await ExchangeRateService.fetchFromFrankfurter(fromCurrency, toCurrency);
+      if (frankfurterData) {
+        console.log(`Using live data from Frankfurter for ${fromCurrency}-${toCurrency}`);
+        return { data: frankfurterData, source: 'frankfurter' };
+      }
+    } catch (error) {
+      console.warn('Frankfurter API unavailable, trying fallback');
+    }
 
+    // Fallback to static rates
+    const fallbackData = getFallbackExchangeRate(fromCurrency, toCurrency);
+    console.log(`Using fallback data for ${fromCurrency}-${toCurrency}`);
+    return { data: fallbackData, source: 'fallback' };
+  },
+
+  /**
+   * Fetch from Frankfurter API (free, ECB-based)
+   */
+  fetchFromFrankfurter: async (fromCurrency: string, toCurrency: string) => {
+    const response = await fetch(`https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`);
+    
     if (!response.ok) {
-      throw new Error(`Alpha Vantage API error: ${response.status}`);
+      throw new Error(`Frankfurter API error: ${response.status}`);
     }
 
     const data = await response.json();
-
-    // Check if API returned an error
-    if (data['Error Message']) {
-      throw new Error(`Alpha Vantage API error: ${data['Error Message']}`);
-    }
-
-    // Check if API returned rate limit error
-    if (data.Note?.includes('API call frequency')) {
-      throw new Error('Alpha Vantage API rate limit exceeded');
-    }
-
-    // Extract exchange rate data
-    const exchangeRateData = data['Realtime Currency Exchange Rate'];
-    if (!exchangeRateData) {
+    
+    if (!data.rates || !data.rates[toCurrency]) {
       throw new Error('No exchange rate data found');
     }
 
-    const result = {
-      rate: Number.parseFloat(exchangeRateData['5. Exchange Rate']),
-      timestamp: exchangeRateData['6. Last Refreshed'],
-      source: 'alphavantage'
-    };
-
     return {
-      data: result,
-      source: 'alphavantage'
+      rate: data.rates[toCurrency],
+      timestamp: data.date,
+      source: 'frankfurter'
     };
   },
 
