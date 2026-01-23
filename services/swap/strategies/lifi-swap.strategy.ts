@@ -15,7 +15,7 @@ import {
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } from '../../../config';
-import { initializeLiFiConfig, validateWalletProvider, checkExecutionProviders, ensureWalletConnection } from '../lifi-config';
+import { initializeLiFiConfig, initializeLiFiForQuotes, validateWalletProvider, checkExecutionProviders, ensureWalletConnection } from '../lifi-config';
 
 export class LiFiSwapStrategy extends BaseSwapStrategy {
     constructor() {
@@ -53,6 +53,9 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
     async getEstimate(params: SwapParams): Promise<SwapEstimate> {
         this.log('Getting swap estimate via LiFi', { from: params.fromToken, to: params.toToken });
 
+        // Use quote-only initialization (no wallet needed)
+        initializeLiFiForQuotes();
+
         const tokens = getTokenAddresses(params.fromChainId);
         const fromTokenAddress = tokens[params.fromToken as keyof typeof tokens];
         const toTokenAddress = tokens[params.toToken as keyof typeof tokens];
@@ -74,6 +77,9 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
             options: {
                 slippage: (params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE) / 100,
                 order: 'CHEAPEST',
+                // Add additional options for better compatibility
+                integrator: 'diversifi-minipay',
+                allowSwitchChain: false, // Prevent automatic chain switching
             },
         });
 
@@ -129,17 +135,9 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
                 userAddress: params.userAddress
             });
 
-            // Ensure LiFi is configured before making API calls
-            initializeLiFiConfig();
+            // Use quote-only initialization first to get route
+            initializeLiFiForQuotes();
 
-            // Ensure wallet is connected and ready
-            await ensureWalletConnection();
-
-            // Validate wallet provider is available
-            validateWalletProvider();
-
-            // Check execution providers
-            await checkExecutionProviders();
             const result = await getRoutes({
                 fromChainId: params.fromChainId,
                 fromTokenAddress,
@@ -150,6 +148,9 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
                 options: {
                     slippage: (params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE) / 100,
                     order: 'CHEAPEST',
+                    // Add additional options for better compatibility
+                    integrator: 'diversifi-minipay',
+                    allowSwitchChain: false, // Prevent automatic chain switching
                 },
             });
 
@@ -166,16 +167,17 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
                 toAmount: route.toAmount
             });
 
-            // Add additional debugging before execution
-            this.log('Pre-execution checks', {
-                hasWindowEthereum: typeof window !== 'undefined' && !!window.ethereum,
-                walletConnected: window.ethereum?.selectedAddress,
-                chainId: window.ethereum?.chainId,
-                isMetaMask: window.ethereum?.isMetaMask,
-                isMiniPay: window.ethereum?.isMiniPay,
-                routeSteps: route.steps.length,
-                routeTool: route.steps[0]?.tool
-            });
+            // Now initialize LiFi with wallet for execution
+            initializeLiFiConfig();
+
+            // Ensure wallet is connected and ready
+            await ensureWalletConnection();
+
+            // Validate wallet provider is available
+            validateWalletProvider();
+
+            // Check execution providers
+            await checkExecutionProviders();
 
             // Execute route via LiFi SDK
             this.log('Executing route with LiFi SDK');

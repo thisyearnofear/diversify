@@ -1,6 +1,7 @@
 /**
  * LiFi SDK Configuration
  * Centralized configuration for LiFi SDK to avoid initialization issues
+ * Fixed to handle frontend wallet integration properly
  */
 
 import { createConfig, EVM } from '@lifi/sdk';
@@ -32,6 +33,17 @@ export function initializeLiFiConfig(): void {
                             throw new Error('No wallet provider available');
                         }
 
+                        // Ensure wallet is connected first
+                        try {
+                            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                            if (!accounts || accounts.length === 0) {
+                                throw new Error('Wallet not connected');
+                            }
+                        } catch (error) {
+                            console.error('[LiFi Config] Wallet connection check failed:', error);
+                            throw new Error('Wallet connection required');
+                        }
+
                         // Get current chain ID from the wallet
                         let chainId: number;
                         try {
@@ -61,7 +73,6 @@ export function initializeLiFiConfig(): void {
 
                         console.log('[LiFi Config] Switching to chain:', chainId);
 
-                        // Request chain switch via wallet
                         try {
                             await window.ethereum.request({
                                 method: 'wallet_switchEthereumChain',
@@ -123,6 +134,29 @@ export function initializeLiFiConfig(): void {
 }
 
 /**
+ * Initialize LiFi for route discovery only (no wallet needed)
+ * Use this for getting quotes without wallet connection
+ */
+export function initializeLiFiForQuotes(): void {
+    if (isConfigured) {
+        return;
+    }
+
+    try {
+        createConfig({
+            integrator: 'diversifi-minipay',
+            apiUrl: 'https://li.quest/v1',
+            // No providers needed for route discovery
+        });
+
+        isConfigured = true;
+        console.log('[LiFi Config] Successfully initialized LiFi SDK for quotes');
+    } catch (error) {
+        console.error('[LiFi Config] Failed to initialize LiFi SDK for quotes:', error);
+    }
+}
+
+/**
  * Check if LiFi SDK is configured
  */
 export function isLiFiConfigured(): boolean {
@@ -172,6 +206,7 @@ export async function ensureWalletConnection(): Promise<void> {
         throw new Error('Failed to connect to wallet: ' + error.message);
     }
 }
+
 /**
  * Ensure wallet provider is available before using LiFi SDK
  */
@@ -206,6 +241,7 @@ export function validateWalletProvider(): void {
 
     console.log('[LiFi Config] Wallet provider validation passed');
 }
+
 /**
  * Check if LiFi SDK can detect execution providers
  */

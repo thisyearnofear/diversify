@@ -155,11 +155,48 @@ export const TX_CONFIG = {
     },
 } as const;
 
+// Swap Strategy Configuration
+export const SWAP_CONFIG = {
+    // Strategy preferences by network (higher score = higher priority)
+    STRATEGY_SCORES: {
+        [NETWORKS.CELO_MAINNET.chainId]: {
+            'MentoSwapStrategy': 100,
+            'OneInchSwapStrategy': 20,
+            'UniswapV3Strategy': 15,
+            'LiFiSwapStrategy': 10,
+        },
+        [NETWORKS.ALFAJORES.chainId]: {
+            'MentoSwapStrategy': 100,
+            'LiFiSwapStrategy': 20,
+        },
+        [NETWORKS.ARBITRUM_ONE.chainId]: {
+            'OneInchSwapStrategy': 90,
+            'UniswapV3Strategy': 80,
+            'LiFiSwapStrategy': 60,
+        },
+    },
+    // Token-specific optimizations
+    TOKEN_PREFERENCES: {
+        'PAXG': {
+            'OneInchSwapStrategy': 25, // Best for RWAs
+        },
+        'USDC': {
+            'OneInchSwapStrategy': 15,
+            'UniswapV3Strategy': 12,
+        },
+    },
+    // Feature flags
+    ENABLE_PERFORMANCE_TRACKING: true,
+    ENABLE_AUTOMATIC_FALLBACK: true,
+    MAX_FALLBACK_ATTEMPTS: 3,
+} as const;
+
 // Cache Configuration
 export const CACHE_CONFIG = {
     EXCHANGE_RATE: 60 * 60 * 1000, // 1 hour
     INFLATION_DATA: 24 * 60 * 60 * 1000, // 24 hours
     BALANCE: 5 * 60 * 1000, // 5 minutes
+    SWAP_ESTIMATE: 30 * 1000, // 30 seconds
 } as const;
 
 // Exchange Rates (USD equivalent)

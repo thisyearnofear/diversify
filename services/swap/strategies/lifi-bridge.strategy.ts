@@ -15,7 +15,7 @@ import {
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } from '../../../config';
-import { initializeLiFiConfig } from '../lifi-config';
+import { initializeLiFiConfig, initializeLiFiForQuotes } from '../lifi-config';
 
 export class LiFiBridgeStrategy extends BaseSwapStrategy {
     constructor() {
@@ -69,6 +69,9 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
             from: `${params.fromToken} on ${ChainDetectionService.getNetworkName(params.fromChainId)}`,
             to: `${params.toToken} on ${ChainDetectionService.getNetworkName(params.toChainId)}`,
         });
+
+        // Use quote-only initialization (no wallet needed)
+        initializeLiFiForQuotes();
 
         const fromTokens = getTokenAddresses(params.fromChainId);
         const toTokens = getTokenAddresses(params.toChainId);
@@ -145,6 +148,10 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
 
             // Get route from LiFi
             this.log('Requesting cross-chain route from LiFi');
+
+            // Use quote-only initialization first to get route
+            initializeLiFiForQuotes();
+
             const result = await getRoutes({
                 fromChainId: params.fromChainId,
                 fromTokenAddress,
@@ -167,6 +174,9 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
                 steps: route.steps.length,
                 tools: route.steps.map(s => s.tool).join(' -> ')
             });
+
+            // Now initialize LiFi with wallet for execution
+            initializeLiFiConfig();
 
             // Execute route via LiFi SDK
             // LiFi SDK v3 will automatically use window.ethereum
