@@ -15,7 +15,7 @@ import {
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } from '../../../config';
-import { initializeLiFiConfig, validateWalletProvider, checkExecutionProviders } from '../lifi-config';
+import { initializeLiFiConfig, validateWalletProvider, checkExecutionProviders, ensureWalletConnection } from '../lifi-config';
 
 export class LiFiSwapStrategy extends BaseSwapStrategy {
     constructor() {
@@ -132,6 +132,9 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
             // Ensure LiFi is configured before making API calls
             initializeLiFiConfig();
 
+            // Ensure wallet is connected and ready
+            await ensureWalletConnection();
+
             // Validate wallet provider is available
             validateWalletProvider();
 
@@ -163,21 +166,19 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
                 toAmount: route.toAmount
             });
 
-            // Check if we have window.ethereum available
-            if (typeof window === 'undefined' || !window.ethereum) {
-                throw new Error('No wallet provider available. Please ensure MetaMask or another Web3 wallet is installed and connected.');
-            }
-
-            // Execute route via LiFi SDK
-            // LiFi SDK v3 will automatically use window.ethereum
-            this.log('Executing route with LiFi SDK');
-
             // Add additional debugging before execution
             this.log('Pre-execution checks', {
                 hasWindowEthereum: typeof window !== 'undefined' && !!window.ethereum,
                 walletConnected: window.ethereum?.selectedAddress,
-                chainId: window.ethereum?.chainId
+                chainId: window.ethereum?.chainId,
+                isMetaMask: window.ethereum?.isMetaMask,
+                isMiniPay: window.ethereum?.isMiniPay,
+                routeSteps: route.steps.length,
+                routeTool: route.steps[0]?.tool
             });
+
+            // Execute route via LiFi SDK
+            this.log('Executing route with LiFi SDK');
 
             const executedRoute = await executeRoute(route, {
                 updateRouteHook: (updatedRoute) => {

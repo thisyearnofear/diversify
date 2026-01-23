@@ -1,9 +1,9 @@
 import { createConfig, getRoutes, executeRoute, RoutesRequest, Route, config } from '@lifi/sdk';
 import { ethers } from 'ethers';
 import { CIRCLE_CONFIG, ARBITRUM_TOKENS } from '../../config';
-import { initializeLiFiConfig } from './lifi-config';
+import { initializeLiFiConfig, ensureWalletConnection } from './lifi-config';
 
-// Initialize LI.FI Config
+// Initialize LI.FI Config with proper EVM provider
 initializeLiFiConfig();
 
 export interface BridgeQuoteRequest {
@@ -138,6 +138,9 @@ export class BridgeService {
     }
 
     static async swapSingleChain(route: Route, signer?: ethers.Signer): Promise<BridgeResult> {
+        // Ensure wallet connection before execution
+        await ensureWalletConnection();
+
         // Execute route - LiFi SDK v3 will automatically use window.ethereum
         const result = await executeRoute(route);
 
