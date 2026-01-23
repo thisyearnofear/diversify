@@ -204,8 +204,9 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
         chainId: number;
         slippage: number;
     }): Promise<OneInchQuoteResponse> {
-        const url = `${this.API_BASE_URL}/${params.chainId}/quote`;
         const searchParams = new URLSearchParams({
+            chainId: params.chainId.toString(),
+            endpoint: 'quote',
             src: params.src,
             dst: params.dst,
             amount: params.amount,
@@ -213,7 +214,7 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
             includeGas: 'true',
         });
 
-        const response = await fetch(`${url}?${searchParams}`);
+        const response = await fetch(`/api/swap/oneinch-proxy?${searchParams}`);
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -231,8 +232,9 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
         chainId: number;
         slippage: number;
     }): Promise<OneInchSwapResponse> {
-        const url = `${this.API_BASE_URL}/${params.chainId}/swap`;
         const searchParams = new URLSearchParams({
+            chainId: params.chainId.toString(),
+            endpoint: 'swap',
             src: params.src,
             dst: params.dst,
             amount: params.amount,
@@ -241,7 +243,7 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
             disableEstimate: 'true',
         });
 
-        const response = await fetch(`${url}?${searchParams}`);
+        const response = await fetch(`/api/swap/oneinch-proxy?${searchParams}`);
 
         if (!response.ok) {
             const errorText = await response.text();

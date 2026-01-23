@@ -82,21 +82,39 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
         const amountIn = this.parseAmount(params.amount, fromTokenMeta.decimals || 18);
 
         try {
-            // Use 0.3% fee tier (most common)
-            const fee = 3000;
+            // Try multiple fee tiers for better liquidity discovery
+            const feeTiers = [3000, 10000, 500]; // 0.3%, 1%, 0.05%
+            let bestQuote = null;
+            let bestFee = 3000;
 
             // Create router contract for static call
             const router = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, provider);
 
-            // Get quote (this is a view function, so it doesn't cost gas)
-            const expectedOutput = await router.callStatic.quoteExactInputSingle({
-                tokenIn: fromTokenAddress,
-                tokenOut: toTokenAddress,
-                fee,
-                amountIn: amountIn.toString(),
-                sqrtPriceLimitX96: 0, // No price limit
-            });
+            for (const fee of feeTiers) {
+                try {
+                    const quote = await router.callStatic.quoteExactInputSingle({
+                        tokenIn: fromTokenAddress,
+                        tokenOut: toTokenAddress,
+                        fee,
+                        amountIn: amountIn.toString(),
+                        sqrtPriceLimitX96: 0,
+                    });
 
+                    if (!bestQuote || quote.gt(bestQuote)) {
+                        bestQuote = quote;
+                        bestFee = fee;
+                    }
+                } catch (error) {
+                    // This fee tier doesn't have a pool, try next
+                    continue;
+                }
+            }
+
+            if (!bestQuote) {
+                throw new Error(`No Uniswap V3 pool found for ${params.fromToken}/${params.toToken}`);
+            }
+
+            const expectedOutput = bestQuote;
             const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
             const minimumOutput = this.calculateMinOutput(expectedOutput, slippage);
 
@@ -143,17 +161,38 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
 
             // Get quote for minimum output calculation
             const router = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, signer);
-            const fee = 3000; // 0.3% fee tier
 
-            const expectedOutput = await router.callStatic.quoteExactInputSingle({
-                tokenIn: fromTokenAddress,
-                tokenOut: toTokenAddress,
-                fee,
-                amountIn: amountIn.toString(),
-                sqrtPriceLimitX96: 0,
-            });
+            // Try multiple fee tiers to find the best route
+            const feeTiers = [3000, 10000, 500];
+            let bestQuote = null;
+            let bestFee = 3000;
 
+            for (const fee of feeTiers) {
+                try {
+                    const quote = await router.callStatic.quoteExactInputSingle({
+                        tokenIn: fromTokenAddress,
+                        tokenOut: toTokenAddress,
+                        fee,
+                        amountIn: amountIn.toString(),
+                        sqrtPriceLimitX96: 0,
+                    });
+
+                    if (!bestQuote || quote.gt(bestQuote)) {
+                        bestQuote = quote;
+                        bestFee = fee;
+                    }
+                } catch (error) {
+                    continue;
+                }
+            }
+
+            if (!bestQuote) {
+                throw new Error(`No Uniswap V3 pool found for ${params.fromToken}/${params.toToken}`);
+            }
+
+            const expectedOutput = bestQuote;
             const minAmountOut = this.calculateMinOutput(expectedOutput, slippage);
+            const fee = bestFee;
 
             // Check and handle approval if needed
             if (fromTokenAddress !== '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
