@@ -59,6 +59,7 @@ export function initializeLiFiConfig(): void {
 
                         // Create a wallet client using the browser's ethereum provider
                         const walletClient = createWalletClient({
+                            account: accounts[0] as `0x${string}`, // Ensure account is properly set
                             chain,
                             transport: custom(window.ethereum),
                         });
@@ -84,6 +85,7 @@ export function initializeLiFiConfig(): void {
 
                             // Return a new wallet client for the switched chain
                             const walletClient = createWalletClient({
+                                account: accounts[0] as `0x${string}`, // Ensure account is properly set
                                 chain,
                                 transport: custom(window.ethereum),
                             });
@@ -112,6 +114,7 @@ export function initializeLiFiConfig(): void {
                                     });
 
                                     return createWalletClient({
+                                        account: accounts[0] as `0x${string}`, // Ensure account is properly set
                                         chain,
                                         transport: custom(window.ethereum),
                                     });

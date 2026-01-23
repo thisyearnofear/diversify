@@ -182,6 +182,7 @@ export const SWAP_CONFIG = {
             'OneInchSwapStrategy': 90,
             'UniswapV3Strategy': 80,
             'LiFiSwapStrategy': 60,
+            'DirectRWAStrategy': 30, // Final fallback with helpful error messages
         },
     },
     // Token-specific optimizations

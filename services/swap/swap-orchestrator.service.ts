@@ -17,6 +17,7 @@ import { LiFiSwapStrategy } from './strategies/lifi-swap.strategy';
 import { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
 import { OneInchSwapStrategy } from './strategies/oneinch-swap.strategy';
 import { UniswapV3Strategy } from './strategies/uniswap-v3.strategy';
+import { DirectRWAStrategy } from './strategies/direct-rwa.strategy';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
 
@@ -33,6 +34,7 @@ export class SwapOrchestratorService {
         new UniswapV3Strategy(),      // Direct Uniswap V3 (reliable fallback)
         new LiFiSwapStrategy(),       // LiFi same-chain (fallback)
         new LiFiBridgeStrategy(),     // Cross-chain bridging
+        new DirectRWAStrategy(),      // Direct RWA swaps (final fallback)
     ];
 
     private static performanceData = new Map<string, StrategyPerformance>();
