@@ -61,6 +61,11 @@ export function validateWalletProvider(): void {
         throw new Error('Wallet provider is missing required methods. Please ensure you have a compatible Web3 wallet.');
     }
 
+    // Check if wallet is connected (if the method exists)
+    if (typeof (window.ethereum as any).isConnected === 'function' && !(window.ethereum as any).isConnected()) {
+        console.warn('[LiFi Config] Wallet is not connected');
+    }
+
     console.log('[LiFi Config] Wallet provider validation passed');
 }
 /**

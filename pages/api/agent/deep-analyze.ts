@@ -41,10 +41,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         );
 
         return res.status(200).json(result);
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('[Deep Analyze] Error:', error);
-        return res.status(500).json({ 
-            error: error.message,
+        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+        return res.status(500).json({
+            error: errorMessage,
             action: 'HOLD',
             reasoning: 'Deep analysis temporarily unavailable.',
             confidence: 0,
