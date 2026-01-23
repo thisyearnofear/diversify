@@ -6,7 +6,7 @@ import {
   getNetworkConfig,
   ABIS,
 } from '../config';
-import { EXCHANGE_RATES } from '../config/constants';
+import { EXCHANGE_RATES } from '../config';
 import { NETWORKS } from '../config';
 import { TokenPriceService } from '../utils/api-services';
 import { ChainDetectionService } from '../services/swap/chain-detection.service';
