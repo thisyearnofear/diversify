@@ -120,13 +120,13 @@ export default function OverviewTab({
             />
           </div>
         ) : (
-          <div className="space-y-8">
+<div className="space-y-6">
             {/* Portfolio Summary with more breathing room */}
-            <div className="flex items-center gap-8">
+            <div className="flex items-start gap-8 -mt-2">
               <div className="w-32 h-32 flex-shrink-0">
                 <SimplePieChart data={regionData} title="" />
               </div>
-              <div className="flex-1 min-w-0 space-y-4">
+              <div className="flex-1 min-w-0 space-y-3">
                 <div className="flex items-baseline gap-3">
                   <span className="text-4xl font-bold text-gray-900">${totalValue.toFixed(2)}</span>
                   <span className="text-base text-gray-500">total value</span>
@@ -135,32 +135,30 @@ export default function OverviewTab({
                   <StatBadge label="Score" value={`${diversificationScore}/100`} color="blue" />
                   <StatBadge label="Regions" value={activeRegions} color="green" />
                 </div>
-              </div>
-            </div>
 
-            {/* Diversification Rating with more space */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <span className="font-bold text-xl text-gray-900">{diversificationRating}</span>
-                  <span className="text-gray-600 text-base ml-3">Protection</span>
+                {/* Compact Diversification Rating */}
+                <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-base text-gray-900">{diversificationRating}</span>
+                    <span className="text-gray-600 text-sm">Protection</span>
+                  </div>
+                  <button
+                    onClick={() => setActiveTab("swap")}
+                    className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Improve →
+                  </button>
                 </div>
-                <button
-                  onClick={() => setActiveTab("swap")}
-                  className="text-sm bg-blue-600 text-white px-5 py-2.5 rounded-full hover:bg-blue-700 transition-colors font-medium"
-                >
-                  Improve →
-                </button>
+                <p className="text-xs text-gray-600 leading-relaxed">{diversificationDescription}</p>
               </div>
-              <p className="text-base text-gray-600 leading-relaxed">{diversificationDescription}</p>
             </div>
 
-            {/* Quick Actions with more space */}
-            <div className="flex gap-4 pt-4">
-              <PrimaryButton onClick={() => setActiveTab("swap")} fullWidth size="lg">
+            {/* Quick Actions - Right aligned with proper sizing */}
+            <div className="flex justify-end gap-3">
+              <PrimaryButton onClick={() => setActiveTab("swap")} size="md">
                 Swap
               </PrimaryButton>
-              <SecondaryButton onClick={() => setActiveTab("analytics")} fullWidth size="lg">
+              <SecondaryButton onClick={() => setActiveTab("analytics")} size="md">
                 Analytics
               </SecondaryButton>
             </div>

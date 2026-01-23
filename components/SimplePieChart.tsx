@@ -77,36 +77,38 @@ export default function SimplePieChart({
   }, [data]);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-4 border border-gray-200">
-      <h3 className="text-lg font-bold text-gray-900 mb-4">{title}</h3>
+    <div className="bg-white rounded-lg shadow-sm p-3 mb-3 border border-gray-200">
+      {title && <h3 className="text-sm font-bold text-gray-900 mb-3">{title}</h3>}
 
       {data.length > 0 ? (
         <div className="flex flex-col items-center">
-          <canvas ref={canvasRef} width={200} height={200} className="mb-4" />
+          <canvas ref={canvasRef} width={200} height={200} className="mb-3" />
 
-          <div className="grid grid-cols-2 gap-2 w-full">
+          <div className="grid grid-cols-1 gap-1 w-full text-xs">
             {data.map((item, index) => (
-              <div key={index} className="flex items-center">
-                <div
-                  className="size-4 rounded-full mr-2 border border-gray-200"
-                  style={{ backgroundColor: item.color }}
-                />
-                <span className="text-sm font-medium text-gray-900">
-                  {item.region}:{" "}
-                  <span className="font-bold">
-                    {(
-                      (item.value / data.reduce((sum, d) => sum + d.value, 0)) *
-                      100
-                    ).toFixed(1)}
-                    %
+              <div key={index} className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <div
+                    className="w-3 h-3 rounded-full mr-1.5 border border-gray-200"
+                    style={{ backgroundColor: item.color }}
+                  />
+                  <span className="font-medium text-gray-900">
+                    {item.region}
                   </span>
+                </div>
+                <span className="font-bold text-gray-900">
+                  {(
+                    (item.value / data.reduce((sum, d) => sum + d.value, 0)) *
+                    100
+                  ).toFixed(1)}
+                  %
                 </span>
               </div>
             ))}
           </div>
         </div>
       ) : (
-        <div className="text-center py-10 text-gray-500">
+        <div className="text-center py-8 text-gray-500 text-sm">
           No portfolio data available
         </div>
       )}

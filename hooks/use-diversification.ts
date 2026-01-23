@@ -76,7 +76,7 @@ export function useDiversification({ regionData, balances, userRegion, inflation
   // Get description based on score
   const diversificationDescription = useMemo(() => {
     if (diversificationScore >= 80)
-      return "excellent wealth protection. Your portfolio is globally diversified and includes RWA hedges against inflation.";
+      return "Your portfolio is globally diversified and includes RWA hedges against inflation.";
     if (diversificationScore >= 60)
       return "good regional balance. Adding more Arbitrum RWAs could further insulate you from local currency volatility.";
     if (diversificationScore >= 40)

@@ -35,7 +35,12 @@ export default async function handler(
       return res.status(200).json(imfData);
     }
   } catch (error) {
-    console.warn('[Inflation API] IMF failed:', error);
+    // Log the specific error for debugging but don't expose it to client
+    if (error instanceof Error && error.message.includes('403')) {
+      console.warn('[Inflation API] IMF API access denied (403) - may require authentication or be rate limited');
+    } else {
+      console.warn('[Inflation API] IMF failed:', error);
+    }
   }
 
   // Fall back to World Bank (historical data)
@@ -84,7 +89,11 @@ async function fetchFromIMF(countryCodes: string[]) {
   const response = await fetch(
     `${IMF_URL}?periods=${years.join(',')}`,
     {
-      headers: { 'Accept': 'application/json' },
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'DiversiFi-App/1.0',
+        'Referer': 'https://diversifi.app'
+      },
       signal: AbortSignal.timeout(8000)
     }
   );
