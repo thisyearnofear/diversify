@@ -175,18 +175,21 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
                 updateRouteHook: (updatedRoute) => {
                     // Track execution progress across all steps
                     updatedRoute.steps.forEach((step, index) => {
-                        if (step?.execution?.process) {
+                        if (step?.execution?.process && step.execution.process.length > 0) {
                             const latestProcess = step.execution.process[step.execution.process.length - 1];
 
-                            if (latestProcess.type === 'TOKEN_ALLOWANCE' && latestProcess.txHash) {
-                                this.log(`Step ${index + 1}: Approval submitted`, { hash: latestProcess.txHash });
-                                callbacks?.onApprovalSubmitted?.(latestProcess.txHash);
-                            } else if (latestProcess.type === 'CROSS_CHAIN' && latestProcess.txHash) {
-                                this.log(`Step ${index + 1}: Bridge transaction submitted`, { hash: latestProcess.txHash });
-                                callbacks?.onSwapSubmitted?.(latestProcess.txHash);
-                            } else if (latestProcess.type === 'SWAP' && latestProcess.txHash) {
-                                this.log(`Step ${index + 1}: Swap submitted`, { hash: latestProcess.txHash });
-                                callbacks?.onSwapSubmitted?.(latestProcess.txHash);
+                            // Add null check before accessing properties
+                            if (latestProcess) {
+                                if (latestProcess.type === 'TOKEN_ALLOWANCE' && latestProcess.txHash) {
+                                    this.log(`Step ${index + 1}: Approval submitted`, { hash: latestProcess.txHash });
+                                    callbacks?.onApprovalSubmitted?.(latestProcess.txHash);
+                                } else if (latestProcess.type === 'CROSS_CHAIN' && latestProcess.txHash) {
+                                    this.log(`Step ${index + 1}: Bridge transaction submitted`, { hash: latestProcess.txHash });
+                                    callbacks?.onSwapSubmitted?.(latestProcess.txHash);
+                                } else if (latestProcess.type === 'SWAP' && latestProcess.txHash) {
+                                    this.log(`Step ${index + 1}: Swap submitted`, { hash: latestProcess.txHash });
+                                    callbacks?.onSwapSubmitted?.(latestProcess.txHash);
+                                }
                             }
                         }
                     });

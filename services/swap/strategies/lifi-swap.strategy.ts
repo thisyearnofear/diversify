@@ -184,19 +184,22 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
                 updateRouteHook: (updatedRoute) => {
                     // Track execution progress
                     const step = updatedRoute.steps[0];
-                    if (step?.execution?.process) {
+                    if (step?.execution?.process && step.execution.process.length > 0) {
                         const latestProcess = step.execution.process[step.execution.process.length - 1];
 
-                        this.log('Route execution progress', {
-                            type: latestProcess.type,
-                            status: latestProcess.status,
-                            txHash: latestProcess.txHash
-                        });
+                        // Add null check before accessing properties
+                        if (latestProcess) {
+                            this.log('Route execution progress', {
+                                type: latestProcess.type,
+                                status: latestProcess.status,
+                                txHash: latestProcess.txHash
+                            });
 
-                        if (latestProcess.type === 'TOKEN_ALLOWANCE' && latestProcess.txHash) {
-                            callbacks?.onApprovalSubmitted?.(latestProcess.txHash);
-                        } else if (latestProcess.type === 'SWAP' && latestProcess.txHash) {
-                            callbacks?.onSwapSubmitted?.(latestProcess.txHash);
+                            if (latestProcess.type === 'TOKEN_ALLOWANCE' && latestProcess.txHash) {
+                                callbacks?.onApprovalSubmitted?.(latestProcess.txHash);
+                            } else if (latestProcess.type === 'SWAP' && latestProcess.txHash) {
+                                callbacks?.onSwapSubmitted?.(latestProcess.txHash);
+                            }
                         }
                     }
                 },
