@@ -164,7 +164,7 @@ export class SwapOrchestratorService {
         let score = 0;
 
         // Use configuration-based scoring
-        const chainScores = SWAP_CONFIG.STRATEGY_SCORES[params.fromChainId];
+        const chainScores = SWAP_CONFIG.STRATEGY_SCORES[params.fromChainId as keyof typeof SWAP_CONFIG.STRATEGY_SCORES];
         if (chainScores && chainScores[strategyName as keyof typeof chainScores]) {
             score += chainScores[strategyName as keyof typeof chainScores];
         }
