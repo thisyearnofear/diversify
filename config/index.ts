@@ -95,12 +95,21 @@ export const CIRCLE_CONFIG = {
 // Token Addresses - Mainnet
 export const MAINNET_TOKENS = {
     CELO: '0x471ece3750da237f93b8e339c536989b8978a438',
-    CUSD: '0x765de816845861e75a25fca122bb6898b8b1282a',
-    CEUR: '0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73',
-    CREAL: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787',
-    CKES: '0x456a3d042c0dbd3db53d5489e98dfb038553b0d0',
-    CCOP: '0x8a567e2ae79ca692bd748ab832081c45de4041ea',
-    PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
+    CUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a', // USDm (Mento Dollar)
+    CEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73', // EURm (Mento Euro)
+    CREAL: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787', // BRLm (Mento Brazilian Real)
+    CKES: '0x456a3D042C0DbD3db53D5489e98dFb038553B0d0', // KESm (Mento Kenyan Shilling)
+    CCOP: '0x8A567e2aE79CA692Bd748aB832081C45de4041eA', // COPm (Mento Colombian Peso)
+    PUSO: '0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B', // PHPm (Mento Philippine Peso)
+    CGHS: '0xfAeA5F3404bbA20D3cc2f8C4B0A888F55a3c7313', // GHSm (Mento Ghanaian Cedi)
+    CGBP: '0xCCF663b1fF11028f0b19058d0f7B674004a40746', // GBPm (Mento British Pound)
+    CZAR: '0x4c35853A3B4e647fD266f4de678dCc8fEC410BF6', // ZARm (Mento South African Rand)
+    CCAD: '0xff4Ab19391af240c311c54200a492233052B6325', // CADm (Mento Canadian Dollar)
+    CAUD: '0x7175504C455076F15c04A2F90a8e352281F492F9', // AUDm (Mento Australian Dollar)
+    CXOF: '0x73F93dcc49cB8A239e2032663e9475dd5ef29A08', // XOFm (Mento West African CFA franc)
+    CCHF: '0xb55a79F398E759E43C95b979163f30eC87Ee131D', // CHFm (Mento Swiss Franc)
+    CJPY: '0xc45eCF20f3CD864B32D9794d6f76814aE8892e20', // JPYm (Mento Japanese Yen)
+    CNGN: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71', // NGNm (Mento Nigerian Naira)
 } as const;
 
 // Token Addresses - Alfajores
@@ -209,11 +218,13 @@ export const EXCHANGE_RATES: Record<string, number> = {
     PUSO: 0.0179,
     CGHS: 0.069,
     CXOF: 0.0016,
-    CPESO: 0.0179,
     CGBP: 1.27,
     CZAR: 0.055,
     CCAD: 0.74,
     CAUD: 0.66,
+    CCHF: 1.10,
+    CJPY: 0.0067,
+    CNGN: 0.00061,
     USDC: 1,
     PAXG: 2000, // Placeholder Gold Price - Should be fetched dynamically
 } as const;
@@ -247,11 +258,13 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
     PUSO: { name: 'Philippine Peso', region: 'ASIA' },
     CGHS: { name: 'Celo Ghana Cedi', region: 'AFRICA' },
     CXOF: { name: 'CFA Franc', region: 'AFRICA' },
-    CPESO: { name: 'Philippine Peso', region: 'ASIA' },
     CGBP: { name: 'British Pound', region: 'EUROPE' },
     CZAR: { name: 'South African Rand', region: 'AFRICA' },
     CCAD: { name: 'Canadian Dollar', region: 'USA' },
     CAUD: { name: 'Australian Dollar', region: 'ASIA' },
+    CCHF: { name: 'Swiss Franc', region: 'EUROPE' },
+    CJPY: { name: 'Japanese Yen', region: 'ASIA' },
+    CNGN: { name: 'Nigerian Naira', region: 'AFRICA' },
     USDC: { name: 'USD Coin', region: 'GLOBAL', decimals: 6 },
     PAXG: { name: 'Paxos Gold', region: 'GLOBAL', decimals: 18 },
 } as const;

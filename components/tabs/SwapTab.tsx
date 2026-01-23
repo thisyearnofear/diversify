@@ -28,13 +28,19 @@ const NETWORK_TOKENS: Record<
   [NETWORKS.CELO_MAINNET.chainId]: [
     { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
     { symbol: "CEUR", name: "Celo Euro", region: "Europe" },
-    { symbol: "CREAL", name: "Celo Real", region: "LatAm" },
+    { symbol: "CREAL", name: "Celo Brazilian Real", region: "LatAm" },
     { symbol: "CKES", name: "Celo Kenyan Shilling", region: "Africa" },
     { symbol: "CCOP", name: "Celo Colombian Peso", region: "LatAm" },
     { symbol: "PUSO", name: "Philippine Peso", region: "Asia" },
     { symbol: "CGHS", name: "Celo Ghana Cedi", region: "Africa" },
+    { symbol: "CXOF", name: "CFA Franc", region: "Africa" },
     { symbol: "CGBP", name: "British Pound", region: "Europe" },
+    { symbol: "CZAR", name: "South African Rand", region: "Africa" },
     { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
+    { symbol: "CAUD", name: "Australian Dollar", region: "Asia" },
+    { symbol: "CCHF", name: "Swiss Franc", region: "Europe" },
+    { symbol: "CJPY", name: "Japanese Yen", region: "Asia" },
+    { symbol: "CNGN", name: "Nigerian Naira", region: "Africa" },
   ],
   // Celo Alfajores
   [NETWORKS.ALFAJORES.chainId]: [
@@ -44,6 +50,11 @@ const NETWORK_TOKENS: Record<
     { symbol: "CKES", name: "Celo Kenyan Shilling", region: "Africa" },
     { symbol: "CCOP", name: "Celo Colombian Peso", region: "LatAm" },
     { symbol: "PUSO", name: "Philippine Peso", region: "Asia" },
+    { symbol: "CGHS", name: "Celo Ghana Cedi", region: "Africa" },
+    { symbol: "CGBP", name: "British Pound", region: "Europe" },
+    { symbol: "CZAR", name: "South African Rand", region: "Africa" },
+    { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
+    { symbol: "CAUD", name: "Australian Dollar", region: "Asia" },
   ],
   // Arbitrum One
   [NETWORKS.ARBITRUM_ONE.chainId]: [

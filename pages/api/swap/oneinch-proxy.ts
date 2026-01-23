@@ -32,11 +32,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         console.log('[1inch Proxy] Fetching:', apiUrl);
 
+        const apiKey = process.env.ONEINCH_API_KEY;
+        if (!apiKey) {
+            console.error('[1inch Proxy] Missing ONEINCH_API_KEY environment variable');
+            return res.status(500).json({
+                error: '1inch API not configured',
+                details: 'Server is missing 1inch API key configuration'
+            });
+        }
+
         const response = await fetch(apiUrl, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'DiversiFi/1.0',
+                'Authorization': `Bearer ${apiKey}`,
             },
         });
 
