@@ -336,7 +336,7 @@ export default function SwapTab({
               <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r">
                 <p className="text-sm text-blue-800">
                   <span className="font-medium">Arbitrum Mode:</span> Swap
-                  between yield-bearing assets and RWAs.
+                  between stablecoins and real-world assets like PAXG.
                 </p>
               </div>
             )}

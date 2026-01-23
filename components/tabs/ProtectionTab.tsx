@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import InflationProtectionInfo from "../InflationProtectionInfo";
 import RegionalRecommendations from "../RegionalRecommendations";
 import AgentWealthGuard from "../AgentWealthGuard";
@@ -16,9 +16,15 @@ interface ProtectionTabProps {
   setActiveTab?: (tab: string) => void;
 }
 
-// RWA yield data
-const RWA_YIELDS = [
-  { symbol: "PAXG", apy: "Store of Value", label: "Inflation Hedge", description: "Tokenized physical gold" },
+// RWA asset data (not yields - we don't offer yield)
+const RWA_ASSETS = [
+  { 
+    symbol: "PAXG", 
+    type: "Store of Value", 
+    label: "Inflation Hedge",
+    description: "Tokenized physical gold backed 1:1 by London Good Delivery gold bars held in Brink's vaults. Each PAXG token = 1 troy ounce of gold.",
+    benefits: ["No storage fees", "Redeemable for physical gold", "24/7 trading"]
+  },
 ];
 
 export default function ProtectionTab({
@@ -32,6 +38,7 @@ export default function ProtectionTab({
   const { chainId } = useWalletContext();
   const isCelo = ChainDetectionService.isCelo(chainId);
   const isArbitrum = ChainDetectionService.isArbitrum(chainId);
+  const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
 
   const currentRegions = regionData
     .filter((item) => item.value > 0)
@@ -52,7 +59,7 @@ export default function ProtectionTab({
         <TabHeader
           title="Protection"
           chainId={chainId}
-          showNetworkSwitcher={false}
+          showNetworkSwitcher={true}
         />
 
         {/* Quick Stats */}
@@ -62,44 +69,59 @@ export default function ProtectionTab({
           <StatBadge label="Strategy" value={isArbitrum ? "RWA" : "Stables"} color="gray" />
         </div>
 
-        {/* Primary CTA based on network */}
+        {/* Network-specific guidance */}
         {isCelo ? (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100">
-            <p className="text-sm text-gray-700 mb-2">
-              Access higher yields with Real-World Assets on Arbitrum.
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-100 mb-3">
+            <p className="text-sm text-gray-700 mb-1">
+              <strong>🌍 Celo Stablecoins</strong> — Swap between regional currencies (cUSD, cEUR, cKES, cREAL) to hedge against local inflation.
             </p>
-            <PrimaryButton onClick={handleNavigateToSwap} icon={<span>🌉</span>} size="sm">
-              Bridge to Arbitrum
-            </PrimaryButton>
+            <p className="text-xs text-gray-500">
+              Want gold-backed assets? Switch to Arbitrum above.
+            </p>
           </div>
         ) : isArbitrum ? (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-100">
-            <p className="text-sm text-gray-700 mb-2">
-              You&apos;re on Arbitrum — explore yield-bearing RWAs below.
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100 mb-3">
+            <p className="text-sm text-gray-700 mb-1">
+              <strong>🔷 Arbitrum RWAs</strong> — Hold tokenized real-world assets like gold (PAXG) as a store of value.
+            </p>
+            <p className="text-xs text-gray-500">
+              Want regional stablecoins? Switch to Celo above.
             </p>
           </div>
         ) : null}
       </Card>
 
-      {/* RWA Yields - Premium Feature Card */}
+      {/* RWA Assets - Premium Feature Card */}
       <FeatureCard
-        title="🏛️ RWA Vaults"
-        badge={<span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Asset Stability</span>}
+        title="🏛️ Real-World Assets"
+        badge={<span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">Arbitrum</span>}
         variant="premium"
       >
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {RWA_YIELDS.map((item) => (
-            <div key={item.symbol} className="bg-white/10 border border-white/20 rounded-lg p-2 text-center">
-              <div className="text-xs text-blue-200 font-bold">{item.symbol}</div>
-              <div className="text-sm font-bold text-white my-1">{item.apy}</div>
-              <div className="text-xs text-blue-200/60">{item.label}</div>
-            </div>
+        <div className="space-y-2 mb-3">
+          {RWA_ASSETS.map((item) => (
+            <button
+              key={item.symbol}
+              onClick={() => setShowAssetModal(item.symbol)}
+              className="w-full bg-white/10 border border-white/20 rounded-lg p-3 text-left hover:bg-white/20 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">🏆</span>
+                    <span className="text-sm font-bold text-white">{item.symbol}</span>
+                    <span className="text-xs text-blue-200/60 bg-white/10 px-2 py-0.5 rounded">{item.type}</span>
+                  </div>
+                  <div className="text-xs text-blue-200 mt-1">{item.label}</div>
+                </div>
+                <span className="text-blue-200/60 text-xs">ⓘ Learn more</span>
+              </div>
+            </button>
           ))}
         </div>
         
         {isCelo && (
           <PrimaryButton onClick={handleNavigateToSwap} fullWidth size="sm" icon={<span>🌉</span>}>
-            Bridge to Invest
+            Bridge to Arbitrum
           </PrimaryButton>
         )}
 
@@ -114,6 +136,40 @@ export default function ProtectionTab({
           </span>
         </div>
       </FeatureCard>
+
+      {/* Asset Info Modal */}
+      {showAssetModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAssetModal(null)}>
+          <div className="bg-white rounded-xl max-w-sm w-full p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            {RWA_ASSETS.filter(a => a.symbol === showAssetModal).map(asset => (
+              <div key={asset.symbol}>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-3xl">🏆</span>
+                  <div>
+                    <h3 className="font-bold text-lg">{asset.symbol}</h3>
+                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{asset.type}</span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">{asset.description}</p>
+                <div className="space-y-2 mb-4">
+                  {asset.benefits.map((benefit, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm">
+                      <span className="text-green-500">✓</span>
+                      <span>{benefit}</span>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => setShowAssetModal(null)}
+                  className="w-full py-2 bg-gray-100 rounded-lg text-sm font-medium hover:bg-gray-200"
+                >
+                  Close
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* AI Wealth Guard - Collapsible */}
       <CollapsibleSection
