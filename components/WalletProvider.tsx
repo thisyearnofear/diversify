@@ -26,6 +26,7 @@ interface WalletContextType {
   isFarcaster: boolean;
   farcasterContext: FarcasterContext | null;
   connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
   switchNetwork: (chainId: number) => Promise<void>;
   formatAddress: (addr: string) => string;
 }
@@ -41,6 +42,7 @@ const WalletContext = createContext<WalletContextType>({
   isFarcaster: false,
   farcasterContext: null,
   connect: async () => { },
+  disconnect: async () => { },
   switchNetwork: async () => { },
   formatAddress: (addr: string) => addr,
 });

@@ -23,6 +23,7 @@ import InfoTab from "../components/tabs/InfoTab";
 import WalletButton from "../components/WalletButton";
 import { useWalletContext } from "../components/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/WalletTutorial";
+import ThemeToggle from "../components/ThemeToggle";
 
 export default function DiversiFiPage() {
   // Use app state context for tab management
@@ -104,7 +105,7 @@ export default function DiversiFiPage() {
   }, [detectedRegion, isRegionLoading]);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors">
       <Head>
         <title>DiversiFi - MiniPay</title>
         <meta
@@ -126,18 +127,22 @@ export default function DiversiFiPage() {
       </Head>
 
       <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        {/* Header with proper spacing */}
+        <div className="flex items-center justify-between mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
           <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-gray-900 bg-white px-2 py-1 rounded-md shadow-sm">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
               DiversiFi
             </h1>
             {isInMiniPay && (
-              <span className="ml-2 bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-medium shadow-sm border border-blue-700">
+              <span className="ml-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
                 MiniPay
               </span>
             )}
           </div>
-          <WalletButton />
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <WalletButton />
+          </div>
         </div>
 
         {/* Unsupported Network State - Blocking */}
@@ -194,90 +199,94 @@ export default function DiversiFiPage() {
           )
         )}
 
-        {/* Mobile tabs with icons */}
-        <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        {/* Mobile tabs with proper spacing */}
+        <div className="mb-6">
+          <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        </div>
 
-        {/* Tab Content */}
-        <ErrorBoundary>
-          {activeTab === "overview" && (
-            <OverviewTab
-              regionData={regionData}
-              regionTotals={regionTotals}
-              totalValue={totalValue}
-              isRegionLoading={isRegionLoading}
-              userRegion={userRegion}
-              setUserRegion={setUserRegion}
-              REGIONS={REGIONS}
-              setActiveTab={setActiveTab}
-              refreshBalances={refreshBalances}
-              refreshChainId={refreshChainId}
-              balances={balances}
-              inflationData={inflationData as Record<string, RegionalInflationData>}
-            />
-          )}
+        {/* Tab Content with proper spacing */}
+        <div className="space-y-4">
+          <ErrorBoundary>
+            {activeTab === "overview" && (
+              <OverviewTab
+                regionData={regionData}
+                regionTotals={regionTotals}
+                totalValue={totalValue}
+                isRegionLoading={isRegionLoading}
+                userRegion={userRegion}
+                setUserRegion={setUserRegion}
+                REGIONS={REGIONS}
+                setActiveTab={setActiveTab}
+                refreshBalances={refreshBalances}
+                refreshChainId={refreshChainId}
+                balances={balances}
+                inflationData={inflationData as Record<string, RegionalInflationData>}
+              />
+            )}
 
-          {/* Protection Tab */}
-          {activeTab === "protect" && (
-            <ProtectionTab
-              userRegion={userRegion}
-              setUserRegion={setUserRegion}
-              regionData={regionData}
-              totalValue={totalValue}
-              balances={balances}
-              setActiveTab={setActiveTab}
-            />
-          )}
+            {/* Protection Tab */}
+            {activeTab === "protect" && (
+              <ProtectionTab
+                userRegion={userRegion}
+                setUserRegion={setUserRegion}
+                regionData={regionData}
+                totalValue={totalValue}
+                balances={balances}
+                setActiveTab={setActiveTab}
+              />
+            )}
 
-          {/* Strategies Tab */}
-          {activeTab === "strategies" && (
-            <StrategiesTab
-              userRegion={userRegion}
-              regionData={regionData}
-              onSelectStrategy={setSelectedStrategy}
-            />
-          )}
+            {/* Strategies Tab */}
+            {activeTab === "strategies" && (
+              <StrategiesTab
+                userRegion={userRegion}
+                regionData={regionData}
+                onSelectStrategy={setSelectedStrategy}
+              />
+            )}
 
-          {/* Analytics Tab */}
-          {activeTab === "analytics" && (
-            <AnalyticsTab
-              currencyPerformanceData={currencyPerformanceData}
-              isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
-              regionData={regionData}
-              totalValue={totalValue}
-              userRegion={userRegion}
-              setUserRegion={setUserRegion}
-            />
-          )}
+            {/* Analytics Tab */}
+            {activeTab === "analytics" && (
+              <AnalyticsTab
+                currencyPerformanceData={currencyPerformanceData}
+                isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
+                regionData={regionData}
+                totalValue={totalValue}
+                userRegion={userRegion}
+                setUserRegion={setUserRegion}
+              />
+            )}
 
-          {/* Swap Tab */}
-          {activeTab === "swap" && (
-            <SwapTab
-              availableTokens={availableTokens}
-              userRegion={userRegion}
-              selectedStrategy={selectedStrategy}
-              inflationData={inflationData as Record<string, RegionalInflationData>}
-              refreshBalances={refreshBalances}
-              refreshChainId={refreshChainId}
-              isBalancesLoading={isBalancesLoading}
-            />
-          )}
+            {/* Swap Tab */}
+            {activeTab === "swap" && (
+              <SwapTab
+                availableTokens={availableTokens}
+                userRegion={userRegion}
+                selectedStrategy={selectedStrategy}
+                inflationData={inflationData as Record<string, RegionalInflationData>}
+                refreshBalances={refreshBalances}
+                refreshChainId={refreshChainId}
+                isBalancesLoading={isBalancesLoading}
+              />
+            )}
 
-          {/* Info Tab */}
-          {activeTab === "info" && (
-            <InfoTab
-              availableTokens={availableTokens}
-            />
-          )}
-        </ErrorBoundary>
+            {/* Info Tab */}
+            {activeTab === "info" && (
+              <InfoTab
+                availableTokens={availableTokens}
+              />
+            )}
+          </ErrorBoundary>
+        </div>
+
+        {/* Wallet Tutorial Modal */}
+        <WalletTutorial
+          isOpen={isTutorialOpen}
+          onClose={closeTutorial}
+          onConnect={connectWallet}
+          isMiniPay={isInMiniPay}
+        />
       </div>
-
-      {/* Wallet Tutorial Modal */}
-      <WalletTutorial
-        isOpen={isTutorialOpen}
-        onClose={closeTutorial}
-        onConnect={connectWallet}
-        isMiniPay={isInMiniPay}
-      />
     </div>
   );
 }

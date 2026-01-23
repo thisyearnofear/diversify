@@ -291,7 +291,7 @@ export class ArcAgent {
         const steps: string[] = [];
         const dataSources: string[] = [];
         const paymentHashes: Record<string, string> = {};
-        let totalCost = 0;
+        const totalCost = 0;
 
         try {
             // Step 1: Check USDC balance with Circle Gateway integration

@@ -18,18 +18,18 @@ export const CollapsibleSection = ({
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-lg overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {icon}
-          <span className="font-medium text-gray-900 text-sm">{title}</span>
+          <span className="font-semibold text-gray-900 text-sm">{title}</span>
           {badge}
         </div>
         <svg
-          className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -69,28 +69,29 @@ export const TabHeader = ({
         : "Celo";
 
   return (
-    <div className="flex justify-between items-center mb-4">
-      <div className="flex items-center gap-2">
-        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+    <div className="flex justify-between items-start mb-6">
+      <div className="flex items-center gap-3">
+        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
         {chainId && (
-          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+          <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
             {networkName}
           </span>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {rightContent}
         {showNetworkSwitcher && (
           <NetworkSwitcher
             currentChainId={chainId ?? null}
             onNetworkChange={onNetworkChange}
             compact
+            className="min-w-0"
           />
         )}
         {onRefresh && (
           <button
             onClick={onRefresh}
-            className="p-1.5 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0"
             title="Refresh"
             disabled={isLoading}
           >
@@ -178,8 +179,8 @@ export const StatBadge = ({
     yellow: "bg-yellow-100 text-yellow-700",
   };
   return (
-    <div className={`${colors[color]} px-3 py-1.5 rounded-lg text-center`}>
-      <div className="text-xs text-opacity-70">{label}</div>
+    <div className={`${colors[color]} px-4 py-2 rounded-xl text-center min-w-0 flex-1`}>
+      <div className="text-xs text-opacity-80 mb-1">{label}</div>
       <div className="font-bold text-sm">{value}</div>
     </div>
   );

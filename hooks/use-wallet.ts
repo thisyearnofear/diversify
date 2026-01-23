@@ -196,6 +196,15 @@ export function useWallet() {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
   };
 
+  // Disconnect wallet function
+  const disconnect = async () => {
+    setAddress(null);
+    setIsConnected(false);
+    setChainId(null);
+    setError(null);
+    console.log('Wallet disconnected');
+  };
+
   return {
     address,
     isConnected,
@@ -206,6 +215,7 @@ export function useWallet() {
     isFarcaster,
     farcasterContext,
     connect,
+    disconnect,
     switchNetwork,
     formatAddress,
   };
