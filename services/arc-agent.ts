@@ -222,6 +222,7 @@ export class ArcAgent {
     private spentToday: number = 0;
     private isTestnet: boolean;
     private circleGatewayService: CircleGatewayService;
+    private circleBridgeKitService: CircleBridgeKitService;
 
     constructor(config: {
         privateKey?: string;

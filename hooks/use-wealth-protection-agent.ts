@@ -96,13 +96,22 @@ export function useWealthProtectionAgent() {
 
         try {
             if (arcAgent && config.analysisDepth === 'Deep') {
-                // Use Arc Agent for premium data analysis
-                const result = await arcAgent.analyzePortfolioAutonomously(
-                    { balance: userBalance, holdings: currentHoldings },
-                    config,
-                    networkInfo
-                );
+                // Use server-side Arc Agent for premium data analysis
+                const response = await fetch('/api/agent/deep-analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        portfolio: { balance: userBalance, holdings: currentHoldings },
+                        config,
+                        networkInfo
+                    })
+                });
 
+                if (!response.ok) {
+                    throw new Error('Deep analysis failed');
+                }
+
+                const result = await response.json();
                 setAdvice(result);
 
                 // Add to conversation history
