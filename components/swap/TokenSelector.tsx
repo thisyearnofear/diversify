@@ -190,7 +190,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                 } transition-colors ${!hasBalance || isCrossChain ? 'opacity-50 cursor-not-allowed' : ''
                 }`}
-              disabled={disabled || !hasBalance || isCrossChain}
+              disabled={disabled || !hasBalance || Boolean(isCrossChain)}
               title={
                 isCrossChain
                   ? "MAX not available for cross-chain swaps"

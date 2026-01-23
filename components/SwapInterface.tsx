@@ -445,7 +445,7 @@ const SwapInterface = forwardRef<
             inflationRate={fromTokenInflationRate}
             disabled={isLoading}
             tokenBalances={tokenBalances}
-            currentChainId={chainId}
+            currentChainId={chainId ?? undefined}
             tokenChainId={fromChainId}
           />
 
@@ -489,7 +489,7 @@ const SwapInterface = forwardRef<
             disabled={isLoading}
             showAmountInput={false}
             tokenBalances={tokenBalances}
-            currentChainId={chainId}
+            currentChainId={chainId ?? undefined}
             tokenChainId={toChainId}
           />
 

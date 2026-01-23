@@ -82,7 +82,7 @@ export const TabHeader = ({
         {rightContent}
         {showNetworkSwitcher && (
           <NetworkSwitcher
-            currentChainId={chainId}
+            currentChainId={chainId ?? undefined}
             onNetworkChange={onNetworkChange}
             compact
           />
