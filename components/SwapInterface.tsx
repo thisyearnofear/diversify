@@ -7,7 +7,10 @@ import { SwapErrorHandler } from "../services/swap/error-handler";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
 import { REGION_COLORS } from "../constants/regions";
 import TokenSelector from "./swap/TokenSelector";
+import ChainSelector from "./ChainSelector";
 import { NETWORKS } from "../config";
+import { ChainDetectionService } from "../services/swap/chain-detection.service";
+import { getTokensForChain, isTokenAvailableOnChain } from "../utils/cross-chain-tokens";
 import type { Region } from "../hooks/use-user-region";
 
 interface Token {
@@ -22,13 +25,16 @@ interface SwapInterfaceProps {
   onSwap?: (
     fromToken: string,
     toToken: string,
-    amount: string
+    amount: string,
+    fromChainId?: number,
+    toChainId?: number
   ) => Promise<void>;
   title?: string;
   address?: string | null;
   preferredFromRegion?: string;
   preferredToRegion?: string;
   chainId?: number | null;
+  enableCrossChain?: boolean; // New prop to enable cross-chain functionality
 }
 
 
@@ -83,6 +89,8 @@ const SwapInterface = forwardRef<
     address,
     preferredFromRegion,
     preferredToRegion,
+    chainId,
+    enableCrossChain = false,
   },
   ref
 ) {
@@ -106,6 +114,66 @@ const SwapInterface = forwardRef<
   const [toToken, setToToken] = useState<string>(defaultToToken);
   const [amount, setAmount] = useState<string>("10");
   const [slippageTolerance, setSlippageTolerance] = useState<number>(0.5); // 0.5% default
+
+  // Cross-chain state
+  const [fromChainId, setFromChainId] = useState<number>(chainId || NETWORKS.CELO_MAINNET.chainId);
+  const [toChainId, setToChainId] = useState<number>(chainId || NETWORKS.CELO_MAINNET.chainId);
+
+  // Filter tokens based on selected chains when cross-chain is enabled
+  const availableFromTokens = useMemo(() => {
+    if (!enableCrossChain) return availableTokens;
+
+    const chainTokens = getTokensForChain(fromChainId);
+    return chainTokens.map(token => ({
+      symbol: token.symbol,
+      name: token.name,
+      region: token.region,
+    }));
+  }, [enableCrossChain, fromChainId, availableTokens]);
+
+  const availableToTokens = useMemo(() => {
+    if (!enableCrossChain) return availableTokens;
+
+    const chainTokens = getTokensForChain(toChainId);
+    return chainTokens.map(token => ({
+      symbol: token.symbol,
+      name: token.name,
+      region: token.region,
+    }));
+  }, [enableCrossChain, toChainId, availableTokens]);
+
+  // Update chain IDs when wallet chain changes
+  useEffect(() => {
+    if (chainId && !enableCrossChain) {
+      setFromChainId(chainId);
+      setToChainId(chainId);
+    } else if (chainId && fromChainId === toChainId) {
+      // If cross-chain is enabled and both chains are the same, update both
+      setFromChainId(chainId);
+      setToChainId(chainId);
+    }
+  }, [chainId, enableCrossChain, fromChainId, toChainId]);
+
+  // Update token selection when chains change
+  useEffect(() => {
+    if (enableCrossChain) {
+      // Check if current fromToken is available on fromChain
+      if (!isTokenAvailableOnChain(fromToken, fromChainId)) {
+        const firstAvailable = availableFromTokens[0]?.symbol;
+        if (firstAvailable) {
+          setFromToken(firstAvailable);
+        }
+      }
+
+      // Check if current toToken is available on toChain
+      if (!isTokenAvailableOnChain(toToken, toChainId)) {
+        const firstAvailable = availableToTokens[0]?.symbol;
+        if (firstAvailable) {
+          setToToken(firstAvailable);
+        }
+      }
+    }
+  }, [enableCrossChain, fromChainId, toChainId, fromToken, toToken, availableFromTokens, availableToTokens]);
 
   // State for transaction status
   const [status, setStatus] = useState<
@@ -136,7 +204,7 @@ const SwapInterface = forwardRef<
       // Only set if the tokens are available
       const fromExists = availableTokens.some(t => t.symbol.toUpperCase() === from.toUpperCase());
       const toExists = availableTokens.some(t => t.symbol.toUpperCase() === to.toUpperCase());
-      
+
       if (fromExists) {
         setFromToken(from.toUpperCase());
       }
@@ -204,7 +272,7 @@ const SwapInterface = forwardRef<
     try {
       if (onSwap) {
         // Use the provided onSwap function if available
-        await onSwap(fromToken, toToken, amount);
+        await onSwap(fromToken, toToken, amount, fromChainId, toChainId);
         setStatus("completed");
       } else {
         // Otherwise, use the stablecoin swap hook
@@ -212,6 +280,8 @@ const SwapInterface = forwardRef<
           fromToken,
           toToken,
           amount,
+          fromChainId: enableCrossChain ? fromChainId : undefined,
+          toChainId: enableCrossChain ? toChainId : undefined,
           slippageTolerance,
         });
 
@@ -312,6 +382,40 @@ const SwapInterface = forwardRef<
           )}
         </div>
 
+        {/* Cross-Chain Selectors */}
+        {enableCrossChain && (
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-blue-600">🌉</span>
+              <span className="text-sm font-medium text-blue-800">Cross-Chain Bridge</span>
+              {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                  Bridge Required
+                </span>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <ChainSelector
+                selectedChainId={fromChainId}
+                onChainSelect={setFromChainId}
+                label="From Chain"
+                disabled={isLoading}
+              />
+              <ChainSelector
+                selectedChainId={toChainId}
+                onChainSelect={setToChainId}
+                label="To Chain"
+                disabled={isLoading}
+              />
+            </div>
+            {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
+              <div className="mt-2 text-xs text-blue-600">
+                ⚠️ Cross-chain swaps may take longer and have higher fees
+              </div>
+            )}
+          </div>
+        )}
+
         {/* AI Insight for beneficial swaps */}
         {fromToken && toToken && hasInflationBenefit && (
           <SwapAIInsight
@@ -332,7 +436,7 @@ const SwapInterface = forwardRef<
             onTokenChange={setFromToken}
             amount={amount}
             onAmountChange={setAmount}
-            availableTokens={availableTokens}
+            availableTokens={availableFromTokens}
             tokenRegion={fromTokenRegion}
             inflationRate={fromTokenInflationRate}
             disabled={isLoading}
@@ -373,7 +477,7 @@ const SwapInterface = forwardRef<
             label="To"
             selectedToken={toToken}
             onTokenChange={setToToken}
-            availableTokens={availableTokens}
+            availableTokens={availableToTokens}
             tokenRegion={toTokenRegion}
             inflationRate={toTokenInflationRate}
             disabled={isLoading}

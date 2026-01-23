@@ -16,6 +16,8 @@ interface HookSwapParams {
     fromToken: string;
     toToken: string;
     amount: string;
+    fromChainId?: number; // Allow specifying source chain
+    toChainId?: number;   // Allow specifying destination chain
     slippageTolerance?: number;
     onApprovalSubmitted?: (hash: string) => void;
     onApprovalConfirmed?: () => void;
@@ -72,6 +74,8 @@ export function useSwap() {
             fromToken,
             toToken,
             amount,
+            fromChainId,
+            toChainId,
             slippageTolerance,
             onApprovalSubmitted,
             onApprovalConfirmed,
@@ -79,8 +83,8 @@ export function useSwap() {
         } = params;
 
         // Determine slippage tolerance
-        const finalSlippage = slippageTolerance !== undefined 
-            ? slippageTolerance 
+        const finalSlippage = slippageTolerance !== undefined
+            ? slippageTolerance
             : (isMiniPay ? TX_CONFIG.MINIPAY_SLIPPAGE : TX_CONFIG.DEFAULT_SLIPPAGE);
 
         // Reset state
@@ -116,8 +120,8 @@ export function useSwap() {
                 fromToken,
                 toToken,
                 amount,
-                fromChainId: currentChainId,
-                toChainId: currentChainId, // Same-chain swap by default
+                fromChainId: params.fromChainId || currentChainId,
+                toChainId: params.toChainId || currentChainId,
                 userAddress,
                 slippageTolerance: finalSlippage,
             };

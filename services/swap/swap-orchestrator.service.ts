@@ -108,7 +108,7 @@ export class SwapOrchestratorService {
         }
 
         if (ChainDetectionService.isCrossChain(params.fromChainId, params.toChainId)) {
-            return `Cross-chain swap from ${fromChainName} to ${toChainName} is not yet supported`;
+            return `Cross-chain swap from ${fromChainName} to ${toChainName} requires bridging - this may take longer and have higher fees`;
         }
 
         return `No swap strategy available for ${params.fromToken}/${params.toToken} on ${fromChainName}`;

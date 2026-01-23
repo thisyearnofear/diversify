@@ -31,7 +31,7 @@ export const WorldBankService = {
    */
   getInflationData: async (year?: number) => {
     const cacheKey = `worldbank-inflation-${year || 'latest'}`;
-    
+
     // Simple caching without circuit breaker for now
     return unifiedCache.getOrFetch(
       cacheKey,
@@ -102,7 +102,7 @@ export const ExchangeRateService = {
    */
   getExchangeRate: async (fromCurrency: string, toCurrency: string) => {
     const cacheKey = `exchange-rate-${fromCurrency}-${toCurrency}`;
-    
+
     return unifiedCache.getOrFetch(
       cacheKey,
       () => ExchangeRateService.fetchExchangeRate(fromCurrency, toCurrency),
@@ -136,13 +136,13 @@ export const ExchangeRateService = {
    */
   fetchFromFrankfurter: async (fromCurrency: string, toCurrency: string) => {
     const response = await fetch(`https://api.frankfurter.app/latest?from=${fromCurrency}&to=${toCurrency}`);
-    
+
     if (!response.ok) {
       throw new Error(`Frankfurter API error: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.rates || !data.rates[toCurrency]) {
       throw new Error('No exchange rate data found');
     }
@@ -161,6 +161,15 @@ export const ExchangeRateService = {
    * @param outputSize Data points to return ('compact' = 100, 'full' = all)
    * @returns Historical exchange rate data
    */
+  getHistoricalRates: async (fromCurrency: string, toCurrency: string, outputSize: 'compact' | 'full' = 'compact') => {
+    // Placeholder for historical rates - could integrate with Alpha Vantage or similar
+    return {
+      data: [],
+      source: 'not-implemented'
+    };
+  }
+};
+
 /**
  * Token Price Service
  * Live USD pricing for on-chain tokens with caching and multi-provider fallback
@@ -203,7 +212,7 @@ export const TokenPriceService = {
       },
       'volatile'
     );
-    
+
     return result.data ?? null;
   },
 
@@ -219,7 +228,7 @@ export const TokenPriceService = {
     getTokenAddresses: (chainId: number) => Record<string, string>;
   }): Promise<{ amount: string; source: string }> {
     const { fromToken, toToken, amount, chainId, getTokenAddresses } = params;
-    
+
     try {
       const amountNum = Number.parseFloat(amount);
       if (isNaN(amountNum) || amountNum <= 0) {
@@ -236,7 +245,7 @@ export const TokenPriceService = {
         address: fromAddr,
         symbol: fromToken
       });
-      
+
       const toUsd = await this.getTokenUsdPrice({
         chainId,
         address: toAddr,
@@ -246,12 +255,12 @@ export const TokenPriceService = {
       // Use live prices when available, fallback to static rates
       const fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] ?? 1);
       const toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] ?? 1);
-      
+
       const resultAmount = ((amountNum * fromRate) / toRate).toString();
-      const source = (typeof fromUsd === 'number' && typeof toUsd === 'number') 
-        ? 'live-prices' 
+      const source = (typeof fromUsd === 'number' && typeof toUsd === 'number')
+        ? 'live-prices'
         : 'mixed-prices';
-      
+
       return { amount: resultAmount, source };
     } catch (error) {
       console.warn('Error in getExpectedAmountOut:', error);

@@ -184,13 +184,13 @@ export default function SwapTab({
         swapPrefill.toToken || 'CEUR',
         swapPrefill.amount
       );
-      
+
       // Show the AI recommendation banner
       if (swapPrefill.reason) {
         setAiRecommendationReason(swapPrefill.reason);
         setShowAiRecommendation(true);
       }
-      
+
       // Clear the prefill so it doesn't re-trigger
       clearSwapPrefill();
     }
@@ -289,9 +289,12 @@ export default function SwapTab({
     fromToken: string,
     toToken: string,
     amount: string,
+    fromChainId?: number,
+    toChainId?: number,
   ) => {
     console.log(
       `Initiating swap: ${amount} ${fromToken} to ${toToken}`,
+      fromChainId && toChainId ? `(${fromChainId} → ${toChainId})` : ''
     );
 
     setSwapStatus("Initiating swap process...");
@@ -309,6 +312,8 @@ export default function SwapTab({
         fromToken,
         toToken,
         amount,
+        fromChainId,
+        toChainId,
         onApprovalSubmitted: (hash) => {
           setApprovalTxHash(hash);
           setSwapStatus("Approval submitted, waiting for confirmation...");
@@ -398,29 +403,28 @@ export default function SwapTab({
               preferredToRegion={isArbitrum ? "USA" : targetRegion}
               title=""
               chainId={chainId}
+              enableCrossChain={true} // Enable cross-chain functionality
             />
 
             {/* Swap status - only show when relevant */}
             {swapStatus && (
               <div
-                className={`mt-3 p-3 rounded-md text-sm ${
-                  swapStatus.includes("Error")
-                    ? "bg-red-50 text-red-700 border border-red-200"
-                    : swapStatus.includes("success")
-                      ? "bg-green-50 text-green-700 border border-green-200"
-                      : "bg-blue-50 text-blue-700 border border-blue-200"
-                }`}
+                className={`mt-3 p-3 rounded-md text-sm ${swapStatus.includes("Error")
+                  ? "bg-red-50 text-red-700 border border-red-200"
+                  : swapStatus.includes("success")
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                  }`}
               >
                 {swapStatus}
                 {(swapTxHash || localSwapTxHash) && (
                   <a
-                    href={`${
-                      walletChainId === NETWORKS.ARBITRUM_ONE.chainId
-                        ? NETWORKS.ARBITRUM_ONE.explorerUrl
-                        : walletChainId === NETWORKS.ALFAJORES.chainId
-                          ? NETWORKS.ALFAJORES.explorerUrl
-                          : NETWORKS.CELO_MAINNET.explorerUrl
-                    }/tx/${swapTxHash || localSwapTxHash}`}
+                    href={`${walletChainId === NETWORKS.ARBITRUM_ONE.chainId
+                      ? NETWORKS.ARBITRUM_ONE.explorerUrl
+                      : walletChainId === NETWORKS.ALFAJORES.chainId
+                        ? NETWORKS.ALFAJORES.explorerUrl
+                        : NETWORKS.CELO_MAINNET.explorerUrl
+                      }/tx/${swapTxHash || localSwapTxHash}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="block mt-2 text-blue-600 hover:underline text-xs"
@@ -481,19 +485,18 @@ export default function SwapTab({
                   .map((region) => (
                     <button
                       key={region}
-                      className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                        region === targetRegion
-                          ? "text-white font-medium"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
+                      className={`px-3 py-1.5 text-xs rounded-full transition-colors ${region === targetRegion
+                        ? "text-white font-medium"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
                       style={
                         region === targetRegion
                           ? {
-                              backgroundColor:
-                                REGION_COLORS[
-                                  region as keyof typeof REGION_COLORS
-                                ],
-                            }
+                            backgroundColor:
+                              REGION_COLORS[
+                              region as keyof typeof REGION_COLORS
+                              ],
+                          }
                           : {}
                       }
                       onClick={() => setTargetRegion(region as Region)}
@@ -542,19 +545,18 @@ export default function SwapTab({
                 (scenario) => (
                   <button
                     key={scenario}
-                    className={`px-3 py-1 text-xs rounded-full ${
-                      selectedScenario === scenario
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+                    className={`px-3 py-1 text-xs rounded-full ${selectedScenario === scenario
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
                     onClick={() =>
                       setSelectedScenario(
                         scenario as
-                          | "remittance"
-                          | "education"
-                          | "business"
-                          | "travel"
-                          | "savings",
+                        | "remittance"
+                        | "education"
+                        | "business"
+                        | "travel"
+                        | "savings",
                       )
                     }
                   >
