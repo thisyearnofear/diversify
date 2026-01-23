@@ -8,6 +8,7 @@ const REGION_COLORS: Record<Region, string> = {
   LatAm: "#F6AD55", // orange
   Africa: "#F56565", // red
   Asia: "#9F7AEA", // purple
+  Commodity: "#ED8936", // orange
 };
 
 interface PerformanceChartProps {

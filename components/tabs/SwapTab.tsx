@@ -519,22 +519,22 @@ export default function SwapTab({
             </div>
 
             {/* Inflation comparison - compact */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="text-center">
-                <p className="text-xs text-gray-500">{userRegion}</p>
-                <p className="font-bold text-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{userRegion}</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-gray-100">
                   {homeInflationRate.toFixed(1)}%
                 </p>
               </div>
-              <div className="text-gray-400">→</div>
+              <div className="text-gray-400 dark:text-gray-500">→</div>
               <div className="text-center">
-                <p className="text-xs text-gray-500">{targetRegion}</p>
-                <p className="font-bold text-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">{targetRegion}</p>
+                <p className="font-bold text-lg text-gray-900 dark:text-gray-100">
                   {targetInflationRate.toFixed(1)}%
                 </p>
               </div>
               {inflationDifference > 0 && (
-                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
                   Save {inflationDifference.toFixed(1)}%
                 </span>
               )}
@@ -604,21 +604,21 @@ export default function SwapTab({
 
           {/* Available Tokens - Compact display */}
           {(fromTokens.length > 0 || toTokens.length > 0) && (
-            <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500">Available:</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Available:</span>
                   <div className="flex gap-1">
                     {networkTokens.slice(0, 4).map((token) => (
                       <span
                         key={token.symbol}
-                        className="text-xs bg-white px-2 py-0.5 rounded border border-gray-200"
+                        className="text-xs bg-white dark:bg-gray-700 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
                       >
                         {token.symbol}
                       </span>
                     ))}
                     {networkTokens.length > 4 && (
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
                         +{networkTokens.length - 4} more
                       </span>
                     )}
@@ -675,18 +675,22 @@ function getRecommendations(
       { from: "PUSO", to: "cUSD", reason: "More stable savings" },
       { from: "PUSO", to: "cEUR", reason: "European diversification" },
     ],
+    Commodity: [
+      { from: "cUSD", to: "PAXG", reason: "Hedge against inflation with gold" },
+      { from: "cEUR", to: "PAXG", reason: "Store value in precious metals" },
+    ],
   };
 
   const recs = recommendations[userRegion] || [];
   return recs.map((rec, idx) => (
     <div
       key={idx}
-      className="flex items-center justify-between p-2 bg-white rounded border border-gray-100"
+      className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700"
     >
-      <span className="text-sm font-medium">
+      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
         {rec.from} → {rec.to}
       </span>
-      <span className="text-xs text-gray-500">{rec.reason}</span>
+      <span className="text-xs text-gray-500 dark:text-gray-400">{rec.reason}</span>
     </div>
   ));
 }

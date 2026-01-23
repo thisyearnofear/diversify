@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 
 // Define the regions we support
-export type Region = 'Africa' | 'USA' | 'Europe' | 'LatAm' | 'Asia';
-export const REGIONS = ['Africa', 'USA', 'Europe', 'LatAm', 'Asia'] as const;
+export type Region = 'Africa' | 'USA' | 'Europe' | 'LatAm' | 'Asia' | 'Commodity';
+export const REGIONS = ['Africa', 'USA', 'Europe', 'LatAm', 'Asia', 'Commodity'] as const;
 
 // Country code to region mapping
 const COUNTRY_TO_REGION: Record<string, Region> = {

@@ -114,7 +114,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                     value={currentChainId || ''}
                     onChange={(e) => switchNetwork(Number(e.target.value))}
                     disabled={isSwitching}
-                    className="text-sm bg-white border border-gray-300 rounded-md px-3 py-1.5 pr-8 font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
+                    className="text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1.5 pr-8 font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed appearance-none cursor-pointer"
                     style={{
                         backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                         backgroundPosition: 'right 0.5rem center',
@@ -129,7 +129,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                     ))}
                 </select>
                 {error && (
-                    <div className="absolute top-full left-0 mt-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200 whitespace-nowrap z-10">
+                    <div className="absolute top-full left-0 mt-1 text-xs text-red-400 dark:text-red-300 bg-red-50 dark:bg-red-900/20 px-2 py-1 rounded border border-red-200 dark:border-red-800 whitespace-nowrap z-10">
                         {error}
                     </div>
                 )}
@@ -138,12 +138,12 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
     }
 
     return (
-        <div className={`bg-white rounded-lg border border-gray-200 shadow-sm ${className}`}>
+        <div className={`bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${className}`}>
             <div className="p-4">
-                <h3 className="text-sm font-bold text-gray-900 mb-3 flex items-center">
+                <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="size-4 mr-1.5 text-gray-700"
+                        className="size-4 mr-1.5 text-gray-700 dark:text-gray-300"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -159,13 +159,13 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                 </h3>
 
                 {currentNetwork && (
-                    <div className="mb-3 p-3 bg-blue-50 rounded-md border border-blue-200">
-                        <div className="text-xs text-blue-700 font-medium mb-1">Current Network</div>
+                    <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
+                        <div className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">Current Network</div>
                         <div className="flex items-center">
                             <span className="text-lg mr-2">{currentNetwork.icon}</span>
                             <div>
-                                <div className="font-bold text-blue-900">{currentNetwork.label}</div>
-                                <div className="text-xs text-blue-700">{currentNetwork.description}</div>
+                                <div className="font-bold text-blue-900 dark:text-blue-100">{currentNetwork.label}</div>
+                                <div className="text-xs text-blue-700 dark:text-blue-300">{currentNetwork.description}</div>
                             </div>
                         </div>
                     </div>
@@ -176,28 +176,28 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                         const isActive = network.chainId === currentChainId;
                         const colorClasses = {
                             green: {
-                                bg: 'bg-green-50 border-green-300',
-                                hover: 'hover:bg-green-100',
-                                text: 'text-green-900',
-                                badge: 'bg-green-600 text-white',
+                                bg: 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700',
+                                hover: 'hover:bg-green-100 dark:hover:bg-green-900/30',
+                                text: 'text-green-900 dark:text-green-100',
+                                badge: 'bg-green-600 dark:bg-green-700 text-white',
                             },
                             amber: {
-                                bg: 'bg-amber-50 border-amber-300',
-                                hover: 'hover:bg-amber-100',
-                                text: 'text-amber-900',
-                                badge: 'bg-amber-600 text-white',
+                                bg: 'bg-amber-50 dark:bg-amber-900/20 border-amber-300 dark:border-amber-700',
+                                hover: 'hover:bg-amber-100 dark:hover:bg-amber-900/30',
+                                text: 'text-amber-900 dark:text-amber-100',
+                                badge: 'bg-amber-600 dark:bg-amber-700 text-white',
                             },
                             purple: {
-                                bg: 'bg-purple-50 border-purple-300',
-                                hover: 'hover:bg-purple-100',
-                                text: 'text-purple-900',
-                                badge: 'bg-purple-600 text-white',
+                                bg: 'bg-purple-50 dark:bg-purple-900/20 border-purple-300 dark:border-purple-700',
+                                hover: 'hover:bg-purple-100 dark:hover:bg-purple-900/30',
+                                text: 'text-purple-900 dark:text-purple-100',
+                                badge: 'bg-purple-600 dark:bg-purple-700 text-white',
                             },
                             blue: {
-                                bg: 'bg-blue-50 border-blue-300',
-                                hover: 'hover:bg-blue-100',
-                                text: 'text-blue-900',
-                                badge: 'bg-blue-600 text-white',
+                                bg: 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700',
+                                hover: 'hover:bg-blue-100 dark:hover:bg-blue-900/30',
+                                text: 'text-blue-900 dark:text-blue-100',
+                                badge: 'bg-blue-600 dark:bg-blue-700 text-white',
                             },
                         };
 
@@ -210,17 +210,17 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                                 disabled={isActive || isSwitching}
                                 className={`w-full p-3 rounded-md border-2 transition-all text-left ${isActive
                                         ? `${colors.bg} cursor-default`
-                                        : `bg-white border-gray-200 ${colors.hover} cursor-pointer`
+                                        : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 ${colors.hover} cursor-pointer`
                                     } ${isSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center">
                                         <span className="text-2xl mr-3">{network.icon}</span>
                                         <div>
-                                            <div className={`font-bold ${isActive ? colors.text : 'text-gray-900'}`}>
+                                            <div className={`font-bold ${isActive ? colors.text : 'text-gray-900 dark:text-gray-100'}`}>
                                                 {network.label}
                                             </div>
-                                            <div className={`text-xs ${isActive ? colors.text : 'text-gray-600'}`}>
+                                            <div className={`text-xs ${isActive ? colors.text : 'text-gray-600 dark:text-gray-400'}`}>
                                                 {network.description}
                                             </div>
                                         </div>
@@ -237,11 +237,11 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                 </div>
 
                 {error && (
-                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded-md">
+                    <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
                         <div className="flex items-start">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="size-4 text-red-600 mr-2 mt-0.5 flex-shrink-0"
+                                className="size-4 text-red-600 dark:text-red-400 mr-2 mt-0.5 flex-shrink-0"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -253,17 +253,17 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                                 />
                             </svg>
-                            <span className="text-xs text-red-700">{error}</span>
+                            <span className="text-xs text-red-700 dark:text-red-300">{error}</span>
                         </div>
                     </div>
                 )}
 
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                    <div className="text-xs text-gray-600">
+                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
                         <div className="flex items-start mb-1">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="size-3 mr-1 mt-0.5 text-gray-500 flex-shrink-0"
+                                className="size-3 mr-1 mt-0.5 text-gray-500 dark:text-gray-400 flex-shrink-0"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"
@@ -282,7 +282,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                         <div className="flex items-start">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
-                                className="size-3 mr-1 mt-0.5 text-gray-500 flex-shrink-0"
+                                className="size-3 mr-1 mt-0.5 text-gray-500 dark:text-gray-400 flex-shrink-0"
                                 fill="none"
                                 viewBox="0 0 24 24"
                                 stroke="currentColor"

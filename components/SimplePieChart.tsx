@@ -82,7 +82,7 @@ export default function SimplePieChart({
 
       {data.length > 0 ? (
         <div className="flex flex-col items-center">
-          <canvas ref={canvasRef} width={200} height={200} className="mb-3" />
+          <canvas ref={canvasRef} width={200} height={200} className="mb-1" />
 
           <div className="grid grid-cols-1 gap-1 w-full text-xs">
             {data.map((item, index) => (

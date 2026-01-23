@@ -33,7 +33,7 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
       <Card>
         <TabHeader title="About DiversiFi" chainId={chainId} showNetworkSwitcher={false} />
 
-        <p className="text-sm text-gray-700 mb-4">
+        <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
           DiversiFi helps you protect your wealth from inflation by diversifying across regional stablecoins and real-world assets.
         </p>
 
@@ -51,18 +51,18 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
             { icon: "🛡️", label: "Inflation Protection", desc: "AI-powered" },
             { icon: "⚡", label: "Multi-Chain", desc: "Celo, Arbitrum, Arc" },
           ].map((feature) => (
-            <div key={feature.label} className="bg-gray-50 p-2 rounded-lg text-center">
+            <div key={feature.label} className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg text-center">
               <span className="text-lg">{feature.icon}</span>
-              <div className="text-xs font-medium text-gray-900">{feature.label}</div>
-              <div className="text-xs text-gray-500">{feature.desc}</div>
+              <div className="text-xs font-medium text-gray-900 dark:text-gray-100">{feature.label}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{feature.desc}</div>
             </div>
           ))}
         </div>
 
         {/* Educational Section */}
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-          <h3 className="font-bold text-gray-900 mb-2">Why Geographic Diversification?</h3>
-          <ul className="text-xs text-gray-700 space-y-1">
+        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Why Geographic Diversification?</h3>
+          <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
             <li>• Different economies experience different inflation rates</li>
             <li>• Economic cycles vary by region</li>
             <li>• Political stability differs across countries</li>
@@ -96,17 +96,17 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
         <CollapsibleSection
           title={`Available Tokens (${networkName})`}
           icon={<span>🪙</span>}
-          badge={<span className="text-xs bg-gray-100 px-2 py-0.5 rounded-full">{displayTokens.length}</span>}
+          badge={<span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full">{displayTokens.length}</span>}
         >
           <div className="grid grid-cols-3 gap-2">
             {displayTokens.map((token) => (
               <div
                 key={token.symbol}
-                className="p-2 rounded-lg border text-center"
+                className="p-2 rounded-lg border text-center bg-white dark:bg-gray-800"
                 style={{ borderColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] || "#e5e7eb" }}
               >
-                <div className="font-bold text-sm">{token.symbol}</div>
-                <div className="text-xs text-gray-500">{token.region}</div>
+                <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{token.symbol}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{token.region}</div>
               </div>
             ))}
           </div>
@@ -121,12 +121,12 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
               { name: "Celo Alfajores", icon: "🧪", status: "Testnet", color: "amber" },
               { name: "Arc Testnet", icon: "⚡", status: "Coming 2026", color: "purple" },
             ].map((network) => (
-              <div key={network.name} className={`flex items-center justify-between p-2 bg-${network.color}-50 rounded-lg border border-${network.color}-200`}>
+              <div key={network.name} className={`flex items-center justify-between p-2 bg-${network.color}-50 dark:bg-${network.color}-900/20 rounded-lg border border-${network.color}-200 dark:border-${network.color}-800`}>
                 <div className="flex items-center gap-2">
                   <span>{network.icon}</span>
-                  <span className="text-sm font-medium">{network.name}</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{network.name}</span>
                 </div>
-                <span className={`text-xs bg-${network.color}-600 text-white px-2 py-0.5 rounded-full`}>
+                <span className={`text-xs bg-${network.color}-600 dark:bg-${network.color}-700 text-white px-2 py-0.5 rounded-full`}>
                   {network.status}
                 </span>
               </div>
@@ -138,17 +138,17 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
         {address && (
           <CollapsibleSection title="Wallet Info" icon={<span>👛</span>}>
             <div className="space-y-2">
-              <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Address</span>
-                <code className="text-xs bg-white px-2 py-1 rounded border">{formatAddress(address)}</code>
+              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Address</span>
+                <code className="text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 rounded border border-gray-200 dark:border-gray-600">{formatAddress(address)}</code>
               </div>
-              <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">Network</span>
-                <span className="text-sm font-medium">{networkName}</span>
+              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Network</span>
+                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{networkName}</span>
               </div>
-              <div className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <span className="text-sm text-gray-600">MiniPay</span>
-                <span className={`text-sm font-medium ${isMiniPay ? "text-green-600" : "text-gray-500"}`}>
+              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <span className="text-sm text-gray-600 dark:text-gray-400">MiniPay</span>
+                <span className={`text-sm font-medium ${isMiniPay ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
                   {isMiniPay ? "✓ Detected" : "Not Detected"}
                 </span>
               </div>

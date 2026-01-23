@@ -19,6 +19,7 @@ export function useHistoricalPerformance(address: string | undefined | null) {
       Africa: [],
       LatAm: [],
       Asia: [],
+      Commodity: [],
     },
     percentChange: 0,
     volatility: 0,

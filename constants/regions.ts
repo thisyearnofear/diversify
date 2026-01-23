@@ -5,6 +5,7 @@ export const REGION_COLORS = {
   LatAm: "#F59E0B", // Enhanced orange/yellow
   Africa: "#EF4444", // Enhanced red/terracotta
   Asia: "#D946EF", // Enhanced purple/pink
+  Commodity: "#F97316", // Orange for commodities like gold
 };
 
 // Region background colors (lighter versions)
@@ -14,6 +15,7 @@ export const REGION_BG_COLORS = {
   LatAm: "#FEF3C7", // Light yellow
   Africa: "#FEE2E2", // Light red
   Asia: "#F5D0FE", // Light purple
+  Commodity: "#FED7AA", // Light orange
 };
 
 // Region dark colors for text and borders
@@ -23,6 +25,7 @@ export const REGION_DARK_COLORS = {
   LatAm: "#B45309", // Dark orange
   Africa: "#B91C1C", // Dark red
   Asia: "#A21CAF", // Dark purple
+  Commodity: "#C2410C", // Dark orange
 };
 
 // Region contrast colors for text on colored backgrounds
@@ -32,6 +35,7 @@ export const REGION_CONTRAST_COLORS = {
   LatAm: "#78350F", // Very dark orange
   Africa: "#7F1D1D", // Very dark red
   Asia: "#701A75", // Very dark purple
+  Commodity: "#7C2D12", // Very dark orange
 };
 
 // Available tokens - includes all Mento stablecoins

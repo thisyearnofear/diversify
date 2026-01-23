@@ -26,6 +26,7 @@ const REGION_INSIGHTS: Record<
       Europe: 20,
       Asia: 5,
       LatAm: 5,
+      Commodity: 0,
     },
     considerations: [
       "African currencies often experience higher inflation rates",
@@ -47,6 +48,7 @@ const REGION_INSIGHTS: Record<
       Asia: 10,
       Africa: 10,
       LatAm: 5,
+      Commodity: 0,
     },
     considerations: [
       "USD is a global reserve currency with relative stability",
@@ -68,6 +70,7 @@ const REGION_INSIGHTS: Record<
       Africa: 10,
       Asia: 10,
       LatAm: 5,
+      Commodity: 0,
     },
     considerations: [
       "EUR provides stability for European residents",
@@ -89,6 +92,7 @@ const REGION_INSIGHTS: Record<
       Europe: 20,
       Asia: 5,
       Africa: 5,
+      Commodity: 0,
     },
     considerations: [
       "Latin American currencies often face inflation pressures",
@@ -110,6 +114,7 @@ const REGION_INSIGHTS: Record<
       Europe: 20,
       Africa: 5,
       LatAm: 5,
+      Commodity: 0,
     },
     considerations: [
       "Asian currencies vary widely in stability",
@@ -120,6 +125,28 @@ const REGION_INSIGHTS: Record<
     inflationRate: 3.9,
     volatilityLevel: "Medium",
     localCurrencies: ["PUSO"],
+  },
+  Commodity: {
+    title: "Regional Insights: Commodities",
+    description:
+      "Commodities like gold provide inflation protection and serve as a store of value during economic uncertainty.",
+    typicalAllocation: {
+      Africa: 10,
+      USA: 20,
+      Europe: 20,
+      Asia: 20,
+      LatAm: 10,
+      Commodity: 20,
+    },
+    considerations: [
+      "Gold has historically maintained value during inflation",
+      "Commodities provide diversification from traditional currencies",
+      "Physical assets can hedge against currency devaluation",
+      "Recommended allocation is 5-20% of total portfolio",
+    ],
+    inflationRate: 2.0,
+    volatilityLevel: "Medium",
+    localCurrencies: ["PAXG"],
   },
 };
 

@@ -71,20 +71,20 @@ export default function ProtectionTab({
 
         {/* Network-specific guidance */}
         {isCelo ? (
-          <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-3 rounded-lg border border-green-100 mb-3">
-            <p className="text-sm text-gray-700 mb-1">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-3 rounded-lg border border-green-100 dark:border-green-800 mb-3">
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
               <strong>🌍 Celo Stablecoins</strong> — Swap between regional currencies (cUSD, cEUR, cKES, cREAL) to hedge against local inflation.
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Want gold-backed assets? Switch to Arbitrum above.
             </p>
           </div>
         ) : isArbitrum ? (
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded-lg border border-blue-100 mb-3">
-            <p className="text-sm text-gray-700 mb-1">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 mb-3">
+            <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
               <strong>🔷 Arbitrum RWAs</strong> — Hold tokenized real-world assets like gold (PAXG) as a store of value.
             </p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Want regional stablecoins? Switch to Celo above.
             </p>
           </div>
@@ -140,28 +140,28 @@ export default function ProtectionTab({
       {/* Asset Info Modal */}
       {showAssetModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAssetModal(null)}>
-          <div className="bg-white rounded-xl max-w-sm w-full p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-sm w-full p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
             {RWA_ASSETS.filter(a => a.symbol === showAssetModal).map(asset => (
               <div key={asset.symbol}>
                 <div className="flex items-center gap-3 mb-3">
                   <span className="text-3xl">🏆</span>
                   <div>
-                    <h3 className="font-bold text-lg">{asset.symbol}</h3>
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">{asset.type}</span>
+                    <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">{asset.symbol}</h3>
+                    <span className="text-xs bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">{asset.type}</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-4">{asset.description}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">{asset.description}</p>
                 <div className="space-y-2 mb-4">
                   {asset.benefits.map((benefit, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
+                    <div key={i} className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-100">
                       <span className="text-green-500">✓</span>
                       <span>{benefit}</span>
                     </div>
                   ))}
                 </div>
-                <button 
+                <button
                   onClick={() => setShowAssetModal(null)}
-                  className="w-full py-2 bg-gray-100 rounded-lg text-sm font-medium hover:bg-gray-200"
+                  className="w-full py-2 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600"
                 >
                   Close
                 </button>

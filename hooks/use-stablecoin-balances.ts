@@ -47,10 +47,10 @@ const TOKEN_METADATA: Record<string, { name: string; region: string; decimals?: 
   czar: { name: 'South African Rand', region: 'Africa' },
   ccad: { name: 'Canadian Dollar', region: 'USA' },
   caud: { name: 'Australian Dollar', region: 'Asia' },
-  USDC: { name: 'USD Coin', region: 'Global', decimals: 6 },
-  usdc: { name: 'USD Coin', region: 'Global', decimals: 6 },
-  PAXG: { name: 'Paxos Gold', region: 'Global', decimals: 18 },
-  paxg: { name: 'Paxos Gold', region: 'Global', decimals: 18 },
+  USDC: { name: 'USD Coin', region: 'USA', decimals: 6 },
+  usdc: { name: 'USD Coin', region: 'USA', decimals: 6 },
+  PAXG: { name: 'Paxos Gold', region: 'Commodity', decimals: 18 },
+  paxg: { name: 'Paxos Gold', region: 'Commodity', decimals: 18 },
 };
 
 // Updated exchange rates to USD for Mento stablecoins

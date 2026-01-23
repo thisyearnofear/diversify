@@ -51,32 +51,32 @@ export default function WealthJourneyWidget({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-blue-100 p-4 mb-6 relative overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-blue-100 dark:border-gray-700 p-4 mb-6 relative overflow-hidden">
       {/* Progress Bar Background */}
-      <div className="absolute top-0 left-0 h-1 bg-blue-100 w-full">
-        <div 
+      <div className="absolute top-0 left-0 h-1 bg-blue-100 dark:bg-blue-900 w-full">
+        <div
           className="h-full bg-blue-600 transition-all duration-1000 ease-out"
           style={{ width: `${progress}%` }}
         />
       </div>
 
       <div className="flex items-start gap-4 pt-2">
-        <div className="bg-blue-50 p-3 rounded-full text-2xl flex-shrink-0">
+        <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-full text-2xl flex-shrink-0">
           {icon}
         </div>
         <div className="flex-1">
           <div className="flex justify-between items-center mb-1">
-            <h3 className="font-bold text-gray-900">{title}</h3>
-            <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+            <h3 className="font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+            <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
               {stage === 'accumulation' ? 'Start Here' : stage === 'fortification' ? 'Recommended' : 'Active'}
             </span>
           </div>
-          <p className="text-sm text-gray-600 mb-3 leading-relaxed">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
             {description}
           </p>
           <button
             onClick={action}
-            className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 py-2 px-4 rounded-lg transition-colors w-full sm:w-auto shadow-sm flex items-center justify-center gap-2"
+            className="text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 py-2 px-4 rounded-lg transition-colors w-full sm:w-auto shadow-sm flex items-center justify-center gap-2"
           >
             {cta}
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

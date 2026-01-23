@@ -18,18 +18,18 @@ export const CollapsibleSection = ({
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors"
+        className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="flex items-center gap-3">
           {icon}
-          <span className="font-semibold text-gray-900 text-sm">{title}</span>
+          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{title}</span>
           {badge}
         </div>
         <svg
-          className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -37,7 +37,7 @@ export const CollapsibleSection = ({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {isOpen && <div className="p-4 bg-white">{children}</div>}
+      {isOpen && <div className="p-4 bg-white dark:bg-gray-900">{children}</div>}
     </div>
   );
 };
@@ -71,9 +71,9 @@ export const TabHeader = ({
   return (
     <div className="flex justify-between items-start mb-6">
       <div className="flex items-center gap-3">
-        <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">{title}</h2>
         {chainId && (
-          <span className="text-xs bg-gray-100 text-gray-600 px-3 py-1.5 rounded-full">
+          <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-1.5 rounded-full">
             {networkName}
           </span>
         )}
@@ -91,12 +91,12 @@ export const TabHeader = ({
         {onRefresh && (
           <button
             onClick={onRefresh}
-            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0"
+            className="p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors flex-shrink-0"
             title="Refresh"
             disabled={isLoading}
           >
             <svg
-              className={`w-4 h-4 text-gray-600 ${isLoading ? "animate-spin" : ""}`}
+              className={`w-4 h-4 text-gray-600 dark:text-gray-300 ${isLoading ? "animate-spin" : ""}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -120,7 +120,7 @@ export const Card = ({
   className?: string;
   padding?: string;
 }) => (
-  <div className={`bg-white rounded-lg shadow-md border border-gray-200 ${padding} ${className}`}>
+  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 ${padding} ${className}`}>
     {children}
   </div>
 );
@@ -143,16 +143,16 @@ export const EmptyState = ({
 }) => (
   <div className="text-center py-8">
     <div className="flex justify-center mb-4">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center text-2xl">
+      <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-2xl">
         {icon}
       </div>
     </div>
-    <h3 className="text-lg font-medium text-gray-900 mb-2">{title}</h3>
-    <p className="text-gray-600 mb-4 text-sm">{description}</p>
+    <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">{title}</h3>
+    <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">{description}</p>
     {action && (
       <button
         onClick={action.onClick}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm inline-flex items-center gap-2"
+        className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors font-medium text-sm inline-flex items-center gap-2"
       >
         {action.icon}
         {action.label}
@@ -172,15 +172,15 @@ export const StatBadge = ({
   color?: "gray" | "green" | "blue" | "red" | "yellow";
 }) => {
   const colors = {
-    gray: "bg-gray-100 text-gray-700",
-    green: "bg-green-100 text-green-700",
-    blue: "bg-blue-100 text-blue-700",
-    red: "bg-red-100 text-red-700",
-    yellow: "bg-yellow-100 text-yellow-700",
+    gray: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300",
+    green: "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300",
+    blue: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
+    red: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
+    yellow: "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300",
   };
   return (
     <div className={`${colors[color]} px-4 py-2 rounded-xl text-center min-w-0 flex-1`}>
-      <div className="text-xs text-opacity-80 mb-1">{label}</div>
+      <div className="text-xs opacity-80 mb-1">{label}</div>
       <div className="font-bold text-sm">{value}</div>
     </div>
   );
@@ -260,7 +260,7 @@ export const SecondaryButton = ({
       className={`
         ${sizes[size]}
         ${fullWidth ? "w-full" : ""}
-        bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg
+        bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg
         transition-colors disabled:opacity-50 disabled:cursor-not-allowed
         inline-flex items-center justify-center gap-2
       `}
@@ -284,13 +284,13 @@ export const FeatureCard = ({
   variant?: "default" | "premium";
 }) => {
   const styles = {
-    default: "bg-white border border-gray-200",
+    default: "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700",
     premium: "bg-gradient-to-br from-blue-600 to-indigo-700 text-white border border-blue-500/30",
   };
   return (
     <div className={`${styles[variant]} rounded-xl p-4 shadow-md`}>
       <div className="flex justify-between items-center mb-3">
-        <h3 className={`font-bold text-sm ${variant === "premium" ? "text-white" : "text-gray-900"}`}>
+        <h3 className={`font-bold text-sm ${variant === "premium" ? "text-white" : "text-gray-900 dark:text-gray-100"}`}>
           {title}
         </h3>
         {badge}
@@ -319,8 +319,8 @@ export const ConnectWalletPrompt = ({
   message?: string;
   WalletButtonComponent: React.ReactNode;
 }) => (
-  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-    <p className="text-sm text-yellow-800 font-medium mb-3">{message}</p>
+  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+    <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-3">{message}</p>
     {WalletButtonComponent}
   </div>
 );
