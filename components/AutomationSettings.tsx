@@ -289,7 +289,10 @@ export default function AutomationSettings() {
                         </label>
                         <select
                             value={preferences.thresholds.urgencyLevel}
-                            onChange={(e) => updatePreferences('thresholds', { urgencyLevel: e.target.value })}
+                            onChange={(e) => {
+                                const value = e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+                                updatePreferences('thresholds', { urgencyLevel: value });
+                            }}
                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="LOW">Low - All recommendations</option>
