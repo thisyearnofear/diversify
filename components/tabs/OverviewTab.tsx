@@ -120,43 +120,43 @@ export default function OverviewTab({
             />
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Portfolio Summary with better spacing */}
-            <div className="flex items-center gap-6">
-              <div className="w-28 h-28 flex-shrink-0">
+          <div className="space-y-8">
+            {/* Portfolio Summary with more breathing room */}
+            <div className="flex items-center gap-8">
+              <div className="w-32 h-32 flex-shrink-0">
                 <SimplePieChart data={regionData} title="" />
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 mb-3">
-                  <span className="text-3xl font-bold text-gray-900">${totalValue.toFixed(2)}</span>
-                  <span className="text-sm text-gray-500">total</span>
+              <div className="flex-1 min-w-0 space-y-4">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-4xl font-bold text-gray-900">${totalValue.toFixed(2)}</span>
+                  <span className="text-base text-gray-500">total value</span>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex gap-4">
                   <StatBadge label="Score" value={`${diversificationScore}/100`} color="blue" />
                   <StatBadge label="Regions" value={activeRegions} color="green" />
                 </div>
               </div>
             </div>
 
-            {/* Diversification Rating with better spacing */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
-              <div className="flex items-center justify-between mb-2">
+            {/* Diversification Rating with more space */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <span className="font-bold text-lg text-gray-900">{diversificationRating}</span>
-                  <span className="text-gray-600 text-sm ml-2">Protection</span>
+                  <span className="font-bold text-xl text-gray-900">{diversificationRating}</span>
+                  <span className="text-gray-600 text-base ml-3">Protection</span>
                 </div>
                 <button
                   onClick={() => setActiveTab("swap")}
-                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition-colors"
+                  className="text-sm bg-blue-600 text-white px-5 py-2.5 rounded-full hover:bg-blue-700 transition-colors font-medium"
                 >
                   Improve →
                 </button>
               </div>
-              <p className="text-sm text-gray-600 leading-relaxed">{diversificationDescription}</p>
+              <p className="text-base text-gray-600 leading-relaxed">{diversificationDescription}</p>
             </div>
 
-            {/* Quick Actions with better spacing */}
-            <div className="flex gap-3 pt-2">
+            {/* Quick Actions with more space */}
+            <div className="flex gap-4 pt-4">
               <PrimaryButton onClick={() => setActiveTab("swap")} fullWidth size="lg">
                 Swap
               </PrimaryButton>
@@ -168,89 +168,105 @@ export default function OverviewTab({
         )}
       </Card>
 
-      {/* Progressive Disclosure Sections with better spacing */}
+      {/* Consolidated Sections - Only Two */}
       {hasHoldings && (
         <div className="space-y-4">
-          {/* Regional Breakdown - Collapsible */}
+          {/* Portfolio Details - Combines Regional Breakdown + Recommendations */}
           <CollapsibleSection
-            title="Regional Breakdown"
-            icon={<span className="text-lg">🌍</span>}
+            title="Portfolio Details"
+            icon={<span className="text-lg">📊</span>}
             badge={<span className="text-xs bg-gray-100 px-2 py-1 rounded-full">{activeRegions} regions</span>}
           >
-            <div className="space-y-3">
-              {Object.entries(regionTotals).map(([region, value]) => (
-                <div key={region} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: REGION_COLORS[region as keyof typeof REGION_COLORS] }}
-                    />
-                    <span className="text-sm font-medium text-gray-900">{region}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm font-bold text-gray-900">${value.toFixed(2)}</div>
-                    <div className="text-xs text-gray-500">
-                      {((value / totalValue) * 100).toFixed(1)}%
+            <div className="space-y-6">
+              {/* Regional Breakdown */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-base">🌍</span>
+                  Regional Distribution
+                </h4>
+                <div className="space-y-3">
+                  {Object.entries(regionTotals).map(([region, value]) => (
+                    <div key={region} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-4 h-4 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: REGION_COLORS[region as keyof typeof REGION_COLORS] }}
+                        />
+                        <span className="text-sm font-medium text-gray-900">{region}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-gray-900">${value.toFixed(2)}</div>
+                        <div className="text-xs text-gray-500">
+                          {((value / totalValue) * 100).toFixed(1)}%
+                        </div>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recommendations */}
+              {diversificationTips.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <span className="text-base">💡</span>
+                    Optimization Tips
+                  </h4>
+                  <div className="space-y-3">
+                    {diversificationTips.slice(0, 3).map((tip, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
+                        <span className="text-blue-600 font-bold text-sm mt-0.5">•</span>
+                        <span className="text-sm text-gray-700 leading-relaxed">{tip}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </CollapsibleSection>
 
-          {/* Recommendations - Collapsible */}
-          {diversificationTips.length > 0 && (
-            <CollapsibleSection
-              title="Recommendations"
-              icon={<span className="text-lg">💡</span>}
-            >
-              <div className="space-y-3">
-                {diversificationTips.slice(0, 3).map((tip, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 rounded-lg">
-                    <span className="text-blue-600 font-bold text-sm mt-0.5">•</span>
-                    <span className="text-sm text-gray-700 leading-relaxed">{tip}</span>
-                  </div>
-                ))}
+          {/* Personal Settings - Combines Wealth Journey + Home Region */}
+          <CollapsibleSection
+            title="Personal Settings"
+            icon={<span className="text-lg">⚙️</span>}
+          >
+            <div className="space-y-6">
+              {/* Home Region Selection */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <RegionalIconography region={userRegion} size="sm" />
+                  Home Region
+                </h4>
+                <p className="text-sm text-gray-600 leading-relaxed mb-4">
+                  Select your home region to personalize inflation data and recommendations.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {REGIONS.map((region) => (
+                    <button
+                      key={region}
+                      onClick={() => setUserRegion(region)}
+                      className={`px-4 py-2 text-sm rounded-full transition-colors ${userRegion === region
+                        ? "bg-blue-600 text-white font-medium"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                    >
+                      {region}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </CollapsibleSection>
-          )}
 
-          {/* Wealth Journey - Collapsible */}
-          <CollapsibleSection
-            title="Wealth Journey"
-            icon={<span className="text-lg">🎯</span>}
-          >
-            <div className="pt-2">
-              <WealthJourneyWidget
-                totalValue={totalValue}
-                setActiveTab={setActiveTab}
-                userRegion={userRegion}
-              />
-            </div>
-          </CollapsibleSection>
-
-          {/* Home Region - Collapsible */}
-          <CollapsibleSection
-            title="Home Region"
-            icon={<RegionalIconography region={userRegion} size="sm" />}
-          >
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600 leading-relaxed">
-                Select your home region to personalize inflation data and recommendations.
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {REGIONS.map((region) => (
-                  <button
-                    key={region}
-                    onClick={() => setUserRegion(region)}
-                    className={`px-4 py-2 text-sm rounded-full transition-colors ${userRegion === region
-                      ? "bg-blue-600 text-white font-medium"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                  >
-                    {region}
-                  </button>
-                ))}
+              {/* Wealth Journey */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-base">🎯</span>
+                  Wealth Journey
+                </h4>
+                <WealthJourneyWidget
+                  totalValue={totalValue}
+                  setActiveTab={setActiveTab}
+                  userRegion={userRegion}
+                />
               </div>
             </div>
           </CollapsibleSection>
