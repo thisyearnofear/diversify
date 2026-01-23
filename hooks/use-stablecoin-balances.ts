@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
-import { getTokenAddresses, getNetworkConfig, ABIS, NETWORKS } from '../config';
+import {
+  getTokenAddresses,
+  getNetworkConfig,
+  ABIS,
+  NETWORKS,
+  TOKEN_METADATA,
+  EXCHANGE_RATES
+} from '../config';
 import { executeMulticall, type ContractCall } from '../utils/multicall';
 import { ChainDetectionService } from '../services/swap/chain-detection.service';
 import { ProviderFactoryService } from '../services/swap/provider-factory.service';
@@ -14,82 +21,25 @@ interface StablecoinBalance {
   region: string;
 }
 
-// Token metadata mapping
-const TOKEN_METADATA: Record<string, { name: string; region: string; decimals?: number }> = {
-  // Standard format - Mainnet tokens
-  CUSD: { name: 'Celo Dollar', region: 'USA' },
-  CEUR: { name: 'Celo Euro', region: 'Europe' },
-  CREAL: { name: 'Celo Brazilian Real', region: 'LatAm' },
-  CKES: { name: 'Celo Kenyan Shilling', region: 'Africa' },
-  CCOP: { name: 'Celo Colombian Peso', region: 'LatAm' },
-  PUSO: { name: 'Philippine Peso', region: 'Asia' },
-  CGHS: { name: 'Celo Ghana Cedi', region: 'Africa' },
-  CXOF: { name: 'CFA Franc', region: 'Africa' },
-
-  // Mento v2.0 Alfajores tokens
-  CPESO: { name: 'Philippine Peso', region: 'Asia' },
-  CGBP: { name: 'British Pound', region: 'Europe' },
-  CZAR: { name: 'South African Rand', region: 'Africa' },
-  CCAD: { name: 'Canadian Dollar', region: 'USA' },
-  CAUD: { name: 'Australian Dollar', region: 'Asia' },
-
-  // Add lowercase versions to handle case sensitivity issues
-  cusd: { name: 'Celo Dollar', region: 'USA' },
-  ceur: { name: 'Celo Euro', region: 'Europe' },
-  creal: { name: 'Celo Brazilian Real', region: 'LatAm' },
-  ckes: { name: 'Celo Kenyan Shilling', region: 'Africa' },
-  ccop: { name: 'Celo Colombian Peso', region: 'LatAm' },
-  puso: { name: 'Philippine Peso', region: 'Asia' },
-  cghs: { name: 'Celo Ghana Cedi', region: 'Africa' },
-  cxof: { name: 'CFA Franc', region: 'Africa' },
-  cpeso: { name: 'Philippine Peso', region: 'Asia' },
-  cgbp: { name: 'British Pound', region: 'Europe' },
-  czar: { name: 'South African Rand', region: 'Africa' },
-  ccad: { name: 'Canadian Dollar', region: 'USA' },
-  caud: { name: 'Australian Dollar', region: 'Asia' },
-  USDC: { name: 'USD Coin', region: 'USA', decimals: 6 },
-  usdc: { name: 'USD Coin', region: 'USA', decimals: 6 },
-  PAXG: { name: 'Paxos Gold', region: 'Commodity', decimals: 18 },
-  paxg: { name: 'Paxos Gold', region: 'Commodity', decimals: 18 },
-};
-
-// Updated exchange rates to USD for Mento stablecoins
-const EXCHANGE_RATES: Record<string, number> = {
-  // Standard format - updated rates for mainnet tokens
-  CUSD: 1,
-  CEUR: 1.08,
-  CREAL: 0.2, // 1 BRL = $0.20
-  CKES: 0.0078, // 1 KES = $0.0078
-  CCOP: 0.00025, // 1 COP = $0.00025
-  PUSO: 0.0179, // 1 PHP = $0.0179
-  CGHS: 0.069, // 1 GHS = $0.069
-  CXOF: 0.0016, // 1 XOF = $0.0016
-
-  // Mento v2.0 Alfajores tokens
-  CPESO: 0.0179, // 1 PHP = $0.0179
-  CGBP: 1.27, // 1 GBP = $1.27
-  CZAR: 0.055, // 1 ZAR = $0.055
-  CCAD: 0.74, // 1 CAD = $0.74
-  CAUD: 0.66, // 1 AUD = $0.66
-
-  // Lowercase versions
-  cusd: 1,
-  ceur: 1.08,
-  creal: 0.2,
-  ckes: 0.0078,
-  ccop: 0.00025,
-  puso: 0.0179,
-  cghs: 0.069,
-  cxof: 0.0016,
-  cpeso: 0.0179,
-  cgbp: 1.27,
-  czar: 0.055,
-  ccad: 0.74,
-  caud: 0.66,
-  USDC: 1,
-  usdc: 1,
-  paxg: 2000, // Placeholder Gold Price
-  PAXG: 2000, // Placeholder Gold Price
+// Helper function to normalize region names from centralized config
+const normalizeRegion = (region: string): string => {
+  const regionMap: Record<string, string> = {
+    'GLOBAL': 'USA', // Map GLOBAL to USA for consistency
+    'EUROPE': 'Europe',
+    'AFRICA': 'Africa',
+    'ASIA': 'Asia',
+    'LATAM': 'LatAm',
+    'COMMODITIES': 'Commodities',
+    'COMMODITY': 'Commodities',
+    // Backward compatibility
+    'USA': 'USA',
+    'Europe': 'Europe',
+    'Africa': 'Africa',
+    'Asia': 'Asia',
+    'LatAm': 'LatAm',
+    'Commodities': 'Commodities',
+  };
+  return regionMap[region] || region;
 };
 
 function getCachedBalances(address: string): Record<string, StablecoinBalance> | null {
@@ -225,7 +175,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       // Determine which tokens to fetch based on the network
       let tokensToFetch: string[] = [];
       if (isArc) {
-        tokensToFetch = ['USDC'];
+        tokensToFetch = ['USDC', 'EURC'];
       } else if (isArbitrum) {
         tokensToFetch = ['USDC', 'PAXG'];
       } else if (isAlfajores) {
@@ -243,7 +193,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       tokensToFetch.forEach((symbol) => {
         // Determine which token address list to use based on the network
         const tokenList = getTokenAddresses(currentChainId as number);
-        
+
         // Use type assertion to handle the index signature
         const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
           tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
@@ -266,7 +216,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
           metadata: TOKEN_METADATA[symbol] ||
             TOKEN_METADATA[symbol.toUpperCase()] ||
             TOKEN_METADATA[symbol.toLowerCase()] ||
-            { name: symbol, region: 'Global' },
+            { name: symbol, region: 'GLOBAL' }, // Use GLOBAL as fallback for centralized config
           // Get the exchange rate for this token
           exchangeRate: EXCHANGE_RATES[symbol] ||
             EXCHANGE_RATES[symbol.toUpperCase()] ||
@@ -284,19 +234,19 @@ export function useStablecoinBalances(address: string | undefined | null) {
         const { symbol, metadata, exchangeRate } = tokenMetadataList[index];
         const decimals = metadata.decimals || 18;
         const formattedBalance = ethers.utils.formatUnits(balance, decimals);
-        
+
         // Calculate USD value
         const value = Number.parseFloat(formattedBalance) * exchangeRate;
 
-        if (value <= 0 && formattedBalance === "0.0") return null; 
-        
+        if (value <= 0 && formattedBalance === "0.0") return null;
+
         return {
           symbol,
           name: metadata.name,
           balance: balance.toString(),
           formattedBalance,
           value,
-          region: metadata.region,
+          region: normalizeRegion(metadata.region),
         };
       }).filter(Boolean) as StablecoinBalance[];
 

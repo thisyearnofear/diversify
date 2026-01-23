@@ -241,6 +241,7 @@ export default function DiversiFiPage() {
               <StrategiesTab
                 userRegion={userRegion}
                 regionData={regionData}
+                totalValue={totalValue}
                 onSelectStrategy={setSelectedStrategy}
               />
             )}

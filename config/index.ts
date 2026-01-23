@@ -220,6 +220,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     PUSO: 0.0179,
     CGHS: 0.069,
     CXOF: 0.0016,
+    CPESO: 0.0179, // Philippine Peso (Mento v2.0)
     CGBP: 1.27,
     CZAR: 0.055,
     CCAD: 0.74,
@@ -229,7 +230,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CNGN: 0.00061,
     USDC: 1,
     EURC: 1.08, // Euro Coin
-    PAXG: 2000, // Placeholder Gold Price - Should be fetched dynamically
+    PAXG: 2650, // Updated Gold Price
 } as const;
 
 // Region Configuration
@@ -240,6 +241,7 @@ export const REGIONS = {
     AFRICA: 'Africa',
     ASIA: 'Asia',
     GLOBAL: 'Global',
+    COMMODITIES: 'Commodities',
 } as const;
 
 export const REGION_COLORS = {
@@ -261,6 +263,7 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
     PUSO: { name: 'Philippine Peso', region: 'ASIA' },
     CGHS: { name: 'Celo Ghana Cedi', region: 'AFRICA' },
     CXOF: { name: 'CFA Franc', region: 'AFRICA' },
+    CPESO: { name: 'Philippine Peso', region: 'ASIA' }, // Mento v2.0 Alfajores
     CGBP: { name: 'British Pound', region: 'EUROPE' },
     CZAR: { name: 'South African Rand', region: 'AFRICA' },
     CCAD: { name: 'Canadian Dollar', region: 'USA' },
@@ -270,7 +273,24 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
     CNGN: { name: 'Nigerian Naira', region: 'AFRICA' },
     USDC: { name: 'USD Coin', region: 'GLOBAL', decimals: 6 },
     EURC: { name: 'Euro Coin', region: 'EUROPE', decimals: 6 },
-    PAXG: { name: 'Paxos Gold', region: 'GLOBAL', decimals: 18 },
+    PAXG: { name: 'Pax Gold', region: 'COMMODITIES', decimals: 18 },
+    // Lowercase versions for case-insensitive lookup
+    cusd: { name: 'Celo Dollar', region: 'USA' },
+    ceur: { name: 'Celo Euro', region: 'EUROPE' },
+    creal: { name: 'Celo Brazilian Real', region: 'LATAM' },
+    ckes: { name: 'Celo Kenyan Shilling', region: 'AFRICA' },
+    ccop: { name: 'Celo Colombian Peso', region: 'LATAM' },
+    puso: { name: 'Philippine Peso', region: 'ASIA' },
+    cghs: { name: 'Celo Ghana Cedi', region: 'AFRICA' },
+    cxof: { name: 'CFA Franc', region: 'AFRICA' },
+    cpeso: { name: 'Philippine Peso', region: 'ASIA' },
+    cgbp: { name: 'British Pound', region: 'EUROPE' },
+    czar: { name: 'South African Rand', region: 'AFRICA' },
+    ccad: { name: 'Canadian Dollar', region: 'USA' },
+    caud: { name: 'Australian Dollar', region: 'ASIA' },
+    usdc: { name: 'USD Coin', region: 'GLOBAL', decimals: 6 },
+    eurc: { name: 'Euro Coin', region: 'EUROPE', decimals: 6 },
+    paxg: { name: 'Pax Gold', region: 'COMMODITIES', decimals: 18 },
 } as const;
 
 // ABIs

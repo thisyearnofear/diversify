@@ -1,57 +1,92 @@
 import React, { useState } from "react";
 import type { Region } from "@/hooks/use-user-region";
 
-// Define goal types based on real-world use cases
+// Define goal types based on real-world use cases with multichain considerations
 const GOAL_TYPES = [
   {
     id: "education",
     title: "Education Fund",
-    description: "Save for international education expenses",
+    description: "Save for international education expenses with inflation protection",
     icon: "🎓",
     defaultAmount: 10000,
     defaultTimeframe: 36, // 3 years in months
     recommendedStrategy: "balanced",
     regions: ["USA", "Europe"],
+    commodityAllocation: 15,
+    chains: ["Arc", "Arbitrum"],
+    benefits: [
+      "Protection against education cost inflation",
+      "Gold allocation hedges against currency devaluation",
+      "Cross-chain diversification reduces single-network risk"
+    ]
   },
   {
     id: "travel",
     title: "Travel Fund",
-    description: "Save for international travel expenses",
+    description: "Save for international travel with stable purchasing power",
     icon: "✈️",
     defaultAmount: 3000,
     defaultTimeframe: 12, // 1 year in months
     recommendedStrategy: "conservative",
     regions: ["Europe", "Asia", "LatAm"],
+    commodityAllocation: 10,
+    chains: ["Celo", "Arc", "Arbitrum"],
+    benefits: [
+      "Stable value across multiple travel destinations",
+      "Small commodity buffer against travel cost inflation",
+      "Regional currency exposure for destination spending"
+    ]
   },
   {
     id: "remittance",
     title: "Remittance Fund",
-    description: "Save on fees when sending money internationally",
+    description: "Optimize cross-border transfers with multichain efficiency",
     icon: "💸",
     defaultAmount: 5000,
     defaultTimeframe: 24, // 2 years in months
     recommendedStrategy: "balanced",
-    regions: ["Asia", "LatAm"],
+    regions: ["Asia", "LatAm", "Africa"],
+    commodityAllocation: 10,
+    chains: ["Celo", "Arbitrum"],
+    benefits: [
+      "Lower fees through multichain routing",
+      "Commodity backing protects recipient purchasing power",
+      "Regional stablecoin exposure matches recipient needs"
+    ]
   },
   {
     id: "business",
     title: "Business Protection",
-    description: "Protect against exchange rate fluctuations for your business",
+    description: "Hedge operational costs and supply chain inflation",
     icon: "🏭",
     defaultAmount: 20000,
     defaultTimeframe: 18, // 1.5 years in months
     recommendedStrategy: "inflationHedge",
-    regions: ["USA", "Europe", "LatAm"],
+    regions: ["USA", "Europe", "Asia"],
+    commodityAllocation: 25,
+    chains: ["Arc", "Arbitrum", "Celo"],
+    benefits: [
+      "Strong commodity hedge against supply chain inflation",
+      "Multi-regional exposure matches global business operations",
+      "Cross-chain flexibility for international payments"
+    ]
   },
   {
     id: "emergency",
     title: "Emergency Fund",
-    description: "Build a safety net that maintains its value",
+    description: "Build a crisis-resistant safety net with real asset backing",
     icon: "🛡️",
     defaultAmount: 5000,
     defaultTimeframe: 6, // 6 months
     recommendedStrategy: "conservative",
     regions: ["USA", "Europe"],
+    commodityAllocation: 15,
+    chains: ["Arc", "Arbitrum"],
+    benefits: [
+      "Gold allocation provides crisis-resistant store of value",
+      "Stable regional currencies for immediate liquidity",
+      "Multichain access ensures fund availability"
+    ]
   },
 ];
 
@@ -136,11 +171,10 @@ export default function GoalBasedStrategies({
         {GOAL_TYPES.map((goal) => (
           <button
             key={goal.id}
-            className={`px-3 py-2 mr-2 rounded-md whitespace-nowrap flex items-center ${
-              activeGoal === goal.id
-                ? "bg-blue-100 text-blue-800 font-medium"
-                : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-            }`}
+            className={`px-3 py-2 mr-2 rounded-md whitespace-nowrap flex items-center ${activeGoal === goal.id
+              ? "bg-blue-100 text-blue-800 font-medium"
+              : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+              }`}
             onClick={() => handleGoalSelect(goal.id)}
           >
             <span className="mr-1">{goal.icon}</span>
@@ -152,7 +186,7 @@ export default function GoalBasedStrategies({
       <div className="bg-blue-50 p-3 rounded-md mb-4">
         <div className="flex items-start">
           <div className="text-2xl mr-3">{currentGoal.icon}</div>
-          <div>
+          <div className="flex-1">
             <h3 className="font-medium text-blue-800">{currentGoal.title}</h3>
             <p className="text-sm text-blue-600 mt-1">
               {currentGoal.description}
@@ -161,13 +195,25 @@ export default function GoalBasedStrategies({
               {currentGoal.regions.map((region) => (
                 <span
                   key={region}
-                  className={`inline-block text-xs px-2 py-1 rounded-full ${
-                    region === userRegion
-                      ? "bg-blue-200 text-blue-800 font-medium"
-                      : "bg-blue-100 text-blue-700"
-                  }`}
+                  className={`inline-block text-xs px-2 py-1 rounded-full ${region === userRegion
+                    ? "bg-blue-200 text-blue-800 font-medium"
+                    : "bg-blue-100 text-blue-700"
+                    }`}
                 >
                   {region}
+                </span>
+              ))}
+              <span className="inline-block text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                🥇 {currentGoal.commodityAllocation}% Gold
+              </span>
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {currentGoal.chains.map((chain) => (
+                <span
+                  key={chain}
+                  className="inline-block text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700"
+                >
+                  {chain}
                 </span>
               ))}
             </div>
@@ -256,13 +302,11 @@ export default function GoalBasedStrategies({
       <div className="bg-green-50 p-3 rounded-md">
         <h3 className="font-medium text-green-700 mb-2">Strategy Benefits</h3>
         <ul className="text-sm text-green-600 list-disc pl-5 space-y-1">
-          <li>
-            Protection against inflation in {currentGoal.regions.join(" and ")}{" "}
-            regions
-          </li>
-          <li>Optimized for {currentGoal.title.toLowerCase()} expenses</li>
-          <li>Automatic monthly savings recommendations</li>
-          <li>Flexible timeframe to meet your goals</li>
+          {currentGoal.benefits.map((benefit, index) => (
+            <li key={index}>{benefit}</li>
+          ))}
+          <li>Monthly savings target: ${monthlySavingsNeeded.toFixed(2)}</li>
+          <li>Flexible timeframe to meet your {timeframeMonths}-month goal</li>
         </ul>
       </div>
 

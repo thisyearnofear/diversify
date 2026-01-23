@@ -1,6 +1,6 @@
 import React from "react";
 
-// Define region metadata
+// Define region metadata with multichain asset support
 const REGION_METADATA = {
   Africa: {
     color: "#F56565", // red-500
@@ -8,6 +8,7 @@ const REGION_METADATA = {
     inflationRate: 11.2,
     volatility: "High",
     growthPotential: "High",
+    chains: ["Celo"],
   },
   LatAm: {
     color: "#F6AD55", // orange-400
@@ -15,6 +16,7 @@ const REGION_METADATA = {
     inflationRate: 5.9,
     volatility: "Medium",
     growthPotential: "Medium",
+    chains: ["Celo"],
   },
   Asia: {
     color: "#9F7AEA", // purple-400
@@ -22,68 +24,107 @@ const REGION_METADATA = {
     inflationRate: 3.9,
     volatility: "Medium",
     growthPotential: "High",
+    chains: ["Celo"],
   },
   Europe: {
     color: "#48BB78", // green-500
-    tokens: ["cEUR"],
+    tokens: ["cEUR", "EURC"],
     inflationRate: 2.4,
     volatility: "Low",
     growthPotential: "Low",
+    chains: ["Celo", "Arc"],
   },
   USA: {
     color: "#4299E1", // blue-500
-    tokens: ["cUSD"],
+    tokens: ["cUSD", "USDC"],
     inflationRate: 3.1,
     volatility: "Low",
     growthPotential: "Medium",
+    chains: ["Celo", "Arc"],
+  },
+  Commodities: {
+    color: "#D69E2E", // yellow-600
+    tokens: ["PAXG"],
+    inflationRate: -1.2, // Commodities often outpace inflation
+    volatility: "Medium",
+    growthPotential: "Medium",
+    chains: ["Arbitrum"],
   },
 };
 
-// Portfolio allocation strategies
+// Portfolio allocation strategies with multichain asset classes
 const PORTFOLIO_STRATEGIES = {
   conservative: {
     name: "Conservative",
-    description: "Focus on stability with lower-inflation regions",
+    description: "Focus on stability with minimal commodity exposure",
     allocations: {
-      USA: 0.4,
-      Europe: 0.3,
+      USA: 0.35,
+      Europe: 0.25,
       Asia: 0.1,
       LatAm: 0.1,
       Africa: 0.1,
+      Commodities: 0.1, // Small gold allocation for stability
     },
+    benefits: [
+      "Minimal volatility with stable regional currencies",
+      "Small gold allocation for inflation protection",
+      "Focus on developed market stablecoins",
+      "Cross-chain diversification across Celo, Arc, and Arbitrum"
+    ]
   },
   balanced: {
     name: "Balanced",
-    description: "Mix of stability and growth potential",
+    description: "Mix of regional stability and commodity protection",
     allocations: {
-      USA: 0.3,
+      USA: 0.25,
       Europe: 0.2,
-      Asia: 0.2,
+      Asia: 0.15,
       LatAm: 0.15,
-      Africa: 0.15,
+      Africa: 0.1,
+      Commodities: 0.15, // Moderate commodity exposure
     },
+    benefits: [
+      "Balanced exposure across regions and asset classes",
+      "Meaningful commodity allocation for inflation hedge",
+      "Diversified across multiple blockchain networks",
+      "Optimal risk-adjusted returns"
+    ]
   },
   growth: {
     name: "Growth",
-    description: "Higher exposure to emerging markets",
+    description: "Higher exposure to emerging markets with commodity backing",
     allocations: {
       USA: 0.2,
       Europe: 0.15,
-      Asia: 0.25,
+      Asia: 0.2,
       LatAm: 0.2,
-      Africa: 0.2,
+      Africa: 0.15,
+      Commodities: 0.1, // Moderate commodity for stability
     },
+    benefits: [
+      "Higher exposure to high-growth emerging markets",
+      "Commodity backing provides stability anchor",
+      "Leverages multichain ecosystem for maximum opportunities",
+      "Balanced growth with inflation protection"
+    ]
   },
   inflationHedge: {
     name: "Inflation Hedge",
-    description: "Optimized for inflation protection",
+    description: "Optimized for inflation protection with significant commodity exposure",
     allocations: {
-      USA: 0.25,
-      Europe: 0.25,
-      Asia: 0.2,
+      USA: 0.2,
+      Europe: 0.2,
+      Asia: 0.15,
       LatAm: 0.15,
-      Africa: 0.15,
+      Africa: 0.1,
+      Commodities: 0.2, // Significant commodity allocation
     },
+    benefits: [
+      "Maximum inflation protection through commodity exposure",
+      "Gold allocation hedges against currency debasement",
+      "Regional diversification reduces single-currency risk",
+      "Multichain strategy leverages best assets on each network"
+    ]
   },
 };
 
@@ -217,11 +258,10 @@ export default function PortfolioRecommendations({
               onClick={() =>
                 handleStrategyChange(key as keyof typeof PORTFOLIO_STRATEGIES)
               }
-              className={`p-2 text-sm rounded-md transition-colors shadow-sm ${
-                selectedStrategy === key
-                  ? "bg-blue-600 border-blue-700 border text-white font-medium"
-                  : "bg-gray-50 border border-gray-200 text-gray-800 hover:bg-gray-100"
-              }`}
+              className={`p-2 text-sm rounded-md transition-colors shadow-sm ${selectedStrategy === key
+                ? "bg-blue-600 border-blue-700 border text-white font-medium"
+                : "bg-gray-50 border border-gray-200 text-gray-800 hover:bg-gray-100"
+                }`}
             >
               <div className="font-medium">{strategy.name}</div>
               <div className="text-xs mt-1">{strategy.description}</div>
@@ -266,8 +306,43 @@ export default function PortfolioRecommendations({
                 <span className="font-medium text-gray-900">
                   {region}: {(allocation * 100).toFixed(0)}%
                 </span>
+                {region === "Commodities" && (
+                  <span className="ml-1 text-xs text-gray-500">(Arbitrum)</span>
+                )}
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Multichain Asset Breakdown */}
+        <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+          <h4 className="font-medium text-blue-800 mb-2">Multichain Asset Distribution</h4>
+          <div className="grid grid-cols-1 gap-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-blue-700">🌐 Celo Network:</span>
+              <span className="font-medium text-blue-800">
+                {(
+                  (PORTFOLIO_STRATEGIES[selectedStrategy].allocations.Africa || 0) +
+                  (PORTFOLIO_STRATEGIES[selectedStrategy].allocations.LatAm || 0) +
+                  (PORTFOLIO_STRATEGIES[selectedStrategy].allocations.Asia || 0)
+                ).toFixed(0)}% (Regional Stablecoins)
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-blue-700">⚡ Arc Network:</span>
+              <span className="font-medium text-blue-800">
+                {(
+                  (PORTFOLIO_STRATEGIES[selectedStrategy].allocations.USA || 0) +
+                  (PORTFOLIO_STRATEGIES[selectedStrategy].allocations.Europe || 0)
+                ).toFixed(0)}% (USDC, EURC)
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-blue-700">🔷 Arbitrum:</span>
+              <span className="font-medium text-blue-800">
+                {((PORTFOLIO_STRATEGIES[selectedStrategy].allocations.Commodities || 0) * 100).toFixed(0)}% (PAXG Gold)
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -339,18 +414,9 @@ export default function PortfolioRecommendations({
       <div className="bg-blue-50 p-4 rounded-md border border-blue-200 shadow-sm">
         <h3 className="font-bold text-gray-900 mb-2">Strategy Benefits</h3>
         <ul className="text-sm text-gray-800 list-disc pl-5 space-y-2">
-          <li className="font-medium">
-            Reduce exposure to high-inflation regions
-          </li>
-          <li className="font-medium">
-            Maintain purchasing power across different economies
-          </li>
-          <li className="font-medium">
-            Protect against currency devaluation in any single region
-          </li>
-          <li className="font-medium">
-            Create a more resilient savings portfolio
-          </li>
+          {PORTFOLIO_STRATEGIES[selectedStrategy].benefits.map((benefit, index) => (
+            <li key={index} className="font-medium">{benefit}</li>
+          ))}
         </ul>
       </div>
     </div>

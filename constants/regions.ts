@@ -5,7 +5,8 @@ export const REGION_COLORS = {
   LatAm: "#F59E0B", // Enhanced orange/yellow
   Africa: "#EF4444", // Enhanced red/terracotta
   Asia: "#D946EF", // Enhanced purple/pink
-  Commodity: "#F97316", // Orange for commodities like gold
+  Commodities: "#D69E2E", // Gold/yellow for commodities
+  Commodity: "#D69E2E", // Backward compatibility
 };
 
 // Region background colors (lighter versions)
@@ -15,7 +16,8 @@ export const REGION_BG_COLORS = {
   LatAm: "#FEF3C7", // Light yellow
   Africa: "#FEE2E2", // Light red
   Asia: "#F5D0FE", // Light purple
-  Commodity: "#FED7AA", // Light orange
+  Commodities: "#FEF3C7", // Light gold
+  Commodity: "#FEF3C7", // Backward compatibility
 };
 
 // Region dark colors for text and borders
@@ -25,7 +27,8 @@ export const REGION_DARK_COLORS = {
   LatAm: "#B45309", // Dark orange
   Africa: "#B91C1C", // Dark red
   Asia: "#A21CAF", // Dark purple
-  Commodity: "#C2410C", // Dark orange
+  Commodities: "#B45309", // Dark gold
+  Commodity: "#B45309", // Backward compatibility
 };
 
 // Region contrast colors for text on colored backgrounds
@@ -35,7 +38,8 @@ export const REGION_CONTRAST_COLORS = {
   LatAm: "#78350F", // Very dark orange
   Africa: "#7F1D1D", // Very dark red
   Asia: "#701A75", // Very dark purple
-  Commodity: "#7C2D12", // Very dark orange
+  Commodities: "#78350F", // Very dark gold
+  Commodity: "#78350F", // Backward compatibility
 };
 
 // Available tokens - includes all Mento stablecoins
@@ -61,7 +65,7 @@ export const AVAILABLE_TOKENS = [
   { symbol: "USDC", name: "USD Coin", region: "USA" },
 
   // Arbitrum RWAs (Safe Havens)
-  { symbol: "PAXG", name: "Paxos Gold", region: "Commodity" },
+  { symbol: "PAXG", name: "Paxos Gold", region: "Commodities" },
 ];
 
 // Arc testnet tokens (available when connected to Arc testnet)
@@ -111,4 +115,8 @@ export const EXCHANGE_RATES: Record<string, number> = {
   // Arc testnet tokens
   EURC: 1.08, // Euro Coin
   eurc: 1.08,
+
+  // Commodities
+  PAXG: 2650, // Pax Gold (approximate gold price)
+  paxg: 2650,
 };
