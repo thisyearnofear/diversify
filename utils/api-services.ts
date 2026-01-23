@@ -380,6 +380,28 @@ function getFallbackRegionalInflationData(regionCode: string) {
   };
 }
 
+function getFallbackExchangeRate(fromCurrency: string, toCurrency: string) {
+  // Simple fallback exchange rates
+  const rates: Record<string, number> = {
+    'USD': 1.0,
+    'EUR': 0.85,
+    'GBP': 0.73,
+    'JPY': 110.0,
+    'CAD': 1.25,
+    'AUD': 1.35,
+  };
+
+  const fromRate = rates[fromCurrency] || 1.0;
+  const toRate = rates[toCurrency] || 1.0;
+  const rate = toRate / fromRate;
+
+  return {
+    rate,
+    timestamp: new Date().toISOString().split('T')[0],
+    source: 'fallback'
+  };
+}
+
 // Cache helpers
 function getCachedData(key: string, duration: number): any {
   try {

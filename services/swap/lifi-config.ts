@@ -56,11 +56,6 @@ export function validateWalletProvider(): void {
         throw new Error('No wallet provider found. Please install MetaMask or another Web3 wallet.');
     }
 
-    // Check if the wallet provider is properly connected
-    if (window.ethereum.isConnected && !window.ethereum.isConnected()) {
-        throw new Error('Wallet is not connected. Please connect your wallet and try again.');
-    }
-
     // Additional checks for common wallet properties
     if (!window.ethereum.request) {
         throw new Error('Wallet provider is missing required methods. Please ensure you have a compatible Web3 wallet.');
@@ -77,8 +72,8 @@ export async function checkExecutionProviders(): Promise<void> {
         const { config } = await import('@lifi/sdk');
 
         // Check if we can access the config
-        if (config && typeof config.getConfig === 'function') {
-            const currentConfig = config.getConfig();
+        if (config && typeof config.get === 'function') {
+            const currentConfig = config.get();
             console.log('[LiFi Config] Current LiFi configuration:', {
                 integrator: currentConfig.integrator,
                 apiUrl: currentConfig.apiUrl
