@@ -444,7 +444,10 @@ export class ArcAgent {
                 riskLevel: analysis.riskLevel || 'MEDIUM',
                 dataSources,
                 arcTxHash,
-                paymentHashes
+                paymentHashes,
+                executionMode: 'TESTNET_DEMO',
+                actionSteps: steps,
+                urgencyLevel: 'MEDIUM'
             };
 
         } catch (error) {

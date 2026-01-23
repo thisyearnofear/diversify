@@ -8,7 +8,7 @@
 
 import { unifiedCache, CacheCategory } from './unified-cache-service';
 import { circuitBreakerManager } from './circuit-breaker-service';
-import { EXCHANGE_RATES } from '../config/constants';
+import { EXCHANGE_RATES } from '../config';
 
 // Cache durations
 const CACHE_DURATIONS = {

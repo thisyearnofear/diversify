@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useWalletContext } from './WalletProvider';
 
@@ -33,13 +33,7 @@ export default function AutomationSettings() {
     const [saving, setSaving] = useState(false);
     const [testingAutomation, setTestingAutomation] = useState(false);
 
-    useEffect(() => {
-        if (address) {
-            loadPreferences();
-        }
-    }, [address]);
-
-    const loadPreferences = async () => {
+    const loadPreferences = useCallback(async () => {
         try {
             const response = await fetch(`/api/agent/automation?userAddress=${address}`);
             const data = await response.json();
@@ -49,7 +43,13 @@ export default function AutomationSettings() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [address]);
+
+    useEffect(() => {
+        if (address) {
+            loadPreferences();
+        }
+    }, [address, loadPreferences]);
 
     const savePreferences = async () => {
         if (!preferences || !address) return;
@@ -97,7 +97,7 @@ export default function AutomationSettings() {
         }
     };
 
-    const updatePreferences = (section: keyof AutomationPreferences, updates: any) => {
+    const updatePreferences = (section: keyof AutomationPreferences, updates: Partial<AutomationPreferences[keyof AutomationPreferences]>) => {
         if (!preferences) return;
 
         setPreferences({
@@ -181,10 +181,10 @@ export default function AutomationSettings() {
                                     <label key={key} className="flex items-start gap-3 cursor-pointer">
                                         <input
                                             type="checkbox"
-                                            checked={preferences.email.types.includes(key as any)}
+                                            checked={preferences.email.types.includes(key as 'rebalance_alert' | 'urgent_action' | 'weekly_summary')}
                                             onChange={(e) => {
                                                 const types = e.target.checked
-                                                    ? [...preferences.email.types, key as any]
+                                                    ? [...preferences.email.types, key as 'rebalance_alert' | 'urgent_action' | 'weekly_summary']
                                                     : preferences.email.types.filter(t => t !== key);
                                                 updatePreferences('email', { types });
                                             }}

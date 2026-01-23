@@ -50,6 +50,86 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(200).json({ preferences });
 
         case 'POST':
+            // Check if this is a test request
+            if (req.url?.includes('/test')) {
+                // Test automation with sample data
+                try {
+                    const testPreferences = userPreferences.get(userId) || getDefaultPreferences(email as string);
+
+                    const testAnalysis = {
+                        action: 'SWAP' as const,
+                        targetToken: 'PAXG',
+                        targetNetwork: 'Arbitrum' as const,
+                        confidence: 0.85,
+                        reasoning: 'High inflation detected in your region (4.2%). Moving to gold-backed PAXG provides better wealth protection.',
+                        expectedSavings: 75,
+                        timeHorizon: '6 months',
+                        riskLevel: 'MEDIUM' as const,
+                        dataSources: ['Truflation Premium', 'Macro Regime Oracle'],
+                        executionMode: 'ADVISORY' as const,
+                        actionSteps: [
+                            'Open Arbitrum-compatible wallet or exchange',
+                            'Search for PAXG (PAX Gold) trading pair',
+                            'Consider swapping 30% of portfolio to PAXG',
+                            'Monitor gold prices and inflation trends'
+                        ],
+                        urgencyLevel: 'HIGH' as const,
+                        automationTriggers: {
+                            email: {
+                                enabled: testPreferences.email.enabled,
+                                recipient: testPreferences.email.address,
+                                template: 'rebalance_alert' as const
+                            }
+                        }
+                    };
+
+                    // Create automation service with user preferences
+                    const automationConfig = {
+                        email: {
+                            enabled: testPreferences.email.enabled,
+                            provider: (process.env.EMAIL_PROVIDER as 'sendgrid' | 'resend') || 'sendgrid',
+                            apiKey: process.env.SENDGRID_API_KEY || process.env.RESEND_API_KEY,
+                            fromEmail: process.env.FROM_EMAIL || 'agent@diversifi.app',
+                            templates: {
+                                rebalance_alert: 'rebalance',
+                                urgent_action: 'urgent',
+                                weekly_summary: 'summary'
+                            }
+                        },
+                        zapier: {
+                            enabled: testPreferences.zapier.enabled,
+                            webhookUrl: testPreferences.zapier.webhookUrl
+                        },
+                        make: {
+                            enabled: false,
+                            webhookUrl: undefined
+                        },
+                        slack: {
+                            enabled: testPreferences.slack.enabled,
+                            webhookUrl: testPreferences.slack.webhookUrl,
+                            channel: testPreferences.slack.channel
+                        }
+                    };
+
+                    const automationService = new AutomationService(automationConfig);
+
+                    await automationService.processAnalysis(
+                        testAnalysis,
+                        testPreferences.email.address,
+                        { balance: 1000, holdings: ['CUSD'] }
+                    );
+
+                    return res.status(200).json({
+                        success: true,
+                        message: 'Test automation triggered successfully',
+                        testData: testAnalysis
+                    });
+                } catch (error) {
+                    console.error('Test automation failed:', error);
+                    return res.status(500).json({ error: 'Test automation failed' });
+                }
+            }
+            
             // Update user's automation preferences
             try {
                 const newPreferences: AutomationPreferences = req.body;
@@ -69,84 +149,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             } catch (error) {
                 console.error('Failed to update automation preferences:', error);
                 return res.status(500).json({ error: 'Failed to update preferences' });
-            }
-
-        case 'POST' && req.url?.includes('/test'):
-            // Test automation with sample data
-            try {
-                const preferences = userPreferences.get(userId) || getDefaultPreferences(email as string);
-
-                const testAnalysis = {
-                    action: 'SWAP' as const,
-                    targetToken: 'PAXG',
-                    targetNetwork: 'Arbitrum' as const,
-                    confidence: 0.85,
-                    reasoning: 'High inflation detected in your region (4.2%). Moving to gold-backed PAXG provides better wealth protection.',
-                    expectedSavings: 75,
-                    timeHorizon: '6 months',
-                    riskLevel: 'MEDIUM' as const,
-                    dataSources: ['Truflation Premium', 'Macro Regime Oracle'],
-                    executionMode: 'ADVISORY' as const,
-                    actionSteps: [
-                        'Open Arbitrum-compatible wallet or exchange',
-                        'Search for PAXG (PAX Gold) trading pair',
-                        'Consider swapping 30% of portfolio to PAXG',
-                        'Monitor gold prices and inflation trends'
-                    ],
-                    urgencyLevel: 'HIGH' as const,
-                    automationTriggers: {
-                        email: {
-                            enabled: preferences.email.enabled,
-                            recipient: preferences.email.address,
-                            template: 'rebalance_alert' as const
-                        }
-                    }
-                };
-
-                // Create automation service with user preferences
-                const automationConfig = {
-                    email: {
-                        enabled: preferences.email.enabled,
-                        provider: (process.env.EMAIL_PROVIDER as 'sendgrid' | 'resend') || 'sendgrid',
-                        apiKey: process.env.SENDGRID_API_KEY || process.env.RESEND_API_KEY,
-                        fromEmail: process.env.FROM_EMAIL || 'agent@diversifi.app',
-                        templates: {
-                            rebalance_alert: 'rebalance',
-                            urgent_action: 'urgent',
-                            weekly_summary: 'summary'
-                        }
-                    },
-                    zapier: {
-                        enabled: preferences.zapier.enabled,
-                        webhookUrl: preferences.zapier.webhookUrl
-                    },
-                    make: {
-                        enabled: false,
-                        webhookUrl: undefined
-                    },
-                    slack: {
-                        enabled: preferences.slack.enabled,
-                        webhookUrl: preferences.slack.webhookUrl,
-                        channel: preferences.slack.channel
-                    }
-                };
-
-                const automationService = new AutomationService(automationConfig);
-
-                await automationService.processAnalysis(
-                    testAnalysis,
-                    preferences.email.address,
-                    { balance: 1000, holdings: ['CUSD'] }
-                );
-
-                return res.status(200).json({
-                    success: true,
-                    message: 'Test automation triggered successfully',
-                    testData: testAnalysis
-                });
-            } catch (error) {
-                console.error('Test automation failed:', error);
-                return res.status(500).json({ error: 'Test automation failed' });
             }
 
         default:

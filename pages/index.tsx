@@ -29,16 +29,6 @@ export default function DiversiFiPage() {
   const { activeTab, setActiveTab } = useAppState();
   const [selectedStrategy, setSelectedStrategy] = useState("balanced");
 
-  // Dynamic token list based on network
-  const availableTokens = useMemo(() => {
-    if (chainId === 5042002) {
-      // Arc testnet - show testnet tokens
-      return ARC_TESTNET_TOKENS;
-    }
-    // Default to mainnet tokens
-    return AVAILABLE_TOKENS;
-  }, [chainId]);
-
   // Wallet connection from context
   const {
     isMiniPay: isInMiniPay,
@@ -66,6 +56,19 @@ export default function DiversiFiPage() {
     refreshBalances,
     refreshChainId,
   } = useStablecoinBalances(address);
+
+  // Extract chainId for use in memo
+  const currentChainId = chainId;
+
+  // Dynamic token list based on network
+  const availableTokens = useMemo(() => {
+    if (currentChainId === 5042002) {
+      // Arc testnet - show testnet tokens
+      return ARC_TESTNET_TOKENS;
+    }
+    // Default to mainnet tokens
+    return AVAILABLE_TOKENS;
+  }, [currentChainId]);
   // const { data: performanceData, isLoading: isPerformanceLoading } =
   //   useHistoricalPerformance(address); // performanceData is not currently used
   // We use inflationData in the SwapTab component
@@ -148,7 +151,7 @@ export default function DiversiFiPage() {
           // It sets chainId state. 
 
           // Let's implement a robust check here.
-          (!ChainDetectionService.isSupported(chainId) && chainId !== null) && (
+          (!ChainDetectionService.isSupported(currentChainId) && currentChainId !== null) && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4">
               <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
                 <div className="mx-auto bg-amber-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">

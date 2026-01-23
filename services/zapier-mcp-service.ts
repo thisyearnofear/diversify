@@ -279,13 +279,16 @@ export class ZapierMCPService {
 
             const success = await this.triggerAutomation(
                 {
-                    action: 'TEST',
-                    expected_savings: 0,
+                    action: 'HOLD',
+                    expectedSavings: 0,
+                    timeHorizon: 'immediate',
+                    riskLevel: 'LOW',
                     urgencyLevel: 'LOW',
                     confidence: 1.0,
                     reasoning: 'Connection test',
                     dataSources: ['test'],
-                    executionMode: 'TEST',
+                    executionMode: 'TESTNET_DEMO',
+                    actionSteps: ['test'],
                     paymentHashes: {}
                 } as AnalysisResult,
                 'test@example.com',
