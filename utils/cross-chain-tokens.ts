@@ -36,6 +36,18 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         ],
     },
     {
+        symbol: 'EURC',
+        name: 'Euro Coin',
+        region: 'Europe',
+        chains: [
+            {
+                chainId: NETWORKS.ARC_TESTNET.chainId,
+                address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
+                decimals: 6,
+            },
+        ],
+    },
+    {
         symbol: 'CUSD',
         name: 'Celo Dollar',
         region: 'USA',

@@ -61,6 +61,11 @@ const NETWORK_TOKENS: Record<
     { symbol: "USDC", name: "USD Coin", region: "USA" },
     { symbol: "PAXG", name: "Paxos Gold", region: "Global" },
   ],
+  // Arc Testnet
+  [NETWORKS.ARC_TESTNET.chainId]: [
+    { symbol: "USDC", name: "USD Coin", region: "USA" },
+    { symbol: "EURC", name: "Euro Coin", region: "Europe" },
+  ],
 };
 
 interface SwapTabProps {

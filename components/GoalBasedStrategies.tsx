@@ -156,12 +156,12 @@ export default function GoalBasedStrategies({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-4 border border-gray-200">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 mb-4 border border-gray-200 dark:border-gray-700">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold text-gray-900">
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
           Goal-Based Strategies
         </h2>
-        <span className="text-xs text-gray-700 bg-gray-100 px-2 py-1 rounded-full">
+        <span className="text-xs text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-full">
           Based on World Bank data
         </span>
       </div>
@@ -224,16 +224,16 @@ export default function GoalBasedStrategies({
       {/* Goal Calculator */}
       <div className="space-y-4 mb-4">
         <div>
-          <label className="block text-sm font-bold text-gray-900 mb-1">
+          <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
             Goal Amount
           </label>
           <div className="relative rounded-md shadow-sm">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-700 font-medium sm:text-sm">$</span>
+              <span className="text-gray-700 dark:text-gray-300 font-medium sm:text-sm">$</span>
             </div>
             <input
               type="number"
-              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 rounded-md shadow-sm text-gray-900 font-medium"
+              className="focus:ring-blue-500 focus:border-blue-500 block w-full pl-7 pr-12 sm:text-sm border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-gray-100 dark:bg-gray-800 font-medium placeholder-gray-400 dark:placeholder-gray-500"
               placeholder="0.00"
               value={goalAmount}
               onChange={(e) => setGoalAmount(Number(e.target.value))}
@@ -242,7 +242,7 @@ export default function GoalBasedStrategies({
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-900 mb-1">
+          <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
             Timeframe (months)
           </label>
           <input
@@ -251,9 +251,9 @@ export default function GoalBasedStrategies({
             max="60"
             value={timeframeMonths}
             onChange={(e) => setTimeframeMonths(Number(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
           />
-          <div className="flex justify-between text-xs text-gray-700 font-medium mt-1">
+          <div className="flex justify-between text-xs text-gray-700 dark:text-gray-300 font-medium mt-1">
             <span>1 month</span>
             <span>{timeframeMonths} months</span>
             <span>5 years</span>
@@ -261,16 +261,16 @@ export default function GoalBasedStrategies({
         </div>
 
         <div>
-          <label className="block text-sm font-bold text-gray-900 mb-1">
+          <label className="block text-sm font-bold text-gray-900 dark:text-gray-100 mb-1">
             Recommended Strategy
           </label>
           <select
-            className="focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md shadow-sm text-gray-900"
+            className="focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-gray-900 dark:text-gray-100 dark:bg-gray-800 bg-white appearance-none cursor-pointer"
             value={selectedStrategy}
             onChange={(e) => handleStrategyChange(e.target.value)}
           >
             {STRATEGY_OPTIONS.map((strategy) => (
-              <option key={strategy.id} value={strategy.id}>
+              <option key={strategy.id} value={strategy.id} className="dark:bg-gray-800 dark:text-gray-100">
                 {strategy.name} - {strategy.description}
               </option>
             ))}
@@ -280,28 +280,28 @@ export default function GoalBasedStrategies({
 
       {/* Results */}
       <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-gray-50 p-3 rounded-md">
-          <div className="text-sm text-gray-500">Monthly Savings Needed</div>
-          <div className="text-xl font-semibold text-blue-600">
+        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+          <div className="text-sm text-gray-500 dark:text-gray-400">Monthly Savings Needed</div>
+          <div className="text-xl font-semibold text-blue-600 dark:text-blue-400">
             ${monthlySavingsNeeded.toFixed(2)}
           </div>
         </div>
 
-        <div className="bg-gray-50 p-3 rounded-md">
-          <div className="text-sm text-gray-500">Estimated Value</div>
-          <div className="text-xl font-semibold text-green-600">
+        <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-md">
+          <div className="text-sm text-gray-500 dark:text-gray-400">Estimated Value</div>
+          <div className="text-xl font-semibold text-green-600 dark:text-green-400">
             ${estimatedValue.toFixed(2)}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             After {timeframeMonths} months
           </div>
         </div>
       </div>
 
       {/* Strategy Benefits */}
-      <div className="bg-green-50 p-3 rounded-md">
-        <h3 className="font-medium text-green-700 mb-2">Strategy Benefits</h3>
-        <ul className="text-sm text-green-600 list-disc pl-5 space-y-1">
+      <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-md">
+        <h3 className="font-medium text-green-700 dark:text-green-300 mb-2">Strategy Benefits</h3>
+        <ul className="text-sm text-green-600 dark:text-green-400 list-disc pl-5 space-y-1">
           {currentGoal.benefits.map((benefit, index) => (
             <li key={index}>{benefit}</li>
           ))}
