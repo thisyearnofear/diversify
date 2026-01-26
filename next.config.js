@@ -46,10 +46,9 @@ const nextConfig = {
             value: "origin-when-cross-origin",
           },
           {
-            // Add Content-Security-Policy to allow MiniPay embedding
             key: "Content-Security-Policy",
             value:
-              "frame-ancestors 'self' *.minipay.app *.celo.org *.opera.com *.warpcast.com https://warpcast.com;",
+              "frame-ancestors 'self' https://*.minipay.app https://minipay.app https://*.celo.org https://*.opera.com https://*.warpcast.com https://warpcast.com https://*.farcaster.xyz https://farcaster.xyz;",
           },
         ],
       },

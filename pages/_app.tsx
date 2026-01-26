@@ -8,52 +8,56 @@ import { WalletProvider } from "../components/wallet/WalletProvider";
 import { ToastProvider } from "../components/ui/Toast";
 import { AppStateProvider } from "../context/AppStateContext";
 import { useRouter } from "next/router";
+import sdk from "@farcaster/miniapp-sdk";
 
 export default function App({ Component, pageProps }: AppProps) {
   const [isInMiniPay, setIsInMiniPay] = useState(false);
   const router = useRouter();
 
+  // Signal Farcaster Readiness IMMEDIATELY on mount
   useEffect(() => {
-    // Small delay to ensure everything is loaded properly
-    setTimeout(() => {
-      // Check if we're in MiniPay environment
-      const inMiniPay = isMiniPayEnvironment();
-      setIsInMiniPay(inMiniPay);
-
-      // Log basic info for development
-      if (process.env.NODE_ENV === "development") {
-        console.log("App initialized", {
-          inMiniPay,
-          path: router.pathname,
-        });
+    try {
+      console.log("[Farcaster] Attempting early ready signal...");
+      if (sdk && sdk.actions && sdk.actions.ready) {
+        sdk.actions.ready();
+      } else if (sdk && (sdk as any).ready) {
+        (sdk as any).ready();
       }
+    } catch (e) {
+      console.warn("[Farcaster] Early ready signal failed:", e);
+    }
+  }, []);
 
-      // Log when app loads
-      console.log("DiversiFi app loaded", {
+  useEffect(() => {
+    // Check environment immediately
+    const inMiniPay = isMiniPayEnvironment();
+    setIsInMiniPay(inMiniPay);
+
+    // Log basic info for development
+    if (process.env.NODE_ENV === "development") {
+      console.log("App initialized", {
         inMiniPay,
-        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
-        hasEthereum: typeof window !== 'undefined' && typeof window.ethereum !== "undefined",
-        ethereumIsMiniPay: typeof window !== 'undefined' && window.ethereum?.isMiniPay || false,
-        inIframe: typeof window !== 'undefined' && window !== window.parent,
-        referrer: typeof document !== 'undefined' ? (document.referrer || "None") : 'N/A',
-        url: typeof window !== 'undefined' ? window.location.href : 'N/A',
-        pathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
+        path: router.pathname,
       });
+    }
 
-      // If in MiniPay and on the main page, redirect to the minipay-test page
-      if (inMiniPay && router.pathname === "/") {
-        console.log("Redirecting to /minipay-test page");
-        router.push("/minipay-test");
-      }
+    // Log when app loads
+    console.log("DiversiFi app loaded", {
+      inMiniPay,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A',
+      hasEthereum: typeof window !== 'undefined' && typeof window.ethereum !== "undefined",
+      ethereumIsMiniPay: typeof window !== 'undefined' && window.ethereum?.isMiniPay || false,
+      inIframe: typeof window !== 'undefined' && window !== window.parent,
+      referrer: typeof document !== 'undefined' ? (document.referrer || "None") : 'N/A',
+      url: typeof window !== 'undefined' ? window.location.href : 'N/A',
+      pathname: typeof window !== 'undefined' ? window.location.pathname : 'N/A',
+    });
 
-      // Note: Auto-connect is now handled by the useWallet hook
-      // We'll keep this log for debugging
-      if (inMiniPay && window.ethereum) {
-        console.log(
-          "MiniPay detected, wallet connection will be handled by useWallet hook"
-        );
-      }
-    }, 500);
+    // If in MiniPay and on the main page, redirect to the minipay-test page
+    if (inMiniPay && router.pathname === "/") {
+      console.log("Redirecting to /minipay-test page");
+      router.push("/minipay-test");
+    }
   }, [router]);
 
   return (
