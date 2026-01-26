@@ -18,15 +18,10 @@ import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG, ARC_TOKENS } from '../../
 import { CurveDiscoveryService } from '../curve-discovery.service';
 
 // Curve Finance contract addresses on Arc Testnet
-// These need to be discovered via Curve's AddressProvider or registry
+// These are hardcoded for direct integration as we've verified them on-chain
 const CURVE_ARC_CONTRACTS = {
-    // Main contracts (to be discovered)
-    ADDRESS_PROVIDER: '', // Entry point for Curve registries
-    META_REGISTRY: '',    // Pool registry aggregator
-    ROUTER_NG: '',        // CurveRouterNG for swaps
-
-    // Known pools (to be discovered)
-    USDC_EURC_POOL: '',   // Direct USDC/EURC stable swap pool
+    // Verified USDC/EURC pool on Arc Testnet
+    USDC_EURC_POOL: '0x2D84D79C852f6842AbE0304b70bBaA1506AdD457',
 
     // Fallback: Use Curve's web interface via iframe or redirect
     WEB_INTERFACE: 'https://curve.fi/dex/arc/swap/',
@@ -247,7 +242,15 @@ export class CurveArcStrategy extends BaseSwapStrategy {
         pool?: string;
     }> {
         try {
-            // Use the discovery service to find Curve contracts
+            // First priority: Use hardcoded verified pool for Arc Testnet
+            if (CURVE_ARC_CONTRACTS.USDC_EURC_POOL) {
+                this.log('Using hardcoded Curve pool for Arc Testnet');
+                return {
+                    pool: CURVE_ARC_CONTRACTS.USDC_EURC_POOL
+                };
+            }
+
+            // Fallback: Use the discovery service to find Curve contracts
             const contracts = await CurveDiscoveryService.discoverContracts(provider);
 
             return {
