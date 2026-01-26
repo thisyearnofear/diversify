@@ -459,6 +459,9 @@ export const GeminiService = {
     timeHorizon?: string;
     riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
     dataSources?: string[];
+    thoughtChain?: string[];
+    actionSteps?: string[];
+    urgencyLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     _meta?: { modelUsed: string; totalCost?: number };
   }> => {
     try {
@@ -499,7 +502,7 @@ export const GeminiService = {
         },
         body: JSON.stringify({
           prompt: enhancedPrompt,
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-1.5-flash',
           maxTokens: 1000,
           inflationData,
           userBalance,
@@ -514,26 +517,25 @@ export const GeminiService = {
 
       const result = await response.json();
 
-      // Parse JSON response from AI
-      try {
-        const parsedResult = JSON.parse(result.text);
-        return {
-          ...parsedResult,
-          _meta: {
-            modelUsed: result.modelUsed || 'gemini-3-flash-preview',
-            totalCost: 0.02 // Estimated cost in USDC
-          }
-        };
-      } catch (parseError) {
-        // Fallback if JSON parsing fails
-        return {
-          action: 'HOLD',
-          reasoning: result.text || 'Analysis completed successfully.',
-          confidence: 0.75,
-          riskLevel: 'MEDIUM',
-          _meta: { modelUsed: result.modelUsed || 'gemini-3-flash-preview' }
-        } as const;
-      }
+      // The API returns parsed JSON directly, not wrapped in { text: ... }
+      return {
+        action: result.action || 'HOLD',
+        targetToken: result.targetToken,
+        reasoning: result.reasoning || 'Analysis completed.',
+        confidence: result.confidence || 0.75,
+        suggestedAmount: result.suggestedAmount,
+        expectedSavings: result.expectedSavings,
+        timeHorizon: result.timeHorizon,
+        riskLevel: result.riskLevel || 'MEDIUM',
+        dataSources: result.dataSources,
+        thoughtChain: result.thoughtChain,
+        actionSteps: result.actionSteps,
+        urgencyLevel: result.urgencyLevel,
+        _meta: {
+          modelUsed: result._meta?.modelUsed || 'gemini-3-flash-preview',
+          totalCost: 0.02
+        }
+      };
 
     } catch (error) {
       console.error('Enhanced Gemini Agent Error:', error);

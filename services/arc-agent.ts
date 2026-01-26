@@ -666,8 +666,11 @@ export class ArcAgent {
             try {
                 console.log(`[Arc Agent] x402 payment attempt ${attempt}/${retries} to ${url}`);
 
-                // Step 1: Initial request
-                const initialResponse = await fetch(url, {
+                // Step 1: Initial request - ensure absolute URL for server-side fetch
+                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+                const initialUrl = url.startsWith('/') ? `${baseUrl}${url}` : url;
+
+                const initialResponse = await fetch(initialUrl, {
                     headers: {
                         ...headers,
                         'Accept': 'application/json'
@@ -829,12 +832,13 @@ export class ArcAgent {
     `;
 
         try {
-            const response = await fetch('/api/agent/analyze', {
+            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+            const response = await fetch(`${baseUrl}/api/agent/analyze`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt,
-                    model: 'gemini-3-flash-preview',
+                    model: 'gemini-1.5-flash', // Use stable model
                     maxTokens: 1000,
                     realData: data,
                     networkContext: networkInfo,

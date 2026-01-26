@@ -97,13 +97,40 @@ export function useWealthProtectionAgent() {
         setAnalysisSteps([]);
         setAnalysisProgress(0);
 
-        // Initialize Arc Agent if needed
-        await initializeArcAgent();
+        // Initialize Arc Agent if needed - move inside try for better error handling
+        try {
+            setThinkingStep("🤖 Initializing AI Agent...");
+            setAnalysisProgress(5);
+            await initializeArcAgent();
+        } catch (initError) {
+            console.warn("Agent initialization failed, falling back to standard analysis:", initError);
+        }
 
         try {
             if (arcAgent && config.analysisDepth === 'Deep') {
+                // Progress steps for Deep Analysis (since it takes time)
+                const deepProgressSteps = [
+                    { step: "🛡️ Securing Arc Testnet environment...", progress: 15 },
+                    { step: "💰 Verifying USDC gas for autonomous payments...", progress: 30 },
+                    { step: "📡 Connecting to Premium Data Hub (x402)...", progress: 50 },
+                    { step: "🧬 Processing multi-chain risk models...", progress: 75 },
+                    { step: "🤖 Finalizing deep analysis with Gemini 3...", progress: 95 }
+                ];
+
+                // Start an async loop for progress while fetch is running
+                const progressInterval = setInterval(() => {
+                    setAnalysisProgress(prev => {
+                        if (prev < 90) return prev + 2;
+                        return prev;
+                    });
+                }, 1000);
+
+                setThinkingStep(deepProgressSteps[0].step);
+                setAnalysisProgress(deepProgressSteps[0].progress);
+                setAnalysisSteps(prev => [...prev, deepProgressSteps[0].step]);
+
                 // Use server-side Arc Agent for premium data analysis
-                const response = await fetch('/api/agent/deep-analyze', {
+                const responsePromise = fetch('/api/agent/deep-analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -112,6 +139,17 @@ export function useWealthProtectionAgent() {
                         networkInfo
                     })
                 });
+
+                // Parallel progress updates
+                for (let i = 1; i < deepProgressSteps.length; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    setThinkingStep(deepProgressSteps[i].step);
+                    setAnalysisProgress(deepProgressSteps[i].progress);
+                    setAnalysisSteps(prev => [...prev, deepProgressSteps[i].step]);
+                }
+
+                const response = await responsePromise;
+                clearInterval(progressInterval);
 
                 if (!response.ok) {
                     throw new Error('Deep analysis failed');
