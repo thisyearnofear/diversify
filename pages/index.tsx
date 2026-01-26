@@ -6,16 +6,13 @@ import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
 import { useInflationData, type RegionalInflationData } from "../hooks/use-inflation-data";
 import { useCurrencyPerformance } from "../hooks/use-currency-performance";
 import {
-  AVAILABLE_TOKENS,
-  ARC_TESTNET_TOKENS,
   REGION_COLORS,
-} from "../constants/regions";
+  getChainAssets,
+} from "../config";
 import ErrorBoundary from "../components/ui/ErrorBoundary";
 import TabNavigation from "../components/ui/TabNavigation";
 import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
-import { ChainDetectionService } from "../services/swap/chain-detection.service";
-import { NETWORKS } from "../config";
 import SwapTab from "../components/tabs/SwapTab";
 import InfoTab from "../components/tabs/InfoTab";
 import WalletButton from "../components/wallet/WalletButton";
@@ -31,10 +28,8 @@ export default function DiversiFiPage() {
   const {
     isMiniPay: isInMiniPay,
     isFarcaster,
-    farcasterContext,
     address,
     connect: connectWallet,
-    switchNetwork,
   } = useWalletContext();
 
   const {
@@ -53,15 +48,21 @@ export default function DiversiFiPage() {
     chainId,
     refreshBalances,
     refreshChainId,
+    aggregatedPortfolio,
+    fetchAllChainBalances,
   } = useStablecoinBalances(address);
+
+  // Automatically fetch multi-chain data when address changes
+  useEffect(() => {
+    if (address) {
+      fetchAllChainBalances();
+    }
+  }, [address, fetchAllChainBalances]);
 
   const currentChainId = chainId;
 
   const availableTokens = useMemo(() => {
-    if (currentChainId === 5042002) {
-      return ARC_TESTNET_TOKENS;
-    }
-    return AVAILABLE_TOKENS;
+    return getChainAssets(currentChainId || 42220);
   }, [currentChainId]);
 
   const { inflationData } = useInflationData();
@@ -149,10 +150,11 @@ export default function DiversiFiPage() {
                 userRegion={userRegion}
                 setUserRegion={setUserRegion}
                 regionData={regionData}
-                totalValue={totalValue}
+                totalValue={aggregatedPortfolio?.totalValue || totalValue}
                 balances={balances}
                 setActiveTab={setActiveTab}
                 onSelectStrategy={setSelectedStrategy}
+                aggregatedPortfolio={aggregatedPortfolio || undefined}
               />
             )}
 

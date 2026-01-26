@@ -6,7 +6,8 @@ import {
   ABIS,
   NETWORKS,
   TOKEN_METADATA,
-  EXCHANGE_RATES
+  EXCHANGE_RATES,
+  NETWORK_TOKENS
 } from '../config';
 import { executeMulticall, type ContractCall } from '../utils/multicall';
 import { ChainDetectionService } from '../services/swap/chain-detection.service';
@@ -115,19 +116,9 @@ async function fetchBalancesForChain(
 
   const provider = new ethers.providers.JsonRpcProvider(providerUrl);
 
-  // Determine tokens to fetch based on network
-  let tokensToFetch: string[] = [];
-  if (isArc) {
-    tokensToFetch = ['USDC', 'EURC'];
-  } else if (isArbitrum) {
-    tokensToFetch = ['USDC', 'PAXG'];
-  } else if (isAlfajores) {
-    tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
-  } else if (isCeloMainnet) {
-    tokensToFetch = ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO'];
-  } else {
-    return {}; // Unsupported chain
-  }
+  // Determine tokens to fetch based on network from central config
+  const tokensToFetch = NETWORK_TOKENS[targetChainId] || [];
+  if (tokensToFetch.length === 0) return {};
 
   const calls: ContractCall[] = [];
   const tokenMetadataList: { symbol: string; metadata: any; exchangeRate: number }[] = [];
@@ -200,7 +191,7 @@ function calculateDiversificationScore(chains: ChainPortfolio[]): number {
   // Collect all unique holdings across chains
   const allHoldings = new Set<string>();
   const allRegions = new Set<string>();
-  
+
   for (const chain of chainsWithValue) {
     for (const balance of Object.values(chain.balances)) {
       allHoldings.add(balance.symbol);
@@ -226,7 +217,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
   const [regionTotals, setRegionTotals] = useState<Record<string, number>>({});
   const [totalValue, setTotalValue] = useState(0);
   const [chainId, setChainId] = useState<number | null>(null);
-  
+
   // Multi-chain aggregated portfolio
   const [aggregatedPortfolio, setAggregatedPortfolio] = useState<AggregatedPortfolio | null>(null);
   const [isLoadingAllChains, setIsLoadingAllChains] = useState(false);
@@ -318,17 +309,8 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
       const provider = new ethers.providers.JsonRpcProvider(providerUrl);
 
-      // Determine which tokens to fetch based on the network
-      let tokensToFetch: string[] = [];
-      if (isArc) {
-        tokensToFetch = ['USDC', 'EURC'];
-      } else if (isArbitrum) {
-        tokensToFetch = ['USDC', 'PAXG'];
-      } else if (isAlfajores) {
-        tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
-      } else {
-        tokensToFetch = ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO'];
-      }
+      // Determine which tokens to fetch from central config
+      const tokensToFetch = NETWORK_TOKENS[currentChainId as number] || NETWORK_TOKENS[NETWORKS.CELO_MAINNET.chainId];
 
 
 
@@ -543,7 +525,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
     chainId,
     refreshBalances,
     refreshChainId,
-    
+
     // Multi-chain aggregated data
     aggregatedPortfolio,
     isLoadingAllChains,

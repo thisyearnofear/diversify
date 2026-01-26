@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWealthProtectionAgent, AIMessage } from '../../hooks/use-wealth-protection-agent';
+import { useWealthProtectionAgent } from '../../hooks/use-wealth-protection-agent';
 import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
-import { NETWORKS } from '../../config';
+
 import sdk from '@farcaster/miniapp-sdk';
 
 interface AgentWealthGuardProps {
@@ -20,22 +20,19 @@ export default function AgentWealthGuard({
     holdings,
     chainId,
     inflationData,
-    embedded = false,
     onExecute
 }: AgentWealthGuardProps) {
     const {
         advice,
         isAnalyzing,
         thinkingStep,
-        analysisSteps,
         analysisProgress,
-        config,
         analyze,
         sendMessage,
         transcribeAudio,
-        updateConfig,
         arcAgent,
         capabilities,
+        clearConversation,
         initializeArcAgent
     } = useWealthProtectionAgent();
 
@@ -61,7 +58,7 @@ export default function AgentWealthGuard({
         if (analysisProgress === 100) {
             try {
                 (sdk.actions as any).hapticFeedback({ type: 'success' });
-            } catch (e) { }
+            } catch { }
         }
     }, [analysisProgress, isAnalyzing]);
 
@@ -121,7 +118,7 @@ export default function AgentWealthGuard({
             setIsListening(true);
             try {
                 (sdk.actions as any).hapticFeedback({ type: 'selection' });
-            } catch (e) { }
+            } catch { }
         } catch (error) {
             console.error('Error starting recording:', error);
             showToast('Microphone access denied', 'error');
@@ -228,12 +225,17 @@ export default function AgentWealthGuard({
                                     <div className="flex items-center gap-2">
                                         <span className="text-xl">{advice.action === 'HOLD' ? '🛡️' : '⚡'}</span>
                                         <h3 className={`font-black uppercase tracking-tight text-sm ${advice.action === 'HOLD' ? 'text-emerald-800' : 'text-amber-800'}`}>
-                                            {advice.action === 'HOLD' ? 'Portfolio Protected' : 'Action Required'}
+                                            {amount > 0 ? (advice.action === 'HOLD' ? 'Portfolio Protected' : 'Action Required') : 'Simulation Advice'}
                                         </h3>
                                     </div>
-                                    <div className="bg-white/80 px-2 py-1 rounded-lg border border-black/5 flex items-center gap-1.5 shadow-sm">
-                                        <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                                        <span className="text-xs font-black text-blue-700">{(advice.confidence * 100).toFixed(0)}% Confidence</span>
+                                    <div className="flex items-center gap-2">
+                                        {amount === 0 && (
+                                            <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-2 py-1 rounded tracking-tighter shadow-sm">Sim Mode</span>
+                                        )}
+                                        <div className="bg-white/80 px-2 py-1 rounded-lg border border-black/5 flex items-center gap-1.5 shadow-sm">
+                                            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                                            <span className="text-xs font-black text-blue-700">{(advice.confidence * 100).toFixed(0)}% Confidence</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -282,8 +284,17 @@ export default function AgentWealthGuard({
                                             onClick={() => handleExecuteRecommendation(advice.targetToken!)}
                                             className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border-b-4 border-indigo-900"
                                         >
-                                            <span>{advice.action} to {advice.targetToken}</span>
+                                            <span>{amount > 0 ? advice.action : 'Plan'} to {advice.targetToken}</span>
                                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                        </button>
+                                    )}
+
+                                    {amount === 0 && (
+                                        <button
+                                            onClick={clearConversation}
+                                            className="w-full py-3 rounded-2xl bg-gray-100 text-gray-500 font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all border-b-2 border-gray-300"
+                                        >
+                                            Exit Simulation
                                         </button>
                                     )}
                                 </div>
@@ -294,22 +305,40 @@ export default function AgentWealthGuard({
                     {!advice && !isAnalyzing && (
                         <motion.div key="initial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pt-2">
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-500/20 relative overflow-hidden">
-                                <h4 className="text-blue-800 dark:text-blue-100 font-black text-base leading-tight mb-2">Universal Wealth Protection</h4>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className="text-blue-800 dark:text-blue-100 font-black text-base leading-tight">
+                                        {amount > 0 ? 'Universal Wealth Protection' : 'Oracle Simulation'}
+                                    </h4>
+                                    {amount === 0 && (
+                                        <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-tighter shadow-sm">Sim Mode</span>
+                                    )}
+                                </div>
                                 <p className="text-blue-700/80 dark:text-blue-200/60 text-xs font-bold leading-relaxed mb-4">
                                     {capabilities.analysis
-                                        ? `Analyze your $${amount.toFixed(2)} portfolio against real-time global inflation data.`
+                                        ? amount > 0
+                                            ? `Analyze your $${amount.toFixed(2)} portfolio against real-time global inflation data.`
+                                            : "No assets detected. Let's run a simulation ($1,000) to see how DiversiFi protects your wealth."
                                         : "Wealth analysis engine is currently undergoing maintenance."
                                     }
                                 </p>
                                 <button
-                                    onClick={handleAnalyze}
+                                    onClick={() => {
+                                        if (amount === 0) {
+                                            const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
+                                            const networkInfo = { chainId: chainId || 0, name: networkName };
+                                            showToast('Running hypothetical wealth protection simulation...', 'ai');
+                                            analyze(inflationData, 1000, ['CUSD'], networkInfo);
+                                        } else {
+                                            handleAnalyze();
+                                        }
+                                    }}
                                     disabled={!capabilities.analysis}
                                     className={`w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 border-b-4 ${capabilities.analysis
-                                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30 border-blue-800"
-                                            : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed shadow-none"
+                                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30 border-blue-800"
+                                        : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed shadow-none"
                                         }`}
                                 >
-                                    <span>{capabilities.analysis ? 'Run Full Analysis' : 'Intelligence Hub Unavailable'}</span>
+                                    <span>{capabilities.analysis ? amount > 0 ? 'Run Full Analysis' : 'Start Simulation' : 'Intelligence Hub Unavailable'}</span>
                                     {capabilities.analysis && <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>}
                                 </button>
                             </div>

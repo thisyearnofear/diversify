@@ -2,7 +2,7 @@ import React from "react";
 import type { Region } from "../../hooks/use-user-region";
 import { RegionalPattern } from "../regional/RegionalIconography";
 import RegionalIconography from "../regional/RegionalIconography";
-import { REGION_COLORS } from "../../constants/regions";
+import { REGION_COLORS } from "../../config";
 
 interface RealLifeScenarioProps {
   region: Region;
@@ -188,7 +188,7 @@ export default function RealLifeScenario({
                     style={{
                       backgroundColor:
                         REGION_COLORS[
-                          targetRegion as keyof typeof REGION_COLORS
+                        targetRegion as keyof typeof REGION_COLORS
                         ],
                     }}
                   >

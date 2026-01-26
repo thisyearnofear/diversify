@@ -5,7 +5,7 @@ import { useExpectedAmountOut } from "../../hooks/use-expected-amount-out";
 import { useStablecoinBalances } from "../../hooks/use-stablecoin-balances";
 import { SwapErrorHandler } from "../../services/swap/error-handler";
 import RegionalIconography, { RegionalPattern } from "../regional/RegionalIconography";
-import { REGION_COLORS } from "../../constants/regions";
+import { REGION_COLORS } from "../../config";
 import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";
 import { NETWORKS } from "../../config";

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { Region } from "../../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
-import { REGION_COLORS } from "../../constants/regions";
+import { REGION_COLORS } from "../../config";
 
 // Region-specific insights
 const REGION_INSIGHTS: Record<
@@ -210,11 +210,10 @@ export default function RegionalRecommendations({
         {Object.keys(REGION_INSIGHTS).map((region) => (
           <button
             key={region}
-            className={`px-3 py-1 mr-2 text-sm rounded-md whitespace-nowrap flex items-center ${
-              selectedRegion === region
+            className={`px-3 py-1 mr-2 text-sm rounded-md whitespace-nowrap flex items-center ${selectedRegion === region
                 ? `bg-region-${region.toLowerCase()}-light text-region-${region.toLowerCase()}-dark font-medium`
                 : "bg-background-subtle text-text-secondary hover:bg-background-muted"
-            }`}
+              }`}
             onClick={() => setSelectedRegion(region as Region)}
           >
             <RegionalIconography
@@ -300,16 +299,14 @@ export default function RegionalRecommendations({
 
       {difference && (
         <div
-          className={`p-3 rounded-card mb-4 ${
-            difference.isClose
+          className={`p-3 rounded-card mb-4 ${difference.isClose
               ? "bg-accent-success bg-opacity-5 border border-accent-success border-opacity-10"
               : "bg-background-subtle"
-          }`}
+            }`}
         >
           <h3
-            className={`font-medium mb-2 ${
-              difference.isClose ? "text-accent-success" : "text-text-primary"
-            }`}
+            className={`font-medium mb-2 ${difference.isClose ? "text-accent-success" : "text-text-primary"
+              }`}
           >
             {difference.isClose
               ? "Your portfolio is similar to typical patterns"

@@ -3,7 +3,7 @@ import SimplePieChart from "../portfolio/SimplePieChart";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import InflationVisualizer from "../inflation/InflationVisualizer";
 import { useDiversification } from "@/hooks/use-diversification";
-import { REGION_COLORS } from "@/constants/regions";
+import { REGION_COLORS } from "@/config";
 import type { Region } from "@/hooks/use-user-region";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import RegionalIconography from "../regional/RegionalIconography";
@@ -193,8 +193,8 @@ export default function OverviewTab({
                     key={region}
                     onClick={() => setSelectedMarket(region)}
                     className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${region === selectedMarket
-                        ? "bg-blue-600 text-white shadow-lg"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200"
+                      ? "bg-blue-600 text-white shadow-lg"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200"
                       }`}
                   >
                     {region}

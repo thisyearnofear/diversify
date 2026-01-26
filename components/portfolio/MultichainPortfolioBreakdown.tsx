@@ -131,8 +131,8 @@ export default function MultichainPortfolioBreakdown({
                 <ul className="text-sm text-blue-700 list-disc pl-5 space-y-1">
                     <li>Access to best assets on each blockchain network</li>
                     <li>Reduced single-network risk through diversification</li>
-                    <li>Commodity exposure via Arbitrum's liquid gold markets</li>
-                    <li>Regional stablecoin access through Celo's ecosystem</li>
+                    <li>Commodity exposure via Arbitrum&apos;s liquid gold markets</li>
+                    <li>Regional stablecoin access through Celo&apos;s ecosystem</li>
                     <li>Efficient bridging and cross-chain operations</li>
                 </ul>
             </div>

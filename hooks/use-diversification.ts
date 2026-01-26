@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { ARBITRUM_TOKENS } from "../config";
+
 
 interface RegionData {
   region: string;

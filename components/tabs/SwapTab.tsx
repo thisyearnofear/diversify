@@ -5,12 +5,7 @@ import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RegionalIconography from "../regional/RegionalIconography";
 import RealLifeScenario from "../demo/RealLifeScenario";
-import { REGION_COLORS } from "../../constants/regions";
-import { useSwap } from "../../hooks/use-swap";
-import { useWalletContext } from "../wallet/WalletProvider";
-import { useAppState } from "../../context/AppStateContext";
-import WalletButton from "../wallet/WalletButton";
-import { NETWORKS } from "../../config";
+import { REGION_COLORS, getChainAssets, NETWORKS, NETWORK_TOKENS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import {
   TabHeader,
@@ -18,51 +13,12 @@ import {
   Card,
   ConnectWalletPrompt,
 } from "../shared/TabComponents";
+import { useSwap } from "../../hooks/use-swap";
+import { useWalletContext } from "../wallet/WalletProvider";
+import { useAppState } from "../../context/AppStateContext";
+import WalletButton from "../wallet/WalletButton";
 
-// Network-specific token configurations
-const NETWORK_TOKENS: Record<
-  number,
-  Array<{ symbol: string; name: string; region: string }>
-> = {
-  [NETWORKS.CELO_MAINNET.chainId]: [
-    { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
-    { symbol: "CEUR", name: "Celo Euro", region: "Europe" },
-    { symbol: "CREAL", name: "Celo Brazilian Real", region: "LatAm" },
-    { symbol: "CKES", name: "Celo Kenyan Shilling", region: "Africa" },
-    { symbol: "CCOP", name: "Celo Colombian Peso", region: "LatAm" },
-    { symbol: "PUSO", name: "Philippine Peso", region: "Asia" },
-    { symbol: "CGHS", name: "Celo Ghana Cedi", region: "Africa" },
-    { symbol: "CXOF", name: "CFA Franc", region: "Africa" },
-    { symbol: "CGBP", name: "British Pound", region: "Europe" },
-    { symbol: "CZAR", name: "South African Rand", region: "Africa" },
-    { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
-    { symbol: "CAUD", name: "Australian Dollar", region: "Asia" },
-    { symbol: "CCHF", name: "Swiss Franc", region: "Europe" },
-    { symbol: "CJPY", name: "Japanese Yen", region: "Asia" },
-    { symbol: "CNGN", name: "Nigerian Naira", region: "Africa" },
-  ],
-  [NETWORKS.ALFAJORES.chainId]: [
-    { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
-    { symbol: "CEUR", name: "Celo Euro", region: "Europe" },
-    { symbol: "CREAL", name: "Celo Real", region: "LatAm" },
-    { symbol: "CKES", name: "Celo Kenyan Shilling", region: "Africa" },
-    { symbol: "CCOP", name: "Celo Colombian Peso", region: "LatAm" },
-    { symbol: "PUSO", name: "Philippine Peso", region: "Asia" },
-    { symbol: "CGHS", name: "Celo Ghana Cedi", region: "Africa" },
-    { symbol: "CGBP", name: "British Pound", region: "Europe" },
-    { symbol: "CZAR", name: "South African Rand", region: "Africa" },
-    { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
-    { symbol: "CAUD", name: "Australian Dollar", region: "Asia" },
-  ],
-  [NETWORKS.ARBITRUM_ONE.chainId]: [
-    { symbol: "USDC", name: "USD Coin", region: "USA" },
-    { symbol: "PAXG", name: "Paxos Gold", region: "Global" },
-  ],
-  [NETWORKS.ARC_TESTNET.chainId]: [
-    { symbol: "USDC", name: "USD Coin", region: "USA" },
-    { symbol: "EURC", name: "Euro Coin", region: "Europe" },
-  ],
-};
+
 
 interface SwapTabProps {
   availableTokens: Array<{ symbol: string; name: string; region: string }>;
@@ -121,14 +77,17 @@ export default function SwapTab({
   const swapInterfaceRef = useRef<{ refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void }>(null);
 
   const networkTokens = useMemo(() => {
-    const currentChainId = walletChainId || NETWORKS.CELO_MAINNET.chainId;
-    return NETWORK_TOKENS[currentChainId] || availableTokens;
-  }, [walletChainId, availableTokens]);
+    return getChainAssets(walletChainId || NETWORKS.CELO_MAINNET.chainId);
+  }, [walletChainId]);
 
   const filteredTokens = useMemo(() => {
     if (!searchQuery) return networkTokens;
     const query = searchQuery.toLowerCase();
-    return networkTokens.filter(t => t.symbol.toLowerCase().includes(query) || t.name.toLowerCase().includes(query) || t.region.toLowerCase().includes(query));
+    return networkTokens.filter(t =>
+      t.symbol.toLowerCase().includes(query) ||
+      t.name.toLowerCase().includes(query) ||
+      t.region.toLowerCase().includes(query)
+    );
   }, [networkTokens, searchQuery]);
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);

@@ -4,7 +4,7 @@ import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import InflationVisualizer from "../inflation/InflationVisualizer";
-import { REGION_COLORS } from "@/constants/regions";
+import { REGION_COLORS } from "@/config";
 import { Card, TabHeader, CollapsibleSection, StatBadge } from "../shared/TabComponents";
 
 interface AnalyticsTabProps {
@@ -67,11 +67,10 @@ export default function AnalyticsTab({
             <button
               key={region}
               onClick={() => changeRegion(region as Region)}
-              className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-1 ${
-                region === selectedRegion
+              className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-1 ${region === selectedRegion
                   ? "text-white font-medium"
                   : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
+                }`}
               style={region === selectedRegion ? { backgroundColor: REGION_COLORS[region as keyof typeof REGION_COLORS] } : {}}
             >
               <RegionalIconography region={region as Region} size="sm" className={region === selectedRegion ? "text-white" : ""} />

@@ -7,8 +7,11 @@ import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { Card, TabHeader, FeatureCard, PrimaryButton, CollapsibleSection, StatBadge } from "../shared/TabComponents";
+import { Card, TabHeader, FeatureCard, PrimaryButton, CollapsibleSection, StatBadge, ConnectWalletPrompt } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
+import WalletButton from "../wallet/WalletButton";
+import type { AggregatedPortfolio } from "@/hooks/use-stablecoin-balances";
+import { useWealthProtectionAgent } from "@/hooks/use-wealth-protection-agent";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -18,6 +21,7 @@ interface ProtectionTabProps {
   balances: Record<string, { formattedBalance: string; value: number }>;
   setActiveTab?: (tab: string) => void;
   onSelectStrategy?: (strategy: string) => void;
+  aggregatedPortfolio?: AggregatedPortfolio;
 }
 
 const RWA_ASSETS = [
@@ -30,6 +34,13 @@ const RWA_ASSETS = [
   },
 ];
 
+const USER_GOALS = [
+  { id: 'protection', label: 'Hedge Inflation', icon: '🛡️', value: 'inflation_protection' },
+  { id: 'diversify', label: 'Diversify Regions', icon: '🌍', value: 'geographic_diversification' },
+  { id: 'rwa', label: 'Access Gold/RWA', icon: '🥇', value: 'rwa_access' },
+  { id: 'explore', label: 'Just Exploring', icon: '🔍', value: 'exploring' },
+] as const;
+
 export default function ProtectionTab({
   userRegion,
   setUserRegion,
@@ -37,11 +48,12 @@ export default function ProtectionTab({
   totalValue,
   balances,
   setActiveTab,
-  onSelectStrategy
+  onSelectStrategy,
+  aggregatedPortfolio
 }: ProtectionTabProps) {
-  const { chainId } = useWalletContext();
+  const { address, chainId } = useWalletContext();
+  const { config, updateConfig } = useWealthProtectionAgent();
   const isCelo = ChainDetectionService.isCelo(chainId);
-  const isArbitrum = ChainDetectionService.isArbitrum(chainId);
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
 
   const currentRegions = regionData
@@ -51,6 +63,38 @@ export default function ProtectionTab({
   const currentAllocations = Object.fromEntries(
     regionData.map((item) => [item.region, item.value / 100])
   );
+
+  // If not connected, show connection gate
+  if (!address) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <TabHeader title="Oracle Intelligence" />
+          <ConnectWalletPrompt
+            message="Connect your wallet to let the AI Oracle analyze your multi-chain portfolio and suggest protection strategies."
+            WalletButtonComponent={<WalletButton variant="inline" />}
+          />
+        </Card>
+
+        {/* Goal Selector Preview for Unconnected Users */}
+        <Card className="bg-gray-50 border-dashed border-2">
+          <h4 className="text-xs font-black uppercase text-gray-400 mb-4 tracking-widest text-center">Set Your Intention</h4>
+          <div className="grid grid-cols-2 gap-2 pb-2">
+            {USER_GOALS.map((goal) => (
+              <button
+                key={goal.id}
+                className="p-3 bg-white border border-gray-200 rounded-xl text-center shadow-sm opacity-60 grayscale cursor-not-allowed"
+              >
+                <div className="text-xl mb-1">{goal.icon}</div>
+                <div className="text-[10px] font-black uppercase text-gray-900 leading-tight">{goal.label}</div>
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-gray-400 text-center font-bold px-4">Intentions are shared with the AI to personalize your wealth protection plan.</p>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -69,43 +113,61 @@ export default function ProtectionTab({
 
           <div className="flex gap-2">
             <StatBadge label="Total Protected" value={`$${totalValue.toFixed(0)}`} color="white" />
-            <StatBadge label="Exposure" value={`${currentRegions.length} Regions`} color="white" />
+            <StatBadge label="Exposure" value={`${currentRegions.length || 0} Regions`} color="white" />
           </div>
         </div>
 
         <div className="p-4 space-y-4">
+          {/* Goal Intensity Selector (Quick Win) */}
+          <div className="pb-2">
+            <h4 className="text-[10px] font-black uppercase text-gray-400 mb-3 tracking-widest pl-1">Primary Objective</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {USER_GOALS.map((goal) => (
+                <button
+                  key={goal.id}
+                  onClick={() => updateConfig({ userGoal: goal.value })}
+                  className={`p-3 border-2 transition-all rounded-xl text-center shadow-sm ${config.userGoal === goal.value
+                    ? 'border-blue-600 bg-blue-50/50 ring-2 ring-blue-600/10'
+                    : 'border-gray-100 bg-white hover:border-gray-200'
+                    }`}
+                >
+                  <div className="text-xl mb-1">{goal.icon}</div>
+                  <div className="text-[10px] font-black uppercase text-gray-900 leading-tight">{goal.label}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <AgentWealthGuard
+            amount={totalValue || 0}
+            holdings={aggregatedPortfolio?.allHoldings || Object.keys(balances || {})}
+            onExecute={() => setActiveTab?.('swap')}
+          />
+
           {/* Multichain Portfolio Breakdown Restored */}
           {totalValue > 0 && (
             <CollapsibleSection
               title="Chain Distribution"
               icon={<span>🔗</span>}
               defaultOpen={false}
+              badge={aggregatedPortfolio && <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">{aggregatedPortfolio.chains.filter(c => c.totalValue > 0).length} Chains</span>}
             >
               <MultichainPortfolioBreakdown
                 regionData={regionData}
                 totalValue={totalValue}
               />
+              {aggregatedPortfolio && aggregatedPortfolio.chains.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
+                  {aggregatedPortfolio.chains.map(chain => (
+                    <div key={chain.chainId} className="flex justify-between items-center px-2">
+                      <span className="text-xs font-bold text-gray-500">{chain.chainName}</span>
+                      <span className="text-xs font-black text-gray-900 dark:text-white">${chain.totalValue.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CollapsibleSection>
           )}
-
-          {isArbitrum ? (
-            <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-              <span className="text-xl">🔷</span>
-              <p className="text-xs text-blue-800 dark:text-blue-200 font-bold">You are protecting wealth via <span className="underline">Real World Assets</span> on Arbitrum.</p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
-              <span className="text-xl">🌍</span>
-              <p className="text-xs text-emerald-800 dark:text-emerald-200 font-bold">You are protecting wealth via <span className="underline">Regional Stablecoins</span> on Celo.</p>
-            </div>
-          )}
-
-          <AgentWealthGuard
-            amount={totalValue || 0}
-            holdings={Object.keys(balances || {})}
-            embedded={true}
-            onExecute={(token) => setActiveTab?.('swap')}
-          />
         </div>
       </Card>
 

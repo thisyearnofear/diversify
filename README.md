@@ -1,30 +1,41 @@
-# 🧠 DiversiFi Oracle - Autonomous AI Wealth Protection Agent
+# 🧠 DiversiFi Oracle - Multi-Chain AI Wealth Protection & Analytics Platform
 
-**An intelligent AI agent that autonomously protects your wealth by monitoring markets, paying for premium data via x402, and triggering real-world automations.**
+**An intelligent AI platform protecting wealth across multiple blockchains by monitoring markets, analyzing RWAs, managing global/local stablecoins, and providing inflation protection tools.**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
-![Network](https://img.shields.io/badge/network-Arc_Network-purple.svg)
+![Network](https://img.shields.io/badge/network-Multi_Chain-blue.svg)
 ![AI](https://img.shields.io/badge/AI-Gemini_3.0-orange.svg)
 
 ## 🌟 Core Value Proposition
 
-DiversiFi has evolved from a simple stablecoin diversification tool into a **fully agentic wealth protection system**.
+**comprehensive multi-chain wealth protection and analytics platform**.
+
+### 🌐 Multi-Chain Operations
+- **Arbitrum**: Advanced RWA (Real World Assets) monitoring and analytics with sophisticated yield strategies.
+- **Celo**: Global and local stablecoin management for emerging market access and financial inclusion.
+- **Arc Network**: Self-paying autonomous agents using x402 protocol for premium data access and automated actions.
 
 ### 🤖 Autonomous AI Agent (Arc Network)
 - **Self-Paying**: The agent uses the **x402 protocol** to autonomously pay for its own API calls (Truflation, Glassnode, Macro Data) using USDC.
 - **USDC-Native**: Operates on **Arc Network**, using USDC as the native gas token for efficient, transparent operations.
 - **On-Chain Audit**: Every analysis and decision is recorded on the Arc blockchain for complete transparency.
 
-### 💳 Circle Infrastructure Integration
+### 💳 Cross-Chain Infrastructure
 - **Unified Balance**: Uses **Circle Gateway** to view and manage USDC balances across multiple chains instantly.
 - **Cross-Chain Bridging**: Integrates **Circle Bridge Kit** and **CCTP** for secure, native USDC transfers between Arbitrum, Celo, and Arc.
-- **Programmable Wallets**: Enterprise-grade security for agent operations.
+- **Programmable Wallets**: Enterprise-grade security for multi-chain operations.
 
-### 🧠 Advanced Intelligence
+### 🧠 Advanced Intelligence & Analytics
+- **Oracle Insights**: Real-time market intelligence with predictive analytics across all supported chains.
 - **Gemini 3.0 Flash**: Powered by Google's latest `gemini-3-flash-preview` model for deep financial reasoning and structured JSON outputs.
 - **Multimodal Vision**: Can analyze charts and screenshots to assess market sentiment.
 - **Real-Time Data**: Accesses premium data sources (Inflation, Yields, Sentiment) that are normally behind paywalls.
+
+### 🛡️ Wealth Protection Tools
+- **Inflation Protection**: Automated hedging strategies using global and local stablecoins based on real-time economic indicators.
+- **Asset Visualization**: Comprehensive portfolio tracking and visualization tools for multi-chain assets.
+- **Wealth Stabilization**: Algorithmic rebalancing to maintain optimal risk-adjusted returns across volatile markets.
 
 ### ⚡ Smart Automation & Integrations
 - **Zapier MCP**: Full integration with Zapier via Model Context Protocol (MCP) to trigger workflows (Email, Slack, Spreadsheets).
