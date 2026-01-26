@@ -19,13 +19,15 @@ export default function FarcasterUserInfo() {
     return null;
   }
 
-  // Extract user data from Farcaster context
-  const { 
-    fid = 0, 
+  // Extract user data from Farcaster context (Standard 2026 property paths)
+  const {
+    fid = 0,
     username = 'unknown',
     displayName = username,
-    pfp = { url: '', verified: false }
-  } = farcasterContext || {};
+    pfpUrl: url = ''
+  } = farcasterContext?.user || {};
+
+  const pfp = { url, verified: !!url };
 
   return (
     <div className="farcaster-user-info bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3 mb-4 transition-all">
@@ -33,7 +35,7 @@ export default function FarcasterUserInfo() {
         {/* Farcaster Profile Picture */}
         {pfp?.url ? (
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-purple-300 dark:border-purple-600">
-            <img 
+            <img
               src={pfp.url}
               alt={`${displayName}'s profile`}
               className="w-full h-full object-cover"

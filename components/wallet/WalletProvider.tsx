@@ -2,17 +2,18 @@ import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useWallet } from "../../hooks/use-wallet";
 import { useAppState } from "../../context/AppStateContext";
 
-// Define the context type
+// Define the context type (Standard 2026)
 interface FarcasterContext {
-  fid?: number;
-  username?: string;
-  displayName?: string;
-  pfp?: {
-    url: string;
-    verified: boolean;
+  user?: {
+    fid: number;
+    username: string;
+    displayName: string;
+    pfpUrl: string;
   };
-  connectedAddress?: string;
-  // Add other fields as needed based on the actual SDK
+  location?: any;
+  client?: any;
+  added?: boolean;
+  safeAreaInsets?: any;
   [key: string]: unknown;
 }
 

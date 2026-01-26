@@ -25,59 +25,38 @@ export function useWallet() {
       console.log('[Wallet] Initializing environment...');
 
       // 1. Detect Farcaster Environment (Standard 2026)
-      // We do this immediately and without awaiting anything that might block ready()
       try {
         // Robust check for Farcaster SDK and ready action
         if (sdk && sdk.actions) {
           console.log('[Farcaster] SDK detected, signaling ready...');
-          // Signal ready as soon as possible to hide splash screen
-          // Warpcast developer UI requires this to be called early
           sdk.actions.ready();
-        } else if (sdk && (sdk as any).ready) {
-          // Fallback for different SDK versions
-          (sdk as any).ready();
-        }
 
-        // Now attempt to get context asynchronously
-        const getFarcasterContext = async () => {
-          try {
-            const context = await sdk.context;
-            if (context) {
-              console.log('[Farcaster] Context resolved:', context);
-              setIsFarcaster(true);
-              setFarcasterContext(context);
+          // Try to get context IMMEDIATELY or with minimal delay
+          const context = await sdk.context;
+          if (context) {
+            console.log('[Farcaster] Context resolved:', context);
+            setIsFarcaster(true);
+            setFarcasterContext(context);
 
-              // Ensure ready is called again if it wasn't successful before
-              if (sdk.actions && sdk.actions.ready) {
-                sdk.actions.ready();
-              }
-
-              // Log Farcaster user info for analytics
-              logFarcasterUserInfo(context);
-
-              // Try to get wallet address from Farcaster's Ethereum provider
-              try {
-                const ethProvider = await sdk.wallet.getEthereumProvider();
-                if (ethProvider) {
-                  const accounts = await ethProvider.request({ method: 'eth_accounts' }) as string[];
-                  if (accounts && accounts.length > 0 && !address) {
-                    console.log('[Farcaster] User has connected address:', accounts[0]);
-                    setAddress(accounts[0]);
-                    setIsConnected(true);
-                  }
+            // AUTO-CONNECT: In 2026, Mini Apps should autoconnect silently
+            try {
+              const ethProvider = await sdk.wallet.getEthereumProvider();
+              if (ethProvider) {
+                // Request accounts silently - if already approved, this is instant
+                const accounts = await ethProvider.request({ method: 'eth_requestAccounts' }) as string[];
+                if (accounts && accounts.length > 0) {
+                  console.log('[Farcaster] Autoconnect successful:', accounts[0]);
+                  setAddress(accounts[0]);
+                  setIsConnected(true);
                 }
-              } catch (walletErr) {
-                console.log('[Farcaster] Could not get wallet from provider:', walletErr);
               }
+            } catch (walletErr) {
+              console.warn('[Farcaster] Autoconnect attempt failed (silent):', walletErr);
             }
-          } catch (ctxErr) {
-            console.log('[Farcaster] Context resolution failed or timed out:', ctxErr);
           }
-        };
-
-        getFarcasterContext();
+        }
       } catch (err) {
-        console.log('[Farcaster] SDK initialization logic failed:', err);
+        console.log('[Farcaster] SDK lookup skipped or failed');
       }
 
       // 2. Detect MiniPay environment

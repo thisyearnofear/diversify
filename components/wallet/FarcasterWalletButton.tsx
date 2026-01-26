@@ -7,7 +7,7 @@ import { useWalletContext } from './WalletProvider';
 import { useState } from 'react';
 
 export default function FarcasterWalletButton() {
-  const { 
+  const {
     isFarcaster,
     isConnected,
     isConnecting,
@@ -34,17 +34,16 @@ export default function FarcasterWalletButton() {
         {/* Connected State - Farcaster Style */}
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white min-w-[48px] min-h-[48px] px-4 py-3 rounded-lg transition-colors font-medium shadow-sm"
+          className="flex items-center gap-2 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 text-purple-700 dark:text-purple-300 min-h-[40px] px-3 py-1.5 rounded-full transition-all duration-200 font-bold shadow-sm"
           disabled={isConnecting}
           aria-label="Farcaster wallet menu"
           aria-expanded={showDropdown}
           aria-haspopup="true"
         >
-          <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-          <span>{formatAddress(address)}</span>
-          <span className="text-purple-200">@{username}</span>
-          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-xs font-mono">{formatAddress(address)}</span>
+          <svg className="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
 
@@ -81,28 +80,21 @@ export default function FarcasterWalletButton() {
     <button
       onClick={connectFarcasterWallet}
       disabled={isConnecting}
-      className={`flex items-center gap-2 min-w-[48px] min-h-[48px] px-4 py-3 rounded-lg transition-colors font-medium shadow-sm ${
-        isConnecting 
-          ? 'bg-purple-400 cursor-not-allowed' 
-          : 'bg-purple-600 hover:bg-purple-700'
-      } text-white`}
+      className={`flex items-center gap-2 min-h-[40px] px-4 py-1.5 rounded-full transition-all font-bold shadow-sm ${isConnecting
+          ? 'bg-purple-100 text-purple-400 cursor-not-allowed border border-purple-200'
+          : 'bg-purple-600 hover:bg-purple-700 text-white'
+        }`}
       aria-label="Connect Farcaster wallet"
       aria-disabled={isConnecting}
     >
       {isConnecting ? (
         <>
-          <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Connecting via Farcaster...
+          <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-xs">Authenticating...</span>
         </>
       ) : (
         <>
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.94-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-          </svg>
-          Connect Farcaster Wallet
+          <span className="text-xs">Connect Wallet</span>
         </>
       )}
     </button>

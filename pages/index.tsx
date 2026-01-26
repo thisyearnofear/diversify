@@ -25,7 +25,6 @@ import FarcasterWalletButton from "../components/wallet/FarcasterWalletButton";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTutorial";
 import ThemeToggle from "../components/ui/ThemeToggle";
-import LazyFarcasterUserInfo from "../components/farcaster/LazyFarcasterUserInfo";
 
 export default function DiversiFiPage() {
   // Use app state context for tab management
@@ -36,6 +35,7 @@ export default function DiversiFiPage() {
   const {
     isMiniPay: isInMiniPay,
     isFarcaster,
+    farcasterContext,
     address,
     connect: connectWallet,
     switchNetwork,
@@ -134,25 +134,38 @@ export default function DiversiFiPage() {
       </Head>
 
       <div className="max-w-md mx-auto">
-        {/* Farcaster User Info - Lazy loaded for better performance */}
-        <LazyFarcasterUserInfo />
-
         {/* Header with proper spacing */}
         <div className="flex items-center justify-between mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
-          <div className="flex items-center">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              DiversiFi
-            </h1>
-            {isInMiniPay && (
-              <span className="ml-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-                MiniPay
-              </span>
+          <div className="flex items-center gap-3">
+            {isFarcaster && farcasterContext?.user?.pfpUrl ? (
+              <img
+                src={farcasterContext.user.pfpUrl}
+                alt="Profile"
+                className="w-10 h-10 rounded-full border-2 border-purple-500 shadow-sm"
+              />
+            ) : (
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                DiversiFi
+              </h1>
             )}
-            {isFarcaster && (
-              <span className="ml-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-medium">
-                Farcaster
-              </span>
-            )}
+
+            <div className="flex flex-col">
+              <h1 className={`${isFarcaster && farcasterContext?.user ? 'text-sm font-bold leading-tight' : 'hidden'} text-gray-900 dark:text-white`}>
+                {farcasterContext?.user?.displayName || 'DiversiFi'}
+              </h1>
+              <div className="flex items-center gap-1">
+                {isInMiniPay && (
+                  <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                    MiniPay
+                  </span>
+                )}
+                {isFarcaster && (
+                  <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                    Farcaster
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
