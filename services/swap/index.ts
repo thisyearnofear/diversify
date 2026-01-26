@@ -16,6 +16,10 @@ export { MentoSwapStrategy } from './strategies/mento-swap.strategy';
 export { LiFiSwapStrategy } from './strategies/lifi-swap.strategy';
 export { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
 export { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
+export { CurveArcStrategy } from './strategies/curve-arc.strategy';
+
+// Services
+export { CurveDiscoveryService } from './curve-discovery.service';
 
 // Legacy services (still used by strategies)
 export { ApprovalService } from './approval';

@@ -69,18 +69,27 @@ async function testArcSwapConfiguration() {
             console.log(`⚠️ Estimate result: ${error.message}`);
         }
 
-        // Test 6: Try to execute swap (will fail with helpful message)
+        // Test 6: Try to execute swap (should show helpful guidance)
         console.log('\n6️⃣ Testing swap execution...');
         try {
             const result = await SwapOrchestratorService.executeSwap(testParams);
             if (result.success) {
                 console.log('✅ Swap executed successfully:', result.txHash);
             } else {
-                console.log('ℹ️ Expected failure with helpful message:');
-                console.log(`   ${result.error}`);
+                console.log('ℹ️ Expected guidance message received:');
+                console.log('---');
+                console.log(result.error);
+                console.log('---');
+
+                // Check if it contains our expected guidance
+                if (result.error?.includes('Curve Finance') && result.error?.includes('https://curve.fi/dex/arc/swap/')) {
+                    console.log('✅ Guidance message contains Curve Finance information');
+                } else {
+                    console.log('❌ Guidance message missing expected content');
+                }
             }
         } catch (error: any) {
-            console.log(`⚠️ Execution result: ${error.message}`);
+            console.log(`❌ Execution failed: ${error.message}`);
         }
 
         console.log('\n🎉 Arc Testnet swap configuration test completed!');

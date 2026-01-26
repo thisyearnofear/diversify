@@ -180,11 +180,8 @@ export const SWAP_CONFIG = {
             'LiFiSwapStrategy': 20,
         },
         [NETWORKS.ARC_TESTNET.chainId]: {
-            'ArcTestnetStrategy': 100,   // Specialized Arc Testnet strategy (highest priority)
-            'LiFiSwapStrategy': 80,      // LiFi might support Arc
-            'UniswapV3Strategy': 70,     // Uniswap V3 commonly deployed on new chains
-            'OneInchSwapStrategy': 60,   // 1inch aggregator might support Arc
-            'DirectRWAStrategy': 50,     // Fallback with helpful error messages
+            'CurveArcStrategy': 100,     // Direct Curve Finance integration (highest priority)
+            'ArcTestnetStrategy': 90,    // Fallback with comprehensive guidance
         },
         [NETWORKS.ARBITRUM_ONE.chainId]: {
             'OneInchSwapStrategy': 90,

@@ -19,6 +19,7 @@ import { OneInchSwapStrategy } from './strategies/oneinch-swap.strategy';
 import { UniswapV3Strategy } from './strategies/uniswap-v3.strategy';
 import { DirectRWAStrategy } from './strategies/direct-rwa.strategy';
 import { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
+import { CurveArcStrategy } from './strategies/curve-arc.strategy';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
 
@@ -31,7 +32,8 @@ interface StrategyPerformance {
 export class SwapOrchestratorService {
     private static strategies: BaseSwapStrategy[] = [
         new MentoSwapStrategy(),      // Celo same-chain (specialized)
-        new ArcTestnetStrategy(),     // Arc Testnet (specialized)
+        new CurveArcStrategy(),       // Curve Finance on Arc Testnet (direct integration)
+        new ArcTestnetStrategy(),     // Arc Testnet fallback (guidance)
         new OneInchSwapStrategy(),    // Multi-chain same-chain (best rates)
         new UniswapV3Strategy(),      // Direct Uniswap V3 (reliable fallback)
         new LiFiSwapStrategy(),       // LiFi same-chain (fallback)
@@ -85,6 +87,13 @@ export class SwapOrchestratorService {
 
                     console.log(`[SwapOrchestrator] Success with ${strategyName}`);
                     return result;
+                }
+
+                // Special handling for Arc Testnet strategies - don't fall back to other strategies
+                // These strategies provide comprehensive guidance that should be shown to users
+                if (strategyName === 'ArcTestnetStrategy' || strategyName === 'CurveArcStrategy') {
+                    console.log(`[SwapOrchestrator] Arc Testnet guidance provided by ${strategyName}`);
+                    return result; // Return the guidance message directly
                 }
 
                 lastError = result.error;
