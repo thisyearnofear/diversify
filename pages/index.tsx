@@ -121,11 +121,15 @@ export default function DiversiFiPage() {
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌍</text></svg>" />
-        {/* Farcaster Mini App Meta Tag */}
+        <link rel="icon" href="/icon.png" />
+        {/* Farcaster Mini App Metadata */}
+        <meta
+          name="fc:frame"
+          content='{"version":"next","imageUrl":"https://diversifiapp.vercel.app/preview.png","button":{"title":"Launch DiversiFi","action":{"type":"launch_frame","name":"DiversiFi","url":"https://diversifiapp.vercel.app","splashImageUrl":"https://diversifiapp.vercel.app/splash.png","splashBackgroundColor":"#8B5CF6"}}}'
+        />
         <meta
           name="fc:miniapp"
-          content='{"version":"1","name":"DiversiFi","iconUrl":"https://diversifiapp.vercel.app/icon.png","splashImageUrl":"https://diversifiapp.vercel.app/splash.png","webhookUrl":"https://diversifiapp.vercel.app/api/farcaster-webhook"}'
+          content='{"version":"1","name":"DiversiFi","iconUrl":"https://diversifiapp.vercel.app/icon.png","splashImageUrl":"https://diversifiapp.vercel.app/splash.png","splashBackgroundColor":"#8B5CF6","webhookUrl":"https://diversifiapp.vercel.app/api/farcaster-webhook"}'
         />
       </Head>
 

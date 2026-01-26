@@ -49,7 +49,7 @@ const nextConfig = {
             // Add Content-Security-Policy to allow MiniPay embedding
             key: "Content-Security-Policy",
             value:
-              "frame-ancestors 'self' *.minipay.app *.celo.org *.opera.com;",
+              "frame-ancestors 'self' *.minipay.app *.celo.org *.opera.com *.warpcast.com https://warpcast.com;",
           },
         ],
       },
