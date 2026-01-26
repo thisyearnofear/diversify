@@ -92,7 +92,7 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
 export const RWA_NETWORKS = {
     arbitrum: {
         chainId: 42161,
-        name: 'Arbitrum One',
+        name: 'Arbitrum',
         rpcUrl: 'https://arb1.arbitrum.io/rpc',
         blockExplorer: 'https://arbiscan.io',
         nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },

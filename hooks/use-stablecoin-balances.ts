@@ -38,8 +38,8 @@ export interface AggregatedPortfolio {
 
 // Supported chains for multi-chain scanning
 const SCANNABLE_CHAINS = [
-  { chainId: 42220, name: 'Celo Mainnet' },
-  { chainId: 42161, name: 'Arbitrum One' },
+  { chainId: 42220, name: 'Celo' },
+  { chainId: 42161, name: 'Arbitrum' },
   { chainId: 5042002, name: 'Arc Testnet' },
 ] as const;
 

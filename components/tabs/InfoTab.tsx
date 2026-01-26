@@ -116,9 +116,8 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
         <CollapsibleSection title="Supported Networks" icon={<span>🔗</span>}>
           <div className="space-y-2">
             {[
-              { name: "Celo Mainnet", icon: "🌍", status: "Production", color: "green" },
-              { name: "Arbitrum One", icon: "🔷", status: "Production", color: "blue" },
-              { name: "Celo Alfajores", icon: "🧪", status: "Testnet", color: "amber" },
+              { name: "Celo", icon: "🌍", status: "Production", color: "green" },
+              { name: "Arbitrum", icon: "🔷", status: "Production", color: "blue" },
               { name: "Arc Testnet", icon: "⚡", status: "Coming 2026", color: "purple" },
             ].map((network) => (
               <div key={network.name} className={`flex items-center justify-between p-2 bg-${network.color}-50 dark:bg-${network.color}-900/20 rounded-lg border border-${network.color}-200 dark:border-${network.color}-800`}>

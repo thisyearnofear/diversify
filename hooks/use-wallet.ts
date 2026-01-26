@@ -176,7 +176,7 @@ export function useWallet() {
           if (targetChainId === 44787) {
             networkConfig = {
               chainId: '0xaf13',
-              chainName: 'Celo Alfajores',
+              chainName: 'Alfajores',
               nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
               rpcUrls: ['https://alfajores-forno.celo-testnet.org'],
               blockExplorerUrls: ['https://alfajores.celoscan.io'],
@@ -192,7 +192,7 @@ export function useWallet() {
           } else {
             networkConfig = {
               chainId: '0xa4ec',
-              chainName: 'Celo Mainnet',
+              chainName: 'Celo',
               nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
               rpcUrls: ['https://forno.celo.org'],
               blockExplorerUrls: ['https://explorer.celo.org/mainnet'],

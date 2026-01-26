@@ -71,10 +71,10 @@ export class ChainDetectionService {
      * Get network name for display
      */
     static getNetworkName(chainId: number | null): string {
-        if (chainId === NETWORKS.CELO_MAINNET.chainId) return 'Celo Mainnet';
-        if (chainId === NETWORKS.ALFAJORES.chainId) return 'Celo Alfajores';
-        if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return 'Arbitrum One';
-        if (chainId === NETWORKS.ARC_TESTNET.chainId) return 'Arc Testnet';
+        if (chainId === NETWORKS.CELO_MAINNET.chainId) return NETWORKS.CELO_MAINNET.name;
+        if (chainId === NETWORKS.ALFAJORES.chainId) return NETWORKS.ALFAJORES.name;
+        if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return NETWORKS.ARBITRUM_ONE.name;
+        if (chainId === NETWORKS.ARC_TESTNET.chainId) return NETWORKS.ARC_TESTNET.name;
         return 'Unknown Network';
     }
 

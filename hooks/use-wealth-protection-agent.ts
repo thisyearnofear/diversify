@@ -115,7 +115,7 @@ export function useWealthProtectionAgent() {
         inflationData: any,
         userBalance: number,
         currentHoldings: string[],
-        networkInfo: { chainId: number, name: string } = { chainId: 44787, name: 'Celo Alfajores' },
+        networkInfo: { chainId: number, name: string } = { chainId: 42220, name: 'Celo' },
         multiChainContext?: MultiChainContext
     ) => {
         setIsAnalyzing(true);

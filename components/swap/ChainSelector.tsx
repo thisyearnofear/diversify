@@ -21,36 +21,43 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
     otherChainId,
     isBridgeMode = false,
 }) => {
-    const networks = [
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    const allNetworks = [
         {
             ...NETWORKS.CELO_MAINNET,
-            label: 'Celo Mainnet',
+            label: NETWORKS.CELO_MAINNET.name,
             icon: '🌍',
             color: 'green',
             isTestnet: false,
         },
         {
             ...NETWORKS.ALFAJORES,
-            label: 'Celo Alfajores',
+            label: NETWORKS.ALFAJORES.name,
             icon: '🧪',
             color: 'amber',
             isTestnet: true,
         },
         {
             ...NETWORKS.ARBITRUM_ONE,
-            label: 'Arbitrum One',
+            label: NETWORKS.ARBITRUM_ONE.name,
             icon: '🔷',
             color: 'blue',
             isTestnet: false,
         },
         {
             ...NETWORKS.ARC_TESTNET,
-            label: 'Arc Testnet',
+            label: NETWORKS.ARC_TESTNET.name,
             icon: '⚡',
             color: 'purple',
             isTestnet: true,
         },
     ];
+    
+    // Filter out Alfajores in production
+    const networks = allNetworks.filter(n => 
+        isDev || n.chainId !== NETWORKS.ALFAJORES.chainId
+    );
 
     // Helper function to check if a network combination is valid for bridging
     const isValidBridgeCombination = (chainId: number): boolean => {

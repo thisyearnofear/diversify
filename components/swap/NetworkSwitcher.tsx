@@ -17,36 +17,43 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
     const [isSwitching, setIsSwitching] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const networks = [
+    const isDev = process.env.NODE_ENV === 'development';
+    
+    const allNetworks = [
         {
             ...NETWORKS.CELO_MAINNET,
-            label: 'Celo (Cash Wallet)',
+            label: `${NETWORKS.CELO_MAINNET.name} (Cash Wallet)`,
             description: 'Production network',
             icon: '🌍',
             color: 'green',
         },
         {
             ...NETWORKS.ALFAJORES,
-            label: 'Celo Alfajores',
+            label: NETWORKS.ALFAJORES.name,
             description: 'Testnet',
             icon: '🧪',
             color: 'amber',
         },
         {
             ...NETWORKS.ARC_TESTNET,
-            label: 'Arc Testnet',
+            label: NETWORKS.ARC_TESTNET.name,
             description: 'Circle\'s testnet (Mainnet: 2026)',
             icon: '⚡',
             color: 'purple',
         },
         {
             ...NETWORKS.ARBITRUM_ONE,
-            label: 'Arbitrum (Savings Vault)',
+            label: `${NETWORKS.ARBITRUM_ONE.name} (Savings Vault)`,
             description: 'For RWA assets',
             icon: '🔷',
             color: 'blue',
         },
     ];
+    
+    // Filter out Alfajores in production
+    const networks = allNetworks.filter(n => 
+        isDev || n.chainId !== NETWORKS.ALFAJORES.chainId
+    );
 
     const currentNetwork = networks.find((n) => n.chainId === currentChainId);
 

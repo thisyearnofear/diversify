@@ -7,15 +7,16 @@
 export const NETWORKS = {
     CELO_MAINNET: {
         chainId: 42220,
-        name: 'Celo Mainnet',
+        name: 'Celo',
         rpcUrl: process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org',
         explorerUrl: 'https://celo.blockscout.com',
     },
     ALFAJORES: {
         chainId: 44787,
-        name: 'Celo Alfajores',
+        name: 'Alfajores',
         rpcUrl: 'https://alfajores-forno.celo-testnet.org',
         explorerUrl: 'https://alfajores.celoscan.io',
+        devOnly: true, // Only show in development
     },
     ARC_TESTNET: {
         chainId: 5042002,
@@ -25,7 +26,7 @@ export const NETWORKS = {
     },
     ARBITRUM_ONE: {
         chainId: 42161,
-        name: 'Arbitrum One',
+        name: 'Arbitrum',
         rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
         explorerUrl: 'https://arbiscan.io',
     },
