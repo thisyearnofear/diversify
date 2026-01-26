@@ -29,7 +29,7 @@ const REGION_STABLECOINS: Record<string, string[]> = {
   Africa: ['cKES', 'cGHS', 'eXOF', 'cZAR'],
   LatAm: ['cREAL', 'cCOP'],
   Asia: ['PUSO', 'cAUD', 'cPESO'],
-  Europe: ['cEUR', 'cGBP'],
+  Europe: ['cEUR', 'cGBP', 'EURC'],
   USA: ['cUSD', 'cCAD', 'USDC'],
   Global: ['PAXG'],
 };
@@ -265,6 +265,12 @@ export function useInflationData() {
       return rate;
     }
 
+    if (normalizedStablecoin === 'EURC') {
+      const rate = getInflationRateForCurrency('EUR');
+      console.log(`[Inflation] ${stablecoin} -> EUR rate: ${rate}`);
+      return rate;
+    }
+
     // Special case for PAXG and other Global region assets
     if (normalizedStablecoin === 'PAXG') {
       const rate = inflationData['Global']?.avgRate || 5.0;
@@ -300,6 +306,7 @@ export function useInflationData() {
 
     // Europe region
     if (stablecoinUpper === 'CEUR') return 'Europe';
+    if (stablecoinUpper === 'EURC') return 'Europe'; // Euro Coin (Arc testnet)
     if (stablecoinUpper === 'CGBP') return 'Europe'; // British Pound
 
     // Latin America region

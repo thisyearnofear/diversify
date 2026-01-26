@@ -125,7 +125,7 @@ export default function DiversiFiPage() {
         {/* Farcaster Mini App Meta Tag */}
         <meta
           name="fc:miniapp"
-          content='{"version":"1","name":"DiversiFi","iconUrl":"https://diversifi-minipay.netlify.app/icon.png","splashImageUrl":"https://diversifi-minipay.netlify.app/splash.png","webhookUrl":"https://diversifi-minipay.netlify.app/api/farcaster-webhook"}'
+          content='{"version":"1","name":"DiversiFi","iconUrl":"https://diversifiapp.vercel.app/icon.png","splashImageUrl":"https://diversifiapp.vercel.app/splash.png","webhookUrl":"https://diversifiapp.vercel.app/api/farcaster-webhook"}'
         />
       </Head>
 

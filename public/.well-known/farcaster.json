@@ -7,10 +7,10 @@
   "frame": {
     "version": "1",
     "name": "DiversiFi",
-    "iconUrl": "https://diversifi-minipay.netlify.app/icon.png",
-    "homeUrl": "https://diversifi-minipay.netlify.app",
-    "splashImageUrl": "https://diversifi-minipay.netlify.app/splash.png",
+    "iconUrl": "https://diversifiapp.vercel.app/icon.png",
+    "homeUrl": "https://diversifiapp.vercel.app",
+    "splashImageUrl": "https://diversifiapp.vercel.app/splash.png",
     "splashBackgroundColor": "#8B5CF6",
-    "webhookUrl": "https://diversifi-minipay.netlify.app/api/farcaster-webhook"
+    "webhookUrl": "https://diversifiapp.vercel.app/api/farcaster-webhook"
   }
 }
