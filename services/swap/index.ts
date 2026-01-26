@@ -15,6 +15,7 @@ export { BaseSwapStrategy } from './strategies/base-swap.strategy';
 export { MentoSwapStrategy } from './strategies/mento-swap.strategy';
 export { LiFiSwapStrategy } from './strategies/lifi-swap.strategy';
 export { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
+export { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
 
 // Legacy services (still used by strategies)
 export { ApprovalService } from './approval';

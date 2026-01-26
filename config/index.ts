@@ -179,6 +179,13 @@ export const SWAP_CONFIG = {
             'MentoSwapStrategy': 100,
             'LiFiSwapStrategy': 20,
         },
+        [NETWORKS.ARC_TESTNET.chainId]: {
+            'ArcTestnetStrategy': 100,   // Specialized Arc Testnet strategy (highest priority)
+            'LiFiSwapStrategy': 80,      // LiFi might support Arc
+            'UniswapV3Strategy': 70,     // Uniswap V3 commonly deployed on new chains
+            'OneInchSwapStrategy': 60,   // 1inch aggregator might support Arc
+            'DirectRWAStrategy': 50,     // Fallback with helpful error messages
+        },
         [NETWORKS.ARBITRUM_ONE.chainId]: {
             'OneInchSwapStrategy': 90,
             'UniswapV3Strategy': 80,

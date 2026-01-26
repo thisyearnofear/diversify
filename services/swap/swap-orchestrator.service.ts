@@ -18,6 +18,7 @@ import { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
 import { OneInchSwapStrategy } from './strategies/oneinch-swap.strategy';
 import { UniswapV3Strategy } from './strategies/uniswap-v3.strategy';
 import { DirectRWAStrategy } from './strategies/direct-rwa.strategy';
+import { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
 
@@ -30,6 +31,7 @@ interface StrategyPerformance {
 export class SwapOrchestratorService {
     private static strategies: BaseSwapStrategy[] = [
         new MentoSwapStrategy(),      // Celo same-chain (specialized)
+        new ArcTestnetStrategy(),     // Arc Testnet (specialized)
         new OneInchSwapStrategy(),    // Multi-chain same-chain (best rates)
         new UniswapV3Strategy(),      // Direct Uniswap V3 (reliable fallback)
         new LiFiSwapStrategy(),       // LiFi same-chain (fallback)

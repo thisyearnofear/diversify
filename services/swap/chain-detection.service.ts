@@ -20,8 +20,8 @@ export class ChainDetectionService {
      * Check if chain is Celo (mainnet or testnet)
      */
     static isCelo(chainId: number | null): boolean {
-        return chainId === NETWORKS.CELO_MAINNET.chainId || 
-               chainId === NETWORKS.ALFAJORES.chainId;
+        return chainId === NETWORKS.CELO_MAINNET.chainId ||
+            chainId === NETWORKS.ALFAJORES.chainId;
     }
 
     /**
@@ -35,8 +35,8 @@ export class ChainDetectionService {
      * Check if chain is a testnet
      */
     static isTestnet(chainId: number | null): boolean {
-        return chainId === NETWORKS.ALFAJORES.chainId || 
-               chainId === NETWORKS.ARC_TESTNET.chainId;
+        return chainId === NETWORKS.ALFAJORES.chainId ||
+            chainId === NETWORKS.ARC_TESTNET.chainId;
     }
 
     /**
@@ -55,7 +55,7 @@ export class ChainDetectionService {
     static getSwapProtocol(chainId: number | null): SwapProtocol {
         if (this.isCelo(chainId)) return 'mento';
         if (this.isArbitrum(chainId)) return 'lifi';
-        if (this.isArc(chainId)) return 'none'; // Arc not yet supported for swaps
+        if (this.isArc(chainId)) return 'lifi'; // Arc now has basic swap support
         return 'none';
     }
 

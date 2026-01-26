@@ -28,9 +28,9 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Supports same-chain swaps on Arbitrum
+        // Supports same-chain swaps on Arbitrum and Arc Testnet
         return (
-            ChainDetectionService.isArbitrum(params.fromChainId) &&
+            (ChainDetectionService.isArbitrum(params.fromChainId) || ChainDetectionService.isArc(params.fromChainId)) &&
             params.fromChainId === params.toChainId
         );
     }
