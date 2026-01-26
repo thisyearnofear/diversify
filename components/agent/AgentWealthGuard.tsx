@@ -120,8 +120,11 @@ const AIProgress = ({ currentStep, steps, progress }: {
         {/* Cost tracker */}
         <div className="mt-3 pt-3 border-t border-blue-100">
             <div className="flex items-center justify-between text-xs">
-                <span className="text-gray-600">Analysis Cost</span>
-                <span className="font-mono text-blue-600">$0.43 USDC</span>
+                <div className="flex flex-col">
+                    <span className="text-gray-600">Analysis Cost</span>
+                    <span className="text-[10px] text-green-600 font-bold uppercase tracking-tight">✨ Sponsored by DiversiFi</span>
+                </div>
+                <span className="font-mono text-blue-600">$0.05 USDC</span>
             </div>
         </div>
     </div>
@@ -160,7 +163,7 @@ export default function AgentWealthGuard({ amount, holdings, embedded = false }:
     const handleAnalyze = () => {
         const networkName = ChainDetectionService.getNetworkName(chainId);
         const networkInfo = { chainId: chainId || 0, name: networkName };
-        showToast('Starting comprehensive wealth protection analysis...', 'ai', { cost: 0.43, sources: 5 });
+        showToast('Starting comprehensive wealth protection analysis...', 'ai', { cost: 0.05, sources: 5 });
         analyze(
             inflationData,
             amount,

@@ -27,13 +27,26 @@ export interface AgentAdvice {
 
 export type RiskTolerance = 'Conservative' | 'Balanced' | 'Aggressive';
 export type InvestmentGoal = 'Capital Preservation' | 'Inflation Hedge' | 'Growth';
+export type UserGoal = 'inflation_protection' | 'geographic_diversification' | 'rwa_access' | 'exploring';
 
 export interface AgentConfig {
     riskTolerance: RiskTolerance;
     goal: InvestmentGoal;
+    userGoal?: UserGoal;
     analysisDepth?: 'Quick' | 'Standard' | 'Deep';
     timeHorizon?: '1 month' | '3 months' | '6 months' | '1 year';
     spendingLimit?: number;
+}
+
+// Multi-chain portfolio context for the agent
+export interface MultiChainContext {
+    currentChain: { chainId: number; name: string };
+    aggregatedPortfolio?: {
+        totalValue: number;
+        chains: { chainId: number; chainName: string; totalValue: number; holdings: string[] }[];
+        allHoldings: string[];
+        diversificationScore: number;
+    };
 }
 
 export interface AIMessage {
@@ -90,7 +103,8 @@ export function useWealthProtectionAgent() {
         inflationData: any,
         userBalance: number,
         currentHoldings: string[],
-        networkInfo: { chainId: number, name: string } = { chainId: 44787, name: 'Celo Alfajores' }
+        networkInfo: { chainId: number, name: string } = { chainId: 44787, name: 'Celo Alfajores' },
+        multiChainContext?: MultiChainContext
     ) => {
         setIsAnalyzing(true);
         setAdvice(null);
@@ -195,7 +209,7 @@ export function useWealthProtectionAgent() {
                     inflationData,
                     userBalance,
                     currentHoldings,
-                    config
+                    { ...config, multiChainContext, networkInfo }
                 );
 
                 setAdvice(result);

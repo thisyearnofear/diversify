@@ -21,6 +21,27 @@ interface StablecoinBalance {
   region: string;
 }
 
+interface ChainPortfolio {
+  chainId: number;
+  chainName: string;
+  totalValue: number;
+  balances: Record<string, StablecoinBalance>;
+}
+
+export interface AggregatedPortfolio {
+  totalValue: number;
+  chains: ChainPortfolio[];
+  allHoldings: string[];
+  diversificationScore: number;
+}
+
+// Supported chains for multi-chain scanning
+const SCANNABLE_CHAINS = [
+  { chainId: 42220, name: 'Celo Mainnet' },
+  { chainId: 42161, name: 'Arbitrum One' },
+  { chainId: 5042002, name: 'Arc Testnet' },
+] as const;
+
 // Helper function to normalize region names from centralized config
 const normalizeRegion = (region: string): string => {
   const regionMap: Record<string, string> = {
@@ -77,6 +98,127 @@ function setCachedBalances(address: string, balances: Record<string, StablecoinB
   }
 }
 
+// Pure function to fetch balances for a specific chain (no React state)
+async function fetchBalancesForChain(
+  address: string,
+  targetChainId: number
+): Promise<Record<string, StablecoinBalance>> {
+  const isAlfajores = ChainDetectionService.isTestnet(targetChainId) && ChainDetectionService.isCelo(targetChainId);
+  const isArc = ChainDetectionService.isArc(targetChainId);
+  const isArbitrum = ChainDetectionService.isArbitrum(targetChainId);
+  const isCeloMainnet = targetChainId === NETWORKS.CELO_MAINNET.chainId;
+
+  let providerUrl = NETWORKS.CELO_MAINNET.rpcUrl;
+  if (isAlfajores) providerUrl = NETWORKS.ALFAJORES.rpcUrl;
+  if (isArc) providerUrl = NETWORKS.ARC_TESTNET.rpcUrl;
+  if (isArbitrum) providerUrl = NETWORKS.ARBITRUM_ONE.rpcUrl;
+
+  const provider = new ethers.providers.JsonRpcProvider(providerUrl);
+
+  // Determine tokens to fetch based on network
+  let tokensToFetch: string[] = [];
+  if (isArc) {
+    tokensToFetch = ['USDC', 'EURC'];
+  } else if (isArbitrum) {
+    tokensToFetch = ['USDC', 'PAXG'];
+  } else if (isAlfajores) {
+    tokensToFetch = ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD'];
+  } else if (isCeloMainnet) {
+    tokensToFetch = ['CUSD', 'CEUR', 'CKES', 'CCOP', 'PUSO'];
+  } else {
+    return {}; // Unsupported chain
+  }
+
+  const calls: ContractCall[] = [];
+  const tokenMetadataList: { symbol: string; metadata: any; exchangeRate: number }[] = [];
+
+  for (const symbol of tokensToFetch) {
+    const tokenList = getTokenAddresses(targetChainId);
+    const tokenAddress = tokenList[symbol as keyof typeof tokenList] ||
+      tokenList[symbol.toUpperCase() as keyof typeof tokenList] ||
+      tokenList[symbol.toLowerCase() as keyof typeof tokenList];
+
+    if (!tokenAddress) continue;
+
+    calls.push({
+      address: tokenAddress,
+      abi: ABIS.ERC20,
+      method: 'balanceOf',
+      params: [address],
+    });
+
+    tokenMetadataList.push({
+      symbol,
+      metadata: TOKEN_METADATA[symbol] ||
+        TOKEN_METADATA[symbol.toUpperCase()] ||
+        TOKEN_METADATA[symbol.toLowerCase()] ||
+        { name: symbol, region: 'GLOBAL' },
+      exchangeRate: EXCHANGE_RATES[symbol] ||
+        EXCHANGE_RATES[symbol.toUpperCase()] ||
+        EXCHANGE_RATES[symbol.toLowerCase()] || 1
+    });
+  }
+
+  if (calls.length === 0) return {};
+
+  try {
+    const results = await executeMulticall(provider, calls, targetChainId);
+
+    const balanceMap: Record<string, StablecoinBalance> = {};
+    results.forEach((balance, index) => {
+      if (!balance) return;
+
+      const { symbol, metadata, exchangeRate } = tokenMetadataList[index];
+      const decimals = metadata.decimals || 18;
+      const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+      const value = Number.parseFloat(formattedBalance) * exchangeRate;
+
+      if (value <= 0 && formattedBalance === "0.0") return;
+
+      balanceMap[symbol] = {
+        symbol,
+        name: metadata.name,
+        balance: balance.toString(),
+        formattedBalance,
+        value,
+        region: normalizeRegion(metadata.region),
+      };
+    });
+
+    return balanceMap;
+  } catch (err) {
+    console.warn(`Failed to fetch balances for chain ${targetChainId}:`, err);
+    return {};
+  }
+}
+
+// Calculate diversification score (0-100)
+function calculateDiversificationScore(chains: ChainPortfolio[]): number {
+  const chainsWithValue = chains.filter(c => c.totalValue > 0);
+  if (chainsWithValue.length === 0) return 0;
+
+  // Collect all unique holdings across chains
+  const allHoldings = new Set<string>();
+  const allRegions = new Set<string>();
+  
+  for (const chain of chainsWithValue) {
+    for (const balance of Object.values(chain.balances)) {
+      allHoldings.add(balance.symbol);
+      allRegions.add(balance.region);
+    }
+  }
+
+  // Score components:
+  // - Chain diversity: 30 points (10 per chain, max 30)
+  // - Token diversity: 40 points (scaled by number of unique tokens)
+  // - Region diversity: 30 points (scaled by number of unique regions)
+  const chainScore = Math.min(30, chainsWithValue.length * 10);
+  const tokenScore = Math.min(40, allHoldings.size * 8);
+  const regionScore = Math.min(30, allRegions.size * 10);
+
+  return chainScore + tokenScore + regionScore;
+}
+
 export function useStablecoinBalances(address: string | undefined | null) {
   const [balances, setBalances] = useState<Record<string, StablecoinBalance>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -84,6 +226,10 @@ export function useStablecoinBalances(address: string | undefined | null) {
   const [regionTotals, setRegionTotals] = useState<Record<string, number>>({});
   const [totalValue, setTotalValue] = useState(0);
   const [chainId, setChainId] = useState<number | null>(null);
+  
+  // Multi-chain aggregated portfolio
+  const [aggregatedPortfolio, setAggregatedPortfolio] = useState<AggregatedPortfolio | null>(null);
+  const [isLoadingAllChains, setIsLoadingAllChains] = useState(false);
 
   // Define calculateTotals function at the hook level so it can be used by both useEffect and refreshBalances
   const calculateTotals = useCallback((balanceMap: Record<string, StablecoinBalance>) => {
@@ -338,7 +484,57 @@ export function useStablecoinBalances(address: string | undefined | null) {
     }
   }, [address, fetchBalances, refreshChainId]);
 
+  // Fetch balances across all supported chains (for Oracle context)
+  const fetchAllChainBalances = useCallback(async (): Promise<AggregatedPortfolio | null> => {
+    if (!address) return null;
+
+    setIsLoadingAllChains(true);
+
+    try {
+      // Fetch all chains in parallel
+      const chainResults = await Promise.all(
+        SCANNABLE_CHAINS.map(async (chain) => {
+          const balances = await fetchBalancesForChain(address, chain.chainId);
+          const totalValue = Object.values(balances).reduce((sum, b) => sum + b.value, 0);
+          return {
+            chainId: chain.chainId,
+            chainName: chain.name,
+            totalValue,
+            balances,
+          };
+        })
+      );
+
+      // Aggregate results
+      const allHoldings = new Set<string>();
+      let totalAggregatedValue = 0;
+
+      for (const chain of chainResults) {
+        totalAggregatedValue += chain.totalValue;
+        for (const symbol of Object.keys(chain.balances)) {
+          allHoldings.add(symbol);
+        }
+      }
+
+      const portfolio: AggregatedPortfolio = {
+        totalValue: totalAggregatedValue,
+        chains: chainResults,
+        allHoldings: Array.from(allHoldings),
+        diversificationScore: calculateDiversificationScore(chainResults),
+      };
+
+      setAggregatedPortfolio(portfolio);
+      return portfolio;
+    } catch (err) {
+      console.error('Failed to fetch all chain balances:', err);
+      return null;
+    } finally {
+      setIsLoadingAllChains(false);
+    }
+  }, [address]);
+
   return {
+    // Current chain data (backward compatible)
     balances,
     isLoading,
     error,
@@ -346,6 +542,11 @@ export function useStablecoinBalances(address: string | undefined | null) {
     totalValue,
     chainId,
     refreshBalances,
-    refreshChainId
+    refreshChainId,
+    
+    // Multi-chain aggregated data
+    aggregatedPortfolio,
+    isLoadingAllChains,
+    fetchAllChainBalances,
   };
 }

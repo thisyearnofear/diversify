@@ -91,7 +91,7 @@ const DATA_SOURCES: DataSource[] = [
     {
         name: 'Macro Regime Oracle',
         url: '/api/agent/x402-gateway?source=macro-regime',
-        cost: { amount: '0.15', currency: 'USDC' },
+        cost: { amount: '0.01', currency: 'USDC' },
         priority: 0, // Highest priority
         dataType: 'economic',
         x402Enabled: true,
@@ -100,7 +100,7 @@ const DATA_SOURCES: DataSource[] = [
     {
         name: 'Truflation Premium',
         url: '/api/agent/x402-gateway?source=truflation',
-        cost: { amount: '0.08', currency: 'USDC' },
+        cost: { amount: '0.01', currency: 'USDC' },
         priority: 1,
         dataType: 'inflation',
         x402Enabled: true,
@@ -109,7 +109,7 @@ const DATA_SOURCES: DataSource[] = [
     {
         name: 'Glassnode Institutional',
         url: '/api/agent/x402-gateway?source=glassnode',
-        cost: { amount: '0.12', currency: 'USDC' },
+        cost: { amount: '0.01', currency: 'USDC' },
         priority: 1,
         dataType: 'sentiment',
         x402Enabled: true,
@@ -118,7 +118,7 @@ const DATA_SOURCES: DataSource[] = [
     {
         name: 'DeFi Yield Analytics',
         url: '/api/agent/x402-gateway?source=defi-yields',
-        cost: { amount: '0.05', currency: 'USDC' },
+        cost: { amount: '0.01', currency: 'USDC' },
         priority: 1,
         dataType: 'yield',
         x402Enabled: true,
@@ -127,7 +127,7 @@ const DATA_SOURCES: DataSource[] = [
     {
         name: 'RWA Market Data',
         url: '/api/agent/x402-gateway?source=rwa-markets',
-        cost: { amount: '0.03', currency: 'USDC' },
+        cost: { amount: '0.01', currency: 'USDC' },
         priority: 2,
         dataType: 'economic',
         x402Enabled: true,
