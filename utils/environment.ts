@@ -85,8 +85,35 @@ export function isMobileEnvironment(): boolean {
 }
 
 /**
+ * Checks if the app is running in the Farcaster environment
+ * Farcaster triggers frames and mini apps with specific referrers or parameters
+ */
+export function isFarcasterEnvironment(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  // Check for Farcaster in user agent
+  const userAgent = navigator.userAgent || '';
+  const isFarcasterUserAgent = userAgent.includes('Farcaster') || userAgent.includes('Warpcast');
+
+  // Check for URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const isFarcasterParam = urlParams.get('farcaster') === 'true' || !!urlParams.get('fc');
+
+  // Check for referrer from Farcaster domains
+  const referrer = document.referrer || '';
+  const isFarcasterReferrer = referrer.includes('farcaster.xyz') ||
+    referrer.includes('warpcast.com') ||
+    referrer.includes('frames.abc');
+
+  // Check if we're in an iframe (Farcaster frames are always in iframes)
+  const isInIframe = window !== window.parent;
+
+  return isFarcasterUserAgent || isFarcasterParam || (isInIframe && isFarcasterReferrer);
+}
+
+/**
  * Checks if the app should render the DiversiFi UI
- * This is true if the app is running in MiniPay or on the /diversifi path
+ * This is true if the app is running in MiniPay, Farcaster, or on the root path
  */
 export function shouldRenderDiversiFiUI(): boolean {
   if (typeof window === 'undefined') return false;
@@ -94,8 +121,11 @@ export function shouldRenderDiversiFiUI(): boolean {
   // Check if in MiniPay
   const isInMiniPay = isMiniPayEnvironment();
 
+  // Check if in Farcaster
+  const isInFarcaster = isFarcasterEnvironment();
+
   // Check if on the diversifi path or root
   const isOnDiversiFiPath = window.location.pathname.startsWith('/diversifi') || window.location.pathname === '/';
 
-  return isInMiniPay || isOnDiversiFiPath;
+  return isInMiniPay || isInFarcaster || isOnDiversiFiPath;
 }
