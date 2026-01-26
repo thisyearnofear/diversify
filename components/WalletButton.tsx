@@ -86,7 +86,10 @@ export default function WalletButton({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowDropdown(!showDropdown)}
-          className={`flex items-center space-x-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-full text-gray-800 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:shadow-md transition-all duration-200 ${className}`}
+          className={`flex items-center space-x-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm min-w-[48px] min-h-[48px] px-4 py-3 rounded-full text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:shadow-md transition-all duration-200 ${className}`}
+          aria-label="Wallet menu"
+          aria-expanded={showDropdown}
+          aria-haspopup="true"
         >
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
           <span className="text-sm font-medium font-mono">{formatAddress(address)}</span>
@@ -107,7 +110,8 @@ export default function WalletButton({
             <div className="py-1">
               <button
                 onClick={copyAddress}
-                className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center w-full min-h-[44px] px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                aria-label="Copy wallet address"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -127,7 +131,8 @@ export default function WalletButton({
               </button>
               <button
                 onClick={handleDisconnect}
-                className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className="flex items-center w-full min-h-[44px] px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                aria-label="Disconnect wallet"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

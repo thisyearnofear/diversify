@@ -29,6 +29,8 @@ interface WalletContextType {
   disconnect: () => Promise<void>;
   switchNetwork: (chainId: number) => Promise<void>;
   formatAddress: (addr: string) => string;
+  connectFarcasterWallet: () => Promise<void>;
+  getFarcasterErrorMessage: (error: any) => string | null;
 }
 
 // Create the context with default values
@@ -45,6 +47,8 @@ const WalletContext = createContext<WalletContextType>({
   disconnect: async () => { },
   switchNetwork: async () => { },
   formatAddress: (addr: string) => addr,
+  connectFarcasterWallet: async () => { },
+  getFarcasterErrorMessage: (error: any) => null,
 });
 
 // Provider component

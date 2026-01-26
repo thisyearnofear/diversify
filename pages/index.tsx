@@ -21,9 +21,11 @@ import StrategiesTab from "../components/tabs/StrategiesTab";
 import SwapTab from "../components/tabs/SwapTab";
 import InfoTab from "../components/tabs/InfoTab";
 import WalletButton from "../components/WalletButton";
+import FarcasterWalletButton from "../components/FarcasterWalletButton";
 import { useWalletContext } from "../components/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/WalletTutorial";
 import ThemeToggle from "../components/ThemeToggle";
+import LazyFarcasterUserInfo from "../components/LazyFarcasterUserInfo";
 
 export default function DiversiFiPage() {
   // Use app state context for tab management
@@ -33,6 +35,7 @@ export default function DiversiFiPage() {
   // Wallet connection from context
   const {
     isMiniPay: isInMiniPay,
+    isFarcaster,
     address,
     connect: connectWallet,
     switchNetwork,
@@ -110,7 +113,7 @@ export default function DiversiFiPage() {
         <title>DiversiFi - MiniPay</title>
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
         />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -122,11 +125,14 @@ export default function DiversiFiPage() {
         {/* Farcaster Mini App Meta Tag */}
         <meta
           name="fc:miniapp"
-          content='{"version":"1","name":"DiversiFi","iconUrl":"/icon.png","splashImageUrl":"/splash.png"}'
+          content='{"version":"1","name":"DiversiFi","iconUrl":"https://diversifi-minipay.netlify.app/icon.png","splashImageUrl":"https://diversifi-minipay.netlify.app/splash.png","webhookUrl":"https://diversifi-minipay.netlify.app/api/farcaster-webhook"}'
         />
       </Head>
 
       <div className="max-w-md mx-auto">
+        {/* Farcaster User Info - Lazy loaded for better performance */}
+        <LazyFarcasterUserInfo />
+
         {/* Header with proper spacing */}
         <div className="flex items-center justify-between mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
           <div className="flex items-center">
@@ -138,10 +144,15 @@ export default function DiversiFiPage() {
                 MiniPay
               </span>
             )}
+            {isFarcaster && (
+              <span className="ml-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-medium">
+                Farcaster
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <WalletButton />
+            {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
           </div>
         </div>
 

@@ -30,8 +30,27 @@ export function useWallet() {
           setFarcasterContext(context);
           sdk.actions.ready(); // Signal that frame is ready
           console.log('[Farcaster] Frame initialized with context:', context);
+          
+          // Log Farcaster user info for analytics
+          logFarcasterUserInfo(context);
+          
+          // Try to get wallet address from Farcaster's Ethereum provider
+          try {
+            const ethProvider = await sdk.wallet.getEthereumProvider();
+            if (ethProvider) {
+              const accounts = await ethProvider.request({ method: 'eth_accounts' }) as string[];
+              if (accounts && accounts.length > 0 && !address) {
+                console.log('[Farcaster] User has connected address:', accounts[0]);
+                setAddress(accounts[0]);
+                setIsConnected(true);
+              }
+            }
+          } catch (walletErr) {
+            console.log('[Farcaster] Could not get wallet from provider:', walletErr);
+          }
         }
       } catch (err) {
+        console.log('[Farcaster] Not in Farcaster environment:', err);
         // Not in Farcaster environment, continue
       }
 
@@ -191,6 +210,29 @@ export function useWallet() {
     }
   };
 
+  // Log Farcaster user info for analytics
+  const logFarcasterUserInfo = (context: { user?: { fid?: number; username?: string; displayName?: string; pfpUrl?: string } }) => {
+    try {
+      const user = context.user;
+      if (!user) {
+        console.log('[Farcaster Analytics] No user info available');
+        return;
+      }
+      console.log('[Farcaster Analytics] User Info:', {
+        fid: user.fid,
+        username: user.username,
+        displayName: user.displayName,
+        hasProfilePicture: !!user.pfpUrl,
+        timestamp: new Date().toISOString()
+      });
+      
+      // You could also send this to your analytics service
+      // analytics.track('Farcaster User Detected', { fid: user.fid, username: user.username });
+    } catch (error) {
+      console.error('[Farcaster] Error logging user info:', error);
+    }
+  };
+
   // Format address for display
   const formatAddress = (addr: string) => {
     return `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
@@ -203,6 +245,59 @@ export function useWallet() {
     setChainId(null);
     setError(null);
     console.log('Wallet disconnected');
+  };
+
+  // Farcaster-specific connect function
+  const connectFarcasterWallet = async () => {
+    if (!isFarcaster || !farcasterContext) {
+      setError('Farcaster wallet connection is not available');
+      return;
+    }
+
+    try {
+      setIsConnecting(true);
+      setError(null);
+
+      // Check if Farcaster context already has a connected address
+      if (farcasterContext.connectedAddress) {
+        setAddress(farcasterContext.connectedAddress);
+        setIsConnected(true);
+        console.log('[Farcaster] Connected using existing Farcaster address:', farcasterContext.connectedAddress);
+        return;
+      }
+
+      // If no existing address, try to request wallet connection through Farcaster
+      console.log('[Farcaster] Requesting wallet connection...');
+      
+      // This would be implemented based on Farcaster SDK capabilities
+      // For now, we'll fall back to regular wallet connection
+      await connect();
+
+    } catch (error) {
+      console.error('[Farcaster] Error connecting wallet:', error);
+      setError(error instanceof Error ? error.message : 'Failed to connect Farcaster wallet');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  // Enhanced error handling for Farcaster
+  const getFarcasterErrorMessage = (error: any) => {
+    if (!isFarcaster) return null;
+
+    if (error.message.includes('Farcaster')) {
+      return `Farcaster: ${error.message}`;
+    }
+
+    if (error.code === 'FARCASTER_NOT_AVAILABLE') {
+      return 'Farcaster wallet is not available in this context';
+    }
+
+    if (error.code === 'FARCASTER_CONNECTION_FAILED') {
+      return 'Failed to connect Farcaster wallet. Please try again.';
+    }
+
+    return null;
   };
 
   return {
@@ -218,5 +313,7 @@ export function useWallet() {
     disconnect,
     switchNetwork,
     formatAddress,
+    connectFarcasterWallet,
+    getFarcasterErrorMessage,
   };
 }

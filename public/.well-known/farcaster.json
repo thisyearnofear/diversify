@@ -1,18 +1,16 @@
 {
   "accountAssociation": {
-    "header": "eyJmaWQiOiAwLCB0eXBlOiAic2Vzc2lvbiIsICJrZXkiOiAiMHgwIn0",
-    "payload": "eyJkb21haW4iOiAiaHR0cHM6Ly9kaXZlcnNpZmktbWluaXBheS5mcmFtZXMuZXhhbXBsZSJ9",
-    "signature": "MHgw"
+    "header": "REPLACE_WITH_YOUR_HEADER",
+    "payload": "REPLACE_WITH_YOUR_PAYLOAD",
+    "signature": "REPLACE_WITH_YOUR_SIGNATURE"
   },
   "frame": {
     "version": "1",
     "name": "DiversiFi",
-    "iconUrl": "/icon.png",
-    "homeUrl": "/",
-    "imageUrl": "/splash.png",
-    "buttonTitle": "Launch DiversiFi",
-    "splashImageUrl": "/splash.png",
-    "splashBackgroundColor": "#ffffff",
-    "webhookUrl": "/api/webhook"
+    "iconUrl": "https://diversifi-minipay.netlify.app/icon.png",
+    "homeUrl": "https://diversifi-minipay.netlify.app",
+    "splashImageUrl": "https://diversifi-minipay.netlify.app/splash.png",
+    "splashBackgroundColor": "#8B5CF6",
+    "webhookUrl": "https://diversifi-minipay.netlify.app/api/farcaster-webhook"
   }
 }
