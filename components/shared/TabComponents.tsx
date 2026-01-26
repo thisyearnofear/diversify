@@ -169,7 +169,7 @@ export const StatBadge = ({
 }: {
   label: string;
   value: string | number;
-  color?: "gray" | "green" | "blue" | "red" | "yellow";
+  color?: "gray" | "green" | "blue" | "red" | "yellow" | "white";
 }) => {
   const colors = {
     gray: "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300",
@@ -177,6 +177,7 @@ export const StatBadge = ({
     blue: "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300",
     red: "bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300",
     yellow: "bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300",
+    white: "bg-white/20 text-white border border-white/30 backdrop-blur-sm",
   };
   return (
     <div className={`${colors[color]} px-4 py-2 rounded-xl text-center min-w-0 flex-1`}>

@@ -16,8 +16,6 @@ import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
 import { ChainDetectionService } from "../services/swap/chain-detection.service";
 import { NETWORKS } from "../config";
-import AnalyticsTab from "../components/tabs/AnalyticsTab";
-import StrategiesTab from "../components/tabs/StrategiesTab";
 import SwapTab from "../components/tabs/SwapTab";
 import InfoTab from "../components/tabs/InfoTab";
 import WalletButton from "../components/wallet/WalletButton";
@@ -27,11 +25,9 @@ import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTu
 import ThemeToggle from "../components/ui/ThemeToggle";
 
 export default function DiversiFiPage() {
-  // Use app state context for tab management
   const { activeTab, setActiveTab } = useAppState();
   const [selectedStrategy, setSelectedStrategy] = useState("balanced");
 
-  // Wallet connection from context
   const {
     isMiniPay: isInMiniPay,
     isFarcaster,
@@ -41,13 +37,11 @@ export default function DiversiFiPage() {
     switchNetwork,
   } = useWalletContext();
 
-  // Wallet tutorial
   const {
     isTutorialOpen,
     closeTutorial,
   } = useWalletTutorial();
 
-  // Use our custom hooks
   const { region: detectedRegion, isLoading: isRegionLoading } =
     useUserRegion();
   const [userRegion, setUserRegion] = useState<Region>("Africa");
@@ -61,31 +55,24 @@ export default function DiversiFiPage() {
     refreshChainId,
   } = useStablecoinBalances(address);
 
-  // Extract chainId for use in memo
   const currentChainId = chainId;
 
-  // Dynamic token list based on network
   const availableTokens = useMemo(() => {
     if (currentChainId === 5042002) {
-      // Arc testnet - show testnet tokens
       return ARC_TESTNET_TOKENS;
     }
-    // Default to mainnet tokens
     return AVAILABLE_TOKENS;
   }, [currentChainId]);
-  // const { data: performanceData, isLoading: isPerformanceLoading } =
-  //   useHistoricalPerformance(address); // performanceData is not currently used
-  // We use inflationData in the SwapTab component
+
   const { inflationData } = useInflationData();
 
-  // Only load currency performance data when on analytics tab to reduce initial load
-  const shouldLoadCurrencyPerformance = activeTab === 'analytics';
+  // Load currency performance for the Overview (Station) tab
+  const shouldLoadCurrencyPerformance = activeTab === 'overview';
   const {
     data: currencyPerformanceData,
     isLoading: isCurrencyPerformanceLoading,
   } = useCurrencyPerformance('USD', shouldLoadCurrencyPerformance);
 
-  // Convert region totals to format needed for pie chart
   const regionData = useMemo(() => {
     if (!address || isBalancesLoading || Object.keys(regionTotals).length === 0) {
       return [];
@@ -93,14 +80,12 @@ export default function DiversiFiPage() {
     return Object.entries(regionTotals).map(
       ([region, value]) => ({
         region,
-        // Use actual USD value for the pie chart, not percentage
         value: value,
         color: REGION_COLORS[region as keyof typeof REGION_COLORS] || "#CBD5E0",
       })
     );
   }, [address, isBalancesLoading, regionTotals]);
 
-  // Update user region when detected
   useEffect(() => {
     if (!isRegionLoading && detectedRegion) {
       setUserRegion(detectedRegion);
@@ -108,62 +93,23 @@ export default function DiversiFiPage() {
   }, [detectedRegion, isRegionLoading]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 transition-colors">
+    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 transition-colors">
       <Head>
         <title>DiversiFi - MiniPay</title>
-        <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-        />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta
-          name="apple-mobile-web-app-status-bar-style"
-          content="black-translucent"
-        />
-        <link rel="icon" href="/icon.png" />
-        {/* Farcaster Mini App Metadata */}
-        <meta
-          name="fc:frame"
-          content='{"version":"next","imageUrl":"https://diversifiapp.vercel.app/preview.png","button":{"title":"Launch DiversiFi","action":{"type":"launch_frame","name":"DiversiFi","url":"https://diversifiapp.vercel.app","splashImageUrl":"https://diversifiapp.vercel.app/splash.png","splashBackgroundColor":"#8B5CF6"}}}'
-        />
-        <meta
-          name="fc:miniapp"
-          content='{"version":"1","name":"DiversiFi","iconUrl":"https://diversifiapp.vercel.app/icon.png","splashImageUrl":"https://diversifiapp.vercel.app/splash.png","splashBackgroundColor":"#8B5CF6","webhookUrl":"https://diversifiapp.vercel.app/api/farcaster-webhook"}'
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
       </Head>
 
       <div className="max-w-md mx-auto">
-        {/* Header with proper spacing */}
-        <div className="flex items-center justify-between mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 transition-colors">
+        <div className="flex items-center justify-between mb-4 py-2">
           <div className="flex items-center gap-3">
-            {isFarcaster && farcasterContext?.user?.pfpUrl ? (
-              <img
-                src={farcasterContext.user.pfpUrl}
-                alt="Profile"
-                className="w-10 h-10 rounded-full border-2 border-purple-500 shadow-sm"
-              />
-            ) : (
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                DiversiFi
-              </h1>
-            )}
-
-            <div className="flex flex-col">
-              <h1 className={`${isFarcaster && farcasterContext?.user ? 'text-sm font-bold leading-tight' : 'hidden'} text-gray-900 dark:text-white`}>
-                {farcasterContext?.user?.displayName || 'DiversiFi'}
-              </h1>
-              <div className="flex items-center gap-1">
-                {isInMiniPay && (
-                  <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                    MiniPay
-                  </span>
-                )}
-                {isFarcaster && (
-                  <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                    Farcaster
-                  </span>
-                )}
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <span className="text-white text-lg font-black">D</span>
+            </div>
+            <div>
+              <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">DiversiFi</h1>
+              <div className="flex items-center gap-1 opacity-60">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Oracle Live</span>
               </div>
             </div>
           </div>
@@ -173,67 +119,11 @@ export default function DiversiFiPage() {
           </div>
         </div>
 
-        {/* Unsupported Network State - Blocking */}
-        {address && balances && Object.keys(balances).length === 0 && (
-          // We can infer unsupported network if address is connected but no balances are fetched
-          // AND the chainId (if available) is not in our supported list.
-          // However, useStablecoinBalances now just returns empty balances for unsupported networks.
-          // A better check is needed. Let's use the wallet context's chainId if available, or just rely on the empty balances + explicit check.
-
-          // Actually, let's look at the implementation in useStablecoinBalances again.
-          // It sets chainId state. 
-
-          // Let's implement a robust check here.
-          (!ChainDetectionService.isSupported(currentChainId) && currentChainId !== null) && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/80 backdrop-blur-sm p-4">
-              <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full text-center">
-                <div className="mx-auto bg-amber-100 rounded-full w-16 h-16 flex items-center justify-center mb-4">
-                  <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Unsupported Network</h3>
-                <p className="text-gray-600 mb-6">
-                  DiversiFi operates on Celo, Arc, and Arbitrum. Please switch to a supported network to access your portfolio.
-                </p>
-                <div className="space-y-3">
-                  <button
-                    onClick={() => switchNetwork(NETWORKS.CELO_MAINNET.chainId)}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
-                  >
-                    <span>Switch to Celo</span>
-                  </button>
-                  <button
-                    onClick={() => switchNetwork(NETWORKS.ARBITRUM_ONE.chainId)}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
-                  >
-                    <span>Switch to Arbitrum One</span>
-                  </button>
-                  <button
-                    onClick={() => switchNetwork(NETWORKS.ARC_TESTNET.chainId)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center"
-                  >
-                    <span>Switch to Arc Testnet</span>
-                  </button>
-                  <button
-                    onClick={() => switchNetwork(NETWORKS.ALFAJORES.chainId)}
-                    className="w-full bg-white hover:bg-gray-50 text-gray-700 font-medium py-3 px-4 rounded-xl border border-gray-200 transition-colors shadow-sm"
-                  >
-                    Switch to Alfajores (Testnet)
-                  </button>
-                </div>
-              </div>
-            </div>
-          )
-        )}
-
-        {/* Mobile tabs with proper spacing */}
-        <div className="mb-6">
+        <div className="sticky top-0 z-40 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
           <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
 
-        {/* Tab Content with proper spacing */}
-        <div className="space-y-4">
+        <div className="space-y-4 pt-2">
           <ErrorBoundary>
             {activeTab === "overview" && (
               <OverviewTab
@@ -249,10 +139,11 @@ export default function DiversiFiPage() {
                 refreshChainId={refreshChainId}
                 balances={balances}
                 inflationData={inflationData as Record<string, RegionalInflationData>}
+                currencyPerformanceData={currencyPerformanceData}
+                isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
               />
             )}
 
-            {/* Protection Tab */}
             {activeTab === "protect" && (
               <ProtectionTab
                 userRegion={userRegion}
@@ -261,32 +152,10 @@ export default function DiversiFiPage() {
                 totalValue={totalValue}
                 balances={balances}
                 setActiveTab={setActiveTab}
-              />
-            )}
-
-            {/* Strategies Tab */}
-            {activeTab === "strategies" && (
-              <StrategiesTab
-                userRegion={userRegion}
-                regionData={regionData}
-                totalValue={totalValue}
                 onSelectStrategy={setSelectedStrategy}
               />
             )}
 
-            {/* Analytics Tab */}
-            {activeTab === "analytics" && (
-              <AnalyticsTab
-                currencyPerformanceData={currencyPerformanceData}
-                isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
-                regionData={regionData}
-                totalValue={totalValue}
-                userRegion={userRegion}
-                setUserRegion={setUserRegion}
-              />
-            )}
-
-            {/* Swap Tab */}
             {activeTab === "swap" && (
               <SwapTab
                 availableTokens={availableTokens}
@@ -299,7 +168,6 @@ export default function DiversiFiPage() {
               />
             )}
 
-            {/* Info Tab */}
             {activeTab === "info" && (
               <InfoTab
                 availableTokens={availableTokens}
@@ -308,7 +176,6 @@ export default function DiversiFiPage() {
           </ErrorBoundary>
         </div>
 
-        {/* Wallet Tutorial Modal */}
         <WalletTutorial
           isOpen={isTutorialOpen}
           onClose={closeTutorial}

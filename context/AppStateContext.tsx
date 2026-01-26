@@ -55,7 +55,7 @@ function getStoredPreference(): boolean | null {
 // Helper to apply theme to document
 function applyTheme(isDark: boolean) {
   if (typeof document === 'undefined') return;
-  
+
   if (isDark) {
     document.documentElement.classList.add('dark');
   } else {
@@ -78,10 +78,10 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     const savedTab = localStorage.getItem('activeTab');
     const storedPreference = getStoredPreference();
     const initialDarkMode = storedPreference !== null ? storedPreference : getSystemPreference();
-    
+
     // Apply theme immediately
     applyTheme(initialDarkMode);
-    
+
     setState(prev => ({
       ...prev,
       activeTab: savedTab || 'info',
@@ -93,9 +93,9 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Listen for system preference changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const handleChange = (e: MediaQueryListEvent) => {
       // Only apply system preference if no stored preference exists
       if (getStoredPreference() === null) {
@@ -104,7 +104,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
         setState(prev => ({ ...prev, darkMode: newDarkMode }));
       }
     };
-    
+
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
@@ -156,8 +156,13 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   // Initialize from storage
   const initializeFromStorage = useCallback(() => {
     const savedTab = localStorage.getItem('activeTab');
+    const deprecatedTabs = ['analytics', 'strategies', 'protect']; // protection renamed to oracle but ID kept, but for others
     if (savedTab) {
-      setState(prev => ({ ...prev, activeTab: savedTab }));
+      if (deprecatedTabs.includes(savedTab)) {
+        setState(prev => ({ ...prev, activeTab: 'overview' }));
+      } else {
+        setState(prev => ({ ...prev, activeTab: savedTab }));
+      }
     }
   }, []);
 

@@ -495,15 +495,16 @@ export const GeminiService = {
           "targetToken": "string (one of the available tokens above)",
           "reasoning": "Clear explanation in 1-2 sentences mentioning specific regional advantages or inflation hedging",
           "confidence": 0.85,
-          "expectedSavings": 47.50,
-          "timeHorizon": "3 months",
-          "riskLevel": "LOW" | "MEDIUM" | "HIGH",
-          "actionSteps": ["Step 1...", "Step 2..."],
-          "thoughtChain": ["Logic point 1", "Logic point 2"],
-          "urgencyLevel": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
+          "urgencyLevel": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
+          "comparisonProjection": {
+            "currentPathValue": 918.00,
+            "oraclePathValue": 1032.50,
+            "lossPeriod": "1 year"
+          }
         }
         
         If inflation is high in the user's region (detected via holdings or inflation data), recommend a hedge like PAXG (Gold) or a more stable regional coin (e.g., cEUR or cUSD).
+        The "comparisonProjection" should show the estimated dollar value of the user's portfolio after 1 year if they DO NOTHING (currentPathValue) vs if they follow your advice (oraclePathValue).
         Focus on Arc Network advantages: autonomous payments, USDC gas efficiency, cross-chain capabilities.
       `;
 

@@ -16,8 +16,13 @@ export interface AgentAdvice {
     arcTxHash?: string;
     paymentHashes?: Record<string, string>;
     thoughtChain?: string[];
-    actionSteps?: string[]; // New: Step-by-step instructions
-    urgencyLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'; // New: How urgent is this action
+    actionSteps?: string[];
+    urgencyLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    comparisonProjection?: {
+        currentPathValue: number;
+        oraclePathValue: number;
+        lossPeriod: string;
+    };
     _meta?: {
         modelUsed: string;
         totalCost?: number;
@@ -251,12 +256,65 @@ export function useWealthProtectionAgent() {
 
             setAdvice(response);
             setMessages(prev => [...prev, assistantMessage]);
+
+            // Optional: Speak the reasoning back to the user
+            if (response.reasoning) {
+                generateSpeech(response.reasoning);
+            }
         } catch (error) {
             console.error('Chat message failed:', error);
         } finally {
             setIsAnalyzing(false);
         }
     }, [config]);
+
+    // Voice: Transcribe audio blob to text
+    const transcribeAudio = useCallback(async (audioBlob: Blob): Promise<string | null> => {
+        setIsAnalyzing(true);
+        setThinkingStep("🎙️ Transcribing voice...");
+
+        try {
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'query.webm');
+
+            const response = await fetch('/api/agent/transcribe', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const { text } = await response.json();
+                return text;
+            }
+            return null;
+        } catch (error) {
+            console.error('Transcription failed:', error);
+            return null;
+        } finally {
+            setIsAnalyzing(false);
+            setThinkingStep("");
+        }
+    }, []);
+
+    // Voice: Generate speech from text and play it
+    const generateSpeech = useCallback(async (text: string) => {
+        try {
+            const response = await fetch('/api/agent/speak', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text })
+            });
+
+            if (response.ok) {
+                const audioBlob = await response.blob();
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+            }
+        } catch (error) {
+            console.error('Speech synthesis failed:', error);
+        }
+    }, []);
 
     const updateConfig = (newConfig: Partial<AgentConfig>) => {
         setConfig(prev => ({ ...prev, ...newConfig }));
@@ -273,6 +331,8 @@ export function useWealthProtectionAgent() {
         updateConfig,
         messages,
         sendMessage,
+        transcribeAudio,
+        generateSpeech,
         isCompact,
         toggleCompactMode: () => setIsCompact(p => !p),
         clearConversation: () => { setMessages([]); setAdvice(null); },

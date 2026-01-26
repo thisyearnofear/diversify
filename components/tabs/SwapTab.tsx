@@ -24,7 +24,6 @@ const NETWORK_TOKENS: Record<
   number,
   Array<{ symbol: string; name: string; region: string }>
 > = {
-  // Celo Mainnet
   [NETWORKS.CELO_MAINNET.chainId]: [
     { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
     { symbol: "CEUR", name: "Celo Euro", region: "Europe" },
@@ -42,7 +41,6 @@ const NETWORK_TOKENS: Record<
     { symbol: "CJPY", name: "Japanese Yen", region: "Asia" },
     { symbol: "CNGN", name: "Nigerian Naira", region: "Africa" },
   ],
-  // Celo Alfajores
   [NETWORKS.ALFAJORES.chainId]: [
     { symbol: "CUSD", name: "Celo Dollar", region: "USA" },
     { symbol: "CEUR", name: "Celo Euro", region: "Europe" },
@@ -56,12 +54,10 @@ const NETWORK_TOKENS: Record<
     { symbol: "CCAD", name: "Canadian Dollar", region: "USA" },
     { symbol: "CAUD", name: "Australian Dollar", region: "Asia" },
   ],
-  // Arbitrum One
   [NETWORKS.ARBITRUM_ONE.chainId]: [
     { symbol: "USDC", name: "USD Coin", region: "USA" },
     { symbol: "PAXG", name: "Paxos Gold", region: "Global" },
   ],
-  // Arc Testnet
   [NETWORKS.ARC_TESTNET.chainId]: [
     { symbol: "USDC", name: "USD Coin", region: "USA" },
     { symbol: "EURC", name: "Euro Coin", region: "Europe" },
@@ -69,11 +65,7 @@ const NETWORK_TOKENS: Record<
 };
 
 interface SwapTabProps {
-  availableTokens: Array<{
-    symbol: string;
-    name: string;
-    region: string;
-  }>;
+  availableTokens: Array<{ symbol: string; name: string; region: string }>;
   userRegion: Region;
   selectedStrategy: string;
   inflationData: Record<string, RegionalInflationData>;
@@ -82,42 +74,15 @@ interface SwapTabProps {
   isBalancesLoading?: boolean;
 }
 
-// Real-world use cases for swapping between different stablecoins
 const getSwapUseCase = (fromRegion: Region, toRegion: Region): string => {
   if (fromRegion === toRegion) return "";
 
   const cases: Record<string, Record<string, string>> = {
-    Africa: {
-      USA: "Pay for online courses or software subscriptions priced in USD",
-      Europe: "Save for a trip to Europe or pay for imported European goods",
-      LatAm:
-        "Purchase goods from Latin American suppliers or prepare for travel",
-      Asia: "Pay for electronics or goods imported from Asian markets",
-    },
-    USA: {
-      Africa: "Send money to family or friends in Africa with lower fees",
-      Europe: "Prepare for European travel or protect against USD inflation",
-      LatAm: "Invest in Latin American markets or send remittances",
-      Asia: "Pay for services or goods from Asian markets",
-    },
-    Europe: {
-      Africa: "Support family in Africa or invest in African growth markets",
-      USA: "Pay for US-based services or prepare for travel to the USA",
-      LatAm: "Diversify savings or prepare for Latin American travel",
-      Asia: "Purchase goods from Asian markets or prepare for travel",
-    },
-    LatAm: {
-      Africa: "Diversify savings into different emerging markets",
-      USA: "Pay for US imports or online services priced in USD",
-      Europe: "Save for European travel or education opportunities",
-      Asia: "Purchase electronics or goods from Asian markets",
-    },
-    Asia: {
-      Africa: "Invest in African growth markets or support projects",
-      USA: "Pay for US-based services or education expenses",
-      Europe: "Prepare for European travel or business opportunities",
-      LatAm: "Diversify into Latin American markets or prepare for travel",
-    },
+    Africa: { USA: "Pay for online courses priced in USD", Europe: "Save for European travel", LatAm: "Purchase goods from LatAm", Asia: "Pay for Asian imports" },
+    USA: { Africa: "Send remittances with lower fees", Europe: "Protect against USD inflation", LatAm: "Invest in emerging markets", Asia: "Pay for Asian services" },
+    Europe: { Africa: "Support family in Africa", USA: "Pay for US-based services", LatAm: "Diversify regional savings", Asia: "Purchase goods from Asia" },
+    LatAm: { Africa: "Diversify into African markets", USA: "Pay for US imports", Europe: "Save for European education", Asia: "Purchase Asian electronics" },
+    Asia: { Africa: "Invest in African growth", USA: "Pay for US services", Europe: "Prepare for European travel", LatAm: "Diversify into LatAm" },
   };
 
   return cases[fromRegion]?.[toRegion] || "Diversify your stablecoin portfolio";
@@ -134,85 +99,51 @@ export default function SwapTab({
 }: SwapTabProps) {
   const { address, chainId: walletChainId } = useWalletContext();
   const { swapPrefill, clearSwapPrefill } = useAppState();
-  useInflationData();
-  const [selectedScenario, setSelectedScenario] = useState<
-    "education" | "remittance" | "business" | "travel" | "savings"
-  >("remittance");
-  const [targetRegion, setTargetRegion] = useState<Region>(
-    userRegion === "Africa"
-      ? "Europe"
-      : userRegion === "Europe"
-        ? "USA"
-        : userRegion === "USA"
-          ? "Asia"
-          : userRegion === "Asia"
-            ? "LatAm"
-            : "Africa",
-  );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedScenario, setSelectedScenario] = useState<"remittance" | "education" | "business" | "travel" | "savings">("remittance");
+  const [targetRegion, setTargetRegion] = useState<Region>("Africa");
 
-  // Use the swap hook
   const {
     swap: performSwap,
     isLoading: isSwapLoading,
     error: swapError,
     txHash: swapTxHash,
     step: hookSwapStep,
-    chainId,
   } = useSwap();
 
-  // State for transaction status
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
   const [, setApprovalTxHash] = useState<string | null>(null);
   const [localSwapTxHash, setLocalSwapTxHash] = useState<string | null>(null);
-  const [swapStep, setSwapStep] = useState<
-    "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"
-  >("idle");
-
-  // AI recommendation banner state
+  const [swapStep, setSwapStep] = useState<"idle" | "approving" | "swapping" | "completed" | "error" | "bridging">("idle");
   const [showAiRecommendation, setShowAiRecommendation] = useState(false);
   const [aiRecommendationReason, setAiRecommendationReason] = useState<string | null>(null);
 
-  // Create a ref to the SwapInterface component
   const swapInterfaceRef = useRef<{ refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void }>(null);
 
-  // Network-aware token filtering - show only tokens available on current chain
   const networkTokens = useMemo(() => {
     const currentChainId = walletChainId || NETWORKS.CELO_MAINNET.chainId;
-    const networkSpecificTokens = NETWORK_TOKENS[currentChainId];
-
-    if (networkSpecificTokens) {
-      return networkSpecificTokens;
-    }
-
-    // Fallback to passed tokens for unknown networks
-    return availableTokens;
+    return NETWORK_TOKENS[currentChainId] || availableTokens;
   }, [walletChainId, availableTokens]);
 
-  // Check if on Arbitrum (different swap behavior)
+  const filteredTokens = useMemo(() => {
+    if (!searchQuery) return networkTokens;
+    const query = searchQuery.toLowerCase();
+    return networkTokens.filter(t => t.symbol.toLowerCase().includes(query) || t.name.toLowerCase().includes(query) || t.region.toLowerCase().includes(query));
+  }, [networkTokens, searchQuery]);
+
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);
 
-  // Handle AI recommendation prefill from AppState
   useEffect(() => {
     if (swapPrefill && swapInterfaceRef.current?.setTokens) {
-      // Set the tokens in the swap interface
-      swapInterfaceRef.current.setTokens(
-        swapPrefill.fromToken || 'CUSD',
-        swapPrefill.toToken || 'CEUR',
-        swapPrefill.amount
-      );
-
-      // Show the AI recommendation banner
+      swapInterfaceRef.current.setTokens(swapPrefill.fromToken || 'CUSD', swapPrefill.toToken || 'CEUR', swapPrefill.amount);
       if (swapPrefill.reason) {
         setAiRecommendationReason(swapPrefill.reason);
         setShowAiRecommendation(true);
       }
-
-      // Clear the prefill so it doesn't re-trigger
       clearSwapPrefill();
     }
   }, [swapPrefill, clearSwapPrefill]);
 
-  // Effect to update UI when swap status changes
   useEffect(() => {
     if (swapError) {
       setSwapStatus(`Error: ${swapError}`);
@@ -220,482 +151,140 @@ export default function SwapTab({
     } else if (hookSwapStep === "completed") {
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
-
-      // Refresh token balances after successful swap
-      console.log("Refreshing token balances after successful swap");
-
-      // Use a more reliable approach with multiple retries
-      const refreshWithRetries = async (retries = 3, delay = 2000) => {
-        for (let i = 0; i < retries; i++) {
-          try {
-            // Wait for the specified delay
-            await new Promise((resolve) => setTimeout(resolve, delay));
-
-            console.log(`Refresh attempt ${i + 1} of ${retries}`);
-
-            // First refresh chain ID if available
-            if (refreshChainId) {
-              await refreshChainId();
-            }
-
-            // Then refresh balances using the parent component's function if available
-            if (refreshBalances) {
-              await refreshBalances();
-            }
-            // Otherwise use the SwapInterface component's function
-            else if (
-              swapInterfaceRef.current &&
-              swapInterfaceRef.current.refreshBalances
-            ) {
-              await swapInterfaceRef.current.refreshBalances();
-            }
-
-            // If we get here without an error, we can break the loop
-            console.log(`Refresh attempt ${i + 1} successful`);
-            break;
-          } catch (error) {
-            console.error(`Refresh attempt ${i + 1} failed:`, error);
-            // If this is the last attempt, log a more detailed error
-            if (i === retries - 1) {
-              console.error("All refresh attempts failed");
-            }
-          }
-        }
-      };
-
-      // Start the refresh process
-      refreshWithRetries();
-    } else if (swapTxHash || localSwapTxHash) {
-      if (swapStep === "approving") {
-        setSwapStatus("Approval confirmed. Now executing swap...");
-        setSwapStep("swapping");
-      } else {
-        setSwapStatus("Transaction submitted, waiting for confirmation...");
-      }
-    } else if (isSwapLoading) {
-      if (!swapStep || swapStep === "idle") {
-        setSwapStatus("Checking allowance and preparing swap...");
-        setSwapStep("approving");
-      }
+      if (refreshBalances) refreshBalances();
+    } else if (swapTxHash) {
+      setSwapStatus("Transaction submitted...");
     }
-  }, [
-    isSwapLoading,
-    swapError,
-    swapTxHash,
-    localSwapTxHash,
-    hookSwapStep,
-    refreshBalances,
-    refreshChainId,
-    swapStep,
-  ]);
+  }, [swapError, hookSwapStep, swapTxHash, refreshBalances]);
 
-  // Get use case for the selected swap
-  const swapUseCase = getSwapUseCase(userRegion, targetRegion);
-
-  // Get tokens for the selected regions - filtered by network
-  const fromTokens = networkTokens.filter(
-    (token) => token.region === userRegion || token.region === "Global",
-  );
-  const toTokens = networkTokens.filter(
-    (token) => token.region === targetRegion || token.region === "Global",
-  );
-
-  // Handle swap function
-  const handleSwap = async (
-    fromToken: string,
-    toToken: string,
-    amount: string,
-    fromChainId?: number,
-    toChainId?: number,
-  ) => {
-    console.log(
-      `Initiating swap: ${amount} ${fromToken} to ${toToken}`,
-      fromChainId && toChainId ? `(${fromChainId} → ${toChainId})` : ''
-    );
-
-    setSwapStatus("Initiating swap process...");
+  const handleSwap = async (fromToken: string, toToken: string, amount: string, fromChainId?: number, toChainId?: number) => {
+    setSwapStatus("Initiating swap...");
     setSwapStep("approving");
-
     try {
       if (!address) throw new Error("Wallet not connected");
-
-      // Use the swap hook which now delegates to SwapOrchestrator
-      // The orchestrator will automatically determine if this is:
-      // - Celo same-chain (use Mento)
-      // - Arbitrum same-chain (use LiFi)
-      // - Cross-chain (use LiFi Bridge)
       await performSwap({
-        fromToken,
-        toToken,
-        amount,
-        fromChainId,
-        toChainId,
-        onApprovalSubmitted: (hash) => {
-          setApprovalTxHash(hash);
-          setSwapStatus("Approval submitted, waiting for confirmation...");
-        },
-        onSwapSubmitted: (hash) => {
-          setLocalSwapTxHash(hash);
-          setSwapStatus("Swap submitted, waiting for confirmation...");
-        },
+        fromToken, toToken, amount, fromChainId, toChainId,
+        onApprovalSubmitted: setApprovalTxHash,
+        onSwapSubmitted: (hash) => { setLocalSwapTxHash(hash); setSwapStatus("Swap submitted..."); }
       });
-
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
-    } catch (err: unknown) {
-      console.error("Swap failed:", err);
-      const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      setSwapStatus(`Error: ${errorMessage}`);
+    } catch (err: any) {
+      setSwapStatus(`Error: ${err.message || "Unknown error"}`);
       setSwapStep("error");
     }
   };
-
-  // Get inflation rates
-  const homeInflationRate = inflationData[userRegion]?.avgRate || 0;
-  const targetInflationRate = inflationData[targetRegion]?.avgRate || 0;
-  const inflationDifference = homeInflationRate - targetInflationRate;
 
   const handleRefresh = async () => {
     if (refreshChainId) await refreshChainId();
     if (refreshBalances) await refreshBalances();
   };
 
+  const homeInflationRate = inflationData[userRegion]?.avgRate || 0;
+  const targetInflationRate = inflationData[targetRegion]?.avgRate || 0;
+  const inflationDifference = homeInflationRate - targetInflationRate;
+
   return (
     <div className="space-y-4">
       <Card>
         <TabHeader
-          title="Swap"
+          title="Action Hub"
           chainId={walletChainId}
-          onRefresh={refreshBalances ? handleRefresh : undefined}
-          isLoading={isBalancesLoading}
+          onRefresh={handleRefresh}
+          isLoading={isBalancesLoading || isSwapLoading}
           onNetworkChange={handleRefresh}
         />
 
-        {/* Wallet connection or Swap Interface */}
+        <div className="mb-4">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="size-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search assets (e.g. 'cUSD', 'Gold')..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-3 py-2 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900 text-sm font-bold focus:border-blue-500 outline-none"
+            />
+          </div>
+        </div>
+
         {!address ? (
-          <ConnectWalletPrompt
-            message="Connect your wallet to swap tokens."
-            WalletButtonComponent={<WalletButton variant="inline" />}
-          />
+          <ConnectWalletPrompt message="Connect your wallet to swap tokens." WalletButtonComponent={<WalletButton variant="inline" />} />
         ) : (
           <>
-            {/* AI Recommendation Banner */}
-            {showAiRecommendation && aiRecommendationReason && (
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 p-3 mb-4 rounded-lg">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-2">
-                    <span className="text-lg">🧠</span>
-                    <div>
-                      <p className="text-sm font-medium text-purple-900">AI Recommendation</p>
-                      <p className="text-xs text-purple-700 mt-1">{aiRecommendationReason.slice(0, 150)}{aiRecommendationReason.length > 150 ? '...' : ''}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setShowAiRecommendation(false)}
-                    className="text-purple-400 hover:text-purple-600 text-lg leading-none"
-                  >
-                    ×
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Arbitrum notice */}
-            {isArbitrum && (
-              <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r">
-                <p className="text-sm text-blue-800">
-                  <span className="font-medium">Arbitrum Mode:</span> Swap
-                  between stablecoins and real-world assets like PAXG.
-                </p>
+            {showAiRecommendation && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
+                <p className="text-xs font-bold text-blue-800 dark:text-blue-200">🧠 AI: {aiRecommendationReason}</p>
+                <button onClick={() => setShowAiRecommendation(false)} className="text-blue-400 font-bold">×</button>
               </div>
             )}
 
             <SwapInterface
               ref={swapInterfaceRef}
-              availableTokens={networkTokens}
+              availableTokens={filteredTokens}
               address={address}
               onSwap={handleSwap}
-              preferredFromRegion={isArbitrum ? "USA" : userRegion}
-              preferredToRegion={isArbitrum ? "USA" : targetRegion}
+              preferredFromRegion={userRegion}
+              preferredToRegion={targetRegion}
               title=""
-              chainId={chainId}
-              enableCrossChain={true} // Enable cross-chain functionality
+              chainId={walletChainId}
+              enableCrossChain={true}
             />
 
-            {/* Swap status - only show when relevant */}
             {swapStatus && (
-              <div
-                className={`mt-3 p-3 rounded-md text-sm ${swapStatus.includes("Error")
-                  ? "bg-red-50 text-red-700 border border-red-200"
-                  : swapStatus.includes("success")
-                    ? "bg-green-50 text-green-700 border border-green-200"
-                    : "bg-blue-50 text-blue-700 border border-blue-200"
-                  }`}
-              >
+              <div className={`mt-3 p-3 rounded-xl text-xs font-bold ${swapStatus.includes("Error") ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
                 {swapStatus}
-                {(swapTxHash || localSwapTxHash) && (
-                  <a
-                    href={`${walletChainId === NETWORKS.ARBITRUM_ONE.chainId
-                      ? NETWORKS.ARBITRUM_ONE.explorerUrl
-                      : walletChainId === NETWORKS.ALFAJORES.chainId
-                        ? NETWORKS.ALFAJORES.explorerUrl
-                        : NETWORKS.CELO_MAINNET.explorerUrl
-                      }/tx/${swapTxHash || localSwapTxHash}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block mt-2 text-blue-600 hover:underline text-xs"
-                  >
-                    View on explorer →
-                  </a>
-                )}
               </div>
             )}
           </>
         )}
       </Card>
 
-      {/* Progressive Disclosure Sections - Only show on Celo chains */}
       {!isArbitrum && address && (
-        <div className="space-y-3">
-          {/* Why Swap - Collapsible */}
-          <CollapsibleSection
-            title={`Inflation Protection: ${userRegion} → ${targetRegion}`}
-            icon={
-              <div className="flex items-center gap-1">
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor:
-                      REGION_COLORS[userRegion as keyof typeof REGION_COLORS],
-                  }}
-                >
-                  <RegionalIconography
-                    region={userRegion}
-                    size="sm"
-                    className="text-white"
-                  />
-                </div>
-                <span className="text-gray-400">→</span>
-                <div
-                  className="w-5 h-5 rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor:
-                      REGION_COLORS[targetRegion as keyof typeof REGION_COLORS],
-                  }}
-                >
-                  <RegionalIconography
-                    region={targetRegion}
-                    size="sm"
-                    className="text-white"
-                  />
-                </div>
-              </div>
-            }
-          >
-            {/* Compact region selector */}
-            <div className="mb-4">
-              <p className="text-xs text-gray-500 mb-2">Target Region</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.keys(inflationData)
-                  .filter((region) => region !== userRegion)
-                  .map((region) => (
-                    <button
-                      key={region}
-                      className={`px-3 py-1.5 text-xs rounded-full transition-colors ${region === targetRegion
-                        ? "text-white font-medium"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        }`}
-                      style={
-                        region === targetRegion
-                          ? {
-                            backgroundColor:
-                              REGION_COLORS[
-                              region as keyof typeof REGION_COLORS
-                              ],
-                          }
-                          : {}
-                      }
-                      onClick={() => setTargetRegion(region as Region)}
-                    >
-                      {region}
-                    </button>
-                  ))}
-              </div>
+        <div className="space-y-4">
+          <CollapsibleSection title={`Regional Hedge: ${userRegion} → ${targetRegion}`} icon={<span>🛡️</span>}>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {Object.keys(inflationData).filter(r => r !== userRegion).map(r => (
+                <button key={r} onClick={() => setTargetRegion(r as Region)} className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${targetRegion === r ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>{r}</button>
+              ))}
             </div>
-
-            {/* Inflation comparison - compact */}
-            <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <div className="text-center">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{userRegion}</p>
-                <p className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                  {homeInflationRate.toFixed(1)}%
-                </p>
-              </div>
-              <div className="text-gray-400 dark:text-gray-500">→</div>
-              <div className="text-center">
-                <p className="text-xs text-gray-500 dark:text-gray-400">{targetRegion}</p>
-                <p className="font-bold text-lg text-gray-900 dark:text-gray-100">
-                  {targetInflationRate.toFixed(1)}%
-                </p>
-              </div>
-              {inflationDifference > 0 && (
-                <span className="text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-2 py-1 rounded-full">
-                  Save {inflationDifference.toFixed(1)}%
-                </span>
-              )}
-            </div>
-
-            {/* Use case hint */}
-            {swapUseCase && (
-              <p className="text-xs text-gray-600 mt-3 italic">{swapUseCase}</p>
-            )}
-          </CollapsibleSection>
-
-          {/* Scenarios - Collapsible */}
-          <CollapsibleSection
-            title="Real-World Scenarios"
-            icon={<span className="text-lg">💡</span>}
-          >
-            <div className="flex flex-wrap gap-2 mb-3">
-              {["remittance", "education", "business", "travel", "savings"].map(
-                (scenario) => (
-                  <button
-                    key={scenario}
-                    className={`px-3 py-1 text-xs rounded-full ${selectedScenario === scenario
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                      }`}
-                    onClick={() =>
-                      setSelectedScenario(
-                        scenario as
-                        | "remittance"
-                        | "education"
-                        | "business"
-                        | "travel"
-                        | "savings",
-                      )
-                    }
-                  >
-                    {scenario.charAt(0).toUpperCase() + scenario.slice(1)}
-                  </button>
-                ),
-              )}
-            </div>
-            <RealLifeScenario
-              region={userRegion}
-              targetRegion={targetRegion}
-              scenarioType={selectedScenario}
-              inflationRate={homeInflationRate}
-              targetInflationRate={targetInflationRate}
-              amount={1000}
-              monthlyAmount={100}
-            />
-          </CollapsibleSection>
-
-          {/* Recommendations - Collapsible */}
-          <CollapsibleSection
-            title="Personalized Recommendations"
-            icon={<span className="text-lg">🎯</span>}
-          >
-            <p className="text-xs text-gray-600 mb-3">
-              Based on your{" "}
-              <span className="font-medium">{selectedStrategy}</span> strategy
-              in {userRegion}:
-            </p>
-            <div className="space-y-2">
-              {getRecommendations(userRegion, inflationData, homeInflationRate)}
+            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl flex justify-between items-center">
+              <div className="text-center"><div className="text-[10px] font-black text-gray-400 lowercase">{userRegion}</div><div className="text-lg font-black">{homeInflationRate.toFixed(1)}%</div></div>
+              <div className="text-gray-300">→</div>
+              <div className="text-center"><div className="text-[10px] font-black text-gray-400 lowercase">{targetRegion}</div><div className="text-lg font-black">{targetInflationRate.toFixed(1)}%</div></div>
+              {inflationDifference > 0 && <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-black">+{inflationDifference.toFixed(1)}% Yield</div>}
             </div>
           </CollapsibleSection>
 
-          {/* Available Tokens - Compact display */}
-          {(fromTokens.length > 0 || toTokens.length > 0) && (
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">Available:</span>
-                  <div className="flex gap-1">
-                    {networkTokens.slice(0, 4).map((token) => (
-                      <span
-                        key={token.symbol}
-                        className="text-xs bg-white dark:bg-gray-700 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-                      >
-                        {token.symbol}
-                      </span>
-                    ))}
-                    {networkTokens.length > 4 && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500">
-                        +{networkTokens.length - 4} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          <CollapsibleSection title="Action Guidance" icon={<span>🧠</span>}>
+            <RealLifeScenario region={userRegion} targetRegion={targetRegion} scenarioType={selectedScenario} inflationRate={homeInflationRate} targetInflationRate={targetInflationRate} amount={1000} monthlyAmount={100} />
+            {getRecommendations(userRegion, inflationData, homeInflationRate)}
+          </CollapsibleSection>
         </div>
       )}
     </div>
   );
 }
 
-// Helper function to generate recommendations based on region
-function getRecommendations(
-  userRegion: Region,
-  inflationData: Record<string, RegionalInflationData>,
-  homeInflationRate: number,
-): React.ReactNode {
-  const recommendations: Record<
-    Region,
-    Array<{ from: string; to: string; reason: string }>
-  > = {
-    Africa: [
-      {
-        from: "cKES",
-        to: "cEUR",
-        reason: `Europe has ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation`,
-      },
-      {
-        from: "cGHS",
-        to: "cUSD",
-        reason: "Pay for online services priced in USD",
-      },
-    ],
-    LatAm: [
-      {
-        from: "cCOP",
-        to: "cUSD",
-        reason: "Protect against local currency volatility",
-      },
-      { from: "cREAL", to: "cEUR", reason: "Diversify for European travel" },
-    ],
-    USA: [
-      { from: "cUSD", to: "cEUR", reason: "Geographic diversification" },
-      { from: "cUSD", to: "PUSO", reason: "Exposure to Asian growth" },
-    ],
-    Europe: [
-      { from: "cEUR", to: "cKES", reason: "African market exposure" },
-      { from: "cEUR", to: "cUSD", reason: "US services and travel" },
-    ],
-    Asia: [
-      { from: "PUSO", to: "cUSD", reason: "More stable savings" },
-      { from: "PUSO", to: "cEUR", reason: "European diversification" },
-    ],
-    Commodity: [
-      { from: "cUSD", to: "PAXG", reason: "Hedge against inflation with gold" },
-      { from: "cEUR", to: "PAXG", reason: "Store value in precious metals" },
-    ],
+function getRecommendations(userRegion: Region, inflationData: Record<string, RegionalInflationData>, homeInflationRate: number) {
+  const recommendations: Record<string, Array<{ from: string, to: string, reason: string }>> = {
+    Africa: [{ from: "cKES", to: "cEUR", reason: `Hedge: ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation` }],
+    LatAm: [{ from: "cREAL", to: "cUSD", reason: "Stable reserve exposure" }],
+    Asia: [{ from: "PUSO", to: "cEUR", reason: "Diversify into Eurozone" }],
   };
-
   const recs = recommendations[userRegion] || [];
-  return recs.map((rec, idx) => (
-    <div
-      key={idx}
-      className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border border-gray-100 dark:border-gray-700"
-    >
-      <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-        {rec.from} → {rec.to}
-      </span>
-      <span className="text-xs text-gray-500 dark:text-gray-400">{rec.reason}</span>
+  if (recs.length === 0) return null;
+  return (
+    <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recommended Actions</p>
+      {recs.map((r, i) => (
+        <div key={i} className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center">
+          <span className="text-xs font-bold">{r.from} → {r.to}</span>
+          <span className="text-[10px] text-blue-500 font-medium">{r.reason}</span>
+        </div>
+      ))}
     </div>
-  ));
+  );
 }

@@ -18,7 +18,7 @@ export default function TabNavigation({
   const tabs: TabItem[] = [
     {
       id: "overview",
-      label: "Stable\nStation",
+      label: "Station",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -38,7 +38,7 @@ export default function TabNavigation({
     },
     {
       id: "protect",
-      label: "Protection",
+      label: "Oracle",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -57,54 +57,8 @@ export default function TabNavigation({
       ),
     },
     {
-      id: "analytics",
-      label: "Analytics",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="size-6 mb-1"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "strategies",
-      label: "Strategies",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="size-6 mb-1"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
-          />
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
-          />
-        </svg>
-      ),
-    },
-    {
       id: "swap",
-      label: "Swap",
+      label: "Action",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -124,7 +78,7 @@ export default function TabNavigation({
     },
     {
       id: "info",
-      label: "Info",
+      label: "Learn",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -145,20 +99,23 @@ export default function TabNavigation({
   ];
 
   return (
-    <div className="mb-6">
-      <div className="flex border-b border-gray-200 overflow-x-auto bg-white rounded-t-lg shadow-sm">
+    <div className="mb-4">
+      <div className="flex bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            className={`flex-1 p-3 text-center whitespace-nowrap flex flex-col items-center transition-colors duration-200 ${
-              activeTab === tab.id
-                ? "border-b-2 border-blue-500 text-blue-600 font-semibold"
-                : "text-gray-600 hover:text-gray-800"
-            }`}
+            className={`flex-1 py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg ${activeTab === tab.id
+                ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+              }`}
             onClick={() => setActiveTab(tab.id)}
           >
-            {tab.icon}
-            <span className="text-xs font-medium">{tab.label}</span>
+            <div className={`transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''}`}>
+              {tab.icon}
+            </div>
+            <span className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${activeTab === tab.id ? 'opacity-100' : 'opacity-60'}`}>
+              {tab.label}
+            </span>
           </button>
         ))}
       </div>
