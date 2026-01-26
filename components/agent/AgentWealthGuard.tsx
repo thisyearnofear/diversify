@@ -35,6 +35,7 @@ export default function AgentWealthGuard({
         transcribeAudio,
         updateConfig,
         arcAgent,
+        capabilities,
         initializeArcAgent
     } = useWealthProtectionAgent();
 
@@ -73,6 +74,10 @@ export default function AgentWealthGuard({
     };
 
     const handleAnalyze = () => {
+        if (!capabilities.analysis) {
+            showToast('AI Intelligence Hub is currently in maintenance mode (API not configured).', 'error');
+            return;
+        }
         const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
         const networkInfo = { chainId: chainId || 0, name: networkName };
         showToast('Starting comprehensive wealth protection analysis...', 'ai', { cost: 0.05, sources: 5 });
@@ -85,6 +90,10 @@ export default function AgentWealthGuard({
     };
 
     const startRecording = async () => {
+        if (!capabilities.transcription) {
+            showToast('Voice intelligence not configured. Please use text query.', 'error');
+            return;
+        }
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mediaRecorder = new MediaRecorder(stream);
@@ -282,20 +291,26 @@ export default function AgentWealthGuard({
                         </motion.div>
                     )}
 
-                    {/* Initial State */}
                     {!advice && !isAnalyzing && (
                         <motion.div key="initial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pt-2">
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-500/20 relative overflow-hidden">
                                 <h4 className="text-blue-800 dark:text-blue-100 font-black text-base leading-tight mb-2">Universal Wealth Protection</h4>
                                 <p className="text-blue-700/80 dark:text-blue-200/60 text-xs font-bold leading-relaxed mb-4">
-                                    Analyze your <span className="text-blue-600 dark:text-blue-400">${amount.toFixed(2)}</span> portfolio against real-time global inflation data.
+                                    {capabilities.analysis
+                                        ? `Analyze your $${amount.toFixed(2)} portfolio against real-time global inflation data.`
+                                        : "Wealth analysis engine is currently undergoing maintenance."
+                                    }
                                 </p>
                                 <button
                                     onClick={handleAnalyze}
-                                    className="w-full py-4 px-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-600/30 transition-all active:scale-[0.98] flex items-center justify-center gap-3 border-b-4 border-blue-800"
+                                    disabled={!capabilities.analysis}
+                                    className={`w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 border-b-4 ${capabilities.analysis
+                                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30 border-blue-800"
+                                            : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed shadow-none"
+                                        }`}
                                 >
-                                    <span>Run Full Analysis</span>
-                                    <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>
+                                    <span>{capabilities.analysis ? 'Run Full Analysis' : 'Intelligence Hub Unavailable'}</span>
+                                    {capabilities.analysis && <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>}
                                 </button>
                             </div>
                         </motion.div>

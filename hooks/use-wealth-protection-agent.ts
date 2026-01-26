@@ -72,6 +72,11 @@ export function useWealthProtectionAgent() {
     const [messages, setMessages] = useState<AIMessage[]>([]);
     const [isCompact, setIsCompact] = useState(false);
     const [arcAgent, setArcAgent] = useState<ArcAgent | null>(null);
+    const [capabilities, setCapabilities] = useState<{ analysis: boolean, transcription: boolean, speech: boolean }>({
+        analysis: false,
+        transcription: false,
+        speech: false
+    });
     const [config, setConfig] = useState<AgentConfig>({
         riskTolerance: 'Balanced',
         goal: 'Inflation Hedge',
@@ -88,6 +93,9 @@ export function useWealthProtectionAgent() {
                 const response = await fetch('/api/agent/status');
                 if (response.ok) {
                     const status = await response.json();
+                    if (status.capabilities) {
+                        setCapabilities(status.capabilities);
+                    }
                     if (status.enabled) {
                         console.log('[Arc Agent] Server-side agent available:', status);
                         // Create a proxy agent that calls server APIs
@@ -337,6 +345,7 @@ export function useWealthProtectionAgent() {
         toggleCompactMode: () => setIsCompact(p => !p),
         clearConversation: () => { setMessages([]); setAdvice(null); },
         arcAgent,
+        capabilities,
         getSpendingStatus: () => arcAgent?.getSpendingStatus() || { spent: 0, limit: config.spendingLimit || 5, remaining: config.spendingLimit || 5 },
         initializeArcAgent
     };

@@ -5,7 +5,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // Check server-side only environment variables (no NEXT_PUBLIC_ prefix)
+    // Check server-side only environment variables
     const privateKey = process.env.ARC_AGENT_PRIVATE_KEY;
     const circleWalletId = process.env.CIRCLE_WALLET_ID;
     const circleApiKey = process.env.CIRCLE_API_KEY;
@@ -17,11 +17,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const hasCircleWallet = !!circleWalletId && !!circleApiKey && !!circleEntitySecret;
     const enabled = hasPrivateKey || hasCircleWallet;
 
-    // Mask the wallet address for display (show first 6 and last 4 chars)
+    // Mask the wallet address for display
     const walletAddress = process.env.CIRCLE_WALLET_ADDRESS;
-    const maskedAddress = walletAddress 
+    const maskedAddress = walletAddress
         ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
         : undefined;
+
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    const hasOpenAI = !!process.env.OPENAI_API_KEY;
+    const hasElevenLabs = !!process.env.ELEVENLABS_API_KEY;
 
     return res.status(200).json({
         enabled,
@@ -29,5 +33,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         spendingLimit,
         walletType: hasPrivateKey ? 'privateKey' : hasCircleWallet ? 'circle' : 'none',
         walletAddress: maskedAddress,
+        capabilities: {
+            analysis: hasGemini,
+            transcription: hasOpenAI,
+            speech: hasElevenLabs
+        }
     });
 }
