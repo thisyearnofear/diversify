@@ -247,7 +247,8 @@ export class ArcAgent {
     private provider: providers.JsonRpcProvider;
     private wallet: AgentWalletProvider;
     private agentAddress: string;
-    private spendingLimit: number;
+    private spendingLimit: number = 5.0;
+    public isProxy: boolean = false; // Flag for server-side proxy agents
     private spentToday: number = 0;
     private isTestnet: boolean;
     private circleGatewayService: CircleGatewayService;

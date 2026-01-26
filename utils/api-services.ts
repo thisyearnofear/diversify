@@ -467,8 +467,16 @@ export const GeminiService = {
     try {
       // Enhanced prompt for Arc Network context
       const enhancedPrompt = `
-        You are an expert DeFi wealth protection agent operating on Arc Network.
+        You are an expert DeFi wealth protection agent operating on Arc Network for the DiversiFi platform.
         Arc Network features: USDC as gas token, sub-second finality, x402 autonomous payments.
+        
+        Available Regional Stablecoins on DiversiFi:
+        - USA: cUSD, USDC
+        - Europe: cEUR, EURC, cGBP
+        - LatAm: cREAL (Brazil), cCOP (Colombia)
+        - Africa: cKES (Kenya), cZAR (South Africa), cGHS (Ghana), cXOF (CFA Franc)
+        - Asia: cPESO/PUSO (Philippines), cAUD (Australia)
+        - Commodities: PAXG (Gold)
         
         Analysis Context:
         - User Balance: $${userBalance}
@@ -483,15 +491,19 @@ export const GeminiService = {
         
         Provide a JSON response with:
         {
-          "action": "SWAP" | "HOLD" | "REBALANCE",
-          "targetToken": "string (if action is SWAP/REBALANCE)",
-          "reasoning": "Clear explanation in 1-2 sentences",
+          "action": "SWAP" | "HOLD" | "REBALANCE" | "BRIDGE",
+          "targetToken": "string (one of the available tokens above)",
+          "reasoning": "Clear explanation in 1-2 sentences mentioning specific regional advantages or inflation hedging",
           "confidence": 0.85,
           "expectedSavings": 47.50,
           "timeHorizon": "3 months",
-          "riskLevel": "LOW" | "MEDIUM" | "HIGH"
+          "riskLevel": "LOW" | "MEDIUM" | "HIGH",
+          "actionSteps": ["Step 1...", "Step 2..."],
+          "thoughtChain": ["Logic point 1", "Logic point 2"],
+          "urgencyLevel": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
         }
         
+        If inflation is high in the user's region (detected via holdings or inflation data), recommend a hedge like PAXG (Gold) or a more stable regional coin (e.g., cEUR or cUSD).
         Focus on Arc Network advantages: autonomous payments, USDC gas efficiency, cross-chain capabilities.
       `;
 

@@ -86,7 +86,6 @@ export function useWealthProtectionAgent() {
                     if (status.enabled) {
                         console.log('[Arc Agent] Server-side agent available:', status);
                         // Create a proxy agent that calls server APIs
-                        // For now, we just mark that deep analysis is available
                         setArcAgent({ isProxy: true, ...status } as any);
                     } else {
                         console.warn('Agent wallet not configured on server, Arc Agent features disabled');
@@ -111,18 +110,18 @@ export function useWealthProtectionAgent() {
         setAnalysisSteps([]);
         setAnalysisProgress(0);
 
-        // Initialize Arc Agent if needed - move inside try for better error handling
+        // Initialize Arc Agent if needed
         try {
             setThinkingStep("🤖 Initializing AI Agent...");
             setAnalysisProgress(5);
             await initializeArcAgent();
         } catch (initError) {
-            console.warn("Agent initialization failed, falling back to standard analysis:", initError);
+            console.warn("Agent initialization failed:", initError);
         }
 
         try {
             if (arcAgent && config.analysisDepth === 'Deep') {
-                // Progress steps for Deep Analysis (since it takes time)
+                // Progress steps for Deep Analysis
                 const deepProgressSteps = [
                     { step: "🛡️ Securing Arc Testnet environment...", progress: 15 },
                     { step: "💰 Verifying USDC gas for autonomous payments...", progress: 30 },
@@ -131,30 +130,25 @@ export function useWealthProtectionAgent() {
                     { step: "🤖 Finalizing deep analysis with Gemini 3...", progress: 95 }
                 ];
 
-                // Start an async loop for progress while fetch is running
                 const progressInterval = setInterval(() => {
-                    setAnalysisProgress(prev => {
-                        if (prev < 90) return prev + 2;
-                        return prev;
-                    });
+                    setAnalysisProgress(prev => (prev < 90 ? prev + 2 : prev));
                 }, 1000);
 
                 setThinkingStep(deepProgressSteps[0].step);
                 setAnalysisProgress(deepProgressSteps[0].progress);
-                setAnalysisSteps(prev => [...prev, deepProgressSteps[0].step]);
+                setAnalysisSteps([deepProgressSteps[0].step]);
 
-                // Use server-side Arc Agent for premium data analysis
                 const responsePromise = fetch('/api/agent/deep-analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         portfolio: { balance: userBalance, holdings: currentHoldings },
                         config,
-                        networkInfo
+                        networkInfo,
+                        multiChainContext
                     })
                 });
 
-                // Parallel progress updates
                 for (let i = 1; i < deepProgressSteps.length; i++) {
                     await new Promise(resolve => setTimeout(resolve, 1500));
                     setThinkingStep(deepProgressSteps[i].step);
@@ -165,14 +159,10 @@ export function useWealthProtectionAgent() {
                 const response = await responsePromise;
                 clearInterval(progressInterval);
 
-                if (!response.ok) {
-                    throw new Error('Deep analysis failed');
-                }
-
+                if (!response.ok) throw new Error('Deep analysis failed');
                 const result = await response.json();
                 setAdvice(result);
 
-                // Add to conversation history
                 const newMessage: AIMessage = {
                     id: Date.now().toString(),
                     role: 'assistant',
@@ -184,14 +174,15 @@ export function useWealthProtectionAgent() {
                 setMessages(prev => [...prev, newMessage]);
 
             } else {
-                // Enhanced progress tracking for standard analysis
+                // Standard analysis progress
                 const progressSteps = [
                     { step: "🔗 Connecting to Arc Network Oracle...", progress: 10 },
                     { step: "💰 Accessing premium inflation data via x402...", progress: 25 },
                     { step: "📊 Analyzing macro economic signals...", progress: 45 },
                     { step: "🎯 Calculating diversification strategies...", progress: 65 },
                     { step: "🧠 Generating personalized recommendations...", progress: 85 },
-                    { step: "✅ Finalizing wealth protection analysis...", progress: 100 }
+                    { step: "🛡️ Finalizing wealth protection model...", progress: 95 },
+                    { step: "✅ Analysis complete!", progress: 100 }
                 ];
 
                 for (let i = 0; i < progressSteps.length; i++) {
@@ -199,9 +190,7 @@ export function useWealthProtectionAgent() {
                     setThinkingStep(step);
                     setAnalysisProgress(progress);
                     setAnalysisSteps(prev => [...prev, step]);
-
-                    // Realistic timing with some variation
-                    const delay = i === progressSteps.length - 1 ? 1200 : 800 + Math.random() * 600;
+                    const delay = i === progressSteps.length - 1 ? 800 : 600 + Math.random() * 400;
                     await new Promise(resolve => setTimeout(resolve, delay));
                 }
 
@@ -241,11 +230,11 @@ export function useWealthProtectionAgent() {
 
         setMessages(prev => [...prev, userMessage]);
         setIsAnalyzing(true);
+        setAdvice(null); // Clear old advice when starting new chat analysis
 
         try {
-            // Process user message and generate response
             const response = await GeminiService.analyzeWealthProtection(
-                null, // Will be enhanced to handle conversational context
+                null,
                 0,
                 [],
                 { ...config, userMessage: content }
@@ -257,9 +246,10 @@ export function useWealthProtectionAgent() {
                 content: response.reasoning,
                 timestamp: new Date(),
                 data: response,
-                type: 'text'
+                type: 'recommendation'
             };
 
+            setAdvice(response);
             setMessages(prev => [...prev, assistantMessage]);
         } catch (error) {
             console.error('Chat message failed:', error);
@@ -272,40 +262,22 @@ export function useWealthProtectionAgent() {
         setConfig(prev => ({ ...prev, ...newConfig }));
     };
 
-    const toggleCompactMode = () => {
-        setIsCompact(prev => !prev);
-    };
-
-    const clearConversation = () => {
-        setMessages([]);
-        setAdvice(null);
-    };
-
-    const getSpendingStatus = () => {
-        return arcAgent?.getSpendingStatus() || { spent: 0, limit: config.spendingLimit || 5, remaining: config.spendingLimit || 5 };
-    };
-
     return {
-        // Existing API (backward compatible)
         advice,
         isAnalyzing,
         thinkingStep,
         analysisSteps,
         analysisProgress,
         config,
-        analyze: analyzeAutonomously, // Enhanced version
+        analyze: analyzeAutonomously,
         updateConfig,
-
-        // New conversational API
         messages,
         sendMessage,
         isCompact,
-        toggleCompactMode,
-        clearConversation,
-
-        // Arc Network features
+        toggleCompactMode: () => setIsCompact(p => !p),
+        clearConversation: () => { setMessages([]); setAdvice(null); },
         arcAgent,
-        getSpendingStatus,
+        getSpendingStatus: () => arcAgent?.getSpendingStatus() || { spent: 0, limit: config.spendingLimit || 5, remaining: config.spendingLimit || 5 },
         initializeArcAgent
     };
 }
