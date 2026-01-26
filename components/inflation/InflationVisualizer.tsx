@@ -1,6 +1,6 @@
 import React from "react";
 import type { Region } from "@/hooks/use-user-region";
-import { RegionalPattern } from "./RegionalIconography";
+import { RegionalPattern } from "../regional/RegionalIconography";
 
 interface InflationVisualizerProps {
   region: Region;

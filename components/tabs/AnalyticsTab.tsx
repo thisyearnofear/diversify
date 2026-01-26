@@ -1,9 +1,9 @@
 import React, { useState } from "react";
-import CurrencyPerformanceChart from "../CurrencyPerformanceChart";
-import RegionalIconography from "../RegionalIconography";
+import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
+import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { useInflationData } from "@/hooks/use-inflation-data";
-import InflationVisualizer from "../InflationVisualizer";
+import InflationVisualizer from "../inflation/InflationVisualizer";
 import { REGION_COLORS } from "@/constants/regions";
 import { Card, TabHeader, CollapsibleSection, StatBadge } from "../shared/TabComponents";
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAppState } from '../context/AppStateContext';
+import { useAppState } from '../../context/AppStateContext';
 
 const ThemeToggle: React.FC = () => {
   const { darkMode, toggleDarkMode, themeLoaded } = useAppState();

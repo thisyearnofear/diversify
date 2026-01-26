@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from "react";
-import { useInflationData } from "../hooks/use-inflation-data";
-import type { Region } from "../hooks/use-user-region";
-import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
-import RealLifeScenario from "./RealLifeScenario";
+import { useInflationData } from "../../hooks/use-inflation-data";
+import type { Region } from "../../hooks/use-user-region";
+import RegionalIconography, { RegionalPattern } from "../regional/RegionalIconography";
+import RealLifeScenario from "../demo/RealLifeScenario";
 
 interface InflationDataEntry {
   avgRate: number;

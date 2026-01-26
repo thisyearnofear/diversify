@@ -1,6 +1,6 @@
 import React from "react";
 import { REGION_COLORS } from "../../constants/regions";
-import { useWalletContext } from "../WalletProvider";
+import { useWalletContext } from "../wallet/WalletProvider";
 import { Card, CollapsibleSection, TabHeader } from "../shared/TabComponents";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 

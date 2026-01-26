@@ -4,7 +4,7 @@
  */
 
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { useWalletContext } from './WalletProvider';
+import { useWalletContext } from '../wallet/WalletProvider';
 
 // Lazy load the actual component
 const FarcasterUserInfoComponent = lazy(() => import('./FarcasterUserInfo'));

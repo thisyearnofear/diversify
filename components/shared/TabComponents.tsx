@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import NetworkSwitcher from "../NetworkSwitcher";
+import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { NETWORKS } from "../../config";
 
 // Collapsible section for progressive disclosure

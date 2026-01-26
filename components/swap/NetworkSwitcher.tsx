@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NETWORKS } from '../config';
+import { NETWORKS } from '../../config';
 
 interface NetworkSwitcherProps {
     currentChainId: number | null;

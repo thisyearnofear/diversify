@@ -1,5 +1,5 @@
 import React from "react";
-import type { Region } from "../hooks/use-user-region";
+import type { Region } from "../../hooks/use-user-region";
 
 interface RegionalIconographyProps {
   region: Region;

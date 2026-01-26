@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
-import SwapInterface from "../SwapInterface";
+import SwapInterface from "../swap/SwapInterface";
 import { useInflationData } from "../../hooks/use-inflation-data";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
-import RegionalIconography from "../RegionalIconography";
-import RealLifeScenario from "../RealLifeScenario";
+import RegionalIconography from "../regional/RegionalIconography";
+import RealLifeScenario from "../demo/RealLifeScenario";
 import { REGION_COLORS } from "../../constants/regions";
 import { useSwap } from "../../hooks/use-swap";
-import { useWalletContext } from "../WalletProvider";
+import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
-import WalletButton from "../WalletButton";
+import WalletButton from "../wallet/WalletButton";
 import { NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import {

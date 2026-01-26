@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import type { Region } from "../hooks/use-user-region";
+import type { Region } from "../../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
-import { REGION_COLORS } from "../constants/regions";
+import { REGION_COLORS } from "../../constants/regions";
 
 // Region-specific insights
 const REGION_INSIGHTS: Record<

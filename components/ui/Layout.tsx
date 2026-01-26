@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import Head from "next/head";
-import WalletButton from "./WalletButton";
+import WalletButton from "../wallet/WalletButton";
 import ThemeToggle from "./ThemeToggle";
 
 interface LayoutProps {

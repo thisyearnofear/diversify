@@ -1,8 +1,8 @@
 import React from "react";
-import type { Region } from "../hooks/use-user-region";
-import { RegionalPattern } from "./RegionalIconography";
-import RegionalIconography from "./RegionalIconography";
-import { REGION_COLORS } from "../constants/regions";
+import type { Region } from "../../hooks/use-user-region";
+import { RegionalPattern } from "../regional/RegionalIconography";
+import RegionalIconography from "../regional/RegionalIconography";
+import { REGION_COLORS } from "../../constants/regions";
 
 interface RealLifeScenarioProps {
   region: Region;

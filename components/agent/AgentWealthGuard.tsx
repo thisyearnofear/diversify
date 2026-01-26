@@ -1,12 +1,12 @@
 import React, { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useWealthProtectionAgent, RiskTolerance } from "../hooks/use-wealth-protection-agent";
-import { useInflationData } from "../hooks/use-inflation-data";
-import { useWalletContext } from "./WalletProvider";
-import { useAppState } from "../context/AppStateContext";
-import { NETWORKS } from "../config";
-import { ChainDetectionService } from "../services/swap/chain-detection.service";
-import { useToast } from "./Toast";
+import { useWealthProtectionAgent, RiskTolerance } from "../../hooks/use-wealth-protection-agent";
+import { useInflationData } from "../../hooks/use-inflation-data";
+import { useWalletContext } from "../wallet/WalletProvider";
+import { useAppState } from "../../context/AppStateContext";
+import { NETWORKS } from "../../config";
+import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+import { useToast } from "../ui/Toast";
 
 interface AgentWealthGuardProps {
     amount: number;

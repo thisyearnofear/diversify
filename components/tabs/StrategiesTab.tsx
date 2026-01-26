@@ -1,7 +1,7 @@
 import React from "react";
-import GoalBasedStrategies from "../GoalBasedStrategies";
-import PortfolioRecommendations from "../PortfolioRecommendations";
-import MultichainPortfolioBreakdown from "../MultichainPortfolioBreakdown";
+import GoalBasedStrategies from "../strategies/GoalBasedStrategies";
+import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
+import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
 import type { Region } from "@/hooks/use-user-region";
 
 interface StrategiesTabProps {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useWalletContext } from './WalletProvider';
+import { useWalletContext } from '../wallet/WalletProvider';
 
 interface AutomationPreferences {
     email: {

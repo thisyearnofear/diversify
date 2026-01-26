@@ -1,5 +1,5 @@
 import React from "react";
-import RegionalIconography, { RegionalPattern } from "../RegionalIconography";
+import RegionalIconography, { RegionalPattern } from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { REGION_COLORS } from "../../constants/regions";
 

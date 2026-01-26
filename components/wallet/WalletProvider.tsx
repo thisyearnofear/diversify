@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react";
-import { useWallet } from "../hooks/use-wallet";
-import { useAppState } from "../context/AppStateContext";
+import { useWallet } from "../../hooks/use-wallet";
+import { useAppState } from "../../context/AppStateContext";
 
 // Define the context type
 interface FarcasterContext {

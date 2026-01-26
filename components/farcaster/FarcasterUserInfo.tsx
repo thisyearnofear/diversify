@@ -3,7 +3,7 @@
  * Displays Farcaster user data and provides Farcaster-specific UI elements
  */
 
-import { useWalletContext } from './WalletProvider';
+import { useWalletContext } from '../wallet/WalletProvider';
 import { useEffect, useState } from 'react';
 
 export default function FarcasterUserInfo() {

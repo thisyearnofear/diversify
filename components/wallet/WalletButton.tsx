@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWalletContext } from './WalletProvider';
-import { useToast } from './Toast';
+import { useToast } from '../ui/Toast';
 
 type ButtonVariant = 'primary' | 'secondary' | 'inline' | 'minimal';
 

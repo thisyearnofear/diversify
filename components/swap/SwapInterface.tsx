@@ -1,17 +1,17 @@
 import { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from "react";
-import { useInflationData } from "../hooks/use-inflation-data";
-import { useSwap } from "../hooks/use-swap";
-import { useExpectedAmountOut } from "../hooks/use-expected-amount-out";
-import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
-import { SwapErrorHandler } from "../services/swap/error-handler";
-import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
-import { REGION_COLORS } from "../constants/regions";
-import TokenSelector from "./swap/TokenSelector";
+import { useInflationData } from "../../hooks/use-inflation-data";
+import { useSwap } from "../../hooks/use-swap";
+import { useExpectedAmountOut } from "../../hooks/use-expected-amount-out";
+import { useStablecoinBalances } from "../../hooks/use-stablecoin-balances";
+import { SwapErrorHandler } from "../../services/swap/error-handler";
+import RegionalIconography, { RegionalPattern } from "../regional/RegionalIconography";
+import { REGION_COLORS } from "../../constants/regions";
+import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";
-import { NETWORKS } from "../config";
-import { ChainDetectionService } from "../services/swap/chain-detection.service";
-import { getTokensForChain, isTokenAvailableOnChain } from "../utils/cross-chain-tokens";
-import type { Region } from "../hooks/use-user-region";
+import { NETWORKS } from "../../config";
+import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+import { getTokensForChain, isTokenAvailableOnChain } from "../../utils/cross-chain-tokens";
+import type { Region } from "../../hooks/use-user-region";
 
 interface Token {
   symbol: string;

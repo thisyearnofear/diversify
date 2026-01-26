@@ -1,6 +1,6 @@
 import React from 'react';
-import { useWalletContext } from './WalletProvider';
-import { ChainDetectionService } from '../services/swap/chain-detection.service';
+import { useWalletContext } from '../wallet/WalletProvider';
+import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 
 interface WealthJourneyWidgetProps {
   totalValue: number;

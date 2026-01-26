@@ -10,8 +10,8 @@ import {
   ARC_TESTNET_TOKENS,
   REGION_COLORS,
 } from "../constants/regions";
-import ErrorBoundary from "../components/ErrorBoundary";
-import TabNavigation from "../components/TabNavigation";
+import ErrorBoundary from "../components/ui/ErrorBoundary";
+import TabNavigation from "../components/ui/TabNavigation";
 import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
 import { ChainDetectionService } from "../services/swap/chain-detection.service";
@@ -20,12 +20,12 @@ import AnalyticsTab from "../components/tabs/AnalyticsTab";
 import StrategiesTab from "../components/tabs/StrategiesTab";
 import SwapTab from "../components/tabs/SwapTab";
 import InfoTab from "../components/tabs/InfoTab";
-import WalletButton from "../components/WalletButton";
-import FarcasterWalletButton from "../components/FarcasterWalletButton";
-import { useWalletContext } from "../components/WalletProvider";
-import { useWalletTutorial, WalletTutorial } from "../components/WalletTutorial";
-import ThemeToggle from "../components/ThemeToggle";
-import LazyFarcasterUserInfo from "../components/LazyFarcasterUserInfo";
+import WalletButton from "../components/wallet/WalletButton";
+import FarcasterWalletButton from "../components/wallet/FarcasterWalletButton";
+import { useWalletContext } from "../components/wallet/WalletProvider";
+import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTutorial";
+import ThemeToggle from "../components/ui/ThemeToggle";
+import LazyFarcasterUserInfo from "../components/farcaster/LazyFarcasterUserInfo";
 
 export default function DiversiFiPage() {
   // Use app state context for tab management

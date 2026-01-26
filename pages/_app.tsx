@@ -3,9 +3,9 @@ import type { AppProps } from "next/app";
 import { isMiniPayEnvironment } from "../utils/environment";
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import ErrorBoundary from "../components/ErrorBoundary";
-import { WalletProvider } from "../components/WalletProvider";
-import { ToastProvider } from "../components/Toast";
+import ErrorBoundary from "../components/ui/ErrorBoundary";
+import { WalletProvider } from "../components/wallet/WalletProvider";
+import { ToastProvider } from "../components/ui/Toast";
 import { AppStateProvider } from "../context/AppStateContext";
 import { useRouter } from "next/router";
 
