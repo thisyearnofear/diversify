@@ -5,6 +5,7 @@
 
 import { useEffect, useState } from 'react';
 import { isMiniPayEnvironment } from '../utils/environment';
+import { getWalletProvider, setupWalletEventListeners } from '../utils/wallet-provider';
 import sdk from '@farcaster/miniapp-sdk';
 
 export function useWallet() {
@@ -102,32 +103,23 @@ export function useWallet() {
         connect();
       }
 
-      // Event handlers
-      const handleChainChanged = (chainId: string) => {
-        setChainId(parseInt(chainId, 16));
-        // Removed page reload to preserve UI state
-        // Chain changes will be handled gracefully through state updates
-      };
-
-      const handleAccountsChanged = (accounts: string[]) => {
-        if (accounts.length === 0) {
-          setAddress(null);
-          setIsConnected(false);
-        } else {
-          setAddress(accounts[0]);
-          setIsConnected(true);
+      // Setup event listeners
+      const cleanup = await setupWalletEventListeners(
+        (chainId: string) => {
+          setChainId(parseInt(chainId, 16));
+        },
+        (accounts: string[]) => {
+          if (accounts.length === 0) {
+            setAddress(null);
+            setIsConnected(false);
+          } else {
+            setAddress(accounts[0]);
+            setIsConnected(true);
+          }
         }
-      };
+      );
 
-      // Add listeners
-      provider.on('chainChanged', handleChainChanged);
-      provider.on('accountsChanged', handleAccountsChanged);
-
-      // Cleanup
-      return () => {
-        provider?.removeListener('chainChanged', handleChainChanged);
-        provider?.removeListener('accountsChanged', handleAccountsChanged);
-      };
+      return cleanup;
     };
 
     initWallet();
@@ -135,36 +127,12 @@ export function useWallet() {
 
   // Connect wallet function
   const connect = async () => {
-    let provider = null;
-
-    // In Farcaster environment, get the provider through the SDK
-    if (isFarcaster && sdk && sdk.wallet) {
-      try {
-        provider = await sdk.wallet.getEthereumProvider();
-      } catch (err) {
-        console.warn('[Farcaster] Failed to get Ethereum provider:', err);
-      }
-    }
-
-    // Fallback to window.ethereum if not in Farcaster or if SDK provider failed
-    if (!provider && typeof window !== 'undefined' && window.ethereum) {
-      provider = window.ethereum;
-    }
-
-    if (!provider) {
-      setError('No Ethereum provider found');
-      return;
-    }
-
-    setIsConnecting(true);
-    setError(null);
-
     try {
-      if (!provider.request) {
-        setError('Ethereum provider does not support request method');
-        setIsConnecting(false);
-        return;
-      }
+      const provider = await getWalletProvider();
+
+      setIsConnecting(true);
+      setError(null);
+
       const accounts = await provider.request({
         method: 'eth_requestAccounts',
       });
@@ -191,28 +159,9 @@ export function useWallet() {
 
   // Switch network function
   const switchNetwork = async (targetChainId: number) => {
-    let provider = null;
-
-    // In Farcaster environment, get the provider through the SDK
-    if (isFarcaster && sdk && sdk.wallet) {
-      try {
-        provider = await sdk.wallet.getEthereumProvider();
-      } catch (err) {
-        console.warn('[Farcaster] Failed to get Ethereum provider:', err);
-      }
-    }
-
-    // Fallback to window.ethereum if not in Farcaster or if SDK provider failed
-    if (!provider && typeof window !== 'undefined' && window.ethereum) {
-      provider = window.ethereum;
-    }
-
-    if (!provider) {
-      setError('No Ethereum provider found');
-      return;
-    }
-
     try {
+      const provider = await getWalletProvider();
+
       await provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${targetChainId.toString(16)}` }],
@@ -221,6 +170,7 @@ export function useWallet() {
       // This error code indicates that the chain has not been added to MetaMask.
       if (switchError.code === 4902) {
         try {
+          const provider = await getWalletProvider();
           let networkConfig;
           if (targetChainId === 44787) {
             networkConfig = {

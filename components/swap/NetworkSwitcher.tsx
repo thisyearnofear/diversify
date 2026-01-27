@@ -24,7 +24,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
     const allNetworks = [
         {
             ...NETWORKS.CELO_MAINNET,
-            label: `${NETWORKS.CELO_MAINNET.name} (Cash Wallet)`,
+            label: `${NETWORKS.CELO_MAINNET.name} (Stablecoins)`,
             description: 'Production network',
             icon: '🌍',
             color: 'green',
@@ -45,7 +45,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
         },
         {
             ...NETWORKS.ARBITRUM_ONE,
-            label: `${NETWORKS.ARBITRUM_ONE.name} (Savings Vault)`,
+            label: `${NETWORKS.ARBITRUM_ONE.name} (RWAs)`,
             description: 'For RWA assets',
             icon: '🔷',
             color: 'blue',

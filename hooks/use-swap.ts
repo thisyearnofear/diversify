@@ -12,6 +12,7 @@ import { SwapErrorHandler } from '../services/swap/error-handler';
 import { isMiniPayEnvironment } from '../utils/environment';
 import { TX_CONFIG } from '../config';
 import type { SwapParams as OrchestratorSwapParams, SwapCallbacks, SwapResult, SwapState } from '../types/swap';
+import { setupWalletEventListeners } from '../utils/wallet-provider';
 
 interface HookSwapParams {
     fromToken: string;
@@ -68,19 +69,23 @@ export function useSwap() {
         refreshChainId();
 
         // Listen for chain changes from wallet
-        if (typeof window !== 'undefined' && window.ethereum) {
-            const handleChainChanged = (chainIdHex: string) => {
+        let cleanup: (() => void) | undefined;
+        setupWalletEventListeners(
+            (chainIdHex: string) => {
                 const newChainId = parseInt(chainIdHex, 16);
                 console.log('[useSwap] Chain changed to:', newChainId);
                 setChainId(newChainId);
-            };
+            },
+            () => { } // No accounts changed handler needed here
+        ).then(cleanupFn => {
+            cleanup = cleanupFn;
+        });
 
-            window.ethereum.on('chainChanged', handleChainChanged);
-
-            return () => {
-                window.ethereum?.removeListener('chainChanged', handleChainChanged);
-            };
-        }
+        return () => {
+            if (cleanup) {
+                cleanup();
+            }
+        };
     }, [refreshChainId]);
 
     // Get user-friendly swap estimate

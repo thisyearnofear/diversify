@@ -7,33 +7,9 @@
 import { createConfig, EVM } from '@lifi/sdk';
 import { createWalletClient, custom } from 'viem';
 import { arbitrum, celo, celoAlfajores } from 'viem/chains';
-import sdk from '@farcaster/miniapp-sdk';
+import { getWalletProvider } from '../../utils/wallet-provider';
 
 let isConfigured = false;
-
-// Helper function to get wallet provider (supports both regular and Farcaster wallets)
-async function getWalletProvider() {
-    // Try Farcaster SDK first if available
-    if (typeof window !== 'undefined' && sdk && sdk.wallet) {
-        try {
-            const provider = await sdk.wallet.getEthereumProvider();
-            if (provider) {
-                console.log('[LiFi Config] Using Farcaster wallet provider');
-                return provider;
-            }
-        } catch (err) {
-            console.warn('[LiFi Config] Failed to get Farcaster provider:', err);
-        }
-    }
-
-    // Fallback to window.ethereum
-    if (typeof window !== 'undefined' && window.ethereum) {
-        console.log('[LiFi Config] Using window.ethereum provider');
-        return window.ethereum;
-    }
-
-    throw new Error('No wallet provider available');
-}
 
 /**
  * Initialize LiFi SDK configuration

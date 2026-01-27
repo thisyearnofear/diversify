@@ -34,15 +34,15 @@ export default function WealthJourneyWidget({
     if (isCelo) {
       stage = 'fortification';
       title = 'Step 2: Fortification';
-      description = 'You have stablecoins! Now, move surplus funds to the Savings Vault (Arbitrum) to earn yield on Gold & Treasuries.';
-      cta = 'Bridge to Vault';
+      description = 'You have stablecoins! Now, move surplus funds to Arbitrum (RWAs) to earn yield on Gold & Treasuries.';
+      cta = 'Bridge to RWAs';
       action = () => setActiveTab('swap'); // In a real app, this might open a specific bridge modal
       icon = '🏰';
       progress = 66;
     } else if (isArbitrum) {
       stage = 'management';
       title = 'Step 3: Wealth Management';
-      description = 'Your funds are in the Savings Vault. Monitor your Real-World Assets (RWA) performance here.';
+      description = 'Your funds are on Arbitrum (RWAs). Monitor your Real-World Assets performance here.';
       cta = 'View Performance';
       action = () => setActiveTab('analytics');
       icon = '📈';

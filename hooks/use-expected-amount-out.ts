@@ -97,14 +97,15 @@ export function useExpectedAmountOut({
   // Detect chain ID on mount
   useEffect(() => {
     const detectChain = async () => {
-      if (ProviderFactoryService.isWalletConnected()) {
-        try {
+      try {
+        const isConnected = await ProviderFactoryService.isWalletConnected();
+        if (isConnected) {
           const detectedChainId = await ProviderFactoryService.getCurrentChainId();
           setChainId(detectedChainId);
-        } catch (err) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Error detecting chain ID:', err);
-          }
+        }
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Error detecting chain ID:', err);
         }
       }
     };

@@ -12,6 +12,7 @@ import {
 import { executeMulticall, type ContractCall } from '../utils/multicall';
 import { ChainDetectionService } from '../services/swap/chain-detection.service';
 import { ProviderFactoryService } from '../services/swap/provider-factory.service';
+import { getWalletProvider, setupWalletEventListeners } from '../utils/wallet-provider';
 
 interface StablecoinBalance {
   symbol: string;
@@ -260,8 +261,9 @@ export function useStablecoinBalances(address: string | undefined | null) {
       }
 
       // Detect current chain
-      if (ProviderFactoryService.isWalletConnected()) {
-        try {
+      try {
+        const isConnected = await ProviderFactoryService.isWalletConnected();
+        if (isConnected) {
           const detectedChainId = await ProviderFactoryService.getCurrentChainId();
           setChainId(detectedChainId);
 
@@ -271,17 +273,18 @@ export function useStablecoinBalances(address: string | undefined | null) {
             setIsLoading(false);
             return;
           }
-        } catch (err) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Error checking chain ID, proceeding with API calls:', err);
-          }
+        }
+      } catch (err) {
+        if (process.env.NODE_ENV === 'development') {
+          console.warn('Error checking chain ID, proceeding with API calls:', err);
         }
       }
 
-      // Get current chain ID from window.ethereum if not already set
-      if (!chainId && typeof window !== 'undefined' && window.ethereum && window.ethereum.request) {
+      // Get current chain ID from wallet provider if not already set
+      if (!chainId) {
         try {
-          const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+          const provider = await getWalletProvider();
+          const chainIdHex = await provider.request({ method: 'eth_chainId' });
           const detectedChainId = Number.parseInt(chainIdHex as string, 16);
           setChainId(detectedChainId);
         } catch (err) {
@@ -292,7 +295,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
       }
 
       // Create provider for the current chain
-      const currentChainId = chainId || (ProviderFactoryService.isWalletConnected() ?
+      const currentChainId = chainId || (await ProviderFactoryService.isWalletConnected() ?
         await ProviderFactoryService.getCurrentChainId() : null);
 
 
@@ -399,14 +402,15 @@ export function useStablecoinBalances(address: string | undefined | null) {
   }, [address, chainId, calculateTotals]);
 
   const refreshChainId = useCallback(async () => {
-    if (ProviderFactoryService.isWalletConnected()) {
-      try {
+    try {
+      const isConnected = await ProviderFactoryService.isWalletConnected();
+      if (isConnected) {
         const detectedChainId = await ProviderFactoryService.getCurrentChainId();
         setChainId(detectedChainId);
         return detectedChainId;
-      } catch (err) {
-        console.warn('Error refreshing chain ID:', err);
       }
+    } catch (err) {
+      console.warn('Error refreshing chain ID:', err);
     }
     return null;
   }, []);
@@ -422,8 +426,9 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
     const handleChainChanged = async () => {
       // Refresh chain ID
-      if (ProviderFactoryService.isWalletConnected()) {
-        try {
+      try {
+        const isConnected = await ProviderFactoryService.isWalletConnected();
+        if (isConnected) {
           const newChainId = await ProviderFactoryService.getCurrentChainId();
 
           // Update state and refetch balances
@@ -434,21 +439,25 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
           // Refetch balances for the new chain
           fetchBalances();
-        } catch (err) {
-          console.warn('Error refreshing chain ID after external change:', err);
         }
+      } catch (err) {
+        console.warn('Error refreshing chain ID after external change:', err);
       }
     };
 
     // Listen for chain changes
-    if (window.ethereum) {
-      window.ethereum.on('chainChanged', handleChainChanged);
-    }
+    let cleanup: (() => void) | undefined;
+    setupWalletEventListeners(
+      handleChainChanged,
+      () => { } // No accounts changed handler needed here
+    ).then(cleanupFn => {
+      cleanup = cleanupFn;
+    });
 
     // Cleanup listener
     return () => {
-      if (window.ethereum) {
-        window.ethereum.removeListener('chainChanged', handleChainChanged);
+      if (cleanup) {
+        cleanup();
       }
     };
   }, [address, fetchBalances]);
