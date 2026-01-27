@@ -206,17 +206,24 @@ function calculateDiversificationScore(chains: ChainPortfolio[]): number {
   return chainScore + tokenScore + regionScore;
 }
 
-export function useStablecoinBalances(address: string | undefined | null) {
+export function useStablecoinBalances(address: string | undefined | null, initialChainId?: number | null) {
   const [balances, setBalances] = useState<Record<string, StablecoinBalance>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [regionTotals, setRegionTotals] = useState<Record<string, number>>({});
   const [totalValue, setTotalValue] = useState(0);
-  const [chainId, setChainId] = useState<number | null>(null);
+  const [chainId, setChainId] = useState<number | null>(initialChainId ?? null);
 
   // Multi-chain aggregated portfolio
   const [aggregatedPortfolio, setAggregatedPortfolio] = useState<AggregatedPortfolio | null>(null);
   const [isLoadingAllChains, setIsLoadingAllChains] = useState(false);
+
+  // Sync chainId from parent when initialChainId changes (avoids redundant detection)
+  useEffect(() => {
+    if (initialChainId && initialChainId !== chainId) {
+      setChainId(initialChainId);
+    }
+  }, [initialChainId]);
 
   // Define calculateTotals function at the hook level so it can be used by both useEffect and refreshBalances
   const calculateTotals = useCallback((balanceMap: Record<string, StablecoinBalance>) => {

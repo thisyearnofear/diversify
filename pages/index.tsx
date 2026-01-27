@@ -29,6 +29,7 @@ export default function DiversiFiPage() {
     isMiniPay: isInMiniPay,
     isFarcaster,
     address,
+    chainId: walletChainId,
     connect: connectWallet,
   } = useWalletContext();
 
@@ -50,14 +51,15 @@ export default function DiversiFiPage() {
     refreshChainId,
     aggregatedPortfolio,
     fetchAllChainBalances,
-  } = useStablecoinBalances(address);
+  } = useStablecoinBalances(address, walletChainId);
 
-  // Automatically fetch multi-chain data when address changes
+  // Automatically fetch multi-chain data when address AND chainId are ready
+  // This prevents duplicate fetches during initialization
   useEffect(() => {
-    if (address) {
+    if (address && chainId) {
       fetchAllChainBalances();
     }
-  }, [address, fetchAllChainBalances]);
+  }, [address, chainId, fetchAllChainBalances]);
 
   const currentChainId = chainId;
 
