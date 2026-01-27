@@ -79,7 +79,13 @@ export function useSwap() {
                     (chainIdHex: string) => {
                         const newChainId = parseInt(chainIdHex, 16);
                         console.log('[useSwap] Chain changed to:', newChainId);
-                        setChainId(newChainId);
+                        // Only accept supported chains, otherwise keep current or default to Celo
+                        if (ChainDetectionService.isSupported(newChainId)) {
+                            setChainId(newChainId);
+                        } else {
+                            console.log('[useSwap] Unsupported chain detected, defaulting to Celo');
+                            setChainId(42220);
+                        }
                     },
                     () => { } // No accounts changed handler needed here
                 );
