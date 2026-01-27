@@ -37,21 +37,38 @@ export function initializeLiFiConfig(): void {
                         try {
                             accounts = await provider.request({ method: 'eth_accounts' });
                             if (!accounts || accounts.length === 0) {
-                                throw new Error('Wallet not connected');
+                                // For Farcaster, try requesting accounts again
+                                console.log('[LiFi Config] No accounts found, requesting connection...');
+                                accounts = await provider.request({ method: 'eth_requestAccounts' });
+                                if (!accounts || accounts.length === 0) {
+                                    throw new Error('Wallet not connected');
+                                }
                             }
                         } catch (error) {
                             console.error('[LiFi Config] Wallet connection check failed:', error);
                             throw new Error('Wallet connection required');
                         }
 
-                        // Get current chain ID from the wallet
+                        // Get current chain ID from the wallet with retry logic
                         let chainId: number;
-                        try {
-                            const chainIdHex = await provider.request({ method: 'eth_chainId' });
-                            chainId = parseInt(chainIdHex, 16);
-                        } catch (error) {
-                            console.warn('[LiFi Config] Could not get chain ID, defaulting to Arbitrum');
-                            chainId = 42161; // Default to Arbitrum
+                        let retryCount = 0;
+                        const maxRetries = 3;
+
+                        while (retryCount < maxRetries) {
+                            try {
+                                const chainIdHex = await provider.request({ method: 'eth_chainId' });
+                                chainId = parseInt(chainIdHex, 16);
+                                break;
+                            } catch (error) {
+                                retryCount++;
+                                console.warn(`[LiFi Config] Chain ID fetch attempt ${retryCount} failed:`, error);
+                                if (retryCount < maxRetries) {
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                } else {
+                                    console.warn('[LiFi Config] Could not get chain ID, defaulting to Arbitrum');
+                                    chainId = 42161; // Default to Arbitrum
+                                }
+                            }
                         }
 
                         // Find the matching chain configuration
@@ -78,8 +95,28 @@ export function initializeLiFiConfig(): void {
                                 params: [{ chainId: `0x${chainId.toString(16)}` }],
                             });
 
-                            // Get accounts after chain switch
-                            const accounts = await provider.request({ method: 'eth_accounts' });
+                            // Wait a bit for chain switch to complete in Farcaster
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+
+                            // Get accounts after chain switch with retry
+                            let accounts: string[] = [];
+                            let retryCount = 0;
+                            const maxRetries = 3;
+
+                            while (retryCount < maxRetries && (!accounts || accounts.length === 0)) {
+                                try {
+                                    accounts = await provider.request({ method: 'eth_accounts' });
+                                    if (accounts && accounts.length > 0) break;
+                                } catch (err) {
+                                    console.warn(`[LiFi Config] Account fetch attempt ${retryCount + 1} failed:`, err);
+                                }
+
+                                retryCount++;
+                                if (retryCount < maxRetries) {
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                }
+                            }
+
                             if (!accounts || accounts.length === 0) {
                                 throw new Error('Wallet not connected after chain switch');
                             }

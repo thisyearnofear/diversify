@@ -96,6 +96,7 @@ export const TOKEN_METADATA: Record<string, { name: string; region: RegionValue;
     CCHF: { name: 'Swiss Franc', region: REGIONS.EUROPE },
     CJPY: { name: 'Japanese Yen', region: REGIONS.ASIA },
     CNGN: { name: 'Nigerian Naira', region: REGIONS.AFRICA },
+    USDT: { name: 'Tether USD', region: REGIONS.GLOBAL, decimals: 6 },
     USDC: { name: 'USD Coin', region: REGIONS.GLOBAL, decimals: 6 },
     EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18 },
@@ -109,8 +110,8 @@ export function getTokenRegion(symbol: string): RegionValue {
 
 // Single Source of Truth for Network Assets
 export const NETWORK_TOKENS: Record<number, string[]> = {
-    [NETWORKS.CELO_MAINNET.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN'],
-    [NETWORKS.ALFAJORES.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'PUSO'],
+    [NETWORKS.CELO_MAINNET.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN', 'USDT'],
+    [NETWORKS.ALFAJORES.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'PUSO', 'USDT'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
 };
@@ -143,6 +144,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CCHF: 1.10,
     CJPY: 0.0067,
     CNGN: 0.00061,
+    USDT: 1,
     USDC: 1,
     EURC: 1.08,
     PAXG: 2650,
@@ -230,6 +232,7 @@ export const MAINNET_TOKENS = {
     CCHF: '0xb55a79F398E759E43C95b979163f30eC87Ee131D',
     CJPY: '0xc45eCF20f3CD864B32D9794d6f76814aE8892e20',
     CNGN: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71',
+    USDT: '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e',
 } as const;
 
 export const ALFAJORES_TOKENS = {
@@ -248,6 +251,7 @@ export const ALFAJORES_TOKENS = {
     CAUD: '0x84CBD49F5aE07632B6B88094E81Cce8236125Fe0',
     PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
     CNGN: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71',
+    USDT: '0xd077A400968890Eacc75cdc901F0356c943e4fDb',
 } as const;
 
 export const ARBITRUM_TOKENS = {

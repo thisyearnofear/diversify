@@ -18,7 +18,7 @@ export function useWallet() {
   const [isMiniPay, setIsMiniPay] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
   const [farcasterContext, setFarcasterContext] = useState<any | null>(null);
-  
+
   // Single provider reference to ensure consistency across all operations
   const providerRef = useRef<any | null>(null);
 
@@ -43,7 +43,7 @@ export function useWallet() {
 
         // Try to get context with timeout (don't hang in non-Farcaster env)
         const contextPromise = sdk.context;
-        const timeoutPromise = new Promise((_, reject) => 
+        const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('timeout')), 200)
         );
 
@@ -89,12 +89,30 @@ export function useWallet() {
       const inMiniPay = isMiniPayEnvironment();
       setIsMiniPay(inMiniPay);
 
-      // 4. Get current chain ID
-      try {
-        const chainIdHex = await provider.request({ method: 'eth_chainId' });
-        setChainId(parseInt(chainIdHex as string, 16));
-      } catch (err) {
-        console.warn('[Wallet] Error getting chain ID:', err);
+      // 4. Get current chain ID with retry logic for Farcaster
+      let retryCount = 0;
+      const maxRetries = 3;
+
+      while (retryCount < maxRetries) {
+        try {
+          const chainIdHex = await provider.request({ method: 'eth_chainId' });
+          const parsedChainId = parseInt(chainIdHex as string, 16);
+          console.log('[Wallet] Chain ID detected:', parsedChainId);
+          setChainId(parsedChainId);
+          break;
+        } catch (err) {
+          retryCount++;
+          console.warn(`[Wallet] Error getting chain ID (attempt ${retryCount}):`, err);
+          if (retryCount < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
+          } else {
+            // Default to Celo for Farcaster environments
+            if (detectedFarcaster || inMiniPay) {
+              console.log('[Wallet] Defaulting to Celo chain for Farcaster/MiniPay');
+              setChainId(42220);
+            }
+          }
+        }
       }
 
       // 5. Auto-connect logic
@@ -103,7 +121,7 @@ export function useWallet() {
       try {
         const method = (detectedFarcaster || inMiniPay) ? 'eth_requestAccounts' : 'eth_accounts';
         const accounts = await provider.request({ method }) as string[];
-        
+
         if (accounts && accounts.length > 0) {
           console.log('[Wallet] Connected:', accounts[0]);
           setAddress(accounts[0]);
@@ -196,7 +214,7 @@ export function useWallet() {
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${targetChainId.toString(16)}` }],
       });
-      
+
       // Update local state immediately
       setChainId(targetChainId);
     } catch (switchError: any) {
@@ -243,7 +261,7 @@ export function useWallet() {
             method: 'wallet_addEthereumChain',
             params: [networkConfig],
           });
-          
+
           // Update local state after adding chain
           setChainId(targetChainId);
         } catch (addError) {

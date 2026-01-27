@@ -235,7 +235,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
     setTotalValue(total);
   }, []);
 
-  // Function to fetch balances
+  // Function to fetch balances with optimistic loading
   const fetchBalances = useCallback(async () => {
     if (!address) {
       setIsLoading(false);
@@ -243,16 +243,23 @@ export function useStablecoinBalances(address: string | undefined | null) {
     }
 
     try {
-      setIsLoading(true);
       setError(null);
 
-      // Check cache first
+      // Check cache first and show immediately for better UX
       const cachedBalances = getCachedBalances(address);
       if (cachedBalances) {
+        console.log('[StablecoinBalances] Using cached balances for immediate display');
         setBalances(cachedBalances);
         calculateTotals(cachedBalances);
         setIsLoading(false);
-        return;
+
+        // Still fetch fresh data in background if cache is older than 2 minutes
+        const cacheAge = Date.now() - (JSON.parse(localStorage.getItem(`stablecoin-balances-${address}`) || '{}').timestamp || 0);
+        if (cacheAge < 2 * 60 * 1000) {
+          return; // Cache is fresh enough, don't refetch
+        }
+      } else {
+        setIsLoading(true);
       }
 
       // Detect current chain
@@ -442,7 +449,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
     // Listen for chain changes using the cached provider
     let cleanup: (() => void) | undefined;
-    
+
     const setupListeners = async () => {
       try {
         const provider = await getWalletProvider();
@@ -455,7 +462,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
         console.warn('[useStablecoinBalances] Failed to setup chain change listener:', err);
       }
     };
-    
+
     setupListeners();
 
     return () => {
