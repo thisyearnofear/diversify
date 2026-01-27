@@ -1,8 +1,10 @@
 import React from "react";
-import { REGION_COLORS } from "../../config";
+import { REGION_COLORS, NETWORKS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { Card, CollapsibleSection, TabHeader } from "../shared/TabComponents";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+
+const isDev = process.env.NODE_ENV === 'development';
 
 interface InfoTabProps {
   availableTokens: Array<{
@@ -118,7 +120,7 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
             {[
               { name: "Celo", icon: "🌍", status: "Production", color: "green" },
               { name: "Arbitrum", icon: "🔷", status: "Production", color: "blue" },
-              { name: "Arc Testnet", icon: "⚡", status: "Coming 2026", color: "purple" },
+              ...(isDev ? [{ name: "Arc Testnet", icon: "⚡", status: "Coming 2026", color: "purple" }] : []),
             ].map((network) => (
               <div key={network.name} className={`flex items-center justify-between p-2 bg-${network.color}-50 dark:bg-${network.color}-900/20 rounded-lg border border-${network.color}-200 dark:border-${network.color}-800`}>
                 <div className="flex items-center gap-2">

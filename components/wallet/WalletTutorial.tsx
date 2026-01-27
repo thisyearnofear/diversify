@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWalletContext } from './WalletProvider';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 // Wallet provider icons
 const WalletIcons = {
   MetaMask: '/wallets/metamask.svg',
@@ -85,7 +87,7 @@ export const WalletTutorial: React.FC<{
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">👛 Connect Your Wallet</h3>
                   <p className="text-gray-600 mb-6">
-                    Connect your wallet to start protecting your savings. We support Celo and Arc networks for multi-region stablecoins.
+                    Connect your wallet to start protecting your savings. We support Celo{isDev && ' and Arc'} {isDev ? 'networks' : 'network'} for multi-region stablecoins.
                   </p>
 
                   <div className="bg-blue-50 rounded-lg p-4 mb-6 border border-blue-100">

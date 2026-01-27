@@ -5,6 +5,9 @@
 
 import { NETWORKS } from '../../config';
 
+// Helper to check if we're in development mode
+const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+
 export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'unknown';
 export type SwapProtocol = 'mento' | 'lifi' | 'none';
 
@@ -25,9 +28,11 @@ export class ChainDetectionService {
     }
 
     /**
-     * Check if chain is Arc testnet
+     * Check if chain is Arc testnet (only in development)
      */
     static isArc(chainId: number | null): boolean {
+        // Arc only exists in development
+        if (!isDev) return false;
         return chainId === NETWORKS.ARC_TESTNET.chainId;
     }
 
@@ -35,8 +40,11 @@ export class ChainDetectionService {
      * Check if chain is a testnet
      */
     static isTestnet(chainId: number | null): boolean {
-        return chainId === NETWORKS.ALFAJORES.chainId ||
-            chainId === NETWORKS.ARC_TESTNET.chainId;
+        // In production, only Alfajores is considered testnet (if visible)
+        // Arc is hidden in production
+        if (chainId === NETWORKS.ALFAJORES.chainId) return true;
+        if (isDev && chainId === NETWORKS.ARC_TESTNET.chainId) return true;
+        return false;
     }
 
     /**
@@ -45,7 +53,7 @@ export class ChainDetectionService {
     static getChainType(chainId: number | null): ChainType {
         if (this.isCelo(chainId)) return 'celo';
         if (this.isArbitrum(chainId)) return 'arbitrum';
-        if (this.isArc(chainId)) return 'arc';
+        if (isDev && this.isArc(chainId)) return 'arc';
         return 'unknown';
     }
 
@@ -55,7 +63,7 @@ export class ChainDetectionService {
     static getSwapProtocol(chainId: number | null): SwapProtocol {
         if (this.isCelo(chainId)) return 'mento';
         if (this.isArbitrum(chainId)) return 'lifi';
-        if (this.isArc(chainId)) return 'lifi'; // Arc now has basic swap support
+        if (isDev && this.isArc(chainId)) return 'lifi';
         return 'none';
     }
 
@@ -83,13 +91,13 @@ export class ChainDetectionService {
      */
     static isSupported(chainId: number | null): boolean {
         if (!chainId) return false;
-        const supported = [
+        const supported: number[] = [
             NETWORKS.CELO_MAINNET.chainId,
             NETWORKS.ALFAJORES.chainId,
             NETWORKS.ARBITRUM_ONE.chainId,
-            NETWORKS.ARC_TESTNET.chainId,
-        ] as const;
-        return (supported as readonly number[]).includes(chainId);
+            ...(isDev ? [NETWORKS.ARC_TESTNET.chainId] : []),
+        ];
+        return supported.includes(chainId);
     }
 
     /**
@@ -100,7 +108,7 @@ export class ChainDetectionService {
             NETWORKS.CELO_MAINNET.chainId,
             NETWORKS.ALFAJORES.chainId,
             NETWORKS.ARBITRUM_ONE.chainId,
-            NETWORKS.ARC_TESTNET.chainId,
-        ] as number[];
+            ...(isDev ? [NETWORKS.ARC_TESTNET.chainId] : []),
+        ];
     }
 }

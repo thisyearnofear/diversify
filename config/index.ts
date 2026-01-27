@@ -23,6 +23,7 @@ export const NETWORKS = {
         name: 'Arc Testnet',
         rpcUrl: process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network',
         explorerUrl: 'https://testnet.arcscan.app',
+        devOnly: true, // Only show in development
     },
     ARBITRUM_ONE: {
         chainId: 42161,

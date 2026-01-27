@@ -2,6 +2,282 @@ import React, { useState } from "react";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 
+// ============================================================================
+// NEW: Progressive Disclosure Components (following Core Principles)
+// ============================================================================
+
+/** 
+ * StepCard - Used for wizard-style progressive disclosure 
+ * Shows one step at a time, reducing cognitive load
+ */
+export const StepCard = ({
+  step,
+  totalSteps,
+  title,
+  children,
+  onNext,
+  onSkip,
+  canSkip = true,
+  isLast = false,
+}: {
+  step: number;
+  totalSteps: number;
+  title: string;
+  children: React.ReactNode;
+  onNext?: () => void;
+  onSkip?: () => void;
+  canSkip?: boolean;
+  isLast?: boolean;
+}) => (
+  <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl p-4 border border-blue-100">
+    <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">
+          Step {step} of {totalSteps}
+        </span>
+        <div className="flex gap-1">
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-6 h-1 rounded-full ${
+                i < step ? 'bg-blue-600' : 'bg-gray-200'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+      {canSkip && onSkip && (
+        <button
+          onClick={onSkip}
+          className="text-[10px] text-gray-400 hover:text-gray-600 font-bold"
+        >
+          Skip →
+        </button>
+      )}
+    </div>
+    <h4 className="text-sm font-black text-gray-900 mb-4">{title}</h4>
+    {children}
+    {onNext && (
+      <button
+        onClick={onNext}
+        className="w-full mt-4 py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
+      >
+        {isLast ? 'Complete' : 'Continue'} →
+      </button>
+    )}
+  </div>
+);
+
+/**
+ * InsightCard - Primary actionable insight with clear hierarchy
+ * Replaces multiple competing recommendation components
+ * 
+ * Note: Confidence is now shown via ProtectionScore component, not inline
+ */
+export const InsightCard = ({
+  icon,
+  title,
+  description,
+  impact,
+  action,
+  variant = 'default',
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  impact?: string;
+  action?: {
+    label: string;
+    onClick: () => void;
+    cost?: string;
+  };
+  variant?: 'urgent' | 'default' | 'success';
+}) => {
+  const variants = {
+    urgent: 'bg-amber-50 border-amber-200',
+    default: 'bg-blue-50 border-blue-200',
+    success: 'bg-emerald-50 border-emerald-200',
+  };
+
+  return (
+    <div className={`rounded-xl p-4 border-2 ${variants[variant]}`}>
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm shrink-0">
+          {icon}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-bold text-sm text-gray-900">{title}</h4>
+          <p className="text-xs text-gray-600 mt-1 leading-relaxed">{description}</p>
+          
+          {impact && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded">
+                {impact}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {action && (
+        <button
+          onClick={action.onClick}
+          className="w-full mt-3 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+        >
+          {action.label}
+          {action.cost && (
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">
+              {action.cost}
+            </span>
+          )}
+        </button>
+      )}
+    </div>
+  );
+};
+
+/**
+ * QuickSelect - Grid selection component for goals/preferences
+ * Consolidates multiple selection UIs into one reusable component
+ */
+export const QuickSelect = <T extends string>({
+  options,
+  value,
+  onChange,
+  columns = 2,
+}: {
+  options: ReadonlyArray<{ value: T; label: string; icon?: string; description?: string }>;
+  value: T;
+  onChange: (value: T) => void;
+  columns?: 1 | 2 | 3;
+}) => {
+  const gridCols = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3' };
+  
+  return (
+    <div className={`grid ${gridCols[columns]} gap-2`}>
+      {options.map((opt) => (
+        <button
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          className={`p-3 border-2 rounded-xl text-center transition-all ${
+            value === opt.value
+              ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-600/10'
+              : 'border-gray-100 bg-white hover:border-gray-200'
+          }`}
+        >
+          {opt.icon && <div className="text-xl mb-1">{opt.icon}</div>}
+          <div className="text-[10px] font-black uppercase text-gray-900 leading-tight">
+            {opt.label}
+          </div>
+          {opt.description && (
+            <div className="text-[9px] text-gray-500 mt-0.5">{opt.description}</div>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+/**
+ * ProtectionScore - Single consolidated trust indicator
+ * Replaces: confidence badges, "Oracle Live", "Analysis Confidence", factor breakdowns
+ * 
+ * Shows one score with collapsible breakdown for power users
+ */
+export interface ProtectionFactor {
+  label: string;
+  value: number; // 0-100
+  status: string;
+  icon: string;
+}
+
+export const ProtectionScore = ({
+  score,
+  factors,
+  className = '',
+  defaultOpen = false,
+}: {
+  score: number;
+  factors?: ProtectionFactor[];
+  className?: string;
+  defaultOpen?: boolean;
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  
+  const colorClass = score >= 80 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 
+                     score >= 60 ? 'text-amber-600 bg-amber-50 border-amber-200' : 
+                     'text-red-600 bg-red-50 border-red-200';
+  
+  const dotColor = score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500';
+  
+  return (
+    <div className={`rounded-xl border ${colorClass} overflow-hidden ${className}`}>
+      {/* Main Score - Always Visible */}
+      <button
+        onClick={() => factors && setIsOpen(!isOpen)}
+        className={`w-full flex items-center justify-between p-3 ${factors ? 'hover:bg-black/5 cursor-pointer' : 'cursor-default'}`}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">🛡️</span>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm font-black">{score}% Protection Score</span>
+              <div className={`w-2 h-2 rounded-full ${dotColor}`} />
+            </div>
+            <span className="text-[10px] opacity-80">
+              {score >= 80 ? 'Excellent protection' : score >= 60 ? 'Good protection' : 'Needs attention'}
+            </span>
+          </div>
+        </div>
+        {factors && (
+          <svg 
+            className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        )}
+      </button>
+      
+      {/* Factor Breakdown - Collapsible for Power Users */}
+      {factors && isOpen && (
+        <div className="px-3 pb-3 border-t border-black/5">
+          <div className="pt-2 space-y-2">
+            {factors.map((factor, idx) => (
+              <div key={idx} className="flex items-center gap-2">
+                <span className="text-xs">{factor.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-gray-700">{factor.label}</span>
+                    <span className="text-[9px] text-gray-500">{factor.status}</span>
+                  </div>
+                  <div className="mt-1 h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full ${
+                        factor.value >= 80 ? 'bg-emerald-500' : 
+                        factor.value >= 60 ? 'bg-amber-500' : 
+                        'bg-red-500'
+                      }`}
+                      style={{ width: `${factor.value}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * @deprecated Use ProtectionScore instead
+ */
+export const TrustBadge = ProtectionScore;
+
 // Collapsible section for progressive disclosure
 export const CollapsibleSection = ({
   title,
@@ -317,5 +593,53 @@ export const ConnectWalletPrompt = ({
   <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
     <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-3">{message}</p>
     {WalletButtonComponent}
+  </div>
+);
+
+// ============================================================================
+// Layout Utilities
+// ============================================================================
+
+/**
+ * Section - Consistent section wrapper with optional divider
+ */
+export const Section = ({
+  children,
+  className = '',
+  divider = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  divider?: boolean;
+}) => (
+  <div className={`${divider ? 'pt-4 mt-4 border-t border-gray-100 dark:border-gray-800' : ''} ${className}`}>
+    {children}
+  </div>
+);
+
+/**
+ * HeroValue - Large value display for primary metrics
+ */
+export const HeroValue = ({
+  value,
+  label,
+  trend,
+}: {
+  value: string;
+  label: string;
+  trend?: { value: string; positive: boolean };
+}) => (
+  <div className="text-center">
+    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+      {value}
+    </div>
+    <div className="flex items-center justify-center gap-2 mt-1">
+      <span className="text-xs text-gray-500 font-medium">{label}</span>
+      {trend && (
+        <span className={`text-[10px] font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}>
+          {trend.positive ? '↑' : '↓'} {trend.value}
+        </span>
+      )}
+    </div>
   </div>
 );

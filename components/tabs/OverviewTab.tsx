@@ -194,9 +194,9 @@ export default function OverviewTab({
                   <button
                     onClick={() => setActiveTab("protect")}
                     className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold text-sm border border-indigo-100 dark:border-indigo-800 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
-                    aria-label="Ask Oracle"
+                    aria-label="Get Protection Advice"
                   >
-                    Ask Oracle 🤖
+                    Get Advice 🤖
                   </button>
                   <PrimaryButton onClick={() => setActiveTab("swap")} size="sm">
                     Swap & Protect

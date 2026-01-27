@@ -54,10 +54,13 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
         },
     ];
     
-    // Filter out Alfajores in production
-    const networks = allNetworks.filter(n => 
-        isDev || n.chainId !== NETWORKS.ALFAJORES.chainId
-    );
+    // Filter out dev-only networks in production
+    const networks = allNetworks.filter(n => {
+        if (isDev) return true;
+        if (n.chainId === NETWORKS.ALFAJORES.chainId && NETWORKS.ALFAJORES.devOnly) return false;
+        if (n.chainId === NETWORKS.ARC_TESTNET.chainId && NETWORKS.ARC_TESTNET.devOnly) return false;
+        return true;
+    });
 
     // Helper function to check if a network combination is valid for bridging
     const isValidBridgeCombination = (chainId: number): boolean => {

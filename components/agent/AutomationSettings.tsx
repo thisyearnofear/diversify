@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useWalletContext } from '../wallet/WalletProvider';
 
+const isDev = process.env.NODE_ENV === 'development';
+
 interface AutomationPreferences {
     email: {
         enabled: boolean;
@@ -366,8 +368,8 @@ export default function AutomationSettings() {
                         <h4 className="font-medium text-blue-900 mb-1">How It Works</h4>
                         <p className="text-sm text-blue-800">
                             Your AI agent analyzes your portfolio continuously and triggers automations when it detects
-                            wealth protection opportunities that meet your configured thresholds. All analysis costs are
-                            paid autonomously by the agent using x402 micropayments on Arc Network.
+                            wealth protection opportunities that meet your configured thresholds.
+                            {isDev && ' All analysis costs are paid autonomously by the agent using x402 micropayments on Arc Network.'}
                         </p>
                     </div>
                 </div>

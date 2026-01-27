@@ -329,7 +329,7 @@ export default function PortfolioRecommendations({
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-blue-700">⚡ Arc Network:</span>
+              <span className="text-blue-700">💱 Major Currencies:</span>
               <span className="font-medium text-blue-800">
                 {(
                   (PORTFOLIO_STRATEGIES[selectedStrategy].allocations.USA || 0) +

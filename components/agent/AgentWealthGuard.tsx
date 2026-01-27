@@ -14,6 +14,7 @@ interface AgentWealthGuardProps {
     holdings: string[];
     chainId?: number;
     inflationData?: unknown;
+    /** When true, renders in compact embedded mode without header/footer for use within other cards */
     embedded?: boolean;
     onExecute?: (token: string) => void;
     aggregatedPortfolio?: AggregatedPortfolio;
@@ -24,6 +25,7 @@ export default function AgentWealthGuard({
     holdings,
     chainId,
     inflationData: propInflationData,
+    embedded = false,
     onExecute,
     aggregatedPortfolio
 }: AgentWealthGuardProps) {
@@ -149,6 +151,182 @@ export default function AgentWealthGuard({
         }
     };
 
+    // ============================================================================
+    // EMBEDDED MODE: Compact rendering for integration within other cards
+    // ============================================================================
+    if (embedded) {
+        return (
+            <div className="pointer-events-auto">
+                <AnimatePresence mode="wait">
+                    {/* Analysis Progress */}
+                    {isAnalyzing && (
+                        <motion.div
+                            key="progress"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            className="py-4"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="relative w-16 h-16 shrink-0">
+                                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="10" className="text-gray-100" />
+                                        <motion.circle
+                                            cx="50" cy="50" r="45" fill="none" stroke="currentColor" strokeWidth="10"
+                                            strokeLinecap="round" className="text-blue-600"
+                                            initial={{ pathLength: 0 }}
+                                            animate={{ pathLength: (analysisProgress || 0) / 100 }}
+                                        />
+                                    </svg>
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="text-sm font-black text-blue-600">{analysisProgress}%</span>
+                                    </div>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Analyzing</h4>
+                                    <p className="text-sm text-blue-600 font-bold mt-1 truncate">{thinkingStep || 'Connecting...'}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Analysis Results - Compact */}
+                    {advice && !isAnalyzing && (
+                        <motion.div
+                            key="advice"
+                            initial={{ y: 10, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="space-y-3"
+                        >
+                            {/* AI Reasoning Quote */}
+                            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                                <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
+                                    &ldquo;{advice.reasoning}&rdquo;
+                                </p>
+                            </div>
+
+                            {/* Projection Comparison */}
+                            <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-black uppercase text-gray-400">3-Year Projection</span>
+                                    {portfolioAnalysis && (
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                            portfolioAnalysis.diversificationScore > 70 ? 'bg-emerald-100 text-emerald-700' :
+                                            portfolioAnalysis.diversificationScore > 40 ? 'bg-amber-100 text-amber-700' :
+                                            'bg-red-100 text-red-700'
+                                        }`}>
+                                            Diversification: {portfolioAnalysis.diversificationScore}/100
+                                        </span>
+                                    )}
+                                </div>
+                                
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] text-gray-500 w-20 shrink-0">Current</span>
+                                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <motion.div 
+                                                initial={{ width: 0 }} 
+                                                animate={{ width: `${advice.comparisonProjection ? 
+                                                    (advice.comparisonProjection.currentPathValue / amount) * 100 : 
+                                                    85}%`}} 
+                                                className="h-full bg-red-400" 
+                                            />
+                                        </div>
+                                        <span className="text-[10px] text-red-500 font-bold w-16 text-right">
+                                            -${advice.comparisonProjection ? 
+                                                (amount - advice.comparisonProjection.currentPathValue).toFixed(0) : 
+                                                (amount * 0.15).toFixed(0)}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] text-blue-600 w-20 shrink-0">Optimized</span>
+                                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <motion.div 
+                                                initial={{ width: 0 }} 
+                                                animate={{ width: '100%'}} 
+                                                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500" 
+                                            />
+                                        </div>
+                                        <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
+                                            +${advice.expectedSavings?.toFixed(0) || 
+                                                (advice.comparisonProjection ? 
+                                                    (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(0) :
+                                                    (amount * 0.2).toFixed(0))}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Execute Button (only if action needed) */}
+                            {advice.action !== 'HOLD' && advice.targetToken && (
+                                <button
+                                    onClick={() => handleExecuteRecommendation(advice.targetToken!)}
+                                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                >
+                                    <span>Execute {advice.action} to {advice.targetToken}</span>
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                    </svg>
+                                </button>
+                            )}
+
+                            {/* Hold State */}
+                            {advice.action === 'HOLD' && (
+                                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                                    <span className="text-lg">🛡️</span>
+                                    <span className="text-sm font-bold text-emerald-800">Portfolio well-protected</span>
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+
+                    {/* Initial State - Run Analysis */}
+                    {!advice && !isAnalyzing && (
+                        <motion.div 
+                            key="initial" 
+                            initial={{ opacity: 0 }} 
+                            animate={{ opacity: 1 }}
+                            className="text-center py-4"
+                        >
+                            <button
+                                onClick={() => {
+                                    if (!capabilities.analysis) {
+                                        showToast('AI Intelligence Hub unavailable', 'error');
+                                        return;
+                                    }
+                                    const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
+                                    analyze(
+                                        (liveInflationData || propInflationData) as Record<string, RegionalInflationData>,
+                                        amount,
+                                        holdings,
+                                        { chainId: chainId || 0, name: networkName },
+                                        undefined,
+                                        aggregatedPortfolio
+                                    );
+                                }}
+                                disabled={!capabilities.analysis}
+                                className={`w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
+                                    capabilities.analysis
+                                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+                                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                }`}
+                            >
+                                <span>{capabilities.analysis ? 'Run Full Analysis' : 'AI Unavailable'}</span>
+                                {capabilities.analysis && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>}
+                            </button>
+                            <p className="text-[10px] text-gray-400 mt-2">
+                                Analyzes ${amount.toFixed(2)} against real-time global inflation data
+                            </p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        );
+    }
+
+    // ============================================================================
+    // FULL MODE: Standalone card with header/footer
+    // ============================================================================
     return (
         <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-white/10 shadow-xl overflow-hidden pointer-events-auto">
             {/* Header */}
@@ -159,12 +337,12 @@ export default function AgentWealthGuard({
                             <span className="text-xl">🤖</span>
                         </div>
                         <div>
-                            <h3 className="text-white font-black text-sm tracking-tight uppercase leading-none">AI Wealth Guard</h3>
+                            <h3 className="text-white font-black text-sm tracking-tight uppercase leading-none">Protection Engine</h3>
                             <div className="flex items-center gap-1.5 mt-1">
                                 <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">AI</span>
                                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-black/20 border border-white/10">
                                     <div className={`w-1 h-1 rounded-full ${isListening ? 'bg-red-400 animate-ping' : 'bg-blue-400 animate-pulse'}`} />
-                                    <span className="text-[9px] font-mono text-blue-100">{isListening ? 'Oracle Listening...' : 'Arc Agent v2'}</span>
+                                    <span className="text-[9px] font-mono text-blue-100">{isListening ? 'Listening...' : 'AI Powered'}</span>
                                 </div>
                             </div>
                         </div>
@@ -219,7 +397,7 @@ export default function AgentWealthGuard({
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-gray-800 dark:text-white uppercase tracking-widest text-xs">Oracle Thinking</h4>
+                                    <h4 className="font-bold text-gray-800 dark:text-white uppercase tracking-widest text-xs">Analyzing</h4>
                                     <p className="text-sm text-blue-600 font-bold mt-1 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">{thinkingStep || 'Connecting to data hub...'}</p>
                                 </div>
                             </div>
@@ -268,7 +446,7 @@ export default function AgentWealthGuard({
                                         <div className="flex justify-between items-center mb-3">
                                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">3-Year Projection</span>
                                             <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">
-                                                {portfolioAnalysis ? `Inflation Risk: ${portfolioAnalysis.weightedInflationRisk.toFixed(1)}%` : 'Oracle Model'}
+                                                {portfolioAnalysis ? `Inflation Risk: ${portfolioAnalysis.weightedInflationRisk.toFixed(1)}%` : 'Protection Model'}
                                             </span>
                                         </div>
 
@@ -298,7 +476,7 @@ export default function AgentWealthGuard({
 
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-[10px] font-bold">
-                                                    <span className="text-blue-600">Oracle Path (Optimized)</span>
+                                                    <span className="text-blue-600">Optimized Path</span>
                                                     <span className="text-green-600">
                                                         +${advice.expectedSavings?.toFixed(2) || (advice.comparisonProjection ? 
                                                             (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(2) :
@@ -419,7 +597,7 @@ export default function AgentWealthGuard({
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-500/20 relative overflow-hidden">
                                 <div className="flex justify-between items-start mb-2">
                                     <h4 className="text-blue-800 dark:text-blue-100 font-black text-base leading-tight">
-                                        {amount > 0 ? 'Universal Wealth Protection' : 'Oracle Simulation'}
+                                        {amount > 0 ? 'Universal Wealth Protection' : 'Simulation'}
                                     </h4>
                                     {amount === 0 && (
                                         <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-tighter shadow-sm">Sim Mode</span>

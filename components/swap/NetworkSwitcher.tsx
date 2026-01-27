@@ -52,10 +52,14 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
         },
     ];
 
-    // Filter out Alfajores in production
-    const networks = allNetworks.filter(n =>
-        isDev || n.chainId !== NETWORKS.ALFAJORES.chainId
-    );
+    // Filter out dev-only networks in production
+    const networks = allNetworks.filter(n => {
+        if (isDev) return true;
+        // In production, exclude dev-only networks
+        if (n.chainId === NETWORKS.ALFAJORES.chainId && NETWORKS.ALFAJORES.devOnly) return false;
+        if (n.chainId === NETWORKS.ARC_TESTNET.chainId && NETWORKS.ARC_TESTNET.devOnly) return false;
+        return true;
+    });
 
     const currentNetwork = networks.find((n) => n.chainId === currentChainId);
 
@@ -237,25 +241,27 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
 
                 <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                     <div className="text-xs text-gray-600 dark:text-gray-400">
-                        <div className="flex items-start mb-1">
-                            <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                className="size-3 mr-1 mt-0.5 text-gray-500 dark:text-gray-400 flex-shrink-0"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                            </svg>
-                            <span>
-                                <strong>Arc Mainnet</strong> is not yet live. Expected launch: 2026
-                            </span>
-                        </div>
+                        {isDev && (
+                            <div className="flex items-start mb-1">
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="size-3 mr-1 mt-0.5 text-gray-500 dark:text-gray-400 flex-shrink-0"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                    />
+                                </svg>
+                                <span>
+                                    <strong>Arc Mainnet</strong> is not yet live. Expected launch: 2026
+                                </span>
+                            </div>
+                        )}
                         <div className="flex items-start">
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
