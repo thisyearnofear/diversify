@@ -1,9 +1,13 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import SwapInterface from "../swap/SwapInterface";
-import { useInflationData } from "../../hooks/use-inflation-data";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
-import RegionalIconography from "../regional/RegionalIconography";
 import RealLifeScenario from "../demo/RealLifeScenario";
 import { getChainAssets, NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
@@ -17,9 +21,10 @@ import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
 import WalletButton from "../wallet/WalletButton";
-import { useTradeableTokens, filterTradeableTokens } from "../../hooks/use-tradeable-tokens";
-
-
+import {
+  useTradeableTokens,
+  filterTradeableTokens,
+} from "../../hooks/use-tradeable-tokens";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -28,20 +33,6 @@ interface SwapTabProps {
   refreshChainId?: () => Promise<number | null>;
   isBalancesLoading?: boolean;
 }
-
-const getSwapUseCase = (fromRegion: Region, toRegion: Region): string => {
-  if (fromRegion === toRegion) return "";
-
-  const cases: Record<string, Record<string, string>> = {
-    Africa: { USA: "Pay for online courses priced in USD", Europe: "Save for European travel", LatAm: "Purchase goods from LatAm", Asia: "Pay for Asian imports" },
-    USA: { Africa: "Send remittances with lower fees", Europe: "Protect against USD inflation", LatAm: "Invest in emerging markets", Asia: "Pay for Asian services" },
-    Europe: { Africa: "Support family in Africa", USA: "Pay for US-based services", LatAm: "Diversify regional savings", Asia: "Purchase goods from Asia" },
-    LatAm: { Africa: "Diversify into African markets", USA: "Pay for US imports", Europe: "Save for European education", Asia: "Purchase Asian electronics" },
-    Asia: { Africa: "Invest in African growth", USA: "Pay for US services", Europe: "Prepare for European travel", LatAm: "Diversify into LatAm" },
-  };
-
-  return cases[fromRegion]?.[toRegion] || "Diversify your stablecoin portfolio";
-};
 
 export default function SwapTab({
   userRegion,
@@ -65,31 +56,42 @@ export default function SwapTab({
 
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
   const [, setApprovalTxHash] = useState<string | null>(null);
-  const [, setSwapStep] = useState<"idle" | "approving" | "swapping" | "completed" | "error" | "bridging">("idle");
+  const [, setSwapStep] = useState<
+    "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"
+  >("idle");
   const [showAiRecommendation, setShowAiRecommendation] = useState(false);
-  const [aiRecommendationReason, setAiRecommendationReason] = useState<string | null>(null);
+  const [aiRecommendationReason, setAiRecommendationReason] = useState<
+    string | null
+  >(null);
 
-  const swapInterfaceRef = useRef<{ refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void }>(null);
+  const swapInterfaceRef = useRef<{
+    refreshBalances: () => void;
+    setTokens: (from: string, to: string, amount?: string) => void;
+  }>(null);
 
   // Helper to refresh balances with retries
-  const refreshWithRetries = useCallback(async (retries = 3, delay = 3000) => {
-    if (!refreshBalances) return;
-    
-    console.log("[SwapTab] Starting balance refresh sequence...");
-    for (let i = 0; i < retries; i++) {
-      try {
-        // Wait for indexer to catch up
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
-        console.log(`[SwapTab] Refresh attempt ${i + 1}...`);
-        await refreshBalances();
-      } catch (err) {
-        console.warn(`[SwapTab] Refresh attempt ${i + 1} failed:`, err);
+  const refreshWithRetries = useCallback(
+    async (retries = 3, delay = 3000) => {
+      if (!refreshBalances) return;
+
+      console.log("[SwapTab] Starting balance refresh sequence...");
+      for (let i = 0; i < retries; i++) {
+        try {
+          // Wait for indexer to catch up
+          await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
+          console.log(`[SwapTab] Refresh attempt ${i + 1}...`);
+          await refreshBalances();
+        } catch (err) {
+          console.warn(`[SwapTab] Refresh attempt ${i + 1} failed:`, err);
+        }
       }
-    }
-  }, [refreshBalances]);
+    },
+    [refreshBalances],
+  );
 
   // Fetch tradeable tokens from Mento
-  const { tradeableSymbols, isLoading: isTradeableLoading } = useTradeableTokens(walletChainId);
+  const { tradeableSymbols, isLoading: isTradeableLoading } =
+    useTradeableTokens(walletChainId);
 
   const networkTokens = useMemo(() => {
     return getChainAssets(walletChainId || NETWORKS.CELO_MAINNET.chainId);
@@ -97,16 +99,30 @@ export default function SwapTab({
 
   // Filter to only show tokens that Mento actually supports
   const tradeableTokens = useMemo(() => {
-    return filterTradeableTokens(networkTokens, tradeableSymbols);
+    const filtered = filterTradeableTokens(networkTokens, tradeableSymbols);
+
+    // Less restrictive: Always allow major stablecoins if they exist in network configuration
+    // This prevents issues where Mento SDK might not report a coin that is actually tradeable
+    const essentialSymbols = ["USDT", "USDC", "CUSD", "CELO"];
+    const essentials = networkTokens.filter(
+      (t) =>
+        essentialSymbols.includes(t.symbol.toUpperCase()) &&
+        !filtered.some(
+          (f) => f.symbol.toUpperCase() === t.symbol.toUpperCase(),
+        ),
+    );
+
+    return [...filtered, ...essentials];
   }, [networkTokens, tradeableSymbols]);
 
   const filteredTokens = useMemo(() => {
     if (!searchQuery) return tradeableTokens;
     const query = searchQuery.toLowerCase();
-    return tradeableTokens.filter(t =>
-      t.symbol.toLowerCase().includes(query) ||
-      t.name.toLowerCase().includes(query) ||
-      t.region.toLowerCase().includes(query)
+    return tradeableTokens.filter(
+      (t) =>
+        t.symbol.toLowerCase().includes(query) ||
+        t.name.toLowerCase().includes(query) ||
+        t.region.toLowerCase().includes(query),
     );
   }, [tradeableTokens, searchQuery]);
 
@@ -114,7 +130,11 @@ export default function SwapTab({
 
   useEffect(() => {
     if (swapPrefill && swapInterfaceRef.current?.setTokens) {
-      swapInterfaceRef.current.setTokens(swapPrefill.fromToken || 'CUSD', swapPrefill.toToken || 'CEUR', swapPrefill.amount);
+      swapInterfaceRef.current.setTokens(
+        swapPrefill.fromToken || "CUSD",
+        swapPrefill.toToken || "CEUR",
+        swapPrefill.amount,
+      );
       if (swapPrefill.reason) {
         setAiRecommendationReason(swapPrefill.reason);
         setShowAiRecommendation(true);
@@ -136,17 +156,29 @@ export default function SwapTab({
     }
   }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries]);
 
-  const handleSwap = async (fromToken: string, toToken: string, amount: string, fromChainId?: number, toChainId?: number) => {
+  const handleSwap = async (
+    fromToken: string,
+    toToken: string,
+    amount: string,
+    fromChainId?: number,
+    toChainId?: number,
+  ) => {
     setSwapStatus("Initiating swap...");
     setSwapStep("approving");
     try {
       if (!address) throw new Error("Wallet not connected");
       const result = await performSwap({
-        fromToken, toToken, amount, fromChainId, toChainId,
+        fromToken,
+        toToken,
+        amount,
+        fromChainId,
+        toChainId,
         onApprovalSubmitted: setApprovalTxHash,
-        onSwapSubmitted: () => { setSwapStatus("Swap submitted..."); }
+        onSwapSubmitted: () => {
+          setSwapStatus("Swap submitted...");
+        },
       });
-      
+
       if (result.success) {
         setSwapStatus("Swap completed successfully!");
         setSwapStep("completed");
@@ -183,7 +215,19 @@ export default function SwapTab({
         <div className="mb-4">
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="size-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              <svg
+                className="size-4 text-gray-400"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={3}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
             </div>
             <input
               type="text"
@@ -196,20 +240,32 @@ export default function SwapTab({
         </div>
 
         {!address ? (
-          <ConnectWalletPrompt message="Connect your wallet to swap tokens." WalletButtonComponent={<WalletButton variant="inline" />} />
+          <ConnectWalletPrompt
+            message="Connect your wallet to swap tokens."
+            WalletButtonComponent={<WalletButton variant="inline" />}
+          />
         ) : (
           <>
             {showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
-                <p className="text-xs font-bold text-blue-800 dark:text-blue-200">🧠 AI: {aiRecommendationReason}</p>
-                <button onClick={() => setShowAiRecommendation(false)} className="text-blue-400 font-bold">×</button>
+                <p className="text-xs font-bold text-blue-800 dark:text-blue-200">
+                  🧠 AI: {aiRecommendationReason}
+                </p>
+                <button
+                  onClick={() => setShowAiRecommendation(false)}
+                  className="text-blue-400 font-bold"
+                >
+                  ×
+                </button>
               </div>
             )}
 
             {isTradeableLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
-                <span className="text-sm text-gray-500">Loading available tokens...</span>
+                <span className="text-sm text-gray-500">
+                  Loading available tokens...
+                </span>
               </div>
             ) : (
               <SwapInterface
@@ -226,30 +282,51 @@ export default function SwapTab({
             )}
 
             {swapStatus && (
-              <div className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${
-                swapStatus.includes("Error") 
-                  ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400" 
-                  : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
-              }`}>
+              <div
+                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${
+                  swapStatus.includes("Error")
+                    ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
+                    : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
+                }`}
+              >
                 <div className="flex items-center gap-2 mb-2">
-                  <div className={`size-2 rounded-full ${
-                    swapStatus.includes("Error") ? "bg-red-500" : "bg-green-500 animate-pulse"
-                  }`} />
-                  <span className="text-xs font-black uppercase tracking-tight">{swapStatus}</span>
+                  <div
+                    className={`size-2 rounded-full ${
+                      swapStatus.includes("Error")
+                        ? "bg-red-500"
+                        : "bg-green-500 animate-pulse"
+                    }`}
+                  />
+                  <span className="text-xs font-black uppercase tracking-tight">
+                    {swapStatus}
+                  </span>
                 </div>
-                
+
                 {swapTxHash && (
                   <div className="flex items-center justify-between pt-2 border-t border-current/10">
-                    <span className="text-[10px] font-bold opacity-70">Transaction Hash: {swapTxHash.slice(0, 8)}...{swapTxHash.slice(-8)}</span>
+                    <span className="text-[10px] font-bold opacity-70">
+                      Transaction Hash: {swapTxHash.slice(0, 8)}...
+                      {swapTxHash.slice(-8)}
+                    </span>
                     <a
-                      href={`${NETWORKS[walletChainId === 5042002 ? 'ARC_TESTNET' : walletChainId === 42161 ? 'ARBITRUM_ONE' : walletChainId === 44787 ? 'ALFAJORES' : 'CELO_MAINNET'].explorerUrl}/tx/${swapTxHash}`}
+                      href={`${NETWORKS[walletChainId === 5042002 ? "ARC_TESTNET" : walletChainId === 42161 ? "ARBITRUM_ONE" : walletChainId === 44787 ? "ALFAJORES" : "CELO_MAINNET"].explorerUrl}/tx/${swapTxHash}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-[10px] font-black uppercase underline hover:opacity-80 transition-opacity flex items-center gap-1"
                     >
                       View on Explorer
-                      <svg className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      <svg
+                        className="size-2.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={3}
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        />
                       </svg>
                     </a>
                   </div>
@@ -262,22 +339,59 @@ export default function SwapTab({
 
       {!isArbitrum && address && (
         <div className="space-y-4">
-          <CollapsibleSection title={`Regional Hedge: ${userRegion} → ${targetRegion}`} icon={<span>🛡️</span>}>
+          <CollapsibleSection
+            title={`Regional Hedge: ${userRegion} → ${targetRegion}`}
+            icon={<span>🛡️</span>}
+          >
             <div className="flex flex-wrap gap-2 mb-4">
-              {Object.keys(inflationData).filter(r => r !== userRegion).map(r => (
-                <button key={r} onClick={() => setTargetRegion(r as Region)} className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${targetRegion === r ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>{r}</button>
-              ))}
+              {Object.keys(inflationData)
+                .filter((r) => r !== userRegion)
+                .map((r) => (
+                  <button
+                    key={r}
+                    onClick={() => setTargetRegion(r as Region)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${targetRegion === r ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}
+                  >
+                    {r}
+                  </button>
+                ))}
             </div>
             <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl flex justify-between items-center">
-              <div className="text-center"><div className="text-[10px] font-black text-gray-400 lowercase">{userRegion}</div><div className="text-lg font-black">{homeInflationRate.toFixed(1)}%</div></div>
+              <div className="text-center">
+                <div className="text-[10px] font-black text-gray-400 lowercase">
+                  {userRegion}
+                </div>
+                <div className="text-lg font-black">
+                  {homeInflationRate.toFixed(1)}%
+                </div>
+              </div>
               <div className="text-gray-300">→</div>
-              <div className="text-center"><div className="text-[10px] font-black text-gray-400 lowercase">{targetRegion}</div><div className="text-lg font-black">{targetInflationRate.toFixed(1)}%</div></div>
-              {inflationDifference > 0 && <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-black">+{inflationDifference.toFixed(1)}% Yield</div>}
+              <div className="text-center">
+                <div className="text-[10px] font-black text-gray-400 lowercase">
+                  {targetRegion}
+                </div>
+                <div className="text-lg font-black">
+                  {targetInflationRate.toFixed(1)}%
+                </div>
+              </div>
+              {inflationDifference > 0 && (
+                <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-black">
+                  +{inflationDifference.toFixed(1)}% Yield
+                </div>
+              )}
             </div>
           </CollapsibleSection>
 
           <CollapsibleSection title="Action Guidance" icon={<span>🧠</span>}>
-            <RealLifeScenario region={userRegion} targetRegion={targetRegion} scenarioType="remittance" inflationRate={homeInflationRate} targetInflationRate={targetInflationRate} amount={1000} monthlyAmount={100} />
+            <RealLifeScenario
+              region={userRegion}
+              targetRegion={targetRegion}
+              scenarioType="remittance"
+              inflationRate={homeInflationRate}
+              targetInflationRate={targetInflationRate}
+              amount={1000}
+              monthlyAmount={100}
+            />
             {getRecommendations(userRegion, inflationData, homeInflationRate)}
           </CollapsibleSection>
         </div>
@@ -286,9 +400,22 @@ export default function SwapTab({
   );
 }
 
-function getRecommendations(userRegion: Region, inflationData: Record<string, RegionalInflationData>, homeInflationRate: number) {
-  const recommendations: Record<string, Array<{ from: string, to: string, reason: string }>> = {
-    Africa: [{ from: "cKES", to: "cEUR", reason: `Hedge: ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation` }],
+function getRecommendations(
+  userRegion: Region,
+  inflationData: Record<string, RegionalInflationData>,
+  homeInflationRate: number,
+) {
+  const recommendations: Record<
+    string,
+    Array<{ from: string; to: string; reason: string }>
+  > = {
+    Africa: [
+      {
+        from: "cKES",
+        to: "cEUR",
+        reason: `Hedge: ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation`,
+      },
+    ],
     LatAm: [{ from: "cREAL", to: "cUSD", reason: "Stable reserve exposure" }],
     Asia: [{ from: "PUSO", to: "cEUR", reason: "Diversify into Eurozone" }],
   };
@@ -296,11 +423,20 @@ function getRecommendations(userRegion: Region, inflationData: Record<string, Re
   if (recs.length === 0) return null;
   return (
     <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recommended Actions</p>
+      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+        Recommended Actions
+      </p>
       {recs.map((r, i) => (
-        <div key={i} className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center">
-          <span className="text-xs font-bold">{r.from} → {r.to}</span>
-          <span className="text-[10px] text-blue-500 font-medium">{r.reason}</span>
+        <div
+          key={i}
+          className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center"
+        >
+          <span className="text-xs font-bold">
+            {r.from} → {r.to}
+          </span>
+          <span className="text-[10px] text-blue-500 font-medium">
+            {r.reason}
+          </span>
         </div>
       ))}
     </div>

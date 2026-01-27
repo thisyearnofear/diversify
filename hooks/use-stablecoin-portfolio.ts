@@ -1,11 +1,17 @@
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { CELO_TOKENS, MENTO_ABIS } from '@stable-station/mento-utils';
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+import { CELO_TOKENS, MENTO_ABIS } from "@stable-station/mento-utils";
+import {
+  TOKEN_METADATA,
+  EXCHANGE_RATES,
+  REGION_COLORS,
+  RegionValue,
+} from "../config";
 
 interface StablecoinBalance {
   token: string;
   symbol: string;
-  region: string;
+  region: RegionValue;
   balance: string;
   value: number;
   percentage: number;
@@ -24,27 +30,6 @@ interface DiversificationMetric {
   interpretation: string;
   color: string;
 }
-
-// Token metadata
-const TOKEN_METADATA: Record<string, { name: string; region: string }> = {
-  CUSD: { name: 'Celo Dollar', region: 'USA' },
-  CEUR: { name: 'Celo Euro', region: 'Europe' },
-  CREAL: { name: 'Celo Brazilian Real', region: 'LatAm' },
-  CKES: { name: 'Celo Kenyan Shilling', region: 'Africa' },
-  CCOP: { name: 'Celo Colombian Peso', region: 'LatAm' },
-  PUSO: { name: 'Philippine Peso', region: 'Asia' },
-  CGHS: { name: 'Celo Ghana Cedi', region: 'Africa' },
-  EXOF: { name: 'CFA Franc', region: 'Africa' },
-};
-
-// Region colors
-const REGION_COLORS: Record<string, string> = {
-  USA: '#4299E1',
-  Europe: '#48BB78',
-  LatAm: '#F6AD55',
-  Africa: '#F56565',
-  Asia: '#9F7AEA',
-};
 
 export function useStablecoinPortfolio(address?: string) {
   const [isLoading, setIsLoading] = useState(true);
@@ -66,35 +51,41 @@ export function useStablecoinPortfolio(address?: string) {
       try {
         // Create a read-only provider for Celo mainnet
         const provider = new ethers.providers.JsonRpcProvider(
-          'https://forno.celo.org'
+          "https://forno.celo.org",
         );
 
         const balancePromises = Object.entries(CELO_TOKENS).map(
           async ([symbol, tokenAddress]) => {
             try {
               // Skip CELO token (not a stablecoin)
-              if (symbol === 'CELO') return null;
+              if (symbol === "CELO") return null;
 
               // Create ERC20 contract instance
               const tokenContract = new ethers.Contract(
                 tokenAddress,
                 MENTO_ABIS.ERC20_BALANCE,
-                provider
+                provider,
               );
+
+              // Get token metadata from config
+              const metadata = TOKEN_METADATA[symbol];
+              const decimals = metadata?.decimals || 18;
 
               // Get balance
               const balance = await tokenContract.balanceOf(address);
-              const formattedBalance = ethers.utils.formatUnits(balance, 18);
+              const formattedBalance = ethers.utils.formatUnits(
+                balance,
+                decimals,
+              );
 
-              // For demo purposes, we'll use a fixed price
-              // In a real implementation, we would get the actual price
-              const price = 1.0; // 1 USD for simplicity
+              // Get exchange rate from config
+              const price = EXCHANGE_RATES[symbol] || 1.0;
               const value = Number.parseFloat(formattedBalance) * price;
 
               return {
-                token: TOKEN_METADATA[symbol]?.name || symbol,
+                token: metadata?.name || symbol,
                 symbol,
-                region: TOKEN_METADATA[symbol]?.region || 'Unknown',
+                region: metadata?.region || "Global",
                 balance: formattedBalance,
                 value,
                 percentage: 0, // Will be calculated after all balances are fetched
@@ -103,26 +94,28 @@ export function useStablecoinPortfolio(address?: string) {
               console.error(`Error fetching balance for ${symbol}:`, error);
               return null;
             }
-          }
+          },
         );
 
         // Wait for all balance promises to resolve
         const results = await Promise.all(balancePromises);
         const validBalances = results.filter(
-          (balance): balance is StablecoinBalance => balance !== null
+          (balance): balance is StablecoinBalance => balance !== null,
         );
 
         // Calculate total value
         const totalValue = validBalances.reduce(
           (sum, balance) => sum + balance.value,
-          0
+          0,
         );
 
         // Calculate percentages
-        const balancesWithPercentages = validBalances.map((balance) => ({
-          ...balance,
-          percentage: totalValue > 0 ? (balance.value / totalValue) * 100 : 0,
-        }));
+        const balancesWithPercentages: StablecoinBalance[] = validBalances.map(
+          (balance) => ({
+            ...balance,
+            percentage: totalValue > 0 ? (balance.value / totalValue) * 100 : 0,
+          }),
+        );
 
         // Sort by value (descending)
         balancesWithPercentages.sort((a, b) => b.value - a.value);
@@ -137,24 +130,26 @@ export function useStablecoinPortfolio(address?: string) {
           regionMap.set(region, currentValue + balance.percentage);
         }
 
-        const regionDataArray: RegionData[] = Array.from(regionMap.entries()).map(
-          ([region, value]) => ({
-            region,
-            value,
-            color: REGION_COLORS[region] || '#CBD5E0',
-          })
-        );
+        const regionDataArray: RegionData[] = Array.from(
+          regionMap.entries(),
+        ).map(([region, value]) => ({
+          region,
+          value,
+          color: (REGION_COLORS as Record<string, string>)[region] || "#CBD5E0",
+        }));
 
         setRegionData(regionDataArray);
 
         // Calculate diversification metrics
-        const metrics = calculateDiversificationMetrics(balancesWithPercentages, regionDataArray);
+        const metrics = calculateDiversificationMetrics(
+          balancesWithPercentages,
+        );
         setMetrics(metrics);
 
         setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching stablecoin balances:', error);
-        setError('Failed to fetch stablecoin balances. Please try again.');
+        console.error("Error fetching stablecoin balances:", error);
+        setError("Failed to fetch stablecoin balances. Please try again.");
         setIsLoading(false);
       }
     };
@@ -174,7 +169,6 @@ export function useStablecoinPortfolio(address?: string) {
 // Helper function to calculate diversification metrics
 function calculateDiversificationMetrics(
   balances: StablecoinBalance[],
-  regionData: RegionData[]
 ): DiversificationMetric[] {
   // Calculate Herfindahl-Hirschman Index (HHI)
   // Lower values indicate better diversification
@@ -198,36 +192,40 @@ function calculateDiversificationMetrics(
 
   // Calculate Inflation Protection Score (simplified)
   // Higher values indicate better protection
-  const inflationProtectionScore = Math.min(10, regionCount * 2 + shannonEntropy * 3);
+  const inflationProtectionScore = Math.min(
+    10,
+    regionCount * 2 + shannonEntropy * 3,
+  );
 
   return [
     {
-      name: 'Herfindahl-Hirschman Index',
+      name: "Herfindahl-Hirschman Index",
       value: hhi,
-      description: 'Measures concentration of portfolio across regions',
-      interpretation: 'Lower values indicate better diversification',
-      color: '#4299E1',
+      description: "Measures concentration of portfolio across regions",
+      interpretation: "Lower values indicate better diversification",
+      color: "#4299E1",
     },
     {
-      name: 'Shannon Entropy',
+      name: "Shannon Entropy",
       value: shannonEntropy,
-      description: 'Measures information diversity in portfolio',
-      interpretation: 'Higher values indicate better diversification',
-      color: '#48BB78',
+      description: "Measures information diversity in portfolio",
+      interpretation: "Higher values indicate better diversification",
+      color: "#48BB78",
     },
     {
-      name: 'Geographic Spread Ratio',
+      name: "Geographic Spread Ratio",
       value: geographicSpreadRatio,
-      description: 'Measures how evenly distributed your portfolio is',
-      interpretation: 'Higher values indicate better geographic spread',
-      color: '#F6AD55',
+      description: "Measures how evenly distributed your portfolio is",
+      interpretation: "Higher values indicate better geographic spread",
+      color: "#F6AD55",
     },
     {
-      name: 'Inflation Protection Score',
+      name: "Inflation Protection Score",
       value: inflationProtectionScore,
-      description: 'Measures how well protected your portfolio is against inflation',
-      interpretation: 'Higher values indicate better protection',
-      color: '#F56565',
+      description:
+        "Measures how well protected your portfolio is against inflation",
+      interpretation: "Higher values indicate better protection",
+      color: "#F56565",
     },
   ];
 }

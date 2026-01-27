@@ -8,6 +8,7 @@ export const CELO_TOKENS = {
   CKES: '0x456a3d042c0dbd3db53d5489e98dfb038553b0d0',
   CCOP: '0x8a567e2ae79ca692bd748ab832081c45de4041ea',
   PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
+  USDT: '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e',
 };
 
 // Mento Broker address
@@ -66,7 +67,7 @@ export const CACHE_DURATIONS = {
 export const getCachedData = (
   key: string,
   duration: number = CACHE_DURATIONS.EXCHANGE_RATE,
-): any => {
+): unknown => {
   try {
     if (typeof window === 'undefined') return null;
 
@@ -92,7 +93,7 @@ export const getCachedData = (
  * @param key Cache key
  * @param value Value to cache
  */
-export const setCachedData = (key: string, value: any): void => {
+export const setCachedData = (key: string, value: unknown): void => {
   try {
     if (typeof window === 'undefined') return;
 
@@ -121,16 +122,14 @@ export const getMentoExchangeRate = async (
   // Check cache first
   if (cacheKey) {
     const cachedRate = getCachedData(cacheKey);
-    if (cachedRate !== null) {
+    if (typeof cachedRate === 'number') {
       return cachedRate;
     }
   }
 
   // Default fallback rates
-  const defaultRate =
-    DEFAULT_EXCHANGE_RATES[
-      tokenSymbol as keyof typeof DEFAULT_EXCHANGE_RATES
-    ] || 1;
+  const defaultRate: number =
+    (DEFAULT_EXCHANGE_RATES as Record<string, number>)[tokenSymbol] || 1;
 
   try {
     // Get token addresses
@@ -284,7 +283,15 @@ export const getTradeablePairs = async (
             const symbol = await tokenContract.symbol();
             assets.push({ address: assetAddress, symbol });
           } catch {
-            assets.push({ address: assetAddress, symbol: 'UNKNOWN' });
+            // Fallback for well-known addresses if symbol() fails
+            const addr = assetAddress.toLowerCase();
+            let symbol = 'UNKNOWN';
+
+            if (addr === '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e'.toLowerCase()) symbol = 'USDT';
+            else if (addr === '0x765de816845861e75a25fca122bb6898b8b1282a'.toLowerCase()) symbol = 'CUSD';
+            else if (addr === '0x471ece3750da237f93b8e339c536989b8978a438'.toLowerCase()) symbol = 'CELO';
+
+            assets.push({ address: assetAddress, symbol });
           }
         }
 
