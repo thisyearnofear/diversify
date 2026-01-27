@@ -65,14 +65,25 @@ export class ApprovalService {
 
     /**
      * Wait for approval confirmation
+     * Uses JsonRpcProvider for compatibility with Farcaster embedded wallets
      */
     static async waitForApproval(
         tx: ethers.ContractTransaction,
         confirmations: number = 1
     ): Promise<ethers.ContractReceipt> {
-        const receipt = await tx.wait(confirmations);
+        // Import ProviderFactoryService dynamically to avoid circular dependency
+        const { ProviderFactoryService } = require('./provider-factory.service');
+        
+        // Get the chain ID from the transaction
+        const chainId = tx.chainId;
+        
+        // Use JsonRpcProvider for polling (works with all wallet types including Farcaster)
+        const provider = ProviderFactoryService.getProvider(chainId);
+        
+        // Wait for transaction with the JsonRpcProvider
+        const receipt = await provider.waitForTransaction(tx.hash, confirmations);
 
-        if (receipt.status !== 1) {
+        if (!receipt || receipt.status !== 1) {
             throw new Error('Approval transaction failed');
         }
 
