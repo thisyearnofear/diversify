@@ -409,67 +409,80 @@ export default function ProtectionTab({
       </Card>
 
       {/* =====================================================================
-          RWA GOLD CARD (simplified)
+          RWA GOLD CARD - Only show if relevant to user's goal or doesn't have gold
           ===================================================================== */}
-      <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
-              🏆
-            </div>
-            <div>
-              <h3 className="font-black text-sm">Tokenized Gold</h3>
-              <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">PAXG on Arbitrum</span>
+      {(!analysis?.tokens.some(t => t.symbol === 'PAXG') || config.userGoal === 'rwa_access') && (
+        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                🏆
+              </div>
+              <div>
+                <h3 className="font-black text-sm">Tokenized Gold</h3>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">PAXG on Arbitrum</span>
+              </div>
             </div>
           </div>
-        </div>
-        <p className="text-xs text-white/80 mb-3">
-          Escape fiat inflation with gold-backed tokens. 1:1 redeemable for physical bars.
-        </p>
-        {isCelo && (
-          <button
-            onClick={() => handleExecuteSwap('PAXG')}
-            className="w-full py-3 bg-white text-amber-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-all"
-          >
-            Bridge to Gold →
-          </button>
-        )}
-      </Card>
+          <p className="text-xs text-white/80 mb-3">
+            Escape fiat inflation with gold-backed tokens. 1:1 redeemable for physical bars.
+          </p>
+          {isCelo && (
+            <button
+              onClick={() => handleExecuteSwap('PAXG')}
+              className="w-full py-3 bg-white text-amber-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-all"
+            >
+              Bridge to Gold →
+            </button>
+          )}
+        </Card>
+      )}
 
       {/* =====================================================================
           COLLAPSIBLE SECTIONS (progressive disclosure for details)
           ===================================================================== */}
       
-      {/* Rebalancing Opportunities */}
+      {/* Rebalancing Opportunities - Filtered by goal */}
       {analysis && analysis.rebalancingOpportunities.length > 1 && (
         <CollapsibleSection
-          title="More Rebalancing Opportunities"
+          title={config.userGoal === 'geographic_diversification' ? 'Diversification Options' : 'More Opportunities'}
           icon={<span>⚖️</span>}
           defaultOpen={false}
           badge={<span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">+{analysis.rebalancingOpportunities.length - 1}</span>}
         >
           <div className="space-y-2">
-            {analysis.rebalancingOpportunities.slice(1, 4).map((opp, idx) => (
-              <div 
-                key={idx}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-gray-600">{opp.fromToken}</span>
-                  <span className="text-gray-400">→</span>
-                  <span className="text-xs font-bold text-blue-600">{opp.toToken}</span>
+            {analysis.rebalancingOpportunities
+              // Filter: if diversifying, don't show all-gold options
+              .filter(opp => {
+                if (config.userGoal !== 'geographic_diversification') return true;
+                // For diversification, prefer regional diversity over gold
+                return opp.toRegion !== 'Global' || opp.fromRegion === opp.toRegion;
+              })
+              .slice(0, 4)
+              .map((opp, idx) => (
+                <div 
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-600">{opp.fromToken}</span>
+                    <span className="text-gray-400">→</span>
+                    <span className="text-xs font-bold text-blue-600">{opp.toToken}</span>
+                    {config.userGoal === 'geographic_diversification' && opp.fromRegion !== opp.toRegion && (
+                      <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">+region</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-green-600 font-bold">+${opp.annualSavings.toFixed(2)}/yr</span>
+                    <button
+                      onClick={() => handleExecuteSwap(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))}
+                      className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700"
+                    >
+                      Swap
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-green-600 font-bold">+${opp.annualSavings.toFixed(2)}/yr</span>
-                  <button
-                    onClick={() => handleExecuteSwap(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))}
-                    className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700"
-                  >
-                    Swap
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
           </div>
         </CollapsibleSection>
       )}

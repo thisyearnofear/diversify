@@ -280,7 +280,7 @@ export default function AgentWealthGuard({
                         </motion.div>
                     )}
 
-                    {/* Initial State - Run Analysis */}
+                    {/* Initial State - Run Analysis with Voice Option */}
                     {!advice && !isAnalyzing && (
                         <motion.div 
                             key="initial" 
@@ -288,34 +288,62 @@ export default function AgentWealthGuard({
                             animate={{ opacity: 1 }}
                             className="text-center py-4"
                         >
-                            <button
-                                onClick={() => {
-                                    if (!capabilities.analysis) {
-                                        showToast('AI Intelligence Hub unavailable', 'error');
-                                        return;
+                            <div className="flex items-center gap-2 mb-3">
+                                <button
+                                    onClick={() => {
+                                        if (!capabilities.analysis) {
+                                            showToast('AI Intelligence Hub unavailable', 'error');
+                                            return;
                                     }
-                                    const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
-                                    analyze(
-                                        (liveInflationData || propInflationData) as Record<string, RegionalInflationData>,
-                                        amount,
-                                        holdings,
-                                        { chainId: chainId || 0, name: networkName },
-                                        undefined,
-                                        aggregatedPortfolio
-                                    );
-                                }}
-                                disabled={!capabilities.analysis}
-                                className={`w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
-                                    capabilities.analysis
-                                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
-                                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                }`}
-                            >
-                                <span>{capabilities.analysis ? 'Run Full Analysis' : 'AI Unavailable'}</span>
-                                {capabilities.analysis && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>}
-                            </button>
-                            <p className="text-[10px] text-gray-400 mt-2">
+                                        const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
+                                        analyze(
+                                            (liveInflationData || propInflationData) as Record<string, RegionalInflationData>,
+                                            amount,
+                                            holdings,
+                                            { chainId: chainId || 0, name: networkName },
+                                            undefined,
+                                            aggregatedPortfolio
+                                        );
+                                    }}
+                                    disabled={!capabilities.analysis}
+                                    className={`flex-1 py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
+                                        capabilities.analysis
+                                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+                                            : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                    }`}
+                                >
+                                    <span>{capabilities.analysis ? 'Run Analysis' : 'AI Unavailable'}</span>
+                                    {capabilities.analysis && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>}
+                                </button>
+                                
+                                {/* Voice Query Button - Always visible in embedded mode */}
+                                {capabilities.transcription && (
+                                    <button
+                                        onMouseDown={startRecording}
+                                        onMouseUp={stopRecording}
+                                        onTouchStart={startRecording}
+                                        onTouchEnd={stopRecording}
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${
+                                            isListening 
+                                                ? 'bg-red-500 text-white scale-110 shadow-lg shadow-red-500/30' 
+                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                                        }`}
+                                        aria-label="Voice Query"
+                                    >
+                                        <span className="text-xl">{isListening ? '🎙️' : '🎤'}</span>
+                                    </button>
+                                )}
+                            </div>
+                            
+                            {isListening && (
+                                <p className="text-xs text-red-500 font-bold animate-pulse mb-2">
+                                    Listening... Release to send
+                                </p>
+                            )}
+                            
+                            <p className="text-[10px] text-gray-400">
                                 Analyzes ${amount.toFixed(2)} against real-time global inflation data
+                                {capabilities.transcription && ' • Tap 🎤 to ask a question'}
                             </p>
                         </motion.div>
                     )}

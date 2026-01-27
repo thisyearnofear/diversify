@@ -296,7 +296,8 @@ export function calculateProjections(
  */
 export function generateRebalancingOpportunities(
   tokens: TokenAllocation[],
-  inflationData: Record<string, RegionalInflationData>
+  inflationData: Record<string, RegionalInflationData>,
+  goal: string = 'exploring'
 ): RebalancingOpportunity[] {
   const opportunities: RebalancingOpportunity[] = [];
   const totalValue = tokens.reduce((sum, t) => sum + t.value, 0);
@@ -305,14 +306,50 @@ export function generateRebalancingOpportunities(
   
   // Find high-inflation tokens (>5%)
   const highInflationTokens = tokens.filter(t => t.inflationRate > 5);
-  const lowInflationTokens = tokens.filter(t => t.inflationRate <= 4);
+  
+  // Determine target tokens based on goal
+  let targetTokens: TokenAllocation[] = [];
+  
+  if (goal === 'geographic_diversification') {
+    // For diversification: suggest other regional stablecoins, NOT gold
+    // Prefer underrepresented regions
+    const currentRegions = new Set(tokens.map(t => t.region));
+    targetTokens = tokens.filter(t => 
+      t.inflationRate <= 6 && // Accept slightly higher inflation for diversification
+      (t.region !== 'Global' || t.inflationRate <= 2) // Only suggest gold if very low inflation
+    );
+    // Sort by region diversity (prefer new regions)
+    targetTokens.sort((a, b) => {
+      const aNew = !currentRegions.has(a.region) ? 1 : 0;
+      const bNew = !currentRegions.has(b.region) ? 1 : 0;
+      return bNew - aNew;
+    });
+  } else if (goal === 'rwa_access') {
+    // For RWA: suggest gold (Global region)
+    targetTokens = tokens.filter(t => t.region === 'Global' || t.inflationRate <= 2);
+  } else if (goal === 'inflation_protection') {
+    // For inflation protection: suggest lowest inflation assets (gold, EUR, USD)
+    targetTokens = tokens.filter(t => t.inflationRate <= 4);
+  } else {
+    // Default: balanced approach
+    targetTokens = tokens.filter(t => t.inflationRate <= 4);
+  }
+  
+  // If no valid targets, fall back to low inflation
+  if (targetTokens.length === 0) {
+    targetTokens = tokens.filter(t => t.inflationRate <= 4);
+  }
   
   for (const highToken of highInflationTokens) {
-    for (const lowToken of lowInflationTokens) {
-      const inflationDelta = highToken.inflationRate - lowToken.inflationRate;
+    for (const targetToken of targetTokens) {
+      // Skip same token
+      if (highToken.symbol === targetToken.symbol) continue;
       
-      // Only suggest if meaningful delta
-      if (inflationDelta < 2) continue;
+      const inflationDelta = highToken.inflationRate - targetToken.inflationRate;
+      
+      // For diversification, require smaller delta (more flexible)
+      const minDelta = goal === 'geographic_diversification' ? 1 : 2;
+      if (inflationDelta < minDelta) continue;
       
       // Suggest moving 25-50% of high-inflation position
       const suggestedPercentage = highToken.percentage > 50 ? 0.5 : 0.25;
@@ -321,19 +358,29 @@ export function generateRebalancingOpportunities(
       // Calculate annual savings
       const annualSavings = suggestedAmount * (inflationDelta / 100);
       
-      // Priority based on delta and amount
+      // Priority based on delta, amount, AND goal alignment
       let priority: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-      if (inflationDelta > 5 && suggestedAmount > 100) priority = 'HIGH';
-      else if (inflationDelta > 3 && suggestedAmount > 50) priority = 'MEDIUM';
+      
+      // Boost priority for goal-aligned recommendations
+      const isGoalAligned = 
+        (goal === 'geographic_diversification' && highToken.region !== targetToken.region) ||
+        (goal === 'rwa_access' && targetToken.region === 'Global') ||
+        (goal === 'inflation_protection' && targetToken.inflationRate <= 2);
+      
+      if ((inflationDelta > 5 && suggestedAmount > 100) || (isGoalAligned && inflationDelta > 3)) {
+        priority = 'HIGH';
+      } else if ((inflationDelta > 3 && suggestedAmount > 50) || isGoalAligned) {
+        priority = 'MEDIUM';
+      }
       
       opportunities.push({
         fromToken: highToken.symbol,
-        toToken: lowToken.symbol,
+        toToken: targetToken.symbol,
         fromRegion: highToken.region,
-        toRegion: lowToken.region,
+        toRegion: targetToken.region,
         suggestedAmount,
         fromInflation: highToken.inflationRate,
-        toInflation: lowToken.inflationRate,
+        toInflation: targetToken.inflationRate,
         inflationDelta,
         annualSavings,
         priority,
@@ -541,8 +588,8 @@ export function analyzePortfolio(
     .filter(r => r.percentage < 10 && r.value > 0)
     .map(r => r.region);
   
-  // Generate opportunities
-  const rebalancingOpportunities = generateRebalancingOpportunities(tokens, inflationData);
+  // Generate opportunities (respecting user's goal)
+  const rebalancingOpportunities = generateRebalancingOpportunities(tokens, inflationData, currentGoal);
   
   // Calculate projections
   // For optimized path, assume we can reduce inflation exposure by 40%
