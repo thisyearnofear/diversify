@@ -12,7 +12,7 @@ import {
 import { executeMulticall, type ContractCall } from '../utils/multicall';
 import { ChainDetectionService } from '../services/swap/chain-detection.service';
 import { ProviderFactoryService } from '../services/swap/provider-factory.service';
-import { getWalletProvider, setupWalletEventListeners } from '../utils/wallet-provider';
+import { getWalletProvider, setupWalletEventListenersForProvider } from '../utils/wallet-provider';
 
 interface StablecoinBalance {
   symbol: string;
@@ -445,20 +445,26 @@ export function useStablecoinBalances(address: string | undefined | null) {
       }
     };
 
-    // Listen for chain changes
+    // Listen for chain changes using the cached provider
     let cleanup: (() => void) | undefined;
-    setupWalletEventListeners(
-      handleChainChanged,
-      () => { } // No accounts changed handler needed here
-    ).then(cleanupFn => {
-      cleanup = cleanupFn;
-    });
-
-    // Cleanup listener
-    return () => {
-      if (cleanup) {
-        cleanup();
+    
+    const setupListeners = async () => {
+      try {
+        const provider = await getWalletProvider();
+        cleanup = setupWalletEventListenersForProvider(
+          provider,
+          handleChainChanged,
+          () => { } // No accounts changed handler needed here
+        );
+      } catch (err) {
+        console.warn('[useStablecoinBalances] Failed to setup chain change listener:', err);
       }
+    };
+    
+    setupListeners();
+
+    return () => {
+      cleanup?.();
     };
   }, [address, fetchBalances]);
 

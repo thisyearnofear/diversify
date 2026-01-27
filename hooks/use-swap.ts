@@ -12,7 +12,7 @@ import { SwapErrorHandler } from '../services/swap/error-handler';
 import { isMiniPayEnvironment } from '../utils/environment';
 import { TX_CONFIG } from '../config';
 import type { SwapParams as OrchestratorSwapParams, SwapCallbacks, SwapResult, SwapState } from '../types/swap';
-import { setupWalletEventListeners } from '../utils/wallet-provider';
+import { getWalletProvider, setupWalletEventListenersForProvider } from '../utils/wallet-provider';
 
 interface HookSwapParams {
     fromToken: string;
@@ -68,23 +68,30 @@ export function useSwap() {
         setIsMiniPay(isMiniPayEnvironment());
         refreshChainId();
 
-        // Listen for chain changes from wallet
+        // Listen for chain changes using the cached provider
         let cleanup: (() => void) | undefined;
-        setupWalletEventListeners(
-            (chainIdHex: string) => {
-                const newChainId = parseInt(chainIdHex, 16);
-                console.log('[useSwap] Chain changed to:', newChainId);
-                setChainId(newChainId);
-            },
-            () => { } // No accounts changed handler needed here
-        ).then(cleanupFn => {
-            cleanup = cleanupFn;
-        });
+        
+        const setupListeners = async () => {
+            try {
+                const provider = await getWalletProvider();
+                cleanup = setupWalletEventListenersForProvider(
+                    provider,
+                    (chainIdHex: string) => {
+                        const newChainId = parseInt(chainIdHex, 16);
+                        console.log('[useSwap] Chain changed to:', newChainId);
+                        setChainId(newChainId);
+                    },
+                    () => { } // No accounts changed handler needed here
+                );
+            } catch (err) {
+                console.warn('[useSwap] Failed to setup chain change listener:', err);
+            }
+        };
+        
+        setupListeners();
 
         return () => {
-            if (cleanup) {
-                cleanup();
-            }
+            cleanup?.();
         };
     }, [refreshChainId]);
 

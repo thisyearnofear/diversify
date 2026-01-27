@@ -1,11 +1,12 @@
 /**
  * Consolidated wallet hook
  * Handles wallet connection, account management, and MiniPay detection
+ * Uses a single provider instance to ensure state consistency
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { isMiniPayEnvironment } from '../utils/environment';
-import { getWalletProvider, setupWalletEventListeners } from '../utils/wallet-provider';
+import { getWalletProvider, setupWalletEventListenersForProvider } from '../utils/wallet-provider';
 import sdk from '@farcaster/miniapp-sdk';
 
 export function useWallet() {
@@ -17,96 +18,106 @@ export function useWallet() {
   const [isMiniPay, setIsMiniPay] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
   const [farcasterContext, setFarcasterContext] = useState<any | null>(null);
+  
+  // Single provider reference to ensure consistency across all operations
+  const providerRef = useRef<any | null>(null);
 
   // Initialize wallet and environment
   useEffect(() => {
+    let cleanup: (() => void) | undefined;
+
     const initWallet = async () => {
       if (typeof window === 'undefined') return;
 
       console.log('[Wallet] Initializing environment...');
 
-      // 1. Detect Farcaster Environment (Standard 2026)
+      let detectedFarcaster = false;
+      let provider: any | null = null;
+
+      // 1. Detect Farcaster Environment
       try {
-        // Robust check for Farcaster SDK and ready action
-        if (sdk && sdk.actions) {
+        if (sdk?.actions) {
           console.log('[Farcaster] SDK detected, signaling ready...');
           sdk.actions.ready();
+        }
 
-          // Try to get context IMMEDIATELY or with minimal delay
-          const context = await sdk.context;
+        // Try to get context with timeout (don't hang in non-Farcaster env)
+        const contextPromise = sdk.context;
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('timeout')), 200)
+        );
+
+        try {
+          const context = await Promise.race([contextPromise, timeoutPromise]) as any;
           if (context) {
             console.log('[Farcaster] Context resolved:', context);
+            detectedFarcaster = true;
             setIsFarcaster(true);
             setFarcasterContext(context);
 
-            // AUTO-CONNECT: In 2026, Mini Apps should autoconnect silently
+            // Get Farcaster provider
             try {
-              const ethProvider = await sdk.wallet.getEthereumProvider();
-              if (ethProvider) {
-                // Request accounts silently - if already approved, this is instant
-                const accounts = await ethProvider.request({ method: 'eth_requestAccounts' }) as string[];
-                if (accounts && accounts.length > 0) {
-                  console.log('[Farcaster] Autoconnect successful:', accounts[0]);
-                  setAddress(accounts[0]);
-                  setIsConnected(true);
-                }
-              }
+              provider = await sdk.wallet.getEthereumProvider();
+              console.log('[Farcaster] Got Ethereum provider');
             } catch (walletErr) {
-              console.warn('[Farcaster] Autoconnect attempt failed (silent):', walletErr);
+              console.warn('[Farcaster] Failed to get Ethereum provider:', walletErr);
             }
           }
+        } catch {
+          // Context timeout - not in Farcaster
+          console.log('[Wallet] Not in Farcaster environment');
         }
       } catch (err) {
         console.log('[Farcaster] SDK lookup skipped or failed');
       }
 
-      // 2. Detect MiniPay environment
-      const inMiniPay = isMiniPayEnvironment();
-      setIsMiniPay(inMiniPay);
-
-      // Get the appropriate provider
-      let provider = null;
-
-      // In Farcaster environment, get the provider through the SDK
-      if (isFarcaster && sdk && sdk.wallet) {
-        try {
-          provider = await sdk.wallet.getEthereumProvider();
-        } catch (err) {
-          console.warn('[Farcaster] Failed to get Ethereum provider:', err);
-        }
+      // 2. Fallback to window.ethereum if no Farcaster provider
+      if (!provider && typeof window !== 'undefined' && (window as any).ethereum) {
+        provider = (window as any).ethereum;
+        console.log('[Wallet] Using window.ethereum provider');
       }
 
-      // Fallback to window.ethereum if not in Farcaster or if SDK provider failed
-      if (!provider && typeof window !== 'undefined' && window.ethereum) {
-        provider = window.ethereum;
-      }
-
-      if (!provider) {
-        console.log('No ethereum provider found');
+      if (!provider?.request) {
+        console.log('[Wallet] No valid ethereum provider found');
         return;
       }
 
-      // Get current chain ID
+      // Store provider in ref for consistent use across all operations
+      providerRef.current = provider;
+
+      // 3. Detect MiniPay environment
+      const inMiniPay = isMiniPayEnvironment();
+      setIsMiniPay(inMiniPay);
+
+      // 4. Get current chain ID
       try {
-        if (!provider.request) {
-          console.warn('provider.request is not available');
-          return;
-        }
         const chainIdHex = await provider.request({ method: 'eth_chainId' });
         setChainId(parseInt(chainIdHex as string, 16));
       } catch (err) {
-        console.warn('Error getting chain ID:', err);
+        console.warn('[Wallet] Error getting chain ID:', err);
       }
 
-      // Auto-connect if in MiniPay or Farcaster
-      if (inMiniPay) {
-        connect();
+      // 5. Auto-connect logic
+      // - Farcaster/MiniPay: use eth_requestAccounts (auto-prompt is OK)
+      // - Regular web: use eth_accounts (silent check, no prompt)
+      try {
+        const method = (detectedFarcaster || inMiniPay) ? 'eth_requestAccounts' : 'eth_accounts';
+        const accounts = await provider.request({ method }) as string[];
+        
+        if (accounts && accounts.length > 0) {
+          console.log('[Wallet] Connected:', accounts[0]);
+          setAddress(accounts[0]);
+          setIsConnected(true);
+        }
+      } catch (err) {
+        console.warn('[Wallet] Auto-connect failed:', err);
       }
 
-      // Setup event listeners
-      const cleanup = await setupWalletEventListeners(
-        (chainId: string) => {
-          setChainId(parseInt(chainId, 16));
+      // 6. Setup event listeners using the SAME provider instance
+      cleanup = setupWalletEventListenersForProvider(
+        provider,
+        (chainIdHex: string) => {
+          setChainId(parseInt(chainIdHex, 16));
         },
         (accounts: string[]) => {
           if (accounts.length === 0) {
@@ -118,17 +129,32 @@ export function useWallet() {
           }
         }
       );
-
-      return cleanup;
     };
 
     initWallet();
+
+    // Return cleanup function
+    return () => {
+      cleanup?.();
+    };
   }, []);
+
+  // Get the active provider (uses cached ref or fetches new one)
+  const getActiveProvider = async () => {
+    if (providerRef.current) {
+      return providerRef.current;
+    }
+
+    // Fallback: get provider and cache it
+    const provider = await getWalletProvider();
+    providerRef.current = provider;
+    return provider;
+  };
 
   // Connect wallet function
   const connect = async () => {
     try {
-      const provider = await getWalletProvider();
+      const provider = await getActiveProvider();
 
       setIsConnecting(true);
       setError(null);
@@ -145,12 +171,12 @@ export function useWallet() {
         const chainIdHex = await provider.request({ method: 'eth_chainId' });
         setChainId(parseInt(chainIdHex as string, 16));
 
-        console.log('Connected to wallet:', accounts[0]);
+        console.log('[Wallet] Connected to wallet:', accounts[0]);
       } else {
         setError('No accounts found');
       }
     } catch (err: any) {
-      console.error('Error connecting wallet:', err);
+      console.error('[Wallet] Error connecting wallet:', err);
       setError(err.message || 'Failed to connect wallet');
     } finally {
       setIsConnecting(false);
@@ -160,17 +186,24 @@ export function useWallet() {
   // Switch network function
   const switchNetwork = async (targetChainId: number) => {
     try {
-      const provider = await getWalletProvider();
+      const provider = await getActiveProvider();
+
+      if (!provider?.request) {
+        throw new Error('Provider does not support network switching');
+      }
 
       await provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${targetChainId.toString(16)}` }],
       });
+      
+      // Update local state immediately
+      setChainId(targetChainId);
     } catch (switchError: any) {
-      // This error code indicates that the chain has not been added to MetaMask.
+      // This error code indicates that the chain has not been added to the wallet
       if (switchError.code === 4902) {
         try {
-          const provider = await getWalletProvider();
+          const provider = await getActiveProvider();
           let networkConfig;
           if (targetChainId === 44787) {
             networkConfig = {
@@ -210,12 +243,15 @@ export function useWallet() {
             method: 'wallet_addEthereumChain',
             params: [networkConfig],
           });
+          
+          // Update local state after adding chain
+          setChainId(targetChainId);
         } catch (addError) {
-          console.error('Error adding network:', addError);
+          console.error('[Wallet] Error adding network:', addError);
           setError('Failed to add network');
         }
       } else {
-        console.error('Error switching network:', switchError);
+        console.error('[Wallet] Error switching network:', switchError);
         setError('Failed to switch network');
       }
     }
@@ -236,9 +272,6 @@ export function useWallet() {
         hasProfilePicture: !!user.pfpUrl,
         timestamp: new Date().toISOString()
       });
-
-      // You could also send this to your analytics service
-      // analytics.track('Farcaster User Detected', { fid: user.fid, username: user.username });
     } catch (error) {
       console.error('[Farcaster] Error logging user info:', error);
     }
@@ -255,7 +288,7 @@ export function useWallet() {
     setIsConnected(false);
     setChainId(null);
     setError(null);
-    console.log('Wallet disconnected');
+    console.log('[Wallet] Wallet disconnected');
   };
 
   // Farcaster-specific connect function
@@ -277,11 +310,8 @@ export function useWallet() {
         return;
       }
 
-      // If no existing address, try to request wallet connection through Farcaster
+      // Fall back to regular wallet connection
       console.log('[Farcaster] Requesting wallet connection...');
-
-      // This would be implemented based on Farcaster SDK capabilities
-      // For now, we'll fall back to regular wallet connection
       await connect();
 
     } catch (error) {
@@ -296,7 +326,7 @@ export function useWallet() {
   const getFarcasterErrorMessage = (error: any) => {
     if (!isFarcaster) return null;
 
-    if (error.message.includes('Farcaster')) {
+    if (error.message?.includes('Farcaster')) {
       return `Farcaster: ${error.message}`;
     }
 
