@@ -29,6 +29,8 @@ const MENTO_TO_CONFIG_SYMBOL: Record<string, string> = {
   // These don't need mapping
   'CELO': 'CELO',
   'USDC': 'USDC',
+  'USDT': 'USDT', // Tether USD
+  'USD₮': 'USDT', // Alternative Tether symbol
   'AXLUSDC': 'USDC', // Axelar wrapped USDC
   'AXLEUROC': 'EURC', // Axelar wrapped EURC
 };
@@ -55,13 +57,13 @@ const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
 // Fallback list of tradeable tokens (cached from Mento on 2026-01-27)
 // Used to show tokens immediately while fetching fresh data
 const FALLBACK_TRADEABLE_SYMBOLS: Record<number, string[]> = {
-  42220: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN', 'CELO', 'USDC', 'EURC'], // Celo Mainnet
-  44787: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CELO'], // Alfajores (approximate)
+  42220: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN', 'CELO', 'USDC', 'EURC', 'USDT'], // Celo Mainnet
+  44787: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CELO', 'USDT'], // Alfajores (approximate)
 };
 
 export function useTradeableTokens(chainId: number | null): UseTradeableTokensResult {
   const effectiveChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
-  
+
   // Start with fallback symbols for immediate display
   const [tradeableSymbols, setTradeableSymbols] = useState<string[]>(
     () => FALLBACK_TRADEABLE_SYMBOLS[effectiveChainId] || []
@@ -98,7 +100,7 @@ export function useTradeableTokens(chainId: number | null): UseTradeableTokensRe
         : NETWORKS.CELO_MAINNET.rpcUrl;
 
       const mentoSymbols = await getTradeableTokenSymbols(rpcUrl);
-      
+
       // Convert Mento symbols to our config symbols
       const configSymbols: string[] = [];
       for (const mentoSymbol of mentoSymbols) {
@@ -107,13 +109,13 @@ export function useTradeableTokens(chainId: number | null): UseTradeableTokensRe
           configSymbols.push(configSymbol);
         }
       }
-      
+
       // Remove duplicates (e.g., AXLUSDC and USDC both map to USDC)
       const uniqueSymbols = [...new Set(configSymbols)];
-      
+
       // Cache the result
       cache[effectiveChainId] = { symbols: uniqueSymbols, timestamp: Date.now() };
-      
+
       setTradeableSymbols(uniqueSymbols);
       console.log('[TradeableTokens] Mento symbols:', mentoSymbols);
       console.log('[TradeableTokens] Mapped to config symbols:', uniqueSymbols);
@@ -152,7 +154,7 @@ export function filterTradeableTokens<T extends { symbol: string }>(
     return tokens;
   }
 
-  return tokens.filter(token => 
+  return tokens.filter(token =>
     tradeableSymbols.includes(token.symbol.toUpperCase())
   );
 }

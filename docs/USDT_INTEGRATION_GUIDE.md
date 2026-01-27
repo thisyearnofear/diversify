@@ -20,14 +20,14 @@ If step 2 or 3 fails, users would be left with USDT on Celo that they couldn't s
 - **Symbol**: USDT
 - **Name**: Tether USD
 - **Decimals**: 6
-- **Region**: Global
+- **Region**: USA
 
 ### Testnet (Alfajores)
 - **Contract Address**: `0xd077A400968890Eacc75cdc901F0356c943e4fDb`
 - **Symbol**: USDT
 - **Name**: Tether USD
 - **Decimals**: 6
-- **Region**: Global
+- **Region**: USA
 
 ## Features Enabled
 

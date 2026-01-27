@@ -96,7 +96,7 @@ export const TOKEN_METADATA: Record<string, { name: string; region: RegionValue;
     CCHF: { name: 'Swiss Franc', region: REGIONS.EUROPE },
     CJPY: { name: 'Japanese Yen', region: REGIONS.ASIA },
     CNGN: { name: 'Nigerian Naira', region: REGIONS.AFRICA },
-    USDT: { name: 'Tether USD', region: REGIONS.GLOBAL, decimals: 6 },
+    USDT: { name: 'Tether USD', region: REGIONS.USA, decimals: 6 },
     USDC: { name: 'USD Coin', region: REGIONS.GLOBAL, decimals: 6 },
     EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18 },
