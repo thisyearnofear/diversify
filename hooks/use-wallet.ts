@@ -63,18 +63,35 @@ export function useWallet() {
       const inMiniPay = isMiniPayEnvironment();
       setIsMiniPay(inMiniPay);
 
-      if (!window.ethereum) {
+      // Get the appropriate provider
+      let provider = null;
+
+      // In Farcaster environment, get the provider through the SDK
+      if (isFarcaster && sdk && sdk.wallet) {
+        try {
+          provider = await sdk.wallet.getEthereumProvider();
+        } catch (err) {
+          console.warn('[Farcaster] Failed to get Ethereum provider:', err);
+        }
+      }
+
+      // Fallback to window.ethereum if not in Farcaster or if SDK provider failed
+      if (!provider && typeof window !== 'undefined' && window.ethereum) {
+        provider = window.ethereum;
+      }
+
+      if (!provider) {
         console.log('No ethereum provider found');
         return;
       }
 
       // Get current chain ID
       try {
-        if (!window.ethereum.request) {
-          console.warn('window.ethereum.request is not available');
+        if (!provider.request) {
+          console.warn('provider.request is not available');
           return;
         }
-        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+        const chainIdHex = await provider.request({ method: 'eth_chainId' });
         setChainId(parseInt(chainIdHex as string, 16));
       } catch (err) {
         console.warn('Error getting chain ID:', err);
@@ -103,13 +120,13 @@ export function useWallet() {
       };
 
       // Add listeners
-      window.ethereum.on('chainChanged', handleChainChanged);
-      window.ethereum.on('accountsChanged', handleAccountsChanged);
+      provider.on('chainChanged', handleChainChanged);
+      provider.on('accountsChanged', handleAccountsChanged);
 
       // Cleanup
       return () => {
-        window.ethereum?.removeListener('chainChanged', handleChainChanged);
-        window.ethereum?.removeListener('accountsChanged', handleAccountsChanged);
+        provider?.removeListener('chainChanged', handleChainChanged);
+        provider?.removeListener('accountsChanged', handleAccountsChanged);
       };
     };
 
@@ -118,7 +135,23 @@ export function useWallet() {
 
   // Connect wallet function
   const connect = async () => {
-    if (typeof window === 'undefined' || !window.ethereum) {
+    let provider = null;
+
+    // In Farcaster environment, get the provider through the SDK
+    if (isFarcaster && sdk && sdk.wallet) {
+      try {
+        provider = await sdk.wallet.getEthereumProvider();
+      } catch (err) {
+        console.warn('[Farcaster] Failed to get Ethereum provider:', err);
+      }
+    }
+
+    // Fallback to window.ethereum if not in Farcaster or if SDK provider failed
+    if (!provider && typeof window !== 'undefined' && window.ethereum) {
+      provider = window.ethereum;
+    }
+
+    if (!provider) {
       setError('No Ethereum provider found');
       return;
     }
@@ -127,12 +160,12 @@ export function useWallet() {
     setError(null);
 
     try {
-      if (!window.ethereum.request) {
+      if (!provider.request) {
         setError('Ethereum provider does not support request method');
         setIsConnecting(false);
         return;
       }
-      const accounts = await window.ethereum.request({
+      const accounts = await provider.request({
         method: 'eth_requestAccounts',
       });
 
@@ -141,7 +174,7 @@ export function useWallet() {
         setIsConnected(true);
 
         // Get chain ID
-        const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+        const chainIdHex = await provider.request({ method: 'eth_chainId' });
         setChainId(parseInt(chainIdHex as string, 16));
 
         console.log('Connected to wallet:', accounts[0]);
@@ -158,13 +191,29 @@ export function useWallet() {
 
   // Switch network function
   const switchNetwork = async (targetChainId: number) => {
-    if (typeof window === 'undefined' || !window.ethereum) {
+    let provider = null;
+
+    // In Farcaster environment, get the provider through the SDK
+    if (isFarcaster && sdk && sdk.wallet) {
+      try {
+        provider = await sdk.wallet.getEthereumProvider();
+      } catch (err) {
+        console.warn('[Farcaster] Failed to get Ethereum provider:', err);
+      }
+    }
+
+    // Fallback to window.ethereum if not in Farcaster or if SDK provider failed
+    if (!provider && typeof window !== 'undefined' && window.ethereum) {
+      provider = window.ethereum;
+    }
+
+    if (!provider) {
       setError('No Ethereum provider found');
       return;
     }
 
     try {
-      await window.ethereum.request({
+      await provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: `0x${targetChainId.toString(16)}` }],
       });
@@ -189,6 +238,14 @@ export function useWallet() {
               rpcUrls: ['https://rpc.testnet.arc.network'],
               blockExplorerUrls: ['https://explorer.testnet.arc.network'],
             };
+          } else if (targetChainId === 42161) {
+            networkConfig = {
+              chainId: '0xa4b1',
+              chainName: 'Arbitrum One',
+              nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+              rpcUrls: ['https://arb1.arbitrum.io/rpc'],
+              blockExplorerUrls: ['https://arbiscan.io'],
+            };
           } else {
             networkConfig = {
               chainId: '0xa4ec',
@@ -199,7 +256,7 @@ export function useWallet() {
             };
           }
 
-          await window.ethereum.request({
+          await provider.request({
             method: 'wallet_addEthereumChain',
             params: [networkConfig],
           });

@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWealthProtectionAgent } from '../../hooks/use-wealth-protection-agent';
 import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
+import { useInflationData } from '../../hooks/use-inflation-data';
+import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
+import type { RegionalInflationData } from '../../hooks/use-inflation-data';
 
 import sdk from '@farcaster/miniapp-sdk';
 
@@ -13,14 +16,16 @@ interface AgentWealthGuardProps {
     inflationData?: unknown;
     embedded?: boolean;
     onExecute?: (token: string) => void;
+    aggregatedPortfolio?: AggregatedPortfolio;
 }
 
 export default function AgentWealthGuard({
     amount,
     holdings,
     chainId,
-    inflationData,
-    onExecute
+    inflationData: propInflationData,
+    onExecute,
+    aggregatedPortfolio
 }: AgentWealthGuardProps) {
     const {
         advice,
@@ -33,8 +38,11 @@ export default function AgentWealthGuard({
         arcAgent,
         capabilities,
         clearConversation,
-        initializeArcAgent
+        initializeArcAgent,
+        portfolioAnalysis
     } = useWealthProtectionAgent();
+    
+    const { inflationData: liveInflationData } = useInflationData();
 
     const { showToast } = useToast();
     const [isListening, setIsListening] = useState(false);
@@ -78,11 +86,17 @@ export default function AgentWealthGuard({
         const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
         const networkInfo = { chainId: chainId || 0, name: networkName };
         showToast('Starting comprehensive wealth protection analysis...', 'ai', { cost: 0.05, sources: 5 });
+        
+        // Use live inflation data if available, otherwise fall back to prop
+        const inflationDataToUse = (liveInflationData || propInflationData) as Record<string, RegionalInflationData>;
+        
         analyze(
-            inflationData,
+            inflationDataToUse,
             amount,
             holdings,
-            networkInfo
+            networkInfo,
+            undefined,
+            aggregatedPortfolio
         );
     };
 
@@ -249,44 +263,142 @@ export default function AgentWealthGuard({
                                         </p>
                                     </div>
 
-                                    {/* Projection Card */}
+                                    {/* Projection Card - Using Real Calculated Data */}
                                     <div className="bg-white dark:bg-gray-950 rounded-2xl p-4 border border-gray-100 dark:border-white/5 shadow-inner">
                                         <div className="flex justify-between items-center mb-3">
-                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Projection Divergence</span>
-                                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">Oracle Model</span>
+                                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">3-Year Projection</span>
+                                            <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">
+                                                {portfolioAnalysis ? `Inflation Risk: ${portfolioAnalysis.weightedInflationRisk.toFixed(1)}%` : 'Oracle Model'}
+                                            </span>
                                         </div>
 
                                         <div className="space-y-4">
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-[10px] font-bold">
-                                                    <span className="text-gray-500">Current Path (Inflation)</span>
-                                                    <span className="text-red-500">-${(amount - (advice.comparisonProjection?.currentPathValue || amount * 0.92)).toFixed(2)}</span>
+                                                    <span className="text-gray-500">Current Path (Do Nothing)</span>
+                                                    <span className="text-red-500">
+                                                        -${advice.comparisonProjection ? 
+                                                            (amount - advice.comparisonProjection.currentPathValue).toFixed(2) : 
+                                                            (amount * 0.15).toFixed(2)}
+                                                    </span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                                    <motion.div initial={{ width: 0 }} animate={{ width: '70%' }} className="h-full bg-red-400" />
+                                                    <motion.div 
+                                                        initial={{ width: 0 }} 
+                                                        animate={{ width: `${advice.comparisonProjection ? 
+                                                            (advice.comparisonProjection.currentPathValue / amount) * 100 : 
+                                                            85}%`}} 
+                                                        className="h-full bg-red-400" 
+                                                    />
+                                                </div>
+                                                <div className="text-[9px] text-gray-400">
+                                                    Value: ${advice.comparisonProjection?.currentPathValue.toFixed(2) || (amount * 0.85).toFixed(2)}
                                                 </div>
                                             </div>
 
                                             <div className="space-y-1">
                                                 <div className="flex justify-between text-[10px] font-bold">
-                                                    <span className="text-blue-600">Oracle Path (Protected)</span>
-                                                    <span className="text-green-600">+${(advice.comparisonProjection?.oraclePathValue || amount + 47.5).toFixed(2)}</span>
+                                                    <span className="text-blue-600">Oracle Path (Optimized)</span>
+                                                    <span className="text-green-600">
+                                                        +${advice.expectedSavings?.toFixed(2) || (advice.comparisonProjection ? 
+                                                            (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(2) :
+                                                            (amount * 0.2).toFixed(2))}
+                                                    </span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                                    <motion.div initial={{ width: 0 }} animate={{ width: '95%' }} className="h-full bg-gradient-to-r from-blue-500 to-emerald-500" />
+                                                    <motion.div 
+                                                        initial={{ width: 0 }} 
+                                                        animate={{ width: `${advice.comparisonProjection ? 
+                                                            (advice.comparisonProjection.oraclePathValue / amount) * 100 : 
+                                                            100}%`}} 
+                                                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500" 
+                                                    />
+                                                </div>
+                                                <div className="text-[9px] text-gray-400">
+                                                    Value: ${advice.comparisonProjection?.oraclePathValue.toFixed(2) || amount.toFixed(2)}
                                                 </div>
                                             </div>
                                         </div>
+                                        
+                                        {portfolioAnalysis && (
+                                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                                <div className="flex justify-between text-[10px]">
+                                                    <span className="text-gray-500">Diversification Score</span>
+                                                    <span className={`font-bold ${
+                                                        portfolioAnalysis.diversificationScore > 70 ? 'text-emerald-600' :
+                                                        portfolioAnalysis.diversificationScore > 40 ? 'text-amber-600' :
+                                                        'text-red-600'
+                                                    }`}>
+                                                        {portfolioAnalysis.diversificationScore}/100
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {advice.action !== 'HOLD' && advice.targetToken && (
-                                        <button
-                                            onClick={() => handleExecuteRecommendation(advice.targetToken!)}
-                                            className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border-b-4 border-indigo-900"
-                                        >
-                                            <span>{amount > 0 ? advice.action : 'Plan'} to {advice.targetToken}</span>
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-                                        </button>
+                                        <div className="space-y-2">
+                                            <button
+                                                onClick={() => handleExecuteRecommendation(advice.targetToken!)}
+                                                className="w-full py-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-black text-sm uppercase tracking-widest shadow-xl shadow-blue-500/30 active:scale-[0.98] transition-all flex items-center justify-center gap-3 border-b-4 border-indigo-900"
+                                            >
+                                                <span>{amount > 0 ? advice.action : 'Plan'} to {advice.targetToken}</span>
+                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                                            </button>
+                                            
+                                            {advice.targetAllocation && advice.targetAllocation.length > 1 && (
+                                                <button
+                                                    onClick={() => {
+                                                        // Show full rebalancing plan in a modal or expand
+                                                        showToast(`Full plan: ${advice.targetAllocation?.map(a => `${a.symbol} ${a.percentage}%`).join(', ')}`, 'info');
+                                                    }}
+                                                    className="w-full py-2 rounded-xl bg-gray-100 text-gray-600 font-bold text-xs hover:bg-gray-200 transition-colors"
+                                                >
+                                                    View Full Rebalancing Plan ({advice.targetAllocation.length} assets)
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Portfolio Analysis Summary */}
+                                    {advice.portfolioAnalysis && (
+                                        <div className="mt-4 pt-4 border-t border-gray-200">
+                                            <h5 className="text-[10px] font-black uppercase text-gray-400 mb-2">Analysis Factors</h5>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <div className="bg-gray-50 rounded-lg p-2">
+                                                    <div className="text-[9px] text-gray-500">Inflation Risk</div>
+                                                    <div className={`text-sm font-bold ${
+                                                        advice.portfolioAnalysis.weightedInflationRisk > 5 ? 'text-red-600' :
+                                                        advice.portfolioAnalysis.weightedInflationRisk > 3 ? 'text-amber-600' :
+                                                        'text-green-600'
+                                                    }`}>
+                                                        {advice.portfolioAnalysis.weightedInflationRisk.toFixed(1)}%
+                                                    </div>
+                                                </div>
+                                                <div className="bg-gray-50 rounded-lg p-2">
+                                                    <div className="text-[9px] text-gray-500">Diversification</div>
+                                                    <div className={`text-sm font-bold ${
+                                                        advice.portfolioAnalysis.diversificationScore > 70 ? 'text-green-600' :
+                                                        advice.portfolioAnalysis.diversificationScore > 40 ? 'text-amber-600' :
+                                                        'text-red-600'
+                                                    }`}>
+                                                        {advice.portfolioAnalysis.diversificationScore}/100
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            {advice.portfolioAnalysis.topOpportunity && (
+                                                <div className="mt-2 bg-blue-50 rounded-lg p-2">
+                                                    <div className="text-[9px] text-blue-600 font-bold">Top Opportunity</div>
+                                                    <div className="text-xs text-blue-800">
+                                                        {advice.portfolioAnalysis.topOpportunity.fromToken} → {advice.portfolioAnalysis.topOpportunity.toToken}
+                                                        <span className="text-green-600 ml-1">
+                                                            (+${advice.portfolioAnalysis.topOpportunity.annualSavings.toFixed(2)}/year)
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     )}
 
                                     {amount === 0 && (
@@ -327,7 +439,7 @@ export default function AgentWealthGuard({
                                             const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
                                             const networkInfo = { chainId: chainId || 0, name: networkName };
                                             showToast('Running hypothetical wealth protection simulation...', 'ai');
-                                            analyze(inflationData, 1000, ['CUSD'], networkInfo);
+                                            analyze(propInflationData as Record<string, RegionalInflationData>, 1000, ['CUSD'], networkInfo);
                                         } else {
                                             handleAnalyze();
                                         }

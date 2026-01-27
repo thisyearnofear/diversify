@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import InflationProtectionInfo from "../inflation/InflationProtectionInfo";
 import RegionalRecommendations from "../regional/RegionalRecommendations";
 import AgentWealthGuard from "../agent/AgentWealthGuard";
+import ActionableRecommendation from "../agent/ActionableRecommendation";
 import GoalBasedStrategies from "../strategies/GoalBasedStrategies";
 import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
@@ -12,6 +13,9 @@ import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import WalletButton from "../wallet/WalletButton";
 import type { AggregatedPortfolio } from "@/hooks/use-stablecoin-balances";
 import { useWealthProtectionAgent } from "@/hooks/use-wealth-protection-agent";
+import { useAppState } from "@/context/AppStateContext";
+import { useInflationData } from "@/hooks/use-inflation-data";
+import { analyzePortfolio } from "@/utils/portfolio-analysis";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -52,9 +56,19 @@ export default function ProtectionTab({
   aggregatedPortfolio
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
-  const { config, updateConfig } = useWealthProtectionAgent();
+  const { config, updateConfig, advice, portfolioAnalysis } = useWealthProtectionAgent();
+  const { navigateToSwap } = useAppState();
+  const { inflationData } = useInflationData();
   const isCelo = ChainDetectionService.isCelo(chainId);
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
+  const [showGoalSurvey, setShowGoalSurvey] = useState(true);
+  const [hasRunAnalysis, setHasRunAnalysis] = useState(false);
+  
+  // Calculate portfolio analysis for display (independent of AI advice)
+  const liveAnalysis = React.useMemo(() => {
+    if (!aggregatedPortfolio) return null;
+    return analyzePortfolio(aggregatedPortfolio, inflationData, config.userGoal);
+  }, [aggregatedPortfolio, inflationData, config.userGoal]);
 
   const currentRegions = regionData
     .filter((item) => item.value > 0)
@@ -63,6 +77,55 @@ export default function ProtectionTab({
   const currentAllocations = Object.fromEntries(
     regionData.map((item) => [item.region, item.value / 100])
   );
+
+  // Helper to find the best token to swap FROM based on user's holdings
+  const getBestFromToken = (targetToken: string): string => {
+    // Get all tokens with balances, sorted by value
+    const tokensWithBalances = Object.entries(balances || {})
+      .filter(([, data]) => data.value > 0)
+      .sort((a, b) => b[1].value - a[1].value);
+    
+    if (tokensWithBalances.length === 0) return 'CUSD';
+    
+    // If target is PAXG (Gold), prefer swapping from high-inflation regional tokens
+    if (targetToken === 'PAXG') {
+      const highInflationTokens = ['CKES', 'CCOP', 'CZAR', 'CREAL', 'CXOF', 'CGHS'];
+      const foundHighInflation = tokensWithBalances.find(([symbol]) => 
+        highInflationTokens.some(hit => symbol.toUpperCase().includes(hit))
+      );
+      if (foundHighInflation) return foundHighInflation[0];
+    }
+    
+    // Default: return the largest holding that's not the target
+    const largestNonTarget = tokensWithBalances.find(([symbol]) => 
+      symbol.toUpperCase() !== targetToken.toUpperCase()
+    );
+    return largestNonTarget?.[0] || tokensWithBalances[0]?.[0] || 'CUSD';
+  };
+
+  // Helper to calculate swap amount based on goal and holdings
+  const getSwapAmount = (fromToken: string): string => {
+    const balance = balances?.[fromToken]?.value || 0;
+    if (balance <= 0) return '10';
+    
+    // For diversification, suggest 25% of holding
+    // For inflation protection/RWA, suggest 50% of holding
+    const percentage = config.userGoal === 'geographic_diversification' ? 0.25 : 0.5;
+    return (balance * percentage).toFixed(2);
+  };
+
+  // Handle swap execution with intelligent prefill
+  const handleExecuteSwap = (targetToken: string) => {
+    const fromToken = getBestFromToken(targetToken);
+    const amount = getSwapAmount(fromToken);
+    
+    navigateToSwap({
+      fromToken,
+      toToken: targetToken,
+      amount,
+      reason: advice?.reasoning || `Swap ${fromToken} to ${targetToken} based on your ${USER_GOALS.find(g => g.value === config.userGoal)?.label || 'wealth protection'} goal`
+    });
+  };
 
   // If not connected, show connection gate
   if (!address) {
@@ -138,11 +201,144 @@ export default function ProtectionTab({
             </div>
           </div>
 
+          {/* Expanded Intel Gathering Survey */}
+          {showGoalSurvey && (
+            <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl p-4 border border-blue-100 space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[10px] font-black uppercase text-blue-600 tracking-widest flex items-center gap-2">
+                  <span>📋</span> Quick Profile
+                </h4>
+                <button 
+                  onClick={() => setShowGoalSurvey(false)}
+                  className="text-[10px] text-gray-400 hover:text-gray-600 font-bold"
+                >
+                  Skip →
+                </button>
+              </div>
+              
+              {/* Risk Tolerance */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-600 uppercase">Risk Tolerance</label>
+                <div className="flex gap-2">
+                  {(['Conservative', 'Balanced', 'Aggressive'] as const).map((risk) => (
+                    <button
+                      key={risk}
+                      onClick={() => updateConfig({ riskTolerance: risk })}
+                      className={`flex-1 py-2 px-1 rounded-lg text-[10px] font-bold transition-all ${
+                        config.riskTolerance === risk
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:border-blue-300'
+                      }`}
+                    >
+                      {risk}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Time Horizon */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-600 uppercase">Time Horizon</label>
+                <div className="flex gap-2">
+                  {[
+                    { value: '1 month', label: 'Short' },
+                    { value: '3 months', label: 'Medium' },
+                    { value: '1 year', label: 'Long' }
+                  ].map((horizon) => (
+                    <button
+                      key={horizon.value}
+                      onClick={() => updateConfig({ timeHorizon: horizon.value as '1 month' | '3 months' | '1 year' })}
+                      className={`flex-1 py-2 px-1 rounded-lg text-[10px] font-bold transition-all ${
+                        config.timeHorizon === horizon.value
+                          ? 'bg-emerald-600 text-white shadow-md'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:border-emerald-300'
+                      }`}
+                    >
+                      {horizon.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Primary Concern */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-gray-600 uppercase">Primary Concern</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'inflation', label: 'Local Inflation', icon: '📈' },
+                    { id: 'currency', label: 'Currency Risk', icon: '💱' },
+                    { id: 'diversification', label: 'Diversification', icon: '📊' },
+                    { id: 'growth', label: 'Wealth Growth', icon: '📈' },
+                  ].map((concern) => (
+                    <button
+                      key={concern.id}
+                      onClick={() => {
+                        // Map concern to appropriate goal
+                        const goalMap: Record<string, typeof config.userGoal> = {
+                          inflation: 'inflation_protection',
+                          currency: 'rwa_access',
+                          diversification: 'geographic_diversification',
+                          growth: 'exploring'
+                        };
+                        updateConfig({ userGoal: goalMap[concern.id] });
+                      }}
+                      className={`p-2 rounded-lg text-[10px] font-bold transition-all flex items-center gap-2 ${
+                        (concern.id === 'inflation' && config.userGoal === 'inflation_protection') ||
+                        (concern.id === 'currency' && config.userGoal === 'rwa_access') ||
+                        (concern.id === 'diversification' && config.userGoal === 'geographic_diversification') ||
+                        (concern.id === 'growth' && config.userGoal === 'exploring')
+                          ? 'bg-amber-100 text-amber-700 border-2 border-amber-300'
+                          : 'bg-white text-gray-600 border border-gray-200 hover:border-amber-300'
+                      }`}
+                    >
+                      <span>{concern.icon}</span>
+                      {concern.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowGoalSurvey(false)}
+                className="w-full py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
+              >
+                Continue to Analysis →
+              </button>
+            </div>
+          )}
+
           <AgentWealthGuard
             amount={totalValue || 0}
             holdings={aggregatedPortfolio?.allHoldings || Object.keys(balances || {})}
-            onExecute={() => setActiveTab?.('swap')}
+            onExecute={handleExecuteSwap}
+            aggregatedPortfolio={aggregatedPortfolio}
           />
+
+          {/* Actionable Recommendations - Surfaces specific actions */}
+          {totalValue > 0 && (
+            <div className="mt-4">
+              <ActionableRecommendation
+                analysis={portfolioAnalysis || liveAnalysis}
+                portfolio={aggregatedPortfolio || null}
+                onExecuteSwap={(from, to, amount, reason) => {
+                  navigateToSwap({
+                    fromToken: from,
+                    toToken: to,
+                    amount,
+                    reason
+                  });
+                }}
+                onExecuteBridge={(fromChain, toChain, token, amount) => {
+                  navigateToSwap({
+                    fromToken: token,
+                    toToken: 'PAXG',
+                    amount,
+                    reason: `Bridge from ${fromChain} to ${toChain} for RWA access`
+                  });
+                }}
+              />
+            </div>
+          )}
 
           {/* Multichain Portfolio Breakdown Restored */}
           {totalValue > 0 && (
@@ -200,7 +396,27 @@ export default function ProtectionTab({
         </div>
 
         {isCelo && (
-          <PrimaryButton onClick={() => setActiveTab?.('swap')} fullWidth size="md">
+          <PrimaryButton 
+            onClick={() => {
+              // For bridging, suggest the largest holding to bridge
+              const tokensWithBalances = Object.entries(balances || {})
+                .filter(([, data]) => data.value > 0)
+                .sort((a, b) => b[1].value - a[1].value);
+              const fromToken = tokensWithBalances[0]?.[0] || 'CUSD';
+              const amount = tokensWithBalances[0]?.[1]?.value 
+                ? (tokensWithBalances[0][1].value * 0.5).toFixed(2) 
+                : '10';
+              
+              navigateToSwap({
+                fromToken,
+                toToken: 'PAXG',
+                amount,
+                reason: 'Bridge to Arbitrum to access tokenized Gold (PAXG) as an inflation hedge'
+              });
+            }} 
+            fullWidth 
+            size="md"
+          >
             Bridge to Arbitrum
           </PrimaryButton>
         )}
@@ -273,7 +489,10 @@ export default function ProtectionTab({
                     Close
                   </button>
                   <button
-                    onClick={() => { setShowAssetModal(null); setActiveTab?.('swap'); }}
+                    onClick={() => { 
+                      setShowAssetModal(null); 
+                      handleExecuteSwap('PAXG');
+                    }}
                     className="flex-1 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30"
                   >
                     Get PAXG

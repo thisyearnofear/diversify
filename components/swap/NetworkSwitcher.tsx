@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { NETWORKS } from '../../config';
+import { useWalletContext } from '../wallet/WalletProvider';
 
 interface NetworkSwitcherProps {
     currentChainId: number | null;
@@ -16,9 +17,10 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
 }) => {
     const [isSwitching, setIsSwitching] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const { switchNetwork: walletSwitchNetwork, isConnected } = useWalletContext();
 
     const isDev = process.env.NODE_ENV === 'development';
-    
+
     const allNetworks = [
         {
             ...NETWORKS.CELO_MAINNET,
@@ -49,17 +51,17 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             color: 'blue',
         },
     ];
-    
+
     // Filter out Alfajores in production
-    const networks = allNetworks.filter(n => 
+    const networks = allNetworks.filter(n =>
         isDev || n.chainId !== NETWORKS.ALFAJORES.chainId
     );
 
     const currentNetwork = networks.find((n) => n.chainId === currentChainId);
 
     const switchNetwork = async (chainId: number) => {
-        if (!window.ethereum) {
-            setError('No wallet detected');
+        if (!isConnected) {
+            setError('No wallet connected');
             return;
         }
 
@@ -67,48 +69,16 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
         setError(null);
 
         try {
-            await window.ethereum.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: `0x${chainId.toString(16)}` }],
-            });
+            // Use the wallet context's switchNetwork method which handles both regular and Farcaster wallets
+            await walletSwitchNetwork(chainId);
 
             // Call the callback if provided
             if (onNetworkChange) {
                 onNetworkChange();
             }
         } catch (switchError: unknown) {
-            // This error code indicates that the chain has not been added to MetaMask
-            if (switchError instanceof Error && 'code' in switchError && switchError.code === 4902) {
-                try {
-                    const network = networks.find((n) => n.chainId === chainId);
-                    if (!network) {
-                        throw new Error('Network configuration not found');
-                    }
-
-                    await window.ethereum.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [
-                            {
-                                chainId: `0x${chainId.toString(16)}`,
-                                chainName: network.name,
-                                rpcUrls: [network.rpcUrl],
-                                blockExplorerUrls: [network.explorerUrl],
-                            },
-                        ],
-                    });
-
-                    // Call the callback if provided
-                    if (onNetworkChange) {
-                        onNetworkChange();
-                    }
-                } catch (addError: unknown) {
-                    const errorMessage = addError instanceof Error ? addError.message : 'Unknown error';
-                    setError(`Failed to add network: ${errorMessage}`);
-                }
-            } else {
-                const errorMessage = switchError instanceof Error ? switchError.message : 'Unknown error';
-                setError(`Failed to switch network: ${errorMessage}`);
-            }
+            const errorMessage = switchError instanceof Error ? switchError.message : 'Unknown error';
+            setError(`Failed to switch network: ${errorMessage}`);
         } finally {
             setIsSwitching(false);
         }
@@ -216,8 +186,8 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                                 onClick={() => !isActive && switchNetwork(network.chainId)}
                                 disabled={isActive || isSwitching}
                                 className={`w-full p-3 rounded-md border-2 transition-all text-left ${isActive
-                                        ? `${colors.bg} cursor-default`
-                                        : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 ${colors.hover} cursor-pointer`
+                                    ? `${colors.bg} cursor-default`
+                                    : `bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-600 ${colors.hover} cursor-pointer`
                                     } ${isSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <div className="flex items-center justify-between">

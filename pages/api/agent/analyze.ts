@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { analyzePortfolio, type PortfolioAnalysis } from '../../../utils/portfolio-analysis';
 
 
 
@@ -37,77 +38,148 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const apiKey = process.env.GEMINI_API_KEY;
         if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
 
-        const { inflationData, userBalance, currentHoldings, config, networkContext } = req.body;
+        const { inflationData, userBalance, currentHoldings, config, networkContext, portfolio, analysis } = req.body;
         const genAI = new GoogleGenerativeAI(apiKey);
 
+        // Use pre-computed analysis if provided, otherwise calculate it
+        let portfolioAnalysis: PortfolioAnalysis;
+        if (analysis) {
+            portfolioAnalysis = analysis;
+        } else if (portfolio) {
+            portfolioAnalysis = analyzePortfolio(portfolio, inflationData || {}, config?.userGoal);
+        } else {
+            // Fallback: create minimal portfolio from holdings
+            const minimalPortfolio = {
+                totalValue: userBalance || 0,
+                chains: [{
+                    chainId: networkContext?.chainId || 42220,
+                    chainName: networkContext?.name || 'Celo',
+                    totalValue: userBalance || 0,
+                    balances: Object.fromEntries(
+                        (currentHoldings || []).map((h: string) => [h, { value: (userBalance || 0) / (currentHoldings.length || 1) }])
+                    ),
+                }],
+                allHoldings: currentHoldings || [],
+                diversificationScore: 0,
+            };
+            portfolioAnalysis = analyzePortfolio(minimalPortfolio, inflationData || {}, config?.userGoal);
+        }
+
         const systemInstruction = `
-            You are the DiversiFi Wealth Protection Oracle - a specialized AI that provides ACTIONABLE financial advice.
+            You are the DiversiFi Wealth Protection Oracle - a data-driven AI that provides ACTIONABLE financial advice.
             
-            CORE MISSION: Protect user wealth from inflation and provide specific, executable recommendations.
+            CORE MISSION: Protect user wealth from inflation using quantified analysis.
             
             ANALYSIS FRAMEWORK:
-            1. THREAT ASSESSMENT: Identify specific inflation/economic risks to user's holdings
-            2. OPPORTUNITY IDENTIFICATION: Find concrete ways to improve their position
-            3. ACTION PLAN: Provide step-by-step instructions they can execute immediately
+            1. DATA INTERPRETATION: Explain what the portfolio analysis means for the user
+            2. RISK VISUALIZATION: Help them understand their exposure in concrete terms
+            3. ACTION PLAN: Provide specific, executable recommendations based on calculated opportunities
             
             RESPONSE REQUIREMENTS:
-            - Be SPECIFIC: "Swap 50% of your CUSD to CEUR" not "consider diversification"
-            - Be URGENT when needed: If inflation > 5%, emphasize time-sensitivity
-            - Be PRACTICAL: Only recommend actions they can do in the app
-            - Show MATH: Calculate expected savings/protection in USD
+            - Be SPECIFIC with NUMBERS: "Your portfolio faces 6.8% weighted inflation risk"
+            - Show the MATH: Reference the calculated projections and savings
+            - Be GOAL-ALIGNED: Tailor advice to their selected objective
+            - Be PRACTICAL: Recommend actions they can execute immediately
             
             AVAILABLE ACTIONS:
             - SWAP: Move between stablecoins (CUSD→CEUR, USDC→PAXG, etc.)
             - BRIDGE: Move assets between Celo and Arbitrum
-            - HOLD: Stay in current position with specific reasoning
+            - REBALANCE: Multi-token allocation adjustment
+            - HOLD: Stay in current position with data-backed reasoning
             
-            TONE: Confident financial advisor who explains WHY and HOW, not just WHAT.
+            TONE: Expert financial advisor who explains the WHY with data, not opinions.
         `;
+
+        // Build structured prompt with calculated analysis
+        const userGoal = config?.userGoal || 'exploring';
+        const goalLabels: Record<string, string> = {
+            inflation_protection: 'Inflation Protection',
+            geographic_diversification: 'Geographic Diversification',
+            rwa_access: 'Real World Asset Access',
+            exploring: 'Exploration',
+        };
+
+        const topOpportunities = portfolioAnalysis.rebalancingOpportunities.slice(0, 3);
+        const targetAllocation = portfolioAnalysis.targetAllocations[userGoal as keyof typeof portfolioAnalysis.targetAllocations] || [];
 
         const userPrompt = `
             WEALTH PROTECTION ANALYSIS REQUEST
             
-            USER PORTFOLIO:
-            - Balance: $${userBalance} USD
-            - Holdings: ${currentHoldings.join(', ')}
-            - Risk Profile: ${config?.riskTolerance || 'Balanced'}
-            - Network: ${networkContext?.name || 'Unknown'}
+            USER PROFILE:
+            - Total Portfolio Value: $${portfolioAnalysis.totalValue.toFixed(2)}
+            - Risk Tolerance: ${config?.riskTolerance || 'Balanced'}
+            - Time Horizon: ${config?.timeHorizon || '3 months'}
+            - Selected Goal: ${goalLabels[userGoal] || 'Exploration'}
             
-            MARKET CONTEXT:
-            ${inflationData ? `Inflation Data: ${JSON.stringify(inflationData, null, 2)}` : 'No inflation data available'}
+            PORTFOLIO ANALYSIS (Pre-Calculated):
+            - Tokens Held: ${portfolioAnalysis.tokenCount} (${portfolioAnalysis.tokens.map(t => t.symbol).join(', ')})
+            - Regions Exposed: ${portfolioAnalysis.regionCount} (${portfolioAnalysis.regionalExposure.map(r => r.region).join(', ')})
+            - Weighted Inflation Risk: ${portfolioAnalysis.weightedInflationRisk.toFixed(2)}%
+            - Diversification Score: ${portfolioAnalysis.diversificationScore}/100
+            - Concentration Risk: ${portfolioAnalysis.concentrationRisk}
+            
+            REGIONAL BREAKDOWN:
+            ${portfolioAnalysis.regionalExposure.map(r => 
+                `- ${r.region}: $${r.value.toFixed(2)} (${r.percentage.toFixed(1)}%) at ${r.avgInflationRate.toFixed(1)}% avg inflation`
+            ).join('\n')}
+            
+            MISSING REGIONS (Diversification Gaps):
+            ${portfolioAnalysis.missingRegions.length > 0 
+                ? portfolioAnalysis.missingRegions.join(', ') 
+                : 'None - well diversified across regions'}
+            
+            TOP REBALANCING OPPORTUNITIES (Ranked by Savings):
+            ${topOpportunities.length > 0 
+                ? topOpportunities.map((opp, i) => 
+                    `${i + 1}. Swap ${opp.fromToken} (${opp.fromInflation}%) → ${opp.toToken} (${opp.toInflation}%): ` +
+                    `$${opp.suggestedAmount.toFixed(2)} saves $${opp.annualSavings.toFixed(2)}/year (Priority: ${opp.priority})`
+                ).join('\n')
+                : 'No significant rebalancing opportunities identified'}
+            
+            PROJECTED PURCHASING POWER (3 Years):
+            - Current Path: $${portfolioAnalysis.projections.currentPath.value3Year.toFixed(2)} (loses $${portfolioAnalysis.projections.currentPath.purchasingPowerLost.toFixed(2)})
+            - Optimized Path: $${portfolioAnalysis.projections.optimizedPath.value3Year.toFixed(2)} (preserves $${portfolioAnalysis.projections.optimizedPath.purchasingPowerPreserved.toFixed(2)} more)
+            
+            TARGET ALLOCATION FOR ${goalLabels[userGoal]?.toUpperCase()}:
+            ${targetAllocation.map(t => `- ${t.symbol}: ${t.targetPercentage}% - ${t.reason}`).join('\n')}
             
             REQUIRED OUTPUT (JSON):
             {
-                "action": "SWAP|HOLD|BRIDGE",
-                "targetToken": "specific token symbol",
-                "targetNetwork": "Celo|Arbitrum|Ethereum",
-                "reasoning": "2-3 sentences explaining WHY this action protects wealth",
+                "action": "SWAP|HOLD|BRIDGE|REBALANCE",
+                "targetToken": "primary recommended token",
+                "targetAllocation": [{"symbol": "TOKEN", "percentage": 30, "reason": "..."}],
+                "reasoning": "2-3 sentences explaining the data-driven recommendation",
                 "confidence": 0.85,
-                "expectedSavings": 47.50,
-                "timeHorizon": "3 months",
-                "riskLevel": "LOW|MEDIUM|HIGH",
+                "expectedSavings": ${portfolioAnalysis.projections.optimizedPath.purchasingPowerPreserved.toFixed(2)},
+                "timeHorizon": "${config?.timeHorizon || '3 months'}",
+                "riskLevel": "${portfolioAnalysis.concentrationRisk}",
                 "thoughtChain": [
-                    "Current inflation in user's region is X%",
-                    "User's CUSD exposure creates Y risk",
-                    "Moving to CEUR provides Z protection",
-                    "Expected savings: $X over 6 months"
+                    "Portfolio has X% weighted inflation risk based on regional exposure",
+                    "Top opportunity is swapping Y to Z for W% inflation reduction",
+                    "Following goal-based allocation would improve diversification score from X to Y",
+                    "Projected savings of $Z over time horizon"
                 ],
                 "actionSteps": [
-                    "Go to Swap tab",
-                    "Select CUSD → CEUR",
-                    "Enter amount: $500",
-                    "Confirm transaction"
-                ]
+                    "Specific step 1 with token amounts",
+                    "Specific step 2 with token amounts",
+                    "etc."
+                ],
+                "portfolioAnalysis": {
+                    "weightedInflationRisk": ${portfolioAnalysis.weightedInflationRisk},
+                    "diversificationScore": ${portfolioAnalysis.diversificationScore},
+                    "topOpportunity": ${topOpportunities.length > 0 ? JSON.stringify(topOpportunities[0]) : 'null'}
+                }
             }
             
             ANALYSIS RULES:
-            1. If user has >$100 in high-inflation currency (>4% inflation), recommend SWAP
-            2. If user is on Celo with USDC, suggest bridging to Arbitrum for PAXG access
-            3. If inflation data shows regional risk, recommend geographic diversification
-            4. Always calculate specific dollar amounts for expected savings
-            5. Provide exact steps the user can take in the app
+            1. Reference SPECIFIC NUMBERS from the portfolio analysis
+            2. Tailor recommendation to the user's SELECTED GOAL
+            3. Prioritize the highest-impact rebalancing opportunities
+            4. Calculate exact dollar amounts for all recommendations
+            5. If diversification score < 50, emphasize diversification
+            6. If weighted inflation > 5%, emphasize inflation protection
             
-            Make this analysis IMMEDIATELY ACTIONABLE and VALUABLE.
+            Make this analysis DATA-DRIVEN, SPECIFIC, and ACTIONABLE.
         `;
 
         // Try models with structured output support

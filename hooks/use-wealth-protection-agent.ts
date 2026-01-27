@@ -1,10 +1,14 @@
 import { useState, useCallback } from 'react';
 import { GeminiService } from '../utils/api-services';
 import { ArcAgent } from '../services/arc-agent';
+import { analyzePortfolio, type PortfolioAnalysis } from '../utils/portfolio-analysis';
+import type { AggregatedPortfolio } from './use-stablecoin-balances';
+import type { RegionalInflationData } from './use-inflation-data';
 
 export interface AgentAdvice {
     action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE';
     targetToken?: string;
+    targetAllocation?: Array<{ symbol: string; percentage: number; reason: string }>;
     targetNetwork?: string;
     reasoning: string;
     confidence: number;
@@ -22,6 +26,16 @@ export interface AgentAdvice {
         currentPathValue: number;
         oraclePathValue: number;
         lossPeriod: string;
+    };
+    portfolioAnalysis?: {
+        weightedInflationRisk: number;
+        diversificationScore: number;
+        topOpportunity: {
+            fromToken: string;
+            toToken: string;
+            inflationDelta: number;
+            annualSavings: number;
+        } | null;
     };
     _meta?: {
         modelUsed: string;
@@ -72,6 +86,7 @@ export function useWealthProtectionAgent() {
     const [messages, setMessages] = useState<AIMessage[]>([]);
     const [isCompact, setIsCompact] = useState(false);
     const [arcAgent, setArcAgent] = useState<ArcAgent | null>(null);
+    const [portfolioAnalysis, setPortfolioAnalysis] = useState<PortfolioAnalysis | null>(null);
     const [capabilities, setCapabilities] = useState<{ analysis: boolean, transcription: boolean, speech: boolean }>({
         analysis: false,
         transcription: false,
@@ -110,16 +125,18 @@ export function useWealthProtectionAgent() {
         }
     }, [arcAgent]);
 
-    // Enhanced analysis with Arc Network integration and progress tracking
+    // Enhanced analysis with data-driven portfolio analysis
     const analyzeAutonomously = useCallback(async (
-        inflationData: any,
+        inflationData: Record<string, RegionalInflationData>,
         userBalance: number,
         currentHoldings: string[],
         networkInfo: { chainId: number, name: string } = { chainId: 42220, name: 'Celo' },
-        multiChainContext?: MultiChainContext
+        multiChainContext?: MultiChainContext,
+        aggregatedPortfolio?: AggregatedPortfolio
     ) => {
         setIsAnalyzing(true);
         setAdvice(null);
+        setPortfolioAnalysis(null);
         setAnalysisSteps([]);
         setAnalysisProgress(0);
 
@@ -133,89 +150,85 @@ export function useWealthProtectionAgent() {
         }
 
         try {
-            if (arcAgent && config.analysisDepth === 'Deep') {
-                // Progress steps for Deep Analysis
-                const deepProgressSteps = [
-                    { step: "🛡️ Securing Arc Testnet environment...", progress: 15 },
-                    { step: "💰 Verifying USDC gas for autonomous payments...", progress: 30 },
-                    { step: "📡 Connecting to Premium Data Hub (x402)...", progress: 50 },
-                    { step: "🧬 Processing multi-chain risk models...", progress: 75 },
-                    { step: "🤖 Finalizing deep analysis with Gemini 3...", progress: 95 }
-                ];
+            // Step 1: Calculate portfolio analysis locally (data-driven)
+            setThinkingStep("📊 Calculating portfolio metrics...");
+            setAnalysisProgress(15);
+            
+            const portfolio = aggregatedPortfolio || {
+                totalValue: userBalance,
+                chains: [{
+                    chainId: networkInfo.chainId,
+                    chainName: networkInfo.name,
+                    totalValue: userBalance,
+                    balances: Object.fromEntries(
+                        currentHoldings.map(h => [h, { 
+                            symbol: h, 
+                            name: h,
+                            value: userBalance / currentHoldings.length,
+                            formattedBalance: (userBalance / currentHoldings.length).toString(),
+                            region: 'Unknown',
+                            balance: '0'
+                        }])
+                    ),
+                }],
+                allHoldings: currentHoldings,
+                diversificationScore: 0,
+            };
 
-                const progressInterval = setInterval(() => {
-                    setAnalysisProgress(prev => (prev < 90 ? prev + 2 : prev));
-                }, 1000);
+            const analysis = analyzePortfolio(portfolio, inflationData, config.userGoal);
+            setPortfolioAnalysis(analysis);
+            setAnalysisProgress(30);
 
-                setThinkingStep(deepProgressSteps[0].step);
-                setAnalysisProgress(deepProgressSteps[0].progress);
-                setAnalysisSteps([deepProgressSteps[0].step]);
-
-                const responsePromise = fetch('/api/agent/deep-analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        portfolio: { balance: userBalance, holdings: currentHoldings },
-                        config,
-                        networkInfo,
-                        multiChainContext
-                    })
-                });
-
-                for (let i = 1; i < deepProgressSteps.length; i++) {
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    setThinkingStep(deepProgressSteps[i].step);
-                    setAnalysisProgress(deepProgressSteps[i].progress);
-                    setAnalysisSteps(prev => [...prev, deepProgressSteps[i].step]);
-                }
-
-                const response = await responsePromise;
-                clearInterval(progressInterval);
-
-                if (!response.ok) throw new Error('Deep analysis failed');
-                const result = await response.json();
-                setAdvice(result);
-
-                const newMessage: AIMessage = {
-                    id: Date.now().toString(),
-                    role: 'assistant',
-                    content: result.reasoning,
-                    timestamp: new Date(),
-                    data: result,
-                    type: 'recommendation'
-                };
-                setMessages(prev => [...prev, newMessage]);
-
-            } else {
-                // Standard analysis progress
-                const progressSteps = [
-                    { step: "🔗 Connecting to Arc Network Oracle...", progress: 10 },
-                    { step: "💰 Accessing premium inflation data via x402...", progress: 25 },
-                    { step: "📊 Analyzing macro economic signals...", progress: 45 },
-                    { step: "🎯 Calculating diversification strategies...", progress: 65 },
-                    { step: "🧠 Generating personalized recommendations...", progress: 85 },
-                    { step: "🛡️ Finalizing wealth protection model...", progress: 95 },
-                    { step: "✅ Analysis complete!", progress: 100 }
-                ];
-
-                for (let i = 0; i < progressSteps.length; i++) {
-                    const { step, progress } = progressSteps[i];
-                    setThinkingStep(step);
-                    setAnalysisProgress(progress);
-                    setAnalysisSteps(prev => [...prev, step]);
-                    const delay = i === progressSteps.length - 1 ? 800 : 600 + Math.random() * 400;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-
-                const result = await GeminiService.analyzeWealthProtection(
+            // Step 2: Send to AI with structured analysis
+            setThinkingStep("🧠 Generating personalized recommendations...");
+            
+            const response = await fetch('/api/agent/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     inflationData,
                     userBalance,
                     currentHoldings,
-                    { ...config, multiChainContext, networkInfo }
-                );
+                    config,
+                    networkInfo,
+                    portfolio,
+                    analysis
+                })
+            });
 
-                setAdvice(result);
-            }
+            setAnalysisProgress(80);
+
+            if (!response.ok) throw new Error('Analysis API failed');
+            const result = await response.json();
+            
+            // Merge AI response with local analysis for complete data
+            setAdvice({
+                ...result,
+                portfolioAnalysis: {
+                    weightedInflationRisk: analysis.weightedInflationRisk,
+                    diversificationScore: analysis.diversificationScore,
+                    topOpportunity: analysis.rebalancingOpportunities[0] || null,
+                },
+                comparisonProjection: {
+                    currentPathValue: analysis.projections.currentPath.value3Year,
+                    oraclePathValue: analysis.projections.optimizedPath.value3Year,
+                    lossPeriod: '3 years'
+                },
+                expectedSavings: analysis.projections.optimizedPath.purchasingPowerPreserved,
+            });
+
+            setAnalysisProgress(100);
+
+            const newMessage: AIMessage = {
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: result.reasoning,
+                timestamp: new Date(),
+                data: result,
+                type: 'recommendation'
+            };
+            setMessages(prev => [...prev, newMessage]);
+
         } catch (error) {
             console.error("Analysis failed:", error);
             setAdvice({
@@ -229,7 +242,7 @@ export function useWealthProtectionAgent() {
             setThinkingStep('');
             setAnalysisProgress(0);
         }
-    }, [config, arcAgent, initializeArcAgent]);
+    }, [config, initializeArcAgent]);
 
     // Chat functionality
     const sendMessage = useCallback(async (content: string) => {
@@ -343,9 +356,10 @@ export function useWealthProtectionAgent() {
         generateSpeech,
         isCompact,
         toggleCompactMode: () => setIsCompact(p => !p),
-        clearConversation: () => { setMessages([]); setAdvice(null); },
+        clearConversation: () => { setMessages([]); setAdvice(null); setPortfolioAnalysis(null); },
         arcAgent,
         capabilities,
+        portfolioAnalysis,
         getSpendingStatus: () => arcAgent?.getSpendingStatus() || { spent: 0, limit: config.spendingLimit || 5, remaining: config.spendingLimit || 5 },
         initializeArcAgent
     };

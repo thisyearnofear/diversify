@@ -1,14 +1,39 @@
 /**
  * LiFi SDK Configuration
  * Centralized configuration for LiFi SDK to avoid initialization issues
- * Fixed to handle frontend wallet integration properly
+ * Fixed to handle frontend wallet integration properly with Farcaster support
  */
 
 import { createConfig, EVM } from '@lifi/sdk';
 import { createWalletClient, custom } from 'viem';
 import { arbitrum, celo, celoAlfajores } from 'viem/chains';
+import sdk from '@farcaster/miniapp-sdk';
 
 let isConfigured = false;
+
+// Helper function to get wallet provider (supports both regular and Farcaster wallets)
+async function getWalletProvider() {
+    // Try Farcaster SDK first if available
+    if (typeof window !== 'undefined' && sdk && sdk.wallet) {
+        try {
+            const provider = await sdk.wallet.getEthereumProvider();
+            if (provider) {
+                console.log('[LiFi Config] Using Farcaster wallet provider');
+                return provider;
+            }
+        } catch (err) {
+            console.warn('[LiFi Config] Failed to get Farcaster provider:', err);
+        }
+    }
+
+    // Fallback to window.ethereum
+    if (typeof window !== 'undefined' && window.ethereum) {
+        console.log('[LiFi Config] Using window.ethereum provider');
+        return window.ethereum;
+    }
+
+    throw new Error('No wallet provider available');
+}
 
 /**
  * Initialize LiFi SDK configuration
@@ -29,14 +54,12 @@ export function initializeLiFiConfig(): void {
             providers: [
                 EVM({
                     getWalletClient: async () => {
-                        if (typeof window === 'undefined' || !window.ethereum) {
-                            throw new Error('No wallet provider available');
-                        }
+                        const provider = await getWalletProvider();
 
                         // Ensure wallet is connected first and get accounts
                         let accounts: string[];
                         try {
-                            accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                            accounts = await provider.request({ method: 'eth_accounts' });
                             if (!accounts || accounts.length === 0) {
                                 throw new Error('Wallet not connected');
                             }
@@ -48,7 +71,7 @@ export function initializeLiFiConfig(): void {
                         // Get current chain ID from the wallet
                         let chainId: number;
                         try {
-                            const chainIdHex = await window.ethereum.request({ method: 'eth_chainId' });
+                            const chainIdHex = await provider.request({ method: 'eth_chainId' });
                             chainId = parseInt(chainIdHex, 16);
                         } catch (error) {
                             console.warn('[LiFi Config] Could not get chain ID, defaulting to Arbitrum');
@@ -62,27 +85,25 @@ export function initializeLiFiConfig(): void {
                         const walletClient = createWalletClient({
                             account: accounts[0] as `0x${string}`, // Ensure account is properly set
                             chain,
-                            transport: custom(window.ethereum),
+                            transport: custom(provider),
                         });
 
                         console.log('[LiFi Config] Created wallet client for chain:', chain.name, 'ID:', chainId);
                         return walletClient;
                     },
                     switchChain: async (chainId) => {
-                        if (typeof window === 'undefined' || !window.ethereum) {
-                            throw new Error('No wallet provider available for chain switching');
-                        }
+                        const provider = await getWalletProvider();
 
                         console.log('[LiFi Config] Switching to chain:', chainId);
 
                         try {
-                            await window.ethereum.request({
+                            await provider.request({
                                 method: 'wallet_switchEthereumChain',
                                 params: [{ chainId: `0x${chainId.toString(16)}` }],
                             });
 
                             // Get accounts after chain switch
-                            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                            const accounts = await provider.request({ method: 'eth_accounts' });
                             if (!accounts || accounts.length === 0) {
                                 throw new Error('Wallet not connected after chain switch');
                             }
@@ -94,7 +115,7 @@ export function initializeLiFiConfig(): void {
                             const walletClient = createWalletClient({
                                 account: accounts[0] as `0x${string}`, // Ensure account is properly set
                                 chain,
-                                transport: custom(window.ethereum),
+                                transport: custom(provider),
                             });
 
                             console.log('[LiFi Config] Successfully switched to chain:', chain.name);
@@ -105,7 +126,7 @@ export function initializeLiFiConfig(): void {
                                 const chain = supportedChains.find(c => c.id === chainId);
                                 if (chain) {
                                     console.log('[LiFi Config] Adding new chain:', chain.name);
-                                    await window.ethereum.request({
+                                    await provider.request({
                                         method: 'wallet_addEthereumChain',
                                         params: [{
                                             chainId: `0x${chainId.toString(16)}`,
@@ -121,7 +142,7 @@ export function initializeLiFiConfig(): void {
                                     });
 
                                     // Get accounts after adding chain
-                                    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                                    const accounts = await provider.request({ method: 'eth_accounts' });
                                     if (!accounts || accounts.length === 0) {
                                         throw new Error('Wallet not connected after adding chain');
                                     }
@@ -129,7 +150,7 @@ export function initializeLiFiConfig(): void {
                                     return createWalletClient({
                                         account: accounts[0] as `0x${string}`, // Ensure account is properly set
                                         chain,
-                                        transport: custom(window.ethereum),
+                                        transport: custom(provider),
                                     });
                                 }
                             }
@@ -190,28 +211,26 @@ export function resetLiFiConfig(): void {
  * Ensure wallet is connected and ready for LiFi operations
  */
 export async function ensureWalletConnection(): Promise<void> {
-    if (typeof window === 'undefined' || !window.ethereum) {
-        throw new Error('No wallet provider available');
-    }
+    const provider = await getWalletProvider();
 
     try {
         // Request accounts to ensure wallet is connected
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        const accounts = await provider.request({ method: 'eth_accounts' });
 
         if (!accounts || accounts.length === 0) {
             // Try to request connection
-            const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const requestedAccounts = await provider.request({ method: 'eth_requestAccounts' });
             if (!requestedAccounts || requestedAccounts.length === 0) {
                 throw new Error('No wallet accounts available. Please connect your wallet.');
             }
         }
 
         // Get current chain
-        const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+        const chainId = await provider.request({ method: 'eth_chainId' });
         console.log('[LiFi Config] Wallet connection verified:', {
             accounts: accounts.length,
             chainId: parseInt(chainId, 16),
-            selectedAddress: window.ethereum.selectedAddress
+            selectedAddress: (provider as any).selectedAddress
         });
 
     } catch (error: any) {
@@ -226,36 +245,35 @@ export async function ensureWalletConnection(): Promise<void> {
 /**
  * Ensure wallet provider is available before using LiFi SDK
  */
-export function validateWalletProvider(): void {
-    if (typeof window === 'undefined') {
-        throw new Error('LiFi SDK requires a browser environment');
-    }
+export async function validateWalletProvider(): Promise<void> {
+    try {
+        const provider = await getWalletProvider();
 
-    if (!window.ethereum) {
-        throw new Error('No wallet provider found. Please install MetaMask or another Web3 wallet.');
-    }
-
-    // Additional checks for common wallet properties
-    if (!window.ethereum.request) {
-        throw new Error('Wallet provider is missing required methods. Please ensure you have a compatible Web3 wallet.');
-    }
-
-    // Check if wallet is connected (if the method exists)
-    if (typeof (window.ethereum as any).isConnected === 'function') {
-        const isConnected = (window.ethereum as any).isConnected();
-        if (!isConnected) {
-            console.warn('[LiFi Config] Wallet is not connected');
+        // Additional checks for common wallet properties
+        if (!provider.request) {
+            throw new Error('Wallet provider is missing required methods. Please ensure you have a compatible Web3 wallet.');
         }
-    }
 
-    // Check if we have accounts
-    if (window.ethereum.selectedAddress) {
-        console.log('[LiFi Config] Wallet connected with address:', window.ethereum.selectedAddress);
-    } else {
-        console.warn('[LiFi Config] No wallet address selected');
-    }
+        // Check if wallet is connected (if the method exists)
+        if (typeof (provider as any).isConnected === 'function') {
+            const isConnected = (provider as any).isConnected();
+            if (!isConnected) {
+                console.warn('[LiFi Config] Wallet is not connected');
+            }
+        }
 
-    console.log('[LiFi Config] Wallet provider validation passed');
+        // Check if we have accounts
+        if ((provider as any).selectedAddress) {
+            console.log('[LiFi Config] Wallet connected with address:', (provider as any).selectedAddress);
+        } else {
+            console.warn('[LiFi Config] No wallet address selected');
+        }
+
+        console.log('[LiFi Config] Wallet provider validation passed');
+    } catch (error) {
+        console.error('[LiFi Config] Wallet provider validation failed:', error);
+        throw error;
+    }
 }
 
 /**
@@ -276,31 +294,33 @@ export async function checkExecutionProviders(): Promise<void> {
             });
         }
 
-        // Check if window.ethereum is available for execution
-        if (typeof window !== 'undefined' && window.ethereum) {
+        // Check if wallet provider is available for execution
+        try {
+            const provider = await getWalletProvider();
+
             // Get current accounts
             let accounts: string[] = [];
             try {
-                accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                accounts = await provider.request({ method: 'eth_accounts' });
             } catch (error) {
                 console.warn('[LiFi Config] Could not get accounts:', error);
             }
 
             console.log('[LiFi Config] Wallet provider detected:', {
-                isMetaMask: window.ethereum.isMetaMask,
-                isMiniPay: window.ethereum.isMiniPay,
-                chainId: window.ethereum.chainId,
-                selectedAddress: window.ethereum.selectedAddress,
+                isMetaMask: (provider as any).isMetaMask,
+                isMiniPay: (provider as any).isMiniPay,
+                chainId: (provider as any).chainId,
+                selectedAddress: (provider as any).selectedAddress,
                 accountsCount: accounts.length,
-                hasRequest: typeof window.ethereum.request === 'function'
+                hasRequest: typeof provider.request === 'function'
             });
 
             // Ensure we have at least one account
             if (accounts.length === 0) {
                 console.warn('[LiFi Config] No accounts found. Wallet may not be connected.');
             }
-        } else {
-            throw new Error('No wallet provider available');
+        } catch (error) {
+            console.warn('[LiFi Config] No wallet provider available:', error);
         }
 
     } catch (error) {

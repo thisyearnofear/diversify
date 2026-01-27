@@ -439,10 +439,12 @@ function setCachedData(key: string, value: any): void {
   }
 }
 
-// Gemini API Service with Arc Network integration
+// Gemini API Service - Now a thin wrapper around the portfolio analysis API
+// The heavy lifting is done by utils/portfolio-analysis.ts (single source of truth)
 export const GeminiService = {
   /**
-   * Enhanced wealth protection analysis with Arc Network capabilities
+   * @deprecated Use the analyzePortfolio function from utils/portfolio-analysis.ts directly
+   * This method is kept for backward compatibility but delegates to the new analysis engine
    */
   analyzeWealthProtection: async (
     inflationData: any,
@@ -465,62 +467,16 @@ export const GeminiService = {
     _meta?: { modelUsed: string; totalCost?: number };
   }> => {
     try {
-      // Enhanced prompt for Arc Network context
-      const enhancedPrompt = `
-        You are an expert DeFi wealth protection agent operating on Arc Network for the DiversiFi platform.
-        Arc Network features: USDC as gas token, sub-second finality, x402 autonomous payments.
-        
-        Available Regional Stablecoins on DiversiFi:
-        - USA: cUSD, USDC
-        - Europe: cEUR, EURC, cGBP
-        - LatAm: cREAL (Brazil), cCOP (Colombia)
-        - Africa: cKES (Kenya), cZAR (South Africa), cGHS (Ghana), cXOF (CFA Franc)
-        - Asia: cPESO/PUSO (Philippines), cAUD (Australia)
-        - Commodities: PAXG (Gold)
-        
-        Analysis Context:
-        - User Balance: $${userBalance}
-        - Current Holdings: ${currentHoldings.join(', ')}
-        - Risk Tolerance: ${config?.riskTolerance || 'Balanced'}
-        - Investment Goal: ${config?.goal || 'Inflation Hedge'}
-        - Analysis Depth: ${config?.analysisDepth || 'Standard'}
-        - Time Horizon: ${config?.timeHorizon || '3 months'}
-        
-        ${inflationData ? `Inflation Data: ${JSON.stringify(inflationData)}` : ''}
-        ${config?.userMessage ? `User Question: "${config.userMessage}"` : ''}
-        
-        Provide a JSON response with:
-        {
-          "action": "SWAP" | "HOLD" | "REBALANCE" | "BRIDGE",
-          "targetToken": "string (one of the available tokens above)",
-          "reasoning": "Clear explanation in 1-2 sentences mentioning specific regional advantages or inflation hedging",
-          "confidence": 0.85,
-          "urgencyLevel": "LOW" | "MEDIUM" | "HIGH" | "CRITICAL",
-          "comparisonProjection": {
-            "currentPathValue": 918.00,
-            "oraclePathValue": 1032.50,
-            "lossPeriod": "1 year"
-          }
-        }
-        
-        If inflation is high in the user's region (detected via holdings or inflation data), recommend a hedge like PAXG (Gold) or a more stable regional coin (e.g., cEUR or cUSD).
-        The "comparisonProjection" should show the estimated dollar value of the user's portfolio after 1 year if they DO NOTHING (currentPathValue) vs if they follow your advice (oraclePathValue).
-        Focus on Arc Network advantages: autonomous payments, USDC gas efficiency, cross-chain capabilities.
-      `;
-
+      // Delegate to the new API endpoint which uses portfolio-analysis.ts
       const response = await fetch('/api/agent/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: enhancedPrompt,
-          model: 'gemini-1.5-flash',
-          maxTokens: 1000,
           inflationData,
           userBalance,
           currentHoldings,
-          config
+          config,
+          networkInfo: { chainId: 42220, name: 'Celo' },
         }),
       });
 
@@ -530,7 +486,6 @@ export const GeminiService = {
 
       const result = await response.json();
 
-      // The API returns parsed JSON directly, not wrapped in { text: ... }
       return {
         action: result.action || 'HOLD',
         targetToken: result.targetToken,
@@ -545,13 +500,13 @@ export const GeminiService = {
         actionSteps: result.actionSteps,
         urgencyLevel: result.urgencyLevel,
         _meta: {
-          modelUsed: result._meta?.modelUsed || 'gemini-3-flash-preview',
+          modelUsed: result._meta?.modelUsed || 'gemini-1.5-flash',
           totalCost: 0.02
         }
       };
 
     } catch (error) {
-      console.error('Enhanced Gemini Agent Error:', error);
+      console.error('Gemini Service Error:', error);
       return getFallbackAgentAdvice();
     }
   }
