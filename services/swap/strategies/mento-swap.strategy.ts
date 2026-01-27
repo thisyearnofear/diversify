@@ -115,9 +115,11 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
             // Validate
             await this.validate(params);
 
-            // Get signer
+            // Get signer for transactions
             const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
-            const provider = signer.provider as ethers.providers.Provider;
+            
+            // Use JsonRpcProvider for read-only calls (works with Farcaster)
+            const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
 
             // Get configuration
             const tokens = getTokenAddresses(params.fromChainId);
@@ -134,7 +136,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
             const amountIn = this.parseAmount(params.amount, fromTokenMeta.decimals || 18);
 
             // Transaction options
-            const gasPrice = await provider.getGasPrice();
+            const gasPrice = await readProvider.getGasPrice();
             const txOptions = { 
                 useLegacyTx: true, // Celo uses legacy transactions
                 gasPrice 
@@ -181,7 +183,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 brokerAddress,
                 fromTokenAddress,
                 toTokenAddress,
-                provider
+                readProvider
             );
 
             const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
@@ -201,7 +203,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                     fromTokenAddress,
                     toTokenAddress,
                     amountIn,
-                    provider
+                    readProvider
                 );
 
                 const minAmountOut = this.calculateMinOutput(expectedAmountOut, slippage);
@@ -241,7 +243,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                     fromTokenAddress,
                     toTokenAddress,
                     cusdAddress,
-                    provider
+                    readProvider
                 );
 
                 if (!twoStepExchange) {
@@ -256,7 +258,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                     fromTokenAddress,
                     cusdAddress,
                     amountIn,
-                    provider
+                    readProvider
                 );
 
                 const minCusdOut = this.calculateMinOutput(cusdAmountOut, slippage);
@@ -306,7 +308,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                     cusdAddress,
                     toTokenAddress,
                     cusdAmountOut,
-                    provider
+                    readProvider
                 );
 
                 const minFinalOut = this.calculateMinOutput(finalAmountOut, slippage);
