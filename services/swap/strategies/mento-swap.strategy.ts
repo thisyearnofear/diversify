@@ -18,6 +18,9 @@ import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, getBrokerAddress, TOKEN_METADATA, TX_CONFIG } from '../../../config';
 
+// CUSD is the hub token - all Mento pairs route through it
+const CUSD_SYMBOL = 'CUSD';
+
 export class MentoSwapStrategy extends BaseSwapStrategy {
     getName(): string {
         return 'MentoSwapStrategy';
@@ -172,60 +175,165 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 this.log('Approval confirmed');
             }
 
-            // Step 2: Find exchange
+            // Step 2: Find exchange (direct or via CUSD)
             this.log('Finding exchange');
-            const exchangeInfo = await ExchangeDiscoveryService.findDirectExchange(
+            const directExchange = await ExchangeDiscoveryService.findDirectExchange(
                 brokerAddress,
                 fromTokenAddress,
                 toTokenAddress,
-                provider
-            );
-
-            if (!exchangeInfo) {
-                throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
-            }
-
-            // Step 3: Get quote
-            this.log('Getting quote');
-            const expectedAmountOut = await ExchangeDiscoveryService.getQuote(
-                brokerAddress,
-                exchangeInfo,
-                fromTokenAddress,
-                toTokenAddress,
-                amountIn,
                 provider
             );
 
             const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
-            const minAmountOut = this.calculateMinOutput(expectedAmountOut, slippage);
-
-            // Step 4: Execute swap
-            this.log('Executing swap transaction');
-            const swapTx = await SwapExecutionService.executeSwap(
-                brokerAddress,
-                exchangeInfo,
-                fromTokenAddress,
-                toTokenAddress,
-                amountIn,
-                minAmountOut,
-                signer,
-                txOptions
-            );
-
-            callbacks?.onSwapSubmitted?.(swapTx.hash);
-            this.log('Swap transaction submitted', { hash: swapTx.hash });
-
-            // Step 5: Wait for confirmation
             const confirmations = isTestnet
                 ? TX_CONFIG.CONFIRMATIONS.TESTNET
                 : TX_CONFIG.CONFIRMATIONS.MAINNET;
 
-            await SwapExecutionService.waitForSwap(swapTx, confirmations);
+            let finalTxHash: string;
+
+            if (directExchange) {
+                // Direct swap available
+                this.log('Direct exchange found, executing single swap');
+                
+                const expectedAmountOut = await ExchangeDiscoveryService.getQuote(
+                    brokerAddress,
+                    directExchange,
+                    fromTokenAddress,
+                    toTokenAddress,
+                    amountIn,
+                    provider
+                );
+
+                const minAmountOut = this.calculateMinOutput(expectedAmountOut, slippage);
+
+                const swapTx = await SwapExecutionService.executeSwap(
+                    brokerAddress,
+                    directExchange,
+                    fromTokenAddress,
+                    toTokenAddress,
+                    amountIn,
+                    minAmountOut,
+                    signer,
+                    txOptions
+                );
+
+                callbacks?.onSwapSubmitted?.(swapTx.hash);
+                this.log('Swap transaction submitted', { hash: swapTx.hash });
+
+                await SwapExecutionService.waitForSwap(swapTx, confirmations);
+                finalTxHash = swapTx.hash;
+            } else {
+                // No direct exchange - route through CUSD
+                this.log('No direct exchange, routing through CUSD');
+                const cusdAddress = tokens[CUSD_SYMBOL as keyof typeof tokens];
+                
+                if (!cusdAddress) {
+                    throw new Error('CUSD not available on this network for routing');
+                }
+
+                // Skip if one of the tokens is already CUSD
+                if (params.fromToken === CUSD_SYMBOL || params.toToken === CUSD_SYMBOL) {
+                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
+                }
+
+                const twoStepExchange = await ExchangeDiscoveryService.findTwoStepExchange(
+                    brokerAddress,
+                    fromTokenAddress,
+                    toTokenAddress,
+                    cusdAddress,
+                    provider
+                );
+
+                if (!twoStepExchange) {
+                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken} (even via CUSD)`);
+                }
+
+                // Step 1: Swap fromToken -> CUSD
+                this.log('Step 1: Swapping to CUSD');
+                const cusdAmountOut = await ExchangeDiscoveryService.getQuote(
+                    brokerAddress,
+                    twoStepExchange.first,
+                    fromTokenAddress,
+                    cusdAddress,
+                    amountIn,
+                    provider
+                );
+
+                const minCusdOut = this.calculateMinOutput(cusdAmountOut, slippage);
+
+                const firstSwapTx = await SwapExecutionService.executeSwap(
+                    brokerAddress,
+                    twoStepExchange.first,
+                    fromTokenAddress,
+                    cusdAddress,
+                    amountIn,
+                    minCusdOut,
+                    signer,
+                    txOptions
+                );
+
+                this.log('First swap submitted', { hash: firstSwapTx.hash });
+                await SwapExecutionService.waitForSwap(firstSwapTx, confirmations);
+                this.log('First swap confirmed');
+
+                // Approve CUSD for second swap if needed
+                const cusdApprovalStatus = await ApprovalService.checkApproval(
+                    cusdAddress,
+                    params.userAddress,
+                    brokerAddress,
+                    cusdAmountOut,
+                    provider,
+                    18
+                );
+
+                if (!cusdApprovalStatus.isApproved) {
+                    this.log('Approving CUSD for second swap');
+                    const cusdApproveTx = await ApprovalService.approve(
+                        cusdAddress,
+                        brokerAddress,
+                        cusdAmountOut,
+                        signer,
+                        txOptions
+                    );
+                    await ApprovalService.waitForApproval(cusdApproveTx, confirmations);
+                }
+
+                // Step 2: Swap CUSD -> toToken
+                this.log('Step 2: Swapping CUSD to target token');
+                const finalAmountOut = await ExchangeDiscoveryService.getQuote(
+                    brokerAddress,
+                    twoStepExchange.second,
+                    cusdAddress,
+                    toTokenAddress,
+                    cusdAmountOut,
+                    provider
+                );
+
+                const minFinalOut = this.calculateMinOutput(finalAmountOut, slippage);
+
+                const secondSwapTx = await SwapExecutionService.executeSwap(
+                    brokerAddress,
+                    twoStepExchange.second,
+                    cusdAddress,
+                    toTokenAddress,
+                    cusdAmountOut,
+                    minFinalOut,
+                    signer,
+                    txOptions
+                );
+
+                callbacks?.onSwapSubmitted?.(secondSwapTx.hash);
+                this.log('Second swap submitted', { hash: secondSwapTx.hash });
+
+                await SwapExecutionService.waitForSwap(secondSwapTx, confirmations);
+                finalTxHash = secondSwapTx.hash;
+            }
+
             this.log('Swap confirmed');
 
             return {
                 success: true,
-                txHash: swapTx.hash,
+                txHash: finalTxHash,
                 approvalTxHash,
             };
         } catch (error: any) {

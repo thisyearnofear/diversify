@@ -52,14 +52,24 @@ interface UseTradeableTokensResult {
 const cache: Record<number, { symbols: string[]; timestamp: number }> = {};
 const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
 
+// Fallback list of tradeable tokens (cached from Mento on 2026-01-27)
+// Used to show tokens immediately while fetching fresh data
+const FALLBACK_TRADEABLE_SYMBOLS: Record<number, string[]> = {
+  42220: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN', 'CELO', 'USDC', 'EURC'], // Celo Mainnet
+  44787: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CELO'], // Alfajores (approximate)
+};
+
 export function useTradeableTokens(chainId: number | null): UseTradeableTokensResult {
-  const [tradeableSymbols, setTradeableSymbols] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const effectiveChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
+  
+  // Start with fallback symbols for immediate display
+  const [tradeableSymbols, setTradeableSymbols] = useState<string[]>(
+    () => FALLBACK_TRADEABLE_SYMBOLS[effectiveChainId] || []
+  );
+  const [isLoading, setIsLoading] = useState(false); // Start false since we have fallback
   const [error, setError] = useState<string | null>(null);
 
   const fetchTradeableTokens = useCallback(async () => {
-    const effectiveChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
-    
     // Only Mento tokens apply to Celo chains
     if (!ChainDetectionService.isCelo(effectiveChainId)) {
       // For non-Celo chains, all configured tokens are tradeable (via LiFi/bridges)
@@ -76,7 +86,10 @@ export function useTradeableTokens(chainId: number | null): UseTradeableTokensRe
       return;
     }
 
-    setIsLoading(true);
+    // Don't show loading if we have fallback data
+    if (!FALLBACK_TRADEABLE_SYMBOLS[effectiveChainId]) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
