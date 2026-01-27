@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { NETWORKS } from "../../config";
+import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 
 // Collapsible section for progressive disclosure
 export const CollapsibleSection = ({
@@ -60,13 +61,7 @@ export const TabHeader = ({
   showNetworkSwitcher?: boolean;
   rightContent?: React.ReactNode;
 }) => {
-  const networkName = chainId === NETWORKS.ARBITRUM_ONE.chainId
-    ? "Arbitrum"
-    : chainId === NETWORKS.ALFAJORES.chainId
-      ? "Alfajores"
-      : chainId === NETWORKS.ARC_TESTNET.chainId
-        ? "Arc"
-        : "Celo";
+  const networkName = ChainDetectionService.getNetworkName(chainId);
 
   return (
     <div className="flex justify-between items-start mb-6">
