@@ -15,7 +15,7 @@ export default function FarcasterWalletButton() {
     connectFarcasterWallet,
     disconnect,
     formatAddress,
-    farcasterContext: _farcasterContext
+    // farcasterContext: _farcasterContext - commented out unused variable
   } = useWalletContext();
 
   const [showDropdown, setShowDropdown] = useState(false);
@@ -81,8 +81,8 @@ export default function FarcasterWalletButton() {
       onClick={connectFarcasterWallet}
       disabled={isConnecting}
       className={`flex items-center gap-2 min-h-[40px] px-4 py-1.5 rounded-full transition-all font-bold shadow-sm ${isConnecting
-          ? 'bg-purple-100 text-purple-400 cursor-not-allowed border border-purple-200'
-          : 'bg-purple-600 hover:bg-purple-700 text-white'
+        ? 'bg-purple-100 text-purple-400 cursor-not-allowed border border-purple-200'
+        : 'bg-purple-600 hover:bg-purple-700 text-white'
         }`}
       aria-label="Connect Farcaster wallet"
       aria-disabled={isConnecting}

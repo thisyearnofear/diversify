@@ -50,7 +50,7 @@ export function initializeLiFiConfig(): void {
                         }
 
                         // Get current chain ID from the wallet with retry logic
-                        let chainId: number;
+                        let chainId: number = 42161; // Default to Arbitrum
                         let retryCount = 0;
                         const maxRetries = 3;
 
@@ -65,8 +65,8 @@ export function initializeLiFiConfig(): void {
                                 if (retryCount < maxRetries) {
                                     await new Promise(resolve => setTimeout(resolve, 500));
                                 } else {
-                                    console.warn('[LiFi Config] Could not get chain ID, defaulting to Arbitrum');
-                                    chainId = 42161; // Default to Arbitrum
+                                    console.warn('[LiFi Config] Could not get chain ID, using default Arbitrum');
+                                    // chainId already initialized to default above
                                 }
                             }
                         }
