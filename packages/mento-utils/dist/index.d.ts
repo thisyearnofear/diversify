@@ -49,6 +49,34 @@ export declare const setCachedData: (key: string, value: any) => void;
  * @returns Exchange rate (cUSD to token)
  */
 export declare const getMentoExchangeRate: (tokenSymbol: string) => Promise<number>;
+export interface TradeablePair {
+    assets: {
+        address: string;
+        symbol: string;
+    }[];
+    exchangeId: string;
+    exchangeProvider: string;
+}
+/**
+ * Get all tradeable pairs from Mento exchanges
+ * @param rpcUrl RPC URL (defaults to Celo mainnet)
+ * @returns Array of tradeable pairs with token addresses and symbols
+ */
+export declare const getTradeablePairs: (rpcUrl?: string) => Promise<TradeablePair[]>;
+/**
+ * Get all unique tradeable token symbols from Mento
+ * @param rpcUrl RPC URL
+ * @returns Array of unique token symbols that can be traded
+ */
+export declare const getTradeableTokenSymbols: (rpcUrl?: string) => Promise<string[]>;
+/**
+ * Check if a token pair is tradeable on Mento
+ * @param fromSymbol Source token symbol
+ * @param toSymbol Destination token symbol
+ * @param rpcUrl RPC URL
+ * @returns Whether the pair can be traded
+ */
+export declare const isPairTradeable: (fromSymbol: string, toSymbol: string, rpcUrl?: string) => Promise<boolean>;
 /**
  * Handle common swap errors
  * @param error Error object

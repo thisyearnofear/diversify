@@ -17,6 +17,7 @@ import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
 import WalletButton from "../wallet/WalletButton";
+import { useTradeableTokens, filterTradeableTokens } from "../../hooks/use-tradeable-tokens";
 
 
 
@@ -70,19 +71,27 @@ export default function SwapTab({
 
   const swapInterfaceRef = useRef<{ refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void }>(null);
 
+  // Fetch tradeable tokens from Mento
+  const { tradeableSymbols, isLoading: isTradeableLoading } = useTradeableTokens(walletChainId);
+
   const networkTokens = useMemo(() => {
     return getChainAssets(walletChainId || NETWORKS.CELO_MAINNET.chainId);
   }, [walletChainId]);
 
+  // Filter to only show tokens that Mento actually supports
+  const tradeableTokens = useMemo(() => {
+    return filterTradeableTokens(networkTokens, tradeableSymbols);
+  }, [networkTokens, tradeableSymbols]);
+
   const filteredTokens = useMemo(() => {
-    if (!searchQuery) return networkTokens;
+    if (!searchQuery) return tradeableTokens;
     const query = searchQuery.toLowerCase();
-    return networkTokens.filter(t =>
+    return tradeableTokens.filter(t =>
       t.symbol.toLowerCase().includes(query) ||
       t.name.toLowerCase().includes(query) ||
       t.region.toLowerCase().includes(query)
     );
-  }, [networkTokens, searchQuery]);
+  }, [tradeableTokens, searchQuery]);
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);
 
@@ -174,17 +183,24 @@ export default function SwapTab({
               </div>
             )}
 
-            <SwapInterface
-              ref={swapInterfaceRef}
-              availableTokens={filteredTokens}
-              address={address}
-              onSwap={handleSwap}
-              preferredFromRegion={userRegion}
-              preferredToRegion={targetRegion}
-              title=""
-              chainId={walletChainId}
-              enableCrossChain={true}
-            />
+            {isTradeableLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
+                <span className="text-sm text-gray-500">Loading available tokens...</span>
+              </div>
+            ) : (
+              <SwapInterface
+                ref={swapInterfaceRef}
+                availableTokens={filteredTokens}
+                address={address}
+                onSwap={handleSwap}
+                preferredFromRegion={userRegion}
+                preferredToRegion={targetRegion}
+                title=""
+                chainId={walletChainId}
+                enableCrossChain={true}
+              />
+            )}
 
             {swapStatus && (
               <div className={`mt-3 p-3 rounded-xl text-xs font-bold ${swapStatus.includes("Error") ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>

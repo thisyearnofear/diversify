@@ -228,6 +228,132 @@ export const getMentoExchangeRate = async (
   }
 };
 
+// ABI for getting token symbol
+const ERC20_SYMBOL_ABI = ['function symbol() view returns (string)'];
+
+export interface TradeablePair {
+  assets: { address: string; symbol: string }[];
+  exchangeId: string;
+  exchangeProvider: string;
+}
+
+// Cache for tradeable pairs
+let tradeablePairsCache: { pairs: TradeablePair[]; timestamp: number } | null = null;
+const TRADEABLE_PAIRS_CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
+
+/**
+ * Get all tradeable pairs from Mento exchanges
+ * @param rpcUrl RPC URL (defaults to Celo mainnet)
+ * @returns Array of tradeable pairs with token addresses and symbols
+ */
+export const getTradeablePairs = async (
+  rpcUrl = 'https://forno.celo.org'
+): Promise<TradeablePair[]> => {
+  try {
+    // Check cache first
+    if (tradeablePairsCache && Date.now() - tradeablePairsCache.timestamp < TRADEABLE_PAIRS_CACHE_DURATION) {
+      return tradeablePairsCache.pairs;
+    }
+
+    const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+
+    const brokerContract = new ethers.Contract(
+      MENTO_BROKER_ADDRESS,
+      MENTO_ABIS.BROKER_PROVIDERS,
+      provider
+    );
+
+    const exchangeProviders = await brokerContract.getExchangeProviders();
+    const pairs: TradeablePair[] = [];
+
+    for (const providerAddress of exchangeProviders) {
+      const exchangeContract = new ethers.Contract(
+        providerAddress,
+        MENTO_ABIS.EXCHANGE,
+        provider
+      );
+
+      const exchanges = await exchangeContract.getExchanges();
+
+      for (const exchange of exchanges) {
+        const assets: { address: string; symbol: string }[] = [];
+
+        for (const assetAddress of exchange.assets) {
+          try {
+            const tokenContract = new ethers.Contract(assetAddress, ERC20_SYMBOL_ABI, provider);
+            const symbol = await tokenContract.symbol();
+            assets.push({ address: assetAddress, symbol });
+          } catch {
+            assets.push({ address: assetAddress, symbol: 'UNKNOWN' });
+          }
+        }
+
+        pairs.push({
+          assets,
+          exchangeId: exchange.exchangeId,
+          exchangeProvider: providerAddress,
+        });
+      }
+    }
+
+    // Cache the result
+    tradeablePairsCache = { pairs, timestamp: Date.now() };
+
+    return pairs;
+  } catch (error) {
+    console.error('Error fetching tradeable pairs:', error);
+    return [];
+  }
+};
+
+/**
+ * Get all unique tradeable token symbols from Mento
+ * @param rpcUrl RPC URL
+ * @returns Array of unique token symbols that can be traded
+ */
+export const getTradeableTokenSymbols = async (
+  rpcUrl = 'https://forno.celo.org'
+): Promise<string[]> => {
+  const pairs = await getTradeablePairs(rpcUrl);
+  const symbols = new Set<string>();
+
+  for (const pair of pairs) {
+    for (const asset of pair.assets) {
+      if (asset.symbol !== 'UNKNOWN') {
+        symbols.add(asset.symbol.toUpperCase());
+      }
+    }
+  }
+
+  return Array.from(symbols);
+};
+
+/**
+ * Check if a token pair is tradeable on Mento
+ * @param fromSymbol Source token symbol
+ * @param toSymbol Destination token symbol
+ * @param rpcUrl RPC URL
+ * @returns Whether the pair can be traded
+ */
+export const isPairTradeable = async (
+  fromSymbol: string,
+  toSymbol: string,
+  rpcUrl = 'https://forno.celo.org'
+): Promise<boolean> => {
+  const pairs = await getTradeablePairs(rpcUrl);
+  const from = fromSymbol.toUpperCase();
+  const to = toSymbol.toUpperCase();
+
+  for (const pair of pairs) {
+    const symbols = pair.assets.map(a => a.symbol.toUpperCase());
+    if (symbols.includes(from) && symbols.includes(to)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 /**
  * Handle common swap errors
  * @param error Error object
