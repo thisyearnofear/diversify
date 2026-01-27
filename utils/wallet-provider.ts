@@ -9,6 +9,10 @@ import sdk from '@farcaster/miniapp-sdk';
 // Cached detection result to prevent provider mismatches
 let cached: { isFarcaster: boolean; provider: any | null } | null = null;
 
+// Single initialization guard
+let initializationPromise: Promise<any> | null = null;
+let isInitializing = false;
+
 /**
  * Timeout wrapper for promises
  */
@@ -36,9 +40,16 @@ export function isFarcasterProvider(): boolean {
 /**
  * Get wallet provider with proper environment detection
  * Caches the result to ensure consistency across all calls
+ * Uses single initialization pattern to prevent race conditions
  */
 export async function getWalletProvider(opts?: { prefer?: 'farcaster' | 'injected' | 'auto' }): Promise<any> {
   const prefer = opts?.prefer ?? 'auto';
+
+  // Prevent concurrent initializations
+  if (isInitializing && initializationPromise) {
+    console.log('[WalletProvider] Initialization in progress, waiting...');
+    return await initializationPromise;
+  }
 
   // Hard prefer injected (for explicit web mode)
   if (prefer === 'injected') {
@@ -49,14 +60,25 @@ export async function getWalletProvider(opts?: { prefer?: 'farcaster' | 'injecte
   }
 
   // Use cached detection to prevent provider mismatches
-  if (!cached) {
+  if (cached) {
+    if (cached.isFarcaster && cached.provider) {
+      return cached.provider;
+    }
+    if (typeof window !== 'undefined' && (window as any).ethereum) {
+      return (window as any).ethereum;
+    }
+  }
+
+  // Start new initialization
+  isInitializing = true;
+  initializationPromise = (async () => {
     let isFarcaster = false;
     let provider: any | null = null;
 
     if (typeof window !== 'undefined' && sdk?.wallet) {
       try {
-        // Only treat as Farcaster if context resolves quickly (200ms timeout)
-        const ctx = await withTimeout(sdk.context, 200);
+        // Only treat as Farcaster if context resolves quickly (300ms timeout)
+        const ctx = await withTimeout(sdk.context, 300);
         if (ctx) {
           isFarcaster = true;
           provider = await sdk.wallet.getEthereumProvider();
@@ -68,21 +90,34 @@ export async function getWalletProvider(opts?: { prefer?: 'farcaster' | 'injecte
       }
     }
 
+    if (!provider && typeof window !== 'undefined') {
+      // Prefer Privy if available
+      const ethereum = (window as any).ethereum;
+      if (ethereum) {
+        // Check for Privy specifically
+        if (ethereum.isPrivy || ethereum._events?.['accountsChanged']) {
+          console.log('[WalletProvider] Using Privy provider');
+          provider = ethereum;
+        } else {
+          console.log('[WalletProvider] Using generic ethereum provider');
+          provider = ethereum;
+        }
+      }
+    }
+
     cached = { isFarcaster, provider };
-  }
+    isInitializing = false;
+    initializationPromise = null;
+    
+    return provider;
+  })();
 
-  // Return Farcaster provider if detected
-  if (cached.isFarcaster && cached.provider) {
-    return cached.provider;
+  const result = await initializationPromise;
+  if (!result) {
+    throw new Error('No wallet provider available');
   }
-
-  // Fallback to window.ethereum
-  if (typeof window !== 'undefined' && (window as any).ethereum) {
-    console.log('[WalletProvider] Using window.ethereum provider');
-    return (window as any).ethereum;
-  }
-
-  throw new Error('No wallet provider available');
+  
+  return result;
 }
 
 /**

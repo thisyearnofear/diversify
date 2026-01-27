@@ -235,7 +235,7 @@ export function useStablecoinBalances(address: string | undefined | null) {
     setTotalValue(total);
   }, []);
 
-  // Function to fetch balances with optimistic loading
+  // Function to fetch balances with guaranteed chain detection
   const fetchBalances = useCallback(async () => {
     if (!address) {
       setIsLoading(false);
@@ -244,57 +244,88 @@ export function useStablecoinBalances(address: string | undefined | null) {
 
     try {
       setError(null);
+      setIsLoading(true);
 
-      // Check cache first and show immediately for better UX
-      const cachedBalances = getCachedBalances(address);
-      if (cachedBalances) {
-        console.log('[StablecoinBalances] Using cached balances for immediate display');
-        setBalances(cachedBalances);
-        calculateTotals(cachedBalances);
-        setIsLoading(false);
-
-        // Still fetch fresh data in background if cache is older than 2 minutes
-        const cacheAge = Date.now() - (JSON.parse(localStorage.getItem(`stablecoin-balances-${address}`) || '{}').timestamp || 0);
-        if (cacheAge < 2 * 60 * 1000) {
-          return; // Cache is fresh enough, don't refetch
+      // FORCE chain detection - don't proceed without it
+      let detectedChainId = chainId;
+      
+      if (!detectedChainId) {
+        try {
+          const isConnected = await ProviderFactoryService.isWalletConnected();
+          if (isConnected) {
+            detectedChainId = await ProviderFactoryService.getCurrentChainId();
+            setChainId(detectedChainId);
+          }
+        } catch (err) {
+          console.warn('[StablecoinBalances] Chain detection failed:', err);
+          // For Farcaster, assume Celo
+          if (typeof window !== 'undefined' && 
+              (window.location.href.includes('farcaster') || 
+               window.location.href.includes('warpcast'))) {
+            detectedChainId = 42220;
+            setChainId(detectedChainId);
+          }
         }
-      } else {
-        setIsLoading(true);
       }
 
-      // Detect current chain
-      try {
-        const isConnected = await ProviderFactoryService.isWalletConnected();
-        if (isConnected) {
-          const detectedChainId = await ProviderFactoryService.getCurrentChainId();
-          setChainId(detectedChainId);
+      // If still no chain, can't fetch balances
+      if (!detectedChainId || !ChainDetectionService.isSupported(detectedChainId)) {
+        console.warn('[StablecoinBalances] Cannot fetch without valid chain ID');
+        setIsLoading(false);
+        return;
+      }
 
-          // If not on a supported network, we simply won't fetch balances
-          // The UI should handle the "unsupported network" state based on the chainId
-          if (!ChainDetectionService.isSupported(detectedChainId)) {
+      console.log(`[StablecoinBalances] Fetching balances for chain ${detectedChainId}`);
+
+      // Check cache but don't trust it blindly in Farcaster context
+      const isFarcasterContext = typeof window !== 'undefined' &&
+        (window.location.href.includes('farcaster') || 
+         window.location.href.includes('warpcast'));
+      
+      const cachedBalances = getCachedBalances(address);
+      if (cachedBalances && !isFarcasterContext) {
+        const cacheKey = `stablecoin-balances-${address}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { timestamp } = JSON.parse(cached);
+          const cacheAge = Date.now() - timestamp;
+          
+          // Show cached data immediately
+          setBalances(cachedBalances);
+          calculateTotals(cachedBalances);
+          
+          // Only return early if cache is very fresh (< 30 seconds)
+          if (cacheAge < 30 * 1000) {
             setIsLoading(false);
             return;
           }
         }
-      } catch (err) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn('Error checking chain ID, proceeding with API calls:', err);
-        }
       }
 
-      // Get current chain ID from wallet provider if not already set
-      if (!chainId) {
-        try {
-          const provider = await getWalletProvider();
-          const chainIdHex = await provider.request({ method: 'eth_chainId' });
-          const detectedChainId = Number.parseInt(chainIdHex as string, 16);
-          setChainId(detectedChainId);
-        } catch (err) {
-          if (process.env.NODE_ENV === 'development') {
-            console.warn('Error detecting chain ID:', err);
-          }
-        }
-      }
+      // Fetch fresh balances
+      const freshBalances = await fetchBalancesForChain(address, detectedChainId);
+      
+      setBalances(freshBalances);
+      calculateTotals(freshBalances);
+      setCachedBalances(address, freshBalances);
+      setIsLoading(false);
+
+    } catch (err) {
+      console.error('[StablecoinBalances] Error fetching balances:', err);
+      setError('Failed to fetch balances');
+      setIsLoading(false);
+    }
+  }, [address, chainId, calculateTotals]);
+
+  // Keep original code starting here
+  const fetchBalancesOldVersion = useCallback(async () => {
+    if (!address) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setError(null);
 
       // Create provider for the current chain
       const currentChainId = chainId || (await ProviderFactoryService.isWalletConnected() ?

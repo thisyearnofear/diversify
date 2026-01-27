@@ -10,6 +10,7 @@ exports.CELO_TOKENS = {
     CKES: '0x456a3d042c0dbd3db53d5489e98dfb038553b0d0',
     CCOP: '0x8a567e2ae79ca692bd748ab832081c45de4041ea',
     PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
+    USDT: '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e',
 };
 // Mento Broker address
 exports.MENTO_BROKER_ADDRESS = '0x777a8255ca72412f0d706dc03c9d1987306b4cad';
@@ -108,7 +109,7 @@ const getMentoExchangeRate = async (tokenSymbol) => {
     // Check cache first
     if (cacheKey) {
         const cachedRate = (0, exports.getCachedData)(cacheKey);
-        if (cachedRate !== null) {
+        if (typeof cachedRate === 'number') {
             return cachedRate;
         }
     }
@@ -203,7 +204,16 @@ const getTradeablePairs = async (rpcUrl = 'https://forno.celo.org') => {
                         assets.push({ address: assetAddress, symbol });
                     }
                     catch (_a) {
-                        assets.push({ address: assetAddress, symbol: 'UNKNOWN' });
+                        // Fallback for well-known addresses if symbol() fails
+                        const addr = assetAddress.toLowerCase();
+                        let symbol = 'UNKNOWN';
+                        if (addr === '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e'.toLowerCase())
+                            symbol = 'USDT';
+                        else if (addr === '0x765de816845861e75a25fca122bb6898b8b1282a'.toLowerCase())
+                            symbol = 'CUSD';
+                        else if (addr === '0x471ece3750da237f93b8e339c536989b8978a438'.toLowerCase())
+                            symbol = 'CELO';
+                        assets.push({ address: assetAddress, symbol });
                     }
                 }
                 pairs.push({

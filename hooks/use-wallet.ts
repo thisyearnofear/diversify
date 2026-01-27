@@ -89,31 +89,64 @@ export function useWallet() {
       const inMiniPay = isMiniPayEnvironment();
       setIsMiniPay(inMiniPay);
 
-      // 4. Get current chain ID with retry logic for Farcaster
-      let retryCount = 0;
-      const maxRetries = 3;
-
-      while (retryCount < maxRetries) {
+      // 4. Get current chain ID with aggressive multi-strategy detection
+      const detectChainWithFallback = async () => {
+        // Strategy 1: Direct request with longer timeout
         try {
-          const chainIdHex = await provider.request({ method: 'eth_chainId' });
-          const parsedChainId = parseInt(chainIdHex as string, 16);
-          console.log('[Wallet] Chain ID detected:', parsedChainId);
-          setChainId(parsedChainId);
-          break;
+          const chainIdPromise = provider.request({ method: 'eth_chainId' });
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('timeout')), 2000)
+          );
+          
+          const chainIdHex = await Promise.race([chainIdPromise, timeoutPromise]) as string;
+          const parsedChainId = parseInt(chainIdHex, 16);
+          console.log('[Wallet] Chain ID detected (direct):', parsedChainId);
+          return parsedChainId;
         } catch (err) {
-          retryCount++;
-          console.warn(`[Wallet] Error getting chain ID (attempt ${retryCount}):`, err);
-          if (retryCount < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms before retry
-          } else {
-            // Default to Celo for Farcaster environments
-            if (detectedFarcaster || inMiniPay) {
-              console.log('[Wallet] Defaulting to Celo chain for Farcaster/MiniPay');
-              setChainId(42220);
-            }
-          }
+          console.warn('[Wallet] Direct chain detection failed:', err);
         }
-      }
+
+        // Strategy 2: Read from provider.chainId property (Privy specific)
+        try {
+          if (provider.chainId) {
+            const parsedChainId = typeof provider.chainId === 'string' 
+              ? parseInt(provider.chainId, 16)
+              : provider.chainId;
+            console.log('[Wallet] Chain ID from provider property:', parsedChainId);
+            return parsedChainId;
+          }
+        } catch (err) {
+          console.warn('[Wallet] chainId property read failed:', err);
+        }
+
+        // Strategy 3: For Farcaster, assume Celo immediately
+        if (detectedFarcaster || inMiniPay) {
+          console.log('[Wallet] Farcaster/MiniPay detected, defaulting to Celo (42220)');
+          return 42220;
+        }
+
+        // Strategy 4: Read from localStorage cache
+        try {
+          const cached = localStorage.getItem('diversifi-last-chain-id');
+          if (cached) {
+            const parsedChainId = parseInt(cached, 10);
+            console.log('[Wallet] Chain ID from cache:', parsedChainId);
+            return parsedChainId;
+          }
+        } catch {}
+
+        // Final fallback to Celo
+        console.log('[Wallet] Using final fallback: Celo (42220)');
+        return 42220;
+      };
+
+      const detectedChainId = await detectChainWithFallback();
+      setChainId(detectedChainId);
+
+      // Cache for next load
+      try {
+        localStorage.setItem('diversifi-last-chain-id', detectedChainId.toString());
+      } catch {}
 
       // 5. Auto-connect logic
       // - Farcaster/MiniPay: use eth_requestAccounts (auto-prompt is OK)
@@ -135,7 +168,12 @@ export function useWallet() {
       cleanup = setupWalletEventListenersForProvider(
         provider,
         (chainIdHex: string) => {
-          setChainId(parseInt(chainIdHex, 16));
+          const newChainId = parseInt(chainIdHex, 16);
+          setChainId(newChainId);
+          // Cache the new chain ID
+          try {
+            localStorage.setItem('diversifi-last-chain-id', newChainId.toString());
+          } catch {}
         },
         (accounts: string[]) => {
           if (accounts.length === 0) {

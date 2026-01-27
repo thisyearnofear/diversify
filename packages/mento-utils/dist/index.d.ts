@@ -5,6 +5,7 @@ export declare const CELO_TOKENS: {
     CKES: string;
     CCOP: string;
     PUSO: string;
+    USDT: string;
 };
 export declare const MENTO_BROKER_ADDRESS = "0x777a8255ca72412f0d706dc03c9d1987306b4cad";
 export declare const MENTO_ABIS: {
@@ -36,13 +37,13 @@ export declare const CACHE_DURATIONS: {
  * @param duration Cache duration in milliseconds
  * @returns Cached value or null
  */
-export declare const getCachedData: (key: string, duration?: number) => any;
+export declare const getCachedData: (key: string, duration?: number) => unknown;
 /**
  * Set data in cache
  * @param key Cache key
  * @param value Value to cache
  */
-export declare const setCachedData: (key: string, value: any) => void;
+export declare const setCachedData: (key: string, value: unknown) => void;
 /**
  * Get exchange rate for a Celo stablecoin using Mento Protocol
  * @param tokenSymbol Token symbol (CKES, CCOP, PUSO)
