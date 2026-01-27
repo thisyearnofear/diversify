@@ -12,7 +12,7 @@ async function dryRunAnalysis() {
     // 1. Setup Mock Input Data
     const portfolioData = { balance: 2500, holdings: ['cUSD', 'CELO'] };
     const userPreferences = { riskTolerance: 'Balanced', goal: 'Inflation Hedge' };
-    const networkInfo = { chainId: 42220, name: 'Celo Mainnet' };
+    const networkInfo = { chainId: 42220, name: 'Celo' };
 
     // High Inflation Scenario (e.g. Kenya 8.5%)
     const mockInflation = {

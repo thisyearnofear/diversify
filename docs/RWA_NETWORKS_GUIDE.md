@@ -88,7 +88,7 @@
 // Add to your network configuration
 const ARBITRUM_CONFIG = {
   chainId: 42161,
-  name: 'Arbitrum One',
+  name: 'Arbitrum',
   rpcUrl: 'https://arb1.arbitrum.io/rpc',
   nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 }
 };

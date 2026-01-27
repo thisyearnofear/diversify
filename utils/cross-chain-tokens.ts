@@ -1,9 +1,10 @@
 /**
  * Cross-Chain Token Configuration
  * Defines which tokens are available on which chains for cross-chain swaps
+ * Uses centralized token addresses from config to maintain single source of truth
  */
 
-import { NETWORKS } from '../config';
+import { NETWORKS, MAINNET_TOKENS, ALFAJORES_TOKENS, ARBITRUM_TOKENS, ARC_TOKENS } from '../config';
 
 export interface CrossChainToken {
     symbol: string;
@@ -25,12 +26,12 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         chains: [
             {
                 chainId: NETWORKS.ARBITRUM_ONE.chainId,
-                address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                address: ARBITRUM_TOKENS.USDC,
                 decimals: 6,
             },
             {
                 chainId: NETWORKS.ARC_TESTNET.chainId,
-                address: '0x3600000000000000000000000000000000000000',
+                address: ARC_TOKENS.USDC,
                 decimals: 6,
             },
         ],
@@ -42,7 +43,7 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         chains: [
             {
                 chainId: NETWORKS.ARC_TESTNET.chainId,
-                address: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
+                address: ARC_TOKENS.EURC,
                 decimals: 6,
             },
         ],
@@ -54,12 +55,12 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         chains: [
             {
                 chainId: NETWORKS.CELO_MAINNET.chainId,
-                address: '0x765de816845861e75a25fca122bb6898b8b1282a',
+                address: MAINNET_TOKENS.CUSD,
                 decimals: 18,
             },
             {
                 chainId: NETWORKS.ALFAJORES.chainId,
-                address: '0x874069fa1eb16d44d622f2e0ca25eea172369bc1',
+                address: ALFAJORES_TOKENS.CUSD,
                 decimals: 18,
             },
         ],
@@ -71,12 +72,182 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         chains: [
             {
                 chainId: NETWORKS.CELO_MAINNET.chainId,
-                address: '0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73',
+                address: MAINNET_TOKENS.CEUR,
                 decimals: 18,
             },
             {
                 chainId: NETWORKS.ALFAJORES.chainId,
-                address: '0x10c892a6ec43a53e45d0b916b4b7d383b1b78c0f',
+                address: ALFAJORES_TOKENS.CEUR,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CREAL',
+        name: 'Celo Brazilian Real',
+        region: 'LatAm',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CREAL,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CREAL,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CKES',
+        name: 'Celo Kenyan Shilling',
+        region: 'Africa',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CKES,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CKES,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CCOP',
+        name: 'Celo Colombian Peso',
+        region: 'LatAm',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CCOP,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CCOP,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'PUSO',
+        name: 'Celo Philippine Peso',
+        region: 'Asia',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.PUSO,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.PUSO,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CGHS',
+        name: 'Celo Ghana Cedi',
+        region: 'Africa',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CGHS,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CGHS,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CGBP',
+        name: 'Celo British Pound',
+        region: 'Europe',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CGBP,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CGBP,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CZAR',
+        name: 'Celo South African Rand',
+        region: 'Africa',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CZAR,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CZAR,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CCAD',
+        name: 'Celo Canadian Dollar',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CCAD,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CCAD,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CAUD',
+        name: 'Celo Australian Dollar',
+        region: 'Asia',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CAUD,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CAUD,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CNGN',
+        name: 'Celo Nigerian Naira',
+        region: 'Africa',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CNGN,
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.CNGN,
                 decimals: 18,
             },
         ],
@@ -88,7 +259,7 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         chains: [
             {
                 chainId: NETWORKS.ARBITRUM_ONE.chainId,
-                address: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
+                address: ARBITRUM_TOKENS.PAXG,
                 decimals: 18,
             },
         ],

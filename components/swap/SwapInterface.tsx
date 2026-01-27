@@ -123,24 +123,36 @@ const SwapInterface = forwardRef<
   const availableFromTokens = useMemo(() => {
     if (!enableCrossChain) return availableTokens;
 
+    // If same chain, use all available tokens from config (not just cross-chain tokens)
+    if (fromChainId === chainId) {
+      return availableTokens;
+    }
+
+    // For different chains, use cross-chain tokens only
     const chainTokens = getTokensForChain(fromChainId);
     return chainTokens.map(token => ({
       symbol: token.symbol,
       name: token.name,
       region: token.region,
     }));
-  }, [enableCrossChain, fromChainId, availableTokens]);
+  }, [enableCrossChain, fromChainId, chainId, availableTokens]);
 
   const availableToTokens = useMemo(() => {
     if (!enableCrossChain) return availableTokens;
 
+    // If same chain, use all available tokens from config (not just cross-chain tokens)
+    if (toChainId === chainId) {
+      return availableTokens;
+    }
+
+    // For different chains, use cross-chain tokens only
     const chainTokens = getTokensForChain(toChainId);
     return chainTokens.map(token => ({
       symbol: token.symbol,
       name: token.name,
       region: token.region,
     }));
-  }, [enableCrossChain, toChainId, availableTokens]);
+  }, [enableCrossChain, toChainId, chainId, availableTokens]);
 
   // Update chain IDs when wallet chain changes
   useEffect(() => {
