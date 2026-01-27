@@ -141,12 +141,38 @@ export function useWallet() {
       };
 
       const detectedChainId = await detectChainWithFallback();
-      setChainId(detectedChainId);
-
-      // Cache for next load
-      try {
-        localStorage.setItem('diversifi-last-chain-id', detectedChainId.toString());
-      } catch {}
+      
+      // Check if chain is supported - if not and we're in Farcaster, switch to Celo
+      const supportedChains = [42220, 44787, 42161, 5042002]; // Celo, Alfajores, Arbitrum, Arc
+      const isSupported = supportedChains.includes(detectedChainId);
+      
+      if (!isSupported && (detectedFarcaster || inMiniPay)) {
+        console.log(`[Wallet] Unsupported chain ${detectedChainId} detected in Farcaster, switching to Celo...`);
+        try {
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xa4ec' }], // Celo mainnet (42220)
+          });
+          setChainId(42220);
+          // Cache Celo as the chain
+          try {
+            localStorage.setItem('diversifi-last-chain-id', '42220');
+          } catch {}
+        } catch (switchErr) {
+          console.warn('[Wallet] Failed to auto-switch to Celo:', switchErr);
+          // Still set Celo as the chain ID even if switch fails
+          setChainId(42220);
+          try {
+            localStorage.setItem('diversifi-last-chain-id', '42220');
+          } catch {}
+        }
+      } else {
+        setChainId(detectedChainId);
+        // Cache for next load
+        try {
+          localStorage.setItem('diversifi-last-chain-id', detectedChainId.toString());
+        } catch {}
+      }
 
       // 5. Auto-connect logic
       // - Farcaster/MiniPay: use eth_requestAccounts (auto-prompt is OK)
