@@ -94,20 +94,24 @@ const SwapInterface = forwardRef<
   },
   ref
 ) {
-  // Find tokens from preferred regions if specified
+  // Find tokens from preferred regions if specified, with USDT priority
   const defaultFromToken = preferredFromRegion
     ? availableTokens.find((token) => token.region === preferredFromRegion)
       ?.symbol ||
+    availableTokens.find((token) => token.symbol.toUpperCase() === "USDT")?.symbol ||
     availableTokens[0]?.symbol ||
     ""
-    : availableTokens[0]?.symbol || "";
+    : availableTokens.find((token) => token.symbol.toUpperCase() === "USDT")?.symbol ||
+    availableTokens[0]?.symbol || "";
 
   const defaultToToken = preferredToRegion
     ? availableTokens.find((token) => token.region === preferredToRegion)
       ?.symbol ||
+    availableTokens.find((token) => token.symbol.toUpperCase() === "CEUR")?.symbol ||
     availableTokens[1]?.symbol ||
     ""
-    : availableTokens[1]?.symbol || "";
+    : availableTokens.find((token) => token.symbol.toUpperCase() === "CEUR")?.symbol ||
+    availableTokens[1]?.symbol || "";
 
   // State for token selection and amount
   const [fromToken, setFromToken] = useState<string>(defaultFromToken);
@@ -285,17 +289,17 @@ const SwapInterface = forwardRef<
       if (onSwap) {
         // Use the provided onSwap function if available
         const result = await onSwap(fromToken, toToken, amount, fromChainId, toChainId);
-        
+
         // Capture transaction hash if available in result
         if (result && result.swapTxHash) {
           setTxHash(result.swapTxHash);
         }
-        
+
         setStatus("completed");
 
         // Refresh token balances after successful swap (even when onSwap is used)
         console.log("Refreshing token balances after successful swap (onSwap)");
-        
+
         // Use a more reliable approach with multiple retries
         const refreshWithRetries = async (retries = 3, delay = 2000) => {
           for (let i = 0; i < retries; i++) {

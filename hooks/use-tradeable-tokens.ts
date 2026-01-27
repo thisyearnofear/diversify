@@ -187,7 +187,19 @@ export function filterTradeableTokens<T extends { symbol: string }>(
     return tokens;
   }
 
-  return tokens.filter((token) =>
-    tradeableSymbols.includes(token.symbol.toUpperCase()),
-  );
+  return tokens.filter((token) => {
+    const tokenSymbol = token.symbol.toUpperCase();
+    const isIncluded = tradeableSymbols.some(s => s.toUpperCase() === tokenSymbol);
+
+    // Debug logging for USDT specifically
+    if (tokenSymbol === 'USDT') {
+      console.log("[FilterTradeableTokens] USDT check:", {
+        tokenSymbol,
+        tradeableSymbols,
+        isIncluded
+      });
+    }
+
+    return isIncluded;
+  });
 }

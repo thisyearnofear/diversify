@@ -101,8 +101,8 @@ export default function SwapTab({
   const tradeableTokens = useMemo(() => {
     const filtered = filterTradeableTokens(networkTokens, tradeableSymbols);
 
-    // Less restrictive: Always allow major stablecoins if they exist in network configuration
-    // This prevents issues where Mento SDK might not report a coin that is actually tradeable
+    // Always ensure USDT is available - it's a critical stablecoin
+    // This prevents issues where Mento SDK might not report USDT as tradeable
     const essentialSymbols = ["USDT", "USDC", "CUSD", "CELO"];
     const essentials = networkTokens.filter(
       (t) =>
@@ -112,7 +112,16 @@ export default function SwapTab({
         ),
     );
 
-    return [...filtered, ...essentials];
+    const combined = [...filtered, ...essentials];
+
+    // Debug logging to help identify USDT filtering issues
+    console.log("[SwapTab] Network tokens:", networkTokens.map(t => t.symbol));
+    console.log("[SwapTab] Tradeable symbols from Mento:", tradeableSymbols);
+    console.log("[SwapTab] Filtered tokens:", filtered.map(t => t.symbol));
+    console.log("[SwapTab] Essential tokens added:", essentials.map(t => t.symbol));
+    console.log("[SwapTab] Final tradeable tokens:", combined.map(t => t.symbol));
+
+    return combined;
   }, [networkTokens, tradeableSymbols]);
 
   const filteredTokens = useMemo(() => {
@@ -283,19 +292,17 @@ export default function SwapTab({
 
             {swapStatus && (
               <div
-                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${
-                  swapStatus.includes("Error")
+                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${swapStatus.includes("Error")
                     ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
                     : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div
-                    className={`size-2 rounded-full ${
-                      swapStatus.includes("Error")
+                    className={`size-2 rounded-full ${swapStatus.includes("Error")
                         ? "bg-red-500"
                         : "bg-green-500 animate-pulse"
-                    }`}
+                      }`}
                   />
                   <span className="text-xs font-black uppercase tracking-tight">
                     {swapStatus}

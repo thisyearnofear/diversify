@@ -11,6 +11,7 @@ import WalletButton from "../wallet/WalletButton";
 import WealthJourneyWidget from "../demo/WealthJourneyWidget";
 import { TabHeader, Card, CollapsibleSection, EmptyState, StatBadge, PrimaryButton } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
+import NetworkSwitcher from "../swap/NetworkSwitcher";
 
 interface OverviewTabProps {
   regionData: Array<{ region: string; value: number; color: string }>;
@@ -120,13 +121,6 @@ export default function OverviewTab({
     <div className="space-y-6">
       {/* Main Overview Card */}
       <Card className="space-y-4" padding="p-6">
-        <TabHeader
-          title="Portfolio Station"
-          chainId={chainId}
-          onRefresh={refreshBalances ? handleRefresh : undefined}
-          onNetworkChange={handleRefresh}
-        />
-
         {!hasHoldings ? (
           <div className="pt-4">
             <EmptyState
@@ -144,39 +138,71 @@ export default function OverviewTab({
             />
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="flex items-start gap-6">
-              <div className="w-24 h-24 flex-shrink-0">
+          <div className="space-y-8">
+            {/* Hero Section with pie chart moved closer to top */}
+            <div className="flex items-start justify-between pt-17">
+              {/* Left side - Pie Chart moved up */}
+              <div className="w-32 h-45 flex-shrink-0 -mt-17">
                 <SimplePieChart data={regionData} title="" />
               </div>
-              <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold text-gray-900 dark:text-white">${totalValue.toFixed(2)}</span>
+
+              {/* Right side - Stats, Actions, and Network Controls */}
+              <div className="flex flex-col items-end text-right space-y-4">
+                {/* Network Controls */}
+                <div className="flex items-center gap-3">
+                  <NetworkSwitcher
+                    currentChainId={chainId}
+                    onNetworkChange={handleRefresh}
+                    compact={true}
+                  />
+                  {refreshBalances && (
+                    <button
+                      onClick={handleRefresh}
+                      className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                      title="Refresh balances"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-                <div className="flex gap-2">
+
+                {/* Portfolio Value */}
+                <div className="flex flex-col items-end">
+                  <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                    ${totalValue.toFixed(2)}
+                  </span>
+                </div>
+
+                {/* Stats Badges */}
+                <div className="flex gap-3">
                   <StatBadge label="Score" value={diversificationScore} color="blue" />
                   <StatBadge label="Regions" value={activeRegionsCount} color="green" />
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100">{diversificationRating}</span>
-                  <span className="text-gray-600 dark:text-gray-400 text-xs">Rating</span>
+
+                {/* Rating */}
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-600 dark:text-gray-400 text-sm">Rating</span>
+                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                    {diversificationRating}
+                  </span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setActiveTab("protect")}
+                    className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold text-sm border border-indigo-100 dark:border-indigo-800 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+                    aria-label="Ask Oracle"
+                  >
+                    Ask Oracle 🤖
+                  </button>
+                  <PrimaryButton onClick={() => setActiveTab("swap")} size="sm">
+                    Swap & Protect
+                  </PrimaryButton>
                 </div>
               </div>
-            </div>
-
-            <div className="flex gap-3 pt-2">
-              <div className="flex-1">
-                <PrimaryButton onClick={() => setActiveTab("swap")} fullWidth size="sm">
-                  Swap & Protect
-                </PrimaryButton>
-              </div>
-              <button
-                onClick={() => setActiveTab("protect")}
-                className="flex-1 py-2 px-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold text-xs border border-indigo-100 dark:border-indigo-800 transition-colors"
-                aria-label="Ask Oracle"
-              >
-                Ask Oracle 🤖
-              </button>
             </div>
           </div>
         )}
