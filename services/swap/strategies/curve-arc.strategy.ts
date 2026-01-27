@@ -140,8 +140,7 @@ export class CurveArcStrategy extends BaseSwapStrategy {
         const amountIn = this.parseAmount(params.amount, fromTokenMeta.decimals || 6);
 
         // Get estimate from Curve pool using JsonRpcProvider (works with Farcaster)
-        const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
-        const pool = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, readProvider);
+        const pool = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, provider);
 
         // Determine coin indices (0 = USDC, 1 = EURC typically)
         const fromIndex = params.fromToken === 'USDC' ? 0 : 1;
@@ -183,8 +182,9 @@ export class CurveArcStrategy extends BaseSwapStrategy {
     private async executeCurveSwap(params: SwapParams, callbacks?: SwapCallbacks): Promise<SwapResult> {
         const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
 
-        // Try to discover and execute via Curve contracts
-        const curveContracts = await this.discoverCurveContracts(signer.provider as ethers.providers.Provider);
+        // Use JsonRpcProvider for read-only discovery (works with Farcaster)
+        const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
+        const curveContracts = await this.discoverCurveContracts(readProvider);
 
         if (!curveContracts.pool) {
             throw new Error('Curve contracts not available for direct integration');
@@ -213,8 +213,7 @@ export class CurveArcStrategy extends BaseSwapStrategy {
 
         const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
         
-        // Use JsonRpcProvider for read-only quote (works with Farcaster)
-        const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
+        // Use JsonRpcProvider for read-only quote (works with Farcaster) - reuse readProvider from above
         const poolRead = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, readProvider);
         const expectedOutput = await poolRead.get_dy(fromIndex, toIndex, amountIn);
         const minOutput = this.calculateMinOutput(expectedOutput, slippage);
