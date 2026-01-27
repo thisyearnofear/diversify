@@ -30,7 +30,7 @@ const REGION_STABLECOINS: Record<string, string[]> = {
   LatAm: ['CREAL', 'CCOP'],
   Asia: ['PUSO', 'CAUD', 'CPESO', 'CJPY'],
   Europe: ['CEUR', 'CGBP', 'EURC', 'CCHF'],
-  USA: ['CUSD', 'CCAD', 'USDC'],
+  USA: ['CUSD', 'CCAD', 'USDC', 'USDT'],
   Global: ['PAXG'],
   Commodities: ['PAXG'],
 };
@@ -260,7 +260,7 @@ export function useInflationData() {
       return rate;
     }
 
-    if (normalizedStablecoin === 'USDC') {
+    if (normalizedStablecoin === 'USDC' || normalizedStablecoin === 'USDT') {
       const rate = getInflationRateForCurrency('USD');
       console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
       return rate;
@@ -303,6 +303,7 @@ export function useInflationData() {
     // USA region (North America)
     if (stablecoinUpper === 'CUSD') return 'USA';
     if (stablecoinUpper === 'USDC') return 'USA';
+    if (stablecoinUpper === 'USDT') return 'USA'; // Tether USD
     if (stablecoinUpper === 'CCAD') return 'USA'; // Canadian Dollar (could be "North America" in future)
 
     // Europe region
