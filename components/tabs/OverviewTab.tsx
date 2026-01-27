@@ -9,7 +9,7 @@ import RegionalIconography from "../regional/RegionalIconography";
 import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
 import WealthJourneyWidget from "../demo/WealthJourneyWidget";
-import { TabHeader, Card, CollapsibleSection, EmptyState, StatBadge, PrimaryButton } from "../shared/TabComponents";
+import { Card, CollapsibleSection, EmptyState, StatBadge, PrimaryButton } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 
@@ -140,16 +140,16 @@ export default function OverviewTab({
         ) : (
           <div className="space-y-8">
             {/* Hero Section with pie chart moved closer to top */}
-            <div className="flex items-start justify-between pt-17">
+            <div className="flex items-start justify-between pt-18">
               {/* Left side - Pie Chart moved up */}
-              <div className="w-32 h-45 flex-shrink-0 -mt-17">
+              <div className="w-32 h-45 flex-shrink-0 -mt-18">
                 <SimplePieChart data={regionData} title="" />
               </div>
 
               {/* Right side - Stats, Actions, and Network Controls */}
-              <div className="flex flex-col items-end text-right space-y-4">
+              <div className="flex flex-col items-end text-right space-y-3 min-w-0 flex-shrink">
                 {/* Network Controls */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <NetworkSwitcher
                     currentChainId={chainId}
                     onNetworkChange={handleRefresh}
@@ -158,10 +158,10 @@ export default function OverviewTab({
                   {refreshBalances && (
                     <button
                       onClick={handleRefresh}
-                      className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                       title="Refresh balances"
                     >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
                     </button>
@@ -170,37 +170,39 @@ export default function OverviewTab({
 
                 {/* Portfolio Value */}
                 <div className="flex flex-col items-end">
-                  <span className="text-4xl font-bold text-gray-900 dark:text-white">
+                  <span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
                     ${totalValue.toFixed(2)}
                   </span>
                 </div>
 
                 {/* Stats Badges */}
-                <div className="flex gap-3">
+                <div className="flex gap-2">
                   <StatBadge label="Score" value={diversificationScore} color="blue" />
                   <StatBadge label="Regions" value={activeRegionsCount} color="green" />
                 </div>
 
                 {/* Rating */}
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-600 dark:text-gray-400 text-sm">Rating</span>
-                  <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                  <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Rating</span>
+                  <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-gray-100">
                     {diversificationRating}
                   </span>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 pt-2">
+                {/* Action Buttons - Mobile Responsive */}
+                <div className="flex flex-col sm:flex-row gap-2 pt-1 w-full sm:w-auto">
                   <button
                     onClick={() => setActiveTab("protect")}
-                    className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-xl font-bold text-sm border border-indigo-100 dark:border-indigo-800 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-bold text-xs border border-indigo-100 dark:border-indigo-800 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/50 whitespace-nowrap"
                     aria-label="Get Protection Advice"
                   >
                     Get Advice 🤖
                   </button>
-                  <PrimaryButton onClick={() => setActiveTab("swap")} size="sm">
-                    Swap & Protect
-                  </PrimaryButton>
+                  <div className="sm:min-w-0">
+                    <PrimaryButton onClick={() => setActiveTab("swap")} size="sm">
+                      Swap & Protect
+                    </PrimaryButton>
+                  </div>
                 </div>
               </div>
             </div>
