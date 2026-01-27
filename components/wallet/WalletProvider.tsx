@@ -10,10 +10,10 @@ interface FarcasterContext {
     displayName: string;
     pfpUrl: string;
   };
-  location?: any;
-  client?: any;
+  location?: unknown;
+  client?: unknown;
   added?: boolean;
-  safeAreaInsets?: any;
+  safeAreaInsets?: unknown;
   [key: string]: unknown;
 }
 
@@ -31,7 +31,7 @@ interface WalletContextType {
   switchNetwork: (chainId: number) => Promise<void>;
   formatAddress: (addr: string) => string;
   connectFarcasterWallet: () => Promise<void>;
-  getFarcasterErrorMessage: (error: any) => string | null;
+  getFarcasterErrorMessage: (error: unknown) => string | null;
 }
 
 // Create the context with default values
@@ -49,7 +49,7 @@ const WalletContext = createContext<WalletContextType>({
   switchNetwork: async () => { },
   formatAddress: (addr: string) => addr,
   connectFarcasterWallet: async () => { },
-  getFarcasterErrorMessage: (error: any) => null,
+  getFarcasterErrorMessage: (_error: unknown) => null,
 });
 
 // Provider component

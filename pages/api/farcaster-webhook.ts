@@ -16,7 +16,7 @@ interface FarcasterFrameAction {
   frameUrl: string;
   buttonIndex: number;
   inputText?: string;
-  state?: any;
+  state?: unknown;
 }
 
 interface FarcasterFrameEvent {
@@ -87,8 +87,6 @@ async function handleFrameAction(action: FarcasterFrameAction, res: NextApiRespo
       action: actionType,
       fid,
       username,
-      timestamp,
-      frameUrl,
       buttonIndex,
       inputText,
       state
@@ -137,9 +135,7 @@ async function handleFrameEvent(event: FarcasterFrameEvent, res: NextApiResponse
     const { 
       event: eventType,
       fid,
-      username,
-      timestamp,
-      frameUrl
+      username
     } = event;
 
     // Log the event details
@@ -186,7 +182,7 @@ async function handleButtonClick(
   inputText: string | undefined,
   fid: number,
   username: string,
-  state: any
+  state: unknown
 ) {
   console.log(`[Farcaster Action] Button ${buttonIndex} clicked by ${username}`);
   
@@ -227,7 +223,7 @@ async function handleInputSubmit(
   inputText: string | undefined,
   fid: number,
   username: string,
-  state: any
+  state: unknown
 ) {
   if (!inputText) {
     console.warn('[Farcaster Action] Input submit with empty text');

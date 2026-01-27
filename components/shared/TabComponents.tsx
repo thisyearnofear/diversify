@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
-import { NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 
 // Collapsible section for progressive disclosure

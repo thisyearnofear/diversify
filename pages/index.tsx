@@ -129,7 +129,6 @@ export default function DiversiFiPage() {
             {activeTab === "overview" && (
               <OverviewTab
                 regionData={regionData}
-                regionTotals={regionTotals}
                 totalValue={totalValue}
                 isRegionLoading={isRegionLoading}
                 userRegion={userRegion}
@@ -141,7 +140,6 @@ export default function DiversiFiPage() {
                 balances={balances}
                 inflationData={inflationData as Record<string, RegionalInflationData>}
                 currencyPerformanceData={currencyPerformanceData}
-                isCurrencyPerformanceLoading={isCurrencyPerformanceLoading}
               />
             )}
 
@@ -160,9 +158,7 @@ export default function DiversiFiPage() {
 
             {activeTab === "swap" && (
               <SwapTab
-                availableTokens={availableTokens}
                 userRegion={userRegion}
-                selectedStrategy={selectedStrategy}
                 inflationData={inflationData as Record<string, RegionalInflationData>}
                 refreshBalances={refreshBalances}
                 refreshChainId={refreshChainId}

@@ -102,7 +102,7 @@ export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof
 
 // Single Source of Truth for Network Assets
 export const NETWORK_TOKENS: Record<number, string[]> = {
-    [NETWORKS.CELO_MAINNET.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CNGN'],
+    [NETWORKS.CELO_MAINNET.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN'],
     [NETWORKS.ALFAJORES.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'PUSO'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
@@ -240,6 +240,7 @@ export const ALFAJORES_TOKENS = {
     CCAD: '0x02EC9E0D2Fd73e89168C1709e542a48f58d7B133',
     CAUD: '0x84CBD49F5aE07632B6B88094E81Cce8236125Fe0',
     PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
+    CNGN: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71',
 } as const;
 
 export const ARBITRUM_TOKENS = {

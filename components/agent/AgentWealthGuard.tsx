@@ -10,7 +10,7 @@ interface AgentWealthGuardProps {
     amount: number;
     holdings: string[];
     chainId?: number;
-    inflationData?: any;
+    inflationData?: unknown;
     embedded?: boolean;
     onExecute?: (token: string) => void;
 }
@@ -52,12 +52,12 @@ export default function AgentWealthGuard({
     useEffect(() => {
         if (isAnalyzing && analysisProgress % 25 === 0 && analysisProgress > 0) {
             try {
-                (sdk.actions as any).hapticFeedback({ type: 'light' });
+                (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
             } catch (e) { }
         }
         if (analysisProgress === 100) {
             try {
-                (sdk.actions as any).hapticFeedback({ type: 'success' });
+                (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'success' });
             } catch { }
         }
     }, [analysisProgress, isAnalyzing]);
@@ -117,7 +117,7 @@ export default function AgentWealthGuard({
             mediaRecorder.start();
             setIsListening(true);
             try {
-                (sdk.actions as any).hapticFeedback({ type: 'selection' });
+                (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'selection' });
             } catch { }
         } catch (error) {
             console.error('Error starting recording:', error);
@@ -130,7 +130,7 @@ export default function AgentWealthGuard({
             mediaRecorderRef.current.stop();
             setIsListening(false);
             try {
-                (sdk.actions as any).hapticFeedback({ type: 'light' });
+                (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
             } catch (e) { }
         }
     };

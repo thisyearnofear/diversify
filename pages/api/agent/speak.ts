@@ -44,8 +44,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         res.setHeader('Content-Type', 'audio/mpeg');
         res.send(buffer);
-    } catch (error: any) {
+    } catch (error) {
         console.error('[Speak API] Error:', error);
-        res.status(500).json({ error: error.message || 'Failed to generate speech' });
+        res.status(500).json({ error: (error as Error).message || 'Failed to generate speech' });
     }
 }

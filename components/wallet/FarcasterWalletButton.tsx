@@ -15,7 +15,7 @@ export default function FarcasterWalletButton() {
     connectFarcasterWallet,
     disconnect,
     formatAddress,
-    farcasterContext
+    farcasterContext: _farcasterContext
   } = useWalletContext();
 
   const [showDropdown, setShowDropdown] = useState(false);
@@ -26,7 +26,7 @@ export default function FarcasterWalletButton() {
   }
 
   // Extract username from Farcaster context
-  const username = farcasterContext?.username || 'User';
+  // const username = farcasterContext?.username || 'User';
 
   if (isConnected && address) {
     return (

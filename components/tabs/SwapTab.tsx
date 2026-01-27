@@ -5,7 +5,7 @@ import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RegionalIconography from "../regional/RegionalIconography";
 import RealLifeScenario from "../demo/RealLifeScenario";
-import { REGION_COLORS, getChainAssets, NETWORKS, NETWORK_TOKENS } from "../../config";
+import { getChainAssets, NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import {
   TabHeader,
@@ -21,9 +21,7 @@ import WalletButton from "../wallet/WalletButton";
 
 
 interface SwapTabProps {
-  availableTokens: Array<{ symbol: string; name: string; region: string }>;
   userRegion: Region;
-  selectedStrategy: string;
   inflationData: Record<string, RegionalInflationData>;
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
@@ -45,9 +43,7 @@ const getSwapUseCase = (fromRegion: Region, toRegion: Region): string => {
 };
 
 export default function SwapTab({
-  availableTokens,
   userRegion,
-  selectedStrategy,
   inflationData,
   refreshBalances,
   refreshChainId,
@@ -56,7 +52,6 @@ export default function SwapTab({
   const { address, chainId: walletChainId } = useWalletContext();
   const { swapPrefill, clearSwapPrefill } = useAppState();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedScenario, setSelectedScenario] = useState<"remittance" | "education" | "business" | "travel" | "savings">("remittance");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
 
   const {
@@ -69,8 +64,7 @@ export default function SwapTab({
 
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
   const [, setApprovalTxHash] = useState<string | null>(null);
-  const [localSwapTxHash, setLocalSwapTxHash] = useState<string | null>(null);
-  const [swapStep, setSwapStep] = useState<"idle" | "approving" | "swapping" | "completed" | "error" | "bridging">("idle");
+  const [, setSwapStep] = useState<"idle" | "approving" | "swapping" | "completed" | "error" | "bridging">("idle");
   const [showAiRecommendation, setShowAiRecommendation] = useState(false);
   const [aiRecommendationReason, setAiRecommendationReason] = useState<string | null>(null);
 
@@ -124,12 +118,12 @@ export default function SwapTab({
       await performSwap({
         fromToken, toToken, amount, fromChainId, toChainId,
         onApprovalSubmitted: setApprovalTxHash,
-        onSwapSubmitted: (hash) => { setLocalSwapTxHash(hash); setSwapStatus("Swap submitted..."); }
+        onSwapSubmitted: () => { setSwapStatus("Swap submitted..."); }
       });
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
-    } catch (err: any) {
-      setSwapStatus(`Error: ${err.message || "Unknown error"}`);
+    } catch (err) {
+      setSwapStatus(`Error: ${(err as Error).message || "Unknown error"}`);
       setSwapStep("error");
     }
   };
@@ -218,7 +212,7 @@ export default function SwapTab({
           </CollapsibleSection>
 
           <CollapsibleSection title="Action Guidance" icon={<span>🧠</span>}>
-            <RealLifeScenario region={userRegion} targetRegion={targetRegion} scenarioType={selectedScenario} inflationRate={homeInflationRate} targetInflationRate={targetInflationRate} amount={1000} monthlyAmount={100} />
+            <RealLifeScenario region={userRegion} targetRegion={targetRegion} scenarioType="remittance" inflationRate={homeInflationRate} targetInflationRate={targetInflationRate} amount={1000} monthlyAmount={100} />
             {getRecommendations(userRegion, inflationData, homeInflationRate)}
           </CollapsibleSection>
         </div>

@@ -20,8 +20,8 @@ export default function App({ Component, pageProps }: AppProps) {
       console.log("[Farcaster] Attempting early ready signal...");
       if (sdk && sdk.actions && sdk.actions.ready) {
         sdk.actions.ready();
-      } else if (sdk && (sdk as any).ready) {
-        (sdk as any).ready();
+      } else if (sdk && (sdk as unknown as { ready: () => void }).ready) {
+        (sdk as unknown as { ready: () => void }).ready();
       }
     } catch (e) {
       console.warn("[Farcaster] Early ready signal failed:", e);

@@ -3,7 +3,6 @@ import SimplePieChart from "../portfolio/SimplePieChart";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import InflationVisualizer from "../inflation/InflationVisualizer";
 import { useDiversification } from "@/hooks/use-diversification";
-import { REGION_COLORS } from "@/config";
 import type { Region } from "@/hooks/use-user-region";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import RegionalIconography from "../regional/RegionalIconography";
@@ -15,7 +14,6 @@ import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 
 interface OverviewTabProps {
   regionData: Array<{ region: string; value: number; color: string }>;
-  regionTotals: Record<string, number>;
   totalValue: number;
   isRegionLoading: boolean;
   userRegion: Region;
@@ -25,9 +23,19 @@ interface OverviewTabProps {
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
   balances: Record<string, { formattedBalance: string; value: number }>;
-  inflationData: Record<string, any>;
-  currencyPerformanceData?: any;
-  isCurrencyPerformanceLoading?: boolean;
+  inflationData: Record<string, unknown>;
+  currencyPerformanceData?: {
+    dates: string[];
+    currencies: {
+      symbol: string;
+      name: string;
+      region: Region;
+      values: number[];
+      percentChange: number;
+    }[];
+    baseCurrency: string;
+    source?: "api" | "cache" | "fallback";
+  };
 }
 
 const EMERGING_MARKETS = {
@@ -40,7 +48,6 @@ const EMERGING_MARKETS = {
 
 export default function OverviewTab({
   regionData,
-  regionTotals,
   totalValue,
   userRegion,
   setUserRegion,
@@ -50,7 +57,6 @@ export default function OverviewTab({
   refreshChainId,
   balances,
   currencyPerformanceData,
-  isCurrencyPerformanceLoading,
 }: OverviewTabProps) {
   const { address, isConnecting, chainId } = useWalletContext();
   const { inflationData } = useInflationData();
@@ -59,7 +65,6 @@ export default function OverviewTab({
   const {
     diversificationScore,
     diversificationRating,
-    diversificationDescription,
     diversificationTips,
   } = useDiversification({ regionData, balances, userRegion, inflationData });
 

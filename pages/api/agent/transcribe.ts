@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     try {
         const form = formidable({});
-        const [fields, files] = await form.parse(req);
+        const [, files] = await form.parse(req);
 
         const audioFile = files.audio?.[0];
         if (!audioFile) {
@@ -37,8 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         res.status(200).json({ text: transcription.text });
-    } catch (error: any) {
+    } catch (error) {
         console.error('[Transcribe API] Error:', error);
-        res.status(500).json({ error: error.message || 'Failed to transcribe audio' });
+        res.status(500).json({ error: (error as Error).message || 'Failed to transcribe audio' });
     }
 }

@@ -245,11 +245,6 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 address: MAINNET_TOKENS.CNGN,
                 decimals: 18,
             },
-            {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.CNGN,
-                decimals: 18,
-            },
         ],
     },
     {
