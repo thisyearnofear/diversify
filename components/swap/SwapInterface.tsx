@@ -28,7 +28,7 @@ interface SwapInterfaceProps {
     amount: string,
     fromChainId?: number,
     toChainId?: number
-  ) => Promise<void>;
+  ) => Promise<any>;
   title?: string;
   address?: string | null;
   preferredFromRegion?: string;
@@ -284,8 +284,46 @@ const SwapInterface = forwardRef<
     try {
       if (onSwap) {
         // Use the provided onSwap function if available
-        await onSwap(fromToken, toToken, amount, fromChainId, toChainId);
+        const result = await onSwap(fromToken, toToken, amount, fromChainId, toChainId);
+        
+        // Capture transaction hash if available in result
+        if (result && result.swapTxHash) {
+          setTxHash(result.swapTxHash);
+        }
+        
         setStatus("completed");
+
+        // Refresh token balances after successful swap (even when onSwap is used)
+        console.log("Refreshing token balances after successful swap (onSwap)");
+        
+        // Use a more reliable approach with multiple retries
+        const refreshWithRetries = async (retries = 3, delay = 2000) => {
+          for (let i = 0; i < retries; i++) {
+            try {
+              // Wait for the specified delay
+              await new Promise((resolve) =>
+                setTimeout(resolve, delay * (i + 1))
+              );
+
+              console.log(
+                `SwapInterface refresh attempt ${i + 1} of ${retries}`
+              );
+              await refreshBalances();
+
+              console.log(
+                `SwapInterface refresh attempt ${i + 1} successful`
+              );
+              break;
+            } catch (error) {
+              console.error(
+                `SwapInterface refresh attempt ${i + 1} failed:`,
+                error
+              );
+            }
+          }
+        };
+
+        refreshWithRetries();
       } else {
         // Otherwise, use the stablecoin swap hook
         await performSwap({
@@ -850,11 +888,13 @@ const SwapInterface = forwardRef<
                     <div className="mt-2">
                       <a
                         href={
-                          swapHookChainId === NETWORKS.ALFAJORES.chainId
+                          fromChainId === NETWORKS.ALFAJORES.chainId
                             ? `${NETWORKS.ALFAJORES.explorerUrl}/tx/${txHash}`
-                            : swapHookChainId === NETWORKS.ARC_TESTNET.chainId
+                            : fromChainId === NETWORKS.ARC_TESTNET.chainId
                               ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${txHash}`
-                              : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`
+                              : fromChainId === NETWORKS.ARBITRUM_ONE.chainId
+                                ? `${NETWORKS.ARBITRUM_ONE.explorerUrl}/tx/${txHash}`
+                                : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`
                         }
                         target="_blank"
                         rel="noopener noreferrer"

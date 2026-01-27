@@ -71,6 +71,23 @@ export default function SwapTab({
 
   const swapInterfaceRef = useRef<{ refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void }>(null);
 
+  // Helper to refresh balances with retries
+  const refreshWithRetries = useCallback(async (retries = 3, delay = 3000) => {
+    if (!refreshBalances) return;
+    
+    console.log("[SwapTab] Starting balance refresh sequence...");
+    for (let i = 0; i < retries; i++) {
+      try {
+        // Wait for indexer to catch up
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        console.log(`[SwapTab] Refresh attempt ${i + 1}...`);
+        await refreshBalances();
+      } catch (err) {
+        console.warn(`[SwapTab] Refresh attempt ${i + 1} failed:`, err);
+      }
+    }
+  }, [refreshBalances]);
+
   // Fetch tradeable tokens from Mento
   const { tradeableSymbols, isLoading: isTradeableLoading } = useTradeableTokens(walletChainId);
 
@@ -113,27 +130,33 @@ export default function SwapTab({
     } else if (hookSwapStep === "completed") {
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
-      if (refreshBalances) refreshBalances();
+      refreshWithRetries();
     } else if (swapTxHash) {
       setSwapStatus("Transaction submitted...");
     }
-  }, [swapError, hookSwapStep, swapTxHash, refreshBalances]);
+  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries]);
 
   const handleSwap = async (fromToken: string, toToken: string, amount: string, fromChainId?: number, toChainId?: number) => {
     setSwapStatus("Initiating swap...");
     setSwapStep("approving");
     try {
       if (!address) throw new Error("Wallet not connected");
-      await performSwap({
+      const result = await performSwap({
         fromToken, toToken, amount, fromChainId, toChainId,
         onApprovalSubmitted: setApprovalTxHash,
         onSwapSubmitted: () => { setSwapStatus("Swap submitted..."); }
       });
-      setSwapStatus("Swap completed successfully!");
-      setSwapStep("completed");
+      
+      if (result.success) {
+        setSwapStatus("Swap completed successfully!");
+        setSwapStep("completed");
+        return result;
+      }
+      return result;
     } catch (err) {
       setSwapStatus(`Error: ${(err as Error).message || "Unknown error"}`);
       setSwapStep("error");
+      throw err;
     }
   };
 
@@ -203,8 +226,34 @@ export default function SwapTab({
             )}
 
             {swapStatus && (
-              <div className={`mt-3 p-3 rounded-xl text-xs font-bold ${swapStatus.includes("Error") ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                {swapStatus}
+              <div className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${
+                swapStatus.includes("Error") 
+                  ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400" 
+                  : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
+              }`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`size-2 rounded-full ${
+                    swapStatus.includes("Error") ? "bg-red-500" : "bg-green-500 animate-pulse"
+                  }`} />
+                  <span className="text-xs font-black uppercase tracking-tight">{swapStatus}</span>
+                </div>
+                
+                {swapTxHash && (
+                  <div className="flex items-center justify-between pt-2 border-t border-current/10">
+                    <span className="text-[10px] font-bold opacity-70">Transaction Hash: {swapTxHash.slice(0, 8)}...{swapTxHash.slice(-8)}</span>
+                    <a
+                      href={`${NETWORKS[walletChainId === 5042002 ? 'ARC_TESTNET' : walletChainId === 42161 ? 'ARBITRUM_ONE' : walletChainId === 44787 ? 'ALFAJORES' : 'CELO_MAINNET'].explorerUrl}/tx/${swapTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-black uppercase underline hover:opacity-80 transition-opacity flex items-center gap-1"
+                    >
+                      View on Explorer
+                      <svg className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
               </div>
             )}
           </>
