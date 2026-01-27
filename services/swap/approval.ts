@@ -10,15 +10,22 @@ import type { ApprovalStatus } from '../../types/swap';
 export class ApprovalService {
     /**
      * Check if token is approved for spending
+     * Note: Always uses a read-only JsonRpcProvider to ensure compatibility with all wallet types
+     * including Farcaster embedded wallets that don't support eth_call
      */
     static async checkApproval(
         tokenAddress: string,
         ownerAddress: string,
         spenderAddress: string,
         amount: ethers.BigNumber,
-        provider: ethers.providers.Provider,
+        chainId: number,
         decimals: number = 18
     ): Promise<ApprovalStatus> {
+        // Import here to avoid circular dependency
+        const { ProviderFactoryService } = require('./provider-factory.service');
+        
+        // Use JsonRpcProvider for read-only calls (works with all wallet types)
+        const provider = ProviderFactoryService.getProvider(chainId);
         const tokenContract = new ethers.Contract(tokenAddress, ABIS.ERC20, provider);
         const allowance = await tokenContract.allowance(ownerAddress, spenderAddress);
 

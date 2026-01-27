@@ -310,22 +310,28 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
             return false; // Approval was needed and completed
         } else {
             // Use regular ethers for non-Arbitrum chains (like Celo)
-            const tokenContract = new ethers.Contract(
+            // Use JsonRpcProvider for read-only allowance check (works with Farcaster)
+            const readProvider = ProviderFactoryService.getProvider(chainId);
+            const tokenContractRead = new ethers.Contract(
                 tokenAddress,
-                ['function allowance(address owner, address spender) view returns (uint256)',
-                    'function approve(address spender, uint256 amount) returns (bool)'],
-                signer
+                ['function allowance(address owner, address spender) view returns (uint256)'],
+                readProvider
             );
 
-            const currentAllowance = await tokenContract.allowance(userAddress, spenderAddress);
+            const currentAllowance = await tokenContractRead.allowance(userAddress, spenderAddress);
 
             if (currentAllowance.gte(amount)) {
                 return true; // Sufficient allowance
             }
 
-            // Need approval
+            // Need approval - use signer for transaction
             this.log('Approving token spend');
-            const approveTx = await tokenContract.approve(spenderAddress, amount);
+            const tokenContractWrite = new ethers.Contract(
+                tokenAddress,
+                ['function approve(address spender, uint256 amount) returns (bool)'],
+                signer
+            );
+            const approveTx = await tokenContractWrite.approve(spenderAddress, amount);
             callbacks?.onApprovalSubmitted?.(approveTx.hash);
 
             await approveTx.wait();

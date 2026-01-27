@@ -139,8 +139,9 @@ export class CurveArcStrategy extends BaseSwapStrategy {
         const toTokenMeta = TOKEN_METADATA[params.toToken] || { decimals: 6 };
         const amountIn = this.parseAmount(params.amount, fromTokenMeta.decimals || 6);
 
-        // Get estimate from Curve pool
-        const pool = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, provider);
+        // Get estimate from Curve pool using JsonRpcProvider (works with Farcaster)
+        const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
+        const pool = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, readProvider);
 
         // Determine coin indices (0 = USDC, 1 = EURC typically)
         const fromIndex = params.fromToken === 'USDC' ? 0 : 1;
@@ -207,15 +208,20 @@ export class CurveArcStrategy extends BaseSwapStrategy {
         }
 
         // Execute swap
-        const pool = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, signer);
         const fromIndex = params.fromToken === 'USDC' ? 0 : 1;
         const toIndex = params.fromToken === 'USDC' ? 1 : 0;
 
         const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
-        const expectedOutput = await pool.get_dy(fromIndex, toIndex, amountIn);
+        
+        // Use JsonRpcProvider for read-only quote (works with Farcaster)
+        const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
+        const poolRead = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, readProvider);
+        const expectedOutput = await poolRead.get_dy(fromIndex, toIndex, amountIn);
         const minOutput = this.calculateMinOutput(expectedOutput, slippage);
 
-        const tx = await pool.exchange(fromIndex, toIndex, amountIn, minOutput);
+        // Use signer for transaction
+        const poolWrite = new ethers.Contract(curveContracts.pool, CURVE_POOL_ABI, signer);
+        const tx = await poolWrite.exchange(fromIndex, toIndex, amountIn, minOutput);
         callbacks?.onSwapSubmitted?.(tx.hash);
 
         const receipt = await tx.wait();
@@ -273,23 +279,30 @@ export class CurveArcStrategy extends BaseSwapStrategy {
         callbacks?: SwapCallbacks
     ): Promise<void> {
         const userAddress = await signer.getAddress();
+        const chainId = await signer.getChainId();
 
-        const tokenContract = new ethers.Contract(
+        // Use JsonRpcProvider for read-only allowance check (works with Farcaster)
+        const readProvider = ProviderFactoryService.getProvider(chainId);
+        const tokenContractRead = new ethers.Contract(
             tokenAddress,
-            ['function allowance(address owner, address spender) view returns (uint256)',
-                'function approve(address spender, uint256 amount) returns (bool)'],
-            signer
+            ['function allowance(address owner, address spender) view returns (uint256)'],
+            readProvider
         );
 
-        const currentAllowance = await tokenContract.allowance(userAddress, spenderAddress);
+        const currentAllowance = await tokenContractRead.allowance(userAddress, spenderAddress);
 
         if (currentAllowance.gte(amount)) {
             return; // Sufficient allowance
         }
 
-        // Need approval
+        // Need approval - use signer for transaction
         this.log('Approving token spend for Curve');
-        const approveTx = await tokenContract.approve(spenderAddress, amount);
+        const tokenContractWrite = new ethers.Contract(
+            tokenAddress,
+            ['function approve(address spender, uint256 amount) returns (bool)'],
+            signer
+        );
+        const approveTx = await tokenContractWrite.approve(spenderAddress, amount);
         callbacks?.onApprovalSubmitted?.(approveTx.hash);
 
         await approveTx.wait();

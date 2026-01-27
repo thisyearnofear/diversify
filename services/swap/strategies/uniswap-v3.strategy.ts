@@ -88,8 +88,9 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
             let bestQuote = null;
             let bestFee = 3000;
 
-            // Create router contract for static call
-            const router = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, provider);
+            // Use JsonRpcProvider for read-only calls (works with Farcaster)
+            const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
+            const router = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, readProvider);
 
             for (const fee of feeTiers) {
                 try {
@@ -160,8 +161,9 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
             const amountIn = this.parseAmount(params.amount, fromTokenMeta.decimals || 18);
             const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
 
-            // Get quote for minimum output calculation
-            const router = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, signer);
+            // Get quote for minimum output calculation using JsonRpcProvider (works with Farcaster)
+            const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
+            const routerRead = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, readProvider);
 
             // Try multiple fee tiers to find the best route
             const feeTiers = [3000, 10000, 500];
@@ -170,7 +172,7 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
 
             for (const fee of feeTiers) {
                 try {
-                    const quote = await router.callStatic.quoteExactInputSingle({
+                    const quote = await routerRead.callStatic.quoteExactInputSingle({
                         tokenIn: fromTokenAddress,
                         tokenOut: toTokenAddress,
                         fee,
@@ -226,7 +228,8 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
 
             if (ChainDetectionService.isArbitrum(chainId)) {
                 // Use ArbitrumTransactionService for Arbitrum chains
-                const swapCalldata = router.interface.encodeFunctionData('exactInputSingle', [swapParams]);
+                const routerWrite = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, signer);
+                const swapCalldata = routerWrite.interface.encodeFunctionData('exactInputSingle', [swapParams]);
 
                 tx = await ArbitrumTransactionService.executeTransaction(signer, {
                     to: routerAddress,
@@ -236,7 +239,8 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
                 });
             } else {
                 // Use regular ethers for non-Arbitrum chains (like Celo)
-                tx = await router.exactInputSingle(swapParams);
+                const routerWrite = new ethers.Contract(routerAddress, UNISWAP_V3_ROUTER_ABI, signer);
+                tx = await routerWrite.exactInputSingle(swapParams);
             }
 
             callbacks?.onSwapSubmitted?.(tx.hash);
@@ -297,22 +301,28 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
             this.log('Approval confirmed');
         } else {
             // Use regular ethers for non-Arbitrum chains (like Celo)
-            const tokenContract = new ethers.Contract(
+            // Use JsonRpcProvider for read-only allowance check (works with Farcaster)
+            const readProvider = ProviderFactoryService.getProvider(chainId);
+            const tokenContractRead = new ethers.Contract(
                 tokenAddress,
-                ['function allowance(address owner, address spender) view returns (uint256)',
-                    'function approve(address spender, uint256 amount) returns (bool)'],
-                signer
+                ['function allowance(address owner, address spender) view returns (uint256)'],
+                readProvider
             );
 
-            const currentAllowance = await tokenContract.allowance(userAddress, spenderAddress);
+            const currentAllowance = await tokenContractRead.allowance(userAddress, spenderAddress);
 
             if (currentAllowance.gte(amount)) {
                 return; // Sufficient allowance
             }
 
-            // Need approval
+            // Need approval - use signer for transaction
             this.log('Approving token spend for Uniswap V3');
-            const approveTx = await tokenContract.approve(spenderAddress, amount);
+            const tokenContractWrite = new ethers.Contract(
+                tokenAddress,
+                ['function approve(address spender, uint256 amount) returns (bool)'],
+                signer
+            );
+            const approveTx = await tokenContractWrite.approve(spenderAddress, amount);
             callbacks?.onApprovalSubmitted?.(approveTx.hash);
 
             await approveTx.wait();

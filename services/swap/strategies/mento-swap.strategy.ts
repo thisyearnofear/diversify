@@ -147,7 +147,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 params.userAddress,
                 brokerAddress,
                 amountIn,
-                provider,
+                params.fromChainId,
                 fromTokenMeta.decimals || 18
             );
 
@@ -282,7 +282,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                     params.userAddress,
                     brokerAddress,
                     cusdAmountOut,
-                    provider,
+                    params.fromChainId,
                     18
                 );
 
