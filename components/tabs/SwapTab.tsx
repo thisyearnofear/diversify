@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import SwapInterface from "../swap/SwapInterface";
 import { useInflationData } from "../../hooks/use-inflation-data";
 import type { Region } from "../../hooks/use-user-region";
