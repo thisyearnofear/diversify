@@ -107,8 +107,8 @@ export const INFLATION_DATA_SOURCES = {
 export const COUNTRY_TO_REGION: Record<string, string> = {
   'KEN': 'Africa', 'GHA': 'Africa', 'ZAF': 'Africa', 'EGY': 'Africa', 'NGA': 'Africa',
   'BRA': 'LatAm', 'ARG': 'LatAm', 'MEX': 'LatAm', 'COL': 'LatAm', 'CHL': 'LatAm',
-  'IND': 'Asia', 'THA': 'Asia', 'VNM': 'Asia', 'PHL': 'Asia', 'IDN': 'Asia',
-  'DEU': 'Europe', 'FRA': 'Europe', 'ITA': 'Europe', 'ESP': 'Europe', 'NLD': 'Europe',
+  'IND': 'Asia', 'THA': 'Asia', 'VNM': 'Asia', 'PHL': 'Asia', 'IDN': 'Asia', 'JPN': 'Asia', 'AUS': 'Asia',
+  'DEU': 'Europe', 'FRA': 'Europe', 'ITA': 'Europe', 'ESP': 'Europe', 'NLD': 'Europe', 'CHE': 'Europe', 'GBR': 'Europe',
   'USA': 'USA', 'CAN': 'USA'
 };
 
@@ -116,8 +116,8 @@ export const COUNTRY_TO_REGION: Record<string, string> = {
 export const CURRENCY_TO_COUNTRY: Record<string, string> = {
   'KES': 'KEN', 'GHS': 'GHA', 'ZAR': 'ZAF', 'EGP': 'EGY', 'NGN': 'NGA',
   'BRL': 'BRA', 'ARS': 'ARG', 'MXN': 'MEX', 'COP': 'COL', 'CLP': 'CHL',
-  'INR': 'IND', 'THB': 'THA', 'VND': 'VNM', 'PHP': 'PHL', 'IDR': 'IDN',
-  'EUR': 'DEU', 'GBP': 'GBR', 'USD': 'USA', 'CAD': 'CAN'
+  'INR': 'IND', 'THB': 'THA', 'VND': 'VNM', 'PHP': 'PHL', 'IDR': 'IDN', 'JPY': 'JPN', 'AUD': 'AUS',
+  'EUR': 'DEU', 'GBP': 'GBR', 'CHF': 'CHE', 'USD': 'USA', 'CAD': 'CAN'
 };
 
 // Priority countries for API requests

@@ -77,28 +77,35 @@ export const REGION_COLORS = {
     Commodity: "#D69E2E",
 } as const;
 
-// Token Metadata
-export const TOKEN_METADATA: Record<string, { name: string; region: keyof typeof REGIONS; decimals?: number }> = {
-    CUSD: { name: 'Celo Dollar', region: 'USA' },
-    CEUR: { name: 'Celo Euro', region: 'EUROPE' },
-    CREAL: { name: 'Celo Brazilian Real', region: 'LATAM' },
-    CKES: { name: 'Celo Kenyan Shilling', region: 'AFRICA' },
-    CCOP: { name: 'Celo Colombian Peso', region: 'LATAM' },
-    PUSO: { name: 'Philippine Peso', region: 'ASIA' },
-    CGHS: { name: 'Celo Ghana Cedi', region: 'AFRICA' },
-    CXOF: { name: 'CFA Franc', region: 'AFRICA' },
-    CPESO: { name: 'Philippine Peso', region: 'ASIA' },
-    CGBP: { name: 'British Pound', region: 'EUROPE' },
-    CZAR: { name: 'South African Rand', region: 'AFRICA' },
-    CCAD: { name: 'Canadian Dollar', region: 'USA' },
-    CAUD: { name: 'Australian Dollar', region: 'ASIA' },
-    CCHF: { name: 'Swiss Franc', region: 'EUROPE' },
-    CJPY: { name: 'Japanese Yen', region: 'ASIA' },
-    CNGN: { name: 'Nigerian Naira', region: 'AFRICA' },
-    USDC: { name: 'USD Coin', region: 'GLOBAL', decimals: 6 },
-    EURC: { name: 'Euro Coin', region: 'EUROPE', decimals: 6 },
-    PAXG: { name: 'Pax Gold', region: 'COMMODITIES', decimals: 18 },
-} as const;
+// Token Metadata - uses REGIONS values for consistency with UI
+export type RegionValue = (typeof REGIONS)[keyof typeof REGIONS];
+export const TOKEN_METADATA: Record<string, { name: string; region: RegionValue; decimals?: number }> = {
+    CUSD: { name: 'Celo Dollar', region: REGIONS.USA },
+    CEUR: { name: 'Celo Euro', region: REGIONS.EUROPE },
+    CREAL: { name: 'Celo Brazilian Real', region: REGIONS.LATAM },
+    CKES: { name: 'Celo Kenyan Shilling', region: REGIONS.AFRICA },
+    CCOP: { name: 'Celo Colombian Peso', region: REGIONS.LATAM },
+    PUSO: { name: 'Philippine Peso', region: REGIONS.ASIA },
+    CGHS: { name: 'Celo Ghana Cedi', region: REGIONS.AFRICA },
+    CXOF: { name: 'CFA Franc', region: REGIONS.AFRICA },
+    CPESO: { name: 'Philippine Peso', region: REGIONS.ASIA },
+    CGBP: { name: 'British Pound', region: REGIONS.EUROPE },
+    CZAR: { name: 'South African Rand', region: REGIONS.AFRICA },
+    CCAD: { name: 'Canadian Dollar', region: REGIONS.USA },
+    CAUD: { name: 'Australian Dollar', region: REGIONS.ASIA },
+    CCHF: { name: 'Swiss Franc', region: REGIONS.EUROPE },
+    CJPY: { name: 'Japanese Yen', region: REGIONS.ASIA },
+    CNGN: { name: 'Nigerian Naira', region: REGIONS.AFRICA },
+    USDC: { name: 'USD Coin', region: REGIONS.GLOBAL, decimals: 6 },
+    EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
+    PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18 },
+};
+
+// Helper to get token region (normalized)
+export function getTokenRegion(symbol: string): RegionValue {
+    const normalized = symbol.toUpperCase();
+    return TOKEN_METADATA[normalized]?.region ?? REGIONS.GLOBAL;
+}
 
 // Single Source of Truth for Network Assets
 export const NETWORK_TOKENS: Record<number, string[]> = {
@@ -114,7 +121,7 @@ export function getChainAssets(chainId: number) {
     return symbols.map(symbol => ({
         symbol,
         name: TOKEN_METADATA[symbol]?.name || symbol,
-        region: TOKEN_METADATA[symbol]?.region || 'Global'
+        region: TOKEN_METADATA[symbol]?.region || REGIONS.GLOBAL
     }));
 }
 

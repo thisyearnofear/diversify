@@ -161,10 +161,10 @@ export function getTokenInflationRate(
   // Direct mappings for known tokens
   const tokenRegionMap: Record<string, string> = {
     'CUSD': 'USA', 'USDC': 'USA', 'CCAD': 'USA',
-    'CEUR': 'Europe', 'EURC': 'Europe', 'CGBP': 'Europe',
+    'CEUR': 'Europe', 'EURC': 'Europe', 'CGBP': 'Europe', 'CCHF': 'Europe',
     'CREAL': 'LatAm', 'CCOP': 'LatAm',
-    'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa',
-    'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia',
+    'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa', 'CNGN': 'Africa',
+    'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
     'PAXG': 'Global',
   };
   
@@ -184,10 +184,10 @@ export function getTokenRegion(symbol: string): string {
   
   const tokenRegionMap: Record<string, string> = {
     'CUSD': 'USA', 'USDC': 'USA', 'CCAD': 'USA',
-    'CEUR': 'Europe', 'EURC': 'Europe', 'CGBP': 'Europe',
+    'CEUR': 'Europe', 'EURC': 'Europe', 'CGBP': 'Europe', 'CCHF': 'Europe',
     'CREAL': 'LatAm', 'CCOP': 'LatAm',
-    'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa',
-    'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia',
+    'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa', 'CNGN': 'Africa',
+    'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
     'PAXG': 'Global',
   };
   

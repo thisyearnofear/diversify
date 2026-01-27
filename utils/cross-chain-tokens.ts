@@ -248,6 +248,42 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         ],
     },
     {
+        symbol: 'CJPY',
+        name: 'Celo Japanese Yen',
+        region: 'Asia',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CJPY,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CCHF',
+        name: 'Celo Swiss Franc',
+        region: 'Europe',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CCHF,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'CXOF',
+        name: 'CFA Franc',
+        region: 'Africa',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.CXOF,
+                decimals: 18,
+            },
+        ],
+    },
+    {
         symbol: 'PAXG',
         name: 'Paxos Gold',
         region: 'Global',

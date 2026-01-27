@@ -44,25 +44,20 @@ const SCANNABLE_CHAINS = [
   { chainId: 5042002, name: 'Arc Testnet' },
 ] as const;
 
-// Helper function to normalize region names from centralized config
+// Helper function to normalize region names (handles legacy uppercase keys)
 const normalizeRegion = (region: string): string => {
-  const regionMap: Record<string, string> = {
-    'GLOBAL': 'USA', // Map GLOBAL to USA for consistency
+  // TOKEN_METADATA now stores values like 'Africa', 'Europe', etc.
+  // This handles any legacy uppercase keys that might still exist
+  const legacyMap: Record<string, string> = {
+    'GLOBAL': 'Global',
     'EUROPE': 'Europe',
     'AFRICA': 'Africa',
     'ASIA': 'Asia',
     'LATAM': 'LatAm',
     'COMMODITIES': 'Commodities',
-    'COMMODITY': 'Commodities',
-    // Backward compatibility
     'USA': 'USA',
-    'Europe': 'Europe',
-    'Africa': 'Africa',
-    'Asia': 'Asia',
-    'LatAm': 'LatAm',
-    'Commodities': 'Commodities',
   };
-  return regionMap[region] || region;
+  return legacyMap[region] || region;
 };
 
 function getCachedBalances(address: string): Record<string, StablecoinBalance> | null {

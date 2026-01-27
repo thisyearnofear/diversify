@@ -24,22 +24,23 @@ export interface RegionalInflationData {
   stablecoins: string[];
 }
 
-// Region to stablecoins mapping
+// Region to stablecoins mapping (UPPERCASE symbols to match TOKEN_METADATA)
 const REGION_STABLECOINS: Record<string, string[]> = {
-  Africa: ['cKES', 'cGHS', 'eXOF', 'cZAR'],
-  LatAm: ['cREAL', 'cCOP'],
-  Asia: ['PUSO', 'cAUD', 'cPESO'],
-  Europe: ['cEUR', 'cGBP', 'EURC'],
-  USA: ['cUSD', 'cCAD', 'USDC'],
+  Africa: ['CKES', 'CGHS', 'CXOF', 'CZAR', 'CNGN'],
+  LatAm: ['CREAL', 'CCOP'],
+  Asia: ['PUSO', 'CAUD', 'CPESO', 'CJPY'],
+  Europe: ['CEUR', 'CGBP', 'EURC', 'CCHF'],
+  USA: ['CUSD', 'CCAD', 'USDC'],
   Global: ['PAXG'],
+  Commodities: ['PAXG'],
 };
 
-// Currency to stablecoin mapping
+// Currency to stablecoin mapping (UPPERCASE symbols)
 const CURRENCY_TO_STABLECOIN: Record<string, string> = {
-  'KES': 'cKES', 'GHS': 'cGHS', 'XOF': 'eXOF', 'ZAR': 'cZAR',
-  'BRL': 'cREAL', 'COP': 'cCOP',
-  'PHP': 'PUSO', 'AUD': 'CAUD',
-  'EUR': 'CEUR', 'GBP': 'CGBP',
+  'KES': 'CKES', 'GHS': 'CGHS', 'XOF': 'CXOF', 'ZAR': 'CZAR', 'NGN': 'CNGN',
+  'BRL': 'CREAL', 'COP': 'CCOP',
+  'PHP': 'PUSO', 'AUD': 'CAUD', 'JPY': 'CJPY',
+  'EUR': 'CEUR', 'GBP': 'CGBP', 'CHF': 'CCHF',
   'USD': 'CUSD', 'CAD': 'CCAD',
   'XAU': 'PAXG',
 };
@@ -321,8 +322,11 @@ export function useInflationData() {
 
     // Asia region
     if (stablecoinUpper === 'PUSO') return 'Asia';
-    if (stablecoinUpper === 'CAUD') return 'Asia'; // Australian Dollar
+    if (stablecoinUpper === 'CAUD') return 'Asia'; // Australian Dollar (grouped with Asia-Pacific)
     if (stablecoinUpper === 'CPESO') return 'Asia'; // Philippine Peso (alternative name)
+    if (stablecoinUpper === 'CJPY') return 'Asia'; // Japanese Yen
+    if (stablecoinUpper === 'CCHF') return 'Europe'; // Swiss Franc
+    if (stablecoinUpper === 'CNGN') return 'Africa'; // Nigerian Naira
 
     // Global
     if (stablecoinUpper === 'PAXG') return 'Global';
