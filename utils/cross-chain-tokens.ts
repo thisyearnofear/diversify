@@ -295,6 +295,30 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
             },
         ],
     },
+    {
+        symbol: 'USDY',
+        name: 'Ondo US Dollar Yield',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.ARBITRUM_ONE.chainId,
+                address: ARBITRUM_TOKENS.USDY,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'SDAI',
+        name: 'Savings DAI',
+        region: 'Global',
+        chains: [
+            {
+                chainId: NETWORKS.ARBITRUM_ONE.chainId,
+                address: ARBITRUM_TOKENS.SDAI,
+                decimals: 18,
+            },
+        ],
+    },
 ];
 
 /**
