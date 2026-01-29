@@ -100,6 +100,23 @@ export default function DiversiFiPage() {
       <Head>
         <title>DiversiFi - MiniPay</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+        <meta
+          name="fc:miniapp"
+          content={JSON.stringify({
+            version: "1",
+            imageUrl: "https://diversifiapp.vercel.app/embed-image.png",
+            button: {
+              title: "Open DiversiFi",
+              action: {
+                type: "launch_miniapp",
+                name: "DiversiFi",
+                url: "https://diversifiapp.vercel.app",
+                splashImageUrl: "https://diversifiapp.vercel.app/splash.png",
+                splashBackgroundColor: "#8B5CF6"
+              }
+            }
+          })}
+        />
       </Head>
 
       <div className="max-w-md mx-auto">
