@@ -307,18 +307,6 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
             },
         ],
     },
-    {
-        symbol: 'SDAI',
-        name: 'Savings DAI',
-        region: 'Global',
-        chains: [
-            {
-                chainId: NETWORKS.ARBITRUM_ONE.chainId,
-                address: ARBITRUM_TOKENS.SDAI,
-                decimals: 18,
-            },
-        ],
-    },
 ];
 
 /**

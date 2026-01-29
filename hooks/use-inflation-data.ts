@@ -31,7 +31,7 @@ const REGION_STABLECOINS: Record<string, string[]> = {
   Asia: ['PUSO', 'CAUD', 'CPESO', 'CJPY'],
   Europe: ['CEUR', 'CGBP', 'EURC', 'CCHF'],
   USA: ['CUSD', 'CCAD', 'USDC', 'USDT', 'USDY'],
-  Global: ['PAXG', 'SDAI'],
+  Global: ['PAXG'],
   Commodities: ['PAXG'],
 };
 
@@ -279,13 +279,6 @@ export function useInflationData() {
       return rate;
     }
 
-    // Special case for SDAI (Savings DAI) - uses global inflation rate
-    if (normalizedStablecoin === 'SDAI') {
-      const rate = inflationData['Global']?.avgRate || 5.0;
-      console.log(`[Inflation] ${stablecoin} -> Global rate: ${rate}`);
-      return rate;
-    }
-
     // Special case for USDY (Ondo US Dollar Yield) - uses USD inflation rate
     if (normalizedStablecoin === 'USDY') {
       const rate = getInflationRateForCurrency('USD');
@@ -345,7 +338,6 @@ export function useInflationData() {
 
     // Global
     if (stablecoinUpper === 'PAXG') return 'Global';
-    if (stablecoinUpper === 'SDAI') return 'Global';
 
     // USA region (Yield-bearing USD assets)
     if (stablecoinUpper === 'USDY') return 'USA';
