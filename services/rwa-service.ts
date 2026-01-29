@@ -44,6 +44,18 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             description: 'Real yield from GMX trading fees and liquidations',
             minInvestment: 50,
             riskLevel: 'medium'
+        },
+        {
+            address: '0xF84D28A8D28292842dD73D1c5F99476A80b6666A',
+            symbol: 'TBILL',
+            name: 'OpenEden T-Bill',
+            type: 'treasury',
+            apy: 5.3,
+            tvl: 200000000,
+            chain: 'arbitrum',
+            description: 'Direct exposure to US Treasury Bills via OpenEden',
+            minInvestment: 10,
+            riskLevel: 'low'
         }
     ],
     ethereum: [

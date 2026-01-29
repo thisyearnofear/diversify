@@ -385,12 +385,16 @@ export const Card = ({
   children,
   className = "",
   padding = "p-4",
+  ...props
 }: {
   children: React.ReactNode;
   className?: string;
   padding?: string;
-}) => (
-  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 ${padding} ${className}`}>
+} & React.HTMLAttributes<HTMLDivElement>) => (
+  <div 
+    className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 ${padding} ${className}`}
+    {...props}
+  >
     {children}
   </div>
 );

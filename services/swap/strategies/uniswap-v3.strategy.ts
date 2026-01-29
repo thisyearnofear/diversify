@@ -20,7 +20,7 @@ import { ArbitrumTransactionService } from '../arbitrum-transaction.service';
 // Uniswap V3 Router addresses
 const UNISWAP_V3_ROUTER_ADDRESSES: Record<number, string> = {
     1: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',     // Ethereum
-    42161: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45', // Arbitrum
+    42161: '0xE592427A0AEce92De3Edee1F18E0157C05861564', // Arbitrum
     137: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',   // Polygon
     10: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',    // Optimism
     8453: '0x2626664c2603336E57B271c5C0b26F421741e481', // Base
