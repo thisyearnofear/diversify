@@ -102,6 +102,7 @@ export const TOKEN_METADATA: Record<string, { name: string; region: RegionValue;
     EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18 },
     USDY: { name: 'Ondo US Dollar Yield', region: REGIONS.USA, decimals: 18 },
+    SYRUPUSDC: { name: 'Syrup USDC', region: REGIONS.USA, decimals: 18 },
 };
 
 // Helper to get token region (normalized)
@@ -114,7 +115,7 @@ export function getTokenRegion(symbol: string): RegionValue {
 export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.CELO_MAINNET.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN', 'USDT'],
     [NETWORKS.ALFAJORES.chainId]: ['CUSD', 'CEUR', 'CREAL', 'CXOF', 'CKES', 'CPESO', 'CCOP', 'CGHS', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'PUSO', 'USDT'],
-    [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY'],
+    [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
 };
 
@@ -151,7 +152,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     EURC: 1.08,
     PAXG: 2650,
     USDY: 1,
-
+    SYRUPUSDC: 1,
 } as const;
 
 // Transaction Configuration
@@ -213,7 +214,7 @@ export const SWAP_CONFIG = {
         'PAXG': { 'OneInchSwapStrategy': 25 },
         'USDC': { 'OneInchSwapStrategy': 15, 'UniswapV3Strategy': 12 },
         'USDY': { 'UniswapV3Strategy': 100, 'OneInchSwapStrategy': 90 },
-
+        'SYRUPUSDC': { 'UniswapV3Strategy': 100, 'OneInchSwapStrategy': 90 },
     },
     ENABLE_PERFORMANCE_TRACKING: true,
     ENABLE_AUTOMATIC_FALLBACK: true,
@@ -264,7 +265,7 @@ export const ARBITRUM_TOKENS = {
     USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
     PAXG: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
     USDY: '0x96F6eF951840721AdBF41Ac996DdF11aCb0A6382',
-
+    SYRUPUSDC: '0xD54f502e184B6B739d7D27a6410a67dc462d69c8',
 } as const;
 
 export const ARC_TOKENS = {

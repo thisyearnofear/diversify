@@ -307,6 +307,18 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
             },
         ],
     },
+    {
+        symbol: 'SYRUPUSDC',
+        name: 'Syrup USDC',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.ARBITRUM_ONE.chainId,
+                address: ARBITRUM_TOKENS.SYRUPUSDC,
+                decimals: 18,
+            },
+        ],
+    },
 ];
 
 /**

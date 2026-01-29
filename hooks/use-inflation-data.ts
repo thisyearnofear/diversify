@@ -30,7 +30,7 @@ const REGION_STABLECOINS: Record<string, string[]> = {
   LatAm: ['CREAL', 'CCOP'],
   Asia: ['PUSO', 'CAUD', 'CPESO', 'CJPY'],
   Europe: ['CEUR', 'CGBP', 'EURC', 'CCHF'],
-  USA: ['CUSD', 'CCAD', 'USDC', 'USDT', 'USDY'],
+  USA: ['CUSD', 'CCAD', 'USDC', 'USDT', 'USDY', 'SYRUPUSDC'],
   Global: ['PAXG'],
   Commodities: ['PAXG'],
 };
@@ -286,6 +286,13 @@ export function useInflationData() {
       return rate;
     }
 
+    // Special case for SYRUPUSDC (Syrup USDC - Morpho yield-bearing) - uses USD inflation rate
+    if (normalizedStablecoin === 'SYRUPUSDC') {
+      const rate = getInflationRateForCurrency('USD');
+      console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
+      return rate;
+    }
+
     // Find the currency that corresponds to this stablecoin
     const currency = Object.keys(CURRENCY_TO_STABLECOIN).find(
       key => CURRENCY_TO_STABLECOIN[key].toUpperCase() === normalizedStablecoin
@@ -341,6 +348,7 @@ export function useInflationData() {
 
     // USA region (Yield-bearing USD assets)
     if (stablecoinUpper === 'USDY') return 'USA';
+    if (stablecoinUpper === 'SYRUPUSDC') return 'USA';
 
     // Fallback to the original lookup method (case-insensitive)
     const currency = Object.keys(CURRENCY_TO_STABLECOIN).find(
