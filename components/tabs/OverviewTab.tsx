@@ -10,6 +10,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
 import WealthJourneyWidget from "../demo/WealthJourneyWidget";
 import { Card, CollapsibleSection, EmptyState, StatBadge, PrimaryButton } from "../shared/TabComponents";
+import { MtPelerinOnramp } from "../onramp/MtPelerinOnramp";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 
@@ -122,7 +123,7 @@ export default function OverviewTab({
       {/* Main Overview Card */}
       <Card className="space-y-4" padding="p-6">
         {!hasHoldings ? (
-          <div className="pt-4">
+          <div className="pt-4 space-y-4">
             <EmptyState
               icon="💰"
               title={ChainDetectionService.isArbitrum(chainId) ? "No RWAs Found" : "No Stablecoins Found"}
@@ -136,6 +137,29 @@ export default function OverviewTab({
                 icon: <span>{ChainDetectionService.isArbitrum(chainId) ? "🌉" : "➕"}</span>,
               }}
             />
+            
+            {/* Fiat On-ramp Option */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <div className="text-2xl">🏦</div>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm">New to Crypto?</h4>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 mb-3">
+                    Buy crypto instantly with your bank card or bank transfer. No KYC required under limits.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <MtPelerinOnramp mode="buy" />
+                    <button
+                      onClick={() => setActiveTab("swap")}
+                      className="px-4 py-2.5 rounded-xl font-medium text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Bridge Instead
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-2">Powered by Mt Pelerin • Swiss-regulated</p>
+                </div>
+              </div>
+            </div>
           </div>
         ) : (
           <div className="space-y-8">

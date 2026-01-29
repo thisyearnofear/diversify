@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MtPelerinOnramp } from "../onramp/MtPelerinOnramp";
 import InflationProtectionInfo from "../inflation/InflationProtectionInfo";
 import RegionalRecommendations from "../regional/RegionalRecommendations";
 import AgentWealthGuard from "../agent/AgentWealthGuard";
@@ -435,6 +436,31 @@ export default function ProtectionTab({
               Bridge to Gold →
             </button>
           )}
+        </Card>
+      )}
+
+      {/* =====================================================================
+          FIAT ON-RAMP CARD - Show when user has low balance
+          ===================================================================== */}
+      {(!totalValue || totalValue < 50) && (
+        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
+                💳
+              </div>
+              <div>
+                <h3 className="font-black text-sm">Add Funds</h3>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">Buy with Card/Bank</span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-white/80 mb-3">
+            Buy crypto instantly with card or bank transfer. No KYC required under limits. Swiss-regulated.
+          </p>
+          <div className="flex gap-2">
+            <MtPelerinOnramp mode="buy" className="flex-1" variant="white" />
+          </div>
         </Card>
       )}
 
