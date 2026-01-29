@@ -826,9 +826,16 @@ export class ArcAgent {
     4. Focus on geographic diversification benefits (USD vs EUR inflation)
     ` : `
     MAINNET STRATEGY GUIDANCE:
-    1. If inflation data is high (>4%), prioritize PAXG or GLP on Arbitrum
+    1. If inflation data is high (>4%), prioritize PAXG (gold hedge) or USDY (treasury yield) on Arbitrum
     2. If macro sentiment is bearish, recommend PAXG (Gold) as safe haven
-    3. Consider gas efficiency - if amount <$500, optimize for lower fees
+    3. For conservative yield seekers: USDY (~5% APY, auto-accruing, treasury-backed)
+    4. For DeFi-native users: sDAI (~4.5% APY, Maker/Sky protocol, instant liquidity)
+    5. Consider gas efficiency - if amount <$500, optimize for lower fees
+    
+    RWA DIFFERENTIATION:
+    - USDY: Best for users wanting US Treasury yield without KYC. Auto-accruing, no claiming needed.
+    - sDAI: Best for users familiar with Maker/Sky. Rebasing yield, highly liquid.
+    - PAXG: Best for users wanting gold exposure. No yield, pure store of value.
     `}
     `;
 

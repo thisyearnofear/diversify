@@ -9,7 +9,7 @@ export interface RWAToken {
     address: string;
     symbol: string;
     name: string;
-    type: 'treasury' | 'real_estate' | 'commodity' | 'credit';
+    type: 'treasury' | 'real_estate' | 'commodity' | 'credit' | 'stable_yield';
     apy?: number;
     tvl?: number;
     chain: string;
@@ -19,6 +19,7 @@ export interface RWAToken {
 }
 
 // RWA Token Registry - Real addresses and data
+// Prioritizing permissionless tokens with deep DEX liquidity for frictionless UX
 export const RWA_TOKENS: Record<string, RWAToken[]> = {
     arbitrum: [
         {
@@ -29,9 +30,33 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             apy: 0,
             tvl: 10000000,
             chain: 'arbitrum',
-            description: 'Tokenized gold on Arbitrum - hedge against currency debasement',
+            description: 'Tokenized gold on Arbitrum - hedge against currency debasement. Permissionless secondary market.',
             minInvestment: 10,
-            riskLevel: 'medium'
+            riskLevel: 'low'
+        },
+        {
+            address: '0x96F6eF951840721AdBF41Ac996DdF11aCb0A6382',
+            symbol: 'USDY',
+            name: 'Ondo US Dollar Yield',
+            type: 'treasury',
+            apy: 5.0,
+            tvl: 150000000, // ~$150M TVL
+            chain: 'arbitrum',
+            description: 'Tokenized US Treasuries with auto-accruing yield. No KYC required. Deep liquidity on Camelot & Uniswap.',
+            minInvestment: 10, // $10 practical minimum via DEX
+            riskLevel: 'low'
+        },
+        {
+            address: '0x83F20F44975D03b1b09e64809B757c47f942BEeA',
+            symbol: 'sDAI',
+            name: 'Savings DAI',
+            type: 'stable_yield',
+            apy: 4.5,
+            tvl: 800000000, // ~$800M TVL across chains
+            chain: 'arbitrum',
+            description: 'Permissionless yield-bearing stablecoin from Maker/Sky. Rebasing yield on DAI collateral.',
+            minInvestment: 5,
+            riskLevel: 'low'
         },
         {
             address: '0x4277f8F2c384827B5273592FF7CeBd9f2C1ac258',
@@ -44,18 +69,6 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             description: 'Real yield from GMX trading fees and liquidations',
             minInvestment: 50,
             riskLevel: 'medium'
-        },
-        {
-            address: '0xF84D28A8D28292842dD73D1c5F99476A80b6666A',
-            symbol: 'TBILL',
-            name: 'OpenEden T-Bill',
-            type: 'treasury',
-            apy: 5.3,
-            tvl: 200000000,
-            chain: 'arbitrum',
-            description: 'Direct exposure to US Treasury Bills via OpenEden',
-            minInvestment: 10,
-            riskLevel: 'low'
         }
     ],
     ethereum: [

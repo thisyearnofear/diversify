@@ -38,13 +38,16 @@ export class DirectRWAStrategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Only supports Arbitrum USDC/PAXG swaps for now
-        return (
-            params.fromChainId === params.toChainId &&
-            params.fromChainId === 42161 && // Arbitrum
-            ((params.fromToken === 'USDC' && params.toToken === 'PAXG') ||
-                (params.fromToken === 'PAXG' && params.toToken === 'USDC'))
-        );
+        // Supports Arbitrum RWA swaps: USDC/PAXG, USDC/USDY, USDC/sDAI
+        const isArbitrum = params.fromChainId === params.toChainId && params.fromChainId === 42161;
+        if (!isArbitrum) return false;
+        
+        const rwaTokens = ['PAXG', 'USDY', 'SDAI'];
+        const isRwaSwap = 
+            (params.fromToken === 'USDC' && rwaTokens.includes(params.toToken)) ||
+            (rwaTokens.includes(params.fromToken) && params.toToken === 'USDC');
+        
+        return isRwaSwap;
     }
 
     async validate(params: SwapParams): Promise<boolean> {
@@ -62,24 +65,30 @@ export class DirectRWAStrategy extends BaseSwapStrategy {
     async getEstimate(params: SwapParams): Promise<SwapEstimate> {
         this.log('Getting direct RWA estimate', { from: params.fromToken, to: params.toToken });
 
-        // For USDC/PAXG, use a simple price calculation
-        // PAXG is roughly $2000, USDC is $1
+        // Price approximations for RWA tokens
+        const tokenPrices: Record<string, number> = {
+            'USDC': 1,
+            'PAXG': 2650,  // Gold price
+            'USDY': 1.05,  // Slightly above $1 due to accrued yield
+            'SDAI': 1.02,  // Slightly above $1 due to accrued yield
+        };
+
         const fromTokenMeta = TOKEN_METADATA[params.fromToken] || { decimals: 18 };
         const toTokenMeta = TOKEN_METADATA[params.toToken] || { decimals: 18 };
 
         const amountIn = this.parseAmount(params.amount, fromTokenMeta.decimals || 18);
+        const fromPrice = tokenPrices[params.fromToken] || 1;
+        const toPrice = tokenPrices[params.toToken] || 1;
 
-        let expectedOutput: ethers.BigNumber;
-
-        if (params.fromToken === 'USDC' && params.toToken === 'PAXG') {
-            // USDC to PAXG: divide by ~2000 (gold price)
-            expectedOutput = amountIn.mul(ethers.utils.parseEther('1')).div(ethers.utils.parseEther('2000'));
-        } else if (params.fromToken === 'PAXG' && params.toToken === 'USDC') {
-            // PAXG to USDC: multiply by ~2000 (gold price)
-            expectedOutput = amountIn.mul(2000).div(ethers.BigNumber.from(10).pow(12)); // Adjust for USDC decimals
-        } else {
-            throw new Error('Unsupported token pair for direct RWA swap');
-        }
+        // Calculate expected output based on price ratio
+        const amountInUSD = parseFloat(params.amount) * fromPrice;
+        const expectedOutputAmount = amountInUSD / toPrice;
+        
+        // Convert to token decimals
+        const expectedOutput = ethers.utils.parseUnits(
+            expectedOutputAmount.toFixed(6), 
+            toTokenMeta.decimals || 18
+        );
 
         const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
         const minimumOutput = this.calculateMinOutput(expectedOutput, slippage);
@@ -119,12 +128,18 @@ export class DirectRWAStrategy extends BaseSwapStrategy {
     }
 
     private getHelpfulErrorMessage(params: SwapParams): string {
-        if (params.fromToken === 'USDC' && params.toToken === 'PAXG') {
-            return `USDC to PAXG swap temporarily unavailable. This requires a 1inch API key for optimal routing. Please try again later or contact support.`;
+        const rwaTokenNames: Record<string, string> = {
+            'PAXG': 'Paxos Gold (PAXG)',
+            'USDY': 'Ondo US Dollar Yield (USDY)',
+            'SDAI': 'Savings DAI (sDAI)'
+        };
+        
+        if (params.fromToken === 'USDC' && rwaTokenNames[params.toToken]) {
+            return `USDC to ${rwaTokenNames[params.toToken]} swap temporarily unavailable. This requires a 1inch API key for optimal routing. Please try again later or contact support.`;
         }
 
-        if (params.fromToken === 'PAXG' && params.toToken === 'USDC') {
-            return `PAXG to USDC swap temporarily unavailable. This requires a 1inch API key for optimal routing. Please try again later or contact support.`;
+        if (rwaTokenNames[params.fromToken] && params.toToken === 'USDC') {
+            return `${rwaTokenNames[params.fromToken]} to USDC swap temporarily unavailable. This requires a 1inch API key for optimal routing. Please try again later or contact support.`;
         }
 
         return `${params.fromToken} to ${params.toToken} swap is not currently supported on Arbitrum.`;

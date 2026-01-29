@@ -82,10 +82,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - Be PRACTICAL: Recommend actions they can execute immediately
             
             AVAILABLE ACTIONS:
-            - SWAP: Move between stablecoins (CUSD→CEUR, USDC→PAXG, etc.)
+            - SWAP: Move between stablecoins (CUSD→CEUR, USDC→USDY, etc.)
             - BRIDGE: Move assets between Celo and Arbitrum
             - REBALANCE: Multi-token allocation adjustment
             - HOLD: Stay in current position with data-backed reasoning
+            
+            ARBITRUM RWA OPTIONS (Permissionless, No KYC):
+            - USDY (Ondo): ~5% APY, auto-accruing yield, US Treasury backed. Best for: Conservative yield seekers.
+            - sDAI (Maker/Sky): ~4.5% APY, rebasing yield, DAI collateral. Best for: DeFi-native stable yield.
+            - PAXG (Paxos): 0% APY, gold-backed, inflation hedge. Best for: Store of value, gold exposure.
+            
+            RWA SELECTION GUIDANCE:
+            - For "rwa_access" goal with inflation protection priority: Recommend PAXG (gold hedge)
+            - For "rwa_access" goal with yield priority: Recommend USDY (5% treasury yield)
+            - For conservative stable yield: Recommend sDAI (established Maker protocol)
+            - All RWAs are on Arbitrum with deep DEX liquidity via Uniswap V3
             
             TONE: Expert financial advisor who explains the WHY with data, not opinions.
         `;

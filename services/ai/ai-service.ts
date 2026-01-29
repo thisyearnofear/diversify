@@ -500,10 +500,10 @@ function buildWebSearchQuery(portfolioSummary: string, userGoal: string): string
                           Current gold price, analyst price targets, macro risks.`,
     geographic_diversification: `African currency performance 2025. Ghana Cedi, Kenyan Shilling, 
                                  South African Rand vs USD. IMF outlook.`,
-    rwa_access: `Tokenized gold PAXG vs physical gold. Gold price outlook 2025. 
-                 Best time to buy gold analysis.`,
+    rwa_access: `Tokenized gold PAXG vs Treasury yields USDY Ondo. Gold vs Treasury 2025 outlook. 
+                 Best time to buy gold or Treasury tokens. USDY vs sDAI yield comparison.`,
     exploring: `Global inflation outlook 2025. Currency market trends. 
-                Stablecoin adoption in emerging markets.`,
+                Stablecoin adoption in emerging markets. Tokenized Treasury yields.`,
   };
 
   return queries[userGoal] || queries.exploring;

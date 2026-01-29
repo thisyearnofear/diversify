@@ -83,6 +83,24 @@ const TIME_HORIZONS = [
 
 const RWA_ASSETS = [
   {
+    symbol: "USDY",
+    type: "Yield Bearing",
+    label: "US Treasury Yield",
+    description:
+      "Tokenized US Treasuries via Ondo. ~5% APY auto-accrues in your wallet. No KYC needed.",
+    benefits: [
+      "~5% APY auto-accruing",
+      "No KYC required",
+      "Deep DEX liquidity ($10M+)"
+    ],
+    gradient: "from-green-600 to-emerald-700",
+    icon: "📈",
+    textColor: "text-green-700",
+    bgColor: "bg-green-100",
+    expectedSlippage: "0.5%",
+    yieldTooltip: "Your USDY balance grows automatically at ~5% APY. Just hold it in your wallet—no claiming needed. The yield accrues continuously and compounds automatically.",
+  },
+  {
     symbol: "PAXG",
     type: "Store of Value",
     label: "Inflation Hedge",
@@ -97,18 +115,25 @@ const RWA_ASSETS = [
     icon: "🏆",
     textColor: "text-amber-700",
     bgColor: "bg-amber-100",
+    yieldTooltip: "PAXG tracks the price of physical gold. No yield—it's a store of value that protects against currency debasement and inflation over time.",
   },
   {
-    symbol: "TBILL",
-    type: "Yield Bearing",
-    label: "US Treasury Bills",
+    symbol: "SDAI",
+    type: "Stable Yield",
+    label: "Savings DAI",
     description:
-      "Direct exposure to US Treasury Bills via OpenEden. Permissioned, regulatory compliant yield.",
-    benefits: ["~5.2% APY", "Backed by US Govt", "Regulatory Compliant"],
-    gradient: "from-blue-600 to-indigo-700",
-    icon: "🏛️",
-    textColor: "text-blue-700",
-    bgColor: "bg-blue-100",
+      "Permissionless yield-bearing stablecoin from Maker/Sky. Rebasing yield on DAI collateral.",
+    benefits: [
+      "~4.5% APY",
+      "Fully permissionless",
+      "Instant liquidity"
+    ],
+    gradient: "from-yellow-500 to-amber-600",
+    icon: "💰",
+    textColor: "text-yellow-700",
+    bgColor: "bg-yellow-100",
+    expectedSlippage: "0.3%",
+    yieldTooltip: "Your sDAI balance increases automatically at ~4.5% APY from Maker's DAI Savings Rate. Just hold it—yield accrues every block with no action needed.",
   },
 ];
 
@@ -529,13 +554,23 @@ export default function ProtectionTab({
                 </div>
                 <div>
                   <h3 className="font-black text-sm">{asset.label}</h3>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
-                    {asset.symbol} on Arbitrum
-                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
+                      {asset.symbol} on Arbitrum
+                    </span>
+                    <span className="text-[10px] bg-green-500/40 px-2 py-0.5 rounded-full">
+                      ✓ Open Market
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
             <p className="text-xs text-white/80 mb-3">{asset.description}</p>
+            {asset.expectedSlippage && (
+              <p className="text-[10px] text-white/60 mb-2">
+                Expected slippage: ~{asset.expectedSlippage}
+              </p>
+            )}
             {isCelo && (
               <button
                 onClick={(e) => {
@@ -745,9 +780,39 @@ export default function ProtectionTab({
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed font-medium">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed font-medium">
                     {asset.description}
                   </p>
+                  
+                  {/* Market Type Badge */}
+                  <div className="mb-4">
+                    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-bold text-xs">
+                        <span>✓</span>
+                        <span>Open Market - No KYC Required</span>
+                      </div>
+                      {asset.expectedSlippage && (
+                        <p className="text-[10px] text-green-600 dark:text-green-400 mt-1">
+                          Expected slippage: ~{asset.expectedSlippage}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Yield Explanation Tooltip */}
+                  {asset.yieldTooltip && (
+                    <div className="mb-4">
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                        <div className="flex items-start gap-2">
+                          <span className="text-blue-500 mt-0.5">💡</span>
+                          <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
+                            {asset.yieldTooltip}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
                   <div className="space-y-3 mb-8">
                     {asset.benefits.map((benefit, i) => (
                       <div

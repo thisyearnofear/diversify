@@ -160,12 +160,12 @@ export function getTokenInflationRate(
   
   // Direct mappings for known tokens
   const tokenRegionMap: Record<string, string> = {
-    'CUSD': 'USA', 'USDC': 'USA', 'CCAD': 'USA',
+    'CUSD': 'USA', 'USDC': 'USA', 'CCAD': 'USA', 'USDY': 'USA',  // USDY = US Treasury yield, USD-based
     'CEUR': 'Europe', 'EURC': 'Europe', 'CGBP': 'Europe', 'CCHF': 'Europe',
     'CREAL': 'LatAm', 'CCOP': 'LatAm',
     'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa', 'CNGN': 'Africa',
     'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
-    'PAXG': 'Global',
+    'PAXG': 'Global', 'SDAI': 'Global',  // sDAI = global stable yield, not region-specific
   };
   
   const region = tokenRegionMap[normalizedSymbol];
@@ -472,9 +472,9 @@ function getAllocationReason(
       'Global': 'Commodity hedge with gold',
     },
     rwa_access: {
-      'Global': 'Primary gold allocation for wealth preservation',
+      'Global': 'Primary gold (PAXG) or yield (sDAI) for wealth preservation',
       'Europe': 'Stable European exposure',
-      'USA': 'USD stability alongside gold',
+      'USA': 'USD Treasury yield (USDY) for stable returns',
       'Asia': 'Asian market diversification',
     },
     exploring: {
