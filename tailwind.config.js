@@ -72,6 +72,13 @@ module.exports = {
             dark: "#A21CAF",
             contrast: "#701A75",
           },
+          // Global - Enhanced blue/indigo
+          global: {
+            light: "#E0E7FF",
+            medium: "#6366F1",
+            dark: "#4338CA",
+            contrast: "#312E81",
+          },
         },
         // Enhanced UI colors for better contrast
         text: {

@@ -629,19 +629,19 @@ const SwapInterface = forwardRef<
           {/* Inflation benefit information */}
           {fromToken && toToken && hasInflationBenefit && (
             <div
-              className={`relative p-4 rounded-lg overflow-hidden border-2 shadow-md ${toTokenRegion
-                ? `border-region-${toTokenRegion.toLowerCase()}-medium bg-region-${toTokenRegion.toLowerCase()}-light/10`
-                : "border-green-500 bg-green-50"
+              className={`relative p-4 rounded-lg overflow-hidden border-2 shadow-md ${toTokenRegion && toTokenRegion !== 'Unknown'
+                ? `border-region-${toTokenRegion.toLowerCase()}-medium bg-region-${toTokenRegion.toLowerCase()}-light/30`
+                : "border-green-600 bg-green-100"
                 }`}
             >
-              {toTokenRegion && (
+              {toTokenRegion && toTokenRegion !== 'Unknown' && (
                 <RegionalPattern region={toTokenRegion as Region} />
               )}
               <div className="relative">
                 <h3
-                  className={`text-sm font-bold mb-2 flex items-center ${toTokenRegion
-                    ? `text-region-${toTokenRegion.toLowerCase()}-dark`
-                    : "text-green-800"
+                  className={`text-sm font-bold mb-2 flex items-center ${toTokenRegion && toTokenRegion !== 'Unknown'
+                    ? `text-region-${toTokenRegion.toLowerCase()}-contrast`
+                    : "text-green-900"
                     }`}
                 >
                   <span className="mr-2 text-lg">✨</span>
@@ -649,7 +649,7 @@ const SwapInterface = forwardRef<
                 </h3>
                 <div className="flex items-center mb-3">
                   <div className="flex items-center">
-                    {fromTokenRegion && (
+                    {fromTokenRegion && fromTokenRegion !== 'Unknown' && (
                       <div
                         className="size-6 rounded-full flex items-center justify-center mr-1"
                         style={{
@@ -668,17 +668,17 @@ const SwapInterface = forwardRef<
                       </div>
                     )}
                     <span
-                      className={`font-bold mx-1 ${fromTokenRegion
-                        ? `text-region-${fromTokenRegion.toLowerCase()}-dark`
+                      className={`font-bold mx-1 ${fromTokenRegion && fromTokenRegion !== 'Unknown'
+                        ? `text-region-${fromTokenRegion.toLowerCase()}-contrast`
                         : "text-gray-900"
                         }`}
                     >
                       {fromToken}
                     </span>
                   </div>
-                  <span className="mx-2 text-gray-500">→</span>
+                  <span className="mx-2 text-gray-600 font-bold">→</span>
                   <div className="flex items-center">
-                    {toTokenRegion && (
+                    {toTokenRegion && toTokenRegion !== 'Unknown' && (
                       <div
                         className="size-6 rounded-full flex items-center justify-center mr-1"
                         style={{
@@ -697,8 +697,8 @@ const SwapInterface = forwardRef<
                       </div>
                     )}
                     <span
-                      className={`font-bold mx-1 ${toTokenRegion
-                        ? `text-region-${toTokenRegion.toLowerCase()}-dark`
+                      className={`font-bold mx-1 ${toTokenRegion && toTokenRegion !== 'Unknown'
+                        ? `text-region-${toTokenRegion.toLowerCase()}-contrast`
                         : "text-gray-900"
                         }`}
                     >
@@ -707,17 +707,17 @@ const SwapInterface = forwardRef<
                   </div>
                 </div>
                 <p
-                  className={`text-sm ${toTokenRegion
-                    ? `text-region-${toTokenRegion.toLowerCase()}-dark`
-                    : "text-gray-700"
+                  className={`text-sm font-medium ${toTokenRegion && toTokenRegion !== 'Unknown'
+                    ? `text-region-${toTokenRegion.toLowerCase()}-contrast`
+                    : "text-gray-800"
                     }`}
                 >
                   You could save approximately{" "}
-                  <span className="font-bold text-green-600 text-lg">
+                  <span className="font-bold text-green-700 text-lg">
                     {inflationDifference.toFixed(1)}%
                   </span>{" "}
                   in purchasing power per year due to lower inflation in{" "}
-                  <span className="font-bold">{toTokenRegion}</span>.
+                  <span className="font-bold text-gray-900">{toTokenRegion && toTokenRegion !== 'Unknown' ? toTokenRegion : 'the target region'}</span>.
                 </p>
               </div>
             </div>

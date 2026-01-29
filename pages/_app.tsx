@@ -79,7 +79,8 @@ export default function App({ Component, pageProps }: AppProps) {
           name="apple-mobile-web-app-status-bar-style"
           content="black-translucent"
         />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/icon.png" />
+        <link rel="apple-touch-icon" href="/icon.png" />
       </Head>
 
       <ErrorBoundary>

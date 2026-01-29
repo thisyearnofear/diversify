@@ -76,7 +76,9 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     if (isCrossChain && !hasBalance) {
       return "text-amber-600"; // Amber for unknown cross-chain balance
     }
-    return tokenRegion ? `text-region-${tokenRegion.toLowerCase()}-dark` : "text-gray-600";
+    return tokenRegion && tokenRegion !== 'Unknown' 
+      ? `text-region-${tokenRegion.toLowerCase()}-dark` 
+      : "text-gray-600";
   };
 
   // Function to set max amount
@@ -89,7 +91,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     <div>
       <label className="text-sm font-bold text-gray-900 mb-2 flex items-center">
         <span className="mr-2">{label}</span>
-        {tokenRegion && (
+        {tokenRegion && tokenRegion !== 'Unknown' && (
           <div className="flex items-center bg-gray-100 px-2 py-1 rounded-md">
             <RegionalIconography
               region={tokenRegion as Region}
@@ -150,7 +152,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           value={selectedToken}
           onChange={(e) => onTokenChange(e.target.value)}
           className={`${showAmountInput ? "w-1/3" : "w-full"
-            } rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold ${tokenRegion
+            } rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold ${tokenRegion && tokenRegion !== 'Unknown'
               ? `border-region-${tokenRegion.toLowerCase()}-medium focus:border-region-${tokenRegion.toLowerCase()}-medium focus:ring-region-${tokenRegion.toLowerCase()}-light bg-white`
               : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             }`}
@@ -173,7 +175,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               type="number"
               value={amount}
               onChange={(e) => onAmountChange(e.target.value)}
-              className={`w-full rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold pr-16 ${tokenRegion
+              className={`w-full rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold pr-16 ${tokenRegion && tokenRegion !== 'Unknown'
                 ? `border-region-${tokenRegion.toLowerCase()}-medium focus:border-region-${tokenRegion.toLowerCase()}-medium focus:ring-region-${tokenRegion.toLowerCase()}-light bg-white`
                 : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                 }`}
@@ -185,7 +187,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             <button
               type="button"
               onClick={setMaxAmount}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded ${tokenRegion
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded ${tokenRegion && tokenRegion !== 'Unknown'
                 ? `bg-region-${tokenRegion.toLowerCase()}-light text-region-${tokenRegion.toLowerCase()}-dark hover:bg-region-${tokenRegion.toLowerCase()}-medium`
                 : "bg-blue-100 text-blue-700 hover:bg-blue-200"
                 } transition-colors ${!hasBalance || isCrossChain ? 'opacity-50 cursor-not-allowed' : ''
@@ -204,17 +206,19 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           </div>
         )}
       </div>
-      {selectedToken && tokenRegion && (
+      {selectedToken && (
         <div
-          className={`relative mt-2 text-sm px-3 py-2 rounded-md overflow-hidden ${tokenRegion
+          className={`relative mt-2 text-sm px-3 py-2 rounded-md overflow-hidden ${tokenRegion && tokenRegion !== 'Unknown'
             ? `bg-region-${tokenRegion.toLowerCase()}-light/30 border-2 border-region-${tokenRegion.toLowerCase()}-medium`
-            : "bg-white border-2 border-gray-300"
+            : "bg-gray-50 border-2 border-gray-300"
             } shadow-md flex items-center`}
         >
-          <RegionalPattern region={tokenRegion as Region} className="opacity-20" />
+          {tokenRegion && tokenRegion !== 'Unknown' && (
+            <RegionalPattern region={tokenRegion as Region} className="opacity-20" />
+          )}
           <div className="relative flex w-full justify-between items-center">
             <div className="flex items-center">
-              {tokenRegion && (
+              {tokenRegion && tokenRegion !== 'Unknown' && (
                 <div
                   className="mr-2 size-8 rounded-full flex items-center justify-center shadow-sm"
                   style={{
@@ -235,9 +239,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                   Region
                 </span>
                 <div
-                  className={`font-bold text-region-${tokenRegion.toLowerCase()}-dark text-base`}
+                  className={`font-bold text-base ${tokenRegion && tokenRegion !== 'Unknown'
+                    ? `text-region-${tokenRegion.toLowerCase()}-dark`
+                    : "text-gray-700"}`}
                 >
-                  {tokenRegion || "Unknown"}
+                  {tokenRegion && tokenRegion !== 'Unknown' ? tokenRegion : "Unknown"}
                 </div>
               </div>
             </div>

@@ -30,8 +30,8 @@ const REGION_STABLECOINS: Record<string, string[]> = {
   LatAm: ['CREAL', 'CCOP'],
   Asia: ['PUSO', 'CAUD', 'CPESO', 'CJPY'],
   Europe: ['CEUR', 'CGBP', 'EURC', 'CCHF'],
-  USA: ['CUSD', 'CCAD', 'USDC', 'USDT'],
-  Global: ['PAXG'],
+  USA: ['CUSD', 'CCAD', 'USDC', 'USDT', 'USDY'],
+  Global: ['PAXG', 'SDAI'],
   Commodities: ['PAXG'],
 };
 
@@ -279,6 +279,20 @@ export function useInflationData() {
       return rate;
     }
 
+    // Special case for SDAI (Savings DAI) - uses global inflation rate
+    if (normalizedStablecoin === 'SDAI') {
+      const rate = inflationData['Global']?.avgRate || 5.0;
+      console.log(`[Inflation] ${stablecoin} -> Global rate: ${rate}`);
+      return rate;
+    }
+
+    // Special case for USDY (Ondo US Dollar Yield) - uses USD inflation rate
+    if (normalizedStablecoin === 'USDY') {
+      const rate = getInflationRateForCurrency('USD');
+      console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
+      return rate;
+    }
+
     // Find the currency that corresponds to this stablecoin
     const currency = Object.keys(CURRENCY_TO_STABLECOIN).find(
       key => CURRENCY_TO_STABLECOIN[key].toUpperCase() === normalizedStablecoin
@@ -331,6 +345,10 @@ export function useInflationData() {
 
     // Global
     if (stablecoinUpper === 'PAXG') return 'Global';
+    if (stablecoinUpper === 'SDAI') return 'Global';
+
+    // USA region (Yield-bearing USD assets)
+    if (stablecoinUpper === 'USDY') return 'USA';
 
     // Fallback to the original lookup method (case-insensitive)
     const currency = Object.keys(CURRENCY_TO_STABLECOIN).find(
