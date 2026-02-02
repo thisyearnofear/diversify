@@ -28,7 +28,7 @@ interface SwapInterfaceProps {
     amount: string,
     fromChainId?: number,
     toChainId?: number
-  ) => Promise<any>;
+  ) => Promise<unknown>;
   title?: string;
   address?: string | null;
   preferredFromRegion?: string;
@@ -246,7 +246,6 @@ const SwapInterface = forwardRef<
     error: swapError,
     txHash: swapTxHash,
     step: swapStep,
-    chainId: swapHookChainId,
   } = useSwap();
 
   // Use the expected amount out hook

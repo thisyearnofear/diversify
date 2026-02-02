@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { analyzePortfolio, type PortfolioAnalysis } from '../../../utils/portfolio-analysis';
+import { getOnrampSystemPrompt, getOnrampRecommendation } from '../../../services/ai/onramp-agent-context';
 
 
 
@@ -74,18 +75,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             1. DATA INTERPRETATION: Explain what the portfolio analysis means for the user
             2. RISK VISUALIZATION: Help them understand their exposure in concrete terms
             3. ACTION PLAN: Provide specific, executable recommendations based on calculated opportunities
+            4. FIAT ONRAMP GUIDANCE: Help users buy/sell crypto using available onramp providers
             
             RESPONSE REQUIREMENTS:
             - Be SPECIFIC with NUMBERS: "Your portfolio faces 6.8% weighted inflation risk"
             - Show the MATH: Reference the calculated projections and savings
             - Be GOAL-ALIGNED: Tailor advice to their selected objective
             - Be PRACTICAL: Recommend actions they can execute immediately
+            - HELP WITH ONRAMPS: Guide users on buying/selling crypto when needed
             
             AVAILABLE ACTIONS:
             - SWAP: Move between stablecoins (CUSD→CEUR, USDC→USDY, etc.)
             - BRIDGE: Move assets between Celo and Arbitrum
             - REBALANCE: Multi-token allocation adjustment
             - HOLD: Stay in current position with data-backed reasoning
+            - BUY: Purchase crypto using fiat onramps (when user needs to add funds)
+            - SELL: Convert crypto to fiat using offramps (when user needs to cash out)
             
             ARBITRUM RWA OPTIONS (Permissionless, No KYC):
             - USDY (Ondo): ~5% APY, auto-accruing yield, US Treasury backed. Best for: Conservative yield seekers.
@@ -97,6 +102,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - For "rwa_access" goal with yield priority: Recommend USDY (5% treasury yield)
             - For conservative stable yield: Recommend sDAI (established Maker protocol)
             - All RWAs are on Arbitrum with deep DEX liquidity via Uniswap V3
+            
+            ${getOnrampSystemPrompt()}
             
             TONE: Expert financial advisor who explains the WHY with data, not opinions.
         `;
@@ -130,18 +137,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - Concentration Risk: ${portfolioAnalysis.concentrationRisk}
             
             REGIONAL BREAKDOWN:
-            ${portfolioAnalysis.regionalExposure.map(r => 
-                `- ${r.region}: $${r.value.toFixed(2)} (${r.percentage.toFixed(1)}%) at ${r.avgInflationRate.toFixed(1)}% avg inflation`
-            ).join('\n')}
+            ${portfolioAnalysis.regionalExposure.map(r =>
+            `- ${r.region}: $${r.value.toFixed(2)} (${r.percentage.toFixed(1)}%) at ${r.avgInflationRate.toFixed(1)}% avg inflation`
+        ).join('\n')}
             
             MISSING REGIONS (Diversification Gaps):
-            ${portfolioAnalysis.missingRegions.length > 0 
-                ? portfolioAnalysis.missingRegions.join(', ') 
+            ${portfolioAnalysis.missingRegions.length > 0
+                ? portfolioAnalysis.missingRegions.join(', ')
                 : 'None - well diversified across regions'}
             
             TOP REBALANCING OPPORTUNITIES (Ranked by Savings):
-            ${topOpportunities.length > 0 
-                ? topOpportunities.map((opp, i) => 
+            ${topOpportunities.length > 0
+                ? topOpportunities.map((opp, i) =>
                     `${i + 1}. Swap ${opp.fromToken} (${opp.fromInflation}%) → ${opp.toToken} (${opp.toInflation}%): ` +
                     `$${opp.suggestedAmount.toFixed(2)} saves $${opp.annualSavings.toFixed(2)}/year (Priority: ${opp.priority})`
                 ).join('\n')
@@ -156,7 +163,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             REQUIRED OUTPUT (JSON):
             {
-                "action": "SWAP|HOLD|BRIDGE|REBALANCE",
+                "action": "SWAP|HOLD|BRIDGE|REBALANCE|BUY|SELL",
                 "targetToken": "primary recommended token",
                 "targetAllocation": [{"symbol": "TOKEN", "percentage": 30, "reason": "..."}],
                 "reasoning": "2-3 sentences explaining the data-driven recommendation",
@@ -164,6 +171,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 "expectedSavings": ${portfolioAnalysis.projections.optimizedPath.purchasingPowerPreserved.toFixed(2)},
                 "timeHorizon": "${config?.timeHorizon || '3 months'}",
                 "riskLevel": "${portfolioAnalysis.concentrationRisk}",
+                "onrampRecommendation": {
+                    "provider": "Guardarian|Mt Pelerin",
+                    "reasoning": "Why this provider is recommended for the user's situation",
+                    "amount": "Suggested amount if applicable",
+                    "paymentMethod": "Recommended payment method"
+                },
                 "thoughtChain": [
                     "Portfolio has X% weighted inflation risk based on regional exposure",
                     "Top opportunity is swapping Y to Z for W% inflation reduction",

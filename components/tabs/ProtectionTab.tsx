@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MtPelerinOnramp } from "../onramp/MtPelerinOnramp";
+import { SmartBuyCryptoButton } from "../onramp";
 import InflationProtectionInfo from "../inflation/InflationProtectionInfo";
 import RegionalRecommendations from "../regional/RegionalRecommendations";
 import AgentWealthGuard from "../agent/AgentWealthGuard";
@@ -43,31 +43,31 @@ const USER_GOALS: Array<{
   icon: string;
   description: string;
 }> = [
-  {
-    value: "inflation_protection",
-    label: "Hedge Inflation",
-    icon: "🛡️",
-    description: "Protect against currency devaluation",
-  },
-  {
-    value: "geographic_diversification",
-    label: "Diversify Regions",
-    icon: "🌍",
-    description: "Spread risk across economies",
-  },
-  {
-    value: "rwa_access",
-    label: "Access Gold/RWA",
-    icon: "🥇",
-    description: "Hold real-world assets",
-  },
-  {
-    value: "exploring",
-    label: "Just Exploring",
-    icon: "🔍",
-    description: "Learn about protection",
-  },
-];
+    {
+      value: "inflation_protection",
+      label: "Hedge Inflation",
+      icon: "🛡️",
+      description: "Protect against currency devaluation",
+    },
+    {
+      value: "geographic_diversification",
+      label: "Diversify Regions",
+      icon: "🌍",
+      description: "Spread risk across economies",
+    },
+    {
+      value: "rwa_access",
+      label: "Access Gold/RWA",
+      icon: "🥇",
+      description: "Hold real-world assets",
+    },
+    {
+      value: "exploring",
+      label: "Just Exploring",
+      icon: "🔍",
+      description: "Learn about protection",
+    },
+  ];
 
 const RISK_LEVELS = [
   { value: "Conservative" as const, label: "Conservative", icon: "🛡️" },
@@ -493,7 +493,7 @@ export default function ProtectionTab({
               score={Math.round(
                 (analysis.diversificationScore +
                   (100 - analysis.weightedInflationRisk * 5)) /
-                  2,
+                2,
               )}
               factors={[
                 {
@@ -609,7 +609,7 @@ export default function ProtectionTab({
             under limits. Swiss-regulated.
           </p>
           <div className="flex gap-2">
-            <MtPelerinOnramp mode="buy" className="flex-1" variant="white" />
+            <SmartBuyCryptoButton className="flex-1" variant="white" />
           </div>
         </Card>
       )}
@@ -723,7 +723,7 @@ export default function ProtectionTab({
         <div className="space-y-4">
           <GoalBasedStrategies
             userRegion={userRegion}
-            onSelectStrategy={onSelectStrategy || (() => {})}
+            onSelectStrategy={onSelectStrategy || (() => { })}
           />
         </div>
       </CollapsibleSection>
@@ -783,7 +783,7 @@ export default function ProtectionTab({
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed font-medium">
                     {asset.description}
                   </p>
-                  
+
                   {/* Market Type Badge */}
                   <div className="mb-4">
                     <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
@@ -798,7 +798,7 @@ export default function ProtectionTab({
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Yield Explanation Tooltip */}
                   {asset.yieldTooltip && (
                     <div className="mb-4">
@@ -812,7 +812,7 @@ export default function ProtectionTab({
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="space-y-3 mb-8">
                     {asset.benefits.map((benefit, i) => (
                       <div

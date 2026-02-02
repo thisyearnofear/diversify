@@ -10,7 +10,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
 import WealthJourneyWidget from "../demo/WealthJourneyWidget";
 import { Card, CollapsibleSection, EmptyState, StatBadge, PrimaryButton } from "../shared/TabComponents";
-import { MtPelerinOnramp } from "../onramp/MtPelerinOnramp";
+import { SmartBuyCryptoButton } from "../onramp";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 
@@ -137,7 +137,7 @@ export default function OverviewTab({
                 icon: <span>{ChainDetectionService.isArbitrum(chainId) ? "🌉" : "➕"}</span>,
               }}
             />
-            
+
             {/* Fiat On-ramp Option */}
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800">
               <div className="flex items-start gap-3">
@@ -148,7 +148,7 @@ export default function OverviewTab({
                     Buy crypto instantly with your bank card or bank transfer. No KYC required under limits.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <MtPelerinOnramp mode="buy" />
+                    <SmartBuyCryptoButton />
                     <button
                       onClick={() => setActiveTab("swap")}
                       className="px-4 py-2.5 rounded-xl font-medium text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"

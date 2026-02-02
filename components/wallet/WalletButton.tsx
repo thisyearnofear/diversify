@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWalletContext } from './WalletProvider';
 import { useToast } from '../ui/Toast';
-import { MtPelerinOnramp } from '../onramp/MtPelerinOnramp';
+import { SmartBuyCryptoButton, SmartSellCryptoButton } from '../onramp';
 
 type ButtonVariant = 'primary' | 'secondary' | 'inline' | 'minimal';
 
@@ -113,11 +113,11 @@ export default function WalletButton({
               <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Fiat Ramp</p>
                 <div className="space-y-1">
-                  <MtPelerinOnramp mode="buy" compact className="rounded-lg" />
-                  <MtPelerinOnramp mode="sell" compact className="rounded-lg" />
+                  <SmartBuyCryptoButton compact className="rounded-lg" />
+                  <SmartSellCryptoButton compact className="rounded-lg" />
                 </div>
               </div>
-              
+
               <button
                 onClick={copyAddress}
                 className="flex items-center w-full min-h-[44px] px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

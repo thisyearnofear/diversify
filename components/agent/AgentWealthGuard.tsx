@@ -43,7 +43,7 @@ export default function AgentWealthGuard({
         initializeArcAgent,
         portfolioAnalysis
     } = useWealthProtectionAgent();
-    
+
     const { inflationData: liveInflationData } = useInflationData();
 
     const { showToast } = useToast();
@@ -63,7 +63,7 @@ export default function AgentWealthGuard({
         if (isAnalyzing && analysisProgress % 25 === 0 && analysisProgress > 0) {
             try {
                 (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
-            } catch (e) { }
+            } catch (_e) { }
         }
         if (analysisProgress === 100) {
             try {
@@ -88,10 +88,10 @@ export default function AgentWealthGuard({
         const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
         const networkInfo = { chainId: chainId || 0, name: networkName };
         showToast('Starting comprehensive wealth protection analysis...', 'ai', { cost: 0.05, sources: 5 });
-        
+
         // Use live inflation data if available, otherwise fall back to prop
         const inflationDataToUse = (liveInflationData || propInflationData) as Record<string, RegionalInflationData>;
-        
+
         analyze(
             inflationDataToUse,
             amount,
@@ -147,7 +147,7 @@ export default function AgentWealthGuard({
             setIsListening(false);
             try {
                 (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
-            } catch (e) { }
+            } catch (_e) { }
         }
     };
 
@@ -210,46 +210,47 @@ export default function AgentWealthGuard({
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-[10px] font-black uppercase text-gray-400">3-Year Projection</span>
                                     {portfolioAnalysis && (
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                                            portfolioAnalysis.diversificationScore > 70 ? 'bg-emerald-100 text-emerald-700' :
+                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${portfolioAnalysis.diversificationScore > 70 ? 'bg-emerald-100 text-emerald-700' :
                                             portfolioAnalysis.diversificationScore > 40 ? 'bg-amber-100 text-amber-700' :
-                                            'bg-red-100 text-red-700'
-                                        }`}>
+                                                'bg-red-100 text-red-700'
+                                            }`}>
                                             Diversification: {portfolioAnalysis.diversificationScore}/100
                                         </span>
                                     )}
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] text-gray-500 w-20 shrink-0">Current</span>
                                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <motion.div 
-                                                initial={{ width: 0 }} 
-                                                animate={{ width: `${advice.comparisonProjection ? 
-                                                    (advice.comparisonProjection.currentPathValue / amount) * 100 : 
-                                                    85}%`}} 
-                                                className="h-full bg-red-400" 
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{
+                                                    width: `${advice.comparisonProjection ?
+                                                        (advice.comparisonProjection.currentPathValue / amount) * 100 :
+                                                        85}%`
+                                                }}
+                                                className="h-full bg-red-400"
                                             />
                                         </div>
                                         <span className="text-[10px] text-red-500 font-bold w-16 text-right">
-                                            -${advice.comparisonProjection ? 
-                                                (amount - advice.comparisonProjection.currentPathValue).toFixed(0) : 
+                                            -${advice.comparisonProjection ?
+                                                (amount - advice.comparisonProjection.currentPathValue).toFixed(0) :
                                                 (amount * 0.15).toFixed(0)}
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] text-blue-600 w-20 shrink-0">Optimized</span>
                                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <motion.div 
-                                                initial={{ width: 0 }} 
-                                                animate={{ width: '100%'}} 
-                                                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500" 
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: '100%' }}
+                                                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                                             />
                                         </div>
                                         <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
-                                            +${advice.expectedSavings?.toFixed(0) || 
-                                                (advice.comparisonProjection ? 
+                                            +${advice.expectedSavings?.toFixed(0) ||
+                                                (advice.comparisonProjection ?
                                                     (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(0) :
                                                     (amount * 0.2).toFixed(0))}
                                         </span>
@@ -270,6 +271,21 @@ export default function AgentWealthGuard({
                                 </button>
                             )}
 
+                            {/* Onramp Recommendation (embedded mode) */}
+                            {(advice.action === 'BUY' || advice.action === 'SELL') && advice.onrampRecommendation && (
+                                <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-sm">{advice.action === 'BUY' ? '💳' : '💰'}</span>
+                                        <span className="text-xs font-bold text-blue-800">
+                                            {advice.onrampRecommendation.provider}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-blue-600 leading-relaxed">
+                                        {advice.onrampRecommendation.reasoning}
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Hold State */}
                             {advice.action === 'HOLD' && (
                                 <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
@@ -282,9 +298,9 @@ export default function AgentWealthGuard({
 
                     {/* Initial State - Run Analysis with Voice Option */}
                     {!advice && !isAnalyzing && (
-                        <motion.div 
-                            key="initial" 
-                            initial={{ opacity: 0 }} 
+                        <motion.div
+                            key="initial"
+                            initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             className="text-center py-4"
                         >
@@ -294,7 +310,7 @@ export default function AgentWealthGuard({
                                         if (!capabilities.analysis) {
                                             showToast('AI Intelligence Hub unavailable', 'error');
                                             return;
-                                    }
+                                        }
                                         const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
                                         analyze(
                                             (liveInflationData || propInflationData) as Record<string, RegionalInflationData>,
@@ -306,16 +322,15 @@ export default function AgentWealthGuard({
                                         );
                                     }}
                                     disabled={!capabilities.analysis}
-                                    className={`flex-1 py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
-                                        capabilities.analysis
-                                            ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
-                                            : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                                    }`}
+                                    className={`flex-1 py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${capabilities.analysis
+                                        ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+                                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                                        }`}
                                 >
                                     <span>{capabilities.analysis ? 'Run Analysis' : 'AI Unavailable'}</span>
                                     {capabilities.analysis && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>}
                                 </button>
-                                
+
                                 {/* Voice Query Button - Always visible in embedded mode */}
                                 {capabilities.transcription && (
                                     <button
@@ -323,24 +338,23 @@ export default function AgentWealthGuard({
                                         onMouseUp={stopRecording}
                                         onTouchStart={startRecording}
                                         onTouchEnd={stopRecording}
-                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${
-                                            isListening 
-                                                ? 'bg-red-500 text-white scale-110 shadow-lg shadow-red-500/30' 
-                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                                        }`}
+                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${isListening
+                                            ? 'bg-red-500 text-white scale-110 shadow-lg shadow-red-500/30'
+                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                                            }`}
                                         aria-label="Voice Query"
                                     >
                                         <span className="text-xl">{isListening ? '🎙️' : '🎤'}</span>
                                     </button>
                                 )}
                             </div>
-                            
+
                             {isListening && (
                                 <p className="text-xs text-red-500 font-bold animate-pulse mb-2">
                                     Listening... Release to send
                                 </p>
                             )}
-                            
+
                             <p className="text-[10px] text-gray-400">
                                 Analyzes ${amount.toFixed(2)} against real-time global inflation data
                                 {capabilities.transcription && ' • Tap 🎤 to ask a question'}
@@ -483,18 +497,20 @@ export default function AgentWealthGuard({
                                                 <div className="flex justify-between text-[10px] font-bold">
                                                     <span className="text-gray-500">Current Path (Do Nothing)</span>
                                                     <span className="text-red-500">
-                                                        -${advice.comparisonProjection ? 
-                                                            (amount - advice.comparisonProjection.currentPathValue).toFixed(2) : 
+                                                        -${advice.comparisonProjection ?
+                                                            (amount - advice.comparisonProjection.currentPathValue).toFixed(2) :
                                                             (amount * 0.15).toFixed(2)}
                                                     </span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                                    <motion.div 
-                                                        initial={{ width: 0 }} 
-                                                        animate={{ width: `${advice.comparisonProjection ? 
-                                                            (advice.comparisonProjection.currentPathValue / amount) * 100 : 
-                                                            85}%`}} 
-                                                        className="h-full bg-red-400" 
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{
+                                                            width: `${advice.comparisonProjection ?
+                                                                (advice.comparisonProjection.currentPathValue / amount) * 100 :
+                                                                85}%`
+                                                        }}
+                                                        className="h-full bg-red-400"
                                                     />
                                                 </div>
                                                 <div className="text-[9px] text-gray-400">
@@ -506,18 +522,20 @@ export default function AgentWealthGuard({
                                                 <div className="flex justify-between text-[10px] font-bold">
                                                     <span className="text-blue-600">Optimized Path</span>
                                                     <span className="text-green-600">
-                                                        +${advice.expectedSavings?.toFixed(2) || (advice.comparisonProjection ? 
+                                                        +${advice.expectedSavings?.toFixed(2) || (advice.comparisonProjection ?
                                                             (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(2) :
                                                             (amount * 0.2).toFixed(2))}
                                                     </span>
                                                 </div>
                                                 <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                                                    <motion.div 
-                                                        initial={{ width: 0 }} 
-                                                        animate={{ width: `${advice.comparisonProjection ? 
-                                                            (advice.comparisonProjection.oraclePathValue / amount) * 100 : 
-                                                            100}%`}} 
-                                                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500" 
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{
+                                                            width: `${advice.comparisonProjection ?
+                                                                (advice.comparisonProjection.oraclePathValue / amount) * 100 :
+                                                                100}%`
+                                                        }}
+                                                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                                                     />
                                                 </div>
                                                 <div className="text-[9px] text-gray-400">
@@ -525,16 +543,15 @@ export default function AgentWealthGuard({
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         {portfolioAnalysis && (
                                             <div className="mt-3 pt-3 border-t border-gray-100">
                                                 <div className="flex justify-between text-[10px]">
                                                     <span className="text-gray-500">Diversification Score</span>
-                                                    <span className={`font-bold ${
-                                                        portfolioAnalysis.diversificationScore > 70 ? 'text-emerald-600' :
+                                                    <span className={`font-bold ${portfolioAnalysis.diversificationScore > 70 ? 'text-emerald-600' :
                                                         portfolioAnalysis.diversificationScore > 40 ? 'text-amber-600' :
-                                                        'text-red-600'
-                                                    }`}>
+                                                            'text-red-600'
+                                                        }`}>
                                                         {portfolioAnalysis.diversificationScore}/100
                                                     </span>
                                                 </div>
@@ -551,7 +568,7 @@ export default function AgentWealthGuard({
                                                 <span>{amount > 0 ? advice.action : 'Plan'} to {advice.targetToken}</span>
                                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                                             </button>
-                                            
+
                                             {advice.targetAllocation && advice.targetAllocation.length > 1 && (
                                                 <button
                                                     onClick={() => {
@@ -565,7 +582,44 @@ export default function AgentWealthGuard({
                                             )}
                                         </div>
                                     )}
-                                    
+
+                                    {/* Onramp Recommendation for BUY/SELL actions */}
+                                    {(advice.action === 'BUY' || advice.action === 'SELL') && advice.onrampRecommendation && (
+                                        <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-500/20">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="text-lg">{advice.action === 'BUY' ? '💳' : '💰'}</span>
+                                                <h4 className="font-bold text-blue-800 dark:text-blue-200 text-sm">
+                                                    {advice.action === 'BUY' ? 'Recommended Onramp' : 'Recommended Offramp'}
+                                                </h4>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                                        {advice.onrampRecommendation.provider}
+                                                    </span>
+                                                    {advice.onrampRecommendation.amount && (
+                                                        <span className="text-xs bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 px-2 py-1 rounded">
+                                                            {advice.onrampRecommendation.amount}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                                    {advice.onrampRecommendation.reasoning}
+                                                </p>
+                                                {advice.onrampRecommendation.paymentMethod && (
+                                                    <div className="text-xs text-blue-500 dark:text-blue-400">
+                                                        <span className="font-medium">Payment:</span> {advice.onrampRecommendation.paymentMethod}
+                                                    </div>
+                                                )}
+                                                {advice.onrampRecommendation.alternatives && advice.onrampRecommendation.alternatives.length > 0 && (
+                                                    <div className="text-xs text-blue-500 dark:text-blue-400">
+                                                        <span className="font-medium">Alternatives:</span> {advice.onrampRecommendation.alternatives.join(', ')}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Portfolio Analysis Summary */}
                                     {advice.portfolioAnalysis && (
                                         <div className="mt-4 pt-4 border-t border-gray-200">
@@ -573,26 +627,24 @@ export default function AgentWealthGuard({
                                             <div className="grid grid-cols-2 gap-2">
                                                 <div className="bg-gray-50 rounded-lg p-2">
                                                     <div className="text-[9px] text-gray-500">Inflation Risk</div>
-                                                    <div className={`text-sm font-bold ${
-                                                        advice.portfolioAnalysis.weightedInflationRisk > 5 ? 'text-red-600' :
+                                                    <div className={`text-sm font-bold ${advice.portfolioAnalysis.weightedInflationRisk > 5 ? 'text-red-600' :
                                                         advice.portfolioAnalysis.weightedInflationRisk > 3 ? 'text-amber-600' :
-                                                        'text-green-600'
-                                                    }`}>
+                                                            'text-green-600'
+                                                        }`}>
                                                         {advice.portfolioAnalysis.weightedInflationRisk.toFixed(1)}%
                                                     </div>
                                                 </div>
                                                 <div className="bg-gray-50 rounded-lg p-2">
                                                     <div className="text-[9px] text-gray-500">Diversification</div>
-                                                    <div className={`text-sm font-bold ${
-                                                        advice.portfolioAnalysis.diversificationScore > 70 ? 'text-green-600' :
+                                                    <div className={`text-sm font-bold ${advice.portfolioAnalysis.diversificationScore > 70 ? 'text-green-600' :
                                                         advice.portfolioAnalysis.diversificationScore > 40 ? 'text-amber-600' :
-                                                        'text-red-600'
-                                                    }`}>
+                                                            'text-red-600'
+                                                        }`}>
                                                         {advice.portfolioAnalysis.diversificationScore}/100
                                                     </div>
                                                 </div>
                                             </div>
-                                            
+
                                             {advice.portfolioAnalysis.topOpportunity && (
                                                 <div className="mt-2 bg-blue-50 rounded-lg p-2">
                                                     <div className="text-[9px] text-blue-600 font-bold">Top Opportunity</div>

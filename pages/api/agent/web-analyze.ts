@@ -22,7 +22,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const { portfolio, inflationData, userGoal, config } = req.body;
+        const { portfolio, inflationData, userGoal } = req.body;
 
         if (!portfolio || portfolio.totalValue === 0) {
             return res.status(400).json({ error: 'No portfolio data provided' });

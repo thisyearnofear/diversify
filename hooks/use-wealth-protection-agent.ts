@@ -6,7 +6,7 @@ import type { AggregatedPortfolio } from './use-stablecoin-balances';
 import type { RegionalInflationData } from './use-inflation-data';
 
 export interface AgentAdvice {
-    action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE';
+    action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE' | 'BUY' | 'SELL';
     targetToken?: string;
     targetAllocation?: Array<{ symbol: string; percentage: number; reason: string }>;
     targetNetwork?: string;
@@ -22,6 +22,13 @@ export interface AgentAdvice {
     thoughtChain?: string[];
     actionSteps?: string[];
     urgencyLevel?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    onrampRecommendation?: {
+        provider: string;
+        reasoning: string;
+        amount?: string;
+        paymentMethod?: string;
+        alternatives?: string[];
+    };
     comparisonProjection?: {
         currentPathValue: number;
         oraclePathValue: number;
@@ -153,7 +160,7 @@ export function useWealthProtectionAgent() {
             // Step 1: Calculate portfolio analysis locally (data-driven)
             setThinkingStep("📊 Calculating portfolio metrics...");
             setAnalysisProgress(15);
-            
+
             const portfolio = aggregatedPortfolio || {
                 totalValue: userBalance,
                 chains: [{
@@ -161,8 +168,8 @@ export function useWealthProtectionAgent() {
                     chainName: networkInfo.name,
                     totalValue: userBalance,
                     balances: Object.fromEntries(
-                        currentHoldings.map(h => [h, { 
-                            symbol: h, 
+                        currentHoldings.map(h => [h, {
+                            symbol: h,
                             name: h,
                             value: userBalance / currentHoldings.length,
                             formattedBalance: (userBalance / currentHoldings.length).toString(),
@@ -181,7 +188,7 @@ export function useWealthProtectionAgent() {
 
             // Step 2: Send to AI with structured analysis
             setThinkingStep("🧠 Generating personalized recommendations...");
-            
+
             const response = await fetch('/api/agent/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -200,7 +207,7 @@ export function useWealthProtectionAgent() {
 
             if (!response.ok) throw new Error('Analysis API failed');
             const result = await response.json();
-            
+
             // Merge AI response with local analysis for complete data
             setAdvice({
                 ...result,
@@ -244,7 +251,7 @@ export function useWealthProtectionAgent() {
         }
     }, [config, initializeArcAgent]);
 
-    // Chat functionality
+    // Chat functionality with onramp awareness
     const sendMessage = useCallback(async (content: string) => {
         const userMessage: AIMessage = {
             id: Date.now().toString(),
@@ -259,12 +266,53 @@ export function useWealthProtectionAgent() {
         setAdvice(null); // Clear old advice when starting new chat analysis
 
         try {
-            const response = await GeminiService.analyzeWealthProtection(
-                null,
-                0,
-                [],
-                { ...config, userMessage: content }
+            // Check if this is an onramp-related question
+            const onrampKeywords = [
+                'buy crypto', 'sell crypto', 'fiat', 'onramp', 'off-ramp', 'offramp',
+                'purchase', 'cash out', 'deposit', 'withdraw', 'credit card',
+                'bank transfer', 'apple pay', 'google pay', 'kyc', 'no kyc',
+                'guardarian', 'mt pelerin', 'how to buy', 'how to sell'
+            ];
+
+            const isOnrampQuestion = onrampKeywords.some(keyword =>
+                content.toLowerCase().includes(keyword.toLowerCase())
             );
+
+            let response;
+
+            if (isOnrampQuestion) {
+                // Use dedicated onramp agent
+                const onrampResponse = await fetch('/api/agent/onramp-help', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        question: content,
+                        network: 'arbitrum', // Could be dynamic based on user's current network
+                        preferNoKyc: true
+                    })
+                });
+
+                if (onrampResponse.ok) {
+                    const onrampData = await onrampResponse.json();
+                    response = {
+                        action: 'BUY' as const,
+                        reasoning: onrampData.answer,
+                        confidence: 0.9,
+                        riskLevel: 'LOW' as const,
+                        onrampRecommendation: onrampData.recommendation
+                    };
+                } else {
+                    throw new Error('Onramp agent failed');
+                }
+            } else {
+                // Use regular wealth protection analysis
+                response = await GeminiService.analyzeWealthProtection(
+                    null,
+                    0,
+                    [],
+                    { ...config, userMessage: content }
+                );
+            }
 
             const assistantMessage: AIMessage = {
                 id: (Date.now() + 1).toString(),
@@ -272,7 +320,7 @@ export function useWealthProtectionAgent() {
                 content: response.reasoning,
                 timestamp: new Date(),
                 data: response,
-                type: 'recommendation'
+                type: isOnrampQuestion ? 'insight' : 'recommendation'
             };
 
             setAdvice(response);
@@ -284,6 +332,16 @@ export function useWealthProtectionAgent() {
             }
         } catch (error) {
             console.error('Chat message failed:', error);
+
+            // Fallback response
+            const fallbackMessage: AIMessage = {
+                id: (Date.now() + 1).toString(),
+                role: 'assistant',
+                content: 'I apologize, but I encountered an issue processing your request. Please try again or contact support if the problem persists.',
+                timestamp: new Date(),
+                type: 'text'
+            };
+            setMessages(prev => [...prev, fallbackMessage]);
         } finally {
             setIsAnalyzing(false);
         }

@@ -23,7 +23,6 @@ import ThemeToggle from "../components/ui/ThemeToggle";
 
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab } = useAppState();
-  const [selectedStrategy, setSelectedStrategy] = useState("balanced");
 
   const {
     isMiniPay: isInMiniPay,
@@ -73,7 +72,6 @@ export default function DiversiFiPage() {
   const shouldLoadCurrencyPerformance = activeTab === 'overview';
   const {
     data: currencyPerformanceData,
-    isLoading: isCurrencyPerformanceLoading,
   } = useCurrencyPerformance('USD', shouldLoadCurrencyPerformance);
 
   const regionData = useMemo(() => {
@@ -170,7 +168,6 @@ export default function DiversiFiPage() {
                 totalValue={aggregatedPortfolio?.totalValue || totalValue}
                 balances={balances}
                 setActiveTab={setActiveTab}
-                onSelectStrategy={setSelectedStrategy}
                 aggregatedPortfolio={aggregatedPortfolio || undefined}
               />
             )}

@@ -15,7 +15,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import type { PortfolioAnalysis, RebalancingOpportunity } from '../../utils/portfolio-analysis';
 import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
-import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 
 interface ActionableRecommendationProps {
     analysis: PortfolioAnalysis | null;
@@ -76,9 +75,8 @@ export default function ActionableRecommendation({
 
             {/* Rebalancing Opportunities */}
             {analysis.rebalancingOpportunities.length > 0 && (
-                <RebalancingSection 
+                <RebalancingSection
                     opportunities={analysis.rebalancingOpportunities}
-                    totalValue={analysis.totalValue}
                     onExecuteSwap={onExecuteSwap}
                 />
             )}
@@ -212,13 +210,11 @@ function CrossChainSection({
     );
 }
 
-function RebalancingSection({ 
+function RebalancingSection({
     opportunities,
-    totalValue,
-    onExecuteSwap 
-}: { 
+    onExecuteSwap
+}: {
     opportunities: RebalancingOpportunity[];
-    totalValue: number;
     onExecuteSwap: (from: string, to: string, amount: string, reason: string) => void;
 }) {
     // Show top 3 opportunities
