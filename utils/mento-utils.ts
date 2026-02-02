@@ -114,7 +114,7 @@ export const getMentoExchangeRate = async (
   try {
     // Get token addresses
     const tokenAddress = CELO_TOKENS[tokenSymbol as keyof typeof CELO_TOKENS];
-    const cusdAddress = CELO_TOKENS.CUSD;
+    const cusdAddress = CELO_TOKENS.USDm; // Using USDm as the base stablecoin
 
     if (!tokenAddress) {
       console.warn(`Token address not found for ${tokenSymbol}`);

@@ -1,18 +1,17 @@
 import React, { useState } from "react";
-import SimplePieChart from "../portfolio/SimplePieChart";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import InflationVisualizer from "../inflation/InflationVisualizer";
 import { useDiversification } from "@/hooks/use-diversification";
+import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
 import type { Region } from "@/hooks/use-user-region";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import RegionalIconography from "../regional/RegionalIconography";
 import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
 import WealthJourneyWidget from "../demo/WealthJourneyWidget";
-import { Card, CollapsibleSection, EmptyState, StatBadge, PrimaryButton } from "../shared/TabComponents";
+import { Card, CollapsibleSection, EmptyState } from "../shared/TabComponents";
 import { SmartBuyCryptoButton } from "../onramp";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
-import NetworkSwitcher from "../swap/NetworkSwitcher";
 
 interface OverviewTabProps {
   regionData: Array<{ region: string; value: number; color: string }>;
@@ -68,6 +67,7 @@ export default function OverviewTab({
     diversificationScore,
     diversificationRating,
     diversificationTips,
+    goalScores,
   } = useDiversification({ regionData, balances, userRegion, inflationData });
 
   const handleRefresh = async () => {
@@ -76,7 +76,6 @@ export default function OverviewTab({
   };
 
   const hasHoldings = totalValue > 0;
-  const activeRegionsCount = regionData.filter((r) => r.value > 0).length;
 
   const selectedMarketData = EMERGING_MARKETS[selectedMarket as keyof typeof EMERGING_MARKETS] || EMERGING_MARKETS.Africa;
   const selectedMarketInflation = inflationData[selectedMarket]?.avgRate || 0;
@@ -120,9 +119,8 @@ export default function OverviewTab({
 
   return (
     <div className="space-y-6">
-      {/* Main Overview Card */}
-      <Card className="space-y-4" padding="p-6">
-        {!hasHoldings ? (
+      {!hasHoldings ? (
+        <Card className="space-y-4" padding="p-6">
           <div className="pt-4 space-y-4">
             <EmptyState
               icon="💰"
@@ -161,78 +159,21 @@ export default function OverviewTab({
               </div>
             </div>
           </div>
-        ) : (
-          <div className="space-y-8">
-            {/* Hero Section with pie chart moved closer to top */}
-            <div className="flex items-start justify-between pt-18">
-              {/* Left side - Pie Chart moved up */}
-              <div className="w-32 h-45 flex-shrink-0 -mt-18">
-                <SimplePieChart data={regionData} title="" />
-              </div>
-
-              {/* Right side - Stats, Actions, and Network Controls */}
-              <div className="flex flex-col items-end text-right space-y-3 min-w-0 flex-shrink">
-                {/* Network Controls */}
-                <div className="flex items-center gap-2">
-                  <NetworkSwitcher
-                    currentChainId={chainId}
-                    onNetworkChange={handleRefresh}
-                    compact={true}
-                  />
-                  {refreshBalances && (
-                    <button
-                      onClick={handleRefresh}
-                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                      title="Refresh balances"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-
-                {/* Portfolio Value */}
-                <div className="flex flex-col items-end">
-                  <span className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
-                    ${totalValue.toFixed(2)}
-                  </span>
-                </div>
-
-                {/* Stats Badges */}
-                <div className="flex gap-2">
-                  <StatBadge label="Score" value={diversificationScore} color="blue" />
-                  <StatBadge label="Regions" value={activeRegionsCount} color="green" />
-                </div>
-
-                {/* Rating */}
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm">Rating</span>
-                  <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-gray-100">
-                    {diversificationRating}
-                  </span>
-                </div>
-
-                {/* Action Buttons - Mobile Responsive */}
-                <div className="flex flex-col sm:flex-row gap-2 pt-1 w-full sm:w-auto">
-                  <button
-                    onClick={() => setActiveTab("protect")}
-                    className="px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-lg font-bold text-xs border border-indigo-100 dark:border-indigo-800 transition-colors hover:bg-indigo-100 dark:hover:bg-indigo-900/50 whitespace-nowrap"
-                    aria-label="Get Protection Advice"
-                  >
-                    Get Advice 🤖
-                  </button>
-                  <div className="sm:min-w-0">
-                    <PrimaryButton onClick={() => setActiveTab("swap")} size="sm">
-                      Swap & Protect
-                    </PrimaryButton>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </Card>
+        </Card>
+      ) : (
+        <ProtectionAnalysis
+          regionData={regionData}
+          totalValue={totalValue}
+          goalScores={goalScores}
+          diversificationScore={diversificationScore}
+          diversificationRating={diversificationRating}
+          onOptimize={() => setActiveTab("protect")}
+          onSwap={() => setActiveTab("swap")}
+          chainId={chainId}
+          onNetworkChange={refreshChainId ? handleRefresh : undefined}
+          refreshBalances={refreshBalances}
+        />
+      )}
 
       {hasHoldings && (
         <div className="space-y-4">
