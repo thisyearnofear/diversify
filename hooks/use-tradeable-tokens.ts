@@ -11,21 +11,21 @@ import { ChainDetectionService } from "../services/swap/chain-detection.service"
 // Mento rebranded their tokens from C-prefix to m-suffix (e.g., CUSD → USDm)
 // This maps Mento's new symbols to our config symbols
 const MENTO_TO_CONFIG_SYMBOL: Record<string, string> = {
-  USDM: "CUSD",
-  EURM: "CEUR",
-  BRLM: "CREAL",
-  KESM: "CKES",
-  COPM: "CCOP",
-  PHPM: "PUSO",
-  GHSM: "CGHS",
-  XOFM: "CXOF",
-  GBPM: "CGBP",
-  ZARM: "CZAR",
-  CADM: "CCAD",
-  AUDM: "CAUD",
-  CHFM: "CCHF",
-  JPYM: "CJPY",
-  NGNM: "CNGN",
+  USDM: "USDm",
+  EURM: "EURm",
+  BRLM: "BRLm",
+  KESM: "KESm",
+  COPM: "COPm",
+  PHPM: "PHPm",
+  GHSM: "GHSm",
+  XOFM: "XOFm",
+  GBPM: "GBPm",
+  ZARM: "ZARm",
+  CADM: "CADm",
+  AUDM: "AUDm",
+  CHFM: "CHFm",
+  JPYM: "JPYm",
+  NGNM: "NGNm",
   // These don't need mapping
   CELO: "CELO",
   USDC: "USDC",
@@ -41,7 +41,15 @@ const MENTO_TO_CONFIG_SYMBOL: Record<string, string> = {
  */
 function mentoToConfigSymbol(mentoSymbol: string): string | null {
   const upper = mentoSymbol.toUpperCase();
-  return MENTO_TO_CONFIG_SYMBOL[upper] || null;
+  // Try exact match first (case-insensitive)
+  if (MENTO_TO_CONFIG_SYMBOL[upper]) {
+    return MENTO_TO_CONFIG_SYMBOL[upper];
+  }
+  // If it's already in our new format (ending in m), just return it
+  if (upper.endsWith('M')) {
+    return upper.charAt(0) + upper.slice(1).toLowerCase(); // e.g. USDM -> USDm
+  }
+  return null;
 }
 
 interface UseTradeableTokensResult {
@@ -59,27 +67,27 @@ const CACHE_DURATION = 1000 * 60 * 30; // 30 minutes
 // Used to show tokens immediately while fetching fresh data
 const FALLBACK_TRADEABLE_SYMBOLS: Record<number, string[]> = {
   42220: [
-    "CUSD",
-    "CEUR",
-    "CREAL",
-    "CKES",
-    "CCOP",
-    "PUSO",
-    "CGHS",
-    "CXOF",
-    "CGBP",
-    "CZAR",
-    "CCAD",
-    "CAUD",
-    "CCHF",
-    "CJPY",
-    "CNGN",
+    "USDm",
+    "EURm",
+    "BRLm",
+    "KESm",
+    "COPm",
+    "PHPm",
+    "GHSm",
+    "XOFm",
+    "GBPm",
+    "ZARm",
+    "CADm",
+    "AUDm",
+    "CHFm",
+    "JPYm",
+    "NGNm",
     "CELO",
     "USDC",
     "EURC",
     "USDT",
   ], // Celo Mainnet
-  44787: ["CUSD", "CEUR", "CREAL", "CKES", "CELO", "USDT"], // Alfajores (approximate)
+  44787: ["USDm", "EURm", "BRLm", "KESm", "CELO", "USDT"], // Alfajores (approximate)
 };
 
 export function useTradeableTokens(
@@ -136,7 +144,7 @@ export function useTradeableTokens(
       // Ensure critical tokens are always available if on Celo
       if (ChainDetectionService.isCelo(effectiveChainId)) {
         if (!configSymbols.includes("USDT")) configSymbols.push("USDT");
-        if (!configSymbols.includes("CUSD")) configSymbols.push("CUSD");
+        if (!configSymbols.includes("USDm")) configSymbols.push("USDm");
         if (!configSymbols.includes("CELO")) configSymbols.push("CELO");
       }
 

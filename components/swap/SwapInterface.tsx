@@ -107,10 +107,10 @@ const SwapInterface = forwardRef<
   const defaultToToken = preferredToRegion
     ? availableTokens.find((token) => token.region === preferredToRegion)
       ?.symbol ||
-    availableTokens.find((token) => token.symbol.toUpperCase() === "CEUR")?.symbol ||
+    availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")?.symbol ||
     availableTokens[1]?.symbol ||
     ""
-    : availableTokens.find((token) => token.symbol.toUpperCase() === "CEUR")?.symbol ||
+    : availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")?.symbol ||
     availableTokens[1]?.symbol || "";
 
   // State for token selection and amount

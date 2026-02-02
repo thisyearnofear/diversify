@@ -212,30 +212,30 @@ export function useExpectedAmountOut({
         let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
         let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
         if (isAlfajores) {
-          if (fromToken === 'CUSD') fromRate = 1;
-          else if (fromToken === 'CEUR') fromRate = 1.08;
-          else if (fromToken === 'CREAL') fromRate = 0.2;
-          else if (fromToken === 'CXOF') fromRate = 0.0016;
-          else if (fromToken === 'CKES') fromRate = 0.0078;
-          else if (fromToken === 'CCOP') fromRate = 0.00025;
-          else if (fromToken === 'CGHS') fromRate = 0.083;
-          else if (fromToken === 'CGBP') fromRate = 1.27;
-          else if (fromToken === 'CZAR') fromRate = 0.055;
-          else if (fromToken === 'CCAD') fromRate = 0.74;
-          else if (fromToken === 'CAUD') fromRate = 0.66;
-          else if (fromToken === 'PUSO') fromRate = 0.0179;
-          if (toToken === 'CUSD') toRate = 1;
-          else if (toToken === 'CEUR') toRate = 1.08;
-          else if (toToken === 'CREAL') toRate = 0.2;
-          else if (toToken === 'CXOF') toRate = 0.0016;
-          else if (toToken === 'CKES') toRate = 0.0078;
-          else if (toToken === 'CCOP') toRate = 0.00025;
-          else if (toToken === 'CGHS') toRate = 0.083;
-          else if (toToken === 'CGBP') toRate = 1.27;
-          else if (toToken === 'CZAR') toRate = 0.055;
-          else if (toToken === 'CCAD') toRate = 0.74;
-          else if (toToken === 'CAUD') toRate = 0.66;
-          else if (toToken === 'PUSO') toRate = 0.0179;
+          if (fromToken === 'USDm') fromRate = 1;
+          else if (fromToken === 'EURm') fromRate = 1.08;
+          else if (fromToken === 'BRLm') fromRate = 0.2;
+          else if (fromToken === 'XOFm') fromRate = 0.0016;
+          else if (fromToken === 'KESm') fromRate = 0.0078;
+          else if (fromToken === 'COPm') fromRate = 0.00025;
+          else if (fromToken === 'GHSm') fromRate = 0.083;
+          else if (fromToken === 'GBPm') fromRate = 1.27;
+          else if (fromToken === 'ZARm') fromRate = 0.055;
+          else if (fromToken === 'CADm') fromRate = 0.74;
+          else if (fromToken === 'AUDm') fromRate = 0.66;
+          else if (fromToken === 'PHPm') fromRate = 0.0179;
+          if (toToken === 'USDm') toRate = 1;
+          else if (toToken === 'EURm') toRate = 1.08;
+          else if (toToken === 'BRLm') toRate = 0.2;
+          else if (toToken === 'XOFm') toRate = 0.0016;
+          else if (toToken === 'KESm') toRate = 0.0078;
+          else if (toToken === 'COPm') toRate = 0.00025;
+          else if (toToken === 'GHSm') toRate = 0.083;
+          else if (toToken === 'GBPm') toRate = 1.27;
+          else if (toToken === 'ZARm') toRate = 0.055;
+          else if (toToken === 'CADm') toRate = 0.74;
+          else if (toToken === 'AUDm') toRate = 0.66;
+          else if (toToken === 'PHPm') toRate = 0.0179;
         }
         const result = ((amountNum * fromRate) / toRate).toString();
         setCachedResult(fromToken, toToken, amount, chainId, result);
@@ -305,12 +305,12 @@ export function useExpectedAmountOut({
 
         // Check if we can do a two-step swap via CELO for specific pairs
         const canUseViaSwap = (
-          // CUSD/CEUR pairs
-          (fromToken === 'CUSD' && toToken === 'CEUR') ||
-          (fromToken === 'CEUR' && toToken === 'CUSD') ||
-          // CUSD/CREAL pairs
-          (fromToken === 'CUSD' && toToken === 'CREAL') ||
-          (fromToken === 'CREAL' && toToken === 'CUSD')
+          // USDm/EURm pairs
+          (fromToken === 'USDm' && toToken === 'EURm') ||
+          (fromToken === 'EURm' && toToken === 'USDm') ||
+          // USDm/BRLm pairs
+          (fromToken === 'USDm' && toToken === 'BRLm') ||
+          (fromToken === 'BRLm' && toToken === 'USDm')
         );
 
         // Try two-step calculation on both mainnet and Alfajores
@@ -446,31 +446,31 @@ export function useExpectedAmountOut({
 
         // For Alfajores testnet, use hardcoded rates for common tokens
         if (isAlfajores) {
-          if (fromToken === 'CUSD') fromRate = 1;
-          else if (fromToken === 'CEUR') fromRate = 1.08;
-          else if (fromToken === 'CREAL') fromRate = 0.2;
-          else if (fromToken === 'CXOF') fromRate = 0.0016;
-          else if (fromToken === 'CKES') fromRate = 0.0078;
-          else if (fromToken === 'CCOP') fromRate = 0.00025;
-          else if (fromToken === 'CGHS') fromRate = 0.083;
-          else if (fromToken === 'CGBP') fromRate = 1.27;
-          else if (fromToken === 'CZAR') fromRate = 0.055;
-          else if (fromToken === 'CCAD') fromRate = 0.74;
-          else if (fromToken === 'CAUD') fromRate = 0.66;
-          else if (fromToken === 'PUSO') fromRate = 0.0179;
+          if (fromToken === 'USDm') fromRate = 1;
+          else if (fromToken === 'EURm') fromRate = 1.08;
+          else if (fromToken === 'BRLm') fromRate = 0.2;
+          else if (fromToken === 'XOFm') fromRate = 0.0016;
+          else if (fromToken === 'KESm') fromRate = 0.0078;
+          else if (fromToken === 'COPm') fromRate = 0.00025;
+          else if (fromToken === 'GHSm') fromRate = 0.083;
+          else if (fromToken === 'GBPm') fromRate = 1.27;
+          else if (fromToken === 'ZARm') fromRate = 0.055;
+          else if (fromToken === 'CADm') fromRate = 0.74;
+          else if (fromToken === 'AUDm') fromRate = 0.66;
+          else if (fromToken === 'PHPm') fromRate = 0.0179;
 
-          if (toToken === 'CUSD') toRate = 1;
-          else if (toToken === 'CEUR') toRate = 1.08;
-          else if (toToken === 'CREAL') toRate = 0.2;
-          else if (toToken === 'CXOF') toRate = 0.0016;
-          else if (toToken === 'CKES') toRate = 0.0078;
-          else if (toToken === 'CCOP') toRate = 0.00025;
-          else if (toToken === 'CGHS') toRate = 0.083;
-          else if (toToken === 'CGBP') toRate = 1.27;
-          else if (toToken === 'CZAR') toRate = 0.055;
-          else if (toToken === 'CCAD') toRate = 0.74;
-          else if (toToken === 'CAUD') toRate = 0.66;
-          else if (toToken === 'PUSO') toRate = 0.0179;
+          if (toToken === 'USDm') toRate = 1;
+          else if (toToken === 'EURm') toRate = 1.08;
+          else if (toToken === 'BRLm') toRate = 0.2;
+          else if (toToken === 'XOFm') toRate = 0.0016;
+          else if (toToken === 'KESm') toRate = 0.0078;
+          else if (toToken === 'COPm') toRate = 0.00025;
+          else if (toToken === 'GHSm') toRate = 0.083;
+          else if (toToken === 'GBPm') toRate = 1.27;
+          else if (toToken === 'ZARm') toRate = 0.055;
+          else if (toToken === 'CADm') toRate = 0.74;
+          else if (toToken === 'AUDm') toRate = 0.66;
+          else if (toToken === 'PHPm') toRate = 0.0179;
         }
 
         const expectedOutput = (amountNum * fromRate) / toRate;
@@ -521,31 +521,31 @@ export function useExpectedAmountOut({
 
         // For Alfajores testnet, use hardcoded rates for common tokens
         if (isAlfajores) {
-          if (fromToken === 'CUSD') fromRate = 1;
-          else if (fromToken === 'CEUR') fromRate = 1.08;
-          else if (fromToken === 'CREAL') fromRate = 0.2;
-          else if (fromToken === 'CXOF') fromRate = 0.0016;
-          else if (fromToken === 'CKES') fromRate = 0.0078;
-          else if (fromToken === 'CCOP') fromRate = 0.00025;
-          else if (fromToken === 'CGHS') fromRate = 0.083;
-          else if (fromToken === 'CGBP') fromRate = 1.27;
-          else if (fromToken === 'CZAR') fromRate = 0.055;
-          else if (fromToken === 'CCAD') fromRate = 0.74;
-          else if (fromToken === 'CAUD') fromRate = 0.66;
-          else if (fromToken === 'PUSO') fromRate = 0.0179;
+          if (fromToken === 'USDm') fromRate = 1;
+          else if (fromToken === 'EURm') fromRate = 1.08;
+          else if (fromToken === 'BRLm') fromRate = 0.2;
+          else if (fromToken === 'XOFm') fromRate = 0.0016;
+          else if (fromToken === 'KESm') fromRate = 0.0078;
+          else if (fromToken === 'COPm') fromRate = 0.00025;
+          else if (fromToken === 'GHSm') fromRate = 0.083;
+          else if (fromToken === 'GBPm') fromRate = 1.27;
+          else if (fromToken === 'ZARm') fromRate = 0.055;
+          else if (fromToken === 'CADm') fromRate = 0.74;
+          else if (fromToken === 'AUDm') fromRate = 0.66;
+          else if (fromToken === 'PHPm') fromRate = 0.0179;
 
-          if (toToken === 'CUSD') toRate = 1;
-          else if (toToken === 'CEUR') toRate = 1.08;
-          else if (toToken === 'CREAL') toRate = 0.2;
-          else if (toToken === 'CXOF') toRate = 0.0016;
-          else if (toToken === 'CKES') toRate = 0.0078;
-          else if (toToken === 'CCOP') toRate = 0.00025;
-          else if (toToken === 'CGHS') toRate = 0.083;
-          else if (toToken === 'CGBP') toRate = 1.27;
-          else if (toToken === 'CZAR') toRate = 0.055;
-          else if (toToken === 'CCAD') toRate = 0.74;
-          else if (toToken === 'CAUD') toRate = 0.66;
-          else if (toToken === 'PUSO') toRate = 0.0179;
+          if (toToken === 'USDm') toRate = 1;
+          else if (toToken === 'EURm') toRate = 1.08;
+          else if (toToken === 'BRLm') toRate = 0.2;
+          else if (toToken === 'XOFm') toRate = 0.0016;
+          else if (toToken === 'KESm') toRate = 0.0078;
+          else if (toToken === 'COPm') toRate = 0.00025;
+          else if (toToken === 'GHSm') toRate = 0.083;
+          else if (toToken === 'GBPm') toRate = 1.27;
+          else if (toToken === 'ZARm') toRate = 0.055;
+          else if (toToken === 'CADm') toRate = 0.74;
+          else if (toToken === 'AUDm') toRate = 0.66;
+          else if (toToken === 'PHPm') toRate = 0.0179;
         }
 
         const expectedOutput = (amountNum * fromRate) / toRate;
@@ -568,31 +568,31 @@ export function useExpectedAmountOut({
         let toRate = 1;
 
         // Default rates for all tokens
-        if (fromToken === 'CUSD') fromRate = 1;
-        else if (fromToken === 'CEUR') fromRate = 1.08;
-        else if (fromToken === 'CREAL') fromRate = 0.2;
-        else if (fromToken === 'CXOF') fromRate = 0.0016;
-        else if (fromToken === 'CKES') fromRate = 0.0078;
-        else if (fromToken === 'CCOP') fromRate = 0.00025;
-        else if (fromToken === 'CGHS') fromRate = 0.083;
-        else if (fromToken === 'CGBP') fromRate = 1.27;
-        else if (fromToken === 'CZAR') fromRate = 0.055;
-        else if (fromToken === 'CCAD') fromRate = 0.74;
-        else if (fromToken === 'CAUD') fromRate = 0.66;
-        else if (fromToken === 'PUSO') fromRate = 0.0179;
+        if (fromToken === 'USDm') fromRate = 1;
+        else if (fromToken === 'EURm') fromRate = 1.08;
+        else if (fromToken === 'BRLm') fromRate = 0.2;
+        else if (fromToken === 'XOFm') fromRate = 0.0016;
+        else if (fromToken === 'KESm') fromRate = 0.0078;
+        else if (fromToken === 'COPm') fromRate = 0.00025;
+        else if (fromToken === 'GHSm') fromRate = 0.083;
+        else if (fromToken === 'GBPm') fromRate = 1.27;
+        else if (fromToken === 'ZARm') fromRate = 0.055;
+        else if (fromToken === 'CADm') fromRate = 0.74;
+        else if (fromToken === 'AUDm') fromRate = 0.66;
+        else if (fromToken === 'PHPm') fromRate = 0.0179;
 
-        if (toToken === 'CUSD') toRate = 1;
-        else if (toToken === 'CEUR') toRate = 1.08;
-        else if (toToken === 'CREAL') toRate = 0.2;
-        else if (toToken === 'CXOF') toRate = 0.0016;
-        else if (toToken === 'CKES') toRate = 0.0078;
-        else if (toToken === 'CCOP') toRate = 0.00025;
-        else if (toToken === 'CGHS') toRate = 0.083;
-        else if (toToken === 'CGBP') toRate = 1.27;
-        else if (toToken === 'CZAR') toRate = 0.055;
-        else if (toToken === 'CCAD') toRate = 0.74;
-        else if (toToken === 'CAUD') toRate = 0.66;
-        else if (toToken === 'PUSO') toRate = 0.0179;
+        if (toToken === 'USDm') toRate = 1;
+        else if (toToken === 'EURm') toRate = 1.08;
+        else if (toToken === 'BRLm') toRate = 0.2;
+        else if (toToken === 'XOFm') toRate = 0.0016;
+        else if (toToken === 'KESm') toRate = 0.0078;
+        else if (toToken === 'COPm') toRate = 0.00025;
+        else if (toToken === 'GHSm') toRate = 0.083;
+        else if (toToken === 'GBPm') toRate = 1.27;
+        else if (toToken === 'ZARm') toRate = 0.055;
+        else if (toToken === 'CADm') toRate = 0.74;
+        else if (toToken === 'AUDm') toRate = 0.66;
+        else if (toToken === 'PHPm') toRate = 0.0179;
 
         const expectedOutput = (amountNum * fromRate) / toRate;
 

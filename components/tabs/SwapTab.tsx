@@ -103,7 +103,7 @@ export default function SwapTab({
 
     // Always ensure USDT is available - it's a critical stablecoin
     // This prevents issues where Mento SDK might not report USDT as tradeable
-    const essentialSymbols = ["USDT", "USDC", "CUSD", "CELO"];
+    const essentialSymbols = ["USDT", "USDC", "USDm", "CELO"];
     const essentials = networkTokens.filter(
       (t) =>
         essentialSymbols.includes(t.symbol.toUpperCase()) &&
@@ -140,8 +140,8 @@ export default function SwapTab({
   useEffect(() => {
     if (swapPrefill && swapInterfaceRef.current?.setTokens) {
       swapInterfaceRef.current.setTokens(
-        swapPrefill.fromToken || "CUSD",
-        swapPrefill.toToken || "CEUR",
+        swapPrefill.fromToken || "USDm",
+        swapPrefill.toToken || "EURm",
         swapPrefill.amount,
       );
       if (swapPrefill.reason) {
@@ -240,7 +240,7 @@ export default function SwapTab({
             </div>
             <input
               type="text"
-              placeholder="Search assets (e.g. 'cUSD', 'Gold')..."
+              placeholder="Search assets (e.g. 'USDm', 'Gold')..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="block w-full pl-10 pr-3 py-2 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900 text-sm font-bold focus:border-blue-500 outline-none"
@@ -418,13 +418,13 @@ function getRecommendations(
   > = {
     Africa: [
       {
-        from: "cKES",
-        to: "cEUR",
+        from: "KESm",
+        to: "EURm",
         reason: `Hedge: ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation`,
       },
     ],
-    LatAm: [{ from: "cREAL", to: "cUSD", reason: "Stable reserve exposure" }],
-    Asia: [{ from: "PUSO", to: "cEUR", reason: "Diversify into Eurozone" }],
+    LatAm: [{ from: "BRLm", to: "USDm", reason: "Stable reserve exposure" }],
+    Asia: [{ from: "PHPm", to: "EURm", reason: "Diversify into Eurozone" }],
   };
   const recs = recommendations[userRegion] || [];
   if (recs.length === 0) return null;

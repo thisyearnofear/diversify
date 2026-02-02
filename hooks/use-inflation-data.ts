@@ -26,22 +26,22 @@ export interface RegionalInflationData {
 
 // Region to stablecoins mapping (UPPERCASE symbols to match TOKEN_METADATA)
 const REGION_STABLECOINS: Record<string, string[]> = {
-  Africa: ['CKES', 'CGHS', 'CXOF', 'CZAR', 'CNGN'],
-  LatAm: ['CREAL', 'CCOP'],
-  Asia: ['PUSO', 'CAUD', 'CPESO', 'CJPY'],
-  Europe: ['CEUR', 'CGBP', 'EURC', 'CCHF'],
-  USA: ['CUSD', 'CCAD', 'USDC', 'USDT', 'USDY', 'SYRUPUSDC'],
+  Africa: ['KESm', 'GHSm', 'XOFm', 'ZARm', 'NGNm'],
+  LatAm: ['BRLm', 'COPm'],
+  Asia: ['PHPm', 'AUDm', 'CJPY'],
+  Europe: ['EURm', 'GBPm', 'EURC', 'CHFm'],
+  USA: ['USDm', 'CADm', 'USDC', 'USDT', 'USDY', 'SYRUPUSDC'],
   Global: ['PAXG'],
   Commodities: ['PAXG'],
 };
 
 // Currency to stablecoin mapping (UPPERCASE symbols)
 const CURRENCY_TO_STABLECOIN: Record<string, string> = {
-  'KES': 'CKES', 'GHS': 'CGHS', 'XOF': 'CXOF', 'ZAR': 'CZAR', 'NGN': 'CNGN',
-  'BRL': 'CREAL', 'COP': 'CCOP',
-  'PHP': 'PUSO', 'AUD': 'CAUD', 'JPY': 'CJPY',
-  'EUR': 'CEUR', 'GBP': 'CGBP', 'CHF': 'CCHF',
-  'USD': 'CUSD', 'CAD': 'CCAD',
+  'KES': 'KESm', 'GHS': 'GHSm', 'XOF': 'XOFm', 'ZAR': 'ZARm', 'NGN': 'NGNm',
+  'BRL': 'BRLm', 'COP': 'COPm',
+  'PHP': 'PHPm', 'AUD': 'AUDm', 'JPY': 'JPYm',
+  'EUR': 'EURm', 'GBP': 'GBPm', 'CHF': 'CHFm',
+  'USD': 'USDm', 'CAD': 'CADm',
   'XAU': 'PAXG',
 };
 
@@ -315,33 +315,32 @@ export function useInflationData() {
 
     // Try direct mapping first based on known stablecoin patterns
     // USA region (North America)
-    if (stablecoinUpper === 'CUSD') return 'USA';
+    if (stablecoinUpper === 'USDm') return 'USA';
     if (stablecoinUpper === 'USDC') return 'USA';
     if (stablecoinUpper === 'USDT') return 'USA'; // Tether USD
-    if (stablecoinUpper === 'CCAD') return 'USA'; // Canadian Dollar (could be "North America" in future)
+    if (stablecoinUpper === 'CADm') return 'USA'; // Canadian Dollar (could be "North America" in future)
 
     // Europe region
-    if (stablecoinUpper === 'CEUR') return 'Europe';
+    if (stablecoinUpper === 'EURm') return 'Europe';
     if (stablecoinUpper === 'EURC') return 'Europe'; // Euro Coin (Arc testnet)
-    if (stablecoinUpper === 'CGBP') return 'Europe'; // British Pound
+    if (stablecoinUpper === 'GBPm') return 'Europe'; // British Pound
 
     // Latin America region
-    if (stablecoinUpper === 'CREAL') return 'LatAm';
-    if (stablecoinUpper === 'CCOP') return 'LatAm';
+    if (stablecoinUpper === 'BRLm') return 'LatAm';
+    if (stablecoinUpper === 'COPm') return 'LatAm';
 
     // Africa region
-    if (stablecoinUpper === 'CKES') return 'Africa';
-    if (stablecoinUpper === 'CGHS') return 'Africa';
-    if (stablecoinUpper === 'CZAR') return 'Africa'; // South African Rand
-    if (stablecoinUpper === 'CXOF' || stablecoinUpper === 'EXOF') return 'Africa';
+    if (stablecoinUpper === 'KESm') return 'Africa';
+    if (stablecoinUpper === 'GHSm') return 'Africa';
+    if (stablecoinUpper === 'ZARm') return 'Africa'; // South African Rand
+    if (stablecoinUpper === 'XOFm' || stablecoinUpper === 'EXOF') return 'Africa';
 
     // Asia region
-    if (stablecoinUpper === 'PUSO') return 'Asia';
-    if (stablecoinUpper === 'CAUD') return 'Asia'; // Australian Dollar (grouped with Asia-Pacific)
-    if (stablecoinUpper === 'CPESO') return 'Asia'; // Philippine Peso (alternative name)
-    if (stablecoinUpper === 'CJPY') return 'Asia'; // Japanese Yen
-    if (stablecoinUpper === 'CCHF') return 'Europe'; // Swiss Franc
-    if (stablecoinUpper === 'CNGN') return 'Africa'; // Nigerian Naira
+    if (stablecoinUpper === 'PHPm') return 'Asia';
+    if (stablecoinUpper === 'AUDm') return 'Asia'; // Australian Dollar (grouped with Asia-Pacific)
+    if (stablecoinUpper === 'JPYm') return 'Asia'; // Japanese Yen
+    if (stablecoinUpper === 'CHFm') return 'Europe'; // Swiss Franc
+    if (stablecoinUpper === 'NGNm') return 'Africa'; // Nigerian Naira
 
     // Global
     if (stablecoinUpper === 'PAXG') return 'Global';
