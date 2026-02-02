@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { GuardarianOnramp } from "./GuardarianOnramp";
@@ -31,7 +31,7 @@ export function UnifiedOnramp({
     const isSmallAmount = amount <= 700; // €700 Guardarian no-KYC limit
 
     // Network-specific provider optimization
-    const getOptimalProvider = (): OnrampProvider => {
+    const getOptimalProvider = useCallback((): OnrampProvider => {
         // Both providers support Celo and Arbitrum, but optimize based on strengths
         switch (chainId) {
             case 42161: // Arbitrum - Guardarian excels with ARB support and no-KYC
@@ -41,14 +41,14 @@ export function UnifiedOnramp({
             default:
                 return "guardarian"; // Default to Guardarian for other networks
         }
-    };
+    }, [chainId, isSmallAmount]);
 
     // Auto-select optimal provider on network/amount change
     React.useEffect(() => {
         if (!showProviderChoice) {
             setSelectedProvider(getOptimalProvider());
         }
-    }, [chainId, isSmallAmount, showProviderChoice]);
+    }, [chainId, isSmallAmount, showProviderChoice, getOptimalProvider]);
 
     // Get network-specific provider descriptions
     const getProviderDescription = (provider: OnrampProvider) => {

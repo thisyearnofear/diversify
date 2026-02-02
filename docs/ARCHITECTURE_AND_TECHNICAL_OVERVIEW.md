@@ -1,9 +1,9 @@
-# 🏗 DiversiFi Oracle - Product Architecture
+# DiversiFi Architecture & Technical Overview
 
 ## Product Vision
 **An AI agent that autonomously protects user wealth by paying for premium data, making intelligent recommendations, and triggering real-world automations.**
 
-## 🎯 Core Value Proposition
+## Core Value Proposition
 
 ### For Users:
 - **Autonomous Wealth Protection**: AI agent monitors portfolio 24/7
@@ -19,7 +19,7 @@
 - **Arc Network Native**: USDC gas, transparent on-chain operations
 - **Gemini AI Integration**: Advanced reasoning for financial decisions
 
-## 🏗 Technical Architecture
+## Technical Architecture
 
 ### 1. AI Agent Core (Arc Network)
 ```
@@ -70,11 +70,10 @@ Total Analysis Cost: ~$0.43 per comprehensive analysis
 AI Recommendation → Automation Service → External Systems
                                     ├── Email (SendGrid/Resend)
                                     ├── Zapier Webhooks
-                                    ├── Slack Notifications
-                                    └── Make.com Workflows
+                                    └── Slack Notifications
 ```
 
-## 🔄 User Journey
+## User Journey
 
 ### 1. Onboarding
 1. User connects wallet to DiversiFi
@@ -101,7 +100,7 @@ AI Recommendation → Automation Service → External Systems
 - **Mainnet**: Manual execution with step-by-step guidance
 - **Future**: Direct execution via Circle CCTP integration
 
-## 🛠 Implementation Status
+## Implementation Status
 
 ### ✅ Completed
 - [x] Gemini 3 AI integration with structured outputs
@@ -127,7 +126,7 @@ AI Recommendation → Automation Service → External Systems
 - [ ] Social features and agent performance tracking
 - [ ] Enterprise and institutional features
 
-## 💰 Economic Model
+## Economic Model
 
 ### Agent Operating Costs
 - **Data Analysis**: $0.43 per comprehensive analysis
@@ -140,7 +139,7 @@ AI Recommendation → Automation Service → External Systems
 3. **Enterprise Licensing**: Custom agent solutions
 4. **Data Insights**: Aggregated (anonymous) market intelligence
 
-## 🔒 Security & Trust
+## Security & Trust
 
 ### Agent Guardrails
 - **Spending Limits**: $5/day maximum autonomous spending
@@ -154,7 +153,7 @@ AI Recommendation → Automation Service → External Systems
 - **Open Source Logic**: Agent decision-making is transparent
 - **Real-Time Monitoring**: Users see agent activity live
 
-## 📊 Success Metrics
+## Success Metrics
 
 ### Technical KPIs
 - **Agent Autonomy**: 95%+ of data purchases automated
@@ -168,21 +167,7 @@ AI Recommendation → Automation Service → External Systems
 - **Retention**: 80%+ monthly active users
 - **Automation Adoption**: 60%+ users enable email notifications
 
-## 🌍 Real-World Impact
-
-### User Benefits
-- **Inflation Protection**: Quantified savings from currency diversification
-- **Risk Reduction**: Automated portfolio rebalancing recommendations
-- **Time Savings**: No need to manually monitor multiple data sources
-- **Education**: Learn about wealth protection strategies
-
-### Ecosystem Benefits
-- **x402 Adoption**: Real-world usage of micropayment protocol
-- **Circle Integration**: Showcase unified USDC and cross-chain capabilities
-- **Arc Network**: Demonstrate USDC-native gas and transparency
-- **AI Innovation**: Autonomous agents with economic decision-making
-
-## 🚀 Competitive Advantages
+## Competitive Advantages
 
 ### vs Traditional Robo-Advisors
 - ✅ **True Autonomy**: Agent pays for its own operations
@@ -202,7 +187,7 @@ AI Recommendation → Automation Service → External Systems
 - ✅ **Objective Analysis**: No emotional decision-making
 - ✅ **Automation**: Reduces manual work and human error
 
-## 🧪 Arc Testnet Demo Strategy
+## Arc Testnet Demo Strategy
 
 ### Risk-Free Value Demonstration
 - **Real Tokens**: USDC (native gas), EURC (EUR diversification)
@@ -223,7 +208,7 @@ AI Recommendation → Automation Service → External Systems
 4. Execute swaps to test wealth protection strategies
 5. Experience automation notifications and results tracking
 
-## 📈 Scaling Strategy
+## Scaling Strategy
 
 ### Phase 1: Core Product (Current)
 - Single AI agent for wealth protection

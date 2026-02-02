@@ -49,10 +49,10 @@ export default function ActionableRecommendation({
     }
 
     // Generate actionable steps from analysis
-    const actionSteps: ActionStep[] = generateActionSteps(analysis, portfolio);
+    const actionSteps: ActionStep[] = generateActionSteps(analysis);
 
     // Find cross-chain opportunities
-    const crossChainOps = generateCrossChainOpportunities(portfolio, analysis);
+    const crossChainOps = generateCrossChainOpportunities(portfolio);
 
     return (
         <div className="space-y-4">
@@ -391,8 +391,7 @@ function ConfidenceBadge({ level }: { level: 'HIGH' | 'MEDIUM' | 'LOW' }) {
 // ============================================================================
 
 function generateActionSteps(
-    analysis: PortfolioAnalysis,
-    portfolio: AggregatedPortfolio | null
+    analysis: PortfolioAnalysis
 ): ActionStep[] {
     const steps: ActionStep[] = [];
     
@@ -451,8 +450,7 @@ function generateActionSteps(
 }
 
 function generateCrossChainOpportunities(
-    portfolio: AggregatedPortfolio | null,
-    analysis: PortfolioAnalysis
+    portfolio: AggregatedPortfolio | null
 ): Array<{
     chainName: string;
     chainId: number;

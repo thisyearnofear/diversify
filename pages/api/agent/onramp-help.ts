@@ -16,7 +16,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const {
             question,
-            userContext = {},
             amount,
             network = 'arbitrum',
             preferNoKyc = true

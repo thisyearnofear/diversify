@@ -290,8 +290,8 @@ const SwapInterface = forwardRef<
         const result = await onSwap(fromToken, toToken, amount, fromChainId, toChainId);
 
         // Capture transaction hash if available in result
-        if (result && result.swapTxHash) {
-          setTxHash(result.swapTxHash);
+        if (result && typeof result === 'object' && 'swapTxHash' in result && result.swapTxHash) {
+          setTxHash(result.swapTxHash as string);
         }
 
         setStatus("completed");

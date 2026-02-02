@@ -63,7 +63,7 @@ export default function AgentWealthGuard({
         if (isAnalyzing && analysisProgress % 25 === 0 && analysisProgress > 0) {
             try {
                 (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
-            } catch (_e) { }
+            } catch { }
         }
         if (analysisProgress === 100) {
             try {
@@ -147,7 +147,7 @@ export default function AgentWealthGuard({
             setIsListening(false);
             try {
                 (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
-            } catch (_e) { }
+            } catch { }
         }
     };
 

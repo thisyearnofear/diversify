@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { analyzePortfolio, type PortfolioAnalysis } from '../../../utils/portfolio-analysis';
-import { getOnrampSystemPrompt, getOnrampRecommendation } from '../../../services/ai/onramp-agent-context';
+import { getOnrampSystemPrompt } from '../../../services/ai/onramp-agent-context';
 
 
 

@@ -120,12 +120,13 @@ Experience the full power of agentic wealth protection without spending real mon
 
 ## 📂 Documentation
 
-Detailed documentation is available in the `/docs` directory:
+Comprehensive documentation is available in the `/docs` directory:
 
-- [**Product Architecture**](docs/PRODUCT_ARCHITECTURE.md): Deep dive into the agent logic and stack.
-- [**Agent Setup Guide**](docs/ARC_AGENT_SETUP.md): How to configure and fund the Arc Agent.
-- [**Zapier Integration**](docs/ZAPIER_SETUP_GUIDE.md): Setting up automation workflows.
-- [**Freemium Model**](docs/FREEMIUM_X402_MODEL.md): How x402 monetization works.
+- [**Architecture & Technical Overview**](docs/ARCHITECTURE_AND_TECHNICAL_OVERVIEW.md): Complete system architecture and technical implementation.
+- [**API Keys & Data Sources**](docs/API_KEYS_AND_DATA_SOURCES.md): Guide to setting up premium and free data sources with API keys.
+- [**Integration Guides**](docs/INTEGRATION_GUIDES.md): Step-by-step instructions for Farcaster, Arc, Guardarian, and Zapier integrations.
+- [**Business Model & Economics**](docs/BUSINESS_MODEL_ECONOMICS.md): Explanation of the freemium x402 model and economic projections.
+- [**Development Guidelines**](docs/DEVELOPMENT_GUIDELINES.md): Coding standards, project structure, and development best practices.
 
 ## 🛠️ Tech Stack
 
