@@ -61,16 +61,7 @@ export default function ProtectionAnalysis({
         const rwaAllocation = regionData.find(r => r.region === 'Commodity' || r.region === 'Commodities')?.value || 0;
         const rwaPercent = totalValue > 0 ? (rwaAllocation / totalValue) * 100 : 0;
 
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://diversifiapp.vercel.app';
-        
-        // Build share URL with OG params so the card shows personalized scores
-        const shareParams = new URLSearchParams({
-            regions: activeRegions.toString(),
-            div: getLetterRating(goalScores.diversify),
-            inf: getLetterRating(goalScores.hedge),
-            rwa: rwaPercent.toFixed(1)
-        });
-        const shareUrl = `${baseUrl}?${shareParams.toString()}`;
+        const baseUrl = 'https://diversifiapp.vercel.app';
 
         if (platform === 'twitter') {
             // Twitter: include mentions at the end
@@ -81,7 +72,7 @@ export default function ProtectionAnalysis({
                 `Building resilience against currency debasement 📈\n\n` +
                 `#WealthProtection #RWA #diversifi\n\n` +
                 `@arbitrum 🤝 @Celo 🤝 @stable_station`;
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(shareUrl)}`);
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(baseUrl)}`);
         } else {
             // Farcaster: shorter text, use SDK if available
             const farcasterText = `Savings protected across ${activeRegions} regions via DiversiFi 🛡️\n\n` +
@@ -101,7 +92,7 @@ export default function ProtectionAnalysis({
                     // Use native SDK - will render embed card with image
                     sdk.actions.composeCast({
                         text: farcasterText,
-                        embeds: [shareUrl]
+                        embeds: [baseUrl]
                     });
                     return;
                 }
@@ -110,7 +101,8 @@ export default function ProtectionAnalysis({
             }
 
             // Fallback: Warpcast URL intent (for external browsers)
-            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(farcasterText)}&embeds[]=${encodeURIComponent(shareUrl)}`;
+            // Use warpcast.com domain and simple URL without query params to avoid encoding issues
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(farcasterText)}&embeds[]=${encodeURIComponent(baseUrl)}`;
             window.open(warpcastUrl);
         }
     };
