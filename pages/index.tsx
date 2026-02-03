@@ -23,7 +23,7 @@ import ThemeToggle from "../components/ui/ThemeToggle";
 
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab } = useAppState();
-  
+
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
 
@@ -102,7 +102,7 @@ export default function DiversiFiPage() {
         <title>DiversiFi - Protect Your Savings</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
         <meta name="description" content="Diversify your stablecoin savings across regions to protect against currency debasement" />
-        
+
         {/* Open Graph tags for social sharing */}
         <meta property="og:title" content="DiversiFi - Protect Your Savings" />
         <meta property="og:description" content="Diversify your stablecoin savings across regions to protect against currency debasement" />
@@ -110,13 +110,13 @@ export default function DiversiFiPage() {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:type" content="website" />
-        
+
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="DiversiFi - Protect Your Savings" />
         <meta name="twitter:description" content="Diversify your stablecoin savings across regions to protect against currency debasement" />
         <meta name="twitter:image" content={ogImageUrl} />
-        
+
         {/* Farcaster Mini App */}
         <meta
           name="fc:miniapp"

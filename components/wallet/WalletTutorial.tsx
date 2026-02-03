@@ -97,6 +97,7 @@ export const WalletTutorial: React.FC<{
                       <li>• Get personalized inflation protection</li>
                       <li>• Swap between regional stablecoins</li>
                       <li>• Access advanced wealth strategies</li>
+                      <li>• Ask questions with voice commands 🎤</li>
                     </ul>
                   </div>
 

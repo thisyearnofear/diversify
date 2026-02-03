@@ -357,7 +357,7 @@ export default function AgentWealthGuard({
 
                             <p className="text-[10px] text-gray-400">
                                 Analyzes ${amount.toFixed(2)} against real-time global inflation data
-                                {capabilities.transcription && ' • Tap 🎤 to ask a question'}
+                                {capabilities.transcription && ' • Hold 🎤 to ask questions'}
                             </p>
                         </motion.div>
                     )}
