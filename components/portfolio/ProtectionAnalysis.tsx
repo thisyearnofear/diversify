@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Card, PrimaryButton } from '../shared/TabComponents';
 import SimplePieChart from './SimplePieChart';
 import NetworkSwitcher from '../swap/NetworkSwitcher';
+import sdk from '@farcaster/miniapp-sdk';
 
 interface ProtectionAnalysisProps {
     regionData: Array<{ region: string; value: number; color: string }>;
@@ -55,24 +56,62 @@ export default function ProtectionAnalysis({
         return 'D';
     };
 
-    const shareToSocial = (platform: 'twitter' | 'farcaster') => {
+    const shareToSocial = async (platform: 'twitter' | 'farcaster') => {
         const activeRegions = regionData.filter(r => r.value > 0).length;
         const rwaAllocation = regionData.find(r => r.region === 'Commodity' || r.region === 'Commodities')?.value || 0;
         const rwaPercent = totalValue > 0 ? (rwaAllocation / totalValue) * 100 : 0;
 
-        const text = `My savings are protected across ${activeRegions} regions with DiversiFi 🛡️\n\n` +
-            `Global Diversification: ${getLetterRating(goalScores.diversify)}\n` +
-            `Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
-            `Real Asset Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
-            `Building resilience against currency debasement. 📈\n\n` +
-            `#WealthProtection #DiversiFi #RWA`;
-
-        const url = typeof window !== 'undefined' ? window.location.origin : 'https://diversifi.app';
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://diversifiapp.vercel.app';
+        
+        // Build share URL with OG params so the card shows personalized scores
+        const shareParams = new URLSearchParams({
+            regions: activeRegions.toString(),
+            div: getLetterRating(goalScores.diversify),
+            inf: getLetterRating(goalScores.hedge),
+            rwa: rwaPercent.toFixed(1)
+        });
+        const shareUrl = `${baseUrl}?${shareParams.toString()}`;
 
         if (platform === 'twitter') {
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`);
+            // Twitter: include mentions at the end
+            const twitterText = `Savings protected across ${activeRegions} regions via DiversiFi 🛡️\n\n` +
+                `Global Diversification: ${getLetterRating(goalScores.diversify)}\n` +
+                `Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
+                `Real Asset Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
+                `Building resilience against currency debasement 📈\n\n` +
+                `#WealthProtection #RWA #diversifi\n\n` +
+                `@arbitrum 🤝 @Celo 🤝 @stable_station`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(shareUrl)}`);
         } else {
-            window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(url)}`);
+            // Farcaster: shorter text, use SDK if available
+            const farcasterText = `Savings protected across ${activeRegions} regions via DiversiFi 🛡️\n\n` +
+                `Global Diversification: ${getLetterRating(goalScores.diversify)}\n` +
+                `Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
+                `Real Asset Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
+                `Building resilience against currency debasement 📈`;
+
+            // Try to use SDK composeCast if in Farcaster Mini App context
+            try {
+                const context = await Promise.race([
+                    sdk.context,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 200))
+                ]);
+                
+                if (context && sdk.actions?.composeCast) {
+                    // Use native SDK - will render embed card with image
+                    sdk.actions.composeCast({
+                        text: farcasterText,
+                        embeds: [shareUrl]
+                    });
+                    return;
+                }
+            } catch {
+                // Not in Farcaster Mini App context, fall through to URL intent
+            }
+
+            // Fallback: Warpcast URL intent (for external browsers)
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(farcasterText)}&embeds[]=${encodeURIComponent(shareUrl)}`;
+            window.open(warpcastUrl);
         }
     };
 
