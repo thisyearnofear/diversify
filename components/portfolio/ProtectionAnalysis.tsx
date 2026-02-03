@@ -62,6 +62,12 @@ export default function ProtectionAnalysis({
         const rwaPercent = totalValue > 0 ? (rwaAllocation / totalValue) * 100 : 0;
 
         const baseUrl = 'https://diversifiapp.vercel.app';
+        
+        // Helper to get rating without + symbol (causes URL encoding issues)
+        const getSafeRating = (score: number) => {
+            const rating = getLetterRating(score);
+            return rating.replace('+', ' plus'); // A+ -> A plus
+        };
 
         if (platform === 'twitter') {
             // Twitter: include mentions at the end
@@ -74,12 +80,12 @@ export default function ProtectionAnalysis({
                 `@arbitrum 🤝 @Celo 🤝 @stable_station`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(baseUrl)}`);
         } else {
-            // Farcaster: shorter text, use SDK if available
-            const farcasterText = `Savings protected across ${activeRegions} regions via DiversiFi 🛡️\n\n` +
+            // Farcaster: use SDK composeCast (recommended approach per Farcaster docs)
+            const farcasterText = `Savings protected across ${activeRegions} regions via DiversiFi\n\n` +
                 `Global Diversification: ${getLetterRating(goalScores.diversify)}\n` +
                 `Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
                 `Real Asset Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
-                `Building resilience against currency debasement 📈`;
+                `Building resilience against currency debasement`;
 
             // Try to use SDK composeCast if in Farcaster Mini App context
             try {
@@ -89,7 +95,7 @@ export default function ProtectionAnalysis({
                 ]);
                 
                 if (context && sdk.actions?.composeCast) {
-                    // Use native SDK - will render embed card with image
+                    // Use native SDK - recommended approach
                     sdk.actions.composeCast({
                         text: farcasterText,
                         embeds: [baseUrl]
@@ -100,9 +106,13 @@ export default function ProtectionAnalysis({
                 // Not in Farcaster Mini App context, fall through to URL intent
             }
 
-            // Fallback: Warpcast URL intent (for external browsers)
-            // Use warpcast.com domain and simple URL without query params to avoid encoding issues
-            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(farcasterText)}&embeds[]=${encodeURIComponent(baseUrl)}`;
+            // Fallback for external browsers: simplified text without emojis or special chars
+            // Using warpcast.com (not farcaster.xyz) with minimal encoding
+            const simpleText = `Savings protected across ${activeRegions} regions via DiversiFi - ` +
+                `Diversification ${getSafeRating(goalScores.diversify)}, ` +
+                `Inflation Hedge ${getSafeRating(goalScores.hedge)}`;
+            
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(simpleText)}&embeds[]=${encodeURIComponent(baseUrl)}`;
             window.open(warpcastUrl);
         }
     };
