@@ -272,29 +272,54 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
     setIsAnalyzing(true);
     setAnalysisProgress(0);
-    setThinkingStep('Analyzing your portfolio...');
+    setThinkingStep('Initializing protection protocols...');
 
     try {
+      // Phase 1: Local Data Collection (0-30%)
       setAnalysisProgress(10);
-      setThinkingStep('Gathering inflation data...');
+      setThinkingStep('Securing market data...');
 
-      // Local analysis first (always available)
+      // Simulate slight delay for effect
+      await new Promise(resolve => setTimeout(resolve, 800));
+
       setAnalysisProgress(25);
-      setThinkingStep('Running local portfolio analysis...');
+      setThinkingStep('Calibrating inflation models...');
       const localAnalysis = analyzePortfolio(portfolio, inflationData, userGoal || config.goal);
       setPortfolioAnalysis(localAnalysis);
 
-      setAnalysisProgress(40);
-      setThinkingStep('Consulting AI for recommendations...');
+      // Phase 2: AI Consultation (30-90%)
+      setAnalysisProgress(30);
+
+      const THEMATIC_MESSAGES = [
+        "Consulting the oracle...",
+        "Analyzing macro heatmaps...",
+        "Calculating opportunity costs...",
+        "Get stable... or die trying...",
+        "Checking yield curves...",
+        "Scanning for volatility...",
+        "Identifying safe harbors...",
+        "Optimizing purchasing power...",
+        "Protecting your wealth...",
+      ];
+
+      let messageIndex = 0;
+      setThinkingStep(THEMATIC_MESSAGES[0]);
 
       // Enhanced AI analysis via API
-      // Start a slow incremental progress while waiting for AI
+      // Smoother progress bar from 30% to 90%
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
-          if (prev >= 75) return prev;
-          return prev + 1;
+          // Slow down as we get closer to 90%
+          if (prev >= 90) return 90;
+          return prev + (prev > 70 ? 1 : 2);
         });
-      }, 500);
+
+        // Cycle messages every few ticks
+        if (Math.random() > 0.7) {
+          messageIndex = (messageIndex + 1) % THEMATIC_MESSAGES.length;
+          setThinkingStep(THEMATIC_MESSAGES[messageIndex]);
+        }
+      }, 600);
 
       const response = await fetch('/api/agent/analyze', {
         method: 'POST',
@@ -309,8 +334,8 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
       clearInterval(progressInterval);
 
-      setAnalysisProgress(80);
-      setThinkingStep('Processing recommendations...');
+      setAnalysisProgress(95);
+      setThinkingStep('Finalizing strategy...');
 
       if (response.ok) {
         const result = await response.json();
@@ -318,13 +343,26 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         setThinkingStep('Analysis complete!');
         setAdvice(result.advice);
         return result.advice;
+      } else {
+        // Handle non-200 responses gently
+        setThinkingStep('Analysis disrupted. Retrying...');
+        throw new Error(`API returned ${response.status}`);
       }
     } catch (error) {
       console.error('[DiversifiAI] Analysis failed:', error);
+      // Keep error state visible for a moment
+      setThinkingStep('Connection interrupted. Please retry.');
     } finally {
-      setIsAnalyzing(false);
-      setThinkingStep('');
-      setAnalysisProgress(0);
+      // Delay cleaning up state so user sees 100% or error
+      if (!isAnalyzing) { // Only reset if we're not already reset (safety)
+        setTimeout(() => {
+          setIsAnalyzing(false);
+          setThinkingStep('');
+          setAnalysisProgress(0);
+        }, 1500);
+      } else {
+        setIsAnalyzing(false);
+      }
     }
   }, [capabilities.analysis, config]);
 

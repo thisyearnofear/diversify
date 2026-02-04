@@ -126,8 +126,8 @@ const VENICE_MODELS = {
 };
 
 const GEMINI_MODELS = {
-  flash: 'gemini-2.0-flash-exp', // Try 2.0 first
-  pro: 'gemini-1.5-pro-latest',
+  flash: 'gemini-1.5-flash',     // Changed to 1.5-flash for production stability
+  pro: 'gemini-1.5-pro',
 };
 
 // TTS voice mappings
@@ -220,31 +220,42 @@ export async function generateChatCompletion(
     async () => {
       const errors: Array<{ provider: string; error: string }> = [];
 
-      // Try Venice first (if preferred or auto)
-      if ((preferredProvider === 'venice' || preferredProvider === 'auto') && DEFAULT_CONFIG.veniceApiKey) {
-        try {
-          const result = await veniceCircuitBreaker.call(() => callVeniceChat(options));
-          return { data: result, source: 'venice' };
-        } catch (error) {
-          errors.push({ provider: 'venice', error: (error as Error).message });
-          console.warn('[AI Service] Venice failed, trying Gemini:', error);
-        }
+      // Determine execution order
+      // Default to Gemini -> Venice if auto (for stability), or user specified order
+      let providerOrder: Array<'gemini' | 'venice'>;
+
+      if (preferredProvider === 'venice') {
+        providerOrder = ['venice', 'gemini'];
+      } else if (preferredProvider === 'gemini') {
+        providerOrder = ['gemini', 'venice'];
+      } else {
+        // Auto: Prefer Gemini if configured (Hackathon priority), else Venice
+        // Check if both keys exist to decide optimal path, or just default to Gemini primary
+        providerOrder = DEFAULT_CONFIG.geminiApiKey
+          ? ['gemini', 'venice']
+          : ['venice', 'gemini'];
       }
 
-      // Fallback to Gemini
-      if ((preferredProvider === 'gemini' || preferredProvider === 'auto') && DEFAULT_CONFIG.geminiApiKey) {
+      for (const provider of providerOrder) {
         try {
-          const result = await geminiCircuitBreaker.call(() => callGeminiChat(options));
-          return { data: result, source: 'gemini' };
+          if (provider === 'venice' && DEFAULT_CONFIG.veniceApiKey) {
+            const result = await veniceCircuitBreaker.call(() => callVeniceChat(options));
+            return { data: result, source: 'venice' };
+          } else if (provider === 'gemini' && DEFAULT_CONFIG.geminiApiKey) {
+            const result = await geminiCircuitBreaker.call(() => callGeminiChat(options));
+            return { data: result, source: 'gemini' };
+          }
         } catch (error) {
-          errors.push({ provider: 'gemini', error: (error as Error).message });
-          console.error('[AI Service] Gemini also failed:', error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          errors.push({ provider, error: errorMessage });
+          console.warn(`[AI Service] ${provider} failed, attempting next provider...`, errorMessage);
         }
       }
 
       // All providers failed
+      console.error('[AI Service] All providers exhausted:', errors);
       throw new Error(
-        `All AI providers failed: ${errors.map(e => `${e.provider}: ${e.error}`).join(', ')}`
+        `All AI providers failed. Details: ${errors.map(e => `${e.provider}: ${e.error}`).join(' | ')}`
       );
     },
     'volatile'
@@ -324,11 +335,9 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
 
   const modelsToTry = [
     options.model || GEMINI_MODELS.flash,
-    'gemini-2.0-flash-exp',
-    'gemini-3-flash-preview',
     'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-pro-latest',
+    'gemini-1.5-pro',
+    'gemini-2.0-flash-exp', // Fallback to experimental if stable fails
   ];
 
   let lastError: any = null;
@@ -385,6 +394,11 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
 
       const response = await result.response;
       const content = response.text();
+
+      if (!content) {
+        console.warn(`[AI Service] Gemini model ${modelName} returned empty content. Candidates:`, JSON.stringify(response.candidates));
+        throw new Error('Empty content returned - likely safety block or model error');
+      }
 
       return {
         content: options.responseMimeType === 'application/json' ? cleanJsonResponse(content) : content,
