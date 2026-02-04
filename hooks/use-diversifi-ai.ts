@@ -265,6 +265,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     portfolio: MultichainPortfolio,
     userGoal?: string,
     userRegion?: string,
+    analysisGoal?: string,
   ) => {
     if (!capabilities.analysis) {
       console.warn('[DiversifiAI] Analysis not available');
@@ -331,7 +332,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         body: JSON.stringify({
           portfolio,
           inflationData,
-          goal: userGoal || config.goal,
+          goal: analysisGoal || userGoal || config.goal,
           riskTolerance: config.riskTolerance,
           userRegion: userRegion,
         }),
@@ -386,13 +387,16 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     _multiChainContext?: unknown,
     aggregatedPortfolio?: MultichainPortfolio,
     userRegion?: string,
+    analysisGoal?: string,
   ) => {
     // Debug: Log the parameters received
     console.log('[useDiversifiAI] analyze called with:', {
       hasInflationData: !!inflationData,
       userRegion: userRegion,
+      analysisGoal: analysisGoal,
       portfolioType: typeof userBalanceOrPortfolio,
-      portfolioValue: typeof userBalanceOrPortfolio === 'number' ? userBalanceOrPortfolio : userBalanceOrPortfolio.totalValue
+      portfolioValue: typeof userBalanceOrPortfolio === 'number' ? userBalanceOrPortfolio : userBalanceOrPortfolio.totalValue,
+      approach: 'Using app-level region settings (no duplicate UI)'
     });
 
     // Build portfolio from legacy params if needed
@@ -423,7 +427,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       portfolio = userBalanceOrPortfolio;
     }
 
-    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion);
+    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion, analysisGoal);
   }, [analyzePortfolioAI]);
 
   /**

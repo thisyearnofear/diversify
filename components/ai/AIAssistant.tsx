@@ -38,15 +38,17 @@ export default function AIAssistant({
     aggregatedPortfolio,
     userRegion
 }: AIAssistantProps) {
+    // Use the userRegion prop if provided, otherwise default to Africa
+    const effectiveRegion = userRegion || 'Africa';
+    const effectiveGoal = 'exploring'; // Default goal, could be made configurable later
+
     // Debug: Log the props received by AIAssistant
-    console.log('[AIAssistant] Props received:', {
-        amount,
+    console.log('[AIAssistant] Using region and goal:', {
+        userRegionProp: userRegion,
+        effectiveRegion: effectiveRegion,
+        effectiveGoal: effectiveGoal,
+        amount: amount,
         holdingsCount: holdings?.length || 0,
-        chainId,
-        hasPropInflationData: !!propInflationData,
-        embedded,
-        hasAggregatedPortfolio: !!aggregatedPortfolio,
-        userRegion: userRegion
     });
 
     const {
@@ -150,7 +152,10 @@ export default function AIAssistant({
             hasLiveData: !!liveInflationData,
             hasPropData: !!propInflationData,
             dataKeys: Object.keys(inflationDataToUse || {}),
-            userRegion: userRegion,
+            effectiveRegion: effectiveRegion,
+            effectiveGoal: effectiveGoal,
+            amount: amount,
+            holdingsCount: holdings?.length || 0,
             sampleData: inflationDataToUse ? Object.entries(inflationDataToUse).slice(0, 2).map(([region, data]) => ({
                 region,
                 avgRate: data.avgRate,
@@ -174,7 +179,7 @@ export default function AIAssistant({
             errors: [],
         };
 
-        analyze(inflationDataToUse, amount, holdings, undefined, undefined, portfolio, userRegion);
+        analyze(inflationDataToUse, amount, holdings, undefined, undefined, portfolio, effectiveRegion, effectiveGoal);
     };
 
     const handleVoiceTranscription = (transcription: string) => {
@@ -501,6 +506,91 @@ export default function AIAssistant({
                     {/* Initial State - Run Analysis with Voice Option */}
                     {!advice && !isAnalyzing && (
                         <motion.div
+                            key="settings"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800"
+                        >
+                            <div className="text-center mb-4">
+                                <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2">
+                                    🧠 Analysis Settings
+                                </h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    Set your region and goal for personalized recommendations
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Home Region Selection */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        🏰 Home Region
+                                    </label>
+                                    <div className="grid grid-cols-5 gap-2">
+                                        {REGIONS.map((region) => (
+                                            <button
+                                                key={region}
+                                                onClick={() => setSelectedRegion(region)}
+                                                className={`p-2 text-xs rounded-lg font-medium transition-all ${selectedRegion === region
+                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                                    }`}
+                                            >
+                                                {region}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {liveInflationData && selectedRegion && liveInflationData[selectedRegion] && (
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            Current inflation: {liveInflationData[selectedRegion].avgRate.toFixed(1)}%
+                                            ({liveInflationData[selectedRegion].countries.length} countries)
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Analysis Goal */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        🎯 Analysis Goal
+                                    </label>
+                                    <select
+                                        value={analysisGoal}
+                                        onChange={(e) => setAnalysisGoal(e.target.value)}
+                                        className="w-full p-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                                    >
+                                        <option value="exploring">🔍 Exploring Options</option>
+                                        <option value="inflation_protection">🛡️ Inflation Protection</option>
+                                        <option value="geographic_diversification">🌍 Geographic Diversification</option>
+                                        <option value="rwa_access">💎 Real World Asset Access</option>
+                                    </select>
+                                </div>
+
+                                {/* Start Analysis Button */}
+                                <button
+                                    onClick={() => {
+                                        setShowSettings(false);
+                                        handleAnalyze();
+                                    }}
+                                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                                >
+                                    🚀 Run Personalized Analysis
+                                </button>
+
+                                {userRegion && (
+                                    <button
+                                        onClick={() => setShowSettings(false)}
+                                        className="w-full text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    >
+                                        Skip settings (use {userRegion})
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {/* Initial State - Run Analysis with Voice Option */}
+                    {!advice && !isAnalyzing && (
+                        <motion.div
                             key="initial"
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -550,15 +640,7 @@ export default function AIAssistant({
                                             showToast('AI Intelligence Hub unavailable', 'error');
                                             return;
                                         }
-                                        const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
-                                        analyze(
-                                            (liveInflationData || propInflationData) as Record<string, RegionalInflationData>,
-                                            amount,
-                                            holdings,
-                                            { chainId: chainId || 0, name: networkName },
-                                            undefined,
-                                            aggregatedPortfolio
-                                        );
+                                        handleAnalyze();
                                     }}
                                     disabled={!capabilities.analysis}
                                     className={`flex-1 py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${capabilities.analysis
@@ -579,9 +661,16 @@ export default function AIAssistant({
                             </div>
 
                             {messages.length === 0 ? (
-                                <p className="text-[10px] text-gray-400">
-                                    Analyzes ${amount.toFixed(2)} against real-time global inflation data
-                                </p>
+                                <div className="space-y-2">
+                                    <p className="text-[10px] text-gray-400">
+                                        Analyzes ${amount.toFixed(2)} against real-time global inflation data
+                                    </p>
+                                    {effectiveRegion && liveInflationData && liveInflationData[effectiveRegion] && (
+                                        <p className="text-[9px] text-blue-600 dark:text-blue-400">
+                                            Using {effectiveRegion} region ({liveInflationData[effectiveRegion].avgRate.toFixed(1)}% inflation)
+                                        </p>
+                                    )}
+                                </div>
                             ) : (
                                 <button
                                     onClick={clearMessages}
@@ -894,6 +983,90 @@ export default function AIAssistant({
                                         </button>
                                     )}
                                 </div>
+                            </div>
+                        </motion.div>
+                    )}
+
+                    {!advice && !isAnalyzing && (
+                        <motion.div
+                            key="settings-desktop"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800"
+                        >
+                            <div className="text-center mb-6">
+                                <h3 className="text-xl font-bold text-gray-800 dark:text-white mb-2">
+                                    🧠 Analysis Settings
+                                </h3>
+                                <p className="text-gray-600 dark:text-gray-300">
+                                    Configure your region and goal for personalized wealth protection recommendations
+                                </p>
+                            </div>
+
+                            <div className="space-y-6">
+                                {/* Home Region Selection */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                        🏰 Home Region
+                                    </label>
+                                    <div className="grid grid-cols-5 gap-3">
+                                        {REGIONS.map((region) => (
+                                            <button
+                                                key={region}
+                                                onClick={() => setSelectedRegion(region)}
+                                                className={`p-3 rounded-lg font-medium transition-all ${selectedRegion === region
+                                                    ? 'bg-blue-600 text-white shadow-lg'
+                                                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                                    }`}
+                                            >
+                                                {region}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {liveInflationData && selectedRegion && liveInflationData[selectedRegion] && (
+                                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                                            Current inflation: <span className="font-semibold">{liveInflationData[selectedRegion].avgRate.toFixed(1)}%</span>
+                                            ({liveInflationData[selectedRegion].countries.length} countries)
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Analysis Goal */}
+                                <div>
+                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                        🎯 Analysis Goal
+                                    </label>
+                                    <select
+                                        value={analysisGoal}
+                                        onChange={(e) => setAnalysisGoal(e.target.value)}
+                                        className="w-full p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                                    >
+                                        <option value="exploring">🔍 Exploring Options</option>
+                                        <option value="inflation_protection">🛡️ Inflation Protection</option>
+                                        <option value="geographic_diversification">🌍 Geographic Diversification</option>
+                                        <option value="rwa_access">💎 Real World Asset Access</option>
+                                    </select>
+                                </div>
+
+                                {/* Start Analysis Button */}
+                                <button
+                                    onClick={() => {
+                                        setShowSettings(false);
+                                        handleAnalyze();
+                                    }}
+                                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
+                                >
+                                    🚀 Run Personalized Analysis
+                                </button>
+
+                                {userRegion && (
+                                    <button
+                                        onClick={() => setShowSettings(false)}
+                                        className="w-full text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                    >
+                                        Skip settings (use {userRegion})
+                                    </button>
+                                )}
                             </div>
                         </motion.div>
                     )}
