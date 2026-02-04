@@ -8,6 +8,7 @@ import { useInflationData } from '../../hooks/use-inflation-data';
 import { useAppState } from '../../context/AppStateContext';
 import { useAIConversationOptional } from '../../context/AIConversationContext';
 import VoiceButton from '../ui/VoiceButton';
+import type { Region } from '../../hooks/use-user-region';
 import InteractiveAdviceCard from '../agent/InteractiveAdviceCard';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import type { RegionalInflationData } from '../../hooks/use-inflation-data';
@@ -23,6 +24,8 @@ interface AIAssistantProps {
     embedded?: boolean;
     onExecute?: (token: string) => void;
     aggregatedPortfolio?: MultichainPortfolio;
+    /** User's home region for personalized recommendations */
+    userRegion?: Region;
 }
 
 export default function AIAssistant({
@@ -32,7 +35,8 @@ export default function AIAssistant({
     inflationData: propInflationData,
     embedded = false,
     onExecute,
-    aggregatedPortfolio
+    aggregatedPortfolio,
+    userRegion
 }: AIAssistantProps) {
     const {
         advice,
@@ -129,6 +133,20 @@ export default function AIAssistant({
         // Use live inflation data if available, otherwise fall back to prop
         const inflationDataToUse = (liveInflationData || propInflationData) as Record<string, RegionalInflationData>;
 
+        // Debug: Log the inflation data being used
+        console.log('[AIAssistant] Inflation data being passed to analyze:', {
+            hasLiveData: !!liveInflationData,
+            hasPropData: !!propInflationData,
+            dataKeys: Object.keys(inflationDataToUse || {}),
+            userRegion: userRegion,
+            sampleData: inflationDataToUse ? Object.entries(inflationDataToUse).slice(0, 2).map(([region, data]) => ({
+                region,
+                avgRate: data.avgRate,
+                countryCount: data.countries?.length || 0,
+                stablecoinCount: data.stablecoins?.length || 0
+            })) : 'No data'
+        });
+
         // Build portfolio from holdings and amount
         const portfolio: MultichainPortfolio = aggregatedPortfolio || {
             ...createEmptyAnalysis(),
@@ -144,7 +162,7 @@ export default function AIAssistant({
             errors: [],
         };
 
-        analyze(inflationDataToUse, portfolio);
+        analyze(inflationDataToUse, portfolio, undefined, undefined, undefined, undefined, userRegion);
     };
 
     const handleVoiceTranscription = (transcription: string) => {

@@ -264,6 +264,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     inflationData: Record<string, RegionalInflationData>,
     portfolio: MultichainPortfolio,
     userGoal?: string,
+    userRegion?: string,
   ) => {
     if (!capabilities.analysis) {
       console.warn('[DiversifiAI] Analysis not available');
@@ -275,51 +276,54 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     setThinkingStep('Initializing protection protocols...');
 
     try {
-      // Phase 1: Local Data Collection (0-30%)
-      setAnalysisProgress(10);
+      // Phase 1: Local Data Collection (0-30%) - Slower progression
+      setAnalysisProgress(5); // Start slower
       setThinkingStep('Securing market data...');
 
-      // Simulate slight delay for effect
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Simulate data gathering with more realistic timing
+      await new Promise(resolve => setTimeout(resolve, 1200)); // Increased from 800ms
 
-      setAnalysisProgress(25);
+      setAnalysisProgress(15); // Slower increment
       setThinkingStep('Calibrating inflation models...');
       const localAnalysis = analyzePortfolio(portfolio, inflationData, userGoal || config.goal);
       setPortfolioAnalysis(localAnalysis);
 
-      // Phase 2: AI Consultation (30-90%)
-      setAnalysisProgress(30);
+      // Phase 2: AI Consultation (15-90%) - More time for AI analysis
+      setAnalysisProgress(20); // Start AI phase slower
 
       const THEMATIC_MESSAGES = [
-        "Consulting the oracle...",
-        "Analyzing macro heatmaps...",
-        "Calculating opportunity costs...",
-        "Get stable... or die trying...",
-        "Checking yield curves...",
-        "Scanning for volatility...",
-        "Identifying safe harbors...",
-        "Optimizing purchasing power...",
-        "Protecting your wealth...",
+        "Consulting mathematics...",
+        "Analyzing the macro...",
+        "Calculating...",
+        "Stability loading...",
+        "Checking yield...",
+        "Scanning volatility...",
+        "Identifying inflation...",
+        "Optimizing insights...",
+        "Perambulating...",
       ];
 
       let messageIndex = 0;
       setThinkingStep(THEMATIC_MESSAGES[0]);
 
       // Enhanced AI analysis via API
-      // Smoother progress bar from 30% to 90%
+      // Slower, more realistic progress bar from 20% to 90%
       const progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
-          // Slow down as we get closer to 90%
+          // Much slower progression - more realistic for AI analysis
           if (prev >= 90) return 90;
-          return prev + (prev > 70 ? 1 : 2);
+          if (prev > 80) return prev + 0.4; // Very slow near the end
+          if (prev > 70) return prev + 0.7; // Slow down significantly
+          if (prev > 50) return prev + 1.0; // Moderate pace in middle
+          return prev + 1.3; // Slightly faster at the beginning
         });
 
-        // Cycle messages every few ticks
-        if (Math.random() > 0.7) {
+        // Cycle messages every few ticks (less frequently for better UX)
+        if (Math.random() > 0.8) {
           messageIndex = (messageIndex + 1) % THEMATIC_MESSAGES.length;
           setThinkingStep(THEMATIC_MESSAGES[messageIndex]);
         }
-      }, 600);
+      }, 1000); // Increased from 600ms to 1000ms for much slower updates
 
       const response = await fetch('/api/agent/analyze', {
         method: 'POST',
@@ -329,13 +333,17 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           inflationData,
           goal: userGoal || config.goal,
           riskTolerance: config.riskTolerance,
+          userRegion: userRegion,
         }),
       });
 
       clearInterval(progressInterval);
 
-      setAnalysisProgress(95);
+      setAnalysisProgress(92); // Don't jump to 95% immediately
       setThinkingStep('Finalizing strategy...');
+
+      // Add a small delay before completing
+      await new Promise(resolve => setTimeout(resolve, 800));
 
       if (response.ok) {
         const result = await response.json();
@@ -377,6 +385,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     networkInfo?: { chainId: number; name: string },
     _multiChainContext?: unknown,
     aggregatedPortfolio?: MultichainPortfolio,
+    userRegion?: string,
   ) => {
     // Build portfolio from legacy params if needed
     let portfolio: MultichainPortfolio;
@@ -406,7 +415,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       portfolio = userBalanceOrPortfolio;
     }
 
-    return analyzePortfolioAI(inflationData, portfolio);
+    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion);
   }, [analyzePortfolioAI]);
 
   /**

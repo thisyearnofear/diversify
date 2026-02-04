@@ -459,6 +459,7 @@ export default function ProtectionTab({
             holdings={chains.flatMap(c => c.balances.map(b => b.symbol))}
             onExecute={handleExecuteSwap}
             embedded
+            userRegion={userRegion}
           />
 
           {/* =================================================================

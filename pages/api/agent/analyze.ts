@@ -85,7 +85,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(500).json({ error: 'AI providers (GEMINI or VENICE) not configured' });
         }
 
-        const { inflationData, userBalance, currentHoldings, config, networkContext, portfolio, analysis } = req.body;
+        const { inflationData, userBalance, currentHoldings, config, networkContext, portfolio, analysis, userRegion } = req.body;
+
+        // Debug: Log the inflation data received by the API
+        console.log('[Analyze API] Received inflation data:', {
+            hasInflationData: !!inflationData,
+            inflationDataType: typeof inflationData,
+            inflationDataKeys: inflationData ? Object.keys(inflationData) : 'No keys',
+            userRegion: userRegion,
+            sampleInflationData: inflationData ? Object.entries(inflationData).slice(0, 2).map(([region, data]: [string, any]) => ({
+                region,
+                avgRate: data?.avgRate,
+                countryCount: data?.countries?.length || 0,
+                stablecoinCount: data?.stablecoins?.length || 0
+            })) : 'No data'
+        });
 
         // Use pre-computed analysis if provided, otherwise calculate it
         let portfolioAnalysis: PortfolioAnalysis;
@@ -205,6 +219,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - Risk Tolerance: ${config?.riskTolerance || 'Balanced'}
             - Time Horizon: ${config?.timeHorizon || '3 months'}
             - Selected Goal: ${goalLabels[userGoal] || 'Exploration'}
+            - Home Region: ${userRegion || 'Not specified'}
+            ${userRegion && inflationData[userRegion] ? `- Home Region Inflation: ${inflationData[userRegion].avgRate.toFixed(1)}% (${inflationData[userRegion].countries.length} countries)` : ''}
             
             CURRENT MARKET CONTEXT (CRITICAL FOR RECOMMENDATIONS):
             - 10-Year Treasury Yield: ${treasuryYield}%
@@ -380,6 +396,8 @@ TRANSPARENCY REQUIREMENTS:
             4. Calculate exact dollar amounts for all recommendations
             5. If diversification score < 50, emphasize diversification
             6. If weighted inflation > 5%, emphasize inflation protection
+            7. PRIORITIZE USER'S HOME REGION: Use the specific inflation rate for their region (${userRegion || 'not specified'}) when making recommendations
+            8. REFERENCE REGIONAL DATA: Mention specific countries and inflation rates from their region when explaining recommendations
             
             Make this analysis DATA-DRIVEN, SPECIFIC, and ACTIONABLE.
         `;
