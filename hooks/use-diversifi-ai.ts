@@ -14,6 +14,7 @@ import { AI_FEATURES, AUTONOMOUS_FEATURES } from '../config/features';
 import type { RegionalInflationData } from './use-inflation-data';
 import type { AggregatedPortfolio } from './use-stablecoin-balances';
 import { analyzePortfolio, type PortfolioAnalysis } from '../utils/portfolio-analysis';
+import { useAIConversationOptional } from '../context/AIConversationContext';
 
 // ============================================================================
 // TYPES
@@ -142,15 +143,40 @@ interface AIConfig {
 // MAIN HOOK
 // ============================================================================
 
-export function useDiversifiAI() {
+export function useDiversifiAI(useGlobalConversation: boolean = true) {
   // Core AI state
   const [advice, setAdvice] = useState<AIAdvice | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [thinkingStep, setThinkingStep] = useState<string>('');
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
-  const [messages, setMessages] = useState<AIMessage[]>([]);
+  const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState<PortfolioAnalysis | null>(null);
+  
+  // Use global conversation context if available and requested
+  const globalConversation = useAIConversationOptional();
+  const isUsingGlobal = useGlobalConversation && globalConversation !== undefined;
+  const messages = isUsingGlobal 
+    ? globalConversation!.messages 
+    : localMessages;
+  
+  // Unified add message function
+  const addMessage = useCallback((message: AIMessage) => {
+    if (isUsingGlobal) {
+      globalConversation!.addMessage(message);
+    } else {
+      setLocalMessages(prev => [...prev, message]);
+    }
+  }, [isUsingGlobal, globalConversation]);
+  
+  // Unified clear messages function
+  const clearMessages = useCallback(() => {
+    if (isUsingGlobal) {
+      globalConversation!.clearMessages();
+    } else {
+      setLocalMessages([]);
+    }
+  }, [isUsingGlobal, globalConversation]);
   
   // Capabilities (from feature flags + server status)
   const [capabilities, setCapabilities] = useState<AICapabilities>({
@@ -346,7 +372,7 @@ export function useDiversifiAI() {
       content,
       timestamp: new Date(),
     };
-    setMessages(prev => [...prev, userMessage]);
+    addMessage(userMessage);
     setIsAnalyzing(true); // Show thinking state for chat too
 
     try {
@@ -364,7 +390,7 @@ export function useDiversifiAI() {
           timestamp: new Date(),
           type: result.type || 'text',
         };
-        setMessages(prev => [...prev, assistantMessage]);
+        addMessage(assistantMessage);
 
         // Auto-speak the response if voice output is available
         if (capabilities.voiceOutput) {
@@ -495,8 +521,8 @@ export function useDiversifiAI() {
     runAutonomousAnalysis,
     
     // Utilities
-    clearMessages: () => setMessages([]),
-    clearConversation: () => setMessages([]),
+    clearMessages,
+    clearConversation: clearMessages,
     clearAdvice: () => setAdvice(null),
   };
 }

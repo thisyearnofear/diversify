@@ -39,6 +39,7 @@ export default function AIAssistant({
         analysisProgress,
         analyze,
         sendMessage,
+        messages,
         autonomousStatus,
         capabilities,
         clearMessages,
@@ -315,6 +316,44 @@ export default function AIAssistant({
                             animate={{ opacity: 1 }}
                             className="text-center py-4"
                         >
+                            {/* Inline Conversation Display */}
+                            {messages.length > 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mb-4 space-y-2 max-h-48 overflow-y-auto custom-scrollbar"
+                                >
+                                    {messages.slice(-3).map((msg, i) => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.1 }}
+                                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                            <div
+                                                className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs ${
+                                                    msg.role === 'user'
+                                                        ? 'bg-blue-600 text-white rounded-br-md'
+                                                        : 'bg-gray-100 text-gray-800 rounded-bl-md'
+                                                }`}
+                                            >
+                                                {msg.content.length > 120 
+                                                    ? msg.content.slice(0, 120) + '...'
+                                                    : msg.content
+                                                }
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                    {messages.length > 3 && (
+                                        <div className="text-[9px] text-gray-400 text-center">
+                                            {messages.length - 3} earlier messages
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+
                             <div className="flex items-center gap-2 mb-3">
                                 <button
                                     onClick={() => {
@@ -350,9 +389,18 @@ export default function AIAssistant({
                                 />
                             </div>
 
-                            <p className="text-[10px] text-gray-400">
-                                Analyzes ${amount.toFixed(2)} against real-time global inflation data
-                            </p>
+                            {messages.length === 0 ? (
+                                <p className="text-[10px] text-gray-400">
+                                    Analyzes ${amount.toFixed(2)} against real-time global inflation data
+                                </p>
+                            ) : (
+                                <button
+                                    onClick={clearMessages}
+                                    className="text-[10px] text-gray-400 hover:text-gray-600 underline"
+                                >
+                                    Clear conversation
+                                </button>
+                            )}
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -663,21 +711,65 @@ export default function AIAssistant({
 
                     {!advice && !isAnalyzing && (
                         <motion.div key="initial" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6 pt-2">
+                            {/* Inline Conversation Display */}
+                            {messages.length > 0 && (
+                                <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="space-y-3 max-h-60 overflow-y-auto custom-scrollbar"
+                                >
+                                    {messages.slice(-5).map((msg, i) => (
+                                        <motion.div
+                                            key={i}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: i * 0.1 }}
+                                            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                            <div
+                                                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
+                                                    msg.role === 'user'
+                                                        ? 'bg-blue-600 text-white rounded-br-md'
+                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md'
+                                                }`}
+                                            >
+                                                {msg.content}
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                    {messages.length > 5 && (
+                                        <div className="text-xs text-gray-400 text-center">
+                                            {messages.length - 5} earlier messages
+                                        </div>
+                                    )}
+                                    <button
+                                        onClick={clearMessages}
+                                        className="w-full text-xs text-gray-400 hover:text-gray-600 py-2"
+                                    >
+                                        Clear conversation
+                                    </button>
+                                </motion.div>
+                            )}
+
                             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-500/20 relative overflow-hidden">
                                 <div className="flex justify-between items-start mb-2">
                                     <h4 className="text-blue-800 dark:text-blue-100 font-black text-base leading-tight">
-                                        {amount > 0 ? 'Universal Wealth Protection' : 'Simulation'}
+                                        {messages.length > 0 ? 'Ask me anything' : (amount > 0 ? 'Universal Wealth Protection' : 'Simulation')}
                                     </h4>
-                                    {amount === 0 && (
+                                    {amount === 0 && messages.length === 0 && (
                                         <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-tighter shadow-sm">Sim Mode</span>
                                     )}
                                 </div>
                                 <p className="text-blue-700/80 dark:text-blue-200/60 text-xs font-bold leading-relaxed mb-4">
-                                    {capabilities.analysis
-                                        ? amount > 0
-                                            ? `Analyze your $${amount.toFixed(2)} portfolio against real-time global inflation data.`
-                                            : "No assets detected. Let's run a simulation ($1,000) to see how DiversiFi protects your wealth."
-                                        : "Wealth analysis engine is currently undergoing maintenance."
+                                    {messages.length > 0 
+                                        ? "I can analyze your portfolio, explain inflation data, or help you understand wealth protection strategies."
+                                        : (capabilities.analysis
+                                            ? amount > 0
+                                                ? `Analyze your $${amount.toFixed(2)} portfolio against real-time global inflation data.`
+                                                : "No assets detected. Let's run a simulation ($1,000) to see how DiversiFi protects your wealth."
+                                            : "Wealth analysis engine is currently undergoing maintenance."
+                                        )
                                     }
                                 </p>
                                 <button

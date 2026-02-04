@@ -7,6 +7,7 @@ import ErrorBoundary from "../components/ui/ErrorBoundary";
 import { WalletProvider } from "../components/wallet/WalletProvider";
 import { ToastProvider } from "../components/ui/Toast";
 import { AppStateProvider } from "../context/AppStateContext";
+import { AIConversationProvider } from "../context/AIConversationContext";
 import { useRouter } from "next/router";
 import sdk from "@farcaster/miniapp-sdk";
 
@@ -88,11 +89,13 @@ export default function App({ Component, pageProps }: AppProps) {
 
         {/* Wrap with AppStateProvider and other providers */}
         <AppStateProvider>
-          <ToastProvider>
-            <WalletProvider>
-              <Component {...pageProps} isInMiniPay={isInMiniPay} />
-            </WalletProvider>
-          </ToastProvider>
+          <AIConversationProvider>
+            <ToastProvider>
+              <WalletProvider>
+                <Component {...pageProps} isInMiniPay={isInMiniPay} />
+              </WalletProvider>
+            </ToastProvider>
+          </AIConversationProvider>
         </AppStateProvider>
       </ErrorBoundary>
     </>

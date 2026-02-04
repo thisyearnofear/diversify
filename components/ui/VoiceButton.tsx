@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
 import { useToast } from './Toast';
+import sdk from '@farcaster/miniapp-sdk';
 
 const VOICE_DISABLED_KEY = 'diversifi-voice-disabled';
 const VOICE_FIRST_SEEN_KEY = 'diversifi-voice-first-seen';
@@ -100,10 +101,11 @@ export default function VoiceButton({
         }
     }, [showMenu, showSuggestionsPanel]);
 
+    // Touch-friendly sizes (min 44px for mobile accessibility)
     const sizeClasses = {
-        sm: 'w-8 h-8 text-sm',
-        md: 'w-10 h-10 text-lg',
-        lg: 'w-14 h-14 text-xl'
+        sm: 'w-11 h-11 text-sm min-w-[44px] min-h-[44px]', // 44px minimum
+        md: 'w-12 h-12 text-lg min-w-[48px] min-h-[48px]', // 48px
+        lg: 'w-14 h-14 text-xl' // 56px
     };
 
     const variantClasses = {
@@ -250,6 +252,11 @@ export default function VoiceButton({
 
     const handleToggle = () => {
         if (recordingState === 'processing') return; // Don't interrupt processing
+
+        // Haptic feedback for mobile
+        try {
+            (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'selection' });
+        } catch { /* Ignore haptic errors */ }
 
         if (recordingState === 'recording') {
             stopRecording();

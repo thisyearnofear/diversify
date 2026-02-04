@@ -21,9 +21,13 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTutorial";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import VoiceButton from "../components/ui/VoiceButton";
+import { useToast } from "../components/ui/Toast";
+import { useAIConversation } from "../context/AIConversationContext";
 
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab, guidedTour, exitTour } = useAppState();
+  const { showToast } = useToast();
+  const { unreadCount, markAsRead } = useAIConversation();
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -184,19 +188,36 @@ export default function DiversiFiPage() {
               size="sm"
               variant="default"
               onTranscription={(text) => {
-                // Handle voice commands globally
+                // Handle voice commands globally with user feedback
                 console.log('[Voice] Transcribed:', text);
+                
                 const query = text.toLowerCase();
+                let targetTab: string | null = null;
+                let tabName = '';
 
                 // Intent routing
                 if (query.includes('swap') || query.includes('exchange') || query.includes('buy') || query.includes('convert')) {
-                  setActiveTab('swap');
+                  targetTab = 'swap';
+                  tabName = 'Swap';
                 } else if (query.includes('protect') || query.includes('analyze') || query.includes('advice') || query.includes('score')) {
-                  setActiveTab('protect');
+                  targetTab = 'protect';
+                  tabName = 'Protection';
                 } else if (query.includes('balance') || query.includes('portfolio') || query.includes('holding') || query.includes('asset')) {
-                  setActiveTab('overview');
+                  targetTab = 'overview';
+                  tabName = 'Overview';
                 } else if (query.includes('info') || query.includes('learn') || query.includes('help') || query.includes('about')) {
-                  setActiveTab('info');
+                  targetTab = 'info';
+                  tabName = 'Info';
+                }
+
+                // Show feedback to user
+                if (targetTab && targetTab !== activeTab) {
+                  showToast(`"${text}" → Switching to ${tabName}`, 'info');
+                  setActiveTab(targetTab);
+                } else if (targetTab && targetTab === activeTab) {
+                  showToast(`"${text}" → You're already on ${tabName}`, 'info');
+                } else {
+                  showToast(`"${text}" → Ask about swap, protect, balance, or info`, 'info');
                 }
               }}
             />
@@ -206,7 +227,17 @@ export default function DiversiFiPage() {
         </div>
 
         <div className="sticky top-0 z-40 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
-          <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+          <TabNavigation 
+            activeTab={activeTab} 
+            setActiveTab={(tab) => {
+              // Mark conversation as read when switching to protect tab
+              if (tab === 'protect' && unreadCount > 0) {
+                markAsRead();
+              }
+              setActiveTab(tab);
+            }}
+            badges={{ protect: unreadCount }}
+          />
         </div>
 
         {/* Guided Tour Progress Indicator */}

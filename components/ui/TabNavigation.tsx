@@ -4,16 +4,19 @@ interface TabItem {
   id: string;
   label: string;
   icon: React.ReactNode;
+  badge?: number;
 }
 
 interface TabNavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  badges?: Record<string, number>;
 }
 
 export default function TabNavigation({
   activeTab,
   setActiveTab,
+  badges = {},
 }: TabNavigationProps) {
   const tabs: TabItem[] = [
     {
@@ -101,23 +104,33 @@ export default function TabNavigation({
   return (
     <div className="mb-4">
       <div className="flex bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`flex-1 py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg ${activeTab === tab.id
-                ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm"
-                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-              }`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <div className={`transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''}`}>
-              {tab.icon}
-            </div>
-            <span className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${activeTab === tab.id ? 'opacity-100' : 'opacity-60'}`}>
-              {tab.label}
-            </span>
-          </button>
-        ))}
+        {tabs.map((tab) => {
+          const badgeCount = badges[tab.id];
+          const hasBadge = badgeCount && badgeCount > 0;
+          
+          return (
+            <button
+              key={tab.id}
+              className={`flex-1 py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg relative ${activeTab === tab.id
+                  ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm"
+                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                }`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <div className={`transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''} relative`}>
+                {tab.icon}
+                {hasBadge && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
+                    {badgeCount > 99 ? '99+' : badgeCount}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${activeTab === tab.id ? 'opacity-100' : 'opacity-60'}`}>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
