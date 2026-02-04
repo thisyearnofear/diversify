@@ -300,7 +300,7 @@ export function scoreTokens(
 /**
  * Get token APY (would fetch from API in production)
  */
-function getTokenApy(symbol: string): number {
+export function getTokenApy(symbol: string): number {
   const apyMap: Record<string, number> = {
     'PAXG': 0,
     'USDY': 5.0,

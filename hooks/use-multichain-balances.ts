@@ -19,6 +19,8 @@ import {
   REGION_COLORS,
 } from '../config';
 import { executeMulticall, type ContractCall } from '../utils/multicall';
+import { analyzePortfolio, type PortfolioAnalysis } from '../utils/portfolio-analysis';
+import { useInflationData } from './use-inflation-data';
 
 // ============================================================================
 // TYPES
@@ -45,11 +47,11 @@ export interface ChainBalance {
   error: string | null;
 }
 
-export interface MultichainPortfolio {
-  totalValue: number;
+export interface MultichainPortfolio extends PortfolioAnalysis {
   chainCount: number;
-  activeChains: ChainBalance[];
+  chains: ChainBalance[];
   allTokens: TokenBalance[];
+  tokenMap: Record<string, TokenBalance>;
   regionData: Array<{ region: AssetRegion; value: number; color: string; usdValue: number }>;
   isLoading: boolean;
   isStale: boolean;
@@ -61,10 +63,40 @@ export interface MultichainPortfolio {
 // CONFIGURATION - Production Chains Only
 // ============================================================================
 
+const isDev = process.env.NODE_ENV === 'development';
 const PRODUCTION_CHAINS = [
   { chainId: NETWORKS.CELO_MAINNET.chainId, name: 'Celo', rpcUrl: NETWORKS.CELO_MAINNET.rpcUrl },
   { chainId: NETWORKS.ARBITRUM_ONE.chainId, name: 'Arbitrum', rpcUrl: NETWORKS.ARBITRUM_ONE.rpcUrl },
+  ...(isDev ? [{ chainId: NETWORKS.ARC_TESTNET.chainId, name: 'Arc Testnet', rpcUrl: NETWORKS.ARC_TESTNET.rpcUrl }] : []),
 ] as const;
+
+// Helper function to normalize region names
+function normalizeRegion(region: string): AssetRegion {
+  const legacyMap: Record<string, string> = {
+    'GLOBAL': 'Global',
+    'EUROPE': 'Europe',
+    'AFRICA': 'Africa',
+    'ASIA': 'Asia',
+    'LATAM': 'LatAm',
+    'COMMODITIES': 'Commodities',
+    'USA': 'USA',
+  };
+  return (legacyMap[region] || region) as AssetRegion;
+}
+
+// Calculate diversification score (0-100)
+function calculateDiversificationScore(chains: ChainBalance[]): number {
+  if (chains.length === 0) return 0;
+  const allTokens = chains.flatMap(c => c.balances);
+  const uniqueHoldings = new Set(allTokens.map(t => t.symbol));
+  const uniqueRegions = new Set(allTokens.map(t => t.region));
+
+  const chainScore = Math.min(30, chains.length * 15);
+  const tokenScore = Math.min(40, uniqueHoldings.size * 8);
+  const regionScore = Math.min(30, uniqueRegions.size * 10);
+
+  return chainScore + tokenScore + regionScore;
+}
 
 const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 const STALE_TTL = 30 * 1000; // 30 seconds for stale check
@@ -87,16 +119,16 @@ function getCachedBalance(address: string, chainId: number): CacheEntry | null {
     const key = getCacheKey(address, chainId);
     const cached = localStorage.getItem(key);
     if (!cached) return null;
-    
+
     const entry: CacheEntry = JSON.parse(cached);
     const age = Date.now() - entry.timestamp;
-    
+
     // Return null if expired
     if (age > CACHE_TTL) {
       localStorage.removeItem(key);
       return null;
     }
-    
+
     return entry;
   } catch {
     return null;
@@ -133,7 +165,7 @@ async function fetchChainBalances(
 ): Promise<ChainBalance> {
   const provider = new ethers.providers.JsonRpcProvider(chain.rpcUrl);
   const tokensToFetch = NETWORK_TOKENS[chain.chainId] || [];
-  
+
   if (tokensToFetch.length === 0) {
     return {
       chainId: chain.chainId,
@@ -156,7 +188,7 @@ async function fetchChainBalances(
   for (const symbol of tokensToFetch) {
     const tokenList = getTokenAddresses(chain.chainId);
     const tokenAddress = tokenList[symbol as keyof typeof tokenList];
-    
+
     if (!tokenAddress) continue;
 
     calls.push({
@@ -166,13 +198,13 @@ async function fetchChainBalances(
       params: [address],
     });
 
-    const metadata = TOKEN_METADATA[symbol] || 
-      TOKEN_METADATA[symbol.toUpperCase()] || 
-      TOKEN_METADATA[symbol.toLowerCase()] || 
+    const metadata = TOKEN_METADATA[symbol] ||
+      TOKEN_METADATA[symbol.toUpperCase()] ||
+      TOKEN_METADATA[symbol.toLowerCase()] ||
       { name: symbol, region: 'Global' as AssetRegion };
-    
-    const exchangeRate = EXCHANGE_RATES[symbol] || 
-      EXCHANGE_RATES[symbol.toUpperCase()] || 
+
+    const exchangeRate = EXCHANGE_RATES[symbol] ||
+      EXCHANGE_RATES[symbol.toUpperCase()] ||
       EXCHANGE_RATES[symbol.toLowerCase()] || 1;
 
     tokenInfoList.push({ symbol, metadata, exchangeRate });
@@ -180,7 +212,7 @@ async function fetchChainBalances(
 
   try {
     const results = await executeMulticall(provider, calls, chain.chainId);
-    
+
     const balances: TokenBalance[] = [];
     let totalValue = 0;
 
@@ -202,7 +234,7 @@ async function fetchChainBalances(
         balance: balance.toString(),
         formattedBalance: formattedBalance.slice(0, 10), // Limit precision
         value,
-        region: metadata.region || 'Global',
+        region: normalizeRegion(metadata.region || 'Global'),
         chainId: chain.chainId,
         chainName: chain.name,
       });
@@ -238,6 +270,7 @@ async function fetchChainBalances(
 // ============================================================================
 
 export function useMultichainBalances(address: string | undefined | null) {
+  const { inflationData } = useInflationData();
   const [chainBalances, setChainBalances] = useState<Record<number, ChainBalance>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -247,7 +280,7 @@ export function useMultichainBalances(address: string | undefined | null) {
   const portfolio = useMemo<MultichainPortfolio>(() => {
     const activeChains = Object.values(chainBalances).filter(c => c.totalValue > 0);
     const allTokens = activeChains.flatMap(c => c.balances);
-    
+
     // Calculate region totals
     const regionTotals: Record<AssetRegion, number> = {} as Record<AssetRegion, number>;
     allTokens.forEach(token => {
@@ -255,7 +288,7 @@ export function useMultichainBalances(address: string | undefined | null) {
     });
 
     const totalValue = activeChains.reduce((sum, c) => sum + c.totalValue, 0);
-    
+
     // Build region data with percentages
     const regionData = Object.entries(regionTotals).map(([region, usdValue]) => ({
       region: region as AssetRegion,
@@ -264,24 +297,39 @@ export function useMultichainBalances(address: string | undefined | null) {
       usdValue,
     })).sort((a, b) => b.usdValue - a.usdValue);
 
+    // Build token map for fast lookup
+    const tokenMap: Record<string, TokenBalance> = {};
+    allTokens.forEach(t => {
+      // Keep highest balance if same token on multiple chains
+      if (!tokenMap[t.symbol] || (parseFloat(t.formattedBalance) > parseFloat(tokenMap[t.symbol].formattedBalance))) {
+        tokenMap[t.symbol] = t;
+      }
+    });
+
+    // PERFORM ANALYTICS
+    const analysis = analyzePortfolio(
+      { chains: Object.values(chainBalances), totalValue },
+      inflationData as any || {}
+    );
+
     const errors = activeChains
       .filter(c => c.error)
       .map(c => `${c.chainName}: ${c.error}`);
 
     const isStale = lastUpdated ? Date.now() - lastUpdated > STALE_TTL : false;
-
     return {
-      totalValue,
+      ...analysis,
       chainCount: activeChains.length,
-      activeChains,
+      chains: activeChains,
       allTokens,
+      tokenMap,
       regionData,
       isLoading,
       isStale,
       errors,
       lastUpdated,
     };
-  }, [chainBalances, isLoading, lastUpdated]);
+  }, [chainBalances, isLoading, lastUpdated, inflationData]);
 
   // Main fetch function
   const fetchAllBalances = useCallback(async (force = false) => {

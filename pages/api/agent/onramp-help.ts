@@ -3,8 +3,9 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { getOnrampSystemPrompt, getOnrampRecommendation } from '../../../services/ai/onramp-agent-context';
 
 const GEMINI_MODELS = [
+    'gemini-3.0-flash-preview',
+    'gemini-3.0-pro-preview',
     'gemini-1.5-flash',
-    'gemini-1.5-pro',
 ];
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

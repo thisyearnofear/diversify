@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AIService } from '../../../services/ai/ai-service';
 import { analyzePortfolio } from '../../../utils/portfolio-analysis';
-import type { AggregatedPortfolio } from '../../../hooks/use-stablecoin-balances';
+import type { MultichainPortfolio } from '../../../hooks/use-multichain-balances';
 
 /**
  * Web-Enriched Analysis API Endpoint
@@ -30,7 +30,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Step 1: Calculate portfolio analysis (local, fast)
         const portfolioAnalysis = analyzePortfolio(
-            portfolio as AggregatedPortfolio,
+            portfolio as MultichainPortfolio,
             inflationData || {},
             userGoal || 'exploring'
         );
@@ -54,15 +54,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const result = {
             // Core portfolio analysis
             portfolioAnalysis,
-            
+
             // Web-enriched insights (if available)
             webInsights: webAnalysis?.webInsights || null,
             sources: webAnalysis?.sources || [],
             webSearchTimestamp: webAnalysis?.timestamp || null,
-            
+
             // Combined recommendation
             recommendation: generateCombinedRecommendation(portfolioAnalysis, webAnalysis, userGoal),
-            
+
             // Metadata
             meta: {
                 webSearchUsed: !!webAnalysis,
@@ -78,9 +78,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     } catch (error) {
         console.error('[Web Analyze] Error:', error);
-        res.status(500).json({ 
+        res.status(500).json({
             error: 'Analysis failed',
-            details: (error as Error).message 
+            details: (error as Error).message
         });
     }
 }
@@ -136,7 +136,7 @@ function generateCombinedRecommendation(
     // Enhance with web insights if available
     if (webAnalysis?.webInsights?.goldContext && userGoal === 'rwa_access') {
         const gold = webAnalysis.webInsights.goldContext;
-        
+
         if (gold.momentum === 'bullish' && gold.ytdChange > 15) {
             reasoning += ` Gold is up ${gold.ytdChange}% YTD - consider DCA strategy to avoid buying at local peak.`;
             timing = 'DCA over 4 weeks';
@@ -148,7 +148,7 @@ function generateCombinedRecommendation(
 
     if (webAnalysis?.webInsights?.currencyContext && userGoal === 'geographic_diversification') {
         const currencies = webAnalysis.webInsights.currencyContext;
-        
+
         // Check if any held currencies are strengthening
         for (const [region, data] of Object.entries(currencies)) {
             const currencyData = data as { trend: string; ytdPerformance: number };

@@ -50,14 +50,12 @@ export default function DiversiFiPage() {
   const [userRegion, setUserRegion] = useState<Region>("Africa");
 
   // NEW: Use unified multichain balances hook
+  const multichainPortfolio = useMultichainBalances(address);
   const {
-    totalValue,
     chainCount,
-    regionData: multichainRegionData,
-    allTokens,
     isLoading: isMultichainLoading,
     refresh,
-  } = useMultichainBalances(address);
+  } = multichainPortfolio;
 
   // Available tokens based on current chain (for swap tab)
   const availableTokens = useMemo(() => {
@@ -71,36 +69,6 @@ export default function DiversiFiPage() {
   const {
     data: currencyPerformanceData,
   } = useCurrencyPerformance('USD', shouldLoadCurrencyPerformance);
-
-  // Convert multichain region data to the format expected by components
-  const regionData = useMemo(() => {
-    if (!address || isMultichainLoading) {
-      return [];
-    }
-    
-    // Use multichain data if available
-    if (multichainRegionData.length > 0) {
-      return multichainRegionData.map(r => ({
-        region: r.region,
-        value: r.value,
-        color: r.color,
-      }));
-    }
-    
-    return [];
-  }, [address, isMultichainLoading, multichainRegionData]);
-
-  // Legacy balances format for compatibility
-  const balances = useMemo(() => {
-    const result: Record<string, { formattedBalance: string; value: number }> = {};
-    allTokens.forEach(token => {
-      result[token.symbol] = {
-        formattedBalance: token.formattedBalance,
-        value: token.value,
-      };
-    });
-    return result;
-  }, [allTokens]);
 
   useEffect(() => {
     if (!isRegionLoading && detectedRegion) {
@@ -190,7 +158,7 @@ export default function DiversiFiPage() {
               onTranscription={(text) => {
                 // Handle voice commands globally with user feedback
                 console.log('[Voice] Transcribed:', text);
-                
+
                 const query = text.toLowerCase();
                 let targetTab: string | null = null;
                 let tabName = '';
@@ -235,8 +203,8 @@ export default function DiversiFiPage() {
         </div>
 
         <div className="sticky top-0 z-40 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
-          <TabNavigation 
-            activeTab={activeTab} 
+          <TabNavigation
+            activeTab={activeTab}
             setActiveTab={(tab) => {
               // Mark conversation as read when switching to protect tab
               if (tab === 'protect' && unreadCount > 0) {
@@ -267,9 +235,8 @@ export default function DiversiFiPage() {
                       {Array.from({ length: guidedTour.totalSteps }).map((_, i) => (
                         <div
                           key={i}
-                          className={`h-1 w-4 rounded-full ${
-                            i <= guidedTour.currentStep ? 'bg-white' : 'bg-white/30'
-                          }`}
+                          className={`h-1 w-4 rounded-full ${i <= guidedTour.currentStep ? 'bg-white' : 'bg-white/30'
+                            }`}
                         />
                       ))}
                     </div>
@@ -290,16 +257,13 @@ export default function DiversiFiPage() {
           <ErrorBoundary>
             {activeTab === "overview" && (
               <OverviewTab
-                regionData={regionData}
-                totalValue={totalValue}
+                portfolio={multichainPortfolio}
                 isRegionLoading={isRegionLoading}
                 userRegion={userRegion}
                 setUserRegion={setUserRegion}
                 REGIONS={REGIONS}
                 setActiveTab={setActiveTab}
                 refreshBalances={refresh}
-                balances={balances}
-                inflationData={inflationData as Record<string, RegionalInflationData>}
                 currencyPerformanceData={currencyPerformanceData}
               />
             )}
@@ -308,13 +272,11 @@ export default function DiversiFiPage() {
               <ProtectionTab
                 userRegion={userRegion}
                 setUserRegion={setUserRegion}
-                regionData={regionData}
-                totalValue={totalValue}
-                balances={balances}
+                portfolio={multichainPortfolio}
                 setActiveTab={setActiveTab}
               />
             )}
-            
+
             {activeTab === "swap" && (
               <SwapTab
                 userRegion={userRegion}

@@ -22,13 +22,7 @@ import {
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import WalletButton from "../wallet/WalletButton";
 import { useAppState } from "@/context/AppStateContext";
-import { useInflationData } from "@/hooks/use-inflation-data";
-import {
-  analyzePortfolio,
-  type PortfolioAnalysis,
-} from "@/utils/portfolio-analysis";
 import { useProtectionProfile, USER_GOALS, RISK_LEVELS, TIME_HORIZONS } from "@/hooks/use-protection-profile";
-import { useMultichainBalances } from "@/hooks/use-multichain-balances";
 
 // Types from hook
 import type { UserGoal } from "@/hooks/use-protection-profile";
@@ -100,40 +94,37 @@ const RWA_ASSETS = [
 interface ProtectionTabProps {
   userRegion: Region;
   setUserRegion: (region: Region) => void;
-  regionData: Array<{ region: string; value: number; color: string }>;
-  totalValue: number;
-  balances: Record<string, { formattedBalance: string; value: number }>;
-  setActiveTab?: (tab: string) => void;
+  portfolio: MultichainPortfolio;
   onSelectStrategy?: (strategy: string) => void;
+  setActiveTab?: (tab: string) => void;
 }
+
+import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 
 export default function ProtectionTab({
   userRegion,
   setUserRegion,
-  regionData: legacyRegionData,
-  totalValue: legacyTotalValue,
+  portfolio,
   onSelectStrategy,
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
   const { navigateToSwap } = useAppState();
-  const { inflationData } = useInflationData();
   const isCelo = ChainDetectionService.isCelo(chainId);
 
-  // NEW: Use multichain balances for accurate data
   const {
     totalValue,
     chainCount,
-    activeChains,
+    chains,
     regionData,
     isLoading: isMultichainLoading,
     isStale,
+    rebalancingOpportunities,
+  } = portfolio;
 
-  } = useMultichainBalances(address);
-
-  // Use legacy data as fallback while loading
-  const displayTotalValue = totalValue > 0 ? totalValue : legacyTotalValue;
-  const displayRegionData = regionData.length > 0 ? regionData : legacyRegionData.map(r => ({ ...r, usdValue: r.value }));
-  const displayChainCount = chainCount > 0 ? chainCount : (legacyTotalValue > 0 ? 1 : 0);
+  // Use values directly from portfolio
+  const displayTotalValue = totalValue;
+  const displayRegionData = regionData;
+  const displayChainCount = chainCount;
 
   // NEW: Use protection profile hook for proper edit flow
   const {
@@ -171,31 +162,10 @@ export default function ProtectionTab({
     );
   }, [displayRegionData, displayTotalValue]);
 
-  // Live portfolio analysis (using multichain data)
-  const liveAnalysis = useMemo<PortfolioAnalysis | null>(() => {
-    if (!activeChains || activeChains.length === 0) return null;
-    
-    // Convert multichain data to portfolio analysis format
-    const portfolioForAnalysis = {
-      totalValue: displayTotalValue,
-      chains: activeChains.map(chain => ({
-        chainId: chain.chainId,
-        chainName: chain.chainName,
-        totalValue: chain.totalValue,
-        balances: Object.fromEntries(chain.balances.map(b => [b.symbol, b])),
-      })),
-      allHoldings: activeChains.flatMap(c => c.balances.map(b => b.symbol)),
-      diversificationScore: Math.min(100, activeChains.length * 30 + currentRegions.length * 20),
-    };
-    
-    return analyzePortfolio(
-      portfolioForAnalysis,
-      inflationData,
-      config.userGoal || 'exploring',
-    );
-  }, [activeChains, displayTotalValue, currentRegions.length, inflationData, config.userGoal]);
+  // Use the pre-calculated live portfolio analysis from the portfolio prop
+  const liveAnalysis = portfolio;
 
-  const topOpportunity = liveAnalysis?.rebalancingOpportunities?.[0];
+  const topOpportunity = rebalancingOpportunities?.[0];
 
   // ============================================================================
   // HANDLERS
@@ -219,7 +189,7 @@ export default function ProtectionTab({
 
   const getBestFromToken = (targetToken: string): string => {
     // Get all tokens with balances across chains
-    const allTokens = activeChains.flatMap(c => c.balances);
+    const allTokens = chains.flatMap(c => c.balances);
     const tokensWithBalances = allTokens
       .filter(t => t.value > 0)
       .sort((a, b) => b.value - a.value);
@@ -243,10 +213,10 @@ export default function ProtectionTab({
 
   const getSwapAmount = (fromToken: string): string => {
     // Find token across all chains
-    const token = activeChains
+    const token = chains
       .flatMap(c => c.balances)
       .find(t => t.symbol === fromToken);
-    
+
     const balance = token?.value || 0;
     if (balance <= 0) return "10";
     const percentage = config.userGoal === 'geographic_diversification' ? 0.25 : 0.5;
@@ -330,11 +300,11 @@ export default function ProtectionTab({
 
           <HeroValue
             value={`$${displayTotalValue.toFixed(0)}`}
-            label={isMultichainLoading 
-              ? "Loading multichain data..." 
+            label={isMultichainLoading
+              ? "Loading multichain data..."
               : `Protected across ${displayChainCount} chain${displayChainCount !== 1 ? 's' : ''}`}
           />
-          
+
           {isStale && (
             <p className="text-[10px] text-white/60 mt-2">
               Data may be stale. Pull down to refresh.
@@ -486,7 +456,7 @@ export default function ProtectionTab({
               ================================================================= */}
           <AIAssistant
             amount={displayTotalValue || 0}
-            holdings={activeChains.flatMap(c => c.balances.map(b => b.symbol))}
+            holdings={chains.flatMap(c => c.balances.map(b => b.symbol))}
             onExecute={handleExecuteSwap}
             embedded
           />
@@ -546,7 +516,7 @@ export default function ProtectionTab({
           RWA ASSET CARDS
           ===================================================================== */}
       {RWA_ASSETS.map((asset) => {
-        const hasAsset = activeChains.some(chain =>
+        const hasAsset = chains.some(chain =>
           chain.balances.some(b => b.symbol === asset.symbol)
         );
         const showCard = !hasAsset || config.userGoal === 'rwa_access';
@@ -712,13 +682,13 @@ export default function ProtectionTab({
           }
         >
           <MultichainPortfolioBreakdown
-            regionData={displayRegionData.map(r => ({ 
-              region: r.region, 
-              value: r.value, 
-              color: r.color 
+            regionData={displayRegionData.map(r => ({
+              region: r.region,
+              value: r.value,
+              color: r.color
             }))}
             totalValue={displayTotalValue}
-            chainBreakdown={activeChains.map(c => ({
+            chainBreakdown={chains.map(c => ({
               chainId: c.chainId,
               chainName: c.chainName,
               totalValue: c.totalValue,

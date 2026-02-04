@@ -5,7 +5,8 @@ import SimplePieChart from './SimplePieChart';
 import NetworkSwitcher from '../swap/NetworkSwitcher';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAnimatedCounter } from '../../hooks/use-animated-counter';
-import type { PortfolioYieldSummary, AssetYieldInfo } from '../../hooks/use-portfolio-yield';
+import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
+import type { TokenAllocation } from '../../utils/portfolio-analysis';
 
 interface ProtectionAnalysisProps {
     regionData: Array<{ region: string; value: number; color: string }>;
@@ -22,7 +23,7 @@ interface ProtectionAnalysisProps {
     chainId?: number | null;
     onNetworkChange?: () => Promise<void>;
     refreshBalances?: () => Promise<void>;
-    yieldSummary?: PortfolioYieldSummary;
+    yieldSummary?: MultichainPortfolio;
 }
 
 // Grade explanations for user education
@@ -213,9 +214,9 @@ export default function ProtectionAnalysis({
                                 {Number(animatedScore).toFixed(0)}/100
                             </div>
                             <div className={`text-sm font-bold px-3 py-1 rounded-full inline-block mt-2 ${diversificationScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                    diversificationScore >= 60 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                        diversificationScore >= 40 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-                                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                diversificationScore >= 60 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                    diversificationScore >= 40 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                                 }`}>
                                 {diversificationRating}
                             </div>
@@ -313,8 +314,8 @@ export default function ProtectionAnalysis({
                             <div
                                 key={index}
                                 className={`p-2 rounded-lg border text-center transition-all ${highlightedRegionIndex === index
-                                        ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-105'
-                                        : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-105'
+                                    : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                                     }`}
                             >
                                 <div className="flex items-center justify-center gap-1">
@@ -391,10 +392,10 @@ export default function ProtectionAnalysis({
                                     className="mt-3 pt-3 border-t border-green-200 dark:border-green-800 overflow-hidden"
                                 >
                                     <div className="space-y-2">
-                                        {yieldSummary && yieldSummary.assets && yieldSummary.assets.map((item: AssetYieldInfo, index: number) => (
+                                        {yieldSummary && yieldSummary.tokens && yieldSummary.tokens.map((item: TokenAllocation, index: number) => (
                                             <div key={index} className="flex justify-between text-sm">
                                                 <span className="text-gray-600 dark:text-gray-400">{item.symbol}</span>
-                                                <span className="font-medium text-green-600 dark:text-green-400">{item.apy?.toFixed(2) || '0.00'}%</span>
+                                                <span className="font-medium text-green-600 dark:text-green-400">{item.yieldRate?.toFixed(2) || '0.00'}%</span>
                                             </div>
                                         ))}
                                     </div>

@@ -20,7 +20,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!image) return res.status(400).json({ error: 'Image data is required' });
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-3.0-flash-preview' });
 
         const result = await model.generateContent([
             prompt || "Analyze this financial document or portfolio screenshot. Extract holdings, balances, and any risk indicators. Provide a wealth protection recommendation.",
@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const response = await result.response;
         return res.status(200).json({
             text: response.text(),
-            modelUsed: 'gemini-1.5-flash'
+            modelUsed: 'gemini-3.0-flash-preview'
         });
 
     } catch (error: unknown) {

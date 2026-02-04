@@ -163,8 +163,10 @@ export default function VoiceButton({
             streamRef.current = stream;
 
             // Initialize Audio Context for visualization and silence detection
-            const webkitAudioContext = (window as any).webkitAudioContext as (() => AudioContext) | undefined;
-            const AudioContextConstructor = window.AudioContext || webkitAudioContext;
+            interface AudioContextWindow extends Window {
+                webkitAudioContext?: typeof AudioContext;
+            }
+            const AudioContextConstructor = window.AudioContext || (window as unknown as AudioContextWindow).webkitAudioContext;
             if (!AudioContextConstructor) {
                 throw new Error('Web Audio API is not supported in this browser');
             }
@@ -260,7 +262,10 @@ export default function VoiceButton({
 
         // Haptic feedback for mobile
         try {
-            (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'selection' });
+            interface HapticSDK {
+                hapticFeedback: (options: { type: 'selection' | 'impact' | 'notification' }) => void;
+            }
+            (sdk.actions as unknown as HapticSDK).hapticFeedback({ type: 'selection' });
         } catch { /* Ignore haptic errors */ }
 
         if (recordingState === 'recording') {

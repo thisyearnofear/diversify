@@ -14,11 +14,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { PortfolioAnalysis, RebalancingOpportunity } from '../../utils/portfolio-analysis';
-import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
+import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 
 interface ActionableRecommendationProps {
     analysis: PortfolioAnalysis | null;
-    portfolio: AggregatedPortfolio | null;
+    portfolio: MultichainPortfolio | null;
     onExecuteSwap: (fromToken: string, toToken: string, amount: string, reason: string) => void;
     onExecuteBridge?: (fromChain: number, toChain: number, token: string, amount: string) => void;
 }
@@ -104,8 +104,8 @@ function PrimaryRecommendation({
 
     return (
         <div className={`rounded-xl p-4 border-2 ${isHighImpact
-                ? 'bg-amber-50 border-amber-300'
-                : 'bg-blue-50 border-blue-200'
+            ? 'bg-amber-50 border-amber-300'
+            : 'bg-blue-50 border-blue-200'
             }`}>
             <div className="flex items-start gap-3">
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${isHighImpact ? 'bg-amber-200' : 'bg-blue-200'
@@ -146,8 +146,8 @@ function PrimaryRecommendation({
                                     step.description
                                 )}
                                 className={`px-4 py-2 rounded-lg text-xs font-bold text-white transition-all ${isHighImpact
-                                        ? 'bg-amber-600 hover:bg-amber-700'
-                                        : 'bg-blue-600 hover:bg-blue-700'
+                                    ? 'bg-amber-600 hover:bg-amber-700'
+                                    : 'bg-blue-600 hover:bg-blue-700'
                                     }`}
                             >
                                 Execute
@@ -234,8 +234,8 @@ function RebalancingSection({
                     >
                         <div className="flex items-center gap-3">
                             <div className={`w-2 h-2 rounded-full ${opp.priority === 'HIGH' ? 'bg-red-500' :
-                                    opp.priority === 'MEDIUM' ? 'bg-amber-500' :
-                                        'bg-green-500'
+                                opp.priority === 'MEDIUM' ? 'bg-amber-500' :
+                                    'bg-green-500'
                                 }`} />
                             <div>
                                 <div className="flex items-center gap-1 text-sm font-bold">
@@ -315,8 +315,8 @@ function ConfidenceFactors({ analysis }: { analysis: PortfolioAnalysis }) {
                 </h4>
                 <div className="flex items-center gap-1">
                     <div className={`w-2 h-2 rounded-full ${overallConfidence > 0.8 ? 'bg-green-500' :
-                            overallConfidence > 0.6 ? 'bg-amber-500' :
-                                'bg-red-500'
+                        overallConfidence > 0.6 ? 'bg-amber-500' :
+                            'bg-red-500'
                         }`} />
                     <span className="text-xs font-bold">{(overallConfidence * 100).toFixed(0)}%</span>
                 </div>
@@ -333,8 +333,8 @@ function ConfidenceFactors({ analysis }: { analysis: PortfolioAnalysis }) {
                             <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
                                 <div
                                     className={`h-full rounded-full ${factor.value > 0.8 ? 'bg-green-500' :
-                                            factor.value > 0.6 ? 'bg-amber-500' :
-                                                'bg-red-500'
+                                        factor.value > 0.6 ? 'bg-amber-500' :
+                                            'bg-red-500'
                                         }`}
                                     style={{ width: `${factor.value * 100}%` }}
                                 />
@@ -357,8 +357,8 @@ function ImpactBadge({ impact }: { impact: string }) {
 
     return (
         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isHigh
-                ? 'bg-green-100 text-green-700'
-                : 'bg-blue-100 text-blue-700'
+            ? 'bg-green-100 text-green-700'
+            : 'bg-blue-100 text-blue-700'
             }`}>
             {impact}
         </span>
@@ -443,7 +443,7 @@ function generateActionSteps(
 }
 
 function generateCrossChainOpportunities(
-    portfolio: AggregatedPortfolio | null
+    portfolio: MultichainPortfolio | null
 ): Array<{
     chainName: string;
     chainId: number;
@@ -471,7 +471,7 @@ function generateCrossChainOpportunities(
 
         // Arbitrum opportunities
         if (chain.chainId === 42161) {
-            const hasPAXG = Object.keys(chain.balances).some(t => t.toUpperCase() === 'PAXG');
+            const hasPAXG = chain.balances.some(t => t.symbol.toUpperCase() === 'PAXG');
             if (!hasPAXG && chain.totalValue > 5) {
                 opportunities.push({
                     chainName: 'Arbitrum',

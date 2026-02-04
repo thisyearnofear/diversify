@@ -1,22 +1,20 @@
 import React, { useState } from "react";
-import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
-import InflationVisualizer from "../inflation/InflationVisualizer";
-import { useDiversification } from "@/hooks/use-diversification";
-import { usePortfolioYield } from "@/hooks/use-portfolio-yield";
-import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
-import type { Region } from "@/hooks/use-user-region";
+import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import RegionalIconography from "../regional/RegionalIconography";
 import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
+import type { Region } from "@/hooks/use-user-region";
+import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
+import InflationVisualizer from "../inflation/InflationVisualizer";
+import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
 
 import { Card, CollapsibleSection, EmptyState } from "../shared/TabComponents";
 import { SmartBuyCryptoButton } from "../onramp";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 
 interface OverviewTabProps {
-  regionData: Array<{ region: string; value: number; color: string }>;
-  totalValue: number;
+  portfolio: MultichainPortfolio;
   isRegionLoading: boolean;
   userRegion: Region;
   setUserRegion: (region: Region) => void;
@@ -24,8 +22,6 @@ interface OverviewTabProps {
   setActiveTab: (tab: string) => void;
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
-  balances: Record<string, { formattedBalance: string; value: number }>;
-  inflationData: Record<string, unknown>;
   currencyPerformanceData?: {
     dates: string[];
     currencies: {
@@ -49,15 +45,13 @@ const EMERGING_MARKETS = {
 };
 
 export default function OverviewTab({
-  regionData,
-  totalValue,
+  portfolio,
   userRegion,
   setUserRegion,
   REGIONS,
   setActiveTab,
   refreshBalances,
   refreshChainId,
-  balances,
   currencyPerformanceData,
 }: OverviewTabProps) {
   const { address, isConnecting, chainId } = useWalletContext();
@@ -67,12 +61,12 @@ export default function OverviewTab({
   const {
     diversificationScore,
     diversificationRating,
+    totalValue,
+    regionData,
     diversificationTips,
-    goalScores,
-  } = useDiversification({ regionData, balances, userRegion, inflationData });
+  } = portfolio;
 
-  // Calculate yield vs inflation for Net Protection display
-  const yieldSummary = usePortfolioYield(balances, inflationData);
+
 
   const handleRefresh = async () => {
     if (refreshChainId) await refreshChainId();
@@ -168,7 +162,7 @@ export default function OverviewTab({
         <ProtectionAnalysis
           regionData={regionData}
           totalValue={totalValue}
-          goalScores={goalScores}
+          goalScores={portfolio.goalScores}
           diversificationScore={diversificationScore}
           diversificationRating={diversificationRating}
           onOptimize={() => setActiveTab("protect")}
@@ -176,7 +170,7 @@ export default function OverviewTab({
           chainId={chainId}
           onNetworkChange={refreshChainId ? handleRefresh : undefined}
           refreshBalances={refreshBalances}
-          yieldSummary={yieldSummary}
+          yieldSummary={portfolio}
         />
       )}
 

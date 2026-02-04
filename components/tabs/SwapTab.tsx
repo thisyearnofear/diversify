@@ -73,7 +73,7 @@ export default function SwapTab({
 
   // Get multichain balances for the header
   const {
-    activeChains,
+    chains,
     isLoading: isMultichainLoading,
     refresh: refreshMultichain,
   } = useMultichainBalances(address);
@@ -227,14 +227,14 @@ export default function SwapTab({
 
   // Prepare chain data for the header
   const chainBalancesData = useMemo(() => {
-    return activeChains.map(chain => ({
+    return chains.map(chain => ({
       chainId: chain.chainId,
       chainName: chain.chainName,
       totalValue: chain.totalValue,
       tokenCount: chain.tokenCount,
       isActive: chain.chainId === walletChainId,
     }));
-  }, [activeChains, walletChainId]);
+  }, [chains, walletChainId]);
 
   return (
     <div className="space-y-4">
@@ -329,15 +329,15 @@ export default function SwapTab({
             {swapStatus && (
               <div
                 className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${swapStatus.includes("Error")
-                    ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
-                    : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
+                  ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
+                  : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
                   }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div
                     className={`size-2 rounded-full ${swapStatus.includes("Error")
-                        ? "bg-red-500"
-                        : "bg-green-500 animate-pulse"
+                      ? "bg-red-500"
+                      : "bg-green-500 animate-pulse"
                       }`}
                   />
                   <span className="text-xs font-black uppercase tracking-tight">

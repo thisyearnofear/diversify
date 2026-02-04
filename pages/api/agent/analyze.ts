@@ -3,12 +3,13 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { analyzePortfolio, type PortfolioAnalysis } from '../../../utils/portfolio-analysis';
 import { getOnrampSystemPrompt } from '../../../services/ai/onramp-agent-context';
 import type { RegionalInflationData } from '../../../hooks/use-inflation-data';
+import type { ChainBalance } from '../../../hooks/use-multichain-balances';
 
 
 
 const GEMINI_MODELS_FALLBACK = [
-    'gemini-3-flash-preview',
-    'gemini-3-pro-preview',
+    'gemini-3.0-flash-preview',
+    'gemini-3.0-pro-preview',
     'gemini-1.5-flash',
     'gemini-1.5-pro',
 ];
@@ -51,20 +52,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             portfolioAnalysis = analyzePortfolio(portfolio, inflationData || {}, config?.userGoal);
         } else {
             // Fallback: create minimal portfolio from holdings
-            const minimalPortfolio = {
+            const chains: ChainBalance[] = [{
+                chainId: networkContext?.chainId || 42220,
+                chainName: networkContext?.name || 'Celo',
                 totalValue: userBalance || 0,
-                chains: [{
+                tokenCount: (currentHoldings || []).length,
+                isLoading: false,
+                error: null,
+                balances: (currentHoldings || []).map((h: string) => ({
+                    symbol: h,
+                    name: h,
+                    balance: "0",
+                    formattedBalance: "0",
+                    value: (userBalance || 0) / (currentHoldings.length || 1),
+                    region: 'Global',
                     chainId: networkContext?.chainId || 42220,
-                    chainName: networkContext?.name || 'Celo',
-                    totalValue: userBalance || 0,
-                    balances: Object.fromEntries(
-                        (currentHoldings || []).map((h: string) => [h, { value: (userBalance || 0) / (currentHoldings.length || 1) }])
-                    ),
-                }],
-                allHoldings: currentHoldings || [],
-                diversificationScore: 0,
-            };
-            portfolioAnalysis = analyzePortfolio(minimalPortfolio, inflationData || {}, config?.userGoal);
+                    chainName: networkContext?.name || 'Celo'
+                })),
+            }];
+
+            portfolioAnalysis = analyzePortfolio(
+                { chains, totalValue: userBalance || 0 },
+                inflationData || {},
+                config?.userGoal
+            );
         }
 
         const systemInstruction = `

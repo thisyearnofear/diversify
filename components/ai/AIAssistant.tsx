@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDiversifiAI, type AIAdvice } from '../../hooks/use-diversifi-ai';
+import { createEmptyAnalysis } from '../../utils/portfolio-analysis';
 import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 import { useInflationData } from '../../hooks/use-inflation-data';
@@ -8,7 +9,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { useAIConversationOptional } from '../../context/AIConversationContext';
 import VoiceButton from '../ui/VoiceButton';
 import InteractiveAdviceCard from '../agent/InteractiveAdviceCard';
-import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
+import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import type { RegionalInflationData } from '../../hooks/use-inflation-data';
 
 import sdk from '@farcaster/miniapp-sdk';
@@ -21,7 +22,7 @@ interface AIAssistantProps {
     /** When true, renders in compact embedded mode without header/footer for use within other cards */
     embedded?: boolean;
     onExecute?: (token: string) => void;
-    aggregatedPortfolio?: AggregatedPortfolio;
+    aggregatedPortfolio?: MultichainPortfolio;
 }
 
 export default function AIAssistant({
@@ -54,6 +55,33 @@ export default function AIAssistant({
     const globalConversation = useAIConversationOptional();
     const unreadCount = globalConversation?.unreadCount ?? 0;
     const markAsRead = globalConversation?.markAsRead;
+
+    // Chat input state
+    const [chatInput, setChatInput] = useState('');
+    const [showChatInput, setShowChatInput] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Quick ask prompts (contextual based on advice)
+    const getQuickPrompts = () => {
+        if (!advice) return [];
+        const prompts = ['Why this?', 'What are the risks?'];
+        if (advice.action === 'SWAP') prompts.push('Alternatives?');
+        if (advice.targetToken === 'PAXG') prompts.push('Gold vs yield?');
+        if (advice.targetToken === 'USDY') prompts.push('How does yield work?');
+        return prompts.slice(0, 3);
+    };
+
+    const handleChatSubmit = (e?: React.FormEvent) => {
+        e?.preventDefault();
+        if (!chatInput.trim() || isAnalyzing) return;
+        sendMessage(chatInput.trim());
+        setChatInput('');
+        setShowChatInput(false);
+    };
+
+    const handleQuickAsk = (prompt: string) => {
+        sendMessage(prompt);
+    };
 
     // Initialize AI on mount
     useEffect(() => {
@@ -102,11 +130,18 @@ export default function AIAssistant({
         const inflationDataToUse = (liveInflationData || propInflationData) as Record<string, RegionalInflationData>;
 
         // Build portfolio from holdings and amount
-        const portfolio = aggregatedPortfolio || {
+        const portfolio: MultichainPortfolio = aggregatedPortfolio || {
+            ...createEmptyAnalysis(),
             totalValue: amount,
+            lastUpdated: Date.now(),
+            chainCount: 0,
             chains: [],
-            allHoldings: holdings,
-            diversificationScore: 0,
+            allTokens: [],
+            tokenMap: {},
+            regionData: [],
+            isLoading: false,
+            isStale: false,
+            errors: [],
         };
 
         analyze(inflationDataToUse, portfolio);
@@ -340,6 +375,96 @@ export default function AIAssistant({
                                     )}
                                 </>
                             )}
+
+                            {/* Compact Chat Bar - appears after analysis */}
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                {/* Quick Ask Chips */}
+                                {!showChatInput && messages.length === 0 && (
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {getQuickPrompts().map((prompt) => (
+                                            <button
+                                                key={prompt}
+                                                onClick={() => handleQuickAsk(prompt)}
+                                                disabled={isAnalyzing}
+                                                className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 rounded-full transition-colors disabled:opacity-50"
+                                            >
+                                                {prompt}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Latest Response */}
+                                <AnimatePresence mode="wait">
+                                    {messages.length > 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -5 }}
+                                            className="mb-2"
+                                        >
+                                            <div className="bg-gray-50 rounded-xl p-2.5 text-xs text-gray-700 leading-relaxed">
+                                                {messages[messages.length - 1]?.content}
+                                            </div>
+                                            {messages.length > 1 && (
+                                                <button
+                                                    onClick={clearMessages}
+                                                    className="text-[9px] text-gray-400 hover:text-gray-600 mt-1"
+                                                >
+                                                    Clear • {messages.length} messages
+                                                </button>
+                                            )}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Input Row */}
+                                <div className="flex items-center gap-2">
+                                    {showChatInput ? (
+                                        <form onSubmit={handleChatSubmit} className="flex-1 flex gap-1.5">
+                                            <input
+                                                ref={inputRef}
+                                                type="text"
+                                                value={chatInput}
+                                                onChange={(e) => setChatInput(e.target.value)}
+                                                placeholder="Ask about this recommendation..."
+                                                className="flex-1 px-3 py-2 text-xs bg-white border border-gray-200 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+                                                autoFocus
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={!chatInput.trim() || isAnalyzing}
+                                                className="px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold disabled:opacity-50 disabled:bg-gray-300"
+                                            >
+                                                {isAnalyzing ? '...' : '→'}
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowChatInput(false)}
+                                                className="px-2 py-2 text-gray-400 hover:text-gray-600"
+                                            >
+                                                ✕
+                                            </button>
+                                        </form>
+                                    ) : (
+                                        <button
+                                            onClick={() => {
+                                                setShowChatInput(true);
+                                                setTimeout(() => inputRef.current?.focus(), 100);
+                                            }}
+                                            className="flex-1 flex items-center gap-2 px-3 py-2 text-xs text-gray-400 bg-gray-50 hover:bg-gray-100 rounded-xl transition-colors border border-transparent hover:border-gray-200"
+                                        >
+                                            <span>💬</span>
+                                            <span>Ask a follow-up question...</span>
+                                        </button>
+                                    )}
+                                    <VoiceButton
+                                        onTranscription={handleVoiceTranscription}
+                                        size="sm"
+                                        variant="embedded"
+                                    />
+                                </div>
+                            </div>
                         </motion.div>
                     )}
 
@@ -369,8 +494,8 @@ export default function AIAssistant({
                                         >
                                             <div
                                                 className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs ${msg.role === 'user'
-                                                        ? 'bg-blue-600 text-white rounded-br-md'
-                                                        : 'bg-gray-100 text-gray-800 rounded-bl-md'
+                                                    ? 'bg-blue-600 text-white rounded-br-md'
+                                                    : 'bg-gray-100 text-gray-800 rounded-bl-md'
                                                     }`}
                                             >
                                                 {msg.content.length > 120
@@ -763,8 +888,8 @@ export default function AIAssistant({
                                         >
                                             <div
                                                 className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${msg.role === 'user'
-                                                        ? 'bg-blue-600 text-white rounded-br-md'
-                                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md'
+                                                    ? 'bg-blue-600 text-white rounded-br-md'
+                                                    : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md'
                                                     }`}
                                             >
                                                 {msg.content}
@@ -831,12 +956,35 @@ export default function AIAssistant({
                 </AnimatePresence>
             </div>
 
-            {/* Footer */}
-            <div className="p-4 bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 shrink-0 flex items-center justify-around">
-                <div className="flex flex-col items-center gap-1 opacity-50"><span className="text-xl">📊</span><span className="text-[8px] font-black uppercase tracking-tighter">Insights</span></div>
-                <div className="flex flex-col items-center gap-1 opacity-50"><span className="text-xl">🔄</span><span className="text-[8px] font-black uppercase tracking-tighter">Rebalance</span></div>
-                <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => handleExecuteRecommendation(advice?.targetToken || 'PAXG')}><span className="text-xl">⚡</span><span className="text-[8px] font-black uppercase tracking-tighter">Swap</span></div>
-                <div className="flex flex-col items-center gap-1 opacity-50"><span className="text-xl">⚙️</span><span className="text-[8px] font-black uppercase tracking-tighter">Config</span></div>
+            {/* Footer - Chat Input */}
+            <div className="p-3 bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 shrink-0">
+                <form onSubmit={handleChatSubmit} className="flex items-center gap-2">
+                    <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={advice ? "Ask about this analysis..." : "Ask me anything..."}
+                        className="flex-1 px-4 py-2.5 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
+                    />
+                    <VoiceButton
+                        onTranscription={handleVoiceTranscription}
+                        size="md"
+                        variant="embedded"
+                    />
+                    <button
+                        type="submit"
+                        disabled={!chatInput.trim() || isAnalyzing}
+                        className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors disabled:opacity-50 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    >
+                        {isAnalyzing ? (
+                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                        ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                        )}
+                    </button>
+                </form>
             </div>
         </div>
     );

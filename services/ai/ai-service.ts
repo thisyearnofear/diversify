@@ -98,8 +98,8 @@ const VENICE_MODELS = {
 };
 
 const GEMINI_MODELS = {
-  flash: 'gemini-1.5-flash',
-  pro: 'gemini-1.5-pro',
+  flash: 'gemini-3.0-flash-preview',
+  pro: 'gemini-3.0-pro-preview',
 };
 
 // TTS voice mappings
@@ -487,7 +487,7 @@ async function callElevenLabsTranscribe(filePath: string): Promise<string> {
 
   // Read file into buffer for ElevenLabs API
   const fileBuffer = fs.readFileSync(filePath);
-  
+
   // Create form data
   const formData = new FormData();
   const blob = new Blob([fileBuffer], { type: 'audio/webm' });

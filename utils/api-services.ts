@@ -500,8 +500,8 @@ export const GeminiService = {
         actionSteps: result.actionSteps,
         urgencyLevel: result.urgencyLevel,
         _meta: {
-          modelUsed: result._meta?.modelUsed || 'gemini-1.5-flash',
-          totalCost: 0.02
+          modelUsed: result._meta?.modelUsed || 'gemini-3.0-flash-preview',
+          totalCost: 0.0035 // Example updated cost for Gemini 3 Flash Preview
         }
       };
 

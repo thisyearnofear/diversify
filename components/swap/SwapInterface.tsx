@@ -1,17 +1,15 @@
-import { useState, useEffect, forwardRef, useImperativeHandle, useMemo } from "react";
-import { useInflationData } from "../../hooks/use-inflation-data";
-import { useSwap } from "../../hooks/use-swap";
-import { useExpectedAmountOut } from "../../hooks/use-expected-amount-out";
-import { useStablecoinBalances } from "../../hooks/use-stablecoin-balances";
-import { SwapErrorHandler } from "../../services/swap/error-handler";
-import RegionalIconography, { RegionalPattern } from "../regional/RegionalIconography";
-import { REGION_COLORS } from "../../config";
+import { forwardRef, useImperativeHandle } from "react";
+import { useSwapController } from "../../hooks/use-swap-controller";
+import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";
-import { NETWORKS } from "../../config";
-import { ChainDetectionService } from "../../services/swap/chain-detection.service";
-import { getTokensForChain, isTokenAvailableOnChain } from "../../utils/cross-chain-tokens";
-import type { Region } from "../../hooks/use-user-region";
+import SwapAIInsight from "./SwapAIInsight";
+import ExpectedOutputCard from "./ExpectedOutputCard";
+import InflationBenefitCard from "./InflationBenefitCard";
+import SwapStatus from "./SwapStatus";
+import SwapActionButton from "./SwapActionButton";
+import { RegionalPattern } from "../regional/RegionalIconography";
+import type { Region } from "@/hooks/use-user-region";
 
 interface Token {
   symbol: string;
@@ -34,49 +32,8 @@ interface SwapInterfaceProps {
   preferredFromRegion?: string;
   preferredToRegion?: string;
   chainId?: number | null;
-  enableCrossChain?: boolean; // New prop to enable cross-chain functionality
+  enableCrossChain?: boolean;
 }
-
-
-
-// Compact AI Insight Component for SwapInterface
-const SwapAIInsight = ({
-  toToken,
-  inflationDifference,
-  onAskAI
-}: {
-  toToken: string;
-  inflationDifference: number;
-  onAskAI: () => void;
-}) => {
-  if (inflationDifference <= 0) return null;
-
-  return (
-    <div className="bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-400 dark:border-blue-500 p-2 mb-3 rounded-r">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <span className="text-blue-600 dark:text-blue-400 text-sm flex-shrink-0">💡</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
-              Swapping to {toToken} could save ~${(inflationDifference * 10).toFixed(0)} over 6 months
-            </p>
-            <p className="text-[10px] text-blue-600 dark:text-blue-400">
-              {inflationDifference.toFixed(1)}% lower inflation
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={onAskAI}
-          className="text-blue-600 dark:text-blue-300 text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-800 rounded hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors flex-shrink-0 whitespace-nowrap"
-        >
-          More →
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
 
 const SwapInterface = forwardRef<
   { refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void },
@@ -94,140 +51,26 @@ const SwapInterface = forwardRef<
   },
   ref
 ) {
-  // Find tokens from preferred regions if specified, with USDT priority
-  const defaultFromToken = preferredFromRegion
-    ? availableTokens.find((token) => token.region === preferredFromRegion)
-      ?.symbol ||
-    availableTokens.find((token) => token.symbol.toUpperCase() === "USDT")?.symbol ||
-    availableTokens[0]?.symbol ||
-    ""
-    : availableTokens.find((token) => token.symbol.toUpperCase() === "USDT")?.symbol ||
-    availableTokens[0]?.symbol || "";
+  const {
+    fromToken, setFromToken,
+    toToken, setToToken,
+    amount, setAmount,
+    slippageTolerance, setSlippageTolerance,
+    fromChainId, setFromChainId,
+    toChainId, setToChainId,
+    status, localError, localTxHash, isLoading, mounted,
+    availableFromTokens, availableToTokens,
+    tokenBalances, expectedOutput,
+    inflationDataSource,
+    fromTokenInflationRate, toTokenInflationRate, fromTokenRegion, toTokenRegion,
+    inflationDifference, hasInflationBenefit,
+    handleSwitchTokens, executeSwap, refreshBalances
+  } = useSwapController({
+    address, chainId, availableTokens, enableCrossChain,
+    preferredFromRegion, preferredToRegion
+  });
 
-  const defaultToToken = preferredToRegion
-    ? availableTokens.find((token) => token.region === preferredToRegion)
-      ?.symbol ||
-    availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")?.symbol ||
-    availableTokens[1]?.symbol ||
-    ""
-    : availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")?.symbol ||
-    availableTokens[1]?.symbol || "";
-
-  // State for token selection and amount
-  const [fromToken, setFromToken] = useState<string>(defaultFromToken);
-  const [toToken, setToToken] = useState<string>(defaultToToken);
-  const [amount, setAmount] = useState<string>("10");
-  const [slippageTolerance, setSlippageTolerance] = useState<number>(0.5); // 0.5% default
-
-  // Cross-chain state
-  const [fromChainId, setFromChainId] = useState<number>(chainId || NETWORKS.CELO_MAINNET.chainId);
-  const [toChainId, setToChainId] = useState<number>(chainId || NETWORKS.CELO_MAINNET.chainId);
-
-  // Filter tokens based on selected chains when cross-chain is enabled
-  const availableFromTokens = useMemo(() => {
-    if (!enableCrossChain) return availableTokens;
-
-    // If same chain, use all available tokens from config (not just cross-chain tokens)
-    if (fromChainId === chainId) {
-      return availableTokens;
-    }
-
-    // For different chains, use cross-chain tokens only
-    const chainTokens = getTokensForChain(fromChainId);
-    return chainTokens.map(token => ({
-      symbol: token.symbol,
-      name: token.name,
-      region: token.region,
-    }));
-  }, [enableCrossChain, fromChainId, chainId, availableTokens]);
-
-  const availableToTokens = useMemo(() => {
-    if (!enableCrossChain) return availableTokens;
-
-    // If same chain, use all available tokens from config (not just cross-chain tokens)
-    if (toChainId === chainId) {
-      return availableTokens;
-    }
-
-    // For different chains, use cross-chain tokens only
-    const chainTokens = getTokensForChain(toChainId);
-    return chainTokens.map(token => ({
-      symbol: token.symbol,
-      name: token.name,
-      region: token.region,
-    }));
-  }, [enableCrossChain, toChainId, chainId, availableTokens]);
-
-  // Update chain IDs when wallet chain changes
-  useEffect(() => {
-    if (chainId && !enableCrossChain) {
-      setFromChainId(chainId);
-      setToChainId(chainId);
-    } else if (chainId && fromChainId === toChainId) {
-      // If cross-chain is enabled and both chains are the same, update both
-      setFromChainId(chainId);
-      setToChainId(chainId);
-    }
-  }, [chainId, enableCrossChain, fromChainId, toChainId]);
-
-  // Update token selection when availableTokens changes (e.g., from search filtering)
-  useEffect(() => {
-    // Only update if the current selection is not in the filtered list
-    // If cross-chain is enabled, we should check against the appropriate chain's tokens
-    const fromExists = (enableCrossChain ? availableFromTokens : availableTokens).some(t => t.symbol === fromToken);
-    const toExists = (enableCrossChain ? availableToTokens : availableTokens).some(t => t.symbol === toToken);
-
-    if (!fromExists && (enableCrossChain ? availableFromTokens : availableTokens).length > 0) {
-      setFromToken((enableCrossChain ? availableFromTokens : availableTokens)[0].symbol);
-    }
-    if (!toExists && (enableCrossChain ? availableToTokens : availableTokens).length > 0) {
-      // Try to find a different token than fromToken
-      const targetTokens = enableCrossChain ? availableToTokens : availableTokens;
-      const differentToken = targetTokens.find(t => t.symbol !== fromToken);
-      setToToken(differentToken?.symbol || targetTokens[0].symbol);
-    }
-  }, [availableTokens, fromToken, toToken, enableCrossChain, availableFromTokens, availableToTokens]);
-
-  // Update token selection when chains change
-  useEffect(() => {
-    if (enableCrossChain) {
-      // Check if current fromToken is available on fromChain
-      if (!isTokenAvailableOnChain(fromToken, fromChainId)) {
-        const firstAvailable = availableFromTokens[0]?.symbol;
-        if (firstAvailable) {
-          setFromToken(firstAvailable);
-        }
-      }
-
-      // Check if current toToken is available on toChain
-      if (!isTokenAvailableOnChain(toToken, toChainId)) {
-        const firstAvailable = availableToTokens[0]?.symbol;
-        if (firstAvailable) {
-          setToToken(firstAvailable);
-        }
-      }
-    }
-  }, [enableCrossChain, fromChainId, toChainId, fromToken, toToken, availableFromTokens, availableToTokens]);
-
-  // State for transaction status
-  const [status, setStatus] = useState<
-    "idle" | "approving" | "swapping" | "completed" | "error"
-  >("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [mounted, setMounted] = useState<boolean>(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Get token balances
-  const { balances: tokenBalances, refreshBalances } = useStablecoinBalances(
-    address || ""
-  );
-
-  // Expose methods to parent component
+  // Expose methods to parent
   useImperativeHandle(ref, () => ({
     refreshBalances: () => {
       console.log("Refreshing token balances from SwapInterface");
@@ -235,207 +78,20 @@ const SwapInterface = forwardRef<
     },
     setTokens: (from: string, to: string, inputAmount?: string) => {
       console.log(`[SwapInterface] Setting tokens: ${from} → ${to}, amount: ${inputAmount}`);
-      // Only set if the tokens are available
       const fromExists = availableTokens.some(t => t.symbol.toUpperCase() === from.toUpperCase());
       const toExists = availableTokens.some(t => t.symbol.toUpperCase() === to.toUpperCase());
-
-      if (fromExists) {
-        setFromToken(from.toUpperCase());
-      }
-      if (toExists) {
-        setToToken(to.toUpperCase());
-      }
-      if (inputAmount) {
-        setAmount(inputAmount);
-      }
+      if (fromExists) setFromToken(from.toUpperCase());
+      if (toExists) setToToken(to.toUpperCase());
+      if (inputAmount) setAmount(inputAmount);
     },
   }));
 
-  // Get inflation data
-  const {
-    getInflationRateForStablecoin,
-    getRegionForStablecoin,
-    dataSource: inflationDataSource,
-  } = useInflationData();
-
-  // Use the swap hook
-  const {
-    swap: performSwap,
-    error: swapError,
-    txHash: swapTxHash,
-    step: swapStep,
-  } = useSwap();
-
-  // Use the expected amount out hook
-  const { expectedOutput } = useExpectedAmountOut({
-    fromToken,
-    toToken,
-    amount,
-  });
-
-  // Handle token switching
-  const handleSwitchTokens = () => {
-    const temp = fromToken;
-    setFromToken(toToken);
-    setToToken(temp);
-  };
-
-  // Handle the swap
-  const handleSwap = async () => {
-    if (
-      !fromToken ||
-      !toToken ||
-      !amount ||
-      Number.parseFloat(amount) <= 0 ||
-      fromToken === toToken
-    ) {
-      return;
-    }
-
-    if (!address) {
-      setError("Please connect your wallet first");
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setTxHash(null);
-    setStatus("approving");
-
-    try {
-      if (onSwap) {
-        // Use the provided onSwap function if available
-        const result = await onSwap(fromToken, toToken, amount, fromChainId, toChainId);
-
-        // Capture transaction hash if available in result
-        if (result && typeof result === 'object' && 'swapTxHash' in result && result.swapTxHash) {
-          setTxHash(result.swapTxHash as string);
-        }
-
-        setStatus("completed");
-
-        // Refresh token balances after successful swap (even when onSwap is used)
-        console.log("Refreshing token balances after successful swap (onSwap)");
-
-        // Use a more reliable approach with multiple retries
-        const refreshWithRetries = async (retries = 3, delay = 2000) => {
-          for (let i = 0; i < retries; i++) {
-            try {
-              // Wait for the specified delay
-              await new Promise((resolve) =>
-                setTimeout(resolve, delay * (i + 1))
-              );
-
-              console.log(
-                `SwapInterface refresh attempt ${i + 1} of ${retries}`
-              );
-              await refreshBalances();
-
-              console.log(
-                `SwapInterface refresh attempt ${i + 1} successful`
-              );
-              break;
-            } catch (error) {
-              console.error(
-                `SwapInterface refresh attempt ${i + 1} failed:`,
-                error
-              );
-            }
-          }
-        };
-
-        refreshWithRetries();
-      } else {
-        // Otherwise, use the stablecoin swap hook
-        await performSwap({
-          fromToken,
-          toToken,
-          amount,
-          fromChainId: enableCrossChain ? fromChainId : undefined,
-          toChainId: enableCrossChain ? toChainId : undefined,
-          slippageTolerance,
-        });
-
-        // Update local state based on the hook's state
-        if (swapTxHash) setTxHash(swapTxHash);
-
-        // Check for errors first
-        if (swapError) {
-          setError(swapError);
-          setStatus("error");
-        } else if (swapStep === 'completed' && !swapError) {
-          // Only set to completed if there's no error
-          setStatus("completed");
-
-          // Refresh token balances after successful swap
-          console.log("Refreshing token balances after successful swap");
-
-          // Use a more reliable approach with multiple retries
-          const refreshWithRetries = async (retries = 3, delay = 2000) => {
-            for (let i = 0; i < retries; i++) {
-              try {
-                // Wait for the specified delay
-                await new Promise((resolve) =>
-                  setTimeout(resolve, delay * (i + 1))
-                ); // Increase delay with each retry
-
-                console.log(
-                  `SwapInterface refresh attempt ${i + 1} of ${retries}`
-                );
-                await refreshBalances();
-
-                // If we get here without an error, we can break the loop
-                console.log(
-                  `SwapInterface refresh attempt ${i + 1} successful`
-                );
-                break;
-              } catch (error) {
-                console.error(
-                  `SwapInterface refresh attempt ${i + 1} failed:`,
-                  error
-                );
-              }
-            }
-          };
-
-          // Start the refresh process
-          refreshWithRetries();
-        }
-      }
-    } catch (error) {
-      console.error("Swap error:", error);
-      setError(SwapErrorHandler.handle(error, "swap tokens"));
-      setStatus("error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Get inflation rates for the selected tokens (memoized to prevent unnecessary recalculations)
-  const { fromTokenInflationRate, toTokenInflationRate, fromTokenRegion, toTokenRegion } = useMemo(() => {
-    const fromTokenInflationRate = fromToken ? getInflationRateForStablecoin(fromToken) : 0;
-    const toTokenInflationRate = toToken ? getInflationRateForStablecoin(toToken) : 0;
-    const fromTokenRegion = fromToken ? getRegionForStablecoin(fromToken) : "";
-    const toTokenRegion = toToken ? getRegionForStablecoin(toToken) : "";
-
-    return { fromTokenInflationRate, toTokenInflationRate, fromTokenRegion, toTokenRegion };
-  }, [fromToken, toToken, getInflationRateForStablecoin, getRegionForStablecoin]);
-
-  // Calculate potential inflation savings (memoized)
-  const { inflationDifference, hasInflationBenefit } = useMemo(() => {
-    const inflationDifference = fromTokenInflationRate - toTokenInflationRate;
-    const hasInflationBenefit = inflationDifference > 0;
-    return { inflationDifference, hasInflationBenefit };
-  }, [fromTokenInflationRate, toTokenInflationRate]);
-
   return (
-    <div
-      className="relative bg-white dark:bg-gray-900 p-4 rounded-lg shadow-md overflow-hidden SwapInterface border border-gray-200 dark:border-gray-700"
-    >
+    <div className="relative bg-white dark:bg-gray-900 p-4 rounded-lg shadow-md overflow-hidden SwapInterface border border-gray-200 dark:border-gray-700">
       {fromTokenRegion && toTokenRegion && (
         <div className="absolute inset-0">
           <RegionalPattern
-            region={toTokenRegion as "USA" | "Europe" | "LatAm" | "Africa" | "Asia"}
+            region={toTokenRegion as Region}
             className="opacity-5"
           />
         </div>
@@ -450,7 +106,6 @@ const SwapInterface = forwardRef<
           )}
         </div>
 
-        {/* Cross-Chain Selectors */}
         {enableCrossChain && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-3">
@@ -488,20 +143,13 @@ const SwapInterface = forwardRef<
           </div>
         )}
 
-        {/* AI Insight for beneficial swaps */}
-        {fromToken && toToken && hasInflationBenefit && (
-          <SwapAIInsight
-            toToken={toToken}
-            inflationDifference={inflationDifference}
-            onAskAI={() => {
-              // This would trigger the AI chat interface
-              console.log('AI insight requested for swap analysis');
-            }}
-          />
-        )}
+        <SwapAIInsight
+          toToken={toToken}
+          inflationDifference={inflationDifference}
+          onAskAI={() => console.log('AI insight requested')}
+        />
 
         <div className="space-y-3">
-          {/* From Token Selector */}
           <TokenSelector
             label="From"
             selectedToken={fromToken}
@@ -521,32 +169,19 @@ const SwapInterface = forwardRef<
             <button
               onClick={handleSwitchTokens}
               className={`p-3 rounded-full transition-colors shadow-md ${fromTokenRegion && toTokenRegion
-                ? `bg-gradient-to-b from-region-${fromTokenRegion.toLowerCase()}-light to-region-${toTokenRegion.toLowerCase()}-light hover:from-region-${fromTokenRegion.toLowerCase()}-medium hover:to-region-${toTokenRegion.toLowerCase()}-medium border-2 border-gray-200`
+                ? `bg-gradient-to-b from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-gray-200`
                 : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
                 }`}
               disabled={isLoading}
               aria-label="Switch tokens"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`size-7 ${fromTokenRegion && toTokenRegion
-                  ? `text-gray-800`
-                  : "text-gray-700"
-                  }`}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className="size-7 text-gray-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <polyline points="19 12 12 19 5 12"></polyline>
               </svg>
             </button>
           </div>
 
-          {/* To Token Selector */}
           <TokenSelector
             label="To"
             selectedToken={toToken}
@@ -561,158 +196,28 @@ const SwapInterface = forwardRef<
             tokenChainId={toChainId}
           />
 
-          {/* Expected Output */}
-          {mounted && expectedOutput && Number.parseFloat(expectedOutput) > 0 && (
-            <div
-              className="relative mt-3 p-3 rounded-lg overflow-hidden bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-md"
-            >
-              <div className="relative">
-                <div className="text-xs font-bold mb-1.5 flex items-center text-gray-900 dark:text-gray-100">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="size-4 mr-1 text-blue-600"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Expected Output
-                </div>
-                <div className="bg-white dark:bg-gray-800 p-2 rounded-md shadow-sm border border-gray-200 dark:border-gray-700">
-                  <div className="font-medium flex items-center justify-between gap-2">
-                    <div className="flex-1">
-                      <span className="text-xs text-gray-800 dark:text-gray-200 font-medium block">
-                        You&#39;ll receive ~
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className="font-bold text-xl text-blue-700 dark:text-blue-400" suppressHydrationWarning>
-                          {Number.parseFloat(expectedOutput).toFixed(4)}
-                        </span>
-                        <span className="font-bold text-sm text-blue-700 dark:text-blue-400">
-                          {toToken}
-                        </span>
-                      </div>
-                    </div>
-                    {toTokenRegion && (
-                      <div
-                        className="size-6 rounded-full flex items-center justify-center shadow-sm flex-shrink-0"
-                        style={{
-                          backgroundColor: toTokenRegion
-                            ? REGION_COLORS[
-                            toTokenRegion as keyof typeof REGION_COLORS
-                            ]
-                            : undefined,
-                        }}
-                      >
-                        <RegionalIconography
-                          region={toTokenRegion as Region}
-                          size="sm"
-                          className="text-white scale-75"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-1.5 text-[10px] text-gray-600 dark:text-gray-400">
-                  Rate: 1 {fromToken} ≈{" "}
-                  {mounted && (
-                    Number.parseFloat(expectedOutput) /
-                    Number.parseFloat(amount)
-                  ).toFixed(4)}{" "}
-                  {toToken}
-                </div>
-              </div>
-            </div>
-          )}
+          <ExpectedOutputCard
+            expectedOutput={expectedOutput}
+            amount={amount}
+            fromToken={fromToken}
+            toToken={toToken}
+            toTokenRegion={toTokenRegion}
+            mounted={mounted}
+          />
 
-          {/* Inflation benefit information */}
-          {fromToken && toToken && hasInflationBenefit && (
-            <div
-              className="relative p-3 rounded-lg overflow-hidden border-2 shadow-md bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
-            >
-              <div className="relative">
-                <h3 className="text-xs font-bold mb-1.5 flex items-center text-gray-900 dark:text-gray-100">
-                  <span className="mr-1.5 text-sm">✨</span>
-                  Inflation Protection
-                </h3>
-                <div className="flex items-center mb-2 gap-1">
-                  <div className="flex items-center">
-                    {fromTokenRegion && fromTokenRegion !== 'Unknown' && (
-                      <div
-                        className="size-5 rounded-full flex items-center justify-center mr-1"
-                        style={{
-                          backgroundColor: fromTokenRegion
-                            ? REGION_COLORS[
-                            fromTokenRegion as keyof typeof REGION_COLORS
-                            ]
-                            : undefined,
-                        }}
-                      >
-                        <RegionalIconography
-                          region={fromTokenRegion as Region}
-                          size="sm"
-                          className="text-white scale-[0.6]"
-                        />
-                      </div>
-                    )}
-                    <span className="font-bold text-xs text-gray-900">
-                      {fromToken}
-                    </span>
-                  </div>
-                  <span className="mx-1 text-gray-600 font-bold text-xs">→</span>
-                  <div className="flex items-center">
-                    {toTokenRegion && toTokenRegion !== 'Unknown' && (
-                      <div
-                        className="size-5 rounded-full flex items-center justify-center mr-1"
-                        style={{
-                          backgroundColor: toTokenRegion
-                            ? REGION_COLORS[
-                            toTokenRegion as keyof typeof REGION_COLORS
-                            ]
-                            : undefined,
-                        }}
-                      >
-                        <RegionalIconography
-                          region={toTokenRegion as Region}
-                          size="sm"
-                          className="text-white scale-[0.6]"
-                        />
-                      </div>
-                    )}
-                    <span className="font-bold text-xs text-gray-900">
-                      {toToken}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs font-medium text-gray-800">
-                  Save ~{" "}
-                  <span className="font-bold text-green-700 text-sm">
-                    {inflationDifference.toFixed(1)}%
-                  </span>{" "}
-                  per year in {toTokenRegion && toTokenRegion !== 'Unknown' ? toTokenRegion : 'target region'}.
-                </p>
-              </div>
-            </div>
-          )}
+          <InflationBenefitCard
+            fromToken={fromToken}
+            toToken={toToken}
+            fromTokenRegion={fromTokenRegion}
+            toTokenRegion={toTokenRegion}
+            inflationDifference={inflationDifference}
+            hasInflationBenefit={hasInflationBenefit}
+          />
 
-          {/* Slippage Tolerance */}
           <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
             <label className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-1.5 flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="size-4 mr-1 text-gray-700"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1v-3a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
+              <svg xmlns="http://www.w3.org/2000/svg" className="size-4 mr-1 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1v-3a1 1 0 00-1-1z" clipRule="evenodd" />
               </svg>
               Slippage Tolerance
             </label>
@@ -731,281 +236,25 @@ const SwapInterface = forwardRef<
                 </button>
               ))}
             </div>
-            <div className="mt-1.5 text-[10px] text-gray-500 dark:text-gray-400">
-              Transaction reverts if price changes unfavorably by more than this %.
-            </div>
           </div>
 
-          {/* Transaction Status */}
-          {status !== "idle" &&
-            (status === "error" ||
-              status === "approving" ||
-              status === "swapping" ||
-              (status === "completed" && !error)) && (
-              <div
-                className={`p-3 rounded-card ${status === "error"
-                  ? "bg-accent-error/5 text-accent-error border border-accent-error/10"
-                  : status === "completed"
-                    ? "bg-accent-success/5 text-accent-success border border-accent-success/10"
-                    : "bg-accent-info/5 text-accent-info border border-accent-info/10"
-                  }`}
-              >
-                <div className="flex items-center">
-                  {status === "approving" && (
-                    <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 size-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      <span>Approving token transfer...</span>
-                    </>
-                  )}
+          <SwapStatus
+            status={status}
+            error={localError}
+            txHash={localTxHash}
+            fromChainId={fromChainId}
+          />
 
-                  {status === "swapping" && (
-                    <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 size-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      <span>Executing swap transaction...</span>
-                    </>
-                  )}
-
-                  {status === "completed" && !error && (
-                    <>
-                      <svg
-                        className="size-4 mr-2 text-accent-success"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>Swap completed successfully!</span>
-                    </>
-                  )}
-
-                  {status === "error" && (
-                    <>
-                      <svg
-                        className="size-4 mr-2 text-accent-error"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      <span>
-                        {error || "An error occurred during the swap"}
-                      </span>
-                    </>
-                  )}
-                </div>
-
-                {txHash && (
-                  <div className="mt-2 text-sm border-t border-gray-200 pt-2">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-medium text-gray-700">
-                        Transaction Hash:
-                      </span>
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(txHash);
-                          alert("Transaction hash copied to clipboard!");
-                        }}
-                        className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded-md transition-colors"
-                        title="Copy to clipboard"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                    <div className="flex items-center">
-                      <code className="bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-mono w-full overflow-hidden text-ellipsis">
-                        {txHash}
-                      </code>
-                    </div>
-                    <div className="mt-2">
-                      <a
-                        href={
-                          fromChainId === NETWORKS.ALFAJORES.chainId
-                            ? `${NETWORKS.ALFAJORES.explorerUrl}/tx/${txHash}`
-                            : fromChainId === NETWORKS.ARC_TESTNET.chainId
-                              ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${txHash}`
-                              : fromChainId === NETWORKS.ARBITRUM_ONE.chainId
-                                ? `${NETWORKS.ARBITRUM_ONE.explorerUrl}/tx/${txHash}`
-                                : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center text-accent-info hover:underline bg-accent-info/10 px-3 py-1.5 rounded-md text-sm font-medium"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="size-4 mr-1"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                          <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                        </svg>
-                        View on Explorer
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-          <div className="pt-4">
-            <button
-              onClick={handleSwap}
-              className="relative w-full py-4 px-6 border-2 border-blue-700 rounded-lg shadow-lg text-base font-bold text-white overflow-hidden bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]"
-              disabled={
-                isLoading ||
-                !fromToken ||
-                !toToken ||
-                !amount ||
-                Number.parseFloat(amount) <= 0 ||
-                fromToken === toToken
-              }
-            >
-              {toTokenRegion && !isLoading && (
-                <div className="absolute inset-0 opacity-20">
-                  <RegionalPattern region={toTokenRegion as Region} />
-                </div>
-              )}
-              <div className="relative">
-                {isLoading ? (
-                  <span className="flex items-center justify-center">
-                    <svg
-                      className="animate-spin -ml-1 mr-3 size-6 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    <span className="text-lg">
-                      {status === "approving"
-                        ? "Approving Transaction..."
-                        : status === "swapping"
-                          ? "Swapping Tokens..."
-                          : "Processing..."}
-                    </span>
-                  </span>
-                ) : (
-                  <div className="flex items-center justify-center">
-                    {fromTokenRegion && toTokenRegion && (
-                      <div className="flex items-center mr-3">
-                        <div
-                          className="size-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-                          style={{
-                            backgroundColor: fromTokenRegion
-                              ? REGION_COLORS[
-                              fromTokenRegion as keyof typeof REGION_COLORS
-                              ]
-                              : undefined,
-                          }}
-                        >
-                          <RegionalIconography
-                            region={fromTokenRegion as Region}
-                            size="sm"
-                            className="text-white"
-                          />
-                        </div>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="size-6 mx-1 text-white"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        <div
-                          className="size-7 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
-                          style={{
-                            backgroundColor: toTokenRegion
-                              ? REGION_COLORS[
-                              toTokenRegion as keyof typeof REGION_COLORS
-                              ]
-                              : undefined,
-                          }}
-                        >
-                          <RegionalIconography
-                            region={toTokenRegion as Region}
-                            size="sm"
-                            className="text-white"
-                          />
-                        </div>
-                      </div>
-                    )}
-                    <span className="font-bold text-lg">Swap Tokens</span>
-                    {fromToken && toToken && fromToken !== toToken && (
-                      <span className="ml-3 text-sm bg-white px-3 py-1 rounded-full font-bold shadow-sm text-blue-700">
-                        {fromToken} → {toToken}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </button>
-          </div>
+          <SwapActionButton
+            isLoading={isLoading}
+            status={status}
+            fromToken={fromToken}
+            toToken={toToken}
+            fromTokenRegion={fromTokenRegion}
+            toTokenRegion={toTokenRegion}
+            disabled={!address || fromToken === toToken || !amount || parseFloat(amount) <= 0}
+            onClick={() => executeSwap(onSwap)}
+          />
         </div>
       </div>
     </div>

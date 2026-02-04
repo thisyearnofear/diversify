@@ -12,7 +12,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { AI_FEATURES, AUTONOMOUS_FEATURES } from '../config/features';
 import type { RegionalInflationData } from './use-inflation-data';
-import type { AggregatedPortfolio } from './use-stablecoin-balances';
+import type { MultichainPortfolio } from './use-multichain-balances';
 import { analyzePortfolio, type PortfolioAnalysis } from '../utils/portfolio-analysis';
 import { useAIConversationOptional } from '../context/AIConversationContext';
 
@@ -261,7 +261,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
    */
   const analyzePortfolioAI = useCallback(async (
     inflationData: Record<string, RegionalInflationData>,
-    portfolio: AggregatedPortfolio,
+    portfolio: MultichainPortfolio,
     userGoal?: string,
   ) => {
     if (!capabilities.analysis) {
@@ -323,32 +323,35 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
    */
   const analyze = useCallback(async (
     inflationData: Record<string, RegionalInflationData>,
-    userBalanceOrPortfolio: number | AggregatedPortfolio,
+    userBalanceOrPortfolio: number | MultichainPortfolio,
     currentHoldings?: string[],
     networkInfo?: { chainId: number; name: string },
     _multiChainContext?: unknown,
-    aggregatedPortfolio?: AggregatedPortfolio,
+    aggregatedPortfolio?: MultichainPortfolio,
   ) => {
     // Build portfolio from legacy params if needed
-    let portfolio: AggregatedPortfolio;
+    let portfolio: MultichainPortfolio;
     if (typeof userBalanceOrPortfolio === 'number') {
       portfolio = aggregatedPortfolio || {
         totalValue: userBalanceOrPortfolio,
         chains: networkInfo ? [{
           chainId: networkInfo.chainId,
           chainName: networkInfo.name,
-          balances: Object.fromEntries((currentHoldings || []).map(symbol => [symbol, {
-            symbol,
-            name: symbol,
-            balance: '0',
-            formattedBalance: '0',
-            value: userBalanceOrPortfolio / (currentHoldings?.length || 1),
-            region: 'Global',
-          }])),
+          balances: [], // Changed from Object.fromEntries to array
           totalValue: userBalanceOrPortfolio,
+          tokenCount: currentHoldings?.length || 0,
+          isLoading: false,
+          error: null
         }] : [],
-        allHoldings: currentHoldings || [],
-        diversificationScore: 0,
+        allTokens: [],
+        tokenMap: {},
+        regionData: [],
+        isLoading: false,
+        isStale: false,
+        errors: [],
+        lastUpdated: Date.now(),
+        chainCount: networkInfo ? 1 : 0,
+        ...({} as any)
       };
     } else {
       portfolio = userBalanceOrPortfolio;
@@ -475,7 +478,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
    */
   const runAutonomousAnalysis = useCallback(async (
     inflationData: Record<string, RegionalInflationData>,
-    portfolio: AggregatedPortfolio,
+    portfolio: MultichainPortfolio,
   ) => {
     if (!AUTONOMOUS_FEATURES.AUTONOMOUS_MODE || !autonomousStatus?.enabled) {
       console.warn('[DiversifiAI] Autonomous mode not available');
