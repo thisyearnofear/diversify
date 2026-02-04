@@ -46,12 +46,23 @@ export default function VoiceButton({
     const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
     const [isFirstVisit, setIsFirstVisit] = useState(false);
     const [hasBeenSeen, setHasBeenSeen] = useState(false);
+    const [volume, setVolume] = useState(0);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+
+    // Audio context for visualization
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const analyserRef = useRef<AnalyserNode | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
+    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Silence detection parameters
+    const SILENCE_THRESHOLD = 0.01;
+    const SILENCE_DURATION = 2000; // 2 seconds of silence to auto-stop
 
     // Load disabled state and first visit from localStorage
     useEffect(() => {
@@ -122,6 +133,21 @@ export default function VoiceButton({
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
+        
+        // Cleanup audio analysis
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
+        setVolume(0);
     }, []);
 
     const startRecording = async () => {
@@ -133,6 +159,51 @@ export default function VoiceButton({
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
+
+            // Initialize Audio Context for visualization and silence detection
+            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 256;
+            
+            audioContextRef.current = audioContext;
+            analyserRef.current = analyser;
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            const updateVisuals = () => {
+                if (!analyserRef.current) return;
+                analyserRef.current.getByteFrequencyData(dataArray);
+                
+                // Calculate average volume
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    sum += dataArray[i];
+                }
+                const average = sum / bufferLength / 255;
+                setVolume(average);
+
+                // Silence detection
+                if (average < SILENCE_THRESHOLD) {
+                    if (!silenceTimerRef.current) {
+                        silenceTimerRef.current = setTimeout(() => {
+                            stopRecording();
+                            showToast('Auto-stopped (silence)', 'info');
+                        }, SILENCE_DURATION);
+                    }
+                } else {
+                    if (silenceTimerRef.current) {
+                        clearTimeout(silenceTimerRef.current);
+                        silenceTimerRef.current = null;
+                    }
+                }
+
+                animationFrameRef.current = requestAnimationFrame(updateVisuals);
+            };
+            updateVisuals();
+
             const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
                 ? 'audio/webm' 
                 : MediaRecorder.isTypeSupported('audio/mp4') 
@@ -276,6 +347,30 @@ export default function VoiceButton({
                 aria-label={recordingState === 'recording' ? 'Stop listening' : 'Start voice input'}
                 title="Tap to speak, tap again to stop. Right-click to disable."
             >
+                {/* Visualizer bars when recording */}
+                {recordingState === 'recording' && (
+                    <div className="absolute inset-0 flex items-center justify-center gap-[2px]">
+                        {[1, 2, 3, 4, 5].map((i) => (
+                            <motion.div
+                                key={i}
+                                className="w-[3px] bg-white/60 rounded-full"
+                                animate={{
+                                    height: [
+                                        '20%',
+                                        `${Math.max(30, volume * 100 * (1 + Math.random()))}%`,
+                                        '20%'
+                                    ]
+                                }}
+                                transition={{
+                                    duration: 0.2,
+                                    repeat: Infinity,
+                                    ease: "easeInOut"
+                                }}
+                            />
+                        ))}
+                    </div>
+                )}
+
                 {recordingState === 'processing' ? (
                     <motion.span
                         animate={{ rotate: 360 }}
@@ -284,7 +379,7 @@ export default function VoiceButton({
                         ⏳
                     </motion.span>
                 ) : recordingState === 'recording' ? (
-                    <span>⏹️</span>
+                    <span className="relative z-10 text-white font-bold text-[10px]">STOP</span>
                 ) : (
                     <motion.span
                         animate={{ 
@@ -312,6 +407,21 @@ export default function VoiceButton({
                             duration: 2,
                             repeat: Infinity,
                             ease: "easeOut",
+                        }}
+                    />
+                )}
+
+                {/* Recording pulse ring (volume reactive) */}
+                {recordingState === 'recording' && (
+                    <motion.span
+                        className="absolute inset-0 rounded-full border-4 border-red-400/30"
+                        animate={{
+                            scale: [1, 1 + (volume * 1.5), 1],
+                            opacity: [0.3, 0.6, 0.3],
+                        }}
+                        transition={{
+                            duration: 0.1,
+                            repeat: Infinity,
                         }}
                     />
                 )}

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
+import fs from 'fs/promises';
 import { AIService } from '../../../services/ai/ai-service';
 
 export const config = {
@@ -13,6 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
+    let audioFile: formidable.File | undefined;
+
     try {
         const form = formidable({
             keepExtensions: true,
@@ -21,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
         const [, files] = await form.parse(req);
 
-        const audioFile = files.audio?.[0];
+        audioFile = files.audio?.[0];
         if (!audioFile) {
             return res.status(400).json({ error: 'No audio file provided' });
         }
@@ -38,5 +41,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     } catch (error) {
         console.error('[Transcribe API] Error:', error);
         res.status(500).json({ error: (error as Error).message || 'Failed to transcribe audio' });
+    } finally {
+        // Cleanup temp file
+        if (audioFile?.filepath) {
+            try {
+                await fs.unlink(audioFile.filepath);
+            } catch (cleanupError) {
+                console.error('[Transcribe API] Cleanup error:', cleanupError);
+            }
+        }
     }
 }

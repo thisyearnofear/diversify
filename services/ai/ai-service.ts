@@ -484,10 +484,10 @@ async function callVeniceTranscribe(filePath: string): Promise<string> {
 
   const fileStream = fs.createReadStream(filePath);
 
-  // Venice uses OpenAI-compatible API
+  // Venice uses OpenAI-compatible API but requires different model name
   const transcription = await client.audio.transcriptions.create({
     file: fileStream,
-    model: 'whisper-1',
+    model: 'openai/whisper-large-v3',
   });
 
   return transcription.text;

@@ -322,6 +322,7 @@ export function useDiversifiAI() {
       timestamp: new Date(),
     };
     setMessages(prev => [...prev, userMessage]);
+    setIsAnalyzing(true); // Show thinking state for chat too
 
     try {
       const response = await fetch('/api/agent/chat', {
@@ -339,11 +340,27 @@ export function useDiversifiAI() {
           type: result.type || 'text',
         };
         setMessages(prev => [...prev, assistantMessage]);
+
+        // Auto-speak the response if voice output is available
+        if (capabilities.voiceOutput) {
+          try {
+            const speechBlob = await generateSpeech(result.response);
+            if (speechBlob) {
+              const url = URL.createObjectURL(speechBlob);
+              const audio = new Audio(url);
+              audio.play();
+            }
+          } catch (speechError) {
+            console.warn('[DiversifiAI] Auto-speech failed:', speechError);
+          }
+        }
       }
     } catch (error) {
       console.error('[DiversifiAI] Chat failed:', error);
+    } finally {
+      setIsAnalyzing(false);
     }
-  }, [capabilities.chat, messages]);
+  }, [capabilities.chat, capabilities.voiceOutput, messages, generateSpeech]);
 
   /**
    * Transcribe audio to text
