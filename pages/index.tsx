@@ -217,7 +217,15 @@ export default function DiversiFiPage() {
                 } else if (targetTab && targetTab === activeTab) {
                   showToast(`"${text}" → You're already on ${tabName}`, 'info');
                 } else {
-                  showToast(`"${text}" → Ask about swap, protect, balance, or info`, 'info');
+                  // If no navigation intent, switch to protect tab and send to AI
+                  showToast(`"${text}" → Asking AI assistant`, 'info');
+                  setActiveTab('protect');
+                  // Send to AI after a brief delay to allow tab switch
+                  setTimeout(() => {
+                    // Trigger AI analysis with the voice query
+                    const event = new CustomEvent('voiceQuery', { detail: text });
+                    window.dispatchEvent(event);
+                  }, 100);
                 }
               }}
             />

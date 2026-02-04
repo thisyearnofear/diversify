@@ -119,6 +119,16 @@ export default function AIAssistant({
         sendMessage(transcription);
     };
 
+    // Listen for voice queries from main page
+    useEffect(() => {
+        const handleVoiceQuery = (event: CustomEvent) => {
+            sendMessage(event.detail);
+        };
+        
+        window.addEventListener('voiceQuery', handleVoiceQuery as EventListener);
+        return () => window.removeEventListener('voiceQuery', handleVoiceQuery as EventListener);
+    }, [sendMessage]);
+
     // ============================================================================
     // EMBEDDED MODE: Compact rendering for integration within other cards
     // ============================================================================
