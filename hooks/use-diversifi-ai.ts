@@ -312,10 +312,10 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         setAnalysisProgress(prev => {
           // Much slower progression - more realistic for AI analysis
           if (prev >= 90) return 90;
-          if (prev > 80) return prev + 0.4; // Very slow near the end
-          if (prev > 70) return prev + 0.7; // Slow down significantly
-          if (prev > 50) return prev + 1.0; // Moderate pace in middle
-          return prev + 1.3; // Slightly faster at the beginning
+          if (prev > 80) return Math.round(prev + 0.4); // Round to whole numbers
+          if (prev > 70) return Math.round(prev + 0.7);
+          if (prev > 50) return Math.round(prev + 1.0);
+          return Math.round(prev + 1.3); // Always return whole numbers
         });
 
         // Cycle messages every few ticks (less frequently for better UX)
@@ -387,6 +387,14 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     aggregatedPortfolio?: MultichainPortfolio,
     userRegion?: string,
   ) => {
+    // Debug: Log the parameters received
+    console.log('[useDiversifiAI] analyze called with:', {
+      hasInflationData: !!inflationData,
+      userRegion: userRegion,
+      portfolioType: typeof userBalanceOrPortfolio,
+      portfolioValue: typeof userBalanceOrPortfolio === 'number' ? userBalanceOrPortfolio : userBalanceOrPortfolio.totalValue
+    });
+
     // Build portfolio from legacy params if needed
     let portfolio: MultichainPortfolio;
     if (typeof userBalanceOrPortfolio === 'number') {

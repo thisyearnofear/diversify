@@ -38,6 +38,17 @@ export default function AIAssistant({
     aggregatedPortfolio,
     userRegion
 }: AIAssistantProps) {
+    // Debug: Log the props received by AIAssistant
+    console.log('[AIAssistant] Props received:', {
+        amount,
+        holdingsCount: holdings?.length || 0,
+        chainId,
+        hasPropInflationData: !!propInflationData,
+        embedded,
+        hasAggregatedPortfolio: !!aggregatedPortfolio,
+        userRegion: userRegion
+    });
+
     const {
         advice,
         isAnalyzing,
@@ -94,17 +105,18 @@ export default function AIAssistant({
 
     // Milestone haptics for Farcaster
     useEffect(() => {
-        if (isAnalyzing && analysisProgress % 25 === 0 && analysisProgress > 0) {
+        const roundedProgress = Math.round(analysisProgress);
+        if (isAnalyzing && roundedProgress % 25 === 0 && roundedProgress > 0) {
             try {
                 (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
             } catch { }
         }
-        if (analysisProgress === 100) {
+        if (roundedProgress === 100) {
             try {
                 (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'success' });
             } catch { }
         }
-    }, [analysisProgress, isAnalyzing]);
+    }, [Math.round(analysisProgress), isAnalyzing]);
 
     const handleExecuteRecommendation = (token: string, amount?: number) => {
         if (onExecute) {
@@ -162,7 +174,7 @@ export default function AIAssistant({
             errors: [],
         };
 
-        analyze(inflationDataToUse, portfolio, undefined, undefined, undefined, undefined, userRegion);
+        analyze(inflationDataToUse, amount, holdings, undefined, undefined, portfolio, userRegion);
     };
 
     const handleVoiceTranscription = (transcription: string) => {
@@ -231,7 +243,7 @@ export default function AIAssistant({
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-sm font-black text-blue-600">{analysisProgress}%</span>
+                                        <span className="text-sm font-black text-blue-600">{Math.round(analysisProgress)}%</span>
                                     </div>
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -649,7 +661,7 @@ export default function AIAssistant({
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className="text-2xl font-black text-blue-600">{analysisProgress}%</span>
+                                        <span className="text-2xl font-black text-blue-600">{Math.round(analysisProgress)}%</span>
                                     </div>
                                 </div>
                                 <div>
