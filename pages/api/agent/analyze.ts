@@ -186,7 +186,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 // Count total countries covered
                 let countryCount = 0;
-                Object.values(inflationData).forEach((region: RegionalInflationData) => {
+                (Object.values(inflationData) as RegionalInflationData[]).forEach((region) => {
                     if (region.countries) {
                         countryCount += region.countries.length;
                     }

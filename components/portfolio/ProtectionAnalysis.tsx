@@ -124,7 +124,8 @@ export default function ProtectionAnalysis({
         const percentile = Math.min(99, Math.max(50, Math.round(diversificationScore + 10)));
 
         // Build dynamic share page URL with fc:miniapp meta tags
-        const sharePageUrl = `${baseUrl}/share/${shareId}?r=${activeRegions}&d=${encodeURIComponent(getLetterRating(goalScores.diversify))}&i=${encodeURIComponent(getLetterRating(goalScores.hedge))}&rwa=${rwaPercent.toFixed(1)}&s=${diversificationScore}&p=${percentile}`;
+        // Note: Don't pre-encode query params - they'll be encoded when the full URL is encoded for the share intent
+        const sharePageUrl = `${baseUrl}/share/${shareId}?r=${activeRegions}&d=${getLetterRating(goalScores.diversify)}&i=${getLetterRating(goalScores.hedge)}&rwa=${rwaPercent.toFixed(1)}&s=${diversificationScore}&p=${percentile}`;
 
         if (platform === 'twitter') {
             const twitterText = `🛡️ My DiversiFi Protection Score:\n\n` +
