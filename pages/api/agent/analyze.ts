@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateChatCompletion } from '../../../services/ai/ai-service';
 import { analyzePortfolio, type PortfolioAnalysis } from '../../../utils/portfolio-analysis';
 import { getOnrampSystemPrompt } from '../../../services/ai/onramp-agent-context';
 import type { RegionalInflationData } from '../../../hooks/use-inflation-data';
@@ -7,12 +7,7 @@ import type { ChainBalance } from '../../../hooks/use-multichain-balances';
 
 
 
-const GEMINI_MODELS_FALLBACK = [
-    'gemini-3.0-flash-preview',
-    'gemini-3.0-pro-preview',
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-];
+
 
 // Define the response schema
 // const responseSchema = {
@@ -38,11 +33,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+        if (!process.env.GEMINI_API_KEY && !process.env.VENICE_API_KEY) {
+            return res.status(500).json({ error: 'AI providers (GEMINI or VENICE) not configured' });
+        }
 
         const { inflationData, userBalance, currentHoldings, config, networkContext, portfolio, analysis } = req.body;
-        const genAI = new GoogleGenerativeAI(apiKey);
 
         // Use pre-computed analysis if provided, otherwise calculate it
         let portfolioAnalysis: PortfolioAnalysis;
@@ -340,35 +335,24 @@ TRANSPARENCY REQUIREMENTS:
             Make this analysis DATA-DRIVEN, SPECIFIC, and ACTIONABLE.
         `;
 
-        // Try models with structured output support
-        for (const modelName of GEMINI_MODELS_FALLBACK) {
-            try {
-                console.log(`[Gemini 3] Attempting ${modelName}...`);
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    systemInstruction: systemInstruction,
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        // responseSchema: responseSchema, // Temporarily remove strict schema enforcement
-                    }
-                });
+        const chatOptions = {
+            messages: [
+                { role: 'system' as const, content: systemInstruction },
+                { role: 'user' as const, content: userPrompt }
+            ],
+            responseMimeType: 'application/json' as const,
+        };
 
-                const result = await model.generateContent(userPrompt);
-                const response = await result.response;
-                const parsed = JSON.parse(response.text());
+        const result = await generateChatCompletion(chatOptions);
+        const parsed = JSON.parse(result.content);
 
-                return res.status(200).json({
-                    ...parsed,
-                    _meta: { modelUsed: modelName }
-                });
-            } catch (err: unknown) {
-                const errorMessage = err instanceof Error ? err.message : String(err);
-                console.warn(`[Gemini 3] ${modelName} logic failed, trying next...`, errorMessage);
-                continue;
+        return res.status(200).json({
+            ...parsed,
+            _meta: {
+                modelUsed: result.model,
+                provider: result.provider
             }
-        }
-
-        throw new Error("All Gemini models failed to process structured output.");
+        });
 
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);

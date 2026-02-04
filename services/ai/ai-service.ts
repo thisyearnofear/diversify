@@ -37,6 +37,7 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
   enableWebSearch?: boolean;
   enableReasoning?: boolean;
+  responseMimeType?: 'text/plain' | 'application/json';
 }
 
 export interface ChatCompletionResult {
@@ -98,8 +99,8 @@ const VENICE_MODELS = {
 };
 
 const GEMINI_MODELS = {
-  flash: 'gemini-3.0-flash-preview',
-  pro: 'gemini-3.0-pro-preview',
+  flash: 'gemini-3-flash-preview',
+  pro: 'gemini-3-pro-preview',
 };
 
 // TTS voice mappings
@@ -265,38 +266,75 @@ async function callVeniceChat(options: ChatCompletionOptions): Promise<ChatCompl
 }
 
 /**
- * Call Gemini API (fallback, no web search)
+ * Call Gemini API with automatic model failover
  */
 async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
   const client = getGeminiClient();
   if (!client) throw new Error('Gemini client not initialized');
 
-  const model = client.getGenerativeModel({
-    model: options.model || GEMINI_MODELS.flash,
-  });
+  const modelsToTry = [
+    options.model || GEMINI_MODELS.flash,
+    'gemini-3-flash-preview',
+    'gemini-2.0-flash-exp',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash',
+    'gemini-1.5-pro-latest',
+  ];
 
-  // Convert OpenAI-style messages to Gemini format
-  const geminiMessages = options.messages.map(m => ({
-    role: m.role === 'assistant' ? 'model' : m.role,
-    parts: [{ text: m.content }],
-  }));
+  let lastError: any = null;
 
-  const result = await model.generateContent({
-    contents: geminiMessages as any,
-    generationConfig: {
-      temperature: options.temperature ?? 0.7,
-      maxOutputTokens: options.maxTokens ?? 2000,
-    },
-  });
+  for (const modelName of modelsToTry) {
+    try {
+      if (!modelName) continue;
 
-  const response = await result.response;
+      const model = client.getGenerativeModel({
+        model: modelName,
+      });
 
-  return {
-    content: response.text(),
-    model: options.model || GEMINI_MODELS.flash,
-    provider: 'gemini',
-    webSearchUsed: false,
-  };
+      // Convert OpenAI-style messages to Gemini format
+      // Separate system messages from chat history for better compatibility
+      const systemMessages = options.messages.filter(m => m.role === 'system');
+      const chatMessages = options.messages.filter(m => m.role !== 'system');
+
+      const geminiMessages = chatMessages.map(m => ({
+        role: m.role === 'assistant' ? 'model' : m.role,
+        parts: [{ text: m.content }],
+      }));
+
+      const generationConfig: any = {
+        temperature: options.temperature ?? 0.7,
+        maxOutputTokens: options.maxTokens ?? 2000,
+      };
+
+      if (options.responseMimeType) {
+        generationConfig.responseMimeType = options.responseMimeType;
+      }
+
+      const result = await model.generateContent({
+        contents: geminiMessages as any,
+        systemInstruction: systemMessages.length > 0 ? {
+          role: 'system',
+          parts: [{ text: systemMessages.map(m => m.content).join('\n\n') }]
+        } : undefined,
+        generationConfig,
+      });
+
+      const response = await result.response;
+
+      return {
+        content: response.text(),
+        model: modelName,
+        provider: 'gemini',
+        webSearchUsed: false,
+      };
+    } catch (error) {
+      lastError = error;
+      console.warn(`[AI Service] Gemini model ${modelName} failed:`, (error as Error).message);
+      continue;
+    }
+  }
+
+  throw lastError || new Error('All Gemini models failed');
 }
 
 // ============================================================================

@@ -846,7 +846,7 @@ export class ArcAgent {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     prompt,
-                    model: 'gemini-3.0-flash-preview', // Use latest frontier model
+                    model: 'gemini-3-flash-preview', // Use latest frontier model
                     maxTokens: 1000,
                     realData: data,
                     networkContext: networkInfo,
