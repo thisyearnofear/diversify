@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { Region } from './use-user-region';
+import type { AssetRegion } from '../config';
 
 interface HistoricalData {
   dates: string[];
   values: number[];
-  regions: Record<Region, number[]>;
+  regions: Record<AssetRegion, number[]>;
   percentChange: number;
   volatility: number;
 }
@@ -19,7 +19,8 @@ export function useHistoricalPerformance(address: string | undefined | null) {
       Africa: [],
       LatAm: [],
       Asia: [],
-      Commodity: [],
+      Global: [],
+      Commodities: [],
     },
     percentChange: 0,
     volatility: 0,

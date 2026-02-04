@@ -1,8 +1,29 @@
 import { useState, useEffect } from 'react';
+import { 
+  GEOGRAPHIC_REGION_LIST,
+  type GeographicRegion,
+  type AssetRegion 
+} from '../config';
 
-// Define the regions we support
-export type Region = 'Africa' | 'USA' | 'Europe' | 'LatAm' | 'Asia' | 'Commodity';
-export const REGIONS = ['Africa', 'USA', 'Europe', 'LatAm', 'Asia', 'Commodity'] as const;
+// =============================================================================
+// USER REGION DETECTION
+// =============================================================================
+// This hook detects the user's GEOGRAPHIC location for personalization.
+// It uses GeographicRegion (not AssetRegion) because users are located in
+// physical places, not asset categories like "Commodities" or "Global".
+//
+// For asset/token categorization, use AssetRegion from config/index.ts
+// =============================================================================
+
+// Re-export types for backward compatibility
+// Region = geographic location where a user can be (no Commodities/Global)
+export type Region = GeographicRegion;
+
+// For files that need asset categorization, they should import AssetRegion from config
+export type { AssetRegion } from '../config';
+
+// Geographic regions only (users can't be "from Commodities")
+export const REGIONS = GEOGRAPHIC_REGION_LIST;
 
 // Country code to region mapping
 const COUNTRY_TO_REGION: Record<string, Region> = {

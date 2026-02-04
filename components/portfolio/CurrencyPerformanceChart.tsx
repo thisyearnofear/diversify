@@ -1,15 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import type { Region } from "../../hooks/use-user-region";
-
-// Region colors for visualization - brighter, more vibrant colors
-const REGION_COLORS: Record<Region, string> = {
-  USA: "#4299E1", // blue
-  Europe: "#48BB78", // green
-  LatAm: "#F6AD55", // orange
-  Africa: "#F56565", // red
-  Asia: "#9F7AEA", // purple
-  Commodity: "#ED8936", // orange
-};
+import { REGION_COLORS, type AssetRegion } from "../../config";
 
 interface CurrencyPerformanceChartProps {
   data: {
@@ -17,7 +7,7 @@ interface CurrencyPerformanceChartProps {
     currencies: {
       symbol: string;
       name: string;
-      region: Region;
+      region: AssetRegion;
       values: number[];
       percentChange: number;
     }[];

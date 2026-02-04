@@ -186,7 +186,7 @@ export default function OverviewTab({
             <div className="space-y-6">
               {/* Region Selector */}
               <div className="flex flex-wrap gap-2">
-                {REGIONS.filter(r => r !== 'Commodity').map((region) => (
+                {REGIONS.map((region) => (
                   <button
                     key={region}
                     onClick={() => setSelectedMarket(region)}
@@ -266,7 +266,7 @@ export default function OverviewTab({
                   Home Region
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {REGIONS.filter(region => region !== 'Commodity').map((region) => (
+                  {REGIONS.map((region) => (
                     <button
                       key={region}
                       onClick={() => setUserRegion(region)}

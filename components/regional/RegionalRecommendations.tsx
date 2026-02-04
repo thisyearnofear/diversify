@@ -1,21 +1,23 @@
 import React, { useState } from "react";
 import type { Region } from "../../hooks/use-user-region";
 import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
-import { REGION_COLORS } from "../../config";
+import { REGION_COLORS, type GeographicRegion } from "../../config";
 
-// Region-specific insights
-const REGION_INSIGHTS: Record<
-  Region,
-  {
-    title: string;
-    description: string;
-    typicalAllocation: Record<Region, number>;
-    considerations: string[];
-    inflationRate: number;
-    volatilityLevel: "Low" | "Medium" | "High";
-    localCurrencies: string[];
-  }
-> = {
+// Geographic allocation recommendations for users based on their home region
+// Note: These are GEOGRAPHIC allocations only. Commodities (PAXG, etc.) are
+// recommended separately as inflation hedges, not as regional allocations.
+interface RegionInsight {
+  title: string;
+  description: string;
+  typicalAllocation: Record<GeographicRegion, number>;
+  considerations: string[];
+  inflationRate: number;
+  volatilityLevel: "Low" | "Medium" | "High";
+  localCurrencies: string[];
+  commodityRecommendation?: string; // Separate recommendation for commodities
+}
+
+const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
   Africa: {
     title: "Regional Insights: Africa",
     description:
@@ -26,8 +28,8 @@ const REGION_INSIGHTS: Record<
       Europe: 20,
       Asia: 5,
       LatAm: 5,
-      Commodity: 0,
     },
+    commodityRecommendation: "Consider 5-15% in PAXG (gold) as an inflation hedge",
     considerations: [
       "African currencies often experience higher inflation rates",
       "EUR and USD provide stability during economic uncertainty",
@@ -48,8 +50,8 @@ const REGION_INSIGHTS: Record<
       Asia: 10,
       Africa: 10,
       LatAm: 5,
-      Commodity: 0,
     },
+    commodityRecommendation: "Consider 5-10% in PAXG (gold) for portfolio diversification",
     considerations: [
       "USD is a global reserve currency with relative stability",
       "EUR provides hedge against USD fluctuations",
@@ -70,8 +72,8 @@ const REGION_INSIGHTS: Record<
       Africa: 10,
       Asia: 10,
       LatAm: 5,
-      Commodity: 0,
     },
+    commodityRecommendation: "Consider 5-10% in PAXG (gold) for portfolio diversification",
     considerations: [
       "EUR provides stability for European residents",
       "USD offers protection against EUR-specific risks",
@@ -92,8 +94,8 @@ const REGION_INSIGHTS: Record<
       Europe: 20,
       Asia: 5,
       Africa: 5,
-      Commodity: 0,
     },
+    commodityRecommendation: "Consider 10-15% in PAXG (gold) as an inflation hedge",
     considerations: [
       "Latin American currencies often face inflation pressures",
       "USD provides stability for savings",
@@ -114,8 +116,8 @@ const REGION_INSIGHTS: Record<
       Europe: 20,
       Africa: 5,
       LatAm: 5,
-      Commodity: 0,
     },
+    commodityRecommendation: "Consider 5-10% in PAXG (gold) for portfolio diversification",
     considerations: [
       "Asian currencies vary widely in stability",
       "USD provides stability for savings",
@@ -125,28 +127,6 @@ const REGION_INSIGHTS: Record<
     inflationRate: 3.9,
     volatilityLevel: "Medium",
     localCurrencies: ["PUSO"],
-  },
-  Commodity: {
-    title: "Regional Insights: Commodities",
-    description:
-      "Commodities like gold provide inflation protection and serve as a store of value during economic uncertainty.",
-    typicalAllocation: {
-      Africa: 10,
-      USA: 20,
-      Europe: 20,
-      Asia: 20,
-      LatAm: 10,
-      Commodity: 20,
-    },
-    considerations: [
-      "Gold has historically maintained value during inflation",
-      "Commodities provide diversification from traditional currencies",
-      "Physical assets can hedge against currency devaluation",
-      "Recommended allocation is 5-20% of total portfolio",
-    ],
-    inflationRate: 2.0,
-    volatilityLevel: "Medium",
-    localCurrencies: ["PAXG"],
   },
 };
 

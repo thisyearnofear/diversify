@@ -56,26 +56,62 @@ export const ARC_DATA_HUB_CONFIG = {
     CHAIN_ID: 5042002
 };
 
-// Region Configuration
-export const REGIONS = {
+// =============================================================================
+// REGION & CATEGORY CONFIGURATION (Single Source of Truth)
+// =============================================================================
+// 
+// CONCEPTUAL MODEL:
+// - Geographic Regions: Where currencies/stablecoins originate (USA, Europe, etc.)
+// - Asset Categories: Non-geographic classifications (Global liquidity, Commodities)
+// - Asset Region: The union of both - used for token categorization
+// - User Region: Geographic only - where the user is located (no Commodities/Global)
+//
+// TERMINOLOGY:
+// - "Global" = Globally liquid, not tied to specific region (e.g., USDC)
+// - "Commodities" = Physical asset-backed tokens (e.g., PAXG gold, BCT carbon)
+// - "RWA" = Broader category including Commodities + Treasuries + Yield tokens
+// =============================================================================
+
+// Geographic regions where users can be located and currencies originate
+export const GEOGRAPHIC_REGIONS = {
     USA: 'USA',
     EUROPE: 'Europe',
     LATAM: 'LatAm',
     AFRICA: 'Africa',
     ASIA: 'Asia',
-    GLOBAL: 'Global',
-    COMMODITIES: 'Commodities',
 } as const;
 
-export const REGION_COLORS = {
-    USA: '#3B82F6',
-    Europe: '#22C55E',
-    LatAm: '#F59E0B',
-    Africa: '#EF4444',
-    Asia: '#D946EF',
-    Global: '#2563EB',
-    Commodities: "#D69E2E",
-    Commodity: "#D69E2E",
+// Non-geographic asset categories
+export const ASSET_CATEGORIES = {
+    GLOBAL: 'Global',        // Globally liquid, USD-pegged (USDC)
+    COMMODITIES: 'Commodities', // Physical asset-backed (PAXG, BCT)
+} as const;
+
+// Combined: All possible regions for asset categorization
+export const REGIONS = {
+    ...GEOGRAPHIC_REGIONS,
+    ...ASSET_CATEGORIES,
+} as const;
+
+// Type exports for consistent usage across codebase
+export type GeographicRegion = typeof GEOGRAPHIC_REGIONS[keyof typeof GEOGRAPHIC_REGIONS];
+export type AssetCategory = typeof ASSET_CATEGORIES[keyof typeof ASSET_CATEGORIES];
+export type AssetRegion = typeof REGIONS[keyof typeof REGIONS];
+
+// Array versions for iteration
+export const GEOGRAPHIC_REGION_LIST: GeographicRegion[] = ['USA', 'Europe', 'LatAm', 'Africa', 'Asia'];
+export const ASSET_CATEGORY_LIST: AssetCategory[] = ['Global', 'Commodities'];
+export const ASSET_REGION_LIST: AssetRegion[] = [...GEOGRAPHIC_REGION_LIST, ...ASSET_CATEGORY_LIST];
+
+// Colors for visualization (canonical, no duplicates)
+export const REGION_COLORS: Record<AssetRegion, string> = {
+    USA: '#3B82F6',        // Blue
+    Europe: '#22C55E',     // Green
+    LatAm: '#F59E0B',      // Amber
+    Africa: '#EF4444',     // Red
+    Asia: '#D946EF',       // Purple
+    Global: '#2563EB',     // Deep Blue
+    Commodities: '#D69E2E', // Gold
 } as const;
 
 // Token Metadata - uses REGIONS values for consistency with UI

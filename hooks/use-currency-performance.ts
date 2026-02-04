@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import type { Region } from './use-user-region';
+import { type GeographicRegion } from '../config';
 import { exchangeRateService } from '../utils/improved-data-services';
 
 interface CurrencyPerformance {
   symbol: string;
   name: string;
-  region: Region;
+  region: GeographicRegion;
   values: number[];
   percentChange: number;
 }
@@ -17,8 +17,8 @@ interface PerformanceData {
   source: 'api' | 'cache' | 'fallback';
 }
 
-// Currency metadata
-const CURRENCY_METADATA: Record<string, { name: string; region: Region }> = {
+// Currency metadata - currencies are tied to geographic regions
+const CURRENCY_METADATA: Record<string, { name: string; region: GeographicRegion }> = {
   'USD': { name: 'US Dollar', region: 'USA' },
   'EUR': { name: 'Euro', region: 'Europe' },
   'KES': { name: 'Kenyan Shilling', region: 'Africa' },

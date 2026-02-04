@@ -139,7 +139,7 @@ async function fetchBalancesForChain(
       metadata: TOKEN_METADATA[symbol] ||
         TOKEN_METADATA[symbol.toUpperCase()] ||
         TOKEN_METADATA[symbol.toLowerCase()] ||
-        { name: symbol, region: 'GLOBAL' },
+        { name: symbol, region: 'Global' },
       exchangeRate: EXCHANGE_RATES[symbol] ||
         EXCHANGE_RATES[symbol.toUpperCase()] ||
         EXCHANGE_RATES[symbol.toLowerCase()] || 1
@@ -387,7 +387,7 @@ export function useStablecoinBalances(address: string | undefined | null, initia
           metadata: TOKEN_METADATA[symbol] ||
             TOKEN_METADATA[symbol.toUpperCase()] ||
             TOKEN_METADATA[symbol.toLowerCase()] ||
-            { name: symbol, region: 'GLOBAL' }, // Use GLOBAL as fallback for centralized config
+            { name: symbol, region: 'Global' }, // Use GLOBAL as fallback for centralized config
           // Get the exchange rate for this token
           exchangeRate: EXCHANGE_RATES[symbol] ||
             EXCHANGE_RATES[symbol.toUpperCase()] ||

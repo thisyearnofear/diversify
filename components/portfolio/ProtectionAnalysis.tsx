@@ -58,7 +58,7 @@ export default function ProtectionAnalysis({
 
     const shareToSocial = async (platform: 'twitter' | 'farcaster') => {
         const activeRegions = regionData.filter(r => r.value > 0).length;
-        const rwaAllocation = regionData.find(r => r.region === 'Commodity' || r.region === 'Commodities')?.value || 0;
+        const rwaAllocation = regionData.find(r => r.region === 'Commodities')?.value || 0;
         const rwaPercent = totalValue > 0 ? (rwaAllocation / totalValue) * 100 : 0;
 
         const baseUrl = 'https://diversifiapp.vercel.app';
@@ -185,7 +185,7 @@ export default function ProtectionAnalysis({
                             {regionData.filter(r => r.value > 0).map((r) => (
                                 <div key={r.region} className="space-y-1">
                                     <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
-                                        <span>{r.region === 'Commodity' || r.region === 'Commodities' ? 'Real Assets (RWA)' : r.region}</span>
+                                        <span>{r.region === 'Commodities' ? 'Commodities (RWA)' : r.region}</span>
                                         <span>{showAmounts ? `$${r.value.toFixed(2)}` : `${((r.value / totalValue) * 100).toFixed(1)}%`}</span>
                                     </div>
                                     <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">

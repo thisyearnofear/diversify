@@ -1,21 +1,11 @@
 import React, { useEffect, useRef } from "react";
-import type { Region } from "@/hooks/use-user-region";
-
-// Region colors for visualization
-const REGION_COLORS: Record<Region, string> = {
-  USA: "#4299E1", // blue
-  Europe: "#48BB78", // green
-  LatAm: "#F6AD55", // orange
-  Africa: "#F56565", // red
-  Asia: "#9F7AEA", // purple
-  Commodity: "#ED8936", // orange
-};
+import { REGION_COLORS, type AssetRegion } from "@/config";
 
 interface PerformanceChartProps {
   data: {
     dates: string[];
     values: number[];
-    regions: Record<Region, number[]>;
+    regions: Record<AssetRegion, number[]>;
     percentChange: number;
     volatility: number;
   };
@@ -238,7 +228,7 @@ export default function PerformanceChart({
               Regional Allocation (Current)
             </div>
             {Object.entries(REGION_COLORS).map(([region, color]) => {
-              const regionData = data.regions[region as Region];
+              const regionData = data.regions[region as AssetRegion];
               if (!regionData || regionData.length === 0) return null;
 
               const latestValue = regionData[regionData.length - 1];
