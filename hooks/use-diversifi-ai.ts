@@ -288,6 +288,14 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       setThinkingStep('Consulting AI for recommendations...');
 
       // Enhanced AI analysis via API
+      // Start a slow incremental progress while waiting for AI
+      const progressInterval = setInterval(() => {
+        setAnalysisProgress(prev => {
+          if (prev >= 75) return prev;
+          return prev + 1;
+        });
+      }, 500);
+
       const response = await fetch('/api/agent/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -298,6 +306,8 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           riskTolerance: config.riskTolerance,
         }),
       });
+
+      clearInterval(progressInterval);
 
       setAnalysisProgress(80);
       setThinkingStep('Processing recommendations...');

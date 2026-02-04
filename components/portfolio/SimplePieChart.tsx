@@ -18,6 +18,8 @@ interface SimplePieChartProps {
   onSegmentHover?: (index: number | null) => void;
   /** Enable interactive hover effects */
   interactive?: boolean;
+  /** Show text labels inside the chart */
+  showLabels?: boolean;
 }
 
 export default function SimplePieChart({
@@ -28,6 +30,7 @@ export default function SimplePieChart({
   highlightedIndex = null,
   onSegmentHover,
   interactive = false,
+  showLabels = false,
 }: SimplePieChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [animationProgress, setAnimationProgress] = useState(0);
@@ -40,22 +43,22 @@ export default function SimplePieChart({
   // Animate entry on mount
   useEffect(() => {
     const startTime = performance.now();
-    
+
     const animate = (currentTime: number) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / animationDuration, 1);
-      
+
       // Easing function: easeOutCubic
       const eased = 1 - Math.pow(1 - progress, 3);
       setAnimationProgress(eased);
-      
+
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate);
       }
     };
-    
+
     animationRef.current = requestAnimationFrame(animate);
-    
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -85,14 +88,14 @@ export default function SimplePieChart({
 
     // Draw pie chart with staggered animation
     let startAngle = -Math.PI / 2; // Start from top
-    
+
     data.forEach((item, index) => {
       const sliceAngle = (item.value / total) * 2 * Math.PI;
-      
+
       // Stagger animation by index (each slice starts 100ms after previous)
       const sliceDelay = index * 0.1;
       const sliceProgress = Math.max(0, Math.min((animationProgress - sliceDelay) / 0.7, 1));
-      
+
       if (sliceProgress <= 0) {
         startAngle += sliceAngle;
         return;
@@ -135,7 +138,7 @@ export default function SimplePieChart({
         ctx.stroke();
       }
 
-      if (!minimal) {
+      if (!minimal && showLabels) {
         // Calculate label position
         const labelAngle = startAngle + animatedSliceAngle / 2;
         const labelRadius = radius * 0.7;
@@ -159,10 +162,10 @@ export default function SimplePieChart({
   // Handle mouse/touch interactions
   const handleInteraction = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!interactive || !canvasRef.current) return;
-    
+
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
-    
+
     // Get coordinates
     let clientX, clientY;
     if ('touches' in event) {
@@ -172,10 +175,10 @@ export default function SimplePieChart({
       clientX = (event as React.MouseEvent).clientX;
       clientY = (event as React.MouseEvent).clientY;
     }
-    
+
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-    
+
     // Calculate angle and distance from center
     const centerX = canvas.width / 2;
     const centerY = canvas.height / 2;
@@ -183,26 +186,26 @@ export default function SimplePieChart({
     const dy = y - centerY;
     const distance = Math.sqrt(dx * dx + dy * dy);
     let angle = Math.atan2(dy, dx);
-    
+
     // Normalize angle to match our drawing (start from -PI/2)
     angle = angle + Math.PI / 2;
     if (angle < 0) angle += 2 * Math.PI;
-    
+
     // Check if within donut radius
     const radius = Math.min(centerX, centerY) - (minimal ? 2 : 10);
     const innerRadius = minimal ? radius * 0.7 : 0;
-    
+
     if (distance < innerRadius || distance > radius * 1.05) {
       setHoveredIndex(null);
       onSegmentHover?.(null);
       return;
     }
-    
+
     // Find which segment
     const total = data.reduce((sum, item) => sum + item.value, 0);
     let currentAngle = 0;
     let foundIndex = -1;
-    
+
     for (let i = 0; i < data.length; i++) {
       const sliceAngle = (data[i].value / total) * 2 * Math.PI;
       if (angle >= currentAngle && angle < currentAngle + sliceAngle) {
@@ -211,7 +214,7 @@ export default function SimplePieChart({
       }
       currentAngle += sliceAngle;
     }
-    
+
     setHoveredIndex(foundIndex >= 0 ? foundIndex : null);
     onSegmentHover?.(foundIndex >= 0 ? foundIndex : null);
   }, [data, interactive, minimal, onSegmentHover]);
@@ -243,10 +246,10 @@ export default function SimplePieChart({
   if (minimal) {
     return (
       <div className="w-full h-full flex items-center justify-center p-1">
-        <canvas 
-          ref={canvasRef} 
-          width={240} 
-          height={240} 
+        <canvas
+          ref={canvasRef}
+          width={240}
+          height={240}
           className="w-full h-full"
           onMouseMove={handleInteraction}
           onMouseLeave={handleMouseLeave}
@@ -265,10 +268,10 @@ export default function SimplePieChart({
 
       {data.length > 0 ? (
         <div className="flex flex-col items-center">
-          <canvas 
-            ref={canvasRef} 
-            width={200} 
-            height={200} 
+          <canvas
+            ref={canvasRef}
+            width={200}
+            height={200}
             className="mb-1"
             onMouseMove={handleInteraction}
             onMouseLeave={handleMouseLeave}
@@ -280,11 +283,10 @@ export default function SimplePieChart({
 
           <div className="grid grid-cols-1 gap-1 w-full text-xs">
             {data.map((item, index) => (
-              <div 
-                key={index} 
-                className={`flex items-center justify-between transition-opacity duration-200 ${
-                  activeIndex !== null && activeIndex !== index ? 'opacity-40' : 'opacity-100'
-                }`}
+              <div
+                key={index}
+                className={`flex items-center justify-between transition-opacity duration-200 ${activeIndex !== null && activeIndex !== index ? 'opacity-40' : 'opacity-100'
+                  }`}
               >
                 <div className="flex items-center">
                   <div

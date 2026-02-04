@@ -126,7 +126,7 @@ const VENICE_MODELS = {
 };
 
 const GEMINI_MODELS = {
-  flash: 'gemini-2.0-flash-exp',
+  flash: 'gemini-2.0-flash-exp', // Try 2.0 first
   pro: 'gemini-1.5-pro-latest',
 };
 
@@ -324,10 +324,10 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
 
   const modelsToTry = [
     options.model || GEMINI_MODELS.flash,
-    'gemini-3-flash-preview',
     'gemini-2.0-flash-exp',
-    'gemini-1.5-flash-latest',
+    'gemini-3-flash-preview',
     'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
     'gemini-1.5-pro-latest',
   ];
 
