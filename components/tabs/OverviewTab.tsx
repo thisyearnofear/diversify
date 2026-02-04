@@ -2,13 +2,14 @@ import React, { useState } from "react";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import InflationVisualizer from "../inflation/InflationVisualizer";
 import { useDiversification } from "@/hooks/use-diversification";
+import { usePortfolioYield } from "@/hooks/use-portfolio-yield";
 import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
 import type { Region } from "@/hooks/use-user-region";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import RegionalIconography from "../regional/RegionalIconography";
 import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
-import WealthJourneyWidget from "../demo/WealthJourneyWidget";
+
 import { Card, CollapsibleSection, EmptyState } from "../shared/TabComponents";
 import { SmartBuyCryptoButton } from "../onramp";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
@@ -69,6 +70,9 @@ export default function OverviewTab({
     diversificationTips,
     goalScores,
   } = useDiversification({ regionData, balances, userRegion, inflationData });
+
+  // Calculate yield vs inflation for Net Protection display
+  const yieldSummary = usePortfolioYield(balances, inflationData);
 
   const handleRefresh = async () => {
     if (refreshChainId) await refreshChainId();
@@ -172,6 +176,7 @@ export default function OverviewTab({
           chainId={chainId}
           onNetworkChange={refreshChainId ? handleRefresh : undefined}
           refreshBalances={refreshBalances}
+          yieldSummary={yieldSummary}
         />
       )}
 
@@ -237,29 +242,31 @@ export default function OverviewTab({
             </div>
           </CollapsibleSection>
 
-          {/* Tips Section */}
-          {diversificationTips.length > 0 && (
-            <CollapsibleSection
-              title="Station Insights"
-              icon={<span>🧠</span>}
-            >
-              <div className="space-y-3">
-                {diversificationTips.map((tip, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                    <span className="text-blue-600 dark:text-blue-400 font-bold text-sm mt-0.5">•</span>
-                    <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{tip}</span>
-                  </div>
-                ))}
-              </div>
-            </CollapsibleSection>
-          )}
-
-          {/* Personalization */}
+          {/* Settings & Insights - Consolidated */}
           <CollapsibleSection
-            title="Station Settings"
-            icon={<span>⚙️</span>}
+            title="Settings & Insights"
+            icon={<span>🧠</span>}
           >
             <div className="space-y-6">
+              {/* Tips Section */}
+              {diversificationTips.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-black uppercase text-gray-400 mb-3 flex items-center gap-2">
+                    <span>💡</span>
+                    Insights
+                  </h4>
+                  <div className="space-y-3">
+                    {diversificationTips.map((tip, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                        <span className="text-blue-600 dark:text-blue-400 font-bold text-sm mt-0.5">•</span>
+                        <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{tip}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Home Region Selector */}
               <div>
                 <h4 className="text-xs font-black uppercase text-gray-400 mb-3 flex items-center gap-2">
                   <RegionalIconography region={userRegion} size="sm" />
@@ -280,11 +287,6 @@ export default function OverviewTab({
                   ))}
                 </div>
               </div>
-              <WealthJourneyWidget
-                totalValue={totalValue}
-                setActiveTab={setActiveTab}
-                userRegion={userRegion}
-              />
             </div>
           </CollapsibleSection>
         </div>

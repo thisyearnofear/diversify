@@ -3,6 +3,7 @@ import { Card, PrimaryButton } from '../shared/TabComponents';
 import SimplePieChart from './SimplePieChart';
 import NetworkSwitcher from '../swap/NetworkSwitcher';
 import sdk from '@farcaster/miniapp-sdk';
+import type { PortfolioYieldSummary } from '../../hooks/use-portfolio-yield';
 
 interface ProtectionAnalysisProps {
     regionData: Array<{ region: string; value: number; color: string }>;
@@ -19,6 +20,7 @@ interface ProtectionAnalysisProps {
     chainId?: number | null;
     onNetworkChange?: () => Promise<void>;
     refreshBalances?: () => Promise<void>;
+    yieldSummary?: PortfolioYieldSummary;
 }
 
 export default function ProtectionAnalysis({
@@ -31,10 +33,12 @@ export default function ProtectionAnalysis({
     onSwap,
     chainId,
     onNetworkChange,
-    refreshBalances
+    refreshBalances,
+    yieldSummary
 }: ProtectionAnalysisProps) {
     const [showAmounts, setShowAmounts] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [showYieldBreakdown, setShowYieldBreakdown] = useState(false);
 
     const handleRefresh = async () => {
         if (!refreshBalances) return;
@@ -202,6 +206,96 @@ export default function ProtectionAnalysis({
                         </div>
                     </div>
                 </div>
+
+                {/* Net Protection Summary */}
+                {yieldSummary && totalValue > 0 && (
+                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/50 dark:to-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                        <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg">📊</span>
+                                <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">Net Protection</span>
+                            </div>
+                            <button
+                                onClick={() => setShowYieldBreakdown(!showYieldBreakdown)}
+                                className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                                {showYieldBreakdown ? 'Hide Details' : 'Show Details'}
+                            </button>
+                        </div>
+                        
+                        {/* Summary Row */}
+                        <div className="grid grid-cols-3 gap-2 mb-3">
+                            <div className="text-center">
+                                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-0.5">Earning</div>
+                                <div className="text-sm font-black text-green-600 dark:text-green-400">
+                                    +${yieldSummary.totalAnnualYield.toFixed(2)}<span className="text-[9px] font-bold">/yr</span>
+                                </div>
+                                {yieldSummary.avgYieldRate > 0 && (
+                                    <div className="text-[9px] text-slate-500">({yieldSummary.avgYieldRate.toFixed(1)}% avg)</div>
+                                )}
+                            </div>
+                            <div className="text-center">
+                                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-0.5">Inflation</div>
+                                <div className="text-sm font-black text-red-500 dark:text-red-400">
+                                    -${yieldSummary.totalInflationCost.toFixed(2)}<span className="text-[9px] font-bold">/yr</span>
+                                </div>
+                                {yieldSummary.avgInflationRate > 0 && (
+                                    <div className="text-[9px] text-slate-500">({yieldSummary.avgInflationRate.toFixed(1)}% avg)</div>
+                                )}
+                            </div>
+                            <div className="text-center">
+                                <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-0.5">Net</div>
+                                <div className={`text-sm font-black ${yieldSummary.isNetPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                                    {yieldSummary.isNetPositive ? '+' : ''}${yieldSummary.netAnnualGain.toFixed(2)}<span className="text-[9px] font-bold">/yr</span>
+                                </div>
+                                <div className={`text-[9px] ${yieldSummary.isNetPositive ? 'text-emerald-600' : 'text-red-500'}`}>
+                                    {yieldSummary.isNetPositive ? '✓ Ahead' : '⚠ Behind'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Breakdown (Progressive Disclosure) */}
+                        {showYieldBreakdown && yieldSummary.assets.length > 0 && (
+                            <div className="border-t border-slate-200 dark:border-slate-700 pt-3 mt-3 space-y-2">
+                                {yieldSummary.assets.slice(0, 5).map((asset) => (
+                                    <div key={asset.symbol} className="flex items-center justify-between text-xs">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-bold text-slate-700 dark:text-slate-300 w-16">{asset.symbol}</span>
+                                            <span className="text-slate-500">${asset.value.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {asset.apy > 0 && (
+                                                <span className="text-green-600 dark:text-green-400 font-bold">+{asset.apy}%</span>
+                                            )}
+                                            {asset.isInflationHedge ? (
+                                                <span className="text-amber-600 dark:text-amber-400 font-bold text-[10px]">🛡️ Hedge</span>
+                                            ) : asset.inflationRate > 0 && (
+                                                <span className="text-red-500 font-medium">-{asset.inflationRate.toFixed(1)}%</span>
+                                            )}
+                                            <span className={`font-black min-w-[60px] text-right ${asset.netAnnual >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
+                                                {asset.netAnnual >= 0 ? '+' : ''}${asset.netAnnual.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                                {yieldSummary.assets.length > 5 && (
+                                    <div className="text-[10px] text-slate-500 text-center pt-1">
+                                        +{yieldSummary.assets.length - 5} more assets
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Quick insight if not earning */}
+                        {!yieldSummary.isNetPositive && yieldSummary.yieldingValue === 0 && (
+                            <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                                    <span className="font-bold">💡 Tip:</span> Your holdings are not earning yield. Consider USDY (5% APY) or sDAI (4.5% APY) on Arbitrum.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Goal-Based Ratings */}
                 <div className="grid grid-cols-3 gap-3">

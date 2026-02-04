@@ -114,9 +114,29 @@ export const REGION_COLORS: Record<AssetRegion, string> = {
     Commodities: '#D69E2E', // Gold
 } as const;
 
-// Token Metadata - uses REGIONS values for consistency with UI
+// =============================================================================
+// TOKEN METADATA (Single Source of Truth)
+// =============================================================================
+// 
+// Each token includes:
+// - region: Geographic or asset category for diversification tracking
+// - apy: Annual percentage yield (null = no yield, 0 = store of value)
+// - isInflationHedge: True if asset protects against currency debasement
+// - decimals: Token decimals (default 18)
+// =============================================================================
+
 export type RegionValue = (typeof REGIONS)[keyof typeof REGIONS];
-export const TOKEN_METADATA: Record<string, { name: string; region: RegionValue; decimals?: number }> = {
+
+export interface TokenMetadata {
+    name: string;
+    region: RegionValue;
+    decimals?: number;
+    apy?: number | null;        // Annual yield (null = none, number = %)
+    isInflationHedge?: boolean; // Protects against currency debasement
+}
+
+export const TOKEN_METADATA: Record<string, TokenMetadata> = {
+    // Celo Mento Regional Stablecoins (no yield, exposed to local inflation)
     USDm: { name: 'Mento Dollar', region: REGIONS.USA },
     EURm: { name: 'Mento Euro', region: REGIONS.EUROPE },
     BRLm: { name: 'Mento Brazilian Real', region: REGIONS.LATAM },
@@ -132,13 +152,31 @@ export const TOKEN_METADATA: Record<string, { name: string; region: RegionValue;
     CHFm: { name: 'Swiss Franc', region: REGIONS.EUROPE },
     JPYm: { name: 'Mento Japanese Yen', region: REGIONS.ASIA },
     NGNm: { name: 'Mento Nigerian Naira', region: REGIONS.AFRICA },
+    
+    // Global Stablecoins (no yield, low inflation exposure)
     USDT: { name: 'Tether USD', region: REGIONS.USA, decimals: 6 },
     USDC: { name: 'USD Coin', region: REGIONS.GLOBAL, decimals: 6 },
     EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
-    PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18 },
-    USDY: { name: 'Ondo US Dollar Yield', region: REGIONS.USA, decimals: 18 },
-    SYRUPUSDC: { name: 'Syrup USDC', region: REGIONS.USA, decimals: 18 },
+    
+    // Yield-Bearing Assets (Arbitrum RWAs)
+    USDY: { name: 'Ondo US Dollar Yield', region: REGIONS.USA, decimals: 18, apy: 5.0 },
+    SYRUPUSDC: { name: 'Syrup USDC', region: REGIONS.USA, decimals: 18, apy: 4.5 },
+    
+    // Inflation Hedges (store of value, no yield)
+    PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
 };
+
+// Helper to get token yield (0 if none)
+export function getTokenApy(symbol: string): number {
+    const normalized = symbol.toUpperCase();
+    return TOKEN_METADATA[normalized]?.apy ?? 0;
+}
+
+// Helper to check if token is an inflation hedge
+export function isTokenInflationHedge(symbol: string): boolean {
+    const normalized = symbol.toUpperCase();
+    return TOKEN_METADATA[normalized]?.isInflationHedge ?? false;
+}
 
 // Helper to get token region (normalized)
 export function getTokenRegion(symbol: string): RegionValue {
