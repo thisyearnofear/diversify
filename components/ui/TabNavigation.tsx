@@ -106,7 +106,7 @@ export default function TabNavigation({
       <div className="flex bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1">
         {tabs.map((tab) => {
           const badgeCount = badges[tab.id];
-          const hasBadge = badgeCount && badgeCount > 0;
+          const hasBadge = badgeCount !== undefined && badgeCount > 0;
           
           return (
             <button

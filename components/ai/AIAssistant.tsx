@@ -5,6 +5,7 @@ import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 import { useInflationData } from '../../hooks/use-inflation-data';
 import { useAppState } from '../../context/AppStateContext';
+import { useAIConversationOptional } from '../../context/AIConversationContext';
 import VoiceButton from '../ui/VoiceButton';
 import InteractiveAdviceCard from '../agent/InteractiveAdviceCard';
 import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
@@ -50,6 +51,9 @@ export default function AIAssistant({
     const { inflationData: liveInflationData } = useInflationData();
     const { showToast } = useToast();
     const { startTour, dismissTour, isTourDismissed } = useAppState();
+    const globalConversation = useAIConversationOptional();
+    const unreadCount = globalConversation?.unreadCount ?? 0;
+    const markAsRead = globalConversation?.markAsRead;
 
     // Initialize AI on mount
     useEffect(() => {
@@ -121,6 +125,27 @@ export default function AIAssistant({
     if (embedded) {
         return (
             <div className="pointer-events-auto">
+                {/* Inline unread insights indicator */}
+                {unreadCount > 0 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-3 flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-3 py-2"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-blue-600 text-sm">💬</span>
+                            <span className="text-xs font-bold text-blue-700">
+                                {unreadCount} new insight{unreadCount !== 1 ? 's' : ''}
+                            </span>
+                        </div>
+                        <button
+                            onClick={() => markAsRead?.()}
+                            className="text-[10px] font-bold text-blue-500 hover:text-blue-700 uppercase tracking-wide"
+                        >
+                            Mark read
+                        </button>
+                    </motion.div>
+                )}
                 <AnimatePresence mode="wait">
                     {/* Analysis Progress */}
                     {isAnalyzing && (

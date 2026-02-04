@@ -236,7 +236,6 @@ export default function DiversiFiPage() {
               }
               setActiveTab(tab);
             }}
-            badges={{ protect: unreadCount }}
           />
         </div>
 

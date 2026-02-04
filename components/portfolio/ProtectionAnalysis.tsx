@@ -116,13 +116,13 @@ export default function ProtectionAnalysis({
         const rwaPercent = totalValue > 0 ? (rwaAllocation / totalValue) * 100 : 0;
 
         const baseUrl = 'https://diversifiapp.vercel.app';
-        
+
         // Generate unique share ID based on user stats
         const shareId = `${Date.now().toString(36)}`;
-        
+
         // Calculate percentile (mock - in production could be based on actual user data)
         const percentile = Math.min(99, Math.max(50, Math.round(diversificationScore + 10)));
-        
+
         // Build dynamic share page URL with fc:miniapp meta tags
         const sharePageUrl = `${baseUrl}/share/${shareId}?r=${activeRegions}&d=${encodeURIComponent(getLetterRating(goalScores.diversify))}&i=${encodeURIComponent(getLetterRating(goalScores.hedge))}&rwa=${rwaPercent.toFixed(1)}&s=${diversificationScore}&p=${percentile}`;
 
@@ -147,7 +147,7 @@ export default function ProtectionAnalysis({
                     sdk.context,
                     new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 200))
                 ]);
-                
+
                 if (context && sdk.actions?.composeCast) {
                     // Use native SDK - embeds the share page with fc:miniapp meta for rich preview
                     sdk.actions.composeCast({
@@ -211,12 +211,11 @@ export default function ProtectionAnalysis({
                             <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
                                 {Number(animatedScore).toFixed(0)}/100
                             </div>
-                            <div className={`text-sm font-bold px-3 py-1 rounded-full inline-block mt-2 ${
-                                diversificationScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                                diversificationScore >= 60 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                diversificationScore >= 40 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                            }`}>
+                            <div className={`text-sm font-bold px-3 py-1 rounded-full inline-block mt-2 ${diversificationScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                                    diversificationScore >= 60 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                        diversificationScore >= 40 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                            'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                }`}>
                                 {diversificationRating}
                             </div>
                         </div>
@@ -239,9 +238,9 @@ export default function ProtectionAnalysis({
                                 const letterGrade = getLetterRating(score);
                                 const gradeColor =
                                     score >= 80 ? 'from-green-500 to-emerald-600' :
-                                    score >= 60 ? 'from-blue-500 to-indigo-600' :
-                                    score >= 40 ? 'from-amber-500 to-orange-500' :
-                                    'from-red-500 to-red-600';
+                                        score >= 60 ? 'from-blue-500 to-indigo-600' :
+                                            score >= 40 ? 'from-amber-500 to-orange-500' :
+                                                'from-red-500 to-red-600';
 
                                 return (
                                     <motion.div
@@ -312,11 +311,10 @@ export default function ProtectionAnalysis({
                         {regionData.map((region, index) => (
                             <div
                                 key={index}
-                                className={`p-2 rounded-lg border text-center transition-all ${
-                                    highlightedRegionIndex === index
+                                className={`p-2 rounded-lg border text-center transition-all ${highlightedRegionIndex === index
                                         ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-105'
                                         : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-center justify-center gap-1">
                                     <div
@@ -337,20 +335,21 @@ export default function ProtectionAnalysis({
                     </div>
                 </div>
 
-                {/* Network Switcher */}
+                {/* Network Selection */}
                 {chainId !== undefined && (
-                    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl p-4 border border-indigo-200 dark:border-indigo-800">
-                        <div className="flex items-center justify-between">
+                    <div className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-900/10 dark:to-purple-900/10 rounded-xl p-4 border border-indigo-100 dark:border-indigo-900/30">
+                        <div className="flex items-center justify-between mb-3">
                             <div>
-                                <h3 className="font-black text-gray-900 dark:text-white text-sm">Network</h3>
-                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                    Select blockchain for transactions
+                                <h3 className="font-black text-gray-900 dark:text-white text-xs uppercase tracking-wider">Network</h3>
+                                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                                    Switch blockchain for transactions
                                 </p>
                             </div>
-                            <NetworkSwitcher
-                                currentChainId={chainId}
-                            />
                         </div>
+                        <NetworkSwitcher
+                            currentChainId={chainId}
+                            className="w-full"
+                        />
                     </div>
                 )}
 
