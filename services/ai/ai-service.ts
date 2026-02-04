@@ -239,7 +239,7 @@ async function callVeniceChat(options: ChatCompletionOptions): Promise<ChatCompl
     messages: options.messages as any,
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? 2000,
-    // @ts-ignore - Venice-specific parameters
+    // @ts-expect-error - Venice-specific parameters
     venice_parameters: {
       enable_web_search: options.enableWebSearch ? 'on' : 'off',
       enable_web_citations: options.enableWebSearch ? true : false,
@@ -642,13 +642,13 @@ function extractGoldContext(content: string): WebEnrichedAnalysis['webInsights']
   return undefined;
 }
 
-function extractCurrencyContext(content: string) {
+function extractCurrencyContext(_content: string) {
   // Extract currency performance data
   // Simplified - would be enhanced with structured parsing
   return undefined;
 }
 
-function extractMacroContext(content: string) {
+function extractMacroContext(_content: string) {
   // Extract macro factors
   return undefined;
 }

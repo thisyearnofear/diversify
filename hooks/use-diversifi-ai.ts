@@ -147,8 +147,9 @@ export function useDiversifiAI() {
   const [advice, setAdvice] = useState<AIAdvice | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [thinkingStep, setThinkingStep] = useState<string>('');
-  const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
+  // analysisProgress and analysisSteps are for future use
+  // const [analysisProgress, setAnalysisProgress] = useState(0);
+  // const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState<PortfolioAnalysis | null>(null);
   
@@ -268,7 +269,7 @@ export function useDiversifiAI() {
       setIsAnalyzing(false);
       setThinkingStep('');
     }
-  }, [capabilities.analysis, config, portfolioAnalysis]);
+  }, [capabilities.analysis, config]);
 
   /**
    * Backward-compatible analyze function (legacy signature)
@@ -460,7 +461,7 @@ export function useDiversifiAI() {
       setIsAnalyzing(false);
       setThinkingStep('');
     }
-  }, [autonomousStatus, portfolioAnalysis]);
+  }, [autonomousStatus]);
 
   // ============================================================================
   // EXPORTS

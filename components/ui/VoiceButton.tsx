@@ -321,7 +321,7 @@ export default function VoiceButton({
                                 <span className="text-lg">🎤</span>
                                 <div>
                                     <p className="font-bold text-sm">Try Voice Commands!</p>
-                                    <p className="text-xs text-blue-100">Tap and say "Swap $100 to gold"</p>
+                                    <p className="text-xs text-blue-100">Tap and say &quot;Swap $100 to gold&quot;</p>
                                 </div>
                             </div>
                             {/* Arrow */}
