@@ -67,8 +67,8 @@ export default function ChainBalancesHeader({
 
   if (isLoading) {
     return (
-      <div className="bg-gray-50 rounded-xl p-3 mb-4">
-        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 mb-4">
+        <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
@@ -80,12 +80,12 @@ export default function ChainBalancesHeader({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-3 mb-4 shadow-sm">
+    <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-4 shadow-sm">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+        <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
           Your Balances
         </h3>
-        <span className="text-[10px] text-gray-400">
+        <span className="text-[10px] text-gray-400 dark:text-gray-500">
           Click to switch chain
         </span>
       </div>
@@ -120,7 +120,7 @@ export default function ChainBalancesHeader({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1">
-                    <span className="font-bold text-sm text-gray-900 truncate">
+                    <span className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">
                       {config.name}
                     </span>
                     {isCurrentChain && (
@@ -129,7 +129,7 @@ export default function ChainBalancesHeader({
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-500 truncate">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
                     {config.description}
                   </p>
                 </div>
@@ -137,12 +137,12 @@ export default function ChainBalancesHeader({
               
               <div className="mt-2 flex items-center justify-between">
                 <span className={`text-sm font-bold ${
-                  hasBalance ? 'text-gray-900' : 'text-gray-400'
+                  hasBalance ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'
                 }`}>
                   {hasBalance ? `$${chain.totalValue.toFixed(0)}` : '$0'}
                 </span>
                 {hasBalance && chain.tokenCount > 0 && (
-                  <span className="text-[10px] text-gray-500">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
                     {chain.tokenCount} token{chain.tokenCount !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -154,9 +154,9 @@ export default function ChainBalancesHeader({
       
       {/* Total across chains */}
       {displayChains.some(c => c.totalValue > 0) && (
-        <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-xs text-gray-500">Total Value</span>
-          <span className="text-sm font-bold text-gray-900">
+        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
+          <span className="text-xs text-gray-500 dark:text-gray-400">Total Value</span>
+          <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
             ${displayChains.reduce((sum, c) => sum + c.totalValue, 0).toFixed(2)}
           </span>
         </div>

@@ -52,22 +52,22 @@ const SwapAIInsight = ({
   if (inflationDifference <= 0) return null;
 
   return (
-    <div className="bg-blue-50 border-l-2 border-blue-400 p-3 mb-4 rounded-r">
+    <div className="bg-blue-50 dark:bg-blue-900/20 border-l-2 border-blue-400 dark:border-blue-500 p-3 mb-4 rounded-r">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-blue-600">💡</span>
+          <span className="text-blue-600 dark:text-blue-400">💡</span>
           <div>
-            <p className="text-sm font-medium text-blue-800">
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
               AI Insight: Swapping to {toToken} could save ~${(inflationDifference * 10).toFixed(0)} over 6 months
             </p>
-            <p className="text-xs text-blue-600">
+            <p className="text-xs text-blue-600 dark:text-blue-400">
               Based on {inflationDifference.toFixed(1)}% lower inflation rate
             </p>
           </div>
         </div>
         <button
           onClick={onAskAI}
-          className="text-blue-600 text-xs px-2 py-1 bg-blue-100 rounded hover:bg-blue-200 transition-colors"
+          className="text-blue-600 dark:text-blue-300 text-xs px-2 py-1 bg-blue-100 dark:bg-blue-800 rounded hover:bg-blue-200 dark:hover:bg-blue-700 transition-colors"
         >
           Tell me more →
         </button>
@@ -412,10 +412,7 @@ const SwapInterface = forwardRef<
 
   return (
     <div
-      className={`relative bg-white p-5 rounded-lg shadow-md overflow-hidden SwapInterface ${fromTokenRegion && toTokenRegion
-        ? `border-2 border-region-${toTokenRegion.toLowerCase()}-medium`
-        : "border border-gray-200"
-        }`}
+      className="relative bg-white dark:bg-gray-900 p-5 rounded-lg shadow-md overflow-hidden SwapInterface border border-gray-200 dark:border-gray-700"
     >
       {fromTokenRegion && toTokenRegion && (
         <div className="absolute inset-0">
@@ -427,9 +424,9 @@ const SwapInterface = forwardRef<
       )}
       <div className="relative">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h3>
           {inflationDataSource === "api" && (
-            <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full font-medium border border-green-200">
+            <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-2 py-1 rounded-full font-medium border border-green-200 dark:border-green-800">
               Live Inflation Data
             </span>
           )}
@@ -437,12 +434,12 @@ const SwapInterface = forwardRef<
 
         {/* Cross-Chain Selectors */}
         {enableCrossChain && (
-          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-3">
-              <span className="text-blue-600">🌉</span>
-              <span className="text-sm font-medium text-blue-800">Cross-Chain Bridge</span>
+              <span className="text-blue-600 dark:text-blue-400">🌉</span>
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Cross-Chain Bridge</span>
               {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
-                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+                <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
                   Bridge Required
                 </span>
               )}
@@ -466,7 +463,7 @@ const SwapInterface = forwardRef<
               />
             </div>
             {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
-              <div className="mt-2 text-xs text-blue-600">
+              <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
                 ⚠️ Cross-chain swaps may take longer and have higher fees
               </div>
             )}
@@ -549,19 +546,10 @@ const SwapInterface = forwardRef<
           {/* Expected Output */}
           {mounted && expectedOutput && Number.parseFloat(expectedOutput) > 0 && (
             <div
-              className={`relative mt-4 p-4 rounded-lg overflow-hidden ${toTokenRegion
-                ? `bg-region-${toTokenRegion.toLowerCase()}-light/40 border-2 border-region-${toTokenRegion.toLowerCase()}-medium`
-                : "bg-gray-100 border-2 border-gray-300"
-                } shadow-md`}
+              className="relative mt-4 p-4 rounded-lg overflow-hidden bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 shadow-md"
             >
-              {toTokenRegion && (
-                <RegionalPattern
-                  region={toTokenRegion as Region}
-                  className="opacity-20"
-                />
-              )}
               <div className="relative">
-                <div className="text-sm font-bold mb-2 flex items-center text-gray-900 bg-gray-100 p-2 rounded-md border border-gray-300 shadow-sm">
+                <div className="text-sm font-bold mb-2 flex items-center text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 p-2 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     className="size-5 mr-1 text-blue-600"
@@ -576,19 +564,19 @@ const SwapInterface = forwardRef<
                   </svg>
                   Expected Output
                 </div>
-                <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200">
+                <div className="bg-white dark:bg-gray-800 p-3 rounded-md shadow-sm border border-gray-200 dark:border-gray-700">
                   <div className="font-medium flex items-center justify-between">
                     <div>
-                      <span className="text-sm text-gray-800 font-medium">
+                      <span className="text-sm text-gray-800 dark:text-gray-200 font-medium">
                         You&#39;ll receive approximately
                       </span>
                       <div className="flex items-center">
-                        <span className="font-bold text-2xl text-blue-700" suppressHydrationWarning>
+                        <span className="font-bold text-2xl text-blue-700 dark:text-blue-400" suppressHydrationWarning>
                           {Number.parseFloat(expectedOutput).toFixed(4)}
                         </span>
                       </div>
                     </div>
-                    <div className="flex flex-col items-center bg-gray-50 p-2 rounded-md border border-gray-200">
+                    <div className="flex flex-col items-center bg-gray-50 dark:bg-gray-900 p-2 rounded-md border border-gray-200 dark:border-gray-700">
                       {toTokenRegion && (
                         <div
                           className="mb-1 size-8 rounded-full flex items-center justify-center shadow-sm"
@@ -607,13 +595,13 @@ const SwapInterface = forwardRef<
                           />
                         </div>
                       )}
-                      <span className="font-bold text-lg text-blue-700">
+                      <span className="font-bold text-lg text-blue-700 dark:text-blue-400">
                         {toToken}
                       </span>
                     </div>
                   </div>
                 </div>
-                <div className="mt-2 text-xs text-gray-600">
+                <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
                   Rate: 1 {fromToken} ≈{" "}
                   {mounted && (
                     Number.parseFloat(expectedOutput) /
@@ -628,12 +616,10 @@ const SwapInterface = forwardRef<
           {/* Inflation benefit information */}
           {fromToken && toToken && hasInflationBenefit && (
             <div
-              className="relative p-4 rounded-lg overflow-hidden border-2 shadow-md bg-green-50 border-green-200"
+              className="relative p-4 rounded-lg overflow-hidden border-2 shadow-md bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800"
             >
               <div className="relative">
-                <h3
-                  className="text-sm font-bold mb-2 flex items-center text-gray-900"
-                >
+                <h3 className="text-sm font-bold mb-2 flex items-center text-gray-900 dark:text-gray-100">
                   <span className="mr-2 text-lg">✨</span>
                   Inflation Protection Benefit
                 </h3>
@@ -699,8 +685,8 @@ const SwapInterface = forwardRef<
           )}
 
           {/* Slippage Tolerance */}
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 shadow-sm">
-            <label className="text-sm font-bold text-gray-900 mb-2 flex items-center">
+          <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+            <label className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="size-5 mr-1 text-gray-700"
@@ -722,7 +708,7 @@ const SwapInterface = forwardRef<
                   onClick={() => setSlippageTolerance(tolerance)}
                   className={`px-4 py-2 text-sm rounded-md shadow-md ${slippageTolerance === tolerance
                     ? `bg-blue-600 text-white border-2 border-blue-700 font-bold`
-                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50"
+                    : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
                     }`}
                   disabled={isLoading}
                 >
@@ -730,7 +716,7 @@ const SwapInterface = forwardRef<
                 </button>
               ))}
             </div>
-            <div className="mt-2 text-xs text-gray-500">
+            <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               Your transaction will revert if the price changes unfavorably by
               more than this percentage.
             </div>

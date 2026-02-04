@@ -83,12 +83,12 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 
   return (
     <div>
-      <label className="text-sm font-bold text-gray-900 mb-2 flex items-center">
+      <label className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
         <span className="mr-2">{label}</span>
         {tokenRegion && tokenRegion !== 'Unknown' && (
           <div 
             className="flex items-center px-2 py-1 rounded-md"
-            style={{ backgroundColor: `${regionColor}20` }}
+            style={{ backgroundColor: `${regionColor}30` }}
           >
             <RegionalIconography
               region={tokenRegion as Region}
@@ -105,13 +105,13 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         )}
       </label>
       
-      {/* Balance display */}
+      {/* Balance display - fixed for dark mode */}
       <div className="flex justify-end mb-1">
         <div
           className={`text-xs font-medium px-2 py-0.5 rounded-md flex items-center ${
             isCrossChain && !hasBalance 
-              ? 'bg-amber-50 text-amber-700 border border-amber-200' 
-              : 'bg-gray-100 text-gray-700'
+              ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800' 
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
           }`}
         >
           <svg
@@ -154,14 +154,9 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           value={selectedToken}
           onChange={(e) => onTokenChange(e.target.value)}
           className={`${showAmountInput ? "w-1/3" : "w-full"
-            } rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 font-semibold ${
-              regionColor
-                ? 'bg-white'
-                : "border-gray-200 focus:border-blue-500 focus:ring-blue-200"
-            }`}
+            } rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800`}
           style={regionColor ? { 
             borderColor: regionColor,
-            boxShadow: `0 0 0 3px ${regionColor}20`
           } : {}}
           disabled={disabled}
         >
@@ -169,7 +164,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             <option
               key={token.symbol}
               value={token.symbol}
-              className="font-medium"
+              className="font-medium bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
             >
               {token.symbol} - {token.region}
             </option>
@@ -182,7 +177,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               type="number"
               value={amount}
               onChange={(e) => onAmountChange(e.target.value)}
-              className="w-full rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 font-semibold pr-16 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-200"
+              className="w-full rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold pr-16 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800"
               placeholder="Amount"
               min="0"
               step="0.01"
@@ -193,8 +188,8 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               onClick={setMaxAmount}
               className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded transition-colors ${
                 !hasBalance || isCrossChain 
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800'
               }`}
               disabled={disabled || !hasBalance || Boolean(isCrossChain)}
               title={
@@ -211,11 +206,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         )}
       </div>
       
-      {/* Token info card - improved contrast */}
+      {/* Token info card - fixed for dark mode */}
       {selectedToken && (
         <div
-          className="relative mt-2 text-sm px-3 py-2 rounded-lg border-2 shadow-sm bg-white"
-          style={regionColor ? { borderColor: regionColor } : { borderColor: '#e5e7eb' }}
+          className="relative mt-2 text-sm px-3 py-2 rounded-lg border-2 shadow-sm bg-white dark:bg-gray-900"
+          style={regionColor ? { borderColor: regionColor } : {}}
         >
           <div className="flex w-full justify-between items-center">
             <div className="flex items-center">
@@ -232,24 +227,24 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 </div>
               )}
               <div>
-                <span className="text-xs text-gray-500 font-medium block">
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block">
                   Region
                 </span>
-                <span className="font-bold text-base text-gray-900">
+                <span className="font-bold text-base text-gray-900 dark:text-gray-100">
                   {tokenRegion && tokenRegion !== 'Unknown' ? tokenRegion : "Unknown"}
                 </span>
               </div>
             </div>
-            <div className="bg-gray-50 px-3 py-1.5 rounded-md shadow-sm border border-gray-200">
-              <span className="text-xs text-gray-500 font-medium block">
+            <div className="bg-gray-50 dark:bg-gray-800 px-3 py-1.5 rounded-md shadow-sm border border-gray-200 dark:border-gray-700">
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block">
                 Inflation
               </span>
               <span
                 className={`font-bold text-base ${inflationRate > 5
-                  ? "text-red-600"
+                  ? "text-red-600 dark:text-red-400"
                   : inflationRate > 3
-                    ? "text-amber-600"
-                    : "text-green-600"
+                    ? "text-amber-600 dark:text-amber-400"
+                    : "text-green-600 dark:text-green-400"
                   }`}
               >
                 {isNaN(inflationRate) || inflationRate === undefined ? '—' : inflationRate.toFixed(1) + '%'}
