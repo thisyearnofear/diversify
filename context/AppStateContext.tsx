@@ -8,6 +8,14 @@ interface SwapPrefill {
   reason?: string;
 }
 
+// Guided tour state (ENHANCEMENT: extends navigation system)
+interface GuidedTourState {
+  tourId: string;
+  currentStep: number;
+  totalSteps: number;
+  highlightSection?: string;
+}
+
 // Define the application state interface
 interface AppState {
   activeTab: string;
@@ -15,6 +23,8 @@ interface AppState {
   swapPrefill: SwapPrefill | null;
   darkMode: boolean;
   themeLoaded: boolean;
+  guidedTour: GuidedTourState | null;
+  visitedTabs: string[];
 }
 
 // Define the context type
@@ -27,6 +37,12 @@ interface AppStateContextType extends Omit<AppState, 'themeLoaded'> {
   toggleDarkMode: () => void;
   setDarkMode: (darkMode: boolean) => void;
   themeLoaded: boolean;
+  // Guided tour methods (ENHANCEMENT: adds tour orchestration)
+  startTour: (tourId: string, totalSteps: number, initialTab: string, section?: string) => void;
+  nextTourStep: (nextTab: string, section?: string, prefill?: SwapPrefill) => void;
+  exitTour: () => void;
+  dismissTour: (tourId: string) => void;
+  isTourDismissed: (tourId: string) => boolean;
 }
 
 // Create the context with default values
@@ -71,6 +87,8 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     swapPrefill: null,
     darkMode: false,
     themeLoaded: false,
+    guidedTour: null,
+    visitedTabs: [],
   });
 
   // Initialize theme on mount (client-side only)
@@ -121,9 +139,13 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     setState(prev => ({ ...prev, chainId }));
   }, []);
 
-  // Set active tab
+  // Set active tab (ENHANCEMENT: tracks visited tabs for tour detection)
   const setActiveTab = useCallback((tab: string) => {
-    setState(prev => ({ ...prev, activeTab: tab }));
+    setState(prev => ({
+      ...prev,
+      activeTab: tab,
+      visitedTabs: prev.visitedTabs.includes(tab) ? prev.visitedTabs : [...prev.visitedTabs, tab],
+    }));
   }, []);
 
   // Navigate to swap with pre-filled values (from AI recommendations)
@@ -166,12 +188,59 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   }, []);
 
+  // Guided tour methods (ENHANCEMENT: minimal tour orchestration)
+  const startTour = useCallback((tourId: string, totalSteps: number, initialTab: string, section?: string) => {
+    setState(prev => ({
+      ...prev,
+      activeTab: initialTab,
+      guidedTour: { tourId, currentStep: 0, totalSteps, highlightSection: section },
+    }));
+  }, []);
+
+  const nextTourStep = useCallback((nextTab: string, section?: string, prefill?: SwapPrefill) => {
+    setState(prev => {
+      if (!prev.guidedTour) return prev;
+      const nextStep = prev.guidedTour.currentStep + 1;
+      return {
+        ...prev,
+        activeTab: nextTab,
+        guidedTour: { ...prev.guidedTour, currentStep: nextStep, highlightSection: section },
+        swapPrefill: prefill || prev.swapPrefill,
+      };
+    });
+  }, []);
+
+  const exitTour = useCallback(() => {
+    setState(prev => ({ ...prev, guidedTour: null }));
+  }, []);
+
+  const dismissTour = useCallback((tourId: string) => {
+    try {
+      const dismissed = JSON.parse(localStorage.getItem('dismissedTours') || '[]');
+      localStorage.setItem('dismissedTours', JSON.stringify([...dismissed, tourId]));
+    } catch (e) {
+      console.error('Failed to dismiss tour:', e);
+    }
+    exitTour();
+  }, [exitTour]);
+
+  const isTourDismissed = useCallback((tourId: string): boolean => {
+    try {
+      const dismissed = JSON.parse(localStorage.getItem('dismissedTours') || '[]');
+      return dismissed.includes(tourId);
+    } catch (e) {
+      return false;
+    }
+  }, []);
+
   const contextValue: AppStateContextType = {
     activeTab: state.activeTab,
     chainId: state.chainId,
     swapPrefill: state.swapPrefill,
     darkMode: state.darkMode,
     themeLoaded: state.themeLoaded,
+    guidedTour: state.guidedTour,
+    visitedTabs: state.visitedTabs,
     setActiveTab,
     setChainId,
     navigateToSwap,
@@ -179,6 +248,11 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     initializeFromStorage,
     toggleDarkMode,
     setDarkMode,
+    startTour,
+    nextTourStep,
+    exitTour,
+    dismissTour,
+    isTourDismissed,
   };
 
   return (

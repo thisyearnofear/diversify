@@ -38,11 +38,11 @@ export class DirectRWAStrategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Supports Arbitrum RWA swaps: USDC/PAXG, USDC/USDY, USDC/sDAI
+        // Supports Arbitrum RWA swaps: USDC/PAXG, USDC/USDY, USDC/SYRUPUSDC
         const isArbitrum = params.fromChainId === params.toChainId && params.fromChainId === 42161;
         if (!isArbitrum) return false;
         
-        const rwaTokens = ['PAXG', 'USDY', 'SDAI'];
+        const rwaTokens = ['PAXG', 'USDY', 'SYRUPUSDC'];
         const isRwaSwap = 
             (params.fromToken === 'USDC' && rwaTokens.includes(params.toToken)) ||
             (rwaTokens.includes(params.fromToken) && params.toToken === 'USDC');
@@ -70,7 +70,7 @@ export class DirectRWAStrategy extends BaseSwapStrategy {
             'USDC': 1,
             'PAXG': 2650,  // Gold price
             'USDY': 1.05,  // Slightly above $1 due to accrued yield
-            'SDAI': 1.02,  // Slightly above $1 due to accrued yield
+            'SYRUPUSDC': 1.02,  // Slightly above $1 due to accrued yield
         };
 
         const fromTokenMeta = TOKEN_METADATA[params.fromToken] || { decimals: 18 };
@@ -131,7 +131,7 @@ export class DirectRWAStrategy extends BaseSwapStrategy {
         const rwaTokenNames: Record<string, string> = {
             'PAXG': 'Paxos Gold (PAXG)',
             'USDY': 'Ondo US Dollar Yield (USDY)',
-            'SDAI': 'Savings DAI (sDAI)'
+            'SYRUPUSDC': 'Syrup USDC'
         };
         
         if (params.fromToken === 'USDC' && rwaTokenNames[params.toToken]) {

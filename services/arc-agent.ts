@@ -829,12 +829,12 @@ export class ArcAgent {
     1. If inflation data is high (>4%), prioritize PAXG (gold hedge) or USDY (treasury yield) on Arbitrum
     2. If macro sentiment is bearish, recommend PAXG (Gold) as safe haven
     3. For conservative yield seekers: USDY (~5% APY, auto-accruing, treasury-backed)
-    4. For DeFi-native users: sDAI (~4.5% APY, Maker/Sky protocol, instant liquidity)
+    4. For DeFi-native users: SYRUPUSDC (~4.5% APY, Morpho protocol, instant liquidity)
     5. Consider gas efficiency - if amount <$500, optimize for lower fees
     
     RWA DIFFERENTIATION:
     - USDY: Best for users wanting US Treasury yield without KYC. Auto-accruing, no claiming needed.
-    - sDAI: Best for users familiar with Maker/Sky. Rebasing yield, highly liquid.
+    - SYRUPUSDC: Best for users familiar with Morpho. Auto-compounding yield, highly liquid.
     - PAXG: Best for users wanting gold exposure. No yield, pure store of value.
     `}
     `;

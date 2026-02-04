@@ -6,6 +6,8 @@ interface MultichainPortfolioBreakdownProps {
 }
 
 // Network metadata for display
+const isDev = process.env.NODE_ENV === 'development';
+
 const NETWORK_INFO = {
     Celo: {
         color: "#FCFF52",
@@ -13,17 +15,19 @@ const NETWORK_INFO = {
         description: "Regional Stablecoins",
         regions: ["Africa", "LatAm", "Asia"]
     },
-    Arc: {
-        color: "#3B82F6",
-        icon: "⚡",
-        description: "Global Stablecoins",
-        regions: ["USA", "Europe"]
-    },
+    ...(isDev ? {
+        Arc: {
+            color: "#3B82F6",
+            icon: "⚡",
+            description: "Global Stablecoins",
+            regions: ["USA", "Europe"]
+        }
+    } : {}),
     Arbitrum: {
         color: "#D69E2E",
         icon: "🥇",
-        description: "Commodity Assets",
-        regions: ["Commodities"]
+        description: "Commodity Assets & Yield",
+        regions: ["Commodities", "USA", "Europe", "Global"]
     }
 };
 
@@ -33,16 +37,19 @@ export default function MultichainPortfolioBreakdown({
 }: MultichainPortfolioBreakdownProps) {
     // Calculate network allocations based on region data
     const networkAllocations = React.useMemo(() => {
-        const allocations = {
+        const allocations: Record<string, number> = {
             Celo: 0,
-            Arc: 0,
             Arbitrum: 0,
         };
+
+        if (isDev) {
+            allocations.Arc = 0;
+        }
 
         regionData.forEach(({ region, value }) => {
             if (NETWORK_INFO.Celo.regions.includes(region)) {
                 allocations.Celo += value;
-            } else if (NETWORK_INFO.Arc.regions.includes(region)) {
+            } else if (isDev && NETWORK_INFO.Arc?.regions.includes(region)) {
                 allocations.Arc += value;
             } else if (NETWORK_INFO.Arbitrum.regions.includes(region)) {
                 allocations.Arbitrum += value;

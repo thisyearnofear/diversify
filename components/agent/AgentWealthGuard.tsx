@@ -4,6 +4,7 @@ import { useWealthProtectionAgent } from '../../hooks/use-wealth-protection-agen
 import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 import { useInflationData } from '../../hooks/use-inflation-data';
+import { useAppState } from '../../context/AppStateContext';
 import VoiceButton from '../ui/VoiceButton';
 import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
 import type { RegionalInflationData } from '../../hooks/use-inflation-data';
@@ -45,8 +46,8 @@ export default function AgentWealthGuard({
     } = useWealthProtectionAgent();
 
     const { inflationData: liveInflationData } = useInflationData();
-
     const { showToast } = useToast();
+    const { startTour, dismissTour, isTourDismissed } = useAppState();
 
     // Initialize agent on mount
     useEffect(() => {
@@ -222,6 +223,42 @@ export default function AgentWealthGuard({
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                                     </svg>
                                 </button>
+                            )}
+
+                            {/* Guided Tour Recommendation (embedded mode) */}
+                            {advice.guidedTour && !isTourDismissed(advice.guidedTour.tourId) && (
+                                <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
+                                    <div className="flex items-start gap-2 mb-2">
+                                        <span className="text-lg">🎯</span>
+                                        <div className="flex-1">
+                                            <h4 className="text-xs font-bold text-indigo-900">{advice.guidedTour.title}</h4>
+                                            <p className="text-[10px] text-indigo-700 mt-1">{advice.guidedTour.description}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-[10px] text-indigo-600">💰 {advice.guidedTour.estimatedBenefit}</span>
+                                        <span className="text-[10px] text-indigo-500">{advice.guidedTour.steps.length} steps</span>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                const tour = advice.guidedTour!;
+                                                const firstStep = tour.steps[0];
+                                                startTour(tour.tourId, tour.steps.length, firstStep.tab, firstStep.section);
+                                                showToast(`Starting ${tour.title}`, 'info');
+                                            }}
+                                            className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"
+                                        >
+                                            Start Tour
+                                        </button>
+                                        <button
+                                            onClick={() => dismissTour(advice.guidedTour!.tourId)}
+                                            className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold"
+                                        >
+                                            Skip
+                                        </button>
+                                    </div>
+                                </div>
                             )}
 
                             {/* Onramp Recommendation (embedded mode) */}

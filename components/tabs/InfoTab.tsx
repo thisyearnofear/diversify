@@ -94,68 +94,113 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
           </ol>
         </CollapsibleSection>
 
-        {/* Available Tokens */}
-        <CollapsibleSection
-          title={`Available Tokens (${networkName})`}
-          icon={<span>🪙</span>}
-          badge={<span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full">{displayTokens.length}</span>}
+        {/* Consolidated Network & Wallet Section */}
+        <CollapsibleSection 
+          title="Network & Wallet" 
+          icon={<span>🌐</span>}
+          badge={address && <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">Connected</span>}
         >
-          <div className="grid grid-cols-3 gap-2">
-            {displayTokens.map((token) => (
-              <div
-                key={token.symbol}
-                className="p-2 rounded-lg border text-center bg-white dark:bg-gray-800"
-                style={{ borderColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] || "#e5e7eb" }}
-              >
-                <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{token.symbol}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{token.region}</div>
-              </div>
-            ))}
-          </div>
-        </CollapsibleSection>
-
-        {/* Supported Networks */}
-        <CollapsibleSection title="Supported Networks" icon={<span>🔗</span>}>
-          <div className="space-y-2">
-            {[
-              { name: "Celo", icon: "🌍", status: "Production", color: "green" },
-              { name: "Arbitrum", icon: "🔷", status: "Production", color: "blue" },
-              ...(isDev ? [{ name: "Arc Testnet", icon: "⚡", status: "Coming 2026", color: "purple" }] : []),
-            ].map((network) => (
-              <div key={network.name} className={`flex items-center justify-between p-2 bg-${network.color}-50 dark:bg-${network.color}-900/20 rounded-lg border border-${network.color}-200 dark:border-${network.color}-800`}>
-                <div className="flex items-center gap-2">
-                  <span>{network.icon}</span>
-                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{network.name}</span>
+          <div className="space-y-4">
+            {/* Current Network & Wallet Info */}
+            {address ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2">
+                    <span>{isArbitrum ? "🔷" : isCelo ? "🌍" : "⚡"}</span>
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{networkName}</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">Current Network</div>
+                    </div>
+                  </div>
+                  {isMiniPay && (
+                    <span className="text-xs bg-green-600 dark:bg-green-700 text-white px-2 py-0.5 rounded-full">
+                      MiniPay
+                    </span>
+                  )}
                 </div>
-                <span className={`text-xs bg-${network.color}-600 dark:bg-${network.color}-700 text-white px-2 py-0.5 rounded-full`}>
-                  {network.status}
-                </span>
+                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Wallet Address</span>
+                  <code className="text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 rounded border border-gray-200 dark:border-gray-600">{formatAddress(address)}</code>
+                </div>
               </div>
-            ))}
-          </div>
-        </CollapsibleSection>
+            ) : (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  💡 Connect your wallet to see available tokens on your network
+                </p>
+              </div>
+            )}
 
-        {/* Wallet Info - Only when connected */}
-        {address && (
-          <CollapsibleSection title="Wallet Info" icon={<span>👛</span>}>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Address</span>
-                <code className="text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 rounded border border-gray-200 dark:border-gray-600">{formatAddress(address)}</code>
+            {/* Available Tokens on Current Network */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                  Available Tokens {address && `(${displayTokens.length})`}
+                </h4>
               </div>
-              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Network</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{networkName}</span>
-              </div>
-              <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <span className="text-sm text-gray-600 dark:text-gray-400">MiniPay</span>
-                <span className={`text-sm font-medium ${isMiniPay ? "text-green-600 dark:text-green-400" : "text-gray-500 dark:text-gray-400"}`}>
-                  {isMiniPay ? "✓ Detected" : "Not Detected"}
-                </span>
+              <div className="grid grid-cols-3 gap-2">
+                {displayTokens.map((token) => (
+                  <div
+                    key={token.symbol}
+                    className="p-2 rounded-lg border text-center bg-white dark:bg-gray-800"
+                    style={{ borderColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] || "#e5e7eb" }}
+                  >
+                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{token.symbol}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{token.region}</div>
+                  </div>
+                ))}
               </div>
             </div>
-          </CollapsibleSection>
-        )}
+
+            {/* Supported Networks */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                All Supported Networks
+              </h4>
+              <div className="space-y-2">
+                {[
+                  { name: "Celo", icon: "🌍", status: "Production", color: "green", tokens: "13+ Stablecoins" },
+                  { name: "Arbitrum", icon: "🔷", status: "Production", color: "blue", tokens: "4 RWA Tokens" },
+                  ...(isDev ? [{ name: "Arc Testnet", icon: "⚡", status: "Coming 2026", color: "purple", tokens: "USDC, EURC" }] : []),
+                ].map((network) => {
+                  const isCurrentNetwork = 
+                    (network.name === "Celo" && isCelo) || 
+                    (network.name === "Arbitrum" && isArbitrum) ||
+                    (network.name === "Arc Testnet" && !isCelo && !isArbitrum);
+                  
+                  return (
+                    <div 
+                      key={network.name} 
+                      className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
+                        isCurrentNetwork 
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 shadow-sm' 
+                          : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>{network.icon}</span>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1">
+                            {network.name}
+                            {isCurrentNetwork && <span className="text-xs text-blue-600 dark:text-blue-400">✓</span>}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">{network.tokens}</div>
+                        </div>
+                      </div>
+                      <span className={`text-xs ${
+                        network.status === "Production" 
+                          ? "bg-green-600 dark:bg-green-700" 
+                          : "bg-purple-600 dark:bg-purple-700"
+                      } text-white px-2 py-0.5 rounded-full`}>
+                        {network.status}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </CollapsibleSection>
       </div>
     </div>
   );

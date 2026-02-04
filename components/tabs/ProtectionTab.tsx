@@ -118,22 +118,22 @@ const RWA_ASSETS = [
     yieldTooltip: "PAXG tracks the price of physical gold. No yield—it's a store of value that protects against currency debasement and inflation over time.",
   },
   {
-    symbol: "SDAI",
+    symbol: "SYRUPUSDC",
     type: "Stable Yield",
-    label: "Savings DAI",
+    label: "Syrup USDC",
     description:
-      "Permissionless yield-bearing stablecoin from Maker/Sky. Rebasing yield on DAI collateral.",
+      "Yield-bearing USDC from Syrup Finance powered by Morpho. Earn passive yield on your USDC holdings.",
     benefits: [
       "~4.5% APY",
-      "Fully permissionless",
-      "Instant liquidity"
+      "Morpho-powered lending",
+      "Auto-compounding"
     ],
-    gradient: "from-yellow-500 to-amber-600",
-    icon: "💰",
-    textColor: "text-yellow-700",
-    bgColor: "bg-yellow-100",
+    gradient: "from-purple-500 to-indigo-600",
+    icon: "🍯",
+    textColor: "text-purple-700",
+    bgColor: "bg-purple-100",
     expectedSlippage: "0.3%",
-    yieldTooltip: "Your sDAI balance increases automatically at ~4.5% APY from Maker's DAI Savings Rate. Just hold it—yield accrues every block with no action needed.",
+    yieldTooltip: "Your SYRUPUSDC balance increases automatically at ~4.5% APY from Morpho lending markets. Just hold it—yield accrues automatically with no action needed.",
   },
 ];
 

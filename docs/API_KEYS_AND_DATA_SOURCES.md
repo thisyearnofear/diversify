@@ -229,13 +229,13 @@ Most providers are responsive and can help with setup questions.
 
 ### Arbitrum RWA Options
 - **USDY (Ondo)**: ~5% APY, auto-accruing yield, US Treasury backed
-- **sDAI (Maker/Sky)**: ~4.5% APY, rebasing yield, DAI collateral
+- **SYRUPUSDC (Syrup/Morpho)**: ~4.5% APY, auto-compounding yield, USDC collateral
 - **PAXG (Paxos)**: 0% APY, gold-backed, inflation hedge
 
 ### RWA Selection Guidance
 - For "rwa_access" goal with inflation protection priority: Recommend PAXG (gold hedge)
 - For "rwa_access" goal with yield priority: Recommend USDY (5% treasury yield)
-- For conservative stable yield: Recommend sDAI (established Maker protocol)
+- For conservative stable yield: Recommend SYRUPUSDC (Morpho protocol)
 - All RWAs are on Arbitrum with deep DEX liquidity via Uniswap V3
 
 ### Integration Strategies

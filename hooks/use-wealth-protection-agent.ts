@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import { GeminiService } from '../utils/api-services';
 import { ArcAgent } from '../services/arc-agent';
-import { analyzePortfolio, type PortfolioAnalysis } from '../utils/portfolio-analysis';
+import { analyzePortfolio, detectGuidedTour, type PortfolioAnalysis } from '../utils/portfolio-analysis';
 import type { AggregatedPortfolio } from './use-stablecoin-balances';
 import type { RegionalInflationData } from './use-inflation-data';
 
 export interface AgentAdvice {
-    action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE' | 'BUY' | 'SELL';
+    action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE' | 'BUY' | 'SELL' | 'GUIDED_TOUR';
     targetToken?: string;
     targetAllocation?: Array<{ symbol: string; percentage: number; reason: string }>;
     targetNetwork?: string;
@@ -43,6 +43,21 @@ export interface AgentAdvice {
             inflationDelta: number;
             annualSavings: number;
         } | null;
+    };
+    // ENHANCEMENT: Guided tour recommendation
+    guidedTour?: {
+        tourId: string;
+        title: string;
+        description: string;
+        estimatedBenefit: string;
+        steps: Array<{
+            tab: string;
+            section?: string;
+            message: string;
+            action?: 'highlight' | 'prefill' | 'scroll';
+            prefill?: { fromToken?: string; toToken?: string; amount?: string };
+        }>;
+        priority: 'HIGH' | 'MEDIUM' | 'LOW';
     };
     _meta?: {
         modelUsed: string;
@@ -99,6 +114,7 @@ export function useWealthProtectionAgent() {
         transcription: false,
         speech: false
     });
+    const [visitedTabs] = useState<string[]>(['overview', 'info']); // Track for tour detection
     const [config, setConfig] = useState<AgentConfig>({
         riskTolerance: 'Balanced',
         goal: 'Inflation Hedge',
@@ -186,6 +202,10 @@ export function useWealthProtectionAgent() {
             setPortfolioAnalysis(analysis);
             setAnalysisProgress(30);
 
+            // ENHANCEMENT: Detect if user would benefit from guided tour
+            const tourRecommendation = detectGuidedTour(analysis, config.userGoal, visitedTabs);
+            setAnalysisProgress(35);
+
             // Step 2: Send to AI with structured analysis
             setThinkingStep("🧠 Generating personalized recommendations...");
 
@@ -208,7 +228,7 @@ export function useWealthProtectionAgent() {
             if (!response.ok) throw new Error('Analysis API failed');
             const result = await response.json();
 
-            // Merge AI response with local analysis for complete data
+            // Merge AI response with local analysis and tour recommendation
             setAdvice({
                 ...result,
                 portfolioAnalysis: {
@@ -222,6 +242,8 @@ export function useWealthProtectionAgent() {
                     lossPeriod: '3 years'
                 },
                 expectedSavings: analysis.projections.optimizedPath.purchasingPowerPreserved,
+                // ENHANCEMENT: Include tour recommendation if detected
+                guidedTour: tourRecommendation || undefined,
             });
 
             setAnalysisProgress(100);

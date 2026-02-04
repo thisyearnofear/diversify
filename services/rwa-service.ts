@@ -48,8 +48,8 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
         },
         {
             address: '0x83F20F44975D03b1b09e64809B757c47f942BEeA',
-            symbol: 'sDAI',
-            name: 'Savings DAI',
+            symbol: 'SYRUPUSDC',
+            name: 'Syrup USDC',
             type: 'stable_yield',
             apy: 4.5,
             tvl: 800000000, // ~$800M TVL across chains

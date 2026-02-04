@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Head from "next/head";
 import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
@@ -22,7 +23,7 @@ import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTu
 import ThemeToggle from "../components/ui/ThemeToggle";
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab } = useAppState();
+  const { activeTab, setActiveTab, guidedTour, nextTourStep, exitTour } = useAppState();
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -97,7 +98,7 @@ export default function DiversiFiPage() {
   }, [detectedRegion, isRegionLoading]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 transition-colors">
+    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 transition-colors relative">
       <Head>
         <title>DiversiFi - Protect Your Savings</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -178,6 +179,45 @@ export default function DiversiFiPage() {
         <div className="sticky top-0 z-40 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
           <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
+
+        {/* Guided Tour Progress Indicator (ENHANCEMENT: minimal tour UI) */}
+        <AnimatePresence>
+          {guidedTour && (
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              className="mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-xl shadow-lg"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-lg">🎯</span>
+                  <div className="flex flex-col">
+                    <span className="text-xs font-bold">
+                      Tour Step {guidedTour.currentStep + 1}/{guidedTour.totalSteps}
+                    </span>
+                    <div className="flex gap-1 mt-1">
+                      {Array.from({ length: guidedTour.totalSteps }).map((_, i) => (
+                        <div
+                          key={i}
+                          className={`h-1 w-4 rounded-full ${
+                            i <= guidedTour.currentStep ? 'bg-white' : 'bg-white/30'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={exitTour}
+                  className="text-white/80 hover:text-white text-sm font-bold px-2"
+                >
+                  ✕
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="space-y-4 pt-2">
           <ErrorBoundary>

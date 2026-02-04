@@ -290,7 +290,7 @@ export default function ProtectionAnalysis({
                         {!yieldSummary.isNetPositive && yieldSummary.yieldingValue === 0 && (
                             <div className="mt-3 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                                 <p className="text-[10px] text-amber-700 dark:text-amber-300">
-                                    <span className="font-bold">💡 Tip:</span> Your holdings are not earning yield. Consider USDY (5% APY) or sDAI (4.5% APY) on Arbitrum.
+                                    <span className="font-bold">💡 Tip:</span> Your holdings are not earning yield. Consider USDY (5% APY) or SYRUPUSDC (4.5% APY) on Arbitrum.
                                 </p>
                             </div>
                         )}

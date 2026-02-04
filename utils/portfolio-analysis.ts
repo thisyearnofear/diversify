@@ -165,7 +165,7 @@ export function getTokenInflationRate(
     'CREAL': 'LatAm', 'CCOP': 'LatAm',
     'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa', 'CNGN': 'Africa',
     'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
-    'PAXG': 'Global', 'SDAI': 'Global',  // sDAI = global stable yield, not region-specific
+    'PAXG': 'Global', 'SYRUPUSDC': 'Global',  // SYRUPUSDC = global stable yield, not region-specific
   };
   
   const region = tokenRegionMap[normalizedSymbol];
@@ -472,7 +472,7 @@ function getAllocationReason(
       'Global': 'Commodity hedge with gold',
     },
     rwa_access: {
-      'Global': 'Primary gold (PAXG) or yield (sDAI) for wealth preservation',
+      'Global': 'Primary gold (PAXG) or yield (SYRUPUSDC) for wealth preservation',
       'Europe': 'Stable European exposure',
       'USA': 'USD Treasury yield (USDY) for stable returns',
       'Asia': 'Asian market diversification',
@@ -627,6 +627,162 @@ export function analyzePortfolio(
 }
 
 // ============================================================================
+// GUIDED TOUR DETECTION
+// ============================================================================
+
+export interface GuidedTourStep {
+  tab: string;
+  section?: string;
+  message: string;
+  action?: 'highlight' | 'prefill' | 'scroll';
+  prefill?: {
+    fromToken?: string;
+    toToken?: string;
+    amount?: string;
+  };
+}
+
+export interface GuidedTourRecommendation {
+  tourId: string;
+  title: string;
+  description: string;
+  estimatedBenefit: string;
+  steps: GuidedTourStep[];
+  priority: 'HIGH' | 'MEDIUM' | 'LOW';
+}
+
+/**
+ * Detect if user would benefit from a guided tour
+ * ENHANCEMENT: Extends portfolio analysis with tour recommendations
+ */
+export function detectGuidedTour(
+  analysis: PortfolioAnalysis,
+  userGoal?: string,
+  visitedTabs?: string[]
+): GuidedTourRecommendation | null {
+  const visited = new Set(visitedTabs || ['overview', 'info']);
+  const hasVisitedProtect = visited.has('protect');
+  const hasVisitedStrategies = visited.has('strategies');
+  
+  // Tour 1: High Inflation Fighter
+  if (analysis.weightedInflationRisk > 5 && !hasVisitedProtect) {
+    const topOpp = analysis.rebalancingOpportunities[0];
+    return {
+      tourId: 'inflation_fighter',
+      title: 'High Inflation Protection',
+      description: `Your portfolio faces ${analysis.weightedInflationRisk.toFixed(1)}% inflation risk. Let me show you protection strategies.`,
+      estimatedBenefit: topOpp ? `Save $${topOpp.annualSavings.toFixed(0)}/year` : 'Reduce inflation exposure',
+      priority: 'HIGH',
+      steps: [
+        {
+          tab: 'protect',
+          section: 'regional-data',
+          message: 'See how your region compares to lower-inflation alternatives',
+          action: 'scroll',
+        },
+        {
+          tab: 'protect',
+          section: 'rwa-cards',
+          message: 'Real-world assets like gold and treasuries protect against inflation',
+          action: 'highlight',
+        },
+        {
+          tab: 'swap',
+          message: topOpp ? `Ready to protect? Swap ${topOpp.fromToken} → ${topOpp.toToken}` : 'Execute your protection strategy',
+          action: 'prefill',
+          prefill: topOpp ? {
+            fromToken: topOpp.fromToken,
+            toToken: topOpp.toToken,
+            amount: topOpp.suggestedAmount.toFixed(2),
+          } : undefined,
+        },
+      ],
+    };
+  }
+  
+  // Tour 2: Goal-Based Strategy Explorer
+  if (userGoal === 'exploring' && analysis.totalValue > 100 && !hasVisitedStrategies) {
+    return {
+      tourId: 'goal_explorer',
+      title: 'Discover Goal-Based Strategies',
+      description: 'Save for education, travel, or business with inflation-protected strategies.',
+      estimatedBenefit: 'Structured savings with protection',
+      priority: 'MEDIUM',
+      steps: [
+        {
+          tab: 'protect',
+          section: 'strategies',
+          message: 'Choose a goal that matches your financial plans',
+          action: 'scroll',
+        },
+        {
+          tab: 'protect',
+          section: 'strategies',
+          message: 'See recommended allocations and monthly targets for your goal',
+          action: 'highlight',
+        },
+      ],
+    };
+  }
+  
+  // Tour 3: Diversification Guide
+  if (analysis.diversificationScore < 40 && analysis.totalValue > 50) {
+    const missingRegion = analysis.missingRegions[0];
+    return {
+      tourId: 'diversification_guide',
+      title: 'Improve Diversification',
+      description: `Your diversification score is ${analysis.diversificationScore}/100. Spread risk across regions.`,
+      estimatedBenefit: 'Reduce concentration risk',
+      priority: 'MEDIUM',
+      steps: [
+        {
+          tab: 'protect',
+          section: 'regional-recommendations',
+          message: 'Explore regional diversification patterns used by others',
+          action: 'scroll',
+        },
+        {
+          tab: 'swap',
+          message: missingRegion ? `Start by adding exposure to ${missingRegion}` : 'Begin diversifying',
+          action: 'prefill',
+        },
+      ],
+    };
+  }
+  
+  // Tour 4: RWA Discovery (for users with no yield)
+  const hasYieldTokens = analysis.tokens.some(t => ['USDY', 'SYRUPUSDC', 'PAXG'].includes(t.symbol));
+  if (!hasYieldTokens && analysis.totalValue > 200 && !hasVisitedProtect) {
+    return {
+      tourId: 'rwa_discovery',
+      title: 'Discover Real-World Assets',
+      description: 'Your stablecoins earn 0% yield. Explore RWAs earning 4-5% APY.',
+      estimatedBenefit: `Potential ${(analysis.totalValue * 0.05).toFixed(0)} USDC/year`,
+      priority: 'HIGH',
+      steps: [
+        {
+          tab: 'protect',
+          section: 'rwa-cards',
+          message: 'Explore USDY (5% APY) and SYRUPUSDC (4.5% APY) - no KYC needed',
+          action: 'highlight',
+        },
+        {
+          tab: 'swap',
+          message: 'Ready to earn yield? Start with a small allocation',
+          action: 'prefill',
+          prefill: {
+            toToken: 'USDY',
+            amount: Math.min(100, analysis.totalValue * 0.25).toFixed(2),
+          },
+        },
+      ],
+    };
+  }
+  
+  return null;
+}
+
+// ============================================================================
 // EXPORT HELPERS
 // ============================================================================
 
@@ -639,4 +795,5 @@ export const PortfolioAnalysisUtils = {
   calculateProjections,
   generateRebalancingOpportunities,
   generateTargetAllocations,
+  detectGuidedTour,
 };
