@@ -185,7 +185,7 @@ export async function generateChatCompletion(
   preferredProvider: 'venice' | 'gemini' | 'auto' = 'auto'
 ): Promise<ChatCompletionResult> {
   const cacheKey = generateCacheKey('chat', options);
-  
+
   // Use getOrFetch for caching with automatic fetch on miss
   const result = await unifiedCache.getOrFetch(
     cacheKey,
@@ -233,7 +233,7 @@ async function callVeniceChat(options: ChatCompletionOptions): Promise<ChatCompl
   if (!client) throw new Error('Venice client not initialized');
 
   const model = options.model || VENICE_MODELS.flagship;
-  
+
   const completion = await client.chat.completions.create({
     model,
     messages: options.messages as any,
@@ -248,7 +248,7 @@ async function callVeniceChat(options: ChatCompletionOptions): Promise<ChatCompl
   });
 
   const message = completion.choices[0]?.message;
-  
+
   return {
     content: message?.content || '',
     model: completion.model,
@@ -290,7 +290,7 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
   });
 
   const response = await result.response;
-  
+
   return {
     content: response.text(),
     model: options.model || GEMINI_MODELS.flash,
@@ -312,7 +312,7 @@ export async function generateSpeech(
   preferredProvider: 'venice' | 'elevenlabs' | 'auto' = 'auto'
 ): Promise<TTSResult> {
   const cacheKey = generateCacheKey('tts', options);
-  
+
   // Use getOrFetch for caching with automatic fetch on miss
   const result = await unifiedCache.getOrFetch(
     cacheKey,
@@ -357,7 +357,7 @@ export async function generateSpeech(
 async function callVeniceTTS(options: TTSOptions): Promise<TTSResult> {
   const voice = options.voice || VENICE_VOICES.professional;
   const format = options.format || 'mp3';
-  
+
   const response = await fetch('https://api.venice.ai/api/v1/audio/speech', {
     method: 'POST',
     headers: {
@@ -379,7 +379,7 @@ async function callVeniceTTS(options: TTSOptions): Promise<TTSResult> {
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  
+
   return {
     audio: Buffer.from(arrayBuffer),
     provider: 'venice',
@@ -391,7 +391,7 @@ async function callVeniceTTS(options: TTSOptions): Promise<TTSResult> {
  */
 async function callElevenLabsTTS(options: TTSOptions): Promise<TTSResult> {
   const voiceId = DEFAULT_CONFIG.elevenLabsVoiceId || 'pNInz6obpg8ndclKuzWf';
-  
+
   const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: {
@@ -414,7 +414,7 @@ async function callElevenLabsTTS(options: TTSOptions): Promise<TTSResult> {
   }
 
   const arrayBuffer = await response.arrayBuffer();
-  
+
   return {
     audio: Buffer.from(arrayBuffer),
     provider: 'elevenlabs',
@@ -469,7 +469,7 @@ async function callOpenAITranscribe(filePath: string): Promise<string> {
   // Create stream and ensure it has a proper extension for Whisper
   // formidable temp files often lack extensions
   const fileStream = fs.createReadStream(filePath);
-  
+
   const transcription = await client.audio.transcriptions.create({
     file: fileStream,
     model: 'whisper-1',
@@ -482,15 +482,17 @@ async function callVeniceTranscribe(filePath: string): Promise<string> {
   const client = getVeniceClient();
   if (!client) throw new Error('Venice client not initialized');
 
+  // Venice API works better with streams, similar to OpenAI
   const fileStream = fs.createReadStream(filePath);
 
-  // Venice uses OpenAI-compatible API but requires different model name
   const transcription = await client.audio.transcriptions.create({
     file: fileStream,
-    model: 'openai/whisper-large-v3',
+    model: 'openai/whisper-large-v3', // Venice-specific model name
   });
 
   return transcription.text;
+}
+  }
 }
 
 // ============================================================================
@@ -583,11 +585,11 @@ function hashString(str: string): string {
 
 function extractCitations(content?: string): string[] | undefined {
   if (!content) return undefined;
-  
+
   // Extract URLs or citation markers like [1], [2]
   const citationRegex = /\[(\d+)\]|\(https?:\/\/[^\s)]+\)/g;
   const matches = content.match(citationRegex);
-  
+
   return matches || undefined;
 }
 
@@ -609,7 +611,7 @@ function buildWebSearchQuery(portfolioSummary: string, userGoal: string): string
 function parseWebEnrichedResponse(result: ChatCompletionResult): WebEnrichedAnalysis {
   // Parse the structured response from Venice
   // This is a simplified parser - could be enhanced with structured output
-  
+
   return {
     portfolioContext: result.content,
     webInsights: {
@@ -626,12 +628,12 @@ function extractGoldContext(content: string): WebEnrichedAnalysis['webInsights']
   // Extract gold price and context from text
   const priceMatch = content.match(/gold.*\$([\d,]+)/i);
   const ytdMatch = content.match(/(\d+)%.*YTD|year.*(\d+)%/i);
-  
+
   if (priceMatch) {
-    const momentum: 'bullish' | 'neutral' | 'bearish' = 
-      content.toLowerCase().includes('bullish') ? 'bullish' : 
-      content.toLowerCase().includes('bearish') ? 'bearish' : 'neutral';
-    
+    const momentum: 'bullish' | 'neutral' | 'bearish' =
+      content.toLowerCase().includes('bullish') ? 'bullish' :
+        content.toLowerCase().includes('bearish') ? 'bearish' : 'neutral';
+
     return {
       currentPrice: parseInt(priceMatch[1].replace(',', '')),
       ytdChange: parseInt(ytdMatch?.[1] || ytdMatch?.[2] || '0'),
@@ -729,7 +731,7 @@ export const AIService = {
   transcribe: transcribeAudio,
   analyzeWithWeb: generateWebEnrichedAnalysis,
   getStatus: getAIServiceStatus,
-  
+
   // Constants for consumers
   models: VENICE_MODELS,
   voices: VENICE_VOICES,
