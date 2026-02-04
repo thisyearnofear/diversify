@@ -32,6 +32,8 @@ export class UnifiedCacheService {
     this.startCleanupProcess();
   }
 
+  private pendingRequests = new Map<string, Promise<any>>();
+
   /**
    * Get data from cache or fetch if expired/missing
    */
@@ -48,7 +50,7 @@ export class UnifiedCacheService {
     if (!forceRefresh && cached && now - cached.timestamp < cached.ttl) {
       // Update last accessed time
       cached.lastAccessed = now;
-      
+
       return {
         data: cached.data,
         source: `${cached.source} (cached)`,
@@ -56,14 +58,33 @@ export class UnifiedCacheService {
       };
     }
 
+    // Check if there's already a pending request for this key
+    if (this.pendingRequests.has(key)) {
+      console.log(`[Cache] Coalescing request for key: ${key}`);
+      const data = await this.pendingRequests.get(key);
+      return {
+        data,
+        source: 'coalesced',
+        fromCache: false
+      };
+    }
+
     try {
+      // Create and track the fetch promise
+      const fetchPromise = (async () => {
+        const result = await fetchFn();
+        return result;
+      })();
+
+      this.pendingRequests.set(key, fetchPromise.then(r => r.data));
+
       // Fetch fresh data
-      const result = await fetchFn();
+      const result = await fetchPromise;
       const ttl = this.TTL_CONFIG[category];
-      
+
       // Store in cache
       this.set(key, result.data, ttl, result.source, result.etag);
-      
+
       return {
         data: result.data,
         source: result.source,
@@ -74,15 +95,17 @@ export class UnifiedCacheService {
       if (cached && now - cached.timestamp < cached.ttl * 3) {
         console.warn(`Serving stale cache for ${key} due to fetch error`);
         cached.lastAccessed = now;
-        
+
         return {
           data: cached.data,
           source: `${cached.source} (stale)`,
           fromCache: true
         };
       }
-      
+
       throw error;
+    } finally {
+      this.pendingRequests.delete(key);
     }
   }
 
@@ -115,7 +138,7 @@ export class UnifiedCacheService {
   ): Promise<T> {
     const result = await fetchFn();
     const ttl = this.TTL_CONFIG[category];
-    
+
     this.set(key, result.data, ttl, result.source, result.etag);
     return result.data;
   }
@@ -126,7 +149,7 @@ export class UnifiedCacheService {
   async warmCache(warmupFunctions: Array<() => Promise<void>>): Promise<void> {
     console.log('Warming up cache...');
     const startTime = Date.now();
-    
+
     await Promise.all(
       warmupFunctions.map(async (warmupFn, index) => {
         try {
@@ -137,7 +160,7 @@ export class UnifiedCacheService {
         }
       })
     );
-    
+
     console.log(`Cache warmup completed in ${Date.now() - startTime}ms`);
   }
 
@@ -183,7 +206,7 @@ export class UnifiedCacheService {
    */
   clear(pattern?: string): void {
     if (pattern) {
-      const keysToDelete = Array.from(this.cache.keys()).filter(key => 
+      const keysToDelete = Array.from(this.cache.keys()).filter(key =>
         key.includes(pattern)
       );
       keysToDelete.forEach(key => this.cache.delete(key));
@@ -198,7 +221,7 @@ export class UnifiedCacheService {
   private evictLeastRecentlyUsed(): void {
     const entries = Array.from(this.cache.entries());
     entries.sort(([, a], [, b]) => a.lastAccessed - b.lastAccessed);
-    
+
     // Remove 10% of least recently used entries
     const removeCount = Math.ceil(entries.length * 0.1);
     for (let i = 0; i < removeCount; i++) {
@@ -215,14 +238,14 @@ export class UnifiedCacheService {
   private cleanupExpiredEntries(): void {
     const now = Date.now();
     let removedCount = 0;
-    
+
     this.cache.forEach((entry, key) => {
       if (now - entry.timestamp > entry.ttl) {
         this.cache.delete(key);
         removedCount++;
       }
     });
-    
+
     if (removedCount > 0) {
       console.log(`Cleaned up ${removedCount} expired cache entries`);
     }

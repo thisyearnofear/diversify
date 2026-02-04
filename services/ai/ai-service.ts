@@ -23,17 +23,25 @@ import fs from 'fs';
  * Handles markdown code blocks, preamble, and postscript text
  */
 function cleanJsonResponse(text: string): string {
-  // If no backticks, just trim
-  if (!text.includes('```')) return text.trim();
+  if (!text) return '';
 
-  // Extract content between ```json and ``` or just ``` and ```
-  const match = text.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
-  if (match && match[1]) {
-    return match[1].trim();
+  // 1. Try to find JSON block with backticks
+  const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (jsonBlockMatch && jsonBlockMatch[1]) {
+    const cleaned = jsonBlockMatch[1].trim();
+    if (cleaned) return cleaned;
   }
 
-  // Fallback: strip the first and last backtick lines if we can't match precisely
-  return text.replace(/^```(?:json)?\s*|```\s*$/g, '').trim();
+  // 2. If no backticks, try to find the first '{' and last '}'
+  const startBrace = text.indexOf('{');
+  const endBrace = text.lastIndexOf('}');
+
+  if (startBrace !== -1 && endBrace !== -1 && endBrace > startBrace) {
+    return text.substring(startBrace, endBrace + 1).trim();
+  }
+
+  // 3. Last resort: just trim and pray
+  return text.trim();
 }
 
 // ============================================================================
@@ -118,8 +126,8 @@ const VENICE_MODELS = {
 };
 
 const GEMINI_MODELS = {
-  flash: 'gemini-3-flash-preview',
-  pro: 'gemini-3-pro-preview',
+  flash: 'gemini-2.0-flash-exp',
+  pro: 'gemini-1.5-pro-latest',
 };
 
 // TTS voice mappings
@@ -770,7 +778,16 @@ function extractMacroContext(_content: string) {
 // STATUS CHECKING
 // ============================================================================
 
+// Simple server-side cache for status
+let statusCache: { data: AIServiceStatus; timestamp: number } | null = null;
+const STATUS_CACHE_TTL = 1000 * 60 * 5; // 5 minutes
+
 export async function getAIServiceStatus(): Promise<AIServiceStatus> {
+  // Check cache
+  if (statusCache && Date.now() - statusCache.timestamp < STATUS_CACHE_TTL) {
+    return statusCache.data;
+  }
+
   const status: AIServiceStatus = {
     venice: { available: false },
     gemini: { available: false },
@@ -829,6 +846,7 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
     }
   }
 
+  statusCache = { data: status, timestamp: Date.now() };
   return status;
 }
 

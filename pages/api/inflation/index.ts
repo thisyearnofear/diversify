@@ -14,6 +14,16 @@ import {
 const IMF_URL = 'https://www.imf.org/external/datamapper/api/v1/PCPIPCH';
 const WORLD_BANK_URL = 'https://api.worldbank.org/v2';
 
+// Simple server-side cache to prevent hitting IMF too often
+// This persists as long as the lambda is warm
+let serverCache: {
+  data: any;
+  timestamp: number;
+  countries: string;
+} | null = null;
+
+const CACHE_TTL = 1000 * 60 * 30; // 30 minutes
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -23,6 +33,16 @@ export default async function handler(
   }
 
   const { countries } = req.query;
+  const countriesStr = countries as string || '';
+
+  // Check cache
+  if (serverCache &&
+    Date.now() - serverCache.timestamp < CACHE_TTL &&
+    serverCache.countries === countriesStr) {
+    console.log('[Inflation API] Serving from server-side cache');
+    return res.status(200).json(serverCache.data);
+  }
+
   const targetCountries = countries
     ? (countries as string).split(',').filter(Boolean)
     : PRIORITY_COUNTRIES;
@@ -32,6 +52,7 @@ export default async function handler(
     const imfData = await fetchFromIMF(targetCountries);
     if (imfData.countries.length > 0) {
       console.log(`[Inflation API] IMF returned ${imfData.countries.length} countries`);
+      serverCache = { data: imfData, timestamp: Date.now(), countries: countriesStr };
       return res.status(200).json(imfData);
     }
   } catch (error) {
@@ -48,6 +69,7 @@ export default async function handler(
     const wbData = await fetchFromWorldBank(targetCountries);
     if (wbData.countries.length > 0) {
       console.log(`[Inflation API] World Bank returned ${wbData.countries.length} countries`);
+      serverCache = { data: wbData, timestamp: Date.now(), countries: countriesStr };
       return res.status(200).json(wbData);
     }
   } catch (error) {
@@ -71,11 +93,14 @@ export default async function handler(
     }))
   );
 
-  res.status(200).json({
+  const fallbackData = {
     countries: allCountries,
     source: 'fallback',
     lastUpdated: new Date().toISOString()
-  });
+  };
+
+  serverCache = { data: fallbackData, timestamp: Date.now(), countries: countriesStr };
+  res.status(200).json(fallbackData);
 }
 
 async function fetchFromIMF(countryCodes: string[]) {

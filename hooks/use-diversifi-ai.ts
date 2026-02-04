@@ -22,6 +22,7 @@ import { useAIConversationOptional } from '../context/AIConversationContext';
 
 export interface AIAdvice {
   action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE' | 'BUY' | 'SELL' | 'GUIDED_TOUR';
+  oneLiner: string; // Punchy, single-line summary for mobile/Farcaster
   targetToken?: string;
   token?: string; // Alias for targetToken (compatibility)
   targetAllocation?: Array<{ symbol: string; percentage: number; reason: string }>;

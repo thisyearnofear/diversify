@@ -85,7 +85,15 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
 
                     {/* AI Reasoning */}
                     <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
-                        <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-relaxed italic">
+                        <div className="mb-2">
+                            <h5 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">
+                                Strategy
+                            </h5>
+                            <p className="text-sm font-black text-gray-900 dark:text-white leading-tight">
+                                {advice.oneLiner}
+                            </p>
+                        </div>
+                        <p className="text-xs text-gray-700 dark:text-gray-400 font-medium leading-relaxed italic">
                             &quot;{advice.reasoning}&quot;
                         </p>
 

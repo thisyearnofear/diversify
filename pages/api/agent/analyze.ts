@@ -256,6 +256,7 @@ TRANSPARENCY REQUIREMENTS:
             REQUIRED OUTPUT (JSON):
             {
                 "action": "SWAP|HOLD|BRIDGE|REBALANCE|BUY|SELL",
+                "oneLiner": "Punchy 6-8 word summary (e.g., 'Swap KESm for 5% USDY yield')",
                 "targetToken": "primary recommended token",
                 "targetAllocation": [{"symbol": "TOKEN", "percentage": 30, "reason": "..."}],
                 "reasoning": "2-3 sentences explaining the data-driven recommendation",
@@ -341,13 +342,34 @@ TRANSPARENCY REQUIREMENTS:
                 { role: 'user' as const, content: userPrompt }
             ],
             responseMimeType: 'application/json' as const,
+            maxTokens: 4096, // Increased to prevent truncation of complex JSON
         };
 
         const result = await generateChatCompletion(chatOptions);
-        const parsed = JSON.parse(result.content);
+
+        if (!result.content) {
+            console.error('[Analyze API] AI returned empty content');
+            return res.status(500).json({
+                error: 'AI returned empty response',
+                _meta: { provider: result.provider, model: result.model }
+            });
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(result.content);
+        } catch (parseError) {
+            console.error('[Analyze API] JSON parse error:', parseError);
+            console.error('[Analyze API] Raw content:', result.content);
+            return res.status(500).json({
+                error: 'Failed to parse AI response as JSON',
+                rawContent: process.env.NODE_ENV === 'development' ? result.content : undefined,
+                _meta: { provider: result.provider, model: result.model }
+            });
+        }
 
         return res.status(200).json({
-            ...parsed,
+            advice: parsed,
             _meta: {
                 modelUsed: result.model,
                 provider: result.provider
