@@ -25,7 +25,7 @@ export default function WealthJourneyWidget({
   let stage = 'accumulation';
   let title = 'Step 1: Accumulation';
   let description = 'Start by converting your local currency into digital dollars (stablecoins) to stop inflation loss.';
-  let cta = 'Deposit cUSD';
+  let cta = 'Deposit USDm';
   let action = () => setActiveTab('swap');
   let icon = '🛡️';
   let progress = 33;

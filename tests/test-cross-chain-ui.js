@@ -35,7 +35,7 @@ function testCrossChainUI() {
     const testCases = [
         { token: 'USDC', chain: 42161, expected: true },
         { token: 'USDC', chain: 42220, expected: false },
-        { token: 'CUSD', chain: 42220, expected: true },
+        { token: 'USDm', chain: 42220, expected: true },
         { token: 'CUSD', chain: 42161, expected: false },
         { token: 'PAXG', chain: 42161, expected: true },
         { token: 'PAXG', chain: 42220, expected: false },

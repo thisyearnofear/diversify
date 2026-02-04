@@ -52,7 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             testAnalysis,
             'test@example.com',
             '0x742d35Cc6634C0532925a3b8D4C9db96590c6C87',
-            { balance: 1000, holdings: ['CUSD'] }
+            { balance: 1000, holdings: ['USDm'] }
         );
 
         // Get user's Zaps for additional info

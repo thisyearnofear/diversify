@@ -36,10 +36,10 @@ export const ALFAJORES_BROKER_ADDRESS = BROKER_ADDRESSES.ALFAJORES;
 
 // Cache keys
 export const CACHE_KEYS = {
-  EXCHANGE_RATE_CREAL: 'mento-creal-exchange-rate-cache',
-  EXCHANGE_RATE_CKES: 'mento-ckes-exchange-rate-cache',
-  EXCHANGE_RATE_CCOP: 'mento-ccop-exchange-rate-cache',
-  EXCHANGE_RATE_PUSO: 'mento-puso-exchange-rate-cache',
+  EXCHANGE_RATE_BRLM: 'mento-brlm-exchange-rate-cache',
+  EXCHANGE_RATE_KESM: 'mento-kesm-exchange-rate-cache',
+  EXCHANGE_RATE_COPM: 'mento-copm-exchange-rate-cache',
+  EXCHANGE_RATE_PHPM: 'mento-phpm-exchange-rate-cache',
 };
 
 /**
@@ -114,7 +114,7 @@ export const getMentoExchangeRate = async (
   try {
     // Get token addresses
     const tokenAddress = CELO_TOKENS[tokenSymbol as keyof typeof CELO_TOKENS];
-    const cusdAddress = CELO_TOKENS.USDm; // Using USDm as the base stablecoin
+    const routingTokenAddress = CELO_TOKENS.USDm; // Using USDm as the base stablecoin
 
     if (!tokenAddress) {
       console.warn(`Token address not found for ${tokenSymbol}`);
@@ -136,7 +136,7 @@ export const getMentoExchangeRate = async (
     // Get exchange providers
     const exchangeProviders = await brokerContract.getExchangeProviders();
 
-    // Find the exchange for cUSD/token
+    // Find the exchange for USDm/token
     let exchangeProvider = '';
     let exchangeId = '';
 
@@ -155,7 +155,7 @@ export const getMentoExchangeRate = async (
         const assets = exchange.assets.map((a: string) => a.toLowerCase());
 
         if (
-          assets.includes(cusdAddress.toLowerCase()) &&
+          assets.includes(routingTokenAddress.toLowerCase()) &&
           assets.includes(tokenAddress.toLowerCase())
         ) {
           exchangeProvider = providerAddress;
@@ -168,7 +168,7 @@ export const getMentoExchangeRate = async (
     }
 
     if (!exchangeProvider || !exchangeId) {
-      console.warn(`No exchange found for cUSD/${tokenSymbol}`);
+      console.warn(`No exchange found for USDm/${tokenSymbol}`);
       return defaultRate;
     }
 
@@ -179,12 +179,12 @@ export const getMentoExchangeRate = async (
       provider,
     );
 
-    // Get quote for 1 cUSD
+    // Get quote for 1 USDm
     const oneUSD = ethers.utils.parseUnits('1', 18);
     const amountOut = await brokerRateContract.getAmountOut(
       exchangeProvider,
       exchangeId,
-      cusdAddress,
+      routingTokenAddress,
       tokenAddress,
       oneUSD,
     );
@@ -243,21 +243,21 @@ export const handleMentoError = (error: unknown, context: string): string => {
     if (errorMsg.toLowerCase().includes('alfajores') || errorMsg.includes('44787')) {
       if (errorMsg.includes('Two-step swap on Alfajores failed')) {
         return 'Attempting a two-step swap via CELO failed. Falling back to simulated swap for demonstration purposes.';
-      } else if (errorMsg.includes('CUSD/CELO on Alfajores') || errorMsg.includes('CELO/CEUR on Alfajores')) {
+      } else if (errorMsg.includes('USDm/CELO on Alfajores') || errorMsg.includes('CELO/EURm on Alfajores')) {
         return 'Attempting a two-step swap via CELO. If this fails, the swap will be simulated for demonstration purposes.';
-      } else if (errorMsg.includes('CUSD/CEUR') || errorMsg.includes('CEUR/CUSD')) {
-        return 'Attempting to swap CUSD/CEUR on Alfajores using a two-step process via CELO. If this fails, the swap will be simulated.';
-      } else if (errorMsg.includes('CUSD/CREAL') || errorMsg.includes('CREAL/CUSD')) {
-        return 'Attempting to swap CUSD/CREAL on Alfajores using a two-step process via CELO. If this fails, the swap will be simulated.';
+      } else if (errorMsg.includes('USDm/EURm') || errorMsg.includes('EURm/USDm')) {
+        return 'Attempting to swap USDm/EURm on Alfajores using a two-step process via CELO. If this fails, the swap will be simulated.';
+      } else if (errorMsg.includes('USDm/BRLm') || errorMsg.includes('BRLm/USDm')) {
+        return 'Attempting to swap USDm/BRLm on Alfajores using a two-step process via CELO. If this fails, the swap will be simulated.';
       } else {
         return 'No exchange found for this token pair on Alfajores. Some token pairs are not directly swappable on the testnet. The swap will be simulated for demonstration purposes.';
       }
     } else if (errorMsg.includes('Two-step swap failed')) {
       return 'The two-step swap process failed. This could be due to insufficient liquidity or contract restrictions. Please try again with a different amount or token pair.';
-    } else if (errorMsg.includes('CUSD/CEUR') || errorMsg.includes('CEUR/CUSD')) {
-      return 'Attempting to swap CUSD/CEUR using a two-step process via CELO. This may take longer than a direct swap.';
-    } else if (errorMsg.includes('CUSD/CREAL') || errorMsg.includes('CREAL/CUSD')) {
-      return 'Attempting to swap CUSD/CREAL using a two-step process via CELO. This may take longer than a direct swap.';
+    } else if (errorMsg.includes('USDm/EURm') || errorMsg.includes('EURm/USDm')) {
+      return 'Attempting to swap USDm/EURm using a two-step process via CELO. This may take longer than a direct swap.';
+    } else if (errorMsg.includes('USDm/BRLm') || errorMsg.includes('BRLm/USDm')) {
+      return 'Attempting to swap USDm/BRLm using a two-step process via CELO. This may take longer than a direct swap.';
     } else if (errorMsg.includes('Invalid token selection')) {
       return 'This token is not available on the current network. Please try a different token pair.';
     } else {

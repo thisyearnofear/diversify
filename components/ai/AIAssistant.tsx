@@ -124,7 +124,7 @@ export default function AIAssistant({
         const handleVoiceQuery = (event: CustomEvent) => {
             sendMessage(event.detail);
         };
-        
+
         window.addEventListener('voiceQuery', handleVoiceQuery as EventListener);
         return () => window.removeEventListener('voiceQuery', handleVoiceQuery as EventListener);
     }, [sendMessage]);
@@ -207,138 +207,138 @@ export default function AIAssistant({
                             ) : (
                                 /* Fallback to original compact view */
                                 <>
-                            {/* AI Reasoning Quote */}
-                            <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
-                                    &ldquo;{advice.reasoning}&rdquo;
-                                </p>
-                            </div>
+                                    {/* AI Reasoning Quote */}
+                                    <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                                        <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
+                                            &ldquo;{advice.reasoning}&rdquo;
+                                        </p>
+                                    </div>
 
-                            {/* Projection Comparison */}
-                            <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
-                                <div className="flex justify-between items-center mb-2">
-                                    <span className="text-[10px] font-black uppercase text-gray-400">3-Year Projection</span>
-                                    {portfolioAnalysis && (
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${portfolioAnalysis.diversificationScore > 70 ? 'bg-emerald-100 text-emerald-700' :
-                                            portfolioAnalysis.diversificationScore > 40 ? 'bg-amber-100 text-amber-700' :
-                                                'bg-red-100 text-red-700'
-                                            }`}>
-                                            Diversification: {portfolioAnalysis.diversificationScore}/100
-                                        </span>
+                                    {/* Projection Comparison */}
+                                    <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-[10px] font-black uppercase text-gray-400">3-Year Projection</span>
+                                            {portfolioAnalysis && (
+                                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${portfolioAnalysis.diversificationScore > 70 ? 'bg-emerald-100 text-emerald-700' :
+                                                    portfolioAnalysis.diversificationScore > 40 ? 'bg-amber-100 text-amber-700' :
+                                                        'bg-red-100 text-red-700'
+                                                    }`}>
+                                                    Diversification: {portfolioAnalysis.diversificationScore}/100
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-gray-500 w-20 shrink-0">Current</span>
+                                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{
+                                                            width: `${advice.comparisonProjection ?
+                                                                (advice.comparisonProjection.currentPathValue / amount) * 100 :
+                                                                85}%`
+                                                        }}
+                                                        className="h-full bg-red-400"
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] text-red-500 font-bold w-16 text-right">
+                                                    -${advice.comparisonProjection ?
+                                                        (amount - advice.comparisonProjection.currentPathValue).toFixed(0) :
+                                                        (amount * 0.15).toFixed(0)}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-blue-600 w-20 shrink-0">Optimized</span>
+                                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: '100%' }}
+                                                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
+                                                    />
+                                                </div>
+                                                <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
+                                                    +${advice.expectedSavings?.toFixed(0) ||
+                                                        (advice.comparisonProjection?.oraclePathValue ?
+                                                            (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(0) :
+                                                            (amount * 0.2).toFixed(0))}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Execute Button (only if action needed) */}
+                                    {advice.action !== 'HOLD' && advice.targetToken && (
+                                        <button
+                                            onClick={() => handleExecuteRecommendation(advice.targetToken!)}
+                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span>Execute {advice.action} to {advice.targetToken}</span>
+                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                            </svg>
+                                        </button>
                                     )}
-                                </div>
 
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-gray-500 w-20 shrink-0">Current</span>
-                                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{
-                                                    width: `${advice.comparisonProjection ?
-                                                        (advice.comparisonProjection.currentPathValue / amount) * 100 :
-                                                        85}%`
-                                                }}
-                                                className="h-full bg-red-400"
-                                            />
+                                    {/* Guided Tour Recommendation (embedded mode) */}
+                                    {advice.guidedTour && !isTourDismissed(advice.guidedTour.tourId) && (
+                                        <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
+                                            <div className="flex items-start gap-2 mb-2">
+                                                <span className="text-lg">🎯</span>
+                                                <div className="flex-1">
+                                                    <h4 className="text-xs font-bold text-indigo-900">{advice.guidedTour.title}</h4>
+                                                    <p className="text-[10px] text-indigo-700 mt-1">{advice.guidedTour.description}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-[10px] text-indigo-600">💰 {advice.guidedTour.estimatedBenefit}</span>
+                                                <span className="text-[10px] text-indigo-500">{advice.guidedTour.steps.length} steps</span>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => {
+                                                        const tour = advice.guidedTour!;
+                                                        const firstStep = tour.steps[0];
+                                                        startTour(tour.tourId, tour.steps.length, firstStep.tab, firstStep.section);
+                                                        showToast(`Starting ${tour.title}`, 'info');
+                                                    }}
+                                                    className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"
+                                                >
+                                                    Start Tour
+                                                </button>
+                                                <button
+                                                    onClick={() => dismissTour(advice.guidedTour!.tourId)}
+                                                    className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold"
+                                                >
+                                                    Skip
+                                                </button>
+                                            </div>
                                         </div>
-                                        <span className="text-[10px] text-red-500 font-bold w-16 text-right">
-                                            -${advice.comparisonProjection ?
-                                                (amount - advice.comparisonProjection.currentPathValue).toFixed(0) :
-                                                (amount * 0.15).toFixed(0)}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-blue-600 w-20 shrink-0">Optimized</span>
-                                        <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                                            <motion.div
-                                                initial={{ width: 0 }}
-                                                animate={{ width: '100%' }}
-                                                className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
-                                            />
+                                    )}
+
+                                    {/* Onramp Recommendation (embedded mode) */}
+                                    {(advice.action === 'BUY' || advice.action === 'SELL') && advice.onrampRecommendation && (
+                                        <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="text-sm">{advice.action === 'BUY' ? '💳' : '💰'}</span>
+                                                <span className="text-xs font-bold text-blue-800">
+                                                    {advice.onrampRecommendation.provider}
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-blue-600 leading-relaxed">
+                                                {advice.onrampRecommendation.reasoning}
+                                            </p>
                                         </div>
-                                        <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
-                                            +${advice.expectedSavings?.toFixed(0) ||
-                                                (advice.comparisonProjection?.oraclePathValue ?
-                                                    (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(0) :
-                                                    (amount * 0.2).toFixed(0))}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                                    )}
 
-                            {/* Execute Button (only if action needed) */}
-                            {advice.action !== 'HOLD' && advice.targetToken && (
-                                <button
-                                    onClick={() => handleExecuteRecommendation(advice.targetToken!)}
-                                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                                >
-                                    <span>Execute {advice.action} to {advice.targetToken}</span>
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                    </svg>
-                                </button>
-                            )}
-
-                            {/* Guided Tour Recommendation (embedded mode) */}
-                            {advice.guidedTour && !isTourDismissed(advice.guidedTour.tourId) && (
-                                <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
-                                    <div className="flex items-start gap-2 mb-2">
-                                        <span className="text-lg">🎯</span>
-                                        <div className="flex-1">
-                                            <h4 className="text-xs font-bold text-indigo-900">{advice.guidedTour.title}</h4>
-                                            <p className="text-[10px] text-indigo-700 mt-1">{advice.guidedTour.description}</p>
+                                    {/* Hold State */}
+                                    {advice.action === 'HOLD' && (
+                                        <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                                            <span className="text-lg">🛡️</span>
+                                            <span className="text-sm font-bold text-emerald-800">Portfolio well-protected</span>
                                         </div>
-                                    </div>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] text-indigo-600">💰 {advice.guidedTour.estimatedBenefit}</span>
-                                        <span className="text-[10px] text-indigo-500">{advice.guidedTour.steps.length} steps</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => {
-                                                const tour = advice.guidedTour!;
-                                                const firstStep = tour.steps[0];
-                                                startTour(tour.tourId, tour.steps.length, firstStep.tab, firstStep.section);
-                                                showToast(`Starting ${tour.title}`, 'info');
-                                            }}
-                                            className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"
-                                        >
-                                            Start Tour
-                                        </button>
-                                        <button
-                                            onClick={() => dismissTour(advice.guidedTour!.tourId)}
-                                            className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold"
-                                        >
-                                            Skip
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Onramp Recommendation (embedded mode) */}
-                            {(advice.action === 'BUY' || advice.action === 'SELL') && advice.onrampRecommendation && (
-                                <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-sm">{advice.action === 'BUY' ? '💳' : '💰'}</span>
-                                        <span className="text-xs font-bold text-blue-800">
-                                            {advice.onrampRecommendation.provider}
-                                        </span>
-                                    </div>
-                                    <p className="text-xs text-blue-600 leading-relaxed">
-                                        {advice.onrampRecommendation.reasoning}
-                                    </p>
-                                </div>
-                            )}
-
-                            {/* Hold State */}
-                            {advice.action === 'HOLD' && (
-                                <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                                    <span className="text-lg">🛡️</span>
-                                    <span className="text-sm font-bold text-emerald-800">Portfolio well-protected</span>
-                                </div>
-                            )}
-                            </>
+                                    )}
+                                </>
                             )}
                         </motion.div>
                     )}
@@ -368,13 +368,12 @@ export default function AIAssistant({
                                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                         >
                                             <div
-                                                className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs ${
-                                                    msg.role === 'user'
+                                                className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs ${msg.role === 'user'
                                                         ? 'bg-blue-600 text-white rounded-br-md'
                                                         : 'bg-gray-100 text-gray-800 rounded-bl-md'
-                                                }`}
+                                                    }`}
                                             >
-                                                {msg.content.length > 120 
+                                                {msg.content.length > 120
                                                     ? msg.content.slice(0, 120) + '...'
                                                     : msg.content
                                                 }
@@ -763,11 +762,10 @@ export default function AIAssistant({
                                             className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                         >
                                             <div
-                                                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
-                                                    msg.role === 'user'
+                                                className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${msg.role === 'user'
                                                         ? 'bg-blue-600 text-white rounded-br-md'
                                                         : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md'
-                                                }`}
+                                                    }`}
                                             >
                                                 {msg.content}
                                             </div>
@@ -797,7 +795,7 @@ export default function AIAssistant({
                                     )}
                                 </div>
                                 <p className="text-blue-700/80 dark:text-blue-200/60 text-xs font-bold leading-relaxed mb-4">
-                                    {messages.length > 0 
+                                    {messages.length > 0
                                         ? "I can analyze your portfolio, explain inflation data, or help you understand wealth protection strategies."
                                         : (capabilities.analysis
                                             ? amount > 0
@@ -813,7 +811,7 @@ export default function AIAssistant({
                                             const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
                                             const networkInfo = { chainId: chainId || 0, name: networkName };
                                             showToast('Running hypothetical wealth protection simulation...', 'ai');
-                                            analyze(propInflationData as Record<string, RegionalInflationData>, 1000, ['CUSD'], networkInfo);
+                                            analyze(propInflationData as Record<string, RegionalInflationData>, 1000, ['USDm'], networkInfo);
                                         } else {
                                             handleAnalyze();
                                         }

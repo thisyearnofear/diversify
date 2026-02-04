@@ -8,7 +8,7 @@ const REGION_METADATA = {
     color: "#F56565",
     gradient: "from-red-500 via-red-600 to-rose-600",
     icon: "🌍",
-    tokens: ["cKES", "cGHS", "eXOF", "cUSD"],
+    tokens: ["KESm", "GHSm", "XOFm", "USDm"],
     inflationRate: 11.2,
     volatility: "High",
     growthPotential: "High",
@@ -18,7 +18,7 @@ const REGION_METADATA = {
     color: "#F6AD55",
     gradient: "from-orange-500 via-orange-600 to-amber-600",
     icon: "🌎",
-    tokens: ["cREAL", "cCOP"],
+    tokens: ["BRLm", "COPm"],
     inflationRate: 5.9,
     volatility: "Medium",
     growthPotential: "Medium",
@@ -28,7 +28,7 @@ const REGION_METADATA = {
     color: "#9F7AEA",
     gradient: "from-violet-500 via-purple-600 to-indigo-600",
     icon: "🌏",
-    tokens: ["PUSO"],
+    tokens: ["PHPm"],
     inflationRate: 3.9,
     volatility: "Medium",
     growthPotential: "High",
@@ -38,7 +38,7 @@ const REGION_METADATA = {
     color: "#48BB78",
     gradient: "from-emerald-500 via-emerald-600 to-teal-600",
     icon: "🇪🇺",
-    tokens: ["cEUR", "EURC"],
+    tokens: ["EURm", "EURC"],
     inflationRate: 2.4,
     volatility: "Low",
     growthPotential: "Low",
@@ -48,7 +48,7 @@ const REGION_METADATA = {
     color: "#4299E1",
     gradient: "from-blue-500 via-blue-600 to-indigo-600",
     icon: "🇺🇸",
-    tokens: ["cUSD", "USDC"],
+    tokens: ["USDm", "USDC"],
     inflationRate: 3.1,
     volatility: "Low",
     growthPotential: "Medium",
@@ -303,19 +303,17 @@ export default function PortfolioRecommendations({
               onClick={() => handleStrategyChange(key as keyof typeof PORTFOLIO_STRATEGIES)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className={`relative p-3 rounded-xl border-2 transition-all text-left ${
-                selectedStrategy === key
+              className={`relative p-3 rounded-xl border-2 transition-all text-left ${selectedStrategy === key
                   ? `border-transparent bg-gradient-to-br ${strategy.color} text-white shadow-lg`
                   : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
+                }`}
             >
               <div className="flex items-start justify-between mb-2">
                 <span className="text-2xl">{strategy.icon}</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  selectedStrategy === key 
-                    ? "bg-white/30 text-white" 
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${selectedStrategy === key
+                    ? "bg-white/30 text-white"
                     : getRiskBadgeColor(strategy.riskLevel)
-                }`}>
+                  }`}>
                   {strategy.riskLevel}
                 </span>
               </div>
@@ -323,21 +321,19 @@ export default function PortfolioRecommendations({
               <p className={`text-xs ${selectedStrategy === key ? "text-white/80" : "text-gray-500 dark:text-gray-400"}`}>
                 {strategy.description}
               </p>
-              
+
               {/* Expected Returns */}
               <div className="mt-2 flex items-center gap-2">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                  selectedStrategy === key 
-                    ? "bg-white/20 text-white" 
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${selectedStrategy === key
+                    ? "bg-white/20 text-white"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                }`}>
+                  }`}>
                   ↗ {strategy.expectedReturn}
                 </span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                  selectedStrategy === key 
-                    ? "bg-white/20 text-white" 
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${selectedStrategy === key
+                    ? "bg-white/20 text-white"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400"
-                }`}>
+                  }`}>
                   ↓ {strategy.maxDrawdown}
                 </span>
               </div>
@@ -350,7 +346,7 @@ export default function PortfolioRecommendations({
           <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
             <span>📊</span> Strategy Allocation
           </h3>
-          
+
           {/* Stacked Bar */}
           <div className="flex rounded-lg overflow-hidden mb-3 h-8 shadow-inner">
             {Object.entries(currentStrategy.allocations).map(([region, allocation]) => (
@@ -389,7 +385,7 @@ export default function PortfolioRecommendations({
               <h3 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
                 <span>🔄</span> Recommended Adjustments
               </h3>
-              
+
               <div className="space-y-2">
                 {potentialAdjustments.map((swap, index) => (
                   <motion.div
@@ -406,14 +402,14 @@ export default function PortfolioRecommendations({
                         </div>
                         <span className="font-bold text-sm text-gray-900 dark:text-white">{swap.from}</span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <span className="text-lg">→</span>
                         <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold px-2 py-1 rounded-full">
                           {swap.percentage}%
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${REGION_METADATA[swap.to as keyof typeof REGION_METADATA]?.gradient || "from-gray-400 to-gray-500"} flex items-center justify-center text-sm`}>
                           {REGION_METADATA[swap.to as keyof typeof REGION_METADATA]?.icon}
@@ -463,7 +459,7 @@ export default function PortfolioRecommendations({
               ▼
             </motion.span>
           </div>
-          
+
           <AnimatePresence>
             {showBenefits && (
               <motion.div

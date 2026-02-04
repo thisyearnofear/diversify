@@ -59,24 +59,24 @@ export interface PortfolioAnalysis {
   totalValue: number;
   tokenCount: number;
   regionCount: number;
-  
+
   // Current allocations
   tokens: TokenAllocation[];
   regionalExposure: RegionalExposure[];
-  
+
   // Risk metrics
   weightedInflationRisk: number;
   diversificationScore: number;
   concentrationRisk: 'LOW' | 'MEDIUM' | 'HIGH';
-  
+
   // Gap analysis
   missingRegions: string[];
   overExposedRegions: string[];
   underExposedRegions: string[];
-  
+
   // Opportunities
   rebalancingOpportunities: RebalancingOpportunity[];
-  
+
   // Goal-based recommendations
   targetAllocations: {
     inflation_protection: TargetAllocation[];
@@ -84,7 +84,7 @@ export interface PortfolioAnalysis {
     rwa_access: TargetAllocation[];
     exploring: TargetAllocation[];
   };
-  
+
   // Projections
   projections: {
     currentPath: {
@@ -146,6 +146,16 @@ const CONCENTRATION_THRESHOLDS = {
   MEDIUM: 50, // >50% in one region = medium risk
 };
 
+// Single source of truth for token regions within analysis engine
+const TOKEN_REGION_MAP: Record<string, string> = {
+  'USDM': 'USA', 'USDC': 'USA', 'CCAD': 'USA', 'USDY': 'USA',
+  'EURM': 'Europe', 'EURC': 'Europe', 'GBPM': 'Europe', 'CHFM': 'Europe',
+  'BRLM': 'LatAm', 'COPM': 'LatAm',
+  'KESM': 'Africa', 'GHSM': 'Africa', 'ZARM': 'Africa', 'XOFM': 'Africa', 'EXOF': 'Africa', 'NGNM': 'Africa',
+  'PHPM': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
+  'PAXG': 'Global', 'SYRUPUSDC': 'Global',
+};
+
 // ============================================================================
 // PURE CALCULATION FUNCTIONS
 // ============================================================================
@@ -158,22 +168,12 @@ export function getTokenInflationRate(
   inflationData: Record<string, RegionalInflationData>
 ): number {
   const normalizedSymbol = symbol.toUpperCase();
-  
-  // Direct mappings for known tokens
-  const tokenRegionMap: Record<string, string> = {
-    'CUSD': 'USA', 'USDC': 'USA', 'CCAD': 'USA', 'USDY': 'USA',  // USDY = US Treasury yield, USD-based
-    'CEUR': 'Europe', 'EURC': 'Europe', 'CGBP': 'Europe', 'CCHF': 'Europe',
-    'CREAL': 'LatAm', 'CCOP': 'LatAm',
-    'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa', 'CNGN': 'Africa',
-    'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
-    'PAXG': 'Global', 'SYRUPUSDC': 'Global',  // SYRUPUSDC = global stable yield, not region-specific
-  };
-  
-  const region = tokenRegionMap[normalizedSymbol];
+  const region = TOKEN_REGION_MAP[normalizedSymbol];
+
   if (!region || !inflationData[region]) {
     return 3.0; // Default conservative estimate
   }
-  
+
   return inflationData[region].avgRate;
 }
 
@@ -182,17 +182,7 @@ export function getTokenInflationRate(
  */
 export function getTokenRegion(symbol: string): string {
   const normalizedSymbol = symbol.toUpperCase();
-  
-  const tokenRegionMap: Record<string, string> = {
-    'CUSD': 'USA', 'USDC': 'USA', 'CCAD': 'USA',
-    'CEUR': 'Europe', 'EURC': 'Europe', 'CGBP': 'Europe', 'CCHF': 'Europe',
-    'CREAL': 'LatAm', 'CCOP': 'LatAm',
-    'CKES': 'Africa', 'CGHS': 'Africa', 'CZAR': 'Africa', 'CXOF': 'Africa', 'EXOF': 'Africa', 'CNGN': 'Africa',
-    'PUSO': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
-    'PAXG': 'Global',
-  };
-  
-  return tokenRegionMap[normalizedSymbol] || 'Unknown';
+  return TOKEN_REGION_MAP[normalizedSymbol] || 'Unknown';
 }
 
 /**
@@ -204,9 +194,9 @@ export function calculateWeightedInflationRisk(
   if (tokens.length === 0 || tokens.reduce((sum, t) => sum + t.value, 0) === 0) {
     return 0;
   }
-  
+
   const totalValue = tokens.reduce((sum, t) => sum + t.value, 0);
-  
+
   return tokens.reduce((weightedRate, token) => {
     const weight = token.value / totalValue;
     return weightedRate + (token.inflationRate * weight);
@@ -221,23 +211,23 @@ export function calculateDiversificationScore(
   regionalExposure: RegionalExposure[]
 ): number {
   if (tokens.length === 0) return 0;
-  
+
   const totalValue = tokens.reduce((sum, t) => sum + t.value, 0);
   if (totalValue === 0) return 0;
-  
+
   // Herfindahl-Hirschman Index for concentration
   const regionWeights = regionalExposure.map(r => r.percentage / 100);
   const hhi = regionWeights.reduce((sum, weight) => sum + (weight * weight), 0);
-  
+
   // Convert to 0-100 score (lower HHI = higher score)
   const concentrationScore = Math.max(0, Math.min(100, (1 - hhi) * 100));
-  
+
   // Token diversity bonus
   const tokenBonus = Math.min(20, tokens.length * 4);
-  
+
   // Region count bonus
   const regionBonus = Math.min(30, regionalExposure.length * 10);
-  
+
   return Math.min(100, concentrationScore + tokenBonus + regionBonus);
 }
 
@@ -248,9 +238,9 @@ export function getConcentrationRisk(
   regionalExposure: RegionalExposure[]
 ): 'LOW' | 'MEDIUM' | 'HIGH' {
   if (regionalExposure.length === 0) return 'LOW';
-  
+
   const maxExposure = Math.max(...regionalExposure.map(r => r.percentage));
-  
+
   if (maxExposure > CONCENTRATION_THRESHOLDS.HIGH) return 'HIGH';
   if (maxExposure > CONCENTRATION_THRESHOLDS.MEDIUM) return 'MEDIUM';
   return 'LOW';
@@ -269,15 +259,15 @@ export function calculateProjections(
   // If inflation is 5%, $100 today buys what $95.24 buys next year
   const currentPathMultiplier = Math.pow(1 - (currentWeightedInflation / 100), timeHorizonYears);
   const optimizedPathMultiplier = Math.pow(1 - (optimizedWeightedInflation / 100), timeHorizonYears);
-  
+
   const value1Year = totalValue * (1 - (currentWeightedInflation / 100));
   const value3Year = totalValue * currentPathMultiplier;
   const purchasingPowerLost = totalValue - value3Year;
-  
+
   const optimizedValue1Year = totalValue * (1 - (optimizedWeightedInflation / 100));
   const optimizedValue3Year = totalValue * optimizedPathMultiplier;
   const purchasingPowerPreserved = optimizedValue3Year - value3Year;
-  
+
   return {
     currentPath: {
       value1Year,
@@ -302,20 +292,20 @@ export function generateRebalancingOpportunities(
 ): RebalancingOpportunity[] {
   const opportunities: RebalancingOpportunity[] = [];
   const totalValue = tokens.reduce((sum, t) => sum + t.value, 0);
-  
+
   if (totalValue === 0) return opportunities;
-  
+
   // Find high-inflation tokens (>5%)
   const highInflationTokens = tokens.filter(t => t.inflationRate > 5);
-  
+
   // Determine target tokens based on goal
   let targetTokens: TokenAllocation[] = [];
-  
+
   if (goal === 'geographic_diversification') {
     // For diversification: suggest other regional stablecoins, NOT gold
     // Prefer underrepresented regions
     const currentRegions = new Set(tokens.map(t => t.region));
-    targetTokens = tokens.filter(t => 
+    targetTokens = tokens.filter(t =>
       t.inflationRate <= 6 && // Accept slightly higher inflation for diversification
       (t.region !== 'Global' || t.inflationRate <= 2) // Only suggest gold if very low inflation
     );
@@ -335,45 +325,45 @@ export function generateRebalancingOpportunities(
     // Default: balanced approach
     targetTokens = tokens.filter(t => t.inflationRate <= 4);
   }
-  
+
   // If no valid targets, fall back to low inflation
   if (targetTokens.length === 0) {
     targetTokens = tokens.filter(t => t.inflationRate <= 4);
   }
-  
+
   for (const highToken of highInflationTokens) {
     for (const targetToken of targetTokens) {
       // Skip same token
       if (highToken.symbol === targetToken.symbol) continue;
-      
+
       const inflationDelta = highToken.inflationRate - targetToken.inflationRate;
-      
+
       // For diversification, require smaller delta (more flexible)
       const minDelta = goal === 'geographic_diversification' ? 1 : 2;
       if (inflationDelta < minDelta) continue;
-      
+
       // Suggest moving 25-50% of high-inflation position
       const suggestedPercentage = highToken.percentage > 50 ? 0.5 : 0.25;
       const suggestedAmount = highToken.value * suggestedPercentage;
-      
+
       // Calculate annual savings
       const annualSavings = suggestedAmount * (inflationDelta / 100);
-      
+
       // Priority based on delta, amount, AND goal alignment
       let priority: 'HIGH' | 'MEDIUM' | 'LOW' = 'LOW';
-      
+
       // Boost priority for goal-aligned recommendations
-      const isGoalAligned = 
+      const isGoalAligned =
         (goal === 'geographic_diversification' && highToken.region !== targetToken.region) ||
         (goal === 'rwa_access' && targetToken.region === 'Global') ||
         (goal === 'inflation_protection' && targetToken.inflationRate <= 2);
-      
+
       if ((inflationDelta > 5 && suggestedAmount > 100) || (isGoalAligned && inflationDelta > 3)) {
         priority = 'HIGH';
       } else if ((inflationDelta > 3 && suggestedAmount > 50) || isGoalAligned) {
         priority = 'MEDIUM';
       }
-      
+
       opportunities.push({
         fromToken: highToken.symbol,
         toToken: targetToken.symbol,
@@ -388,7 +378,7 @@ export function generateRebalancingOpportunities(
       });
     }
   }
-  
+
   // Sort by priority and annual savings
   return opportunities
     .sort((a, b) => {
@@ -411,20 +401,20 @@ export function generateTargetAllocations(
 ): TargetAllocation[] {
   const allocationMap = GOAL_ALLOCATIONS[goal];
   const targets: TargetAllocation[] = [];
-  
+
   for (const [region, percentage] of Object.entries(allocationMap)) {
     if (percentage === 0) continue;
-    
+
     // Find best token for this region using dynamic scoring
     const regionToken = getBestTokenForRegion(region, inflationData, goal);
-    
+
     targets.push({
       symbol: regionToken,
       targetPercentage: percentage,
       reason: getAllocationReason(region, goal, inflationData),
     });
   }
-  
+
   return targets;
 }
 
@@ -441,19 +431,19 @@ function getBestTokenForRegion(
   // For non-Global regions, use stablecoin mappings
   if (region !== 'Global') {
     const regionTokenMap: Record<string, string> = {
-      'USA': 'cUSD',
-      'Europe': 'cEUR',
-      'LatAm': 'cREAL',
-      'Africa': 'cKES',
-      'Asia': 'PUSO',
+      'USA': 'USDm',
+      'Europe': 'EURm',
+      'LatAm': 'BRLm',
+      'Africa': 'KESm',
+      'Asia': 'PHPm',
     };
-    return regionTokenMap[region] || 'cUSD';
+    return regionTokenMap[region] || 'USDm';
   }
-  
+
   // For Global region, use dynamic scoring
   const typedGoal = (goal as 'inflation_protection' | 'geographic_diversification' | 'rwa_access' | 'exploring') || 'exploring';
   const typedRisk = (riskTolerance as 'conservative' | 'balanced' | 'aggressive') || 'balanced';
-  
+
   const recommendation = getBestTokenForRegionDynamic(
     region,
     DEFAULT_MARKET_CONTEXT,
@@ -465,7 +455,7 @@ function getBestTokenForRegion(
     },
     inflationData
   );
-  
+
   return recommendation.symbol;
 }
 
@@ -478,7 +468,7 @@ function getAllocationReason(
   inflationData: Record<string, RegionalInflationData>
 ): string {
   const rate = inflationData[region]?.avgRate || 3;
-  
+
   const reasons: Record<string, Record<string, string>> = {
     inflation_protection: {
       'Europe': `Low inflation anchor (${rate}%) provides stability`,
@@ -509,7 +499,7 @@ function getAllocationReason(
       'Global': 'Gold as alternative asset',
     },
   };
-  
+
   return reasons[goal]?.[region] || `Diversification into ${region}`;
 }
 
@@ -553,7 +543,7 @@ export function analyzePortfolio(
       },
     };
   }
-  
+
   // Build token allocations
   const tokens: TokenAllocation[] = [];
   for (const chain of portfolio.chains) {
@@ -568,7 +558,7 @@ export function analyzePortfolio(
       });
     }
   }
-  
+
   // Calculate regional exposure
   const regionMap = new Map<string, RegionalExposure>();
   for (const token of tokens) {
@@ -586,34 +576,34 @@ export function analyzePortfolio(
       });
     }
   }
-  
+
   // Calculate percentages for regional exposure
   const regionalExposure = Array.from(regionMap.values()).map(r => ({
     ...r,
     percentage: (r.value / portfolio.totalValue) * 100,
   }));
-  
+
   // Calculate risk metrics
   const weightedInflationRisk = calculateWeightedInflationRisk(tokens);
   const diversificationScore = calculateDiversificationScore(tokens, regionalExposure);
   const concentrationRisk = getConcentrationRisk(regionalExposure);
-  
+
   // Gap analysis
   const allRegions = ['USA', 'Europe', 'Asia', 'Africa', 'LatAm', 'Global'];
   const currentRegions = new Set(regionalExposure.map(r => r.region));
   const missingRegions = allRegions.filter(r => !currentRegions.has(r));
-  
+
   const overExposedRegions = regionalExposure
     .filter(r => r.percentage > 50)
     .map(r => r.region);
-  
+
   const underExposedRegions = regionalExposure
     .filter(r => r.percentage < 10 && r.value > 0)
     .map(r => r.region);
-  
+
   // Generate opportunities (respecting user's goal)
   const rebalancingOpportunities = generateRebalancingOpportunities(tokens, inflationData, currentGoal);
-  
+
   // Calculate projections
   // For optimized path, assume we can reduce inflation exposure by 40%
   const optimizedInflationRisk = weightedInflationRisk * 0.6;
@@ -622,10 +612,10 @@ export function analyzePortfolio(
     optimizedInflationRisk,
     portfolio.totalValue
   );
-  
+
   // Generate target allocations for all goals
   const typedGoal = (currentGoal as keyof typeof GOAL_ALLOCATIONS) || 'exploring';
-  
+
   return {
     totalValue: portfolio.totalValue,
     tokenCount: tokens.length,
@@ -686,7 +676,7 @@ export function detectGuidedTour(
   const visited = new Set(visitedTabs || ['overview', 'info']);
   const hasVisitedProtect = visited.has('protect');
   const hasVisitedStrategies = visited.has('strategies');
-  
+
   // Tour 1: High Inflation Fighter
   if (analysis.weightedInflationRisk > 5 && !hasVisitedProtect) {
     const topOpp = analysis.rebalancingOpportunities[0];
@@ -722,7 +712,7 @@ export function detectGuidedTour(
       ],
     };
   }
-  
+
   // Tour 2: Goal-Based Strategy Explorer
   if (userGoal === 'exploring' && analysis.totalValue > 100 && !hasVisitedStrategies) {
     return {
@@ -747,7 +737,7 @@ export function detectGuidedTour(
       ],
     };
   }
-  
+
   // Tour 3: Diversification Guide
   if (analysis.diversificationScore < 40 && analysis.totalValue > 50) {
     const missingRegion = analysis.missingRegions[0];
@@ -772,7 +762,7 @@ export function detectGuidedTour(
       ],
     };
   }
-  
+
   // Tour 4: RWA Discovery (for users with no yield)
   const hasYieldTokens = analysis.tokens.some(t => ['USDY', 'SYRUPUSDC', 'PAXG'].includes(t.symbol));
   if (!hasYieldTokens && analysis.totalValue > 200 && !hasVisitedProtect) {
@@ -801,7 +791,7 @@ export function detectGuidedTour(
       ],
     };
   }
-  
+
   return null;
 }
 

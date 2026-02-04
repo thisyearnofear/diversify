@@ -116,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     await automationService.processAnalysis(
                         testAnalysis,
                         testPreferences.email.address,
-                        { balance: 1000, holdings: ['CUSD'] }
+                        { balance: 1000, holdings: ['USDm'] }
                     );
 
                     return res.status(200).json({
@@ -129,7 +129,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     return res.status(500).json({ error: 'Test automation failed' });
                 }
             }
-            
+
             // Update user's automation preferences
             try {
                 const newPreferences: AutomationPreferences = req.body;

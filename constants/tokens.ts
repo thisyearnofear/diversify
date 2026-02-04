@@ -44,7 +44,7 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     description: 'Tokenized physical gold backed 1:1 by London Good Delivery gold bars',
     shortLabel: 'Gold',
   },
-  
+
   // Treasury Yield
   'USDY': {
     symbol: 'USDY',
@@ -59,7 +59,7 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     description: 'Tokenized US Treasuries with ~5% APY auto-accruing yield',
     shortLabel: 'Treasury',
   },
-  
+
   // DeFi Yield
   'SYRUPUSDC': {
     symbol: 'SYRUPUSDC',
@@ -74,7 +74,7 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     description: 'Yield-bearing USDC powered by Morpho with ~4.5% APY',
     shortLabel: 'Syrup',
   },
-  
+
   // Stablecoins
   'USDC': {
     symbol: 'USDC',
@@ -89,10 +89,10 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     description: 'Fully-backed US dollar stablecoin',
     shortLabel: 'USDC',
   },
-  
-  'cUSD': {
-    symbol: 'cUSD',
-    name: 'Celo Dollar',
+
+  'USDm': {
+    symbol: 'USDm',
+    name: 'Mento Dollar',
     gradient: 'from-yellow-500 via-yellow-600 to-amber-600',
     icon: '💵',
     textColor: 'text-yellow-700',
@@ -101,12 +101,12 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shadowColor: 'shadow-yellow-500/30',
     category: 'stablecoin',
     description: 'Decentralized stablecoin on Celo',
-    shortLabel: 'cUSD',
+    shortLabel: 'USDm',
   },
-  
-  'cEUR': {
-    symbol: 'cEUR',
-    name: 'Celo Euro',
+
+  'EURm': {
+    symbol: 'EURm',
+    name: 'Mento Euro',
     gradient: 'from-blue-600 via-indigo-600 to-purple-600',
     icon: '💶',
     textColor: 'text-blue-700',
@@ -115,9 +115,9 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shadowColor: 'shadow-blue-500/30',
     category: 'regional',
     description: 'Euro stablecoin on Celo',
-    shortLabel: 'cEUR',
+    shortLabel: 'EURm',
   },
-  
+
   'EURC': {
     symbol: 'EURC',
     name: 'Euro Coin',
@@ -131,10 +131,10 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     description: 'Circle\'s euro-backed stablecoin',
     shortLabel: 'EURC',
   },
-  
-  'cREAL': {
-    symbol: 'cREAL',
-    name: 'Celo Real',
+
+  'BRLm': {
+    symbol: 'BRLm',
+    name: 'Mento Real',
     gradient: 'from-green-500 via-emerald-600 to-teal-600',
     icon: '🇧🇷',
     textColor: 'text-green-700',
@@ -143,12 +143,12 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shadowColor: 'shadow-green-500/30',
     category: 'regional',
     description: 'Brazilian Real stablecoin on Celo',
-    shortLabel: 'cREAL',
+    shortLabel: 'BRLm',
   },
-  
-  'cKES': {
-    symbol: 'cKES',
-    name: 'Celo Kenyan Shilling',
+
+  'KESm': {
+    symbol: 'KESm',
+    name: 'Mento Kenyan Shilling',
     gradient: 'from-red-600 via-red-700 to-rose-700',
     icon: '🇰🇪',
     textColor: 'text-red-700',
@@ -157,12 +157,12 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shadowColor: 'shadow-red-500/30',
     category: 'regional',
     description: 'Kenyan Shilling stablecoin on Celo',
-    shortLabel: 'cKES',
+    shortLabel: 'KESm',
   },
-  
-  'cGHS': {
-    symbol: 'cGHS',
-    name: 'Celo Ghana Cedi',
+
+  'GHSm': {
+    symbol: 'GHSm',
+    name: 'Mento Ghana Cedi',
     gradient: 'from-yellow-600 via-amber-600 to-orange-600',
     icon: '🇬🇭',
     textColor: 'text-yellow-700',
@@ -171,12 +171,12 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shadowColor: 'shadow-yellow-500/30',
     category: 'regional',
     description: 'Ghana Cedi stablecoin on Celo',
-    shortLabel: 'cGHS',
+    shortLabel: 'GHSm',
   },
-  
-  'cZAR': {
-    symbol: 'cZAR',
-    name: 'Celo South African Rand',
+
+  'ZARm': {
+    symbol: 'ZARm',
+    name: 'Mento South African Rand',
     gradient: 'from-green-600 via-emerald-700 to-green-800',
     icon: '🇿🇦',
     textColor: 'text-green-700',
@@ -185,12 +185,12 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shadowColor: 'shadow-green-500/30',
     category: 'regional',
     description: 'South African Rand stablecoin on Celo',
-    shortLabel: 'cZAR',
+    shortLabel: 'ZARm',
   },
-  
-  'eXOF': {
-    symbol: 'eXOF',
-    name: 'eCFA Franc',
+
+  'XOFm': {
+    symbol: 'XOFm',
+    name: 'Mento CFA Franc',
     gradient: 'from-green-500 via-teal-600 to-cyan-600',
     icon: '🌍',
     textColor: 'text-green-700',
@@ -199,12 +199,12 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shadowColor: 'shadow-green-500/30',
     category: 'regional',
     description: 'West African CFA franc on Celo',
-    shortLabel: 'eXOF',
+    shortLabel: 'XOFm',
   },
-  
-  'PUSO': {
-    symbol: 'PUSO',
-    name: 'Philippine Peso',
+
+  'PHPm': {
+    symbol: 'PHPm',
+    name: 'Mento Philippine Peso',
     gradient: 'from-blue-500 via-cyan-600 to-blue-700',
     icon: '🇵🇭',
     textColor: 'text-blue-700',
@@ -212,10 +212,10 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     borderColor: 'border-blue-300',
     shadowColor: 'shadow-blue-500/30',
     category: 'regional',
-    description: 'Philippine Peso stablecoin',
-    shortLabel: 'PUSO',
+    description: 'Philippine Peso stablecoin on Celo',
+    shortLabel: 'PHPm',
   },
-  
+
   // Default fallback
   'default': {
     symbol: 'TOKEN',

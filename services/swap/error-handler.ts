@@ -50,7 +50,7 @@ export class SwapErrorHandler {
         // No exchange found
         if (errorMsg.includes('No exchange found')) {
             if (errorMsg.includes('Alfajores') || errorMsg.includes('44787')) {
-                return 'This token pair is not available on Alfajores testnet. Try using CUSD as an intermediary.';
+                return 'This token pair is not available on Alfajores testnet. Try using USDm as an intermediary.';
             }
             return 'No exchange found for this token pair. Try a different pair or use an intermediary token.';
         }

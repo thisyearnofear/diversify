@@ -168,24 +168,24 @@ export function useDiversification({ regionData, balances, userRegion, inflation
   const goalScores = useMemo(() => {
     // 1. Hedge Inflation Score
     const hasGold = !!(balances?.PAXG || balances?.paxg);
-    const hasStablecoins = !!(balances?.cUSD || balances?.cusd || balances?.USDC || balances?.usdc);
+    const hasStablecoins = !!(balances?.USDm || balances?.usdm || balances?.USDC || balances?.usdc);
     const userRegionInflation = inflationData?.[userRegion]?.avgRate || 3.0;
-    
+
     let hedgeScore = 40; // Base score for having any assets
     if (hasStablecoins) hedgeScore += 20;
     if (hasGold) hedgeScore += 30;
     if (userRegionInflation > 5 && hasGold) hedgeScore += 10;
-    
+
     // 2. Diversify Regions Score
     const totalValue = regionData.reduce((sum, r) => sum + r.value, 0);
     const significantRegions = regionData.filter((r) => totalValue > 0 && (r.value / totalValue) * 100 >= 5).length;
     let diversifyScore = (significantRegions / 5) * 100;
-    
+
     // 3. Access RWA Score
     let rwaScore = 0;
     if (hasGold) rwaScore += 70;
     // Add other RWA checks here if available
-    
+
     return {
       hedge: Math.min(100, hedgeScore),
       diversify: Math.min(100, diversifyScore),

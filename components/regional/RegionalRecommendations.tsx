@@ -35,11 +35,11 @@ const REGION_INSIGHTS: Record<string, RegionInsight> = {
     ],
     inflationRate: 11.2,
     volatilityLevel: "High",
-    localCurrencies: ["cKES", "cGHS", "eXOF"],
+    localCurrencies: ["KESm", "GHSm", "XOFm"],
     recommendedTokens: [
-      { symbol: "cKES", percentage: 25, reason: "Local spending" },
-      { symbol: "cEUR", percentage: 25, reason: "Euro stability" },
-      { symbol: "cUSD", percentage: 25, reason: "USD hedge" },
+      { symbol: "KESm", percentage: 25, reason: "Local spending" },
+      { symbol: "EURm", percentage: 25, reason: "Euro stability" },
+      { symbol: "USDm", percentage: 25, reason: "USD hedge" },
       { symbol: "PAXG", percentage: 15, reason: "Inflation hedge" },
       { symbol: "USDY", percentage: 10, reason: "Yield (5% APY)" },
     ],
@@ -63,13 +63,13 @@ const REGION_INSIGHTS: Record<string, RegionInsight> = {
     ],
     inflationRate: 3.1,
     volatilityLevel: "Low",
-    localCurrencies: ["cUSD"],
+    localCurrencies: ["USDm"],
     recommendedTokens: [
-      { symbol: "cUSD", percentage: 40, reason: "Primary currency" },
-      { symbol: "cEUR", percentage: 25, reason: "Diversification" },
+      { symbol: "USDm", percentage: 40, reason: "Primary currency" },
+      { symbol: "EURm", percentage: 25, reason: "Diversification" },
       { symbol: "USDY", percentage: 20, reason: "Yield (5% APY)" },
       { symbol: "PAXG", percentage: 10, reason: "Gold hedge" },
-      { symbol: "cKES", percentage: 5, reason: "Emerging markets" },
+      { symbol: "KESm", percentage: 5, reason: "Emerging markets" },
     ],
   },
   Europe: {
@@ -91,12 +91,12 @@ const REGION_INSIGHTS: Record<string, RegionInsight> = {
     ],
     inflationRate: 2.4,
     volatilityLevel: "Low",
-    localCurrencies: ["cEUR"],
+    localCurrencies: ["EURm"],
     recommendedTokens: [
-      { symbol: "cEUR", percentage: 45, reason: "Primary currency" },
-      { symbol: "cUSD", percentage: 25, reason: "USD hedge" },
+      { symbol: "EURm", percentage: 45, reason: "Primary currency" },
+      { symbol: "USDm", percentage: 25, reason: "USD hedge" },
       { symbol: "USDY", percentage: 15, reason: "Yield (5% APY)" },
-      { symbol: "cKES", percentage: 10, reason: "Diversification" },
+      { symbol: "KESm", percentage: 10, reason: "Diversification" },
       { symbol: "PAXG", percentage: 5, reason: "Gold hedge" },
     ],
   },
@@ -119,11 +119,11 @@ const REGION_INSIGHTS: Record<string, RegionInsight> = {
     ],
     inflationRate: 5.9,
     volatilityLevel: "Medium",
-    localCurrencies: ["cREAL", "cCOP"],
+    localCurrencies: ["BRLm", "COPm"],
     recommendedTokens: [
-      { symbol: "cUSD", percentage: 35, reason: "USD stability" },
-      { symbol: "cREAL", percentage: 25, reason: "Local spending" },
-      { symbol: "cEUR", percentage: 20, reason: "Euro diversification" },
+      { symbol: "USDm", percentage: 35, reason: "USD stability" },
+      { symbol: "BRLm", percentage: 25, reason: "Local spending" },
+      { symbol: "EURm", percentage: 20, reason: "Euro diversification" },
       { symbol: "PAXG", percentage: 15, reason: "Inflation hedge" },
       { symbol: "USDY", percentage: 5, reason: "Yield (5% APY)" },
     ],
@@ -147,11 +147,11 @@ const REGION_INSIGHTS: Record<string, RegionInsight> = {
     ],
     inflationRate: 3.9,
     volatilityLevel: "Medium",
-    localCurrencies: ["PUSO"],
+    localCurrencies: ["PHPm"],
     recommendedTokens: [
-      { symbol: "PUSO", percentage: 30, reason: "Local currency" },
-      { symbol: "cUSD", percentage: 30, reason: "USD stability" },
-      { symbol: "cEUR", percentage: 20, reason: "Euro diversification" },
+      { symbol: "PHPm", percentage: 30, reason: "Local currency" },
+      { symbol: "USDm", percentage: 30, reason: "USD stability" },
+      { symbol: "EURm", percentage: 20, reason: "Euro diversification" },
       { symbol: "USDY", percentage: 15, reason: "Yield (5% APY)" },
       { symbol: "PAXG", percentage: 5, reason: "Gold hedge" },
     ],
@@ -232,11 +232,10 @@ export default function RegionalRecommendations({
                 onClick={() => setSelectedRegion(region)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
-                  selectedRegion === region
+                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${selectedRegion === region
                     ? `bg-gradient-to-r ${design.gradient} text-white shadow-lg`
                     : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
+                  }`}
               >
                 <span className="mr-1">{design.icon}</span>
                 {region}
@@ -250,7 +249,7 @@ export default function RegionalRecommendations({
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             {regionData.description}
           </p>
-          
+
           {/* Stats */}
           <div className="mt-3 flex gap-3">
             <div className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2">
@@ -261,10 +260,9 @@ export default function RegionalRecommendations({
             </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2">
               <div className="text-[10px] text-gray-500 uppercase">Volatility</div>
-              <div className={`text-sm font-bold ${
-                regionData.volatilityLevel === 'High' ? 'text-red-600' :
-                regionData.volatilityLevel === 'Medium' ? 'text-amber-600' : 'text-green-600'
-              }`}>
+              <div className={`text-sm font-bold ${regionData.volatilityLevel === 'High' ? 'text-red-600' :
+                  regionData.volatilityLevel === 'Medium' ? 'text-amber-600' : 'text-green-600'
+                }`}>
                 {regionData.volatilityLevel}
               </div>
             </div>
@@ -276,7 +274,7 @@ export default function RegionalRecommendations({
           <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
             <span>📊</span> Typical Allocation Pattern
           </h3>
-          
+
           {/* Stacked Bar */}
           <div className="flex rounded-lg overflow-hidden mb-3 h-8 shadow-inner">
             {Object.entries(regionData.typicalAllocation).map(([region, allocation]) => {
@@ -313,7 +311,7 @@ export default function RegionalRecommendations({
           <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
             <span>💡</span> Recommended Allocation
           </h3>
-          
+
           <div className="space-y-2">
             {regionData.recommendedTokens.map((token, index) => (
               <motion.div
@@ -328,9 +326,9 @@ export default function RegionalRecommendations({
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xl text-white">
                       {token.symbol === 'PAXG' ? '🥇' :
-                       token.symbol === 'USDY' ? '💰' :
-                       token.symbol === 'SYRUPUSDC' ? '🍯' :
-                       token.symbol.startsWith('c') ? '💵' : '💎'}
+                        token.symbol === 'USDY' ? '💰' :
+                          token.symbol === 'SYRUPUSDC' ? '🍯' :
+                            token.symbol.startsWith('c') ? '💵' : '💎'}
                     </div>
                     <div>
                       <h4 className="font-bold text-sm text-gray-900 dark:text-white">{token.symbol}</h4>
@@ -354,16 +352,14 @@ export default function RegionalRecommendations({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className={`rounded-xl p-4 border ${
-                difference.isClose
+              className={`rounded-xl p-4 border ${difference.isClose
                   ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                   : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3 mb-2">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
-                  difference.isClose ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'
-                }`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${difference.isClose ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'
+                  }`}>
                   {difference.isClose ? '✓' : '⚠️'}
                 </div>
                 <div>
@@ -371,8 +367,8 @@ export default function RegionalRecommendations({
                     {difference.isClose ? 'Well Aligned' : 'Adjustment Opportunity'}
                   </h4>
                   <p className={`text-xs ${difference.isClose ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
-                    {difference.isClose 
-                      ? 'Your portfolio matches regional patterns' 
+                    {difference.isClose
+                      ? 'Your portfolio matches regional patterns'
                       : `${difference.totalDifference.toFixed(0)}% difference from typical`}
                   </p>
                 </div>
@@ -420,7 +416,7 @@ export default function RegionalRecommendations({
               ▼
             </motion.span>
           </div>
-          
+
           <AnimatePresence>
             {showConsiderations && (
               <motion.div

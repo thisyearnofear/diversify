@@ -86,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - HELP WITH ONRAMPS: Guide users on buying/selling crypto when needed
             
             AVAILABLE ACTIONS:
-            - SWAP: Move between stablecoins (CUSD→CEUR, USDC→USDY, etc.)
+            - SWAP: Move between stablecoins (USDm→EURm, USDC→USDY, etc.)
             - BRIDGE: Move assets between Celo and Arbitrum
             - REBALANCE: Multi-token allocation adjustment
             - HOLD: Stay in current position with data-backed reasoning

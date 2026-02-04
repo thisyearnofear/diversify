@@ -312,8 +312,8 @@ export const TokenPriceService = {
     const idMap: Record<string, string> = {
       USDC: 'usd-coin',
       PAXG: 'pax-gold',
-      CUSD: 'celo-dollar',
-      CEUR: 'celo-euro',
+      USDm: 'celo-dollar',
+      EURm: 'celo-euro',
     };
     return idMap[symbol.toUpperCase()] || null;
   },

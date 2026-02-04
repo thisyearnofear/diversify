@@ -101,16 +101,16 @@ export const TOKEN_PERFORMANCE: Record<string, TokenPerformance> = {
     correlationWithInflation: -0.05,
     lastUpdated: new Date(),
   },
-  'cUSD': {
-    symbol: 'cUSD',
+  'USDm': {
+    symbol: 'USDm',
     ytdReturn: 0,
     volatility: 0.1,
     sharpeRatio: 0,
     correlationWithInflation: -0.8,
     lastUpdated: new Date(),
   },
-  'cEUR': {
-    symbol: 'cEUR',
+  'EURm': {
+    symbol: 'EURm',
     ytdReturn: -2.0,
     volatility: 8.0,
     sharpeRatio: -0.25,
@@ -153,10 +153,10 @@ function calculateInflationHedgeScore(
 ): number {
   let score = 0;
   const realYield = calculateRealYield(marketContext.treasuryYield, marketContext.inflation);
-  
+
   // Base score from correlation with inflation
   score += token.correlationWithInflation * 20;
-  
+
   // Gold-specific logic
   if (token.symbol === 'PAXG') {
     if (marketContext.inflation > 4) {
@@ -172,7 +172,7 @@ function calculateInflationHedgeScore(
       score -= 20; // Hawkish Fed typically bad for gold
     }
   }
-  
+
   // Treasury yield token logic (USDY, SYRUPUSDC)
   if (['USDY', 'SYRUPUSDC'].includes(token.symbol)) {
     if (realYield > 1) {
@@ -185,16 +185,16 @@ function calculateInflationHedgeScore(
       score += 15; // Low inflation environment favors yield over hedges
     }
   }
-  
+
   // Goal-specific adjustments
   if (userContext.goal === 'inflation_protection' && marketContext.inflation > 5) {
     if (token.symbol === 'PAXG') score += 15;
   }
-  
+
   if (userContext.goal === 'rwa_access' && realYield > 1.5) {
     if (['USDY', 'SYRUPUSDC'].includes(token.symbol)) score += 20;
   }
-  
+
   return score;
 }
 
@@ -204,20 +204,20 @@ function calculateInflationHedgeScore(
  */
 function calculateRealYieldScore(token: TokenPerformance, marketContext: MarketContext): number {
   const realYield = calculateRealYield(marketContext.treasuryYield, marketContext.inflation);
-  
+
   if (token.symbol === 'PAXG' && token.ytdReturn === 0) {
     // Non-yielding asset
     if (realYield > 2) return -30; // Strong penalty when Treasuries pay 2%+
     if (realYield > 1) return -15; // Moderate penalty
     if (realYield < 0) return 15;  // Bonus when real yields negative
   }
-  
+
   if (['USDY', 'SYRUPUSDC'].includes(token.symbol)) {
     // Yield-bearing assets
     if (realYield > 2) return 20;  // Bonus when real yields strong
     if (realYield > 0) return 10;  // Small bonus
   }
-  
+
   return 0;
 }
 
@@ -234,17 +234,17 @@ function calculatePerformanceScore(token: TokenPerformance): number {
  */
 function calculateRiskAdjustedScore(token: TokenPerformance, userContext: UserContext): number {
   let score = token.sharpeRatio * 10;
-  
+
   // Conservative users penalize volatility more
   if (userContext.riskTolerance === 'conservative') {
     score -= token.volatility * 0.5;
   }
-  
+
   // Aggressive users appreciate higher returns despite volatility
   if (userContext.riskTolerance === 'aggressive' && token.ytdReturn > 10) {
     score += 10;
   }
-  
+
   return score;
 }
 
@@ -263,16 +263,16 @@ export function scoreTokens(
   inflationData: Record<string, RegionalInflationData>
 ): TokenScore[] {
   const scores: TokenScore[] = [];
-  
+
   // Find max APY for normalization
   const maxApy = Math.max(
     ...symbols.map(s => getTokenApy(s))
   );
-  
+
   for (const symbol of symbols) {
     const token = TOKEN_PERFORMANCE[symbol];
     if (!token) continue;
-    
+
     const breakdown = {
       yieldScore: calculateYieldScore(getTokenApy(symbol), maxApy),
       inflationHedgeScore: calculateInflationHedgeScore(token, marketContext, userContext),
@@ -280,11 +280,11 @@ export function scoreTokens(
       performanceScore: calculatePerformanceScore(token),
       riskAdjustedScore: calculateRiskAdjustedScore(token, userContext),
     };
-    
+
     const totalScore = Object.values(breakdown).reduce((sum, score) => sum + score, 0);
-    
+
     const reasoning = generateReasoning(symbol, breakdown, marketContext, userContext);
-    
+
     scores.push({
       symbol,
       totalScore,
@@ -292,7 +292,7 @@ export function scoreTokens(
       reasoning,
     });
   }
-  
+
   // Sort by total score descending
   return scores.sort((a, b) => b.totalScore - a.totalScore);
 }
@@ -305,8 +305,8 @@ function getTokenApy(symbol: string): number {
     'PAXG': 0,
     'USDY': 5.0,
     'SYRUPUSDC': 4.5,
-    'cUSD': 0,
-    'cEUR': 0,
+    'USDm': 0,
+    'EURm': 0,
     'USDC': 0,
   };
   return apyMap[symbol] || 0;
@@ -323,7 +323,7 @@ function generateReasoning(
 ): string[] {
   const reasoning: string[] = [];
   const realYield = calculateRealYield(marketContext.treasuryYield, marketContext.inflation);
-  
+
   if (symbol === 'PAXG') {
     if (marketContext.inflation > 4) {
       reasoning.push(`Strong inflation hedge: ${marketContext.inflation}% inflation favors hard assets`);
@@ -338,7 +338,7 @@ function generateReasoning(
       reasoning.push(`Strong momentum: Gold up ${marketContext.goldYtdChange}% YTD`);
     }
   }
-  
+
   if (symbol === 'USDY' || symbol === 'SYRUPUSDC') {
     reasoning.push(`${getTokenApy(symbol)}% APY from Treasury yields`);
     if (realYield > 1) {
@@ -348,11 +348,11 @@ function generateReasoning(
       reasoning.push(`Low inflation (${marketContext.inflation}%) environment favors yield over hedges`);
     }
   }
-  
+
   if (breakdown.riskAdjustedScore > 50) {
     reasoning.push(`Excellent risk-adjusted returns (Sharpe: ${TOKEN_PERFORMANCE[symbol]?.sharpeRatio.toFixed(2)})`);
   }
-  
+
   return reasoning;
 }
 
@@ -370,11 +370,11 @@ export function calculateOpportunityCost(
   marketContext: MarketContext = DEFAULT_MARKET_CONTEXT
 ): { vsBestAlternative: string; annualDifference: number } | undefined {
   const tokenApy = getTokenApy(tokenSymbol);
-  
+
   // Find best alternative
   let bestAlternative = '';
   let bestApy = tokenApy;
-  
+
   for (const alt of alternatives) {
     const altApy = getTokenApy(alt);
     if (altApy > bestApy) {
@@ -382,13 +382,13 @@ export function calculateOpportunityCost(
       bestAlternative = alt;
     }
   }
-  
+
   if (!bestAlternative || bestAlternative === tokenSymbol) {
     return undefined;
   }
-  
+
   const annualDifference = (bestApy - tokenApy) / 100 * investmentAmount;
-  
+
   return {
     vsBestAlternative: bestAlternative,
     annualDifference,
@@ -411,16 +411,16 @@ export function getBestTokenForRegionDynamic(
 ): { symbol: string; score: number; reasoning: string[] } {
   // Define available tokens by region
   const regionTokens: Record<string, string[]> = {
-    'USA': ['cUSD', 'USDC', 'USDY', 'SYRUPUSDC'],
-    'Europe': ['cEUR'],
-    'LatAm': ['cREAL'],
-    'Africa': ['cKES', 'cZAR'],
-    'Asia': ['PUSO'],
+    'USA': ['USDm', 'USDC', 'USDY', 'SYRUPUSDC'],
+    'Europe': ['EURm'],
+    'LatAm': ['BRLm'],
+    'Africa': ['KESm', 'ZARm'],
+    'Asia': ['PHPm'],
     'Global': ['PAXG', 'USDY', 'SYRUPUSDC'], // Multiple options for Global
   };
-  
-  const tokens = regionTokens[region] || ['cUSD'];
-  
+
+  const tokens = regionTokens[region] || ['USDm'];
+
   if (region === 'Global') {
     // For Global, use scoring system
     const scored = scoreTokens(tokens, marketContext, userContext, inflationData);
@@ -433,7 +433,7 @@ export function getBestTokenForRegionDynamic(
       };
     }
   }
-  
+
   // For other regions, return the primary token with basic info
   const primaryToken = tokens[0];
   return {

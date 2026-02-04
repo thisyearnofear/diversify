@@ -4,21 +4,21 @@ const USE_CASES = [
   {
     title: "Protection from Local Currency Devaluation",
     description:
-      "When the Kenyan Shilling lost 20% of its value against the USD in 2022, Kenyans who had diversified into cEUR and cUSD preserved more of their savings.",
+      "When the Kenyan Shilling lost 20% of its value against the USD in 2022, Kenyans who had diversified into EURm and USDm preserved more of their savings.",
     icon: "🛡️",
     region: "Africa",
   },
   {
     title: "Remittance Cost Savings",
     description:
-      "A Filipino worker sending money home from the US can save up to 7% in fees by using a mix of cUSD and PUSO instead of traditional remittance services.",
+      "A Filipino worker sending money home from the US can save up to 7% in fees by using a mix of USDm and PHPm instead of traditional remittance services.",
     icon: "💸",
     region: "Asia",
   },
   {
     title: "Business Import/Export Protection",
     description:
-      "A Colombian business that imports goods from Europe can hold cEUR to protect against COP/EUR exchange rate fluctuations.",
+      "A Colombian business that imports goods from Europe can hold EURm to protect against COPm/EURm exchange rate fluctuations.",
     icon: "🏭",
     region: "LatAm",
   },
@@ -48,9 +48,9 @@ export default function RealWorldUseCases({
   // Filter use cases if a focus region is provided
   const filteredCases = focusRegion
     ? USE_CASES.filter(
-        (useCase) =>
-          useCase.region === focusRegion || useCase.region === "Global"
-      )
+      (useCase) =>
+        useCase.region === focusRegion || useCase.region === "Global"
+    )
     : USE_CASES;
 
   return (

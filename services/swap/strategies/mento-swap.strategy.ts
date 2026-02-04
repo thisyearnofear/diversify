@@ -18,8 +18,8 @@ import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, getBrokerAddress, TOKEN_METADATA, TX_CONFIG } from '../../../config';
 
-// CUSD is the hub token - all Mento pairs route through it
-const CUSD_SYMBOL = 'CUSD';
+// USDm is the hub token - all Mento pairs route through it
+const ROUTING_TOKEN_SYMBOL = 'USDm';
 
 export class MentoSwapStrategy extends BaseSwapStrategy {
     getName(): string {
@@ -117,7 +117,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
 
             // Get signer for transactions
             const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
-            
+
             // Use JsonRpcProvider for read-only calls (works with Farcaster)
             const readProvider = ProviderFactoryService.getProvider(params.fromChainId);
 
@@ -137,9 +137,9 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
 
             // Transaction options
             const gasPrice = await readProvider.getGasPrice();
-            const txOptions = { 
+            const txOptions = {
                 useLegacyTx: true, // Celo uses legacy transactions
-                gasPrice 
+                gasPrice
             };
 
             // Step 1: Check and handle approval
@@ -177,7 +177,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 this.log('Approval confirmed');
             }
 
-            // Step 2: Find exchange (direct or via CUSD)
+            // Step 2: Find exchange (direct or via USDm)
             this.log('Finding exchange');
             const directExchange = await ExchangeDiscoveryService.findDirectExchange(
                 brokerAddress,
@@ -196,7 +196,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
             if (directExchange) {
                 // Direct swap available
                 this.log('Direct exchange found, executing single swap');
-                
+
                 const expectedAmountOut = await ExchangeDiscoveryService.getQuote(
                     brokerAddress,
                     directExchange,
@@ -225,16 +225,16 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 await SwapExecutionService.waitForSwap(swapTx, confirmations);
                 finalTxHash = swapTx.hash;
             } else {
-                // No direct exchange - route through CUSD
-                this.log('No direct exchange, routing through CUSD');
-                const cusdAddress = tokens[CUSD_SYMBOL as keyof typeof tokens];
-                
-                if (!cusdAddress) {
-                    throw new Error('CUSD not available on this network for routing');
+                // No direct exchange - route through USDm
+                this.log('No direct exchange, routing through USDm');
+                const routingTokenAddress = tokens[ROUTING_TOKEN_SYMBOL as keyof typeof tokens];
+
+                if (!routingTokenAddress) {
+                    throw new Error('USDm not available on this network for routing');
                 }
 
-                // Skip if one of the tokens is already CUSD
-                if (params.fromToken === CUSD_SYMBOL || params.toToken === CUSD_SYMBOL) {
+                // Skip if one of the tokens is already USDm
+                if (params.fromToken === ROUTING_TOKEN_SYMBOL || params.toToken === ROUTING_TOKEN_SYMBOL) {
                     throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
                 }
 
@@ -242,34 +242,34 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                     brokerAddress,
                     fromTokenAddress,
                     toTokenAddress,
-                    cusdAddress,
+                    routingTokenAddress,
                     readProvider
                 );
 
                 if (!twoStepExchange) {
-                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken} (even via CUSD)`);
+                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken} (even via USDm)`);
                 }
 
-                // Step 1: Swap fromToken -> CUSD
-                this.log('Step 1: Swapping to CUSD');
-                const cusdAmountOut = await ExchangeDiscoveryService.getQuote(
+                // Step 1: Swap fromToken -> USDm
+                this.log('Step 1: Swapping to USDm');
+                const routingTokenAmountOut = await ExchangeDiscoveryService.getQuote(
                     brokerAddress,
                     twoStepExchange.first,
                     fromTokenAddress,
-                    cusdAddress,
+                    routingTokenAddress,
                     amountIn,
                     readProvider
                 );
 
-                const minCusdOut = this.calculateMinOutput(cusdAmountOut, slippage);
+                const minRoutingTokenOut = this.calculateMinOutput(routingTokenAmountOut, slippage);
 
                 const firstSwapTx = await SwapExecutionService.executeSwap(
                     brokerAddress,
                     twoStepExchange.first,
                     fromTokenAddress,
-                    cusdAddress,
+                    routingTokenAddress,
                     amountIn,
-                    minCusdOut,
+                    minRoutingTokenOut,
                     signer,
                     txOptions
                 );
@@ -278,36 +278,36 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 await SwapExecutionService.waitForSwap(firstSwapTx, confirmations);
                 this.log('First swap confirmed');
 
-                // Approve CUSD for second swap if needed
-                const cusdApprovalStatus = await ApprovalService.checkApproval(
-                    cusdAddress,
+                // Approve USDm for second swap if needed
+                const routingTokenApprovalStatus = await ApprovalService.checkApproval(
+                    routingTokenAddress,
                     params.userAddress,
                     brokerAddress,
-                    cusdAmountOut,
+                    routingTokenAmountOut,
                     params.fromChainId,
                     18
                 );
 
-                if (!cusdApprovalStatus.isApproved) {
-                    this.log('Approving CUSD for second swap');
-                    const cusdApproveTx = await ApprovalService.approve(
-                        cusdAddress,
+                if (!routingTokenApprovalStatus.isApproved) {
+                    this.log('Approving USDm for second swap');
+                    const routingTokenApproveTx = await ApprovalService.approve(
+                        routingTokenAddress,
                         brokerAddress,
-                        cusdAmountOut,
+                        routingTokenAmountOut,
                         signer,
                         txOptions
                     );
-                    await ApprovalService.waitForApproval(cusdApproveTx, confirmations);
+                    await ApprovalService.waitForApproval(routingTokenApproveTx, confirmations);
                 }
 
-                // Step 2: Swap CUSD -> toToken
-                this.log('Step 2: Swapping CUSD to target token');
+                // Step 2: Swap USDm -> toToken
+                this.log('Step 2: Swapping USDm to target token');
                 const finalAmountOut = await ExchangeDiscoveryService.getQuote(
                     brokerAddress,
                     twoStepExchange.second,
-                    cusdAddress,
+                    routingTokenAddress,
                     toTokenAddress,
-                    cusdAmountOut,
+                    routingTokenAmountOut,
                     readProvider
                 );
 
@@ -316,9 +316,9 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 const secondSwapTx = await SwapExecutionService.executeSwap(
                     brokerAddress,
                     twoStepExchange.second,
-                    cusdAddress,
+                    routingTokenAddress,
                     toTokenAddress,
-                    cusdAmountOut,
+                    routingTokenAmountOut,
                     minFinalOut,
                     signer,
                     txOptions
