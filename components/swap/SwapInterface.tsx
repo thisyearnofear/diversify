@@ -170,6 +170,22 @@ const SwapInterface = forwardRef<
     }
   }, [chainId, enableCrossChain, fromChainId, toChainId]);
 
+  // Update token selection when availableTokens changes (e.g., from search filtering)
+  useEffect(() => {
+    // Only update if the current selection is not in the filtered list
+    const fromExists = availableTokens.some(t => t.symbol === fromToken);
+    const toExists = availableTokens.some(t => t.symbol === toToken);
+    
+    if (!fromExists && availableTokens.length > 0) {
+      setFromToken(availableTokens[0].symbol);
+    }
+    if (!toExists && availableTokens.length > 0) {
+      // Try to find a different token than fromToken
+      const differentToken = availableTokens.find(t => t.symbol !== fromToken);
+      setToToken(differentToken?.symbol || availableTokens[0].symbol);
+    }
+  }, [availableTokens, fromToken, toToken]);
+
   // Update token selection when chains change
   useEffect(() => {
     if (enableCrossChain) {

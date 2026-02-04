@@ -20,6 +20,7 @@ import FarcasterWalletButton from "../components/wallet/FarcasterWalletButton";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTutorial";
 import ThemeToggle from "../components/ui/ThemeToggle";
+import VoiceButton from "../components/ui/VoiceButton";
 
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab, guidedTour, exitTour } = useAppState();
@@ -178,7 +179,22 @@ export default function DiversiFiPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <VoiceButton
+              size="sm"
+              variant="default"
+              onTranscription={(text) => {
+                // Handle voice commands globally
+                console.log('[Voice] Transcribed:', text);
+                // TODO: Route to appropriate tab/action based on intent
+                // For now, just navigate to protect tab where agent can respond
+                if (text.toLowerCase().includes('swap') || text.toLowerCase().includes('exchange')) {
+                  setActiveTab('swap');
+                } else if (text.toLowerCase().includes('protect') || text.toLowerCase().includes('analyze')) {
+                  setActiveTab('protect');
+                }
+              }}
+            />
             <ThemeToggle />
             {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
           </div>

@@ -63,9 +63,9 @@ export default function VoiceButton({
 
     const variantClasses = {
         default: {
-            idle: 'bg-gray-100 hover:bg-gray-200 text-gray-600',
-            recording: 'bg-red-500 text-white shadow-lg shadow-red-500/30',
-            processing: 'bg-amber-500 text-white'
+            idle: 'bg-blue-100 hover:bg-blue-200 text-blue-600 border-2 border-blue-300 shadow-sm',
+            recording: 'bg-red-500 text-white shadow-lg shadow-red-500/30 border-2 border-red-600',
+            processing: 'bg-amber-500 text-white border-2 border-amber-600'
         },
         header: {
             idle: 'bg-white/10 hover:bg-white/20 text-white',
