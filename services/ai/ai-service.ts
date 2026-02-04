@@ -16,7 +16,7 @@ import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { circuitBreakerManager } from '../../utils/circuit-breaker-service';
 import { unifiedCache } from '../../utils/unified-cache-service';
-import fs from 'fs';
+import crypto from 'crypto';
 
 /**
  * Robustly clean JSON strings from AI responses
@@ -126,8 +126,8 @@ const VENICE_MODELS = {
 };
 
 const GEMINI_MODELS = {
-  flash: 'gemini-1.5-flash',     // Changed to 1.5-flash for production stability
-  pro: 'gemini-1.5-pro',
+  flash: 'gemini-3-flash-preview',     // Only working model for this API key
+  pro: 'gemini-3-flash-preview',       // Use same model for both (API key limitation)
 };
 
 // TTS voice mappings
@@ -144,13 +144,13 @@ const VENICE_VOICES = {
 
 const veniceCircuitBreaker = circuitBreakerManager.getCircuit('venice-api', {
   failureThreshold: 3,
-  timeout: 30000,
+  timeout: 12000, // Reduced from 30s to prevent platform timeout issues
   successThreshold: 2,
 });
 
 const geminiCircuitBreaker = circuitBreakerManager.getCircuit('gemini-api', {
   failureThreshold: 3,
-  timeout: 30000,
+  timeout: 12000, // Reduced from 30s to prevent platform timeout issues
   successThreshold: 2,
 });
 
@@ -221,7 +221,7 @@ export async function generateChatCompletion(
       const errors: Array<{ provider: string; error: string }> = [];
 
       // Determine execution order
-      // Default to Gemini -> Venice if auto (for stability), or user specified order
+      // Venice is faster and more reliable, so prefer it over Gemini
       let providerOrder: Array<'gemini' | 'venice'>;
 
       if (preferredProvider === 'venice') {
@@ -229,26 +229,56 @@ export async function generateChatCompletion(
       } else if (preferredProvider === 'gemini') {
         providerOrder = ['gemini', 'venice'];
       } else {
-        // Auto: Prefer Gemini if configured (Hackathon priority), else Venice
-        // Check if both keys exist to decide optimal path, or just default to Gemini primary
-        providerOrder = DEFAULT_CONFIG.geminiApiKey
-          ? ['gemini', 'venice']
-          : ['venice', 'gemini'];
+        // Auto: Prefer Venice (faster, better JSON support, no rate limits)
+        // Gemini as fallback due to free tier limitations
+        providerOrder = DEFAULT_CONFIG.veniceApiKey
+          ? ['venice', 'gemini']
+          : ['gemini', 'venice'];
       }
 
       for (const provider of providerOrder) {
         try {
           if (provider === 'venice' && DEFAULT_CONFIG.veniceApiKey) {
             const result = await veniceCircuitBreaker.call(() => callVeniceChat(options));
+
+            // Validate JSON response before caching if JSON mode was requested
+            if (options.responseMimeType === 'application/json') {
+              try {
+                JSON.parse(cleanJsonResponse(result.content));
+              } catch (jsonError) {
+                console.warn(`[AI Service] ${provider} returned invalid JSON, not caching:`, jsonError);
+                throw new Error(`Invalid JSON response from ${provider}: ${jsonError}`);
+              }
+            }
+
             return { data: result, source: 'venice' };
           } else if (provider === 'gemini' && DEFAULT_CONFIG.geminiApiKey) {
             const result = await geminiCircuitBreaker.call(() => callGeminiChat(options));
+
+            // Validate JSON response before caching if JSON mode was requested
+            if (options.responseMimeType === 'application/json') {
+              try {
+                JSON.parse(cleanJsonResponse(result.content));
+              } catch (jsonError) {
+                console.warn(`[AI Service] ${provider} returned invalid JSON, not caching:`, jsonError);
+                throw new Error(`Invalid JSON response from ${provider}: ${jsonError}`);
+              }
+            }
+
             return { data: result, source: 'gemini' };
           }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           errors.push({ provider, error: errorMessage });
-          console.warn(`[AI Service] ${provider} failed, attempting next provider...`, errorMessage);
+
+          // Log specific error types for better debugging
+          if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+            console.warn(`[AI Service] ${provider} rate limited - this is expected for free tier Gemini`);
+          } else if (errorMessage.includes('Invalid JSON')) {
+            console.warn(`[AI Service] ${provider} returned invalid JSON - not caching response`);
+          } else {
+            console.warn(`[AI Service] ${provider} failed, attempting next provider...`, errorMessage);
+          }
         }
       }
 
@@ -299,6 +329,9 @@ async function callVeniceChat(options: ChatCompletionOptions): Promise<ChatCompl
     messages: (options.image ? messages : options.messages) as any,
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? 2000,
+    ...(options.responseMimeType === 'application/json' && {
+      response_format: { type: 'json_object' as const },
+    }),
     // @ts-expect-error - Venice-specific parameters
     venice_parameters: {
       enable_web_search: options.enableWebSearch ? 'on' : 'off',
@@ -335,9 +368,8 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
 
   const modelsToTry = [
     options.model || GEMINI_MODELS.flash,
-    'gemini-1.5-flash',
-    'gemini-1.5-pro',
-    'gemini-2.0-flash-exp', // Fallback to experimental if stable fails
+    'gemini-3-flash-preview',        // Only working model
+    'models/gemini-3-flash-preview', // Alternative format
   ];
 
   let lastError: any = null;
@@ -379,7 +411,10 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
         maxOutputTokens: options.maxTokens ?? 2000,
       };
 
-      if (options.responseMimeType) {
+      // Note: Gemini 3 Flash Preview has issues with responseMimeType: 'application/json'
+      // It causes truncated responses. Instead, we rely on clear prompt instructions for JSON.
+      // The cleanJsonResponse() function will handle any markdown wrapping.
+      if (options.responseMimeType && options.responseMimeType !== 'application/json') {
         generationConfig.responseMimeType = options.responseMimeType;
       }
 
@@ -387,8 +422,16 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
         contents: geminiMessages as any,
         systemInstruction: systemMessages.length > 0 ? {
           role: 'system',
-          parts: [{ text: systemMessages.map(m => m.content).join('\n\n') }]
-        } : undefined,
+          parts: [{
+            text: systemMessages.map(m => m.content).join('\n\n') +
+              (options.responseMimeType === 'application/json' ?
+                '\n\nIMPORTANT: Respond with valid JSON only. No explanations, no markdown, no code blocks.' :
+                '')
+          }]
+        } : (options.responseMimeType === 'application/json' ? {
+          role: 'system',
+          parts: [{ text: 'You are a JSON API. Respond with valid JSON only. No explanations, no markdown, no code blocks.' }]
+        } : undefined),
         generationConfig,
       });
 
@@ -585,6 +628,9 @@ async function callOpenAITranscribe(filePath: string): Promise<string> {
   const client = getOpenAIClient();
   if (!client) throw new Error('OpenAI client not initialized - check OPENAI_API_KEY');
 
+  // Lazy-load fs for Node.js environments only
+  const fs = await import('fs');
+
   // Create stream and ensure it has a proper extension for Whisper
   // formidable temp files often lack extensions
   const fileStream = fs.createReadStream(filePath);
@@ -601,6 +647,9 @@ async function callElevenLabsTranscribe(filePath: string): Promise<string> {
   if (!DEFAULT_CONFIG.elevenLabsApiKey) {
     throw new Error('ElevenLabs API key not configured');
   }
+
+  // Lazy-load fs for Node.js environments only
+  const fs = await import('fs');
 
   // Read file into buffer for ElevenLabs API
   const fileBuffer = fs.readFileSync(filePath);
@@ -707,13 +756,8 @@ function generateCacheKey(type: string, options: unknown): string {
 }
 
 function hashString(str: string): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
-  }
-  return Math.abs(hash).toString(36);
+  // Use full SHA-256 hash to eliminate collision risk under production volume
+  return crypto.createHash('sha256').update(str).digest('hex');
 }
 
 function extractCitations(content?: string): string[] | undefined {

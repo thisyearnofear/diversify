@@ -5,6 +5,54 @@ import { getOnrampSystemPrompt } from '../../../services/ai/onramp-agent-context
 import type { RegionalInflationData } from '../../../hooks/use-inflation-data';
 import type { ChainBalance } from '../../../hooks/use-multichain-balances';
 
+/**
+ * Robustly clean JSON strings from AI responses
+ * Handles markdown code blocks, preamble, and postscript text
+ */
+function cleanJsonResponse(text: string): string {
+    if (!text) return '';
+
+    // 1. Try to find JSON block with backticks
+    const jsonBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (jsonBlockMatch && jsonBlockMatch[1]) {
+        const cleaned = jsonBlockMatch[1].trim();
+        if (cleaned) return cleaned;
+    }
+
+    // 2. If no backticks, try to find the first '{' and last '}'
+    const startBrace = text.indexOf('{');
+    const endBrace = text.lastIndexOf('}');
+
+    if (startBrace !== -1 && endBrace !== -1 && endBrace > startBrace) {
+        return text.substring(startBrace, endBrace + 1).trim();
+    }
+
+    // 3. Last resort: just trim
+    return text.trim();
+}
+
+/**
+ * Safely parse JSON with cleaning and detailed error logging
+ */
+function safeJsonParse(raw: string, context: { provider: string; model: string }) {
+    const cleaned = cleanJsonResponse(raw);
+
+    try {
+        return JSON.parse(cleaned);
+    } catch (parseError) {
+        console.error('[Analyze API] JSON parse failed after cleaning:', {
+            provider: context.provider,
+            model: context.model,
+            rawLength: raw.length,
+            cleanedLength: cleaned.length,
+            startsWithBrace: cleaned.startsWith('{'),
+            first100Chars: cleaned.slice(0, 100),
+            last100Chars: cleaned.slice(-100),
+        });
+        throw parseError;
+    }
+}
+
 
 
 
@@ -357,15 +405,44 @@ TRANSPARENCY REQUIREMENTS:
 
         let parsed;
         try {
-            parsed = JSON.parse(result.content);
-        } catch (parseError) {
-            console.error('[Analyze API] JSON parse error:', parseError);
-            console.error('[Analyze API] Raw content:', result.content);
-            return res.status(500).json({
-                error: 'Failed to parse AI response as JSON',
-                rawContent: process.env.NODE_ENV === 'development' ? result.content : undefined,
-                _meta: { provider: result.provider, model: result.model }
+            parsed = safeJsonParse(result.content, {
+                provider: result.provider,
+                model: result.model
             });
+        } catch (parseError) {
+            // First parse failed - attempt repair retry with simpler prompt
+            console.warn('[Analyze API] Initial parse failed, attempting repair retry...');
+
+            try {
+                const repairResult = await generateChatCompletion({
+                    messages: [
+                        {
+                            role: 'system' as const,
+                            content: 'You are a JSON repair assistant. Return ONLY valid JSON, no markdown, no commentary, no code fences.'
+                        },
+                        {
+                            role: 'user' as const,
+                            content: `Fix this invalid JSON and return ONLY the corrected JSON object:\n\n${result.content.slice(0, 3000)}`
+                        }
+                    ],
+                    responseMimeType: 'application/json' as const,
+                    maxTokens: 4096,
+                    temperature: 0.1,
+                });
+
+                parsed = safeJsonParse(repairResult.content, {
+                    provider: repairResult.provider,
+                    model: repairResult.model
+                });
+                console.log('[Analyze API] Repair retry succeeded');
+            } catch (repairError) {
+                console.error('[Analyze API] Repair retry also failed:', repairError);
+                return res.status(500).json({
+                    error: 'Failed to parse AI response as JSON',
+                    rawContent: process.env.NODE_ENV === 'development' ? result.content.slice(0, 500) : undefined,
+                    _meta: { provider: result.provider, model: result.model }
+                });
+            }
         }
 
         return res.status(200).json({
