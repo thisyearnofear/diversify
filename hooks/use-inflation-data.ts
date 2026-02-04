@@ -315,32 +315,32 @@ export function useInflationData() {
 
     // Try direct mapping first based on known stablecoin patterns
     // USA region (North America)
-    if (stablecoinUpper === 'USDm') return 'USA';
+    if (stablecoinUpper === 'USDM') return 'USA';
     if (stablecoinUpper === 'USDC') return 'USA';
     if (stablecoinUpper === 'USDT') return 'USA'; // Tether USD
-    if (stablecoinUpper === 'CADm') return 'USA'; // Canadian Dollar (could be "North America" in future)
+    if (stablecoinUpper === 'CADM') return 'USA'; // Canadian Dollar (could be "North America" in future)
 
     // Europe region
-    if (stablecoinUpper === 'EURm') return 'Europe';
+    if (stablecoinUpper === 'EURM') return 'Europe';
     if (stablecoinUpper === 'EURC') return 'Europe'; // Euro Coin (Arc testnet)
-    if (stablecoinUpper === 'GBPm') return 'Europe'; // British Pound
+    if (stablecoinUpper === 'GBPM') return 'Europe'; // British Pound
+    if (stablecoinUpper === 'CHFM') return 'Europe'; // Swiss Franc
 
     // Latin America region
-    if (stablecoinUpper === 'BRLm') return 'LatAm';
-    if (stablecoinUpper === 'COPm') return 'LatAm';
+    if (stablecoinUpper === 'BRLM') return 'LatAm';
+    if (stablecoinUpper === 'COPM') return 'LatAm';
 
     // Africa region
-    if (stablecoinUpper === 'KESm') return 'Africa';
-    if (stablecoinUpper === 'GHSm') return 'Africa';
-    if (stablecoinUpper === 'ZARm') return 'Africa'; // South African Rand
-    if (stablecoinUpper === 'XOFm' || stablecoinUpper === 'EXOF') return 'Africa';
+    if (stablecoinUpper === 'KESM') return 'Africa';
+    if (stablecoinUpper === 'GHSM') return 'Africa';
+    if (stablecoinUpper === 'ZARM') return 'Africa'; // South African Rand
+    if (stablecoinUpper === 'XOFM' || stablecoinUpper === 'EXOF') return 'Africa';
+    if (stablecoinUpper === 'NGNM') return 'Africa'; // Nigerian Naira
 
     // Asia region
-    if (stablecoinUpper === 'PHPm') return 'Asia';
-    if (stablecoinUpper === 'AUDm') return 'Asia'; // Australian Dollar (grouped with Asia-Pacific)
-    if (stablecoinUpper === 'JPYm') return 'Asia'; // Japanese Yen
-    if (stablecoinUpper === 'CHFm') return 'Europe'; // Swiss Franc
-    if (stablecoinUpper === 'NGNm') return 'Africa'; // Nigerian Naira
+    if (stablecoinUpper === 'PHPM') return 'Asia';
+    if (stablecoinUpper === 'AUDM') return 'Asia'; // Australian Dollar (grouped with Asia-Pacific)
+    if (stablecoinUpper === 'JPYM') return 'Asia'; // Japanese Yen
 
     // Global
     if (stablecoinUpper === 'PAXG') return 'Global';
