@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import fs from 'fs';
-import OpenAI from 'openai';
+import { AIService } from '../../../services/ai/ai-service';
 
 export const config = {
     api: {
@@ -9,17 +9,9 @@ export const config = {
     },
 };
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
-    }
-
-    if (!process.env.OPENAI_API_KEY) {
-        return res.status(500).json({ error: 'OpenAI API key not configured' });
     }
 
     try {
@@ -31,12 +23,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: 'No audio file provided' });
         }
 
-        const transcription = await openai.audio.transcriptions.create({
-            file: fs.createReadStream(audioFile.filepath),
-            model: 'whisper-1',
-        });
+        // Use unified AI Service with failover (OpenAI -> Venice)
+        const transcription = await AIService.transcribe(
+            fs.createReadStream(audioFile.filepath)
+        );
 
-        res.status(200).json({ text: transcription.text });
+        res.status(200).json({ 
+            text: transcription.text,
+            provider: transcription.provider 
+        });
     } catch (error) {
         console.error('[Transcribe API] Error:', error);
         res.status(500).json({ error: (error as Error).message || 'Failed to transcribe audio' });

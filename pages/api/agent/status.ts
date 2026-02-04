@@ -49,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 venice: aiStatus.venice.available,
                 gemini: aiStatus.gemini.available,
             },
-            transcription: !!process.env.OPENAI_API_KEY,
+            transcription: !!process.env.OPENAI_API_KEY || !!process.env.VENICE_API_KEY,
             speech: aiStatus.venice.available || aiStatus.elevenLabs.available,
             speechProviders: {
                 venice: aiStatus.venice.available,

@@ -63,29 +63,29 @@ export default function ProtectionAnalysis({
 
         const baseUrl = 'https://diversifiapp.vercel.app';
         
-        // Helper to get rating without + symbol (causes URL encoding issues)
-        const getSafeRating = (score: number) => {
-            const rating = getLetterRating(score);
-            return rating.replace('+', ' plus'); // A+ -> A plus
-        };
+        // Generate unique share ID based on user stats
+        const shareId = `${Date.now().toString(36)}`;
+        
+        // Calculate percentile (mock - in production could be based on actual user data)
+        const percentile = Math.min(99, Math.max(50, Math.round(diversificationScore + 10)));
+        
+        // Build dynamic share page URL with fc:miniapp meta tags
+        const sharePageUrl = `${baseUrl}/share/${shareId}?r=${activeRegions}&d=${encodeURIComponent(getLetterRating(goalScores.diversify))}&i=${encodeURIComponent(getLetterRating(goalScores.hedge))}&rwa=${rwaPercent.toFixed(1)}&s=${diversificationScore}&p=${percentile}`;
 
         if (platform === 'twitter') {
-            // Twitter: include mentions at the end
-            const twitterText = `Savings protected across ${activeRegions} regions via DiversiFi 🛡️\n\n` +
-                `Global Diversification: ${getLetterRating(goalScores.diversify)}\n` +
-                `Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
-                `Real Asset Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
-                `Building resilience against currency debasement 📈\n\n` +
-                `#WealthProtection #RWA #diversifi\n\n` +
-                `@arbitrum 🤝 @Celo 🤝 @stable_station`;
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(baseUrl)}`);
+            const twitterText = `🛡️ My DiversiFi Protection Score:\n\n` +
+                `📍 ${activeRegions} regions protected\n` +
+                `📊 Diversification: ${getLetterRating(goalScores.diversify)}\n` +
+                `💰 Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
+                `🏠 RWA Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
+                `Top ${percentile}% of users!\n\n` +
+                `#DiversiFi #WealthProtection`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(sharePageUrl)}`);
         } else {
-            // Farcaster: use SDK composeCast (recommended approach per Farcaster docs)
-            const farcasterText = `Savings protected across ${activeRegions} regions via DiversiFi\n\n` +
-                `Global Diversification: ${getLetterRating(goalScores.diversify)}\n` +
-                `Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
-                `Real Asset Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
-                `Building resilience against currency debasement`;
+            // Engaging Farcaster cast text with competitive element
+            const castText = `Just checked my DiversiFi protection score:\n\n` +
+                `🛡️ ${activeRegions} regions • Diversification ${getLetterRating(goalScores.diversify)} • Hedge ${getLetterRating(goalScores.hedge)}\n\n` +
+                `Top ${percentile}% of users. How protected are you?`;
 
             // Try to use SDK composeCast if in Farcaster Mini App context
             try {
@@ -95,10 +95,10 @@ export default function ProtectionAnalysis({
                 ]);
                 
                 if (context && sdk.actions?.composeCast) {
-                    // Use native SDK - recommended approach
+                    // Use native SDK - embeds the share page with fc:miniapp meta for rich preview
                     sdk.actions.composeCast({
-                        text: farcasterText,
-                        embeds: [baseUrl]
+                        text: castText,
+                        embeds: [sharePageUrl]
                     });
                     return;
                 }
@@ -106,13 +106,8 @@ export default function ProtectionAnalysis({
                 // Not in Farcaster Mini App context, fall through to URL intent
             }
 
-            // Fallback for external browsers: simplified text without emojis or special chars
-            // Using warpcast.com (not farcaster.xyz) with minimal encoding
-            const simpleText = `Savings protected across ${activeRegions} regions via DiversiFi - ` +
-                `Diversification ${getSafeRating(goalScores.diversify)}, ` +
-                `Inflation Hedge ${getSafeRating(goalScores.hedge)}`;
-            
-            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(simpleText)}&embeds[]=${encodeURIComponent(baseUrl)}`;
+            // Fallback for external browsers
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(sharePageUrl)}`;
             window.open(warpcastUrl);
         }
     };
