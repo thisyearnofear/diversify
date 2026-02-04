@@ -1,10 +1,10 @@
 export declare const CELO_TOKENS: {
     CELO: string;
-    CUSD: string;
-    CEUR: string;
-    CKES: string;
-    CCOP: string;
-    PUSO: string;
+    USDm: string;
+    EURm: string;
+    KESm: string;
+    COPm: string;
+    PHPm: string;
     USDT: string;
 };
 export declare const MENTO_BROKER_ADDRESS = "0x777a8255ca72412f0d706dc03c9d1987306b4cad";
@@ -18,14 +18,14 @@ export declare const MENTO_ABIS: {
     BROKER_SWAP: string[];
 };
 export declare const DEFAULT_EXCHANGE_RATES: {
-    CKES: number;
-    CCOP: number;
-    PUSO: number;
+    KESm: number;
+    COPm: number;
+    PHPm: number;
 };
 export declare const CACHE_KEYS: {
-    EXCHANGE_RATE_CKES: string;
-    EXCHANGE_RATE_CCOP: string;
-    EXCHANGE_RATE_PUSO: string;
+    EXCHANGE_RATE_KESm: string;
+    EXCHANGE_RATE_COPm: string;
+    EXCHANGE_RATE_PHPm: string;
 };
 export declare const CACHE_DURATIONS: {
     EXCHANGE_RATE: number;
@@ -46,8 +46,8 @@ export declare const getCachedData: (key: string, duration?: number) => unknown;
 export declare const setCachedData: (key: string, value: unknown) => void;
 /**
  * Get exchange rate for a Celo stablecoin using Mento Protocol
- * @param tokenSymbol Token symbol (CKES, CCOP, PUSO)
- * @returns Exchange rate (cUSD to token)
+ * @param tokenSymbol Token symbol (KESm, COPm, PHPm)
+ * @returns Exchange rate (USDm to token)
  */
 export declare const getMentoExchangeRate: (tokenSymbol: string) => Promise<number>;
 export interface TradeablePair {

@@ -148,11 +148,11 @@ const CONCENTRATION_THRESHOLDS = {
 
 // Single source of truth for token regions within analysis engine
 const TOKEN_REGION_MAP: Record<string, string> = {
-  'USDM': 'USA', 'USDC': 'USA', 'CCAD': 'USA', 'USDY': 'USA',
+  'USDM': 'USA', 'USDC': 'USA', 'CADM': 'USA', 'USDY': 'USA',
   'EURM': 'Europe', 'EURC': 'Europe', 'GBPM': 'Europe', 'CHFM': 'Europe',
   'BRLM': 'LatAm', 'COPM': 'LatAm',
   'KESM': 'Africa', 'GHSM': 'Africa', 'ZARM': 'Africa', 'XOFM': 'Africa', 'EXOF': 'Africa', 'NGNM': 'Africa',
-  'PHPM': 'Asia', 'CAUD': 'Asia', 'CPESO': 'Asia', 'CJPY': 'Asia',
+  'PHPM': 'Asia', 'AUDM': 'Asia', 'JPYM': 'Asia',
   'PAXG': 'Global', 'SYRUPUSDC': 'Global',
 };
 

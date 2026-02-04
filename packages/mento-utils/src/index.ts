@@ -204,7 +204,7 @@ export const getMentoExchangeRate = async (
     const amountOut = await brokerRateContract.getAmountOut(
       exchangeProvider,
       exchangeId,
-      cusdAddress,
+      routingTokenAddress,
       tokenAddress,
       oneUSD,
     );

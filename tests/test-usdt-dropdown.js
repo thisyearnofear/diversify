@@ -8,8 +8,8 @@ function testUSDTDropdown() {
 
     // Test 1: Check USDT in FALLBACK_TRADEABLE_SYMBOLS
     console.log('1. Checking USDT in fallback tradeable symbols...');
-    const celoMainnetFallback = ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN', 'CELO', 'USDC', 'EURC', 'USDT'];
-    const alfajoresFallback = ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CELO', 'USDT'];
+    const celoMainnetFallback = ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'CELO', 'USDC', 'EURC', 'USDT'];
+    const alfajoresFallback = ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'USDT'];
     
     if (celoMainnetFallback.includes('USDT')) {
         console.log('✅ USDT found in Celo Mainnet fallback tokens');
@@ -47,12 +47,12 @@ function testUSDTDropdown() {
     // Test 4: Simulate token filtering
     console.log('\n4. Simulating token filtering...');
     const allTokens = [
-        { symbol: 'CUSD', name: 'Celo Dollar', region: 'USA' },
-        { symbol: 'CEUR', name: 'Celo Euro', region: 'Europe' },
+        { symbol: 'USDm', name: 'Mento Dollar', region: 'USA' },
+        { symbol: 'EURm', name: 'Mento Euro', region: 'Europe' },
         { symbol: 'USDT', name: 'Tether USD', region: 'USA' }
     ];
     
-    const tradeableSymbols = ['CUSD', 'CEUR', 'USDT'];
+    const tradeableSymbols = ['USDm', 'EURm', 'USDT'];
     const filteredTokens = allTokens.filter(token => 
         tradeableSymbols.includes(token.symbol.toUpperCase())
     );

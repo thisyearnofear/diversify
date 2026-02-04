@@ -5,11 +5,11 @@ const ethers_1 = require("ethers");
 // Token addresses on Celo
 exports.CELO_TOKENS = {
     CELO: '0x471ece3750da237f93b8e339c536989b8978a438',
-    CUSD: '0x765de816845861e75a25fca122bb6898b8b1282a',
-    CEUR: '0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73',
-    CKES: '0x456a3d042c0dbd3db53d5489e98dfb038553b0d0',
-    CCOP: '0x8a567e2ae79ca692bd748ab832081c45de4041ea',
-    PUSO: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
+    USDm: '0x765de816845861e75a25fca122bb6898b8b1282a',
+    EURm: '0xd8763cba276a3738e6de85b4b3bf5fded6d6ca73',
+    KESm: '0x456a3d042c0dbd3db53d5489e98dfb038553b0d0',
+    COPm: '0x8a567e2ae79ca692bd748ab832081c45de4041ea',
+    PHPm: '0x105d4a9306d2e55a71d2eb95b81553ae1dc20d7b',
     USDT: '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e',
 };
 // Mento Broker address
@@ -38,15 +38,15 @@ exports.MENTO_ABIS = {
 };
 // Default exchange rates (USD to local currency)
 exports.DEFAULT_EXCHANGE_RATES = {
-    CKES: 140, // 1 USD ≈ 140 KES
-    CCOP: 4000, // 1 USD ≈ 4000 COP
-    PUSO: 56, // 1 USD ≈ 56 PHP
+    KESm: 140, // 1 USD ≈ 140 KES
+    COPm: 4000, // 1 USD ≈ 4000 COP
+    PHPm: 56, // 1 USD ≈ 56 PHP
 };
 // Cache keys
 exports.CACHE_KEYS = {
-    EXCHANGE_RATE_CKES: 'mento-ckes-exchange-rate-cache',
-    EXCHANGE_RATE_CCOP: 'mento-ccop-exchange-rate-cache',
-    EXCHANGE_RATE_PUSO: 'mento-puso-exchange-rate-cache',
+    EXCHANGE_RATE_KESm: 'mento-kesm-exchange-rate-cache',
+    EXCHANGE_RATE_COPm: 'mento-copm-exchange-rate-cache',
+    EXCHANGE_RATE_PHPm: 'mento-phpm-exchange-rate-cache',
 };
 // Cache durations
 exports.CACHE_DURATIONS = {
@@ -101,8 +101,8 @@ const setCachedData = (key, value) => {
 exports.setCachedData = setCachedData;
 /**
  * Get exchange rate for a Celo stablecoin using Mento Protocol
- * @param tokenSymbol Token symbol (CKES, CCOP, PUSO)
- * @returns Exchange rate (cUSD to token)
+ * @param tokenSymbol Token symbol (KESm, COPm, PHPm)
+ * @returns Exchange rate (USDm to token)
  */
 const getMentoExchangeRate = async (tokenSymbol) => {
     const cacheKey = exports.CACHE_KEYS[`EXCHANGE_RATE_${tokenSymbol}`];
@@ -118,7 +118,7 @@ const getMentoExchangeRate = async (tokenSymbol) => {
     try {
         // Get token addresses
         const tokenAddress = exports.CELO_TOKENS[tokenSymbol];
-        const cusdAddress = exports.CELO_TOKENS.CUSD;
+        const routingTokenAddress = exports.CELO_TOKENS.USDm;
         if (!tokenAddress) {
             console.warn(`Token address not found for ${tokenSymbol}`);
             return defaultRate;
@@ -129,7 +129,7 @@ const getMentoExchangeRate = async (tokenSymbol) => {
         const brokerContract = new ethers_1.ethers.Contract(exports.MENTO_BROKER_ADDRESS, exports.MENTO_ABIS.BROKER_PROVIDERS, provider);
         // Get exchange providers
         const exchangeProviders = await brokerContract.getExchangeProviders();
-        // Find the exchange for cUSD/token
+        // Find the exchange for USDm/token
         let exchangeProvider = '';
         let exchangeId = '';
         // Loop through providers to find the right exchange
@@ -139,7 +139,7 @@ const getMentoExchangeRate = async (tokenSymbol) => {
             // Check each exchange
             for (const exchange of exchanges) {
                 const assets = exchange.assets.map((a) => a.toLowerCase());
-                if (assets.includes(cusdAddress.toLowerCase()) &&
+                if (assets.includes(routingTokenAddress.toLowerCase()) &&
                     assets.includes(tokenAddress.toLowerCase())) {
                     exchangeProvider = providerAddress;
                     exchangeId = exchange.exchangeId;
@@ -150,14 +150,14 @@ const getMentoExchangeRate = async (tokenSymbol) => {
                 break;
         }
         if (!exchangeProvider || !exchangeId) {
-            console.warn(`No exchange found for cUSD/${tokenSymbol}`);
+            console.warn(`No exchange found for USDm/${tokenSymbol}`);
             return defaultRate;
         }
         // Get the rate using the broker
         const brokerRateContract = new ethers_1.ethers.Contract(exports.MENTO_BROKER_ADDRESS, exports.MENTO_ABIS.BROKER_RATE, provider);
-        // Get quote for 1 cUSD
+        // Get quote for 1 USDm
         const oneUSD = ethers_1.ethers.utils.parseUnits('1', 18);
-        const amountOut = await brokerRateContract.getAmountOut(exchangeProvider, exchangeId, cusdAddress, tokenAddress, oneUSD);
+        const amountOut = await brokerRateContract.getAmountOut(exchangeProvider, exchangeId, routingTokenAddress, tokenAddress, oneUSD);
         // Convert to number
         const rate = Number.parseFloat(ethers_1.ethers.utils.formatUnits(amountOut, 18));
         // Cache the result
@@ -210,7 +210,7 @@ const getTradeablePairs = async (rpcUrl = 'https://forno.celo.org') => {
                         if (addr === '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e'.toLowerCase())
                             symbol = 'USDT';
                         else if (addr === '0x765de816845861e75a25fca122bb6898b8b1282a'.toLowerCase())
-                            symbol = 'CUSD';
+                            symbol = 'USDm';
                         else if (addr === '0x471ece3750da237f93b8e339c536989b8978a438'.toLowerCase())
                             symbol = 'CELO';
                         assets.push({ address: assetAddress, symbol });

@@ -28,7 +28,7 @@ export interface RegionalInflationData {
 const REGION_STABLECOINS: Record<string, string[]> = {
   Africa: ['KESm', 'GHSm', 'XOFm', 'ZARm', 'NGNm'],
   LatAm: ['BRLm', 'COPm'],
-  Asia: ['PHPm', 'AUDm', 'CJPY'],
+  Asia: ['PHPm', 'AUDm', 'JPYm'],
   Europe: ['EURm', 'GBPm', 'EURC', 'CHFm'],
   USA: ['USDm', 'CADm', 'USDC', 'USDT', 'USDY', 'SYRUPUSDC'],
   Global: ['PAXG'],
@@ -251,8 +251,8 @@ export function useInflationData() {
     // Normalize stablecoin name (handle both CXOF and EXOF)
     const normalizedStablecoin = stablecoin.toUpperCase();
 
-    // Special case for CFA Franc (handle both CXOF and EXOF)
-    if (normalizedStablecoin === 'CXOF' || normalizedStablecoin === 'EXOF') {
+    // Special case for CFA Franc (handle both XOFm, CXOF and EXOF)
+    if (normalizedStablecoin === 'XOFM' || normalizedStablecoin === 'CXOF' || normalizedStablecoin === 'EXOF') {
       // Get the inflation rate for XOF directly
       const xofData = inflationData['Africa']?.countries.find(c => c.currency === 'XOF');
       const rate = xofData ? xofData.rate : inflationData['Africa']?.avgRate || 3.5;

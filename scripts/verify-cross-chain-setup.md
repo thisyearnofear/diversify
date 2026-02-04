@@ -5,7 +5,7 @@
 ### 1. **Cross-Chain Token Configuration** (`utils/cross-chain-tokens.ts`)
 - Defines tokens available on each chain
 - USDC: Arbitrum + Arc
-- CUSD/CEUR: Celo Mainnet + Alfajores  
+- USDm/EURm: Celo Mainnet + Alfajores  
 - PAXG: Arbitrum only
 - Helper functions for token/chain validation
 
@@ -37,9 +37,9 @@
 ## 🌉 Cross-Chain Routes Supported
 
 ### **Working Routes (via LiFi SDK)**
-- ✅ Celo CUSD → Arbitrum USDC (via Squid bridge)
-- ✅ Arbitrum USDC → Celo CUSD (via eco → nordstern)
-- ✅ Celo CUSD → Arbitrum PAXG (via glacis → kyberswap, 2 steps)
+- ✅ Celo USDm → Arbitrum USDC (via Squid bridge)
+- ✅ Arbitrum USDC → Celo USDm (via eco → nordstern)
+- ✅ Celo USDm → Arbitrum PAXG (via glacis → kyberswap, 2 steps)
 - ✅ All combinations of supported tokens across chains
 
 ### **Execution Times**

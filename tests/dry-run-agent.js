@@ -10,7 +10,7 @@ async function dryRunAnalysis() {
     console.log("=== 🧠 DRY RUN: ARC WEALTH PROTECTION AGENT ===");
 
     // 1. Setup Mock Input Data
-    const portfolioData = { balance: 2500, holdings: ['cUSD', 'CELO'] };
+    const portfolioData = { balance: 2500, holdings: ['USDm', 'CELO'] };
     const userPreferences = { riskTolerance: 'Balanced', goal: 'Inflation Hedge' };
     const networkInfo = { chainId: 42220, name: 'Celo' };
 
@@ -65,8 +65,8 @@ async function dryRunAnalysis() {
     console.log(JSON.stringify(simulatedResponse, null, 2));
 
     console.log("\n[EXECUTION PATH]");
-    console.log(`1. Approve cUSD on Celo`);
-    console.log(`2. Call BridgeService.getBestRoute(Celo->Arbitrum, cUSD->$PAXG)`);
+    console.log(`1. Approve USDm on Celo`);
+    console.log(`2. Call BridgeService.getBestRoute(Celo->Arbitrum, USDm->$PAXG)`);
     console.log(`3. Execute cross-chain transaction via LI.FI`);
 }
 

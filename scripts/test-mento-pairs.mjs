@@ -47,7 +47,7 @@ async function main() {
   console.log(Array.from(allSymbols).sort().join(', '));
   
   console.log('\n=== COMPARISON WITH CONFIG ===');
-  const configTokens = ['CUSD', 'CEUR', 'CREAL', 'CKES', 'CCOP', 'PUSO', 'CGHS', 'CXOF', 'CGBP', 'CZAR', 'CCAD', 'CAUD', 'CCHF', 'CJPY', 'CNGN'];
+  const configTokens = ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm'];
   const missing = configTokens.filter(t => !allSymbols.has(t));
   const extra = Array.from(allSymbols).filter(t => !configTokens.includes(t));
   
@@ -61,10 +61,10 @@ async function main() {
 
 main().catch(console.error);
 
-// Check if old CUSD address matches new USDm
+// Check if USDm address has correct symbol
 console.log('\n=== ADDRESS CHECK ===');
-const OLD_CUSD = '0x765de816845861e75a25fca122bb6898b8b1282a';
+const USDm_ADDRESS = '0x765de816845861e75a25fca122bb6898b8b1282a';
 const checkProvider = new ethers.providers.JsonRpcProvider('https://forno.celo.org');
-const cusdContract = new ethers.Contract(OLD_CUSD, ERC20_SYMBOL_ABI, checkProvider);
-const symbol = await cusdContract.symbol();
-console.log(`Address ${OLD_CUSD} has symbol: ${symbol}`);
+const usdmContract = new ethers.Contract(USDm_ADDRESS, ERC20_SYMBOL_ABI, checkProvider);
+const symbol = await usdmContract.symbol();
+console.log(`Address ${USDm_ADDRESS} has symbol: ${symbol}`);
