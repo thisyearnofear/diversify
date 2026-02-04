@@ -165,15 +165,17 @@ export function useWealthProtectionAgent() {
                 const response = await fetch('/api/agent/status');
                 if (response.ok) {
                     const status = await response.json();
+                    // ALWAYS set capabilities if available (independent of Arc Agent wallet)
                     if (status.capabilities) {
                         setCapabilities(status.capabilities);
+                        console.log('[Capabilities] Set:', status.capabilities);
                     }
                     if (status.enabled) {
                         console.log('[Arc Agent] Server-side agent available:', status);
                         // Create a proxy agent that calls server APIs
                         setArcAgent({ isProxy: true, ...status } as any);
                     } else {
-                        console.warn('Agent wallet not configured on server, Arc Agent features disabled');
+                        console.warn('Agent wallet not configured on server, Arc Agent features disabled. Voice features still available if API keys set.');
                     }
                 }
             } catch (error) {

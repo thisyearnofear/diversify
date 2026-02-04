@@ -197,9 +197,28 @@ export default function VoiceButton({
         onTranscription?.(suggestion);
     };
 
-    // Don't render if voice not available or user disabled it
-    if (!capabilities.transcription || isDisabled) {
+    // Don't render if user disabled it
+    // Note: We check capabilities.transcription but also allow if the API might be available
+    // The actual availability is verified server-side, but we show the button optimistically
+    const isTranscriptionAvailable = capabilities.transcription;
+    
+    if (isDisabled) {
         return null;
+    }
+    
+    // If transcription is definitely not available, still show button but disable it with tooltip
+    if (!isTranscriptionAvailable && recordingState === 'idle') {
+        return (
+            <div className={`relative ${className}`}>
+                <button
+                    disabled
+                    className={`${sizeClasses[size]} bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-600 border-2 border-gray-200 dark:border-gray-700 rounded-full flex items-center justify-center cursor-not-allowed opacity-50`}
+                    title="Voice features unavailable. Check API keys."
+                >
+                    🎤
+                </button>
+            </div>
+        );
     }
 
     const currentVariant = variantClasses[variant];
