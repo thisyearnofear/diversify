@@ -3,11 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import Head from "next/head";
 import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
-import { useStablecoinBalances } from "../hooks/use-stablecoin-balances";
 import { useInflationData, type RegionalInflationData } from "../hooks/use-inflation-data";
 import { useCurrencyPerformance } from "../hooks/use-currency-performance";
+import { useMultichainBalances } from "../hooks/use-multichain-balances";
 import {
-  REGION_COLORS,
   getChainAssets,
 } from "../config";
 import ErrorBoundary from "../components/ui/ErrorBoundary";
@@ -23,7 +22,7 @@ import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTu
 import ThemeToggle from "../components/ui/ThemeToggle";
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, guidedTour, nextTourStep, exitTour } = useAppState();
+  const { activeTab, setActiveTab, guidedTour, exitTour } = useAppState();
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -44,31 +43,21 @@ export default function DiversiFiPage() {
   const { region: detectedRegion, isLoading: isRegionLoading } =
     useUserRegion();
   const [userRegion, setUserRegion] = useState<Region>("Africa");
+
+  // NEW: Use unified multichain balances hook
   const {
-    isLoading: isBalancesLoading,
-    balances,
-    regionTotals,
     totalValue,
-    chainId,
-    refreshBalances,
-    refreshChainId,
-    aggregatedPortfolio,
-    fetchAllChainBalances,
-  } = useStablecoinBalances(address, walletChainId);
+    chainCount,
+    regionData: multichainRegionData,
+    allTokens,
+    isLoading: isMultichainLoading,
+    refresh,
+  } = useMultichainBalances(address);
 
-  // Automatically fetch multi-chain data when address AND chainId are ready
-  // This prevents duplicate fetches during initialization
-  useEffect(() => {
-    if (address && chainId) {
-      fetchAllChainBalances();
-    }
-  }, [address, chainId, fetchAllChainBalances]);
-
-  const currentChainId = chainId;
-
+  // Available tokens based on current chain (for swap tab)
   const availableTokens = useMemo(() => {
-    return getChainAssets(currentChainId || 42220);
-  }, [currentChainId]);
+    return getChainAssets(walletChainId || 42220);
+  }, [walletChainId]);
 
   const { inflationData } = useInflationData();
 
@@ -78,18 +67,35 @@ export default function DiversiFiPage() {
     data: currencyPerformanceData,
   } = useCurrencyPerformance('USD', shouldLoadCurrencyPerformance);
 
+  // Convert multichain region data to the format expected by components
   const regionData = useMemo(() => {
-    if (!address || isBalancesLoading || Object.keys(regionTotals).length === 0) {
+    if (!address || isMultichainLoading) {
       return [];
     }
-    return Object.entries(regionTotals).map(
-      ([region, value]) => ({
-        region,
-        value: value,
-        color: REGION_COLORS[region as keyof typeof REGION_COLORS] || "#CBD5E0",
-      })
-    );
-  }, [address, isBalancesLoading, regionTotals]);
+    
+    // Use multichain data if available
+    if (multichainRegionData.length > 0) {
+      return multichainRegionData.map(r => ({
+        region: r.region,
+        value: r.value,
+        color: r.color,
+      }));
+    }
+    
+    return [];
+  }, [address, isMultichainLoading, multichainRegionData]);
+
+  // Legacy balances format for compatibility
+  const balances = useMemo(() => {
+    const result: Record<string, { formattedBalance: string; value: number }> = {};
+    allTokens.forEach(token => {
+      result[token.symbol] = {
+        formattedBalance: token.formattedBalance,
+        value: token.value,
+      };
+    });
+    return result;
+  }, [allTokens]);
 
   useEffect(() => {
     if (!isRegionLoading && detectedRegion) {
@@ -166,7 +172,9 @@ export default function DiversiFiPage() {
               <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">DiversiFi</h1>
               <div className="flex items-center gap-1 opacity-60">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Protection Active</span>
+                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
+                  {isMultichainLoading ? 'Loading...' : `${chainCount} Chain${chainCount !== 1 ? 's' : ''} Active`}
+                </span>
               </div>
             </div>
           </div>
@@ -180,7 +188,7 @@ export default function DiversiFiPage() {
           <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
         </div>
 
-        {/* Guided Tour Progress Indicator (ENHANCEMENT: minimal tour UI) */}
+        {/* Guided Tour Progress Indicator */}
         <AnimatePresence>
           {guidedTour && (
             <motion.div
@@ -230,8 +238,7 @@ export default function DiversiFiPage() {
                 setUserRegion={setUserRegion}
                 REGIONS={REGIONS}
                 setActiveTab={setActiveTab}
-                refreshBalances={refreshBalances}
-                refreshChainId={refreshChainId}
+                refreshBalances={refresh}
                 balances={balances}
                 inflationData={inflationData as Record<string, RegionalInflationData>}
                 currencyPerformanceData={currencyPerformanceData}
@@ -243,20 +250,19 @@ export default function DiversiFiPage() {
                 userRegion={userRegion}
                 setUserRegion={setUserRegion}
                 regionData={regionData}
-                totalValue={aggregatedPortfolio?.totalValue || totalValue}
+                totalValue={totalValue}
                 balances={balances}
                 setActiveTab={setActiveTab}
-                aggregatedPortfolio={aggregatedPortfolio || undefined}
               />
             )}
-
+            
             {activeTab === "swap" && (
               <SwapTab
                 userRegion={userRegion}
                 inflationData={inflationData as Record<string, RegionalInflationData>}
-                refreshBalances={refreshBalances}
-                refreshChainId={refreshChainId}
-                isBalancesLoading={isBalancesLoading}
+                refreshBalances={refresh}
+                refreshChainId={async () => walletChainId}
+                isBalancesLoading={isMultichainLoading}
               />
             )}
 

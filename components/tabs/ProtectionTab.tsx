@@ -21,65 +21,21 @@ import {
 } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import WalletButton from "../wallet/WalletButton";
-import type { AggregatedPortfolio } from "@/hooks/use-stablecoin-balances";
-import { useWealthProtectionAgent } from "@/hooks/use-wealth-protection-agent";
 import { useAppState } from "@/context/AppStateContext";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import {
   analyzePortfolio,
   type PortfolioAnalysis,
 } from "@/utils/portfolio-analysis";
+import { useProtectionProfile, USER_GOALS, RISK_LEVELS, TIME_HORIZONS } from "@/hooks/use-protection-profile";
+import { useMultichainBalances } from "@/hooks/use-multichain-balances";
 
 // Types from hook
-import type { UserGoal } from "@/hooks/use-wealth-protection-agent";
+import type { UserGoal } from "@/hooks/use-protection-profile";
 
 // ============================================================================
-// CONSTANTS - Single source of truth
+// RWA ASSETS CONFIGURATION
 // ============================================================================
-
-const USER_GOALS: Array<{
-  value: UserGoal;
-  label: string;
-  icon: string;
-  description: string;
-}> = [
-    {
-      value: "inflation_protection",
-      label: "Hedge Inflation",
-      icon: "🛡️",
-      description: "Protect against currency devaluation",
-    },
-    {
-      value: "geographic_diversification",
-      label: "Diversify Regions",
-      icon: "🌍",
-      description: "Spread risk across economies",
-    },
-    {
-      value: "rwa_access",
-      label: "Access Gold/RWA",
-      icon: "🥇",
-      description: "Hold real-world assets",
-    },
-    {
-      value: "exploring",
-      label: "Just Exploring",
-      icon: "🔍",
-      description: "Learn about protection",
-    },
-  ];
-
-const RISK_LEVELS = [
-  { value: "Conservative" as const, label: "Conservative", icon: "🛡️" },
-  { value: "Balanced" as const, label: "Balanced", icon: "⚖️" },
-  { value: "Aggressive" as const, label: "Aggressive", icon: "🚀" },
-] as const;
-
-const TIME_HORIZONS = [
-  { value: "1 month" as const, label: "Short", description: "< 3 months" },
-  { value: "3 months" as const, label: "Medium", description: "3-12 months" },
-  { value: "1 year" as const, label: "Long", description: "> 1 year" },
-] as const;
 
 const RWA_ASSETS = [
   {
@@ -149,56 +105,98 @@ interface ProtectionTabProps {
   balances: Record<string, { formattedBalance: string; value: number }>;
   setActiveTab?: (tab: string) => void;
   onSelectStrategy?: (strategy: string) => void;
-  aggregatedPortfolio?: AggregatedPortfolio;
 }
 
 export default function ProtectionTab({
   userRegion,
   setUserRegion,
-  regionData,
-  totalValue,
-  balances,
-  setActiveTab,
+  regionData: legacyRegionData,
+  totalValue: legacyTotalValue,
+  setActiveTab: _setActiveTab,
   onSelectStrategy,
-  aggregatedPortfolio,
 }: ProtectionTabProps) {
-  // setActiveTab available for future navigation needs
-  void setActiveTab;
   const { address, chainId } = useWalletContext();
-  const { config, updateConfig, advice, portfolioAnalysis, isAnalyzing } =
-    useWealthProtectionAgent();
   const { navigateToSwap } = useAppState();
   const { inflationData } = useInflationData();
   const isCelo = ChainDetectionService.isCelo(chainId);
 
-  // Progressive disclosure state
-  const [profileStep, setProfileStep] = useState(0); // 0 = not started, 1-3 = steps
+  // NEW: Use multichain balances for accurate data
+  const {
+    totalValue,
+    chainCount,
+    activeChains,
+    regionData,
+    isLoading: isMultichainLoading,
+    isStale,
+
+  } = useMultichainBalances(address);
+
+  // Use legacy data as fallback while loading
+  const displayTotalValue = totalValue > 0 ? totalValue : legacyTotalValue;
+  const displayRegionData = regionData.length > 0 ? regionData : legacyRegionData.map(r => ({ ...r, usdValue: (r.value / 100) * legacyTotalValue }));
+  const displayChainCount = chainCount > 0 ? chainCount : (legacyTotalValue > 0 ? 1 : 0);
+
+  // NEW: Use protection profile hook for proper edit flow
+  const {
+    mode: profileMode,
+    currentStep,
+    config,
+    isComplete,
+
+    currentGoalLabel,
+    currentGoalIcon,
+    currentRiskLabel,
+    currentTimeHorizonLabel,
+    startEditing,
+    nextStep,
+    skipToEnd,
+    completeEditing,
+    setUserGoal,
+    setRiskTolerance,
+    setTimeHorizon,
+  } = useProtectionProfile();
+
+  // Modal state for asset details
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
 
-  // Live portfolio analysis (independent of AI)
-  const liveAnalysis = useMemo<PortfolioAnalysis | null>(() => {
-    if (!aggregatedPortfolio) return null;
-    return analyzePortfolio(
-      aggregatedPortfolio,
-      inflationData,
-      config.userGoal,
+  // Current regions for recommendations
+  const currentRegions = useMemo(() => {
+    return displayRegionData
+      .filter((item) => (item.usdValue || item.value) > 0)
+      .map((item) => item.region as Region);
+  }, [displayRegionData]);
+
+  const currentAllocations = useMemo(() => {
+    return Object.fromEntries(
+      displayRegionData.map((item) => [item.region, (item.usdValue || item.value) / displayTotalValue])
     );
-  }, [aggregatedPortfolio, inflationData, config.userGoal]);
+  }, [displayRegionData, displayTotalValue]);
 
-  const currentRegions = regionData
-    .filter((item) => item.value > 0)
-    .map((item) => item.region as Region);
+  // Live portfolio analysis (using multichain data)
+  const liveAnalysis = useMemo<PortfolioAnalysis | null>(() => {
+    if (!activeChains || activeChains.length === 0) return null;
+    
+    // Convert multichain data to portfolio analysis format
+    const portfolioForAnalysis = {
+      totalValue: displayTotalValue,
+      chains: activeChains.map(chain => ({
+        chainId: chain.chainId,
+        chainName: chain.chainName,
+        totalValue: chain.totalValue,
+        balances: Object.fromEntries(chain.balances.map(b => [b.symbol, b])),
+      })),
+      allHoldings: activeChains.flatMap(c => c.balances.map(b => b.symbol)),
+      diversificationScore: Math.min(100, activeChains.length * 30 + currentRegions.length * 20),
+    };
+    
+    return analyzePortfolio(
+      portfolioForAnalysis,
+      inflationData,
+      config.userGoal || 'exploring',
+    );
+  }, [activeChains, displayTotalValue, currentRegions.length, inflationData, config.userGoal]);
 
-  const currentAllocations = Object.fromEntries(
-    regionData.map((item) => [item.region, item.value / 100]),
-  );
-
-  // Derived state for cleaner conditionals
-  const hasProfile =
-    profileStep >= 3 ||
-    (config.userGoal && config.riskTolerance && config.timeHorizon);
-  const analysis = portfolioAnalysis || liveAnalysis;
-  const topOpportunity = analysis?.rebalancingOpportunities?.[0];
+  const topOpportunity = liveAnalysis?.rebalancingOpportunities?.[0];
 
   // ============================================================================
   // HANDLERS
@@ -209,7 +207,6 @@ export default function ProtectionTab({
     fromToken?: string,
     amount?: string,
   ) => {
-    // Auto-select source token if not provided
     const sourceToken = fromToken || getBestFromToken(targetToken);
     const swapAmount = amount || getSwapAmount(sourceToken);
 
@@ -217,46 +214,43 @@ export default function ProtectionTab({
       fromToken: sourceToken,
       toToken: targetToken,
       amount: swapAmount,
-      reason:
-        advice?.reasoning ||
-        `Swap to ${targetToken} for ${USER_GOALS.find((g) => g.value === config.userGoal)?.label || "wealth protection"}`,
+      reason: `Swap to ${targetToken} for ${currentGoalLabel}`,
     });
   };
 
   const getBestFromToken = (targetToken: string): string => {
-    const tokensWithBalances = Object.entries(balances || {})
-      .filter(([, data]) => data.value > 0)
-      .sort((a, b) => b[1].value - a[1].value);
+    // Get all tokens with balances across chains
+    const allTokens = activeChains.flatMap(c => c.balances);
+    const tokensWithBalances = allTokens
+      .filter(t => t.value > 0)
+      .sort((a, b) => b.value - a.value);
 
-    if (tokensWithBalances.length === 0) return "CUSD";
+    if (tokensWithBalances.length === 0) return "USDC";
 
     // For gold, prefer high-inflation regional tokens
     if (targetToken === "PAXG") {
-      const highInflationTokens = [
-        "CKES",
-        "CCOP",
-        "CZAR",
-        "CREAL",
-        "CXOF",
-        "CGHS",
-      ];
-      const foundHighInflation = tokensWithBalances.find(([symbol]) =>
-        highInflationTokens.some((hit) => symbol.toUpperCase().includes(hit)),
+      const highInflationTokens = ["KESm", "COPm", "ZARm", "BRLm", "XOFm", "GHSm", "NGNm"];
+      const foundHighInflation = tokensWithBalances.find((t) =>
+        highInflationTokens.some(hit => t.symbol.toUpperCase().includes(hit.toUpperCase())),
       );
-      if (foundHighInflation) return foundHighInflation[0];
+      if (foundHighInflation) return foundHighInflation.symbol;
     }
 
     const largestNonTarget = tokensWithBalances.find(
-      ([symbol]) => symbol.toUpperCase() !== targetToken.toUpperCase(),
+      (t) => t.symbol.toUpperCase() !== targetToken.toUpperCase(),
     );
-    return largestNonTarget?.[0] || tokensWithBalances[0]?.[0] || "CUSD";
+    return largestNonTarget?.symbol || tokensWithBalances[0]?.symbol || "USDC";
   };
 
   const getSwapAmount = (fromToken: string): string => {
-    const balance = balances?.[fromToken]?.value || 0;
+    // Find token across all chains
+    const token = activeChains
+      .flatMap(c => c.balances)
+      .find(t => t.symbol === fromToken);
+    
+    const balance = token?.value || 0;
     if (balance <= 0) return "10";
-    const percentage =
-      config.userGoal === "geographic_diversification" ? 0.25 : 0.5;
+    const percentage = config.userGoal === 'geographic_diversification' ? 0.25 : 0.5;
     return (balance * percentage).toFixed(2);
   };
 
@@ -280,7 +274,7 @@ export default function ProtectionTab({
             <span className="text-3xl">🤖</span>
           </div>
           <ConnectWalletPrompt
-            message="Connect your wallet to analyze your portfolio against real-time global inflation data."
+            message="Connect your wallet to analyze your portfolio across Arbitrum and Celo against real-time global inflation data."
             WalletButtonComponent={<WalletButton variant="inline" />}
           />
         </Card>
@@ -325,7 +319,7 @@ export default function ProtectionTab({
                 Protection Engine
               </h3>
               <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-                {hasProfile
+                {isComplete
                   ? "Personalized protection active"
                   : "Set your protection profile"}
               </p>
@@ -336,122 +330,138 @@ export default function ProtectionTab({
           </div>
 
           <HeroValue
-            value={`$${totalValue.toFixed(0)}`}
-            label={`Protected across ${currentRegions.length || 0} regions`}
+            value={`$${displayTotalValue.toFixed(0)}`}
+            label={isMultichainLoading 
+              ? "Loading multichain data..." 
+              : `Protected across ${displayChainCount} chain${displayChainCount !== 1 ? 's' : ''}`}
           />
+          
+          {isStale && (
+            <p className="text-[10px] text-white/60 mt-2">
+              Data may be stale. Pull down to refresh.
+            </p>
+          )}
         </div>
 
         <div className="p-4 space-y-4">
           {/* =================================================================
-              STEP 1: Select Goal (Always visible, collapses after selection)
+              PROFILE SETUP FLOW (3 Steps)
               ================================================================= */}
           <AnimatePresence mode="wait">
-            {!hasProfile && profileStep === 0 && (
+            {profileMode === 'editing' && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
               >
-                <StepCard
-                  step={1}
-                  totalSteps={3}
-                  title="What's your primary goal?"
-                  onNext={() => setProfileStep(1)}
-                  onSkip={() => setProfileStep(3)}
-                >
-                  <QuickSelect
-                    options={USER_GOALS}
-                    value={config.userGoal || "exploring"}
-                    onChange={(v) => updateConfig({ userGoal: v })}
-                  />
-                </StepCard>
-              </motion.div>
-            )}
+                {/* Step 1: Goal */}
+                {currentStep === 0 && (
+                  <StepCard
+                    step={1}
+                    totalSteps={3}
+                    title="What's your primary goal?"
+                    onNext={() => {
+                      if (config.userGoal) nextStep();
+                    }}
+                    onSkip={skipToEnd}
+                    canProceed={!!config.userGoal}
+                  >
+                    <QuickSelect
+                      options={USER_GOALS.map(g => ({
+                        value: g.value,
+                        label: g.label,
+                        icon: g.icon,
+                        description: g.description,
+                      }))}
+                      value={config.userGoal || 'exploring'}
+                      onChange={(v) => setUserGoal(v as UserGoal)}
+                    />
+                  </StepCard>
+                )}
 
-            {!hasProfile && profileStep === 1 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                <StepCard
-                  step={2}
-                  totalSteps={3}
-                  title="What's your risk tolerance?"
-                  onNext={() => setProfileStep(2)}
-                  onSkip={() => setProfileStep(3)}
-                >
-                  <QuickSelect
-                    options={RISK_LEVELS}
-                    value={config.riskTolerance || "Balanced"}
-                    onChange={(v) => updateConfig({ riskTolerance: v })}
-                    columns={3}
-                  />
-                </StepCard>
-              </motion.div>
-            )}
+                {/* Step 2: Risk Tolerance */}
+                {currentStep === 1 && (
+                  <StepCard
+                    step={2}
+                    totalSteps={3}
+                    title="What's your risk tolerance?"
+                    onNext={nextStep}
+                    onSkip={skipToEnd}
+                    canProceed={!!config.riskTolerance}
+                  >
+                    <QuickSelect
+                      options={RISK_LEVELS.map(r => ({
+                        value: r.value,
+                        label: r.label,
+                        icon: r.icon,
+                      }))}
+                      value={config.riskTolerance || 'Balanced'}
+                      onChange={(v) => setRiskTolerance(v as 'Conservative' | 'Balanced' | 'Aggressive')}
+                      columns={3}
+                    />
+                  </StepCard>
+                )}
 
-            {!hasProfile && profileStep === 2 && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                <StepCard
-                  step={3}
-                  totalSteps={3}
-                  title="What's your time horizon?"
-                  onNext={() => setProfileStep(3)}
-                  onSkip={() => setProfileStep(3)}
-                  isLast
-                >
-                  <QuickSelect
-                    options={TIME_HORIZONS}
-                    value={config.timeHorizon || "3 months"}
-                    onChange={(v) => updateConfig({ timeHorizon: v })}
-                    columns={3}
-                  />
-                </StepCard>
+                {/* Step 3: Time Horizon */}
+                {currentStep === 2 && (
+                  <StepCard
+                    step={3}
+                    totalSteps={3}
+                    title="What's your time horizon?"
+                    onNext={completeEditing}
+                    onSkip={skipToEnd}
+                    isLast
+                    canProceed={!!config.timeHorizon}
+                  >
+                    <QuickSelect
+                      options={TIME_HORIZONS.map(t => ({
+                        value: t.value,
+                        label: t.label,
+                        description: t.description,
+                      }))}
+                      value={config.timeHorizon || '3 months'}
+                      onChange={(v) => setTimeHorizon(v as '1 month' | '3 months' | '1 year')}
+                      columns={3}
+                    />
+                  </StepCard>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* =================================================================
-              PROFILE SUMMARY (shown when profile complete)
+              PROFILE SUMMARY (shown when complete)
               ================================================================= */}
-          {hasProfile && (
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          {profileMode === 'complete' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+            >
               <div className="flex items-center gap-3">
-                <span className="text-lg">
-                  {USER_GOALS.find((g) => g.value === config.userGoal)?.icon}
-                </span>
+                <span className="text-lg">{currentGoalIcon}</span>
                 <div>
                   <div className="text-xs font-bold text-gray-900">
-                    {USER_GOALS.find((g) => g.value === config.userGoal)?.label}
+                    {currentGoalLabel}
                   </div>
                   <div className="text-[10px] text-gray-500">
-                    {config.riskTolerance} •{" "}
-                    {
-                      TIME_HORIZONS.find((t) => t.value === config.timeHorizon)
-                        ?.label
-                    }
+                    {currentRiskLabel} • {currentTimeHorizonLabel}
                   </div>
                 </div>
               </div>
               <button
-                onClick={() => setProfileStep(0)}
-                className="text-[10px] font-bold text-blue-600 hover:text-blue-700"
+                onClick={startEditing}
+                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
               >
                 Edit
               </button>
-            </div>
+            </motion.div>
           )}
 
           {/* =================================================================
               PRIMARY INSIGHT CARD
-              Consolidates: AgentWealthGuard + ActionableRecommendation top action
               ================================================================= */}
-          {analysis && topOpportunity && !isAnalyzing && (
+          {liveAnalysis && topOpportunity && (
             <InsightCard
               icon="⚡"
               title={`Reduce ${topOpportunity.fromRegion} Inflation Exposure`}
@@ -473,26 +483,23 @@ export default function ProtectionTab({
           )}
 
           {/* =================================================================
-              AI ANALYSIS SECTION (embedded AgentWealthGuard)
+              AI ANALYSIS SECTION
               ================================================================= */}
           <AgentWealthGuard
-            amount={totalValue || 0}
-            holdings={
-              aggregatedPortfolio?.allHoldings || Object.keys(balances || {})
-            }
+            amount={displayTotalValue || 0}
+            holdings={activeChains.flatMap(c => c.balances.map(b => b.symbol))}
             onExecute={handleExecuteSwap}
-            aggregatedPortfolio={aggregatedPortfolio}
             embedded
           />
 
           {/* =================================================================
-              PROTECTION SCORE - Single consolidated indicator with breakdown
+              PROTECTION SCORE
               ================================================================= */}
-          {analysis && (
+          {liveAnalysis && (
             <ProtectionScore
               score={Math.round(
-                (analysis.diversificationScore +
-                  (100 - analysis.weightedInflationRisk * 5)) /
+                (liveAnalysis.diversificationScore +
+                  (100 - liveAnalysis.weightedInflationRisk * 5)) /
                 2,
               )}
               factors={[
@@ -504,23 +511,29 @@ export default function ProtectionTab({
                 },
                 {
                   label: "Portfolio Coverage",
-                  value: analysis.tokenCount > 0 ? 95 : 50,
+                  value: liveAnalysis.tokenCount > 0 ? 95 : 50,
                   status:
-                    analysis.tokenCount > 0
-                      ? `${analysis.tokenCount} tokens`
+                    liveAnalysis.tokenCount > 0
+                      ? `${liveAnalysis.tokenCount} tokens`
                       : "No data",
                   icon: "💰",
                 },
                 {
+                  label: "Chain Diversification",
+                  value: displayChainCount > 1 ? 90 : 60,
+                  status: `${displayChainCount} chain${displayChainCount !== 1 ? 's' : ''}`,
+                  icon: "🔗",
+                },
+                {
                   label: "Regional Diversification",
-                  value: analysis.regionCount > 2 ? 90 : 70,
-                  status: `${analysis.regionCount} regions`,
+                  value: currentRegions.length > 2 ? 90 : 70,
+                  status: `${currentRegions.length} regions`,
                   icon: "🌍",
                 },
                 {
                   label: "Inflation Risk",
-                  value: Math.max(0, 100 - analysis.weightedInflationRisk * 10),
-                  status: `${analysis.weightedInflationRisk.toFixed(1)}% weighted`,
+                  value: Math.max(0, 100 - liveAnalysis.weightedInflationRisk * 10),
+                  status: `${liveAnalysis.weightedInflationRisk.toFixed(1)}% weighted`,
                   icon: "🛡️",
                 },
               ]}
@@ -534,10 +547,10 @@ export default function ProtectionTab({
           RWA ASSET CARDS
           ===================================================================== */}
       {RWA_ASSETS.map((asset) => {
-        const hasAsset = analysis?.tokens.some(
-          (t) => t.symbol === asset.symbol,
+        const hasAsset = activeChains.some(chain =>
+          chain.balances.some(b => b.symbol === asset.symbol)
         );
-        const showCard = !hasAsset || config.userGoal === "rwa_access";
+        const showCard = !hasAsset || config.userGoal === 'rwa_access';
 
         if (!showCard) return null;
 
@@ -587,9 +600,9 @@ export default function ProtectionTab({
       })}
 
       {/* =====================================================================
-          FIAT ON-RAMP CARD - Show when user has low balance
+          FIAT ON-RAMP CARD
           ===================================================================== */}
-      {(!totalValue || totalValue < 50) && (
+      {(!displayTotalValue || displayTotalValue < 50) && (
         <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-4">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -615,14 +628,14 @@ export default function ProtectionTab({
       )}
 
       {/* =====================================================================
-          COLLAPSIBLE SECTIONS (progressive disclosure for details)
+          COLLAPSIBLE SECTIONS
           ===================================================================== */}
 
-      {/* Rebalancing Opportunities - Filtered by goal */}
-      {analysis && analysis.rebalancingOpportunities.length > 1 && (
+      {/* Rebalancing Opportunities */}
+      {liveAnalysis && liveAnalysis.rebalancingOpportunities.length > 1 && (
         <CollapsibleSection
           title={
-            config.userGoal === "geographic_diversification"
+            config.userGoal === 'geographic_diversification'
               ? "Diversification Options"
               : "More Opportunities"
           }
@@ -630,17 +643,15 @@ export default function ProtectionTab({
           defaultOpen={false}
           badge={
             <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
-              +{analysis.rebalancingOpportunities.length - 1}
+              +{liveAnalysis.rebalancingOpportunities.length - 1}
             </span>
           }
         >
           <div className="space-y-2">
-            {analysis.rebalancingOpportunities
-              // Filter: if diversifying, don't show all-gold options
+            {liveAnalysis.rebalancingOpportunities
               .filter((opp) => {
-                if (config.userGoal !== "geographic_diversification")
+                if (config.userGoal !== 'geographic_diversification')
                   return true;
-                // For diversification, prefer regional diversity over gold
                 return (
                   opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion
                 );
@@ -659,7 +670,7 @@ export default function ProtectionTab({
                     <span className="text-xs font-bold text-blue-600">
                       {opp.toToken}
                     </span>
-                    {config.userGoal === "geographic_diversification" &&
+                    {config.userGoal === 'geographic_diversification' &&
                       opp.fromRegion !== opp.toRegion && (
                         <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
                           +region
@@ -689,27 +700,31 @@ export default function ProtectionTab({
         </CollapsibleSection>
       )}
 
-      {/* Chain Distribution */}
-      {totalValue > 0 && (
+      {/* Chain Distribution - Now with real multichain data */}
+      {displayTotalValue > 0 && (
         <CollapsibleSection
           title="Chain Distribution"
           icon={<span>🔗</span>}
           defaultOpen={false}
           badge={
-            aggregatedPortfolio && (
-              <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
-                {
-                  aggregatedPortfolio.chains.filter((c) => c.totalValue > 0)
-                    .length
-                }{" "}
-                Chains
-              </span>
-            )
+            <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
+              {displayChainCount} Chain{displayChainCount !== 1 ? 's' : ''}
+            </span>
           }
         >
           <MultichainPortfolioBreakdown
-            regionData={regionData}
-            totalValue={totalValue}
+            regionData={displayRegionData.map(r => ({ 
+              region: r.region, 
+              value: r.value, 
+              color: r.color 
+            }))}
+            totalValue={displayTotalValue}
+            chainBreakdown={activeChains.map(c => ({
+              chainId: c.chainId,
+              chainName: c.chainName,
+              totalValue: c.totalValue,
+              tokenCount: c.tokenCount,
+            }))}
           />
         </CollapsibleSection>
       )}
@@ -737,7 +752,7 @@ export default function ProtectionTab({
         <InflationProtectionInfo
           homeRegion={userRegion}
           currentRegions={currentRegions}
-          amount={totalValue || 1000}
+          amount={displayTotalValue || 1000}
           onChangeHomeRegion={setUserRegion}
         />
         <Section divider>

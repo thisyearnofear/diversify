@@ -19,6 +19,7 @@ export const StepCard = ({
   onSkip,
   canSkip = true,
   isLast = false,
+  canProceed = true,
 }: {
   step: number;
   totalSteps: number;
@@ -28,6 +29,7 @@ export const StepCard = ({
   onSkip?: () => void;
   canSkip?: boolean;
   isLast?: boolean;
+  canProceed?: boolean;
 }) => (
   <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl p-4 border border-blue-100">
     <div className="flex items-center justify-between mb-4">
@@ -60,7 +62,12 @@ export const StepCard = ({
     {onNext && (
       <button
         onClick={onNext}
-        className="w-full mt-4 py-3 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all"
+        disabled={!canProceed}
+        className={`w-full mt-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          canProceed
+            ? 'bg-blue-600 text-white hover:bg-blue-700'
+            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        }`}
       >
         {isLast ? 'Complete' : 'Continue'} →
       </button>
