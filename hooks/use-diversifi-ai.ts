@@ -270,12 +270,21 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     }
 
     setIsAnalyzing(true);
+    setAnalysisProgress(0);
     setThinkingStep('Analyzing your portfolio...');
 
     try {
+      setAnalysisProgress(10);
+      setThinkingStep('Gathering inflation data...');
+
       // Local analysis first (always available)
+      setAnalysisProgress(25);
+      setThinkingStep('Running local portfolio analysis...');
       const localAnalysis = analyzePortfolio(portfolio, inflationData, userGoal || config.goal);
       setPortfolioAnalysis(localAnalysis);
+
+      setAnalysisProgress(40);
+      setThinkingStep('Consulting AI for recommendations...');
 
       // Enhanced AI analysis via API
       const response = await fetch('/api/agent/analyze', {
@@ -289,8 +298,13 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         }),
       });
 
+      setAnalysisProgress(80);
+      setThinkingStep('Processing recommendations...');
+
       if (response.ok) {
         const result = await response.json();
+        setAnalysisProgress(100);
+        setThinkingStep('Analysis complete!');
         setAdvice(result.advice);
         return result.advice;
       }
@@ -299,6 +313,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     } finally {
       setIsAnalyzing(false);
       setThinkingStep('');
+      setAnalysisProgress(0);
     }
   }, [capabilities.analysis, config]);
 

@@ -236,13 +236,13 @@ export function useInflationData() {
     );
 
     if (countryData) {
-      console.log(`[Inflation] Found exact match for ${currency}: ${countryData.rate}%`);
+      // console.log(`[Inflation] Found exact match for ${currency}: ${countryData.rate}%`);
       return countryData.rate;
     }
 
     // If no exact match, use region average
     const avgRate = inflationData[region].avgRate;
-    console.log(`[Inflation] Using region average for ${currency}: ${avgRate}%`);
+    // console.log(`[Inflation] Using region average for ${currency}: ${avgRate}%`);
     return avgRate;
   }, [inflationData]);
 
@@ -256,40 +256,40 @@ export function useInflationData() {
       // Get the inflation rate for XOF directly
       const xofData = inflationData['Africa']?.countries.find(c => c.currency === 'XOF');
       const rate = xofData ? xofData.rate : inflationData['Africa']?.avgRate || 3.5;
-      console.log(`[Inflation] ${stablecoin} -> XOF rate: ${rate}`);
+      // console.log(`[Inflation] ${stablecoin} -> XOF rate: ${rate}`);
       return rate;
     }
 
     if (normalizedStablecoin === 'USDC' || normalizedStablecoin === 'USDT') {
       const rate = getInflationRateForCurrency('USD');
-      console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
+      // console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
       return rate;
     }
 
     if (normalizedStablecoin === 'EURC') {
       const rate = getInflationRateForCurrency('EUR');
-      console.log(`[Inflation] ${stablecoin} -> EUR rate: ${rate}`);
+      // console.log(`[Inflation] ${stablecoin} -> EUR rate: ${rate}`);
       return rate;
     }
 
     // Special case for PAXG and other Global region assets
     if (normalizedStablecoin === 'PAXG') {
       const rate = inflationData['Global']?.avgRate || 5.0;
-      console.log(`[Inflation] ${stablecoin} -> Global rate: ${rate}`);
+      // console.log(`[Inflation] ${stablecoin} -> Global rate: ${rate}`);
       return rate;
     }
 
     // Special case for USDY (Ondo US Dollar Yield) - uses USD inflation rate
     if (normalizedStablecoin === 'USDY') {
       const rate = getInflationRateForCurrency('USD');
-      console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
+      // console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
       return rate;
     }
 
     // Special case for SYRUPUSDC (Syrup USDC - Morpho yield-bearing) - uses USD inflation rate
     if (normalizedStablecoin === 'SYRUPUSDC') {
       const rate = getInflationRateForCurrency('USD');
-      console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
+      // console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
       return rate;
     }
 
@@ -304,7 +304,7 @@ export function useInflationData() {
     }
 
     const rate = getInflationRateForCurrency(currency);
-    console.log(`[Inflation] ${stablecoin} -> ${currency} rate: ${rate}`);
+    // console.log(`[Inflation] ${stablecoin} -> ${currency} rate: ${rate}`);
     return rate;
   }, [inflationData, getInflationRateForCurrency]);
 

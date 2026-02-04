@@ -173,18 +173,20 @@ const SwapInterface = forwardRef<
   // Update token selection when availableTokens changes (e.g., from search filtering)
   useEffect(() => {
     // Only update if the current selection is not in the filtered list
-    const fromExists = availableTokens.some(t => t.symbol === fromToken);
-    const toExists = availableTokens.some(t => t.symbol === toToken);
+    // If cross-chain is enabled, we should check against the appropriate chain's tokens
+    const fromExists = (enableCrossChain ? availableFromTokens : availableTokens).some(t => t.symbol === fromToken);
+    const toExists = (enableCrossChain ? availableToTokens : availableTokens).some(t => t.symbol === toToken);
 
-    if (!fromExists && availableTokens.length > 0) {
-      setFromToken(availableTokens[0].symbol);
+    if (!fromExists && (enableCrossChain ? availableFromTokens : availableTokens).length > 0) {
+      setFromToken((enableCrossChain ? availableFromTokens : availableTokens)[0].symbol);
     }
-    if (!toExists && availableTokens.length > 0) {
+    if (!toExists && (enableCrossChain ? availableToTokens : availableTokens).length > 0) {
       // Try to find a different token than fromToken
-      const differentToken = availableTokens.find(t => t.symbol !== fromToken);
-      setToToken(differentToken?.symbol || availableTokens[0].symbol);
+      const targetTokens = enableCrossChain ? availableToTokens : availableTokens;
+      const differentToken = targetTokens.find(t => t.symbol !== fromToken);
+      setToToken(differentToken?.symbol || targetTokens[0].symbol);
     }
-  }, [availableTokens, fromToken, toToken]);
+  }, [availableTokens, fromToken, toToken, enableCrossChain, availableFromTokens, availableToTokens]);
 
   // Update token selection when chains change
   useEffect(() => {
