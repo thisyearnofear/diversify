@@ -4,6 +4,7 @@ import { useWealthProtectionAgent } from '../../hooks/use-wealth-protection-agen
 import { useToast } from './Toast';
 
 const VOICE_DISABLED_KEY = 'diversifi-voice-disabled';
+const VOICE_FIRST_SEEN_KEY = 'diversifi-voice-first-seen';
 
 interface VoiceButtonProps {
     onTranscription?: (text: string) => void;
@@ -13,16 +14,28 @@ interface VoiceButtonProps {
     variant?: 'default' | 'header' | 'embedded';
     /** Show/hide the disable option */
     showDisableOption?: boolean;
+    /** Show suggestions dropdown */
+    showSuggestions?: boolean;
 }
 
 type RecordingState = 'idle' | 'recording' | 'processing';
+
+// Example voice commands to suggest
+const VOICE_SUGGESTIONS = [
+    { command: "Swap $100 to gold", icon: "🥇" },
+    { command: "Protect my savings", icon: "🛡️" },
+    { command: "Analyze my portfolio", icon: "📊" },
+    { command: "What's my balance?", icon: "💰" },
+    { command: "Show inflation data", icon: "📈" },
+];
 
 export default function VoiceButton({
     onTranscription,
     className = '',
     size = 'md',
     variant = 'default',
-    showDisableOption = true
+    showDisableOption = true,
+    showSuggestions = true,
 }: VoiceButtonProps) {
     const { transcribeAudio, capabilities } = useWealthProtectionAgent();
     const { showToast } = useToast();
@@ -30,30 +43,51 @@ export default function VoiceButton({
     const [recordingState, setRecordingState] = useState<RecordingState>('idle');
     const [isDisabled, setIsDisabled] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
+    const [showSuggestionsPanel, setShowSuggestionsPanel] = useState(false);
+    const [isFirstVisit, setIsFirstVisit] = useState(false);
+    const [hasBeenSeen, setHasBeenSeen] = useState(false);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
     const streamRef = useRef<MediaStream | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
 
-    // Load disabled state from localStorage
+    // Load disabled state and first visit from localStorage
     useEffect(() => {
         const disabled = localStorage.getItem(VOICE_DISABLED_KEY) === 'true';
         setIsDisabled(disabled);
+        
+        const firstSeen = localStorage.getItem(VOICE_FIRST_SEEN_KEY);
+        if (!firstSeen) {
+            setIsFirstVisit(true);
+        }
     }, []);
+
+    // Mark as seen after animation
+    useEffect(() => {
+        if (isFirstVisit && !hasBeenSeen) {
+            const timer = setTimeout(() => {
+                setHasBeenSeen(true);
+                localStorage.setItem(VOICE_FIRST_SEEN_KEY, 'true');
+            }, 5000); // Show tooltip for 5 seconds
+            return () => clearTimeout(timer);
+        }
+    }, [isFirstVisit, hasBeenSeen]);
 
     // Close menu on outside click
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setShowMenu(false);
+                setShowSuggestionsPanel(false);
             }
         };
-        if (showMenu) {
+        if (showMenu || showSuggestionsPanel) {
             document.addEventListener('mousedown', handleClickOutside);
             return () => document.removeEventListener('mousedown', handleClickOutside);
         }
-    }, [showMenu]);
+    }, [showMenu, showSuggestionsPanel]);
 
     const sizeClasses = {
         sm: 'w-8 h-8 text-sm',
@@ -68,14 +102,14 @@ export default function VoiceButton({
             processing: 'bg-amber-500 text-white border-2 border-amber-600'
         },
         header: {
-            idle: 'bg-white/10 hover:bg-white/20 text-white',
-            recording: 'bg-red-500 text-white shadow-lg shadow-red-500/50 scale-110',
-            processing: 'bg-amber-500 text-white'
+            idle: 'bg-white/10 hover:bg-white/20 text-white border-2 border-white/30',
+            recording: 'bg-red-500 text-white shadow-lg shadow-red-500/50 scale-110 border-2 border-red-600',
+            processing: 'bg-amber-500 text-white border-2 border-amber-600'
         },
         embedded: {
-            idle: 'bg-gray-100 hover:bg-gray-200 text-gray-600',
-            recording: 'bg-red-500 text-white scale-110 shadow-lg shadow-red-500/30',
-            processing: 'bg-amber-500 text-white'
+            idle: 'bg-blue-100 hover:bg-blue-200 text-blue-600 border-2 border-blue-300 shadow-sm',
+            recording: 'bg-red-500 text-white scale-110 shadow-lg shadow-red-500/30 border-2 border-red-600',
+            processing: 'bg-amber-500 text-white border-2 border-amber-600'
         }
     };
 
@@ -158,6 +192,11 @@ export default function VoiceButton({
         }
     };
 
+    const handleSuggestionClick = (suggestion: string) => {
+        setShowSuggestionsPanel(false);
+        onTranscription?.(suggestion);
+    };
+
     // Don't render if voice not available or user disabled it
     if (!capabilities.transcription || isDisabled) {
         return null;
@@ -168,15 +207,41 @@ export default function VoiceButton({
 
     return (
         <div className={`relative ${className}`} ref={menuRef}>
+            {/* First Visit Tooltip */}
+            <AnimatePresence>
+                {isFirstVisit && !hasBeenSeen && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -10, scale: 0.9 }}
+                        className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-50"
+                    >
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-xl shadow-xl whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                                <span className="text-lg">🎤</span>
+                                <div>
+                                    <p className="font-bold text-sm">Try Voice Commands!</p>
+                                    <p className="text-xs text-blue-100">Tap and say "Swap $100 to gold"</p>
+                                </div>
+                            </div>
+                            {/* Arrow */}
+                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rotate-45" />
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <motion.button
+                ref={buttonRef}
                 onClick={handleToggle}
                 onContextMenu={handleContextMenu}
+                onMouseEnter={() => showSuggestions && recordingState === 'idle' && setShowSuggestionsPanel(true)}
                 disabled={recordingState === 'processing'}
                 className={`
                     ${sizeClasses[size]} 
                     ${stateClass}
                     rounded-full flex items-center justify-center transition-all duration-200
-                    disabled:opacity-50 disabled:cursor-not-allowed
+                    disabled:opacity-50 disabled:cursor-not-allowed relative
                 `}
                 whileTap={{ scale: 0.95 }}
                 aria-label={recordingState === 'recording' ? 'Stop listening' : 'Start voice input'}
@@ -192,7 +257,34 @@ export default function VoiceButton({
                 ) : recordingState === 'recording' ? (
                     <span>⏹️</span>
                 ) : (
-                    <span>🎤</span>
+                    <motion.span
+                        animate={{ 
+                            scale: [1, 1.1, 1],
+                        }}
+                        transition={{ 
+                            duration: 2, 
+                            repeat: Infinity, 
+                            ease: "easeInOut" 
+                        }}
+                    >
+                        🎤
+                    </motion.span>
+                )}
+
+                {/* Idle pulse ring */}
+                {recordingState === 'idle' && (
+                    <motion.span
+                        className="absolute inset-0 rounded-full border-2 border-blue-400"
+                        animate={{
+                            scale: [1, 1.3, 1.3],
+                            opacity: [0.5, 0, 0],
+                        }}
+                        transition={{
+                            duration: 2,
+                            repeat: Infinity,
+                            ease: "easeOut",
+                        }}
+                    />
                 )}
             </motion.button>
 
@@ -230,6 +322,40 @@ export default function VoiceButton({
                 )}
             </AnimatePresence>
 
+            {/* Suggestions Panel */}
+            <AnimatePresence>
+                {showSuggestionsPanel && showSuggestions && recordingState === 'idle' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-20 min-w-[220px]"
+                        onMouseLeave={() => setShowSuggestionsPanel(false)}
+                    >
+                        <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                Try saying...
+                            </p>
+                        </div>
+                        {VOICE_SUGGESTIONS.map(({ command, icon }, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => handleSuggestionClick(command)}
+                                className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 flex items-center gap-2 transition-colors"
+                            >
+                                <span>{icon}</span>
+                                <span className="font-medium">{command}</span>
+                            </button>
+                        ))}
+                        <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800 mt-1">
+                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                                Or tap 🎤 and speak naturally
+                            </p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Disable menu */}
             <AnimatePresence>
                 {showMenu && (
@@ -237,18 +363,18 @@ export default function VoiceButton({
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-20 min-w-[160px]"
+                        className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-20 min-w-[160px]"
                     >
                         <button
                             onClick={handleDisableVoice}
-                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
                         >
                             <span>🚫</span>
                             <span>Disable Voice</span>
                         </button>
                         <button
                             onClick={() => setShowMenu(false)}
-                            className="w-full px-4 py-2 text-left text-sm text-gray-600 hover:bg-gray-50 flex items-center gap-2"
+                            className="w-full px-4 py-2 text-left text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
                         >
                             <span>✕</span>
                             <span>Cancel</span>
