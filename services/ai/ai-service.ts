@@ -422,49 +422,34 @@ async function callElevenLabsTTS(options: TTSOptions): Promise<TTSResult> {
 }
 
 // ============================================================================
-// TRANSCRIPTION WITH FAILOVER
+// TRANSCRIPTION (OpenAI Whisper Only)
 // ============================================================================
 
 /**
- * Transcribe audio with automatic provider failover
- * Priority: OpenAI (Whisper) -> Venice (Fallback)
+ * Transcribe audio using OpenAI Whisper
+ * Note: Venice AI does not support transcription (feature request in progress)
+ * https://featurebase.venice.ai/p/add-transcription-model-to-api
  */
 export async function transcribeAudio(
   filePath: string,
-  preferredProvider: 'openai' | 'venice' | 'auto' = 'auto'
+  _preferredProvider: 'openai' = 'openai'
 ): Promise<TranscriptionResult> {
-  const errors: Array<{ provider: string; error: string }> = [];
-
-  // Try OpenAI first (if preferred or auto)
-  if ((preferredProvider === 'openai' || preferredProvider === 'auto') && DEFAULT_CONFIG.openaiApiKey) {
-    try {
-      const result = await openaiCircuitBreaker.call(() => callOpenAITranscribe(filePath));
-      return { text: result, provider: 'openai' };
-    } catch (error) {
-      errors.push({ provider: 'openai', error: (error as Error).message });
-      console.warn('[AI Service] OpenAI Transcription failed, trying Venice:', error);
-    }
+  if (!DEFAULT_CONFIG.openaiApiKey) {
+    throw new Error('OpenAI API key required for transcription. Venice AI does not support transcription yet.');
   }
 
-  // Fallback to Venice
-  if ((preferredProvider === 'venice' || preferredProvider === 'auto') && DEFAULT_CONFIG.veniceApiKey) {
-    try {
-      const result = await veniceCircuitBreaker.call(() => callVeniceTranscribe(filePath));
-      return { text: result, provider: 'venice' };
-    } catch (error) {
-      errors.push({ provider: 'venice', error: (error as Error).message });
-      console.error('[AI Service] Venice Transcription also failed:', error);
-    }
+  try {
+    const result = await openaiCircuitBreaker.call(() => callOpenAITranscribe(filePath));
+    return { text: result, provider: 'openai' };
+  } catch (error) {
+    console.error('[AI Service] Transcription failed:', error);
+    throw new Error(`Transcription failed: ${(error as Error).message}`);
   }
-
-  throw new Error(
-    `All Transcription providers failed: ${errors.map(e => `${e.provider}: ${e.error}`).join(', ')}`
-  );
 }
 
 async function callOpenAITranscribe(filePath: string): Promise<string> {
   const client = getOpenAIClient();
-  if (!client) throw new Error('OpenAI client not initialized');
+  if (!client) throw new Error('OpenAI client not initialized - check OPENAI_API_KEY');
 
   // Create stream and ensure it has a proper extension for Whisper
   // formidable temp files often lack extensions
@@ -473,21 +458,6 @@ async function callOpenAITranscribe(filePath: string): Promise<string> {
   const transcription = await client.audio.transcriptions.create({
     file: fileStream,
     model: 'whisper-1',
-  });
-
-  return transcription.text;
-}
-
-async function callVeniceTranscribe(filePath: string): Promise<string> {
-  const client = getVeniceClient();
-  if (!client) throw new Error('Venice client not initialized');
-
-  // Venice API works better with streams, similar to OpenAI
-  const fileStream = fs.createReadStream(filePath);
-
-  const transcription = await client.audio.transcriptions.create({
-    file: fileStream,
-    model: 'openai/whisper-large-v3', // Venice-specific model name
   });
 
   return transcription.text;
