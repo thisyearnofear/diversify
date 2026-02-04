@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useWalletContext } from '../wallet/WalletProvider';
+import { useVoiceEnabled } from '../ui/VoiceButton';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -30,6 +31,7 @@ interface AutomationPreferences {
 
 export default function AutomationSettings() {
     const { address } = useWalletContext();
+    const { isEnabled: voiceEnabled, enable: enableVoice, disable: disableVoice } = useVoiceEnabled();
     const [preferences, setPreferences] = useState<AutomationPreferences | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -133,6 +135,54 @@ export default function AutomationSettings() {
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">🤖 AI Agent Automation</h2>
                 <p className="text-gray-600">Configure how your AI agent notifies you about wealth protection opportunities</p>
             </div>
+
+            {/* Voice Input Settings */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+            >
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">🎤</span>
+                        <div>
+                            <h3 className="font-semibold text-gray-900">Voice Input</h3>
+                            <p className="text-sm text-gray-600">Ask questions using your microphone</p>
+                        </div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={voiceEnabled}
+                            onChange={(e) => e.target.checked ? enableVoice() : disableVoice()}
+                            className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <div className="pl-11 space-y-2">
+                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <span className="text-green-500 mt-0.5">✓</span>
+                        <span>Tap once to start, tap again to stop (no hold required)</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <span className="text-green-500 mt-0.5">✓</span>
+                        <span>Microphone released immediately when you stop</span>
+                    </div>
+                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                        <span className="text-green-500 mt-0.5">✓</span>
+                        <span>Audio processed on-device before sending</span>
+                    </div>
+                    {!voiceEnabled && (
+                        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                            <p className="text-sm text-amber-800">
+                                <span className="font-medium">Voice is disabled.</span> Toggle above to re-enable voice input across the app.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </motion.div>
 
             {/* Email Notifications */}
             <motion.div

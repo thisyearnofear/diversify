@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWealthProtectionAgent } from '../../hooks/use-wealth-protection-agent';
 import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 import { useInflationData } from '../../hooks/use-inflation-data';
+import VoiceButton from '../ui/VoiceButton';
 import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
 import type { RegionalInflationData } from '../../hooks/use-inflation-data';
 
@@ -36,7 +37,6 @@ export default function AgentWealthGuard({
         analysisProgress,
         analyze,
         sendMessage,
-        transcribeAudio,
         arcAgent,
         capabilities,
         clearConversation,
@@ -47,11 +47,6 @@ export default function AgentWealthGuard({
     const { inflationData: liveInflationData } = useInflationData();
 
     const { showToast } = useToast();
-    const [isListening, setIsListening] = useState(false);
-
-    // Audio recording refs
-    const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-    const audioChunksRef = useRef<Blob[]>([]);
 
     // Initialize agent on mount
     useEffect(() => {
@@ -102,53 +97,11 @@ export default function AgentWealthGuard({
         );
     };
 
-    const startRecording = async () => {
-        if (!capabilities.transcription) {
-            showToast('Voice intelligence not configured. Please use text query.', 'error');
-            return;
-        }
+    const handleVoiceTranscription = (transcription: string) => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
-            mediaRecorderRef.current = mediaRecorder;
-            audioChunksRef.current = [];
-
-            mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
-            };
-
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-                const transcription = await transcribeAudio(audioBlob);
-                if (transcription) {
-                    showToast(`Oracle heard: "${transcription}"`, 'ai');
-                    sendMessage(transcription);
-                }
-                // Stop all tracks to release microphone
-                stream.getTracks().forEach(track => track.stop());
-            };
-
-            mediaRecorder.start();
-            setIsListening(true);
-            try {
-                (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'selection' });
-            } catch { }
-        } catch (error) {
-            console.error('Error starting recording:', error);
-            showToast('Microphone access denied', 'error');
-        }
-    };
-
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop();
-            setIsListening(false);
-            try {
-                (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'light' });
-            } catch { }
-        }
+            (sdk.actions as unknown as { hapticFeedback: (options: { type: string }) => void }).hapticFeedback({ type: 'selection' });
+        } catch { }
+        sendMessage(transcription);
     };
 
     // ============================================================================
@@ -331,33 +284,16 @@ export default function AgentWealthGuard({
                                     {capabilities.analysis && <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">$0.05</span>}
                                 </button>
 
-                                {/* Voice Query Button - Always visible in embedded mode */}
-                                {capabilities.transcription && (
-                                    <button
-                                        onMouseDown={startRecording}
-                                        onMouseUp={stopRecording}
-                                        onTouchStart={startRecording}
-                                        onTouchEnd={stopRecording}
-                                        className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all shrink-0 ${isListening
-                                            ? 'bg-red-500 text-white scale-110 shadow-lg shadow-red-500/30'
-                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
-                                            }`}
-                                        aria-label="Voice Query"
-                                    >
-                                        <span className="text-xl">{isListening ? '🎙️' : '🎤'}</span>
-                                    </button>
-                                )}
+                                {/* Voice Query Button */}
+                                <VoiceButton
+                                    onTranscription={handleVoiceTranscription}
+                                    size="lg"
+                                    variant="embedded"
+                                />
                             </div>
-
-                            {isListening && (
-                                <p className="text-xs text-red-500 font-bold animate-pulse mb-2">
-                                    Listening... Release to send
-                                </p>
-                            )}
 
                             <p className="text-[10px] text-gray-400">
                                 Analyzes ${amount.toFixed(2)} against real-time global inflation data
-                                {capabilities.transcription && ' • Hold 🎤 to ask questions'}
                             </p>
                         </motion.div>
                     )}
@@ -383,24 +319,19 @@ export default function AgentWealthGuard({
                             <div className="flex items-center gap-1.5 mt-1">
                                 <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">AI</span>
                                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-black/20 border border-white/10">
-                                    <div className={`w-1 h-1 rounded-full ${isListening ? 'bg-red-400 animate-ping' : 'bg-blue-400 animate-pulse'}`} />
-                                    <span className="text-[9px] font-mono text-blue-100">{isListening ? 'Listening...' : 'AI Powered'}</span>
+                                    <div className="w-1 h-1 rounded-full bg-blue-400 animate-pulse" />
+                                    <span className="text-[9px] font-mono text-blue-100">AI Powered</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <button
-                            onMouseDown={startRecording}
-                            onMouseUp={stopRecording}
-                            onTouchStart={startRecording}
-                            onTouchEnd={stopRecording}
-                            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${isListening ? 'bg-red-500 scale-125 shadow-red-500/50' : 'bg-white/10 hover:bg-white/20'}`}
-                            aria-label="Voice Query"
-                        >
-                            <span className="text-lg">{isListening ? '🎙️' : '🎤'}</span>
-                        </button>
+                        <VoiceButton
+                            onTranscription={handleVoiceTranscription}
+                            size="md"
+                            variant="header"
+                        />
 
                         {arcAgent?.isProxy && (
                             <div className="flex flex-col items-end hidden md:flex">
