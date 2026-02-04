@@ -118,7 +118,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             <div className="grid grid-cols-2 gap-2">
                 {networks.map((network) => {
                     const isActive = network.chainId === currentChainId;
-                    const colorClasses: Record<string, any> = {
+                    const colorClasses: Record<string, { bg: string; hover: string; text: string }> = {
                         green: {
                             bg: 'bg-green-50/50 dark:bg-green-900/10 border-green-200/50 dark:border-green-800/50',
                             hover: 'hover:bg-green-100/50 dark:hover:bg-green-900/20',

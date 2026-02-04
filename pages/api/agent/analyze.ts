@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { analyzePortfolio, type PortfolioAnalysis } from '../../../utils/portfolio-analysis';
 import { getOnrampSystemPrompt } from '../../../services/ai/onramp-agent-context';
+import type { RegionalInflationData } from '../../../hooks/use-inflation-data';
 
 
 
@@ -185,7 +186,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                 // Count total countries covered
                 let countryCount = 0;
-                Object.values(inflationData).forEach((region: any) => {
+                Object.values(inflationData).forEach((region: RegionalInflationData) => {
                     if (region.countries) {
                         countryCount += region.countries.length;
                     }

@@ -5,7 +5,7 @@ import SimplePieChart from './SimplePieChart';
 import NetworkSwitcher from '../swap/NetworkSwitcher';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAnimatedCounter } from '../../hooks/use-animated-counter';
-import type { PortfolioYieldSummary } from '../../hooks/use-portfolio-yield';
+import type { PortfolioYieldSummary, AssetYieldInfo } from '../../hooks/use-portfolio-yield';
 
 interface ProtectionAnalysisProps {
     regionData: Array<{ region: string; value: number; color: string }>;
@@ -369,7 +369,7 @@ export default function ProtectionAnalysis({
                         {yieldSummary && (
                             <div className="flex items-baseline gap-2">
                                 <span className="text-2xl font-black text-green-600 dark:text-green-400">
-                                    {typeof (yieldSummary as any).apy !== 'undefined' ? (yieldSummary as any).apy.toFixed(2) : '0.00'}%
+                                    {typeof yieldSummary.avgYieldRate !== 'undefined' ? yieldSummary.avgYieldRate.toFixed(2) : '0.00'}%
                                 </span>
                                 <span className="text-xs text-gray-600 dark:text-gray-400">APY</span>
                             </div>
@@ -377,7 +377,7 @@ export default function ProtectionAnalysis({
 
                         {yieldSummary && (
                             <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                                Estimated annual earnings: ${typeof (yieldSummary as any).estimatedEarnings !== 'undefined' ? (yieldSummary as any).estimatedEarnings.toFixed(2) : '0.00'}
+                                Estimated annual earnings: ${typeof yieldSummary.totalAnnualYield !== 'undefined' ? yieldSummary.totalAnnualYield.toFixed(2) : '0.00'}
                             </p>
                         )}
 
@@ -390,9 +390,9 @@ export default function ProtectionAnalysis({
                                     className="mt-3 pt-3 border-t border-green-200 dark:border-green-800 overflow-hidden"
                                 >
                                     <div className="space-y-2">
-                                        {yieldSummary && (yieldSummary as any).breakdown && (yieldSummary as any).breakdown.map((item: any, index: number) => (
+                                        {yieldSummary && yieldSummary.assets && yieldSummary.assets.map((item: AssetYieldInfo, index: number) => (
                                             <div key={index} className="flex justify-between text-sm">
-                                                <span className="text-gray-600 dark:text-gray-400">{item.token}</span>
+                                                <span className="text-gray-600 dark:text-gray-400">{item.symbol}</span>
                                                 <span className="font-medium text-green-600 dark:text-green-400">{item.apy?.toFixed(2) || '0.00'}%</span>
                                             </div>
                                         ))}
