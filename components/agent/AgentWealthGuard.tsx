@@ -1,11 +1,12 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWealthProtectionAgent } from '../../hooks/use-wealth-protection-agent';
+import { useWealthProtectionAgent, type AlternativeRecommendation } from '../../hooks/use-wealth-protection-agent';
 import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 import { useInflationData } from '../../hooks/use-inflation-data';
 import { useAppState } from '../../context/AppStateContext';
 import VoiceButton from '../ui/VoiceButton';
+import InteractiveAdviceCard from './InteractiveAdviceCard';
 import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
 import type { RegionalInflationData } from '../../hooks/use-inflation-data';
 
@@ -68,12 +69,18 @@ export default function AgentWealthGuard({
         }
     }, [analysisProgress, isAnalyzing]);
 
-    const handleExecuteRecommendation = (token: string) => {
+    const handleExecuteRecommendation = (token: string, amount?: number) => {
         if (onExecute) {
             onExecute(token);
         } else {
-            showToast(`Initiating swap to ${token}...`, 'info');
+            const amountText = amount ? ` ($${amount.toFixed(2)})` : '';
+            showToast(`Initiating swap to ${token}${amountText}...`, 'info');
         }
+    };
+
+    const handleSelectAlternative = (alternative: AlternativeRecommendation) => {
+        showToast(`Switched to ${alternative.token} recommendation`, 'success');
+        handleExecuteRecommendation(alternative.token, alternative.suggestedAmount);
     };
 
     const handleAnalyze = () => {
@@ -144,7 +151,7 @@ export default function AgentWealthGuard({
                         </motion.div>
                     )}
 
-                    {/* Analysis Results - Compact */}
+                    {/* Analysis Results - Compact (with interactive card) */}
                     {advice && !isAnalyzing && (
                         <motion.div
                             key="advice"
@@ -152,6 +159,16 @@ export default function AgentWealthGuard({
                             animate={{ y: 0, opacity: 1 }}
                             className="space-y-3"
                         >
+                            {/* Use Interactive Card for better UX */}
+                            {(advice.alternatives?.length || advice.expandableReasoning) ? (
+                                <InteractiveAdviceCard
+                                    advice={advice}
+                                    onSelectAlternative={handleSelectAlternative}
+                                    onExecute={handleExecuteRecommendation}
+                                />
+                            ) : (
+                                /* Fallback to original compact view */
+                                <>
                             {/* AI Reasoning Quote */}
                             <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
                                 <p className="text-xs text-gray-700 font-medium leading-relaxed italic">
@@ -282,6 +299,8 @@ export default function AgentWealthGuard({
                                     <span className="text-lg">🛡️</span>
                                     <span className="text-sm font-bold text-emerald-800">Portfolio well-protected</span>
                                 </div>
+                            )}
+                            </>
                             )}
                         </motion.div>
                     )}

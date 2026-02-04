@@ -80,6 +80,8 @@ export default function MultichainPortfolioBreakdown({
             <div className="space-y-3">
                 {networkEntries.map(([network, percentage]) => {
                     const networkInfo = NETWORK_INFO[network as keyof typeof NETWORK_INFO];
+                    if (!networkInfo) return null; // Safety check for TypeScript
+                    
                     const dollarValue = (totalValue * percentage) / 100;
 
                     return (

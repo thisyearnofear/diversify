@@ -171,6 +171,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 "expectedSavings": ${portfolioAnalysis.projections.optimizedPath.purchasingPowerPreserved.toFixed(2)},
                 "timeHorizon": "${config?.timeHorizon || '3 months'}",
                 "riskLevel": "${portfolioAnalysis.concentrationRisk}",
+                "alternatives": [
+                    {
+                        "token": "alternative token option",
+                        "action": "SWAP|REBALANCE|BRIDGE",
+                        "reasoning": "Why this is a good alternative",
+                        "expectedSavings": 50.00,
+                        "riskLevel": "LOW|MEDIUM|HIGH",
+                        "apy": 4.5,
+                        "pros": ["Benefit 1", "Benefit 2", "Benefit 3"],
+                        "cons": ["Drawback 1", "Drawback 2"],
+                        "timeHorizon": "${config?.timeHorizon || '3 months'}",
+                        "suggestedAmount": 100.00,
+                        "inflationProtection": 85,
+                        "liquidityScore": 90,
+                        "comparisonVsPrimary": {
+                            "savingsDiff": -10.00,
+                            "riskDiff": "LOWER|SAME|HIGHER",
+                            "liquidityDiff": "BETTER|SAME|WORSE"
+                        }
+                    }
+                ],
+                "expandableReasoning": {
+                    "whyThis": "Detailed explanation of why the primary recommendation is best for their specific situation",
+                    "risks": ["Risk factor 1", "Risk factor 2", "Risk factor 3"],
+                    "alternatives": "Brief overview of other options they could consider",
+                    "timing": "Why taking action now is important (or not urgent)",
+                    "technicalDetails": "Optional: deeper dive into the mechanics"
+                },
                 "onrampRecommendation": {
                     "provider": "Guardarian|Mt Pelerin",
                     "reasoning": "Why this provider is recommended for the user's situation",
@@ -194,6 +222,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     "topOpportunity": ${topOpportunities.length > 0 ? JSON.stringify(topOpportunities[0]) : 'null'}
                 }
             }
+            
+            ALTERNATIVES GUIDANCE:
+            - Provide 2-3 alternative recommendations beyond the primary
+            - Each alternative should have clear pros/cons
+            - Compare alternatives directly to the primary recommendation
+            - Consider different risk profiles (conservative, balanced, aggressive)
+            - Include tokens like: USDY (5% yield), SYRUPUSDC (4.5% yield), PAXG (gold), and regional stables
             
             ANALYSIS RULES:
             1. Reference SPECIFIC NUMBERS from the portfolio analysis

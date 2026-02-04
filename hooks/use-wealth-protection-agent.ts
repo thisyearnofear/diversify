@@ -5,6 +5,36 @@ import { analyzePortfolio, detectGuidedTour, type PortfolioAnalysis } from '../u
 import type { AggregatedPortfolio } from './use-stablecoin-balances';
 import type { RegionalInflationData } from './use-inflation-data';
 
+// ENHANCEMENT: Alternative recommendation for comparison
+export interface AlternativeRecommendation {
+    token: string;
+    action: 'SWAP' | 'REBALANCE' | 'BRIDGE';
+    reasoning: string;
+    expectedSavings: number;
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    apy?: number;
+    pros: string[];
+    cons: string[];
+    timeHorizon?: string;
+    suggestedAmount?: number;
+    inflationProtection?: number; // percentage
+    liquidityScore?: number; // 0-100
+    comparisonVsPrimary?: {
+        savingsDiff: number; // +/- vs primary
+        riskDiff: 'LOWER' | 'SAME' | 'HIGHER';
+        liquidityDiff: 'BETTER' | 'SAME' | 'WORSE';
+    };
+}
+
+// ENHANCEMENT: Expandable reasoning sections
+export interface ExpandableReasoning {
+    whyThis: string; // Why this specific recommendation?
+    risks: string[]; // What are the risks?
+    alternatives: string; // What other options exist?
+    timing: string; // Why now?
+    technicalDetails?: string; // Optional deep dive
+}
+
 export interface AgentAdvice {
     action: 'SWAP' | 'HOLD' | 'REBALANCE' | 'BRIDGE' | 'BUY' | 'SELL' | 'GUIDED_TOUR';
     targetToken?: string;
@@ -59,6 +89,10 @@ export interface AgentAdvice {
         }>;
         priority: 'HIGH' | 'MEDIUM' | 'LOW';
     };
+    // ENHANCEMENT: Multiple alternatives for user choice
+    alternatives?: AlternativeRecommendation[];
+    // ENHANCEMENT: Expandable reasoning sections
+    expandableReasoning?: ExpandableReasoning;
     _meta?: {
         modelUsed: string;
         totalCost?: number;
