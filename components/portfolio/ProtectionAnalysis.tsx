@@ -3,6 +3,7 @@ import { Card, PrimaryButton } from '../shared/TabComponents';
 import SimplePieChart from './SimplePieChart';
 import NetworkSwitcher from '../swap/NetworkSwitcher';
 import sdk from '@farcaster/miniapp-sdk';
+import { useAnimatedCounter } from '../../hooks/use-animated-counter';
 import type { PortfolioYieldSummary } from '../../hooks/use-portfolio-yield';
 
 interface ProtectionAnalysisProps {
@@ -23,6 +24,37 @@ interface ProtectionAnalysisProps {
     yieldSummary?: PortfolioYieldSummary;
 }
 
+// Grade explanations for user education
+const GRADE_EXPLANATIONS: Record<string, Record<string, string>> = {
+    hedge: {
+        'A+': 'Excellent inflation protection across multiple regions',
+        'A': 'Strong hedge with good regional diversification',
+        'B+': 'Good hedge, consider adding more emerging market exposure',
+        'B': 'Moderate protection, increase non-USD allocation',
+        'C+': 'Limited hedge, add Africa/Asia exposure recommended',
+        'C': 'Weak inflation protection, rebalance urgently',
+        'D': 'No meaningful hedge, portfolio at risk',
+    },
+    diversify: {
+        'A+': 'Outstanding geographic spread across 5+ regions',
+        'A': 'Well diversified across multiple continents',
+        'B+': 'Good diversification, add 1-2 more regions',
+        'B': 'Moderate spread, consider LatAm or Asia',
+        'C+': 'Limited diversity, heavy concentration risk',
+        'C': 'Poor diversification, rebalance recommended',
+        'D': 'Highly concentrated, immediate action needed',
+    },
+    rwa: {
+        'A+': 'Optimal real-world asset exposure (10-15%)',
+        'A': 'Strong RWA allocation with good commodities mix',
+        'B+': 'Good RWA exposure, consider adding 2-3% more',
+        'B': 'Moderate real asset exposure, room to grow',
+        'C+': 'Limited RWA, add commodities or real estate tokens',
+        'C': 'Insufficient real-world asset protection',
+        'D': 'No RWA exposure, portfolio vulnerable to fiat risk',
+    },
+};
+
 export default function ProtectionAnalysis({
     regionData,
     totalValue,
@@ -39,6 +71,16 @@ export default function ProtectionAnalysis({
     const [showAmounts, setShowAmounts] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showYieldBreakdown, setShowYieldBreakdown] = useState(false);
+    const [highlightedRegionIndex, setHighlightedRegionIndex] = useState<number | null>(null);
+    const [expandedGrade, setExpandedGrade] = useState<string | null>(null);
+    const [showGrades, setShowGrades] = useState(false);
+
+    // Animated counter for diversification score
+    const { formattedValue: animatedScore, isComplete: scoreAnimationComplete } = useAnimatedCounter({
+        target: diversificationScore,
+        duration: 800,
+        easing: 'easeOut',
+    });
 
     const handleRefresh = async () => {
         if (!refreshBalances) return;
@@ -59,6 +101,14 @@ export default function ProtectionAnalysis({
         if (score >= 40) return 'C';
         return 'D';
     };
+
+    // Trigger grade reveal after score animation completes
+    React.useEffect(() => {
+        if (scoreAnimationComplete) {
+            const timer = setTimeout(() => setShowGrades(true), 200);
+            return () => clearTimeout(timer);
+        }
+    }, [scoreAnimationComplete]);
 
     const shareToSocial = async (platform: 'twitter' | 'farcaster') => {
         const activeRegions = regionData.filter(r => r.value > 0).length;
@@ -116,6 +166,23 @@ export default function ProtectionAnalysis({
         }
     };
 
+    // Get region index for highlighting bars when pie segment hovered
+    const getRegionIndex = (regionName: string) => {
+        return regionData.findIndex(r => r.region === regionName);
+    };
+
+    const handlePieHover = (index: number | null) => {
+        setHighlightedRegionIndex(index);
+    };
+
+    const toggleGradeExpansion = (grade: string) => {
+        setExpandedGrade(expandedGrade === grade ? null : grade);
+    };
+
+    const hedgeGrade = getLetterRating(goalScores.hedge);
+    const diversifyGrade = getLetterRating(goalScores.diversify);
+    const rwaGrade = getLetterRating(goalScores.rwa);
+
     return (
         <Card className="overflow-hidden" padding="p-0">
             <div className="p-5 sm:p-6 space-y-6">
@@ -160,13 +227,29 @@ export default function ProtectionAnalysis({
 
                 {/* Portfolio Content - Improved Mobile Layout */}
                 <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
-                    {/* Pie Chart - Responsive size */}
+                    {/* Pie Chart - Responsive size with animated center score */}
                     <div className="w-40 sm:w-48 h-40 sm:h-48 flex-shrink-0 relative">
-                        <SimplePieChart data={regionData} title="" minimal={true} />
-                        {/* Center Score Overlay */}
+                        <SimplePieChart 
+                            data={regionData} 
+                            title="" 
+                            minimal={true} 
+                            interactive={true}
+                            onSegmentHover={handlePieHover}
+                            highlightedIndex={highlightedRegionIndex}
+                        />
+                        {/* Center Score Overlay with pulse animation */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none">{diversificationScore}</span>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase">Score</span>
+                            {/* Pulse ring animation */}
+                            <div 
+                                className={`absolute w-20 h-20 rounded-full border-2 border-blue-400/30 transition-all duration-500 ${
+                                    scoreAnimationComplete ? 'scale-100 opacity-100 animate-ping' : 'scale-50 opacity-0'
+                                }`}
+                                style={{ animationDuration: '2s', animationIterationCount: '3' }}
+                            />
+                            <span className="text-2xl font-black text-gray-900 dark:text-white leading-none relative z-10">
+                                {animatedScore}
+                            </span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase relative z-10">Score</span>
                         </div>
                     </div>
 
@@ -186,8 +269,17 @@ export default function ProtectionAnalysis({
 
                         {/* Geographical Spread - Horizontal Bars for Mobile */}
                         <div className="space-y-2 pt-2">
-                            {regionData.filter(r => r.value > 0).map((r) => (
-                                <div key={r.region} className="space-y-1">
+                            {regionData.filter(r => r.value > 0).map((r, index) => (
+                                <div 
+                                    key={r.region} 
+                                    className={`space-y-1 transition-all duration-200 ${
+                                        highlightedRegionIndex !== null && highlightedRegionIndex !== index 
+                                            ? 'opacity-40' 
+                                            : highlightedRegionIndex === index 
+                                                ? 'scale-[1.02]' 
+                                                : ''
+                                    }`}
+                                >
                                     <div className="flex justify-between text-[10px] font-bold uppercase text-gray-500">
                                         <span>{r.region === 'Commodities' ? 'Commodities (RWA)' : r.region}</span>
                                         <span>{showAmounts ? `$${r.value.toFixed(2)}` : `${((r.value / totalValue) * 100).toFixed(1)}%`}</span>
@@ -297,22 +389,78 @@ export default function ProtectionAnalysis({
                     </div>
                 )}
 
-                {/* Goal-Based Ratings */}
+                {/* Goal-Based Ratings with Flip Animation */}
                 <div className="grid grid-cols-3 gap-3">
-                    <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                    {/* Hedge Grade */}
+                    <div 
+                        className="relative text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800 cursor-pointer transition-transform active:scale-95"
+                        onClick={() => toggleGradeExpansion('hedge')}
+                    >
                         <div className="text-xl mb-1">🛡️</div>
-                        <div className="text-sm font-black text-blue-900 dark:text-blue-100 leading-none mb-1">{getLetterRating(goalScores.hedge)}</div>
+                        <div 
+                            className={`text-sm font-black text-blue-900 dark:text-blue-100 leading-none mb-1 transition-all duration-500 ${
+                                showGrades ? 'opacity-100 transform-none' : 'opacity-0 scale-75'
+                            }`}
+                        >
+                            {hedgeGrade}
+                        </div>
                         <div className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase">Hedge</div>
+                        
+                        {/* Expanded explanation */}
+                        {expandedGrade === 'hedge' && (
+                            <div className="absolute inset-x-0 -bottom-2 translate-y-full z-10 p-3 bg-blue-100 dark:bg-blue-800 rounded-lg text-[10px] text-blue-800 dark:text-blue-200 shadow-lg">
+                                {GRADE_EXPLANATIONS.hedge[hedgeGrade]}
+                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-blue-100 dark:bg-blue-800 rotate-45" />
+                            </div>
+                        )}
                     </div>
-                    <div className="text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800">
+
+                    {/* Diversify Grade */}
+                    <div 
+                        className="relative text-center p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl border border-emerald-100 dark:border-emerald-800 cursor-pointer transition-transform active:scale-95"
+                        onClick={() => toggleGradeExpansion('diversify')}
+                    >
                         <div className="text-xl mb-1">🌍</div>
-                        <div className="text-sm font-black text-emerald-900 dark:text-emerald-100 leading-none mb-1">{getLetterRating(goalScores.diversify)}</div>
+                        <div 
+                            className={`text-sm font-black text-emerald-900 dark:text-emerald-100 leading-none mb-1 transition-all duration-500 delay-100 ${
+                                showGrades ? 'opacity-100 transform-none' : 'opacity-0 scale-75'
+                            }`}
+                        >
+                            {diversifyGrade}
+                        </div>
                         <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Diversify</div>
+                        
+                        {/* Expanded explanation */}
+                        {expandedGrade === 'diversify' && (
+                            <div className="absolute inset-x-0 -bottom-2 translate-y-full z-10 p-3 bg-emerald-100 dark:bg-emerald-800 rounded-lg text-[10px] text-emerald-800 dark:text-emerald-200 shadow-lg">
+                                {GRADE_EXPLANATIONS.diversify[diversifyGrade]}
+                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-emerald-100 dark:bg-emerald-800 rotate-45" />
+                            </div>
+                        )}
                     </div>
-                    <div className="text-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800">
+
+                    {/* RWA Grade */}
+                    <div 
+                        className="relative text-center p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100 dark:border-amber-800 cursor-pointer transition-transform active:scale-95"
+                        onClick={() => toggleGradeExpansion('rwa')}
+                    >
                         <div className="text-xl mb-1">🥇</div>
-                        <div className="text-sm font-black text-amber-900 dark:text-amber-100 leading-none mb-1">{getLetterRating(goalScores.rwa)}</div>
+                        <div 
+                            className={`text-sm font-black text-amber-900 dark:text-amber-100 leading-none mb-1 transition-all duration-500 delay-200 ${
+                                showGrades ? 'opacity-100 transform-none' : 'opacity-0 scale-75'
+                            }`}
+                        >
+                            {rwaGrade}
+                        </div>
                         <div className="text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase">RWA</div>
+                        
+                        {/* Expanded explanation */}
+                        {expandedGrade === 'rwa' && (
+                            <div className="absolute inset-x-0 -bottom-2 translate-y-full z-10 p-3 bg-amber-100 dark:bg-amber-800 rounded-lg text-[10px] text-amber-800 dark:text-amber-200 shadow-lg">
+                                {GRADE_EXPLANATIONS.rwa[rwaGrade]}
+                                <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-amber-100 dark:bg-amber-800 rotate-45" />
+                            </div>
+                        )}
                     </div>
                 </div>
 
