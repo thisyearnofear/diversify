@@ -18,6 +18,24 @@ import { circuitBreakerManager } from '../../utils/circuit-breaker-service';
 import { unifiedCache } from '../../utils/unified-cache-service';
 import fs from 'fs';
 
+/**
+ * Robustly clean JSON strings from AI responses
+ * Handles markdown code blocks, preamble, and postscript text
+ */
+function cleanJsonResponse(text: string): string {
+  // If no backticks, just trim
+  if (!text.includes('```')) return text.trim();
+
+  // Extract content between ```json and ``` or just ``` and ```
+  const match = text.match(/```(?:json)?\n?([\s\S]*?)\n?```/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+
+  // Fallback: strip the first and last backtick lines if we can't match precisely
+  return text.replace(/^```(?:json)?\s*|```\s*$/g, '').trim();
+}
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -38,6 +56,7 @@ export interface ChatCompletionOptions {
   enableWebSearch?: boolean;
   enableReasoning?: boolean;
   responseMimeType?: 'text/plain' | 'application/json';
+  image?: string; // base64 encoded image
 }
 
 export interface ChatCompletionResult {
@@ -235,9 +254,30 @@ async function callVeniceChat(options: ChatCompletionOptions): Promise<ChatCompl
 
   const model = options.model || VENICE_MODELS.flagship;
 
+
+
+  // Handle Vision if image is provided
+  const messages: any[] = [...options.messages];
+  if (options.image) {
+    // Vision typically requires a specific model and content structure
+    // We add the image to the last user message or as a new message
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Analyze this image.' },
+        {
+          type: 'image_url',
+          image_url: {
+            url: `data:image/jpeg;base64,${options.image.includes(',') ? options.image.split(',')[1] : options.image}`
+          }
+        }
+      ]
+    });
+  }
+
   const completion = await client.chat.completions.create({
-    model,
-    messages: options.messages as any,
+    model: options.image ? VENICE_MODELS.vision : model,
+    messages: (options.image ? messages : options.messages) as any,
     temperature: options.temperature ?? 0.7,
     max_tokens: options.maxTokens ?? 2000,
     // @ts-expect-error - Venice-specific parameters
@@ -250,8 +290,10 @@ async function callVeniceChat(options: ChatCompletionOptions): Promise<ChatCompl
 
   const message = completion.choices[0]?.message;
 
+  const content = message?.content || '';
+
   return {
-    content: message?.content || '',
+    content: options.responseMimeType === 'application/json' ? cleanJsonResponse(content) : content,
     model: completion.model,
     provider: 'venice',
     usage: completion.usage ? {
@@ -301,6 +343,20 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
         parts: [{ text: m.content }],
       }));
 
+      // Handle Vision in Gemini
+      if (options.image) {
+        // Add image to the last user message's parts
+        const lastUserMsg = [...geminiMessages].reverse().find(m => m.role === 'user');
+        if (lastUserMsg) {
+          lastUserMsg.parts.push({
+            inlineData: {
+              data: options.image.includes(',') ? options.image.split(',')[1] : options.image,
+              mimeType: 'image/jpeg'
+            }
+          } as any);
+        }
+      }
+
       const generationConfig: any = {
         temperature: options.temperature ?? 0.7,
         maxOutputTokens: options.maxTokens ?? 2000,
@@ -320,9 +376,10 @@ async function callGeminiChat(options: ChatCompletionOptions): Promise<ChatCompl
       });
 
       const response = await result.response;
+      const content = response.text();
 
       return {
-        content: response.text(),
+        content: options.responseMimeType === 'application/json' ? cleanJsonResponse(content) : content,
         model: modelName,
         provider: 'gemini',
         webSearchUsed: false,

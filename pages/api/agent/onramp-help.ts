@@ -1,19 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateChatCompletion } from '../../../services/ai/ai-service';
 import { getOnrampSystemPrompt, getOnrampRecommendation } from '../../../services/ai/onramp-agent-context';
 
-const GEMINI_MODELS = [
-    'gemini-3-flash-preview',
-    'gemini-3.0-pro-preview',
-    'gemini-1.5-flash',
-];
+
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
     try {
-        const apiKey = process.env.GEMINI_API_KEY;
-        if (!apiKey) return res.status(500).json({ error: 'GEMINI_API_KEY not configured' });
+        if (!process.env.GEMINI_API_KEY && !process.env.VENICE_API_KEY) {
+            return res.status(500).json({ error: 'AI providers (GEMINI or VENICE) not configured' });
+        }
 
         const {
             question,
@@ -26,7 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(400).json({ error: 'Question is required' });
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
+
 
         // Get onramp recommendation based on context
         const recommendation = getOnrampRecommendation(
@@ -70,40 +67,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             Please provide a helpful, accurate response about fiat onramp options for this user.
         `;
 
-        // Try models in order
-        for (const modelName of GEMINI_MODELS) {
-            try {
-                console.log(`[Onramp Agent] Attempting ${modelName}...`);
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    systemInstruction: systemInstruction,
-                });
+        const chatOptions = {
+            messages: [
+                { role: 'system' as const, content: systemInstruction },
+                { role: 'user' as const, content: userPrompt }
+            ]
+        };
 
-                const result = await model.generateContent(userPrompt);
-                const response = await result.response;
-                const answer = response.text();
+        const result = await generateChatCompletion(chatOptions);
 
-                return res.status(200).json({
-                    answer,
-                    recommendation,
-                    context: {
-                        network,
-                        amount,
-                        preferNoKyc
-                    },
-                    _meta: {
-                        modelUsed: modelName,
-                        timestamp: new Date().toISOString()
-                    }
-                });
-            } catch (err: unknown) {
-                const errorMessage = err instanceof Error ? err.message : String(err);
-                console.warn(`[Onramp Agent] ${modelName} failed, trying next...`, errorMessage);
-                continue;
+        return res.status(200).json({
+            answer: result.content,
+            recommendation,
+            context: {
+                network,
+                amount,
+                preferNoKyc
+            },
+            _meta: {
+                modelUsed: result.model,
+                provider: result.provider,
+                timestamp: new Date().toISOString()
             }
-        }
-
-        throw new Error("All models failed to process onramp question.");
+        });
 
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
