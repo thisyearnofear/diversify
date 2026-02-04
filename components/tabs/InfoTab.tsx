@@ -22,9 +22,9 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
   const isArbitrum = ChainDetectionService.isArbitrum(chainId);
 
   const displayTokens = isCelo
-    ? availableTokens.filter((t) => !["PAXG"].includes(t.symbol))
+    ? availableTokens.filter((t) => !["PAXG", "USDY", "SYRUPUSDC"].includes(t.symbol))
     : isArbitrum
-      ? availableTokens.filter((t) => ["USDC", "PAXG"].includes(t.symbol))
+      ? availableTokens.filter((t) => ["USDC", "PAXG", "USDY", "SYRUPUSDC"].includes(t.symbol))
       : availableTokens;
 
   const networkName = ChainDetectionService.getNetworkName(chainId);

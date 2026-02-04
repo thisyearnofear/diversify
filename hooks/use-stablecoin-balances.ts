@@ -38,10 +38,11 @@ export interface AggregatedPortfolio {
 }
 
 // Supported chains for multi-chain scanning
+const isDev = process.env.NODE_ENV === 'development';
 const SCANNABLE_CHAINS = [
   { chainId: 42220, name: 'Celo' },
   { chainId: 42161, name: 'Arbitrum' },
-  { chainId: 5042002, name: 'Arc Testnet' },
+  ...(isDev ? [{ chainId: 5042002, name: 'Arc Testnet' }] : []),
 ] as const;
 
 // Helper function to normalize region names (handles legacy uppercase keys)
