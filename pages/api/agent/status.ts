@@ -50,7 +50,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 gemini: aiStatus.gemini.available,
             },
             // Note: Venice AI does not support transcription yet (feature in progress)
-            transcription: !!process.env.OPENAI_API_KEY,
+            // ElevenLabs Scribe v2 is available as fallback
+            transcription: !!(process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY),
+            transcriptionProviders: {
+                openai: !!process.env.OPENAI_API_KEY,
+                elevenlabs: aiStatus.elevenLabs.available,
+            },
             speech: aiStatus.venice.available || aiStatus.elevenLabs.available,
             speechProviders: {
                 venice: aiStatus.venice.available,

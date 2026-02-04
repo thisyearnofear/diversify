@@ -67,7 +67,7 @@ export interface TTSResult {
 
 export interface TranscriptionResult {
   text: string;
-  provider: 'openai' | 'venice';
+  provider: 'openai' | 'elevenlabs';
 }
 
 export interface AIServiceStatus {
@@ -422,29 +422,46 @@ async function callElevenLabsTTS(options: TTSOptions): Promise<TTSResult> {
 }
 
 // ============================================================================
-// TRANSCRIPTION (OpenAI Whisper Only)
+// TRANSCRIPTION WITH FAILOVER
 // ============================================================================
 
 /**
- * Transcribe audio using OpenAI Whisper
+ * Transcribe audio with automatic provider failover
+ * Priority: OpenAI Whisper -> ElevenLabs Scribe
  * Note: Venice AI does not support transcription (feature request in progress)
  * https://featurebase.venice.ai/p/add-transcription-model-to-api
  */
 export async function transcribeAudio(
   filePath: string,
-  _preferredProvider: 'openai' = 'openai'
+  preferredProvider: 'openai' | 'elevenlabs' | 'auto' = 'auto'
 ): Promise<TranscriptionResult> {
-  if (!DEFAULT_CONFIG.openaiApiKey) {
-    throw new Error('OpenAI API key required for transcription. Venice AI does not support transcription yet.');
+  const errors: Array<{ provider: string; error: string }> = [];
+
+  // Try OpenAI first (if preferred or auto)
+  if ((preferredProvider === 'openai' || preferredProvider === 'auto') && DEFAULT_CONFIG.openaiApiKey) {
+    try {
+      const result = await openaiCircuitBreaker.call(() => callOpenAITranscribe(filePath));
+      return { text: result, provider: 'openai' };
+    } catch (error) {
+      errors.push({ provider: 'openai', error: (error as Error).message });
+      console.warn('[AI Service] OpenAI Transcription failed, trying ElevenLabs:', error);
+    }
   }
 
-  try {
-    const result = await openaiCircuitBreaker.call(() => callOpenAITranscribe(filePath));
-    return { text: result, provider: 'openai' };
-  } catch (error) {
-    console.error('[AI Service] Transcription failed:', error);
-    throw new Error(`Transcription failed: ${(error as Error).message}`);
+  // Fallback to ElevenLabs Scribe
+  if ((preferredProvider === 'elevenlabs' || preferredProvider === 'auto') && DEFAULT_CONFIG.elevenLabsApiKey) {
+    try {
+      const result = await elevenLabsCircuitBreaker.call(() => callElevenLabsTranscribe(filePath));
+      return { text: result, provider: 'elevenlabs' };
+    } catch (error) {
+      errors.push({ provider: 'elevenlabs', error: (error as Error).message });
+      console.error('[AI Service] ElevenLabs Transcription also failed:', error);
+    }
   }
+
+  throw new Error(
+    `All transcription providers failed: ${errors.map(e => `${e.provider}: ${e.error}`).join(', ')}`
+  );
 }
 
 async function callOpenAITranscribe(filePath: string): Promise<string> {
@@ -461,6 +478,37 @@ async function callOpenAITranscribe(filePath: string): Promise<string> {
   });
 
   return transcription.text;
+}
+
+async function callElevenLabsTranscribe(filePath: string): Promise<string> {
+  if (!DEFAULT_CONFIG.elevenLabsApiKey) {
+    throw new Error('ElevenLabs API key not configured');
+  }
+
+  // Read file into buffer for ElevenLabs API
+  const fileBuffer = fs.readFileSync(filePath);
+  
+  // Create form data
+  const formData = new FormData();
+  const blob = new Blob([fileBuffer], { type: 'audio/webm' });
+  formData.append('file', blob, 'audio.webm');
+  formData.append('model_id', 'scribe_v2');
+
+  const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+    method: 'POST',
+    headers: {
+      'xi-api-key': DEFAULT_CONFIG.elevenLabsApiKey,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`ElevenLabs STT error: ${response.status} ${errorText}`);
+  }
+
+  const result = await response.json() as { text: string };
+  return result.text;
 }
 
 // ============================================================================
