@@ -366,9 +366,12 @@ export function useDiversifiAI() {
       if (response.ok) {
         const result = await response.json();
         return result.text;
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('[DiversifiAI] Transcription API error:', response.status, errorData);
       }
     } catch (error) {
-      console.error('[DiversifiAI] Transcription failed:', error);
+      console.error('[DiversifiAI] Transcription network error:', error);
     }
     return null;
   }, [capabilities.voiceInput]);

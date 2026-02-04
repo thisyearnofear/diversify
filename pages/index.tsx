@@ -186,12 +186,17 @@ export default function DiversiFiPage() {
               onTranscription={(text) => {
                 // Handle voice commands globally
                 console.log('[Voice] Transcribed:', text);
-                // TODO: Route to appropriate tab/action based on intent
-                // For now, just navigate to protect tab where agent can respond
-                if (text.toLowerCase().includes('swap') || text.toLowerCase().includes('exchange')) {
+                const query = text.toLowerCase();
+
+                // Intent routing
+                if (query.includes('swap') || query.includes('exchange') || query.includes('buy') || query.includes('convert')) {
                   setActiveTab('swap');
-                } else if (text.toLowerCase().includes('protect') || text.toLowerCase().includes('analyze')) {
+                } else if (query.includes('protect') || query.includes('analyze') || query.includes('advice') || query.includes('score')) {
                   setActiveTab('protect');
+                } else if (query.includes('balance') || query.includes('portfolio') || query.includes('holding') || query.includes('asset')) {
+                  setActiveTab('overview');
+                } else if (query.includes('info') || query.includes('learn') || query.includes('help') || query.includes('about')) {
+                  setActiveTab('info');
                 }
               }}
             />

@@ -430,7 +430,7 @@ async function callElevenLabsTTS(options: TTSOptions): Promise<TTSResult> {
  * Priority: OpenAI (Whisper) -> Venice (Fallback)
  */
 export async function transcribeAudio(
-  fileStream: fs.ReadStream,
+  filePath: string,
   preferredProvider: 'openai' | 'venice' | 'auto' = 'auto'
 ): Promise<TranscriptionResult> {
   const errors: Array<{ provider: string; error: string }> = [];
@@ -438,7 +438,7 @@ export async function transcribeAudio(
   // Try OpenAI first (if preferred or auto)
   if ((preferredProvider === 'openai' || preferredProvider === 'auto') && DEFAULT_CONFIG.openaiApiKey) {
     try {
-      const result = await openaiCircuitBreaker.call(() => callOpenAITranscribe(fileStream));
+      const result = await openaiCircuitBreaker.call(() => callOpenAITranscribe(filePath));
       return { text: result, provider: 'openai' };
     } catch (error) {
       errors.push({ provider: 'openai', error: (error as Error).message });
@@ -449,15 +449,7 @@ export async function transcribeAudio(
   // Fallback to Venice
   if ((preferredProvider === 'venice' || preferredProvider === 'auto') && DEFAULT_CONFIG.veniceApiKey) {
     try {
-      // Create a fresh stream for the second attempt as the first might be consumed
-      // Note: In a real production env, we might need to handle stream cloning or buffering
-      // For now, we assume the stream might need to be recreated by the caller or we accept it might fail if consumed.
-      // However, usually fs.createReadStream is passed. If we passed a stream, it might be consumed.
-      // To be safe, we might need to rely on the caller to retry or ensure we buffer.
-      // Given the constraints, we will attempt to call it. 
-      // Ideally, we should buffer the stream into memory if we want to reuse it, but that has memory implications.
-      // Let's assume for this implementation we try our best.
-      const result = await veniceCircuitBreaker.call(() => callVeniceTranscribe(fileStream));
+      const result = await veniceCircuitBreaker.call(() => callVeniceTranscribe(filePath));
       return { text: result, provider: 'venice' };
     } catch (error) {
       errors.push({ provider: 'venice', error: (error as Error).message });
@@ -470,26 +462,32 @@ export async function transcribeAudio(
   );
 }
 
-async function callOpenAITranscribe(file: fs.ReadStream): Promise<string> {
+async function callOpenAITranscribe(filePath: string): Promise<string> {
   const client = getOpenAIClient();
   if (!client) throw new Error('OpenAI client not initialized');
 
+  // Create stream and ensure it has a proper extension for Whisper
+  // formidable temp files often lack extensions
+  const fileStream = fs.createReadStream(filePath);
+  
   const transcription = await client.audio.transcriptions.create({
-    file,
+    file: fileStream,
     model: 'whisper-1',
   });
 
   return transcription.text;
 }
 
-async function callVeniceTranscribe(file: fs.ReadStream): Promise<string> {
+async function callVeniceTranscribe(filePath: string): Promise<string> {
   const client = getVeniceClient();
   if (!client) throw new Error('Venice client not initialized');
 
+  const fileStream = fs.createReadStream(filePath);
+
   // Venice uses OpenAI-compatible API
   const transcription = await client.audio.transcriptions.create({
-    file,
-    model: 'whisper-1', // or appropriate Venice model if different
+    file: fileStream,
+    model: 'whisper-1',
   });
 
   return transcription.text;

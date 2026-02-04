@@ -133,7 +133,13 @@ export default function VoiceButton({
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
-            const mediaRecorder = new MediaRecorder(stream);
+            const mimeType = MediaRecorder.isTypeSupported('audio/webm') 
+                ? 'audio/webm' 
+                : MediaRecorder.isTypeSupported('audio/mp4') 
+                    ? 'audio/mp4' 
+                    : 'audio/ogg';
+            
+            const mediaRecorder = new MediaRecorder(stream, { mimeType });
             mediaRecorderRef.current = mediaRecorder;
             audioChunksRef.current = [];
 
@@ -146,12 +152,17 @@ export default function VoiceButton({
             mediaRecorder.onstop = async () => {
                 setRecordingState('processing');
                 try {
-                    const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                    const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
                     const transcription = await transcribeAudio(audioBlob);
                     if (transcription) {
                         showToast(`Heard: "${transcription}"`, 'ai');
                         onTranscription?.(transcription);
+                    } else {
+                        showToast('Could not understand audio. Try again?', 'error');
                     }
+                } catch (err) {
+                    console.error('[VoiceButton] Stop error:', err);
+                    showToast('Failed to process audio', 'error');
                 } finally {
                     setRecordingState('idle');
                 }

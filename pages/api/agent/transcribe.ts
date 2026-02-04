@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
-import fs from 'fs';
 import { AIService } from '../../../services/ai/ai-service';
 
 export const config = {
@@ -15,7 +14,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const form = formidable({});
+        const form = formidable({
+            keepExtensions: true,
+            maxFiles: 1,
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+        });
         const [, files] = await form.parse(req);
 
         const audioFile = files.audio?.[0];
@@ -25,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Use unified AI Service with failover (OpenAI -> Venice)
         const transcription = await AIService.transcribe(
-            fs.createReadStream(audioFile.filepath)
+            audioFile.filepath
         );
 
         res.status(200).json({ 

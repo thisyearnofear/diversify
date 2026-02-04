@@ -112,7 +112,6 @@ export default function ProtectionTab({
   setUserRegion,
   regionData: legacyRegionData,
   totalValue: legacyTotalValue,
-  setActiveTab: _setActiveTab,
   onSelectStrategy,
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
