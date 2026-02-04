@@ -259,7 +259,7 @@ export function useMultichainBalances(address: string | undefined | null) {
     // Build region data with percentages
     const regionData = Object.entries(regionTotals).map(([region, usdValue]) => ({
       region: region as AssetRegion,
-      value: totalValue > 0 ? (usdValue / totalValue) * 100 : 0,
+      value: usdValue,
       color: REGION_COLORS[region as AssetRegion] || '#CBD5E0',
       usdValue,
     })).sort((a, b) => b.usdValue - a.usdValue);

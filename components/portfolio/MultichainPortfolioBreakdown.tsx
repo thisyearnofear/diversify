@@ -82,7 +82,7 @@ export default function MultichainPortfolioBreakdown({
             let arbitrumValue = 0;
 
             regionData.forEach(({ region, value }) => {
-                const usdValue = (value / 100) * totalValue;
+                const usdValue = value;
                 if (celoRegions.includes(region)) {
                     celoValue += usdValue;
                 } else if (arbitrumRegions.includes(region)) {

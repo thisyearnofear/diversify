@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { SmartBuyCryptoButton } from "../onramp";
 import InflationProtectionInfo from "../inflation/InflationProtectionInfo";
 import RegionalRecommendations from "../regional/RegionalRecommendations";
-import AgentWealthGuard from "../agent/AgentWealthGuard";
+import AIAssistant from "../ai/AIAssistant";
 import GoalBasedStrategies from "../strategies/GoalBasedStrategies";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
 import type { Region } from "@/hooks/use-user-region";
@@ -133,7 +133,7 @@ export default function ProtectionTab({
 
   // Use legacy data as fallback while loading
   const displayTotalValue = totalValue > 0 ? totalValue : legacyTotalValue;
-  const displayRegionData = regionData.length > 0 ? regionData : legacyRegionData.map(r => ({ ...r, usdValue: (r.value / 100) * legacyTotalValue }));
+  const displayRegionData = regionData.length > 0 ? regionData : legacyRegionData.map(r => ({ ...r, usdValue: r.value }));
   const displayChainCount = chainCount > 0 ? chainCount : (legacyTotalValue > 0 ? 1 : 0);
 
   // NEW: Use protection profile hook for proper edit flow
@@ -485,7 +485,7 @@ export default function ProtectionTab({
           {/* =================================================================
               AI ANALYSIS SECTION
               ================================================================= */}
-          <AgentWealthGuard
+          <AIAssistant
             amount={displayTotalValue || 0}
             holdings={activeChains.flatMap(c => c.balances.map(b => b.symbol))}
             onExecute={handleExecuteSwap}

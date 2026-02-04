@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWealthProtectionAgent } from '../../hooks/use-wealth-protection-agent';
+import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
 import { useToast } from './Toast';
 
 const VOICE_DISABLED_KEY = 'diversifi-voice-disabled';
@@ -37,7 +37,7 @@ export default function VoiceButton({
     showDisableOption = true,
     showSuggestions = true,
 }: VoiceButtonProps) {
-    const { transcribeAudio, capabilities } = useWealthProtectionAgent();
+    const { transcribeAudio, capabilities } = useDiversifiAI();
     const { showToast } = useToast();
 
     const [recordingState, setRecordingState] = useState<RecordingState>('idle');
@@ -125,7 +125,7 @@ export default function VoiceButton({
     }, []);
 
     const startRecording = async () => {
-        if (!capabilities.transcription) {
+        if (!capabilities.voiceInput) {
             showToast('Voice features not available', 'error');
             return;
         }
@@ -198,16 +198,15 @@ export default function VoiceButton({
     };
 
     // Don't render if user disabled it
-    // Note: We check capabilities.transcription but also allow if the API might be available
-    // The actual availability is verified server-side, but we show the button optimistically
-    const isTranscriptionAvailable = capabilities.transcription;
+    // Note: We check capabilities.voiceInput (renamed from transcription)
+    const isVoiceInputAvailable = capabilities.voiceInput;
     
     if (isDisabled) {
         return null;
     }
     
-    // If transcription is definitely not available, still show button but disable it with tooltip
-    if (!isTranscriptionAvailable && recordingState === 'idle') {
+    // If voice input is definitely not available, still show button but disable it with tooltip
+    if (!isVoiceInputAvailable && recordingState === 'idle') {
         return (
             <div className={`relative ${className}`}>
                 <button

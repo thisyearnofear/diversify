@@ -365,3 +365,6 @@ export function getBrokerAddress(chainId: number) {
 export function getNetworkConfig(chainId: number) {
     return Object.values(NETWORKS).find(n => n.chainId === chainId) || NETWORKS.CELO_MAINNET;
 }
+
+// Re-export features for convenience
+export { AI_FEATURES, AUTONOMOUS_FEATURES, UI_FEATURES, hasAIFeatures, hasAutonomousFeatures } from './features';

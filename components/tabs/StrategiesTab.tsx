@@ -34,7 +34,7 @@ export default function StrategiesTab({
       {/* Portfolio Strategies */}
       <PortfolioRecommendations
         currentAllocations={Object.fromEntries(
-          regionData.map((item) => [item.region, item.value / 100])
+          regionData.map((item) => [item.region, totalValue > 0 ? item.value / totalValue : 0])
         )}
         onSelectStrategy={onSelectStrategy}
       />

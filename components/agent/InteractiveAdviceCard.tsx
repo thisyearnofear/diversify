@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { AgentAdvice, AlternativeRecommendation } from '../../hooks/use-wealth-protection-agent';
+import type { AIAdvice } from '../../hooks/use-diversifi-ai';
 
 interface InteractiveAdviceCardProps {
-    advice: AgentAdvice;
-    onSelectAlternative: (alternative: AlternativeRecommendation) => void;
+    advice: AIAdvice;
+    onSelectAlternative: (alternative: AIAdvice) => void;
     onExecute: (token: string, amount?: number) => void;
 }
 
@@ -12,7 +12,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
     const [expandedSection, setExpandedSection] = useState<string | null>(null);
     const [selectedPercentage, setSelectedPercentage] = useState(100);
     const [showAlternatives, setShowAlternatives] = useState(false);
-    const [selectedAlternative, setSelectedAlternative] = useState<AlternativeRecommendation | null>(null);
+    const [selectedAlternative, setSelectedAlternative] = useState<AIAdvice | null>(null);
 
     const toggleSection = (section: string) => {
         setExpandedSection(expandedSection === section ? null : section);
@@ -324,9 +324,11 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                     )}
                                                 </div>
                                             </div>
-                                            <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskBadgeColor(alt.riskLevel)}`}>
-                                                {alt.riskLevel}
-                                            </span>
+                                            {alt.riskLevel && (
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskBadgeColor(alt.riskLevel)}`}>
+                                                    {alt.riskLevel}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
@@ -364,30 +366,36 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                         )}
 
                                         {/* Pros & Cons */}
-                                        <div className="grid grid-cols-2 gap-3 mb-3">
-                                            <div>
-                                                <div className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase mb-1">Pros</div>
-                                                <ul className="space-y-1">
-                                                    {alt.pros.slice(0, 2).map((pro, i) => (
-                                                        <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                                                            <span className="text-green-500">✓</span>
-                                                            <span className="flex-1">{pro}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
+                                        {(alt.pros || alt.cons) && (
+                                            <div className="grid grid-cols-2 gap-3 mb-3">
+                                                {alt.pros && (
+                                                    <div>
+                                                        <div className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase mb-1">Pros</div>
+                                                        <ul className="space-y-1">
+                                                            {alt.pros.slice(0, 2).map((pro, i) => (
+                                                                <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                                                                    <span className="text-green-500">✓</span>
+                                                                    <span className="flex-1">{pro}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                                {alt.cons && (
+                                                    <div>
+                                                        <div className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase mb-1">Cons</div>
+                                                        <ul className="space-y-1">
+                                                            {alt.cons.slice(0, 2).map((con, i) => (
+                                                                <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                                                                    <span className="text-red-500">×</span>
+                                                                    <span className="flex-1">{con}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div>
-                                                <div className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase mb-1">Cons</div>
-                                                <ul className="space-y-1">
-                                                    {alt.cons.slice(0, 2).map((con, i) => (
-                                                        <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                                                            <span className="text-red-500">×</span>
-                                                            <span className="flex-1">{con}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-                                        </div>
+                                        )}
 
                                         {/* Choose This Alternative */}
                                         <motion.button

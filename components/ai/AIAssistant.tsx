@@ -1,18 +1,18 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWealthProtectionAgent, type AlternativeRecommendation } from '../../hooks/use-wealth-protection-agent';
+import { useDiversifiAI, type AIAdvice } from '../../hooks/use-diversifi-ai';
 import { useToast } from '../ui/Toast';
 import { ChainDetectionService } from '../../services/swap/chain-detection.service';
 import { useInflationData } from '../../hooks/use-inflation-data';
 import { useAppState } from '../../context/AppStateContext';
 import VoiceButton from '../ui/VoiceButton';
-import InteractiveAdviceCard from './InteractiveAdviceCard';
+import InteractiveAdviceCard from '../agent/InteractiveAdviceCard';
 import type { AggregatedPortfolio } from '../../hooks/use-stablecoin-balances';
 import type { RegionalInflationData } from '../../hooks/use-inflation-data';
 
 import sdk from '@farcaster/miniapp-sdk';
 
-interface AgentWealthGuardProps {
+interface AIAssistantProps {
     amount: number;
     holdings: string[];
     chainId?: number;
@@ -23,7 +23,7 @@ interface AgentWealthGuardProps {
     aggregatedPortfolio?: AggregatedPortfolio;
 }
 
-export default function AgentWealthGuard({
+export default function AIAssistant({
     amount,
     holdings,
     chainId,
@@ -31,7 +31,7 @@ export default function AgentWealthGuard({
     embedded = false,
     onExecute,
     aggregatedPortfolio
-}: AgentWealthGuardProps) {
+}: AIAssistantProps) {
     const {
         advice,
         isAnalyzing,
@@ -39,21 +39,21 @@ export default function AgentWealthGuard({
         analysisProgress,
         analyze,
         sendMessage,
-        arcAgent,
+        autonomousStatus,
         capabilities,
-        clearConversation,
-        initializeArcAgent,
+        clearMessages,
+        initializeAI,
         portfolioAnalysis
-    } = useWealthProtectionAgent();
+    } = useDiversifiAI();
 
     const { inflationData: liveInflationData } = useInflationData();
     const { showToast } = useToast();
     const { startTour, dismissTour, isTourDismissed } = useAppState();
 
-    // Initialize agent on mount
+    // Initialize AI on mount
     useEffect(() => {
-        initializeArcAgent();
-    }, [initializeArcAgent]);
+        initializeAI();
+    }, [initializeAI]);
 
     // Milestone haptics for Farcaster
     useEffect(() => {
@@ -78,9 +78,12 @@ export default function AgentWealthGuard({
         }
     };
 
-    const handleSelectAlternative = (alternative: AlternativeRecommendation) => {
-        showToast(`Switched to ${alternative.token} recommendation`, 'success');
-        handleExecuteRecommendation(alternative.token, alternative.suggestedAmount);
+    const handleSelectAlternative = (alternative: AIAdvice) => {
+        const token = alternative.token || alternative.targetToken;
+        if (token) {
+            showToast(`Switched to ${token} recommendation`, 'success');
+            handleExecuteRecommendation(token, alternative.suggestedAmount);
+        }
     };
 
     const handleAnalyze = () => {
@@ -88,21 +91,20 @@ export default function AgentWealthGuard({
             showToast('AI Intelligence Hub is currently in maintenance mode (API not configured).', 'error');
             return;
         }
-        const networkName = ChainDetectionService.getNetworkName(chainId ?? null);
-        const networkInfo = { chainId: chainId || 0, name: networkName };
         showToast('Starting comprehensive wealth protection analysis...', 'ai', { cost: 0.05, sources: 5 });
 
         // Use live inflation data if available, otherwise fall back to prop
         const inflationDataToUse = (liveInflationData || propInflationData) as Record<string, RegionalInflationData>;
 
-        analyze(
-            inflationDataToUse,
-            amount,
-            holdings,
-            networkInfo,
-            undefined,
-            aggregatedPortfolio
-        );
+        // Build portfolio from holdings and amount
+        const portfolio = aggregatedPortfolio || {
+            totalValue: amount,
+            chains: [],
+            allHoldings: holdings,
+            diversificationScore: 0,
+        };
+
+        analyze(inflationDataToUse, portfolio);
     };
 
     const handleVoiceTranscription = (transcription: string) => {
@@ -221,7 +223,7 @@ export default function AgentWealthGuard({
                                         </div>
                                         <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
                                             +${advice.expectedSavings?.toFixed(0) ||
-                                                (advice.comparisonProjection ?
+                                                (advice.comparisonProjection?.oraclePathValue ?
                                                     (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(0) :
                                                     (amount * 0.2).toFixed(0))}
                                         </span>
@@ -371,12 +373,12 @@ export default function AgentWealthGuard({
                             <span className="text-xl">🤖</span>
                         </div>
                         <div>
-                            <h3 className="text-white font-black text-sm tracking-tight uppercase leading-none">Protection Engine</h3>
+                            <h3 className="text-white font-black text-sm tracking-tight uppercase leading-none">AI Assistant</h3>
                             <div className="flex items-center gap-1.5 mt-1">
                                 <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">AI</span>
                                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-black/20 border border-white/10">
                                     <div className="w-1 h-1 rounded-full bg-blue-400 animate-pulse" />
-                                    <span className="text-[9px] font-mono text-blue-100">AI Powered</span>
+                                    <span className="text-[9px] font-mono text-blue-100">AI Assistant</span>
                                 </div>
                             </div>
                         </div>
@@ -389,7 +391,7 @@ export default function AgentWealthGuard({
                             variant="header"
                         />
 
-                        {arcAgent?.isProxy && (
+                        {autonomousStatus?.enabled && (
                             <div className="flex flex-col items-end hidden md:flex">
                                 <span className="text-[10px] text-blue-100 font-bold uppercase tracking-tighter opacity-80 underline">On-Chain Verified</span>
                             </div>
@@ -509,7 +511,7 @@ export default function AgentWealthGuard({
                                                 <div className="flex justify-between text-[10px] font-bold">
                                                     <span className="text-blue-600">Optimized Path</span>
                                                     <span className="text-green-600">
-                                                        +${advice.expectedSavings?.toFixed(2) || (advice.comparisonProjection ?
+                                                        +${advice.expectedSavings?.toFixed(2) || (advice.comparisonProjection?.oraclePathValue ?
                                                             (advice.comparisonProjection.oraclePathValue - advice.comparisonProjection.currentPathValue).toFixed(2) :
                                                             (amount * 0.2).toFixed(2))}
                                                     </span>
@@ -518,7 +520,7 @@ export default function AgentWealthGuard({
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{
-                                                            width: `${advice.comparisonProjection ?
+                                                            width: `${advice.comparisonProjection?.oraclePathValue ?
                                                                 (advice.comparisonProjection.oraclePathValue / amount) * 100 :
                                                                 100}%`
                                                         }}
@@ -526,7 +528,7 @@ export default function AgentWealthGuard({
                                                     />
                                                 </div>
                                                 <div className="text-[9px] text-gray-400">
-                                                    Value: ${advice.comparisonProjection?.oraclePathValue.toFixed(2) || amount.toFixed(2)}
+                                                    Value: ${advice.comparisonProjection?.oraclePathValue?.toFixed(2) || amount.toFixed(2)}
                                                 </div>
                                             </div>
                                         </div>
@@ -638,7 +640,7 @@ export default function AgentWealthGuard({
                                                     <div className="text-xs text-blue-800">
                                                         {advice.portfolioAnalysis.topOpportunity.fromToken} → {advice.portfolioAnalysis.topOpportunity.toToken}
                                                         <span className="text-green-600 ml-1">
-                                                            (+${advice.portfolioAnalysis.topOpportunity.annualSavings.toFixed(2)}/year)
+                                                            (+${advice.portfolioAnalysis.topOpportunity.annualSavings?.toFixed(2) ?? advice.portfolioAnalysis.topOpportunity.potentialSavings.toFixed(2)}/year)
                                                         </span>
                                                     </div>
                                                 </div>
@@ -648,7 +650,7 @@ export default function AgentWealthGuard({
 
                                     {amount === 0 && (
                                         <button
-                                            onClick={clearConversation}
+                                            onClick={clearMessages}
                                             className="w-full py-3 rounded-2xl bg-gray-100 text-gray-500 font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all border-b-2 border-gray-300"
                                         >
                                             Exit Simulation
