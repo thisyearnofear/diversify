@@ -1,27 +1,25 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Region } from "../../hooks/use-user-region";
-import RegionalIconography, { RegionalPattern } from "./RegionalIconography";
-import { REGION_COLORS, type GeographicRegion } from "../../config";
+import { getRegionDesign } from "../../constants/tokens";
 
 // Geographic allocation recommendations for users based on their home region
-// Note: These are GEOGRAPHIC allocations only. Commodities (PAXG, etc.) are
-// recommended separately as inflation hedges, not as regional allocations.
 interface RegionInsight {
   title: string;
   description: string;
-  typicalAllocation: Record<GeographicRegion, number>;
+  typicalAllocation: Record<string, number>;
   considerations: string[];
   inflationRate: number;
   volatilityLevel: "Low" | "Medium" | "High";
   localCurrencies: string[];
-  commodityRecommendation?: string; // Separate recommendation for commodities
+  recommendedTokens: { symbol: string; percentage: number; reason: string }[];
 }
 
-const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
+const REGION_INSIGHTS: Record<string, RegionInsight> = {
   Africa: {
-    title: "Regional Insights: Africa",
+    title: "African Market Insights",
     description:
-      "Based on historical data for this region, many users diversify into EUR and USD to address local currency volatility.",
+      "Based on historical data, African users benefit significantly from diversifying into EUR and USD stablecoins to address local currency volatility.",
     typicalAllocation: {
       Africa: 40,
       USA: 30,
@@ -29,9 +27,8 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
       Asia: 5,
       LatAm: 5,
     },
-    commodityRecommendation: "Consider 5-15% in PAXG (gold) as an inflation hedge",
     considerations: [
-      "African currencies often experience higher inflation rates",
+      "African currencies often experience higher inflation rates (avg 11.2%)",
       "EUR and USD provide stability during economic uncertainty",
       "Local currency exposure helps with everyday expenses",
       "A mix of local and global currencies balances needs with stability",
@@ -39,11 +36,18 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
     inflationRate: 11.2,
     volatilityLevel: "High",
     localCurrencies: ["cKES", "cGHS", "eXOF"],
+    recommendedTokens: [
+      { symbol: "cKES", percentage: 25, reason: "Local spending" },
+      { symbol: "cEUR", percentage: 25, reason: "Euro stability" },
+      { symbol: "cUSD", percentage: 25, reason: "USD hedge" },
+      { symbol: "PAXG", percentage: 15, reason: "Inflation hedge" },
+      { symbol: "USDY", percentage: 10, reason: "Yield (5% APY)" },
+    ],
   },
   USA: {
-    title: "Regional Insights: USA",
+    title: "US Market Insights",
     description:
-      "Users in the USA often add exposure to EUR and emerging markets for diversification benefits.",
+      "US-based users typically add exposure to EUR and emerging markets for diversification benefits while maintaining USD as the base.",
     typicalAllocation: {
       USA: 50,
       Europe: 25,
@@ -51,9 +55,8 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
       Africa: 10,
       LatAm: 5,
     },
-    commodityRecommendation: "Consider 5-10% in PAXG (gold) for portfolio diversification",
     considerations: [
-      "USD is a global reserve currency with relative stability",
+      "USD is a global reserve currency with relative stability (3.1% inflation)",
       "EUR provides hedge against USD fluctuations",
       "Emerging market exposure offers different economic cycles",
       "Global diversification can reduce overall portfolio volatility",
@@ -61,11 +64,18 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
     inflationRate: 3.1,
     volatilityLevel: "Low",
     localCurrencies: ["cUSD"],
+    recommendedTokens: [
+      { symbol: "cUSD", percentage: 40, reason: "Primary currency" },
+      { symbol: "cEUR", percentage: 25, reason: "Diversification" },
+      { symbol: "USDY", percentage: 20, reason: "Yield (5% APY)" },
+      { symbol: "PAXG", percentage: 10, reason: "Gold hedge" },
+      { symbol: "cKES", percentage: 5, reason: "Emerging markets" },
+    ],
   },
   Europe: {
-    title: "Regional Insights: Europe",
+    title: "European Market Insights",
     description:
-      "European users typically maintain EUR as their base with USD and emerging market exposure for diversification.",
+      "European users typically maintain EUR as their base with USD and emerging market exposure for optimal diversification.",
     typicalAllocation: {
       Europe: 50,
       USA: 25,
@@ -73,9 +83,8 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
       Asia: 10,
       LatAm: 5,
     },
-    commodityRecommendation: "Consider 5-10% in PAXG (gold) for portfolio diversification",
     considerations: [
-      "EUR provides stability for European residents",
+      "EUR provides stability for European residents (2.4% inflation)",
       "USD offers protection against EUR-specific risks",
       "African stablecoins can provide exposure to different markets",
       "Diversification across currencies can reduce overall risk",
@@ -83,11 +92,18 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
     inflationRate: 2.4,
     volatilityLevel: "Low",
     localCurrencies: ["cEUR"],
+    recommendedTokens: [
+      { symbol: "cEUR", percentage: 45, reason: "Primary currency" },
+      { symbol: "cUSD", percentage: 25, reason: "USD hedge" },
+      { symbol: "USDY", percentage: 15, reason: "Yield (5% APY)" },
+      { symbol: "cKES", percentage: 10, reason: "Diversification" },
+      { symbol: "PAXG", percentage: 5, reason: "Gold hedge" },
+    ],
   },
   LatAm: {
-    title: "Regional Insights: Latin America",
+    title: "Latin American Market Insights",
     description:
-      "In Latin America, many users maintain significant USD and EUR allocations alongside local currencies.",
+      "In Latin America, users maintain significant USD and EUR allocations alongside local currencies to hedge against inflation.",
     typicalAllocation: {
       LatAm: 35,
       USA: 35,
@@ -95,9 +111,8 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
       Asia: 5,
       Africa: 5,
     },
-    commodityRecommendation: "Consider 10-15% in PAXG (gold) as an inflation hedge",
     considerations: [
-      "Latin American currencies often face inflation pressures",
+      "Latin American currencies often face inflation pressures (5.9% avg)",
       "USD provides stability for savings",
       "Local currency exposure helps with everyday expenses",
       "A balanced approach addresses both local needs and stability",
@@ -105,11 +120,18 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
     inflationRate: 5.9,
     volatilityLevel: "Medium",
     localCurrencies: ["cREAL", "cCOP"],
+    recommendedTokens: [
+      { symbol: "cUSD", percentage: 35, reason: "USD stability" },
+      { symbol: "cREAL", percentage: 25, reason: "Local spending" },
+      { symbol: "cEUR", percentage: 20, reason: "Euro diversification" },
+      { symbol: "PAXG", percentage: 15, reason: "Inflation hedge" },
+      { symbol: "USDY", percentage: 5, reason: "Yield (5% APY)" },
+    ],
   },
   Asia: {
-    title: "Regional Insights: Asia",
+    title: "Asian Market Insights",
     description:
-      "Users in Asia often take a balanced approach with significant USD exposure alongside local currencies.",
+      "Users in Asia often take a balanced approach with significant USD exposure alongside local currencies for regional diversification.",
     typicalAllocation: {
       Asia: 40,
       USA: 30,
@@ -117,9 +139,8 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
       Africa: 5,
       LatAm: 5,
     },
-    commodityRecommendation: "Consider 5-10% in PAXG (gold) for portfolio diversification",
     considerations: [
-      "Asian currencies vary widely in stability",
+      "Asian currencies vary widely in stability (3.9% avg inflation)",
       "USD provides stability for savings",
       "EUR offers diversification from USD",
       "A mix of local and global currencies addresses different needs",
@@ -127,20 +148,31 @@ const REGION_INSIGHTS: Record<GeographicRegion, RegionInsight> = {
     inflationRate: 3.9,
     volatilityLevel: "Medium",
     localCurrencies: ["PUSO"],
+    recommendedTokens: [
+      { symbol: "PUSO", percentage: 30, reason: "Local currency" },
+      { symbol: "cUSD", percentage: 30, reason: "USD stability" },
+      { symbol: "cEUR", percentage: 20, reason: "Euro diversification" },
+      { symbol: "USDY", percentage: 15, reason: "Yield (5% APY)" },
+      { symbol: "PAXG", percentage: 5, reason: "Gold hedge" },
+    ],
   },
 };
 
 interface RegionalRecommendationsProps {
   userRegion: Region;
   currentAllocations?: Record<string, number>;
+  onSelectToken?: (token: string) => void;
 }
 
 export default function RegionalRecommendations({
   userRegion,
   currentAllocations,
+  onSelectToken,
 }: RegionalRecommendationsProps) {
-  const [selectedRegion, setSelectedRegion] = useState<Region>(userRegion);
+  const [selectedRegion, setSelectedRegion] = useState<string>(userRegion);
+  const [showConsiderations, setShowConsiderations] = useState(false);
   const regionData = REGION_INSIGHTS[selectedRegion];
+  const regionDesign = getRegionDesign(selectedRegion);
 
   // Calculate how far current allocation is from typical
   const calculateDifference = () => {
@@ -160,194 +192,255 @@ export default function RegionalRecommendations({
 
     return {
       differences,
-      totalDifference: totalDifference / 2, // Divide by 2 because each positive difference has a corresponding negative
-      isClose: totalDifference < 10, // Less than 10% total difference is considered close to typical
+      totalDifference: totalDifference / 2,
+      isClose: totalDifference < 10,
     };
   };
 
   const difference = currentAllocations ? calculateDifference() : null;
 
   return (
-    <div className="relative overflow-hidden bg-white rounded-card shadow-card p-4 mb-4">
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center">
-          <RegionalIconography
-            region={selectedRegion}
-            size="sm"
-            className="mr-2"
-          />
-          <h2 className="text-lg font-semibold text-text-primary">
-            Historical Data
-          </h2>
-        </div>
-        <span className="text-xs text-text-muted">
-          Data: World Bank, Alpha Vantage
-        </span>
-      </div>
-
-      {/* Region selector tabs */}
-      <div className="flex overflow-x-auto mb-4 pb-1">
-        {Object.keys(REGION_INSIGHTS).map((region) => (
-          <button
-            key={region}
-            className={`px-3 py-1 mr-2 text-sm rounded-md whitespace-nowrap flex items-center ${selectedRegion === region
-                ? `bg-region-${region.toLowerCase()}-light text-region-${region.toLowerCase()}-dark font-medium`
-                : "bg-background-subtle text-text-secondary hover:bg-background-muted"
-              }`}
-            onClick={() => setSelectedRegion(region as Region)}
-          >
-            <RegionalIconography
-              region={region as Region}
-              size="sm"
-              className="mr-1"
-            />
-            <span>{region}</span>
-          </button>
-        ))}
-      </div>
-
-      <div
-        className={`relative overflow-hidden bg-region-${selectedRegion.toLowerCase()}-light bg-opacity-20 p-4 rounded-card mb-4`}
-      >
-        <RegionalPattern region={selectedRegion} />
-        <div className="relative">
-          <div className="flex items-center justify-between mb-3">
-            <h3
-              className={`font-medium text-region-${selectedRegion.toLowerCase()}-dark`}
-            >
-              {regionData.title}
-            </h3>
-            <span
-              className={`text-xs bg-region-${selectedRegion.toLowerCase()}-medium text-white px-2 py-1 rounded-full`}
-            >
-              {selectedRegion}
-            </span>
+    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
+      {/* Header */}
+      <div className={`bg-gradient-to-r ${regionDesign.gradient} p-4`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center text-2xl">
+              {regionDesign.icon}
+            </div>
+            <div>
+              <h2 className="text-white font-black text-lg uppercase tracking-tight">
+                Regional Insights
+              </h2>
+              <p className="text-white/70 text-xs">{regionData.title}</p>
+            </div>
           </div>
+          <span className="text-[10px] text-white/60 bg-black/20 px-2 py-1 rounded-full border border-white/10">
+            Data: World Bank
+          </span>
+        </div>
+      </div>
 
-          <p className="text-sm text-text-secondary mb-4">
+      <div className="p-4 space-y-4">
+        {/* Region Selector */}
+        <div className="flex overflow-x-auto gap-2 pb-2 -mx-4 px-4">
+          {Object.keys(REGION_INSIGHTS).map((region) => {
+            const design = getRegionDesign(region);
+            return (
+              <motion.button
+                key={region}
+                onClick={() => setSelectedRegion(region)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${
+                  selectedRegion === region
+                    ? `bg-gradient-to-r ${design.gradient} text-white shadow-lg`
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+              >
+                <span className="mr-1">{design.icon}</span>
+                {region}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* Description Card */}
+        <div className={`bg-gradient-to-br ${regionDesign.gradient} bg-opacity-10 rounded-xl p-4 border border-gray-200 dark:border-gray-700`}>
+          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             {regionData.description}
           </p>
-        </div>
-      </div>
-
-      <h3 className="font-medium text-text-primary mb-2">
-        Typical Allocation Pattern
-      </h3>
-      <div className="bg-background-subtle p-3 rounded-card mb-4">
-        <div className="flex mb-2 h-8 rounded-md overflow-hidden">
-          {Object.entries(regionData.typicalAllocation).map(
-            ([region, allocation]) => (
-              <div
-                key={region}
-                className="h-full flex items-center justify-center text-xs text-white font-medium"
-                style={{
-                  width: `${allocation}%`,
-                  backgroundColor:
-                    REGION_COLORS[region as keyof typeof REGION_COLORS] ||
-                    "#CBD5E0",
-                }}
-                title={`${region}: ${allocation}%`}
-              >
-                {allocation >= 10 ? `${allocation}%` : ""}
+          
+          {/* Stats */}
+          <div className="mt-3 flex gap-3">
+            <div className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2">
+              <div className="text-[10px] text-gray-500 uppercase">Inflation</div>
+              <div className={`text-sm font-bold ${regionData.inflationRate > 5 ? 'text-red-600' : 'text-green-600'}`}>
+                {regionData.inflationRate}%
               </div>
-            )
-          )}
-        </div>
-        <div className="grid grid-cols-3 gap-1 text-xs">
-          {Object.entries(regionData.typicalAllocation).map(
-            ([region, allocation]) => (
-              <div key={region} className="flex items-center">
-                <div
-                  className="size-3 rounded-full mr-1"
-                  style={{
-                    backgroundColor:
-                      REGION_COLORS[region as keyof typeof REGION_COLORS] ||
-                      "#CBD5E0",
-                  }}
-                />
-                <span className="text-text-secondary">
-                  {region}:{" "}
-                  <span className="font-medium text-text-primary">
-                    {allocation}%
-                  </span>
-                </span>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg px-3 py-2">
+              <div className="text-[10px] text-gray-500 uppercase">Volatility</div>
+              <div className={`text-sm font-bold ${
+                regionData.volatilityLevel === 'High' ? 'text-red-600' :
+                regionData.volatilityLevel === 'Medium' ? 'text-amber-600' : 'text-green-600'
+              }`}>
+                {regionData.volatilityLevel}
               </div>
-            )
-          )}
-        </div>
-      </div>
-
-      {difference && (
-        <div
-          className={`p-3 rounded-card mb-4 ${difference.isClose
-              ? "bg-accent-success bg-opacity-5 border border-accent-success border-opacity-10"
-              : "bg-background-subtle"
-            }`}
-        >
-          <h3
-            className={`font-medium mb-2 ${difference.isClose ? "text-accent-success" : "text-text-primary"
-              }`}
-          >
-            {difference.isClose
-              ? "Your portfolio is similar to typical patterns"
-              : "Your portfolio vs typical patterns"}
-          </h3>
-
-          <div className="space-y-2">
-            {Object.entries(difference.differences)
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              .filter(([_, diff]) => Math.abs(diff) >= 5) // Only show significant differences
-              .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])) // Sort by absolute difference
-              .map(([region, diff]) => (
-                <div
-                  key={region}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <div className="flex items-center">
-                    <RegionalIconography
-                      region={region as Region}
-                      size="sm"
-                      className="mr-1"
-                    />
-                    <span className="text-text-secondary">{region}</span>
-                  </div>
-                  <div
-                    className={
-                      diff > 0 ? "text-accent-warning" : "text-accent-success"
-                    }
-                  >
-                    {diff > 0
-                      ? `${diff.toFixed(0)}% less than typical`
-                      : `${Math.abs(diff).toFixed(0)}% more than typical`}
-                  </div>
-                </div>
-              ))}
+            </div>
           </div>
         </div>
-      )}
 
-      <div
-        className={`relative overflow-hidden bg-region-${selectedRegion.toLowerCase()}-light bg-opacity-10 p-3 rounded-card`}
-      >
-        <RegionalPattern region={selectedRegion} />
-        <div className="relative">
-          <h3
-            className={`font-medium text-region-${selectedRegion.toLowerCase()}-dark mb-2`}
-          >
-            Historical Context
+        {/* Typical Allocation Visualization */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
+            <span>📊</span> Typical Allocation Pattern
           </h3>
-          <p className="text-sm text-text-secondary">
-            Data shows that residents of {selectedRegion} who diversified their
-            savings across multiple stablecoins preserved up to{" "}
-            <span className="font-bold text-accent-success">
-              {selectedRegion === "Africa" || selectedRegion === "LatAm"
-                ? "15%"
-                : "8%"}
-            </span>{" "}
-            more purchasing power during recent economic volatility compared to
-            those who held only local currency.
-          </p>
+          
+          {/* Stacked Bar */}
+          <div className="flex rounded-lg overflow-hidden mb-3 h-8 shadow-inner">
+            {Object.entries(regionData.typicalAllocation).map(([region, allocation]) => {
+              const design = getRegionDesign(region);
+              return (
+                <div
+                  key={region}
+                  className={`h-full bg-gradient-to-r ${design.gradient}`}
+                  style={{ width: `${allocation}%` }}
+                  title={`${region}: ${allocation}%`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Legend */}
+          <div className="grid grid-cols-3 gap-2">
+            {Object.entries(regionData.typicalAllocation).map(([region, allocation]) => {
+              const design = getRegionDesign(region);
+              return (
+                <div key={region} className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${design.gradient}`} />
+                  <span className="text-xs text-gray-700 dark:text-gray-300">
+                    {design.icon} {allocation}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
+
+        {/* Recommended Token Cards */}
+        <div>
+          <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
+            <span>💡</span> Recommended Allocation
+          </h3>
+          
+          <div className="space-y-2">
+            {regionData.recommendedTokens.map((token, index) => (
+              <motion.div
+                key={token.symbol}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+                onClick={() => onSelectToken?.(token.symbol)}
+                className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all cursor-pointer"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-xl text-white">
+                      {token.symbol === 'PAXG' ? '🥇' :
+                       token.symbol === 'USDY' ? '💰' :
+                       token.symbol === 'SYRUPUSDC' ? '🍯' :
+                       token.symbol.startsWith('c') ? '💵' : '💎'}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-sm text-gray-900 dark:text-white">{token.symbol}</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{token.reason}</p>
+                    </div>
+                  </div>
+                  <div className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold px-3 py-1 rounded-full">
+                    {token.percentage}%
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Portfolio Comparison */}
+        <AnimatePresence mode="wait">
+          {difference && (
+            <motion.div
+              key={difference.isClose ? 'close' : 'diff'}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className={`rounded-xl p-4 border ${
+                difference.isClose
+                  ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                  : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-2">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xl ${
+                  difference.isClose ? 'bg-green-500 text-white' : 'bg-amber-500 text-white'
+                }`}>
+                  {difference.isClose ? '✓' : '⚠️'}
+                </div>
+                <div>
+                  <h4 className={`font-bold ${difference.isClose ? 'text-green-900 dark:text-green-100' : 'text-amber-900 dark:text-amber-100'}`}>
+                    {difference.isClose ? 'Well Aligned' : 'Adjustment Opportunity'}
+                  </h4>
+                  <p className={`text-xs ${difference.isClose ? 'text-green-700 dark:text-green-300' : 'text-amber-700 dark:text-amber-300'}`}>
+                    {difference.isClose 
+                      ? 'Your portfolio matches regional patterns' 
+                      : `${difference.totalDifference.toFixed(0)}% difference from typical`}
+                  </p>
+                </div>
+              </div>
+
+              {!difference.isClose && (
+                <div className="space-y-1 mt-3">
+                  {Object.entries(difference.differences)
+                    .filter(([, diff]) => Math.abs(diff) >= 5)
+                    .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                    .slice(0, 3)
+                    .map(([region, diff]) => {
+                      const design = getRegionDesign(region);
+                      return (
+                        <div key={region} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <span>{design.icon}</span>
+                            <span className="text-gray-700 dark:text-gray-300">{region}</span>
+                          </div>
+                          <span className={diff > 0 ? 'text-amber-600 font-bold' : 'text-green-600 font-bold'}>
+                            {diff > 0 ? `+${diff.toFixed(0)}% needed` : `${Math.abs(diff).toFixed(0)}% excess`}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Considerations Accordion */}
+        <motion.button
+          onClick={() => setShowConsiderations(!showConsiderations)}
+          className="w-full p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-gray-900 dark:text-white text-sm">
+              🤔 Key Considerations
+            </span>
+            <motion.span
+              animate={{ rotate: showConsiderations ? 180 : 0 }}
+              className="text-gray-600 dark:text-gray-400"
+            >
+              ▼
+            </motion.span>
+          </div>
+          
+          <AnimatePresence>
+            {showConsiderations && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <ul className="mt-3 space-y-2 text-left">
+                  {regionData.considerations.map((consideration, index) => (
+                    <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <span className="text-blue-500 mt-0.5">•</span>
+                      <span>{consideration}</span>
+                    </li>
+                  ))}
+                </ul>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.button>
       </div>
     </div>
   );

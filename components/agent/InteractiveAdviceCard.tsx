@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AIAdvice } from '../../hooks/use-diversifi-ai';
+import { getTokenDesign } from '../../constants/tokens';
 
 interface InteractiveAdviceCardProps {
     advice: AIAdvice;
@@ -22,13 +23,6 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
         return (baseAmount * percentage) / 100;
     };
 
-    const getRiskColor = (risk: 'LOW' | 'MEDIUM' | 'HIGH') => {
-        switch (risk) {
-            case 'LOW': return 'bg-green-100 text-green-700 border-green-200';
-            case 'MEDIUM': return 'bg-amber-100 text-amber-700 border-amber-200';
-            case 'HIGH': return 'bg-red-100 text-red-700 border-red-200';
-        }
-    };
 
     const getRiskBadgeColor = (risk: 'LOW' | 'MEDIUM' | 'HIGH') => {
         switch (risk) {
@@ -84,18 +78,45 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                 </p>
                             )}
                         </div>
-                        <div className="text-4xl">
-                            {advice.targetToken === 'PAXG' ? '🥇' :
-                             advice.targetToken === 'USDY' ? '💰' :
-                             advice.targetToken === 'SYRUPUSDC' ? '🍯' : '💎'}
+                        <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${getTokenDesign(advice.targetToken || '').gradient} shadow-lg flex items-center justify-center text-4xl ${getTokenDesign(advice.targetToken || '').shadowColor}`}>
+                            {getTokenDesign(advice.targetToken || '').icon}
                         </div>
                     </div>
 
                     {/* AI Reasoning */}
                     <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
                         <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-relaxed italic">
-                            "{advice.reasoning}"
+                            &quot;{advice.reasoning}&quot;
                         </p>
+
+                        {/* Data Freshness Indicator */}
+                        {advice.portfolioAnalysis && (
+                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
+                                <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center gap-2">
+                                        <span>📊</span>
+                                        <span>
+                                            Data: {advice.portfolioAnalysis.dataSource === 'imf' ? 'IMF (Live 2024)' :
+                                                advice.portfolioAnalysis.dataSource === 'worldbank' ? 'World Bank (2024)' :
+                                                    'Market Data (Cached)'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="flex items-center gap-1">
+                                            <span>🌍</span>
+                                            {advice.portfolioAnalysis.regionCount || 0} regions
+                                        </span>
+                                        <span className={`flex items-center gap-1 ${advice.confidence > 0.8 ? 'text-green-600' :
+                                            advice.confidence > 0.6 ? 'text-amber-600' : 'text-gray-500'
+                                            }`}>
+                                            <span>✓</span>
+                                            {advice.confidence > 0.8 ? 'High Confidence' :
+                                                advice.confidence > 0.6 ? 'Medium Confidence' : 'Estimated'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Amount Slider (ENHANCEMENT: percentage-based swaps) */}
@@ -123,11 +144,10 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                     <button
                                         key={pct}
                                         onClick={() => setSelectedPercentage(pct)}
-                                        className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${
-                                            selectedPercentage === pct
-                                                ? 'bg-indigo-600 text-white shadow-md'
-                                                : 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
-                                        }`}
+                                        className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${selectedPercentage === pct
+                                            ? 'bg-indigo-600 text-white shadow-md'
+                                            : 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
+                                            }`}
                                     >
                                         {pct}%
                                     </button>
@@ -142,19 +162,23 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                             <h5 className="text-xs font-black text-gray-400 uppercase tracking-wider mb-2">
                                 💬 Have Questions?
                             </h5>
-                            
+
                             {/* Why This? */}
                             <motion.button
                                 onClick={() => toggleSection('why')}
-                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all"
+                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all shadow-sm"
                             >
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                        🤔 Why this recommendation?
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-blue-500">🤔</span>
+                                        <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                            Why this recommendation?
+                                        </span>
+                                    </div>
                                     <motion.span
                                         animate={{ rotate: expandedSection === 'why' ? 180 : 0 }}
                                         transition={{ duration: 0.2 }}
+                                        className="text-gray-400"
                                     >
                                         ▼
                                     </motion.span>
@@ -175,6 +199,70 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                     )}
                                 </AnimatePresence>
                             </motion.button>
+
+                            {/* How We Calculated This (NEW) */}
+                            {advice.portfolioAnalysis?.topOpportunity && (
+                                <motion.button
+                                    onClick={() => toggleSection('calculation')}
+                                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm"
+                                >
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-green-500">🔍</span>
+                                            <span className="text-sm font-bold text-gray-900 dark:text-white">
+                                                How we calculated this
+                                            </span>
+                                        </div>
+                                        <motion.span
+                                            animate={{ rotate: expandedSection === 'calculation' ? 180 : 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="text-gray-400"
+                                        >
+                                            ▼
+                                        </motion.span>
+                                    </div>
+                                    <AnimatePresence>
+                                        {expandedSection === 'calculation' && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-800/30">
+                                                    <div className="space-y-2 text-[11px] font-mono text-gray-600 dark:text-gray-400">
+                                                        <div className="flex justify-between">
+                                                            <span>{advice.portfolioAnalysis.topOpportunity.fromRegion || advice.portfolioAnalysis.topOpportunity.fromToken || 'Current'} Inflation:</span>
+                                                            <span className="font-bold text-red-500">{advice.portfolioAnalysis.topOpportunity.fromInflation || 'N/A'}%</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span>{advice.portfolioAnalysis.topOpportunity.toRegion || advice.portfolioAnalysis.topOpportunity.toToken || 'Target'} Inflation:</span>
+                                                            <span className="font-bold text-green-500">{advice.portfolioAnalysis.topOpportunity.toInflation || 'N/A'}%</span>
+                                                        </div>
+                                                        <div className="border-t border-green-200 dark:border-green-800/50 my-1 pt-1 flex justify-between">
+                                                            <span>Inflation Delta:</span>
+                                                            <span className="font-bold text-blue-500">{((advice.portfolioAnalysis.topOpportunity.fromInflation || 0) - (advice.portfolioAnalysis.topOpportunity.toInflation || 0)).toFixed(1)}%</span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span>Investment Amount:</span>
+                                                            <span className="font-bold text-gray-900 dark:text-gray-200">${advice.suggestedAmount?.toFixed(0) || '0'}</span>
+                                                        </div>
+                                                        <div className="border-t-2 border-green-300 dark:border-green-700 my-1 pt-2 flex justify-between text-xs">
+                                                            <span className="font-black">Annual Savings:</span>
+                                                            <span className="font-black text-green-600 dark:text-green-400">
+                                                                ${advice.portfolioAnalysis.topOpportunity.annualSavings?.toFixed(2) || advice.expectedSavings?.toFixed(2) || '0.00'}/year
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-[10px] font-sans italic mt-2 text-gray-400">
+                                                            * Calculation: Amount × (Current Inflation - Target Inflation) = Annual Purchasing Power Preserved
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.button>
+                            )}
 
                             {/* Show Risks */}
                             <motion.button
@@ -301,19 +389,16 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                         initial={{ x: -20, opacity: 0 }}
                                         animate={{ x: 0, opacity: 1 }}
                                         transition={{ delay: idx * 0.1 }}
-                                        className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${
-                                            selectedAlternative?.token === alt.token
-                                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 shadow-lg'
-                                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-purple-300 dark:hover:border-purple-600'
-                                        }`}
+                                        className={`p-4 rounded-xl border-2 transition-all cursor-pointer ${selectedAlternative?.token === alt.token
+                                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 shadow-lg'
+                                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-purple-300 dark:hover:border-purple-600'
+                                            }`}
                                         onClick={() => setSelectedAlternative(selectedAlternative?.token === alt.token ? null : alt)}
                                     >
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex items-center gap-2">
-                                                <span className="text-2xl">
-                                                    {alt.token === 'PAXG' ? '🥇' :
-                                                     alt.token === 'USDY' ? '💰' :
-                                                     alt.token === 'SYRUPUSDC' ? '🍯' : '💎'}
+                                                <span className={`w-10 h-10 rounded-xl bg-gradient-to-br ${getTokenDesign(alt.token || '').gradient} flex items-center justify-center text-xl ${getTokenDesign(alt.token || '').shadowColor}`}>
+                                                    {getTokenDesign(alt.token || '').icon}
                                                 </span>
                                                 <div>
                                                     <h4 className="text-lg font-black text-gray-900 dark:text-white">{alt.token}</h4>
@@ -346,19 +431,17 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                 </div>
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                                                     <div className="text-[10px] text-gray-500 uppercase">Risk</div>
-                                                    <div className={`text-xs font-bold ${
-                                                        alt.comparisonVsPrimary.riskDiff === 'LOWER' ? 'text-green-600' :
+                                                    <div className={`text-xs font-bold ${alt.comparisonVsPrimary.riskDiff === 'LOWER' ? 'text-green-600' :
                                                         alt.comparisonVsPrimary.riskDiff === 'HIGHER' ? 'text-red-600' : 'text-gray-600'
-                                                    }`}>
+                                                        }`}>
                                                         {alt.comparisonVsPrimary.riskDiff}
                                                     </div>
                                                 </div>
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                                                     <div className="text-[10px] text-gray-500 uppercase">Liquid</div>
-                                                    <div className={`text-xs font-bold ${
-                                                        alt.comparisonVsPrimary.liquidityDiff === 'BETTER' ? 'text-green-600' :
+                                                    <div className={`text-xs font-bold ${alt.comparisonVsPrimary.liquidityDiff === 'BETTER' ? 'text-green-600' :
                                                         alt.comparisonVsPrimary.liquidityDiff === 'WORSE' ? 'text-red-600' : 'text-gray-600'
-                                                    }`}>
+                                                        }`}>
                                                         {alt.comparisonVsPrimary.liquidityDiff}
                                                     </div>
                                                 </div>

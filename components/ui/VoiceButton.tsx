@@ -163,7 +163,7 @@ export default function VoiceButton({
             streamRef.current = stream;
 
             // Initialize Audio Context for visualization and silence detection
-            const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const audioContext = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
             const analyser = audioContext.createAnalyser();
             const source = audioContext.createMediaStreamSource(stream);
             source.connect(analyser);

@@ -71,18 +71,24 @@ export interface AIAdvice {
     steps: TourStep[];
     estimatedBenefit?: string;
   };
-  
+
   // Onramp recommendation for BUY/SELL actions
   onrampRecommendation?: OnrampRecommendation;
   // Portfolio analysis snapshot (for embedded display)
   portfolioAnalysis?: {
     weightedInflationRisk: number;
     diversificationScore: number;
+    dataSource?: string;
+    regionCount?: number;
     topOpportunity?: {
       token: string;
       potentialSavings: number;
       fromToken?: string;
       toToken?: string;
+      fromRegion?: string;
+      toRegion?: string;
+      fromInflation?: number;
+      toInflation?: number;
       annualSavings?: number;
     };
   };
@@ -152,14 +158,14 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
   const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState<PortfolioAnalysis | null>(null);
-  
+
   // Use global conversation context if available and requested
   const globalConversation = useAIConversationOptional();
   const isUsingGlobal = useGlobalConversation && globalConversation !== undefined;
-  const messages = isUsingGlobal 
-    ? globalConversation!.messages 
+  const messages = isUsingGlobal
+    ? globalConversation!.messages
     : localMessages;
-  
+
   // Unified add message function
   const addMessage = useCallback((message: AIMessage) => {
     if (isUsingGlobal) {
@@ -168,7 +174,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       setLocalMessages(prev => [...prev, message]);
     }
   }, [isUsingGlobal, globalConversation]);
-  
+
   // Unified clear messages function
   const clearMessages = useCallback(() => {
     if (isUsingGlobal) {
@@ -177,7 +183,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       setLocalMessages([]);
     }
   }, [isUsingGlobal, globalConversation]);
-  
+
   // Capabilities (from feature flags + server status)
   const [capabilities, setCapabilities] = useState<AICapabilities>({
     analysis: AI_FEATURES.ANALYSIS,
@@ -189,7 +195,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
   // Autonomous mode state (separate from core AI)
   const [autonomousStatus, setAutonomousStatus] = useState<AutonomousStatus | null>(null);
-  
+
   const [config, setConfig] = useState<AIConfig>({
     riskTolerance: 'Balanced',
     goal: 'Inflation Hedge',
@@ -210,7 +216,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       const response = await fetch('/api/agent/status');
       if (response.ok) {
         const status = await response.json();
-        
+
         // Update capabilities from server (validates API keys are working)
         if (status.capabilities) {
           setCapabilities({
@@ -502,7 +508,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     messages,
     portfolioAnalysis,
     capabilities,
-    
+
     // Actions (with legacy aliases for compatibility)
     analyze,
     analyzePortfolio: analyzePortfolioAI,
@@ -511,15 +517,15 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     transcribeAudio,
     generateSpeech,
     initializeAI,
-    
+
     // Config
     config,
     updateConfig: setConfig,
-    
+
     // Autonomous mode (optional)
     autonomousStatus,
     runAutonomousAnalysis,
-    
+
     // Utilities
     clearMessages,
     clearConversation: clearMessages,

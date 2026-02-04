@@ -49,7 +49,7 @@ const WalletContext = createContext<WalletContextType>({
   switchNetwork: async () => { },
   formatAddress: (addr: string) => addr,
   connectFarcasterWallet: async () => { },
-  getFarcasterErrorMessage: (_error: unknown) => null,
+  getFarcasterErrorMessage: () => null,
 });
 
 // Provider component

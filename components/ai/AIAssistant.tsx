@@ -802,7 +802,7 @@ export default function AIAssistant({
             <div className="p-4 bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 shrink-0 flex items-center justify-around">
                 <div className="flex flex-col items-center gap-1 opacity-50"><span className="text-xl">📊</span><span className="text-[8px] font-black uppercase tracking-tighter">Insights</span></div>
                 <div className="flex flex-col items-center gap-1 opacity-50"><span className="text-xl">🔄</span><span className="text-[8px] font-black uppercase tracking-tighter">Rebalance</span></div>
-                <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => handleExecuteRecommendation('PAXG')}><span className="text-xl">⚡</span><span className="text-[8px] font-black uppercase tracking-tighter">Swap</span></div>
+                <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => handleExecuteRecommendation(advice?.targetToken || 'PAXG')}><span className="text-xl">⚡</span><span className="text-[8px] font-black uppercase tracking-tighter">Swap</span></div>
                 <div className="flex flex-col items-center gap-1 opacity-50"><span className="text-xl">⚙️</span><span className="text-[8px] font-black uppercase tracking-tighter">Config</span></div>
             </div>
         </div>
