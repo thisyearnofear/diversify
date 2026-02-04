@@ -1,5 +1,5 @@
 import React from "react";
-import RegionalIconography, { RegionalPattern } from "../regional/RegionalIconography";
+import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { REGION_COLORS } from "../../config";
 
@@ -22,8 +22,8 @@ interface TokenSelectorProps {
   disabled?: boolean;
   showAmountInput?: boolean;
   tokenBalances?: Record<string, { formattedBalance: string; value: number }>;
-  currentChainId?: number; // Current wallet chain
-  tokenChainId?: number; // Chain where this token exists
+  currentChainId?: number;
+  tokenChainId?: number;
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({
@@ -52,14 +52,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   const getBalanceDisplay = () => {
     if (isCrossChain) {
       if (hasBalance) {
-        // We have balance data from the other chain
         return `${parseFloat(tokenBalance.formattedBalance).toFixed(4)} ${selectedToken}`;
       } else {
-        // We don't have balance data for the other chain
         return `— ${selectedToken}`;
       }
     } else {
-      // Same chain - show actual balance or 0
       const balance = tokenBalance?.formattedBalance || "0";
       return `${parseFloat(balance).toFixed(4)} ${selectedToken}`;
     }
@@ -72,14 +69,10 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     return "Balance:";
   };
 
-  const getBalanceColor = () => {
-    if (isCrossChain && !hasBalance) {
-      return "text-amber-600"; // Amber for unknown cross-chain balance
-    }
-    return tokenRegion && tokenRegion !== 'Unknown' 
-      ? `text-region-${tokenRegion.toLowerCase()}-dark` 
-      : "text-gray-600";
-  };
+  // Get region color for styling
+  const regionColor = tokenRegion && tokenRegion !== 'Unknown' 
+    ? REGION_COLORS[tokenRegion as keyof typeof REGION_COLORS] 
+    : null;
 
   // Function to set max amount
   const setMaxAmount = () => {
@@ -87,30 +80,39 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       onAmountChange(tokenBalance.formattedBalance);
     }
   };
+
   return (
     <div>
       <label className="text-sm font-bold text-gray-900 mb-2 flex items-center">
         <span className="mr-2">{label}</span>
         {tokenRegion && tokenRegion !== 'Unknown' && (
-          <div className="flex items-center bg-gray-100 px-2 py-1 rounded-md">
+          <div 
+            className="flex items-center px-2 py-1 rounded-md"
+            style={{ backgroundColor: `${regionColor}20` }}
+          >
             <RegionalIconography
               region={tokenRegion as Region}
               size="sm"
               className="mr-1"
             />
             <span
-              className={`text-xs font-medium text-region-${tokenRegion.toLowerCase()}-dark`}
+              className="text-xs font-bold"
+              style={{ color: regionColor || '#374151' }}
             >
               {tokenRegion}
             </span>
           </div>
         )}
       </label>
-      {/* Balance display - enhanced for cross-chain */}
+      
+      {/* Balance display */}
       <div className="flex justify-end mb-1">
         <div
-          className={`text-xs ${getBalanceColor()} font-medium px-2 py-0.5 bg-gray-100 rounded-md flex items-center ${isCrossChain && !hasBalance ? 'border border-amber-200' : ''
-            }`}
+          className={`text-xs font-medium px-2 py-0.5 rounded-md flex items-center ${
+            isCrossChain && !hasBalance 
+              ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+              : 'bg-gray-100 text-gray-700'
+          }`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -152,10 +154,15 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           value={selectedToken}
           onChange={(e) => onTokenChange(e.target.value)}
           className={`${showAmountInput ? "w-1/3" : "w-full"
-            } rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold ${tokenRegion && tokenRegion !== 'Unknown'
-              ? `border-region-${tokenRegion.toLowerCase()}-medium focus:border-region-${tokenRegion.toLowerCase()}-medium focus:ring-region-${tokenRegion.toLowerCase()}-light bg-white`
-              : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+            } rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 font-semibold ${
+              regionColor
+                ? 'bg-white'
+                : "border-gray-200 focus:border-blue-500 focus:ring-blue-200"
             }`}
+          style={regionColor ? { 
+            borderColor: regionColor,
+            boxShadow: `0 0 0 3px ${regionColor}20`
+          } : {}}
           disabled={disabled}
         >
           {availableTokens.map((token) => (
@@ -175,10 +182,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               type="number"
               value={amount}
               onChange={(e) => onAmountChange(e.target.value)}
-              className={`w-full rounded-md border shadow-md focus:ring-2 text-gray-900 font-semibold pr-16 ${tokenRegion && tokenRegion !== 'Unknown'
-                ? `border-region-${tokenRegion.toLowerCase()}-medium focus:border-region-${tokenRegion.toLowerCase()}-medium focus:ring-region-${tokenRegion.toLowerCase()}-light bg-white`
-                : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                }`}
+              className="w-full rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 font-semibold pr-16 bg-white border-gray-200 focus:border-blue-500 focus:ring-blue-200"
               placeholder="Amount"
               min="0"
               step="0.01"
@@ -187,11 +191,11 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             <button
               type="button"
               onClick={setMaxAmount}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded ${tokenRegion && tokenRegion !== 'Unknown'
-                ? `bg-region-${tokenRegion.toLowerCase()}-light text-region-${tokenRegion.toLowerCase()}-dark hover:bg-region-${tokenRegion.toLowerCase()}-medium`
-                : "bg-blue-100 text-blue-700 hover:bg-blue-200"
-                } transition-colors ${!hasBalance || isCrossChain ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded transition-colors ${
+                !hasBalance || isCrossChain 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+              }`}
               disabled={disabled || !hasBalance || Boolean(isCrossChain)}
               title={
                 isCrossChain
@@ -206,26 +210,19 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           </div>
         )}
       </div>
+      
+      {/* Token info card - improved contrast */}
       {selectedToken && (
         <div
-          className={`relative mt-2 text-sm px-3 py-2 rounded-md overflow-hidden ${tokenRegion && tokenRegion !== 'Unknown'
-            ? `bg-region-${tokenRegion.toLowerCase()}-light/30 border-2 border-region-${tokenRegion.toLowerCase()}-medium`
-            : "bg-gray-50 border-2 border-gray-300"
-            } shadow-md flex items-center`}
+          className="relative mt-2 text-sm px-3 py-2 rounded-lg border-2 shadow-sm bg-white"
+          style={regionColor ? { borderColor: regionColor } : { borderColor: '#e5e7eb' }}
         >
-          {tokenRegion && tokenRegion !== 'Unknown' && (
-            <RegionalPattern region={tokenRegion as Region} className="opacity-20" />
-          )}
-          <div className="relative flex w-full justify-between items-center">
+          <div className="flex w-full justify-between items-center">
             <div className="flex items-center">
-              {tokenRegion && tokenRegion !== 'Unknown' && (
+              {regionColor && (
                 <div
                   className="mr-2 size-8 rounded-full flex items-center justify-center shadow-sm"
-                  style={{
-                    backgroundColor: tokenRegion
-                      ? REGION_COLORS[tokenRegion as keyof typeof REGION_COLORS]
-                      : undefined,
-                  }}
+                  style={{ backgroundColor: regionColor }}
                 >
                   <RegionalIconography
                     region={tokenRegion as Region}
@@ -235,19 +232,15 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 </div>
               )}
               <div>
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-gray-500 font-medium block">
                   Region
                 </span>
-                <div
-                  className={`font-bold text-base ${tokenRegion && tokenRegion !== 'Unknown'
-                    ? `text-region-${tokenRegion.toLowerCase()}-dark`
-                    : "text-gray-700"}`}
-                >
+                <span className="font-bold text-base text-gray-900">
                   {tokenRegion && tokenRegion !== 'Unknown' ? tokenRegion : "Unknown"}
-                </div>
+                </span>
               </div>
             </div>
-            <div className="bg-white px-3 py-1.5 rounded-md shadow-sm border border-gray-200">
+            <div className="bg-gray-50 px-3 py-1.5 rounded-md shadow-sm border border-gray-200">
               <span className="text-xs text-gray-500 font-medium block">
                 Inflation
               </span>

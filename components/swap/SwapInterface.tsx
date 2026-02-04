@@ -628,20 +628,11 @@ const SwapInterface = forwardRef<
           {/* Inflation benefit information */}
           {fromToken && toToken && hasInflationBenefit && (
             <div
-              className={`relative p-4 rounded-lg overflow-hidden border-2 shadow-md ${toTokenRegion && toTokenRegion !== 'Unknown'
-                ? `border-region-${toTokenRegion.toLowerCase()}-medium bg-region-${toTokenRegion.toLowerCase()}-light/30`
-                : "border-green-600 bg-green-100"
-                }`}
+              className="relative p-4 rounded-lg overflow-hidden border-2 shadow-md bg-green-50 border-green-200"
             >
-              {toTokenRegion && toTokenRegion !== 'Unknown' && (
-                <RegionalPattern region={toTokenRegion as Region} />
-              )}
               <div className="relative">
                 <h3
-                  className={`text-sm font-bold mb-2 flex items-center ${toTokenRegion && toTokenRegion !== 'Unknown'
-                    ? `text-region-${toTokenRegion.toLowerCase()}-contrast`
-                    : "text-green-900"
-                    }`}
+                  className="text-sm font-bold mb-2 flex items-center text-gray-900"
                 >
                   <span className="mr-2 text-lg">✨</span>
                   Inflation Protection Benefit
@@ -666,12 +657,7 @@ const SwapInterface = forwardRef<
                         />
                       </div>
                     )}
-                    <span
-                      className={`font-bold mx-1 ${fromTokenRegion && fromTokenRegion !== 'Unknown'
-                        ? `text-region-${fromTokenRegion.toLowerCase()}-contrast`
-                        : "text-gray-900"
-                        }`}
-                    >
+                    <span className="font-bold mx-1 text-gray-900">
                       {fromToken}
                     </span>
                   </div>
@@ -695,22 +681,12 @@ const SwapInterface = forwardRef<
                         />
                       </div>
                     )}
-                    <span
-                      className={`font-bold mx-1 ${toTokenRegion && toTokenRegion !== 'Unknown'
-                        ? `text-region-${toTokenRegion.toLowerCase()}-contrast`
-                        : "text-gray-900"
-                        }`}
-                    >
+                    <span className="font-bold mx-1 text-gray-900">
                       {toToken}
                     </span>
                   </div>
                 </div>
-                <p
-                  className={`text-sm font-medium ${toTokenRegion && toTokenRegion !== 'Unknown'
-                    ? `text-region-${toTokenRegion.toLowerCase()}-contrast`
-                    : "text-gray-800"
-                    }`}
-                >
+                <p className="text-sm font-medium text-gray-800">
                   You could save approximately{" "}
                   <span className="font-bold text-green-700 text-lg">
                     {inflationDifference.toFixed(1)}%

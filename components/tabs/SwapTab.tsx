@@ -25,6 +25,8 @@ import {
   useTradeableTokens,
   filterTradeableTokens,
 } from "../../hooks/use-tradeable-tokens";
+import ChainBalancesHeader from "../swap/ChainBalancesHeader";
+import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -41,7 +43,7 @@ export default function SwapTab({
   refreshChainId,
   isBalancesLoading,
 }: SwapTabProps) {
-  const { address, chainId: walletChainId } = useWalletContext();
+  const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
   const { swapPrefill, clearSwapPrefill } = useAppState();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
@@ -69,6 +71,13 @@ export default function SwapTab({
     setTokens: (from: string, to: string, amount?: string) => void;
   }>(null);
 
+  // Get multichain balances for the header
+  const {
+    activeChains,
+    isLoading: isMultichainLoading,
+    refresh: refreshMultichain,
+  } = useMultichainBalances(address);
+
   // Helper to refresh balances with retries
   const refreshWithRetries = useCallback(
     async (retries = 3, delay = 3000) => {
@@ -77,7 +86,6 @@ export default function SwapTab({
       console.log("[SwapTab] Starting balance refresh sequence...");
       for (let i = 0; i < retries; i++) {
         try {
-          // Wait for indexer to catch up
           await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
           console.log(`[SwapTab] Refresh attempt ${i + 1}...`);
           await refreshBalances();
@@ -85,8 +93,10 @@ export default function SwapTab({
           console.warn(`[SwapTab] Refresh attempt ${i + 1} failed:`, err);
         }
       }
+      // Also refresh multichain data
+      await refreshMultichain();
     },
-    [refreshBalances],
+    [refreshBalances, refreshMultichain]
   );
 
   // Fetch tradeable tokens from Mento
@@ -101,8 +111,6 @@ export default function SwapTab({
   const tradeableTokens = useMemo(() => {
     const filtered = filterTradeableTokens(networkTokens, tradeableSymbols);
 
-    // Always ensure USDT is available - it's a critical stablecoin
-    // This prevents issues where Mento SDK might not report USDT as tradeable
     const essentialSymbols = ["USDT", "USDC", "USDm", "CELO"];
     const essentials = networkTokens.filter(
       (t) =>
@@ -114,7 +122,6 @@ export default function SwapTab({
 
     const combined = [...filtered, ...essentials];
 
-    // Debug logging to help identify USDT filtering issues
     console.log("[SwapTab] Network tokens:", networkTokens.map(t => t.symbol));
     console.log("[SwapTab] Tradeable symbols from Mento:", tradeableSymbols);
     console.log("[SwapTab] Filtered tokens:", filtered.map(t => t.symbol));
@@ -204,11 +211,30 @@ export default function SwapTab({
   const handleRefresh = async () => {
     if (refreshChainId) await refreshChainId();
     if (refreshBalances) await refreshBalances();
+    await refreshMultichain();
+  };
+
+  // Handle chain switching from the balances header
+  const handleSwitchChain = async (chainId: number) => {
+    if (switchNetwork && walletChainId !== chainId) {
+      await switchNetwork(chainId);
+    }
   };
 
   const homeInflationRate = inflationData[userRegion]?.avgRate || 0;
   const targetInflationRate = inflationData[targetRegion]?.avgRate || 0;
   const inflationDifference = homeInflationRate - targetInflationRate;
+
+  // Prepare chain data for the header
+  const chainBalancesData = useMemo(() => {
+    return activeChains.map(chain => ({
+      chainId: chain.chainId,
+      chainName: chain.chainName,
+      totalValue: chain.totalValue,
+      tokenCount: chain.tokenCount,
+      isActive: chain.chainId === walletChainId,
+    }));
+  }, [activeChains, walletChainId]);
 
   return (
     <div className="space-y-4">
@@ -220,6 +246,16 @@ export default function SwapTab({
           isLoading={isBalancesLoading || isSwapLoading}
           onNetworkChange={handleRefresh}
         />
+
+        {/* NEW: Chain Balances Header - Always visible when connected */}
+        {address && (
+          <ChainBalancesHeader
+            chains={chainBalancesData}
+            currentChainId={walletChainId}
+            onSwitchChain={handleSwitchChain}
+            isLoading={isMultichainLoading}
+          />
+        )}
 
         <div className="mb-4">
           <div className="relative">
