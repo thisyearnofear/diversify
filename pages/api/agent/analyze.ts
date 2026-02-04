@@ -93,15 +93,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - SELL: Convert crypto to fiat using offramps (when user needs to cash out)
             
             ARBITRUM RWA OPTIONS (Permissionless, No KYC):
-            - USDY (Ondo): ~5% APY, auto-accruing yield, US Treasury backed. Best for: Conservative yield seekers.
+            - USDY (Ondo): ~5% APY, auto-accruing yield, US Treasury backed. Best for: Conservative yield seekers, positive real yield environments.
             - SYRUPUSDC (Syrup/Morpho): ~4.5% APY, auto-compounding yield, USDC collateral. Best for: DeFi-native stable yield.
-            - PAXG (Paxos): 0% APY, gold-backed, inflation hedge. Best for: Store of value, gold exposure.
+            - PAXG (Paxos): 0% APY, gold-backed, inflation hedge. Best for: Store of value ONLY when real yields are negative or inflation >5%.
             
-            RWA SELECTION GUIDANCE:
-            - For "rwa_access" goal with inflation protection priority: Recommend PAXG (gold hedge)
-            - For "rwa_access" goal with yield priority: Recommend USDY (5% treasury yield)
-            - For conservative stable yield: Recommend SYRUPUSDC (Morpho protocol)
-            - All RWAs are on Arbitrum with deep DEX liquidity via Uniswap V3
+            RWA SELECTION GUIDANCE - CRITICAL:
+            1. CALCULATE REAL YIELD FIRST: Treasury Yield - Inflation = Real Yield
+               - If Real Yield > 2%: Strongly favor USDY/SYRUPUSDC over PAXG
+               - If Real Yield 0-2%: Balanced approach, consider user's time horizon
+               - If Real Yield < 0%: Gold/PAXG becomes more attractive
+            
+            2. OPPORTUNITY COST ANALYSIS (ALWAYS INCLUDE):
+               - Calculate: "If you choose PAXG over USDY, you give up $X/year per $10k invested"
+               - Example: 5% yield on USDY vs 0% on PAXG = $500/year opportunity cost
+               - Only recommend PAXG when inflation protection justifies the yield sacrifice
+            
+            3. CONTEXT-AWARE RECOMMENDATIONS:
+               - High inflation (>5%) + Negative real yield → PAXG makes sense
+               - Moderate inflation (2-4%) + Positive real yield → USDY/SYRUPUSDC wins
+               - Deflationary environment → Yield-bearing assets strongly preferred
+               - Fed hawkish policy → Gold typically underperforms
+            
+            4. GOAL ALIGNMENT:
+               - "rwa_access" + "inflation_protection" priority + high inflation → PAXG only if inflation > 4%
+               - "rwa_access" + "yield" priority → USDY default, mention opportunity cost of gold
+               - Conservative users → Emphasize USDY stability + yield
+               - All RWAs are on Arbitrum with deep DEX liquidity via Uniswap V3
             
             ${getOnrampSystemPrompt()}
             
@@ -120,6 +137,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const topOpportunities = portfolioAnalysis.rebalancingOpportunities.slice(0, 3);
         const targetAllocation = portfolioAnalysis.targetAllocations[userGoal as keyof typeof portfolioAnalysis.targetAllocations] || [];
 
+        // Calculate real yield for context
+        const treasuryYield = 4.5; // Would fetch from API in production
+        const currentInflation = 3.2; // Would fetch from API in production
+        const realYield = treasuryYield - currentInflation;
+        
         const userPrompt = `
             WEALTH PROTECTION ANALYSIS REQUEST
             
@@ -128,6 +150,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - Risk Tolerance: ${config?.riskTolerance || 'Balanced'}
             - Time Horizon: ${config?.timeHorizon || '3 months'}
             - Selected Goal: ${goalLabels[userGoal] || 'Exploration'}
+            
+            CURRENT MARKET CONTEXT (CRITICAL FOR RECOMMENDATIONS):
+            - 10-Year Treasury Yield: ${treasuryYield}%
+            - Current Inflation Rate: ${currentInflation}%
+            - Real Yield (Yield - Inflation): ${realYield}%
+            - Gold Price: ~$2,650/oz (YTD: +15%)
+            - Fed Policy: Neutral
+            
+            REAL YIELD ANALYSIS:
+            ${realYield > 2 
+                ? `✅ STRONG POSITIVE REAL YIELD (${realYield}%): Treasury-backed assets (USDY) strongly favored over non-yielding gold.` 
+                : realYield > 0 
+                    ? `⚖️ MODEST POSITIVE REAL YIELD (${realYield}%): Yield-bearing assets preferred, but gold has merit in high inflation.` 
+                    : `⚠️ NEGATIVE REAL YIELD (${realYield}%): Gold and hard assets favored over cash/yield in inflationary environment.`}
+            
+            OPPORTUNITY COST EXAMPLES (per $10,000 invested for 1 year):
+            - USDY (5% APY) vs PAXG (0% APY): ${realYield > 0 ? '$500/year more with USDY' : '$500/year yield sacrificed for gold hedge'}
+            - SYRUPUSDC (4.5% APY) vs PAXG (0% APY): $450/year difference
             
             PORTFOLIO ANALYSIS (Pre-Calculated):
             - Tokens Held: ${portfolioAnalysis.tokenCount} (${portfolioAnalysis.tokens.map(t => t.symbol).join(', ')})

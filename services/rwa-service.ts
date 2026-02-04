@@ -262,14 +262,29 @@ export class RWAService {
             return sum + (networkConfig?.avgGasCost || 0);
         }, 0);
 
+        // Dynamic reasoning based on preferences and market context
+        const treasuryYield = 4.5; // Would fetch from API
+        const inflation = 3.2; // Would fetch from API
+        const realYield = treasuryYield - inflation;
+        
         if (tokens.length === 0) {
             reasoning = `No suitable RWA options found for $${preferences.investmentAmount}. Consider increasing investment amount or lowering requirements.`;
         } else if (preferences.investmentAmount < 100) {
-            reasoning = `For amounts under $100, consider Arbitrum-based tokens like PAXG or GLP to minimize gas costs.`;
+            const topPick = tokens[0];
+            reasoning = `For amounts under $100, Arbitrum minimizes gas costs. ${topPick.symbol} ${topPick.apy && topPick.apy > 0 ? `offers ${topPick.apy}% APY` : 'provides ' + topPick.type.replace('_', ' ') + ' exposure'}.`;
         } else if (preferences.investmentAmount < 1000) {
-            reasoning = `Focus on Arbitrum for cost efficiency. PAXG offers gold exposure, GLP offers higher variable yield.`;
+            // Context-aware recommendation
+            if (realYield > 2 && preferences.riskTolerance !== 'high') {
+                const yieldToken = tokens.find(t => t.symbol === 'USDY' || t.symbol === 'SYRUPUSDC') || tokens[0];
+                reasoning = `With ${realYield.toFixed(1)}% real yields, ${yieldToken.symbol} (${yieldToken.apy}% APY) offers compelling returns vs non-yielding alternatives.`;
+            } else if (preferences.riskTolerance === 'high' && inflation > 4) {
+                const goldToken = tokens.find(t => t.symbol === 'PAXG') || tokens[0];
+                reasoning = `High inflation (${inflation}%) environment favors ${goldToken.symbol} as a hard asset hedge despite 0% yield.`;
+            } else {
+                reasoning = `With $${preferences.investmentAmount}, consider ${tokens[0].symbol} for ${tokens[0].apy && tokens[0].apy > 0 ? tokens[0].apy + '% yield' : tokens[0].type.replace('_', ' ') + ' exposure'}. Opportunity cost: ${tokens.find(t => t.apy && t.apy > 0)?.apy || 0}% vs 0% for gold.`;
+            }
         } else {
-            reasoning = `With $${preferences.investmentAmount}, you can access premium options like FOBXX on Ethereum or diversify across multiple RWA tokens.`;
+            reasoning = `With $${preferences.investmentAmount}, diversify across multiple RWA tokens. Current real yield is ${realYield.toFixed(1)}% (${treasuryYield}% Treasury - ${inflation}% inflation).`;
         }
 
         return {

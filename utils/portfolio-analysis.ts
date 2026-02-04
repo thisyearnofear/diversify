@@ -12,6 +12,7 @@
 import type { AggregatedPortfolio } from '../hooks/use-stablecoin-balances';
 import type { RegionalInflationData } from '../hooks/use-inflation-data';
 import { CURRENCY_TO_COUNTRY, COUNTRY_TO_REGION } from '../constants/inflation';
+import { getBestTokenForRegionDynamic, calculateRealYield, DEFAULT_MARKET_CONTEXT } from './token-scoring';
 
 // ============================================================================
 // TYPES
@@ -414,8 +415,8 @@ export function generateTargetAllocations(
   for (const [region, percentage] of Object.entries(allocationMap)) {
     if (percentage === 0) continue;
     
-    // Find best token for this region
-    const regionToken = getBestTokenForRegion(region, inflationData);
+    // Find best token for this region using dynamic scoring
+    const regionToken = getBestTokenForRegion(region, inflationData, goal);
     
     targets.push({
       symbol: regionToken,
@@ -429,21 +430,43 @@ export function generateTargetAllocations(
 
 /**
  * Get the best representative token for a region
+ * Uses dynamic scoring based on market conditions and user goal
  */
 function getBestTokenForRegion(
   region: string,
-  inflationData: Record<string, RegionalInflationData>
+  inflationData: Record<string, RegionalInflationData>,
+  goal: string = 'exploring',
+  riskTolerance: string = 'balanced'
 ): string {
-  const regionTokenMap: Record<string, string> = {
-    'USA': 'cUSD',
-    'Europe': 'cEUR',
-    'LatAm': 'cREAL',
-    'Africa': 'cKES',
-    'Asia': 'PUSO',
-    'Global': 'PAXG',
-  };
+  // For non-Global regions, use stablecoin mappings
+  if (region !== 'Global') {
+    const regionTokenMap: Record<string, string> = {
+      'USA': 'cUSD',
+      'Europe': 'cEUR',
+      'LatAm': 'cREAL',
+      'Africa': 'cKES',
+      'Asia': 'PUSO',
+    };
+    return regionTokenMap[region] || 'cUSD';
+  }
   
-  return regionTokenMap[region] || 'cUSD';
+  // For Global region, use dynamic scoring
+  const typedGoal = (goal as 'inflation_protection' | 'geographic_diversification' | 'rwa_access' | 'exploring') || 'exploring';
+  const typedRisk = (riskTolerance as 'conservative' | 'balanced' | 'aggressive') || 'balanced';
+  
+  const recommendation = getBestTokenForRegionDynamic(
+    region,
+    DEFAULT_MARKET_CONTEXT,
+    {
+      goal: typedGoal,
+      riskTolerance: typedRisk,
+      timeHorizonMonths: 12,
+      portfolioValue: 10000,
+    },
+    inflationData
+  );
+  
+  return recommendation.symbol;
 }
 
 /**
