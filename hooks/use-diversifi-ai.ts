@@ -147,9 +147,8 @@ export function useDiversifiAI() {
   const [advice, setAdvice] = useState<AIAdvice | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [thinkingStep, setThinkingStep] = useState<string>('');
-  // analysisProgress and analysisSteps are for future use
-  // const [analysisProgress, setAnalysisProgress] = useState(0);
-  // const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [portfolioAnalysis, setPortfolioAnalysis] = useState<PortfolioAnalysis | null>(null);
   
@@ -312,6 +311,31 @@ export function useDiversifiAI() {
   }, [analyzePortfolioAI]);
 
   /**
+   * Generate speech from text
+   */
+  const generateSpeech = useCallback(async (text: string): Promise<Blob | null> => {
+    if (!capabilities.voiceOutput) {
+      console.warn('[DiversifiAI] Voice output not available');
+      return null;
+    }
+
+    try {
+      const response = await fetch('/api/agent/speak', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      });
+
+      if (response.ok) {
+        return await response.blob();
+      }
+    } catch (error) {
+      console.error('[DiversifiAI] Speech generation failed:', error);
+    }
+    return null;
+  }, [capabilities.voiceOutput]);
+
+  /**
    * Send chat message to AI
    */
   const sendChatMessage = useCallback(async (content: string) => {
@@ -393,31 +417,6 @@ export function useDiversifiAI() {
     }
     return null;
   }, [capabilities.voiceInput]);
-
-  /**
-   * Generate speech from text
-   */
-  const generateSpeech = useCallback(async (text: string): Promise<Blob | null> => {
-    if (!capabilities.voiceOutput) {
-      console.warn('[DiversifiAI] Voice output not available');
-      return null;
-    }
-
-    try {
-      const response = await fetch('/api/agent/speak', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      });
-
-      if (response.ok) {
-        return await response.blob();
-      }
-    } catch (error) {
-      console.error('[DiversifiAI] Speech generation failed:', error);
-    }
-    return null;
-  }, [capabilities.voiceOutput]);
 
   // ============================================================================
   // AUTONOMOUS MODE FUNCTIONS (Optional)

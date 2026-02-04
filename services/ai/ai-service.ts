@@ -492,8 +492,6 @@ async function callVeniceTranscribe(filePath: string): Promise<string> {
 
   return transcription.text;
 }
-  }
-}
 
 // ============================================================================
 // ENHANCED ANALYSIS WITH WEB SEARCH
