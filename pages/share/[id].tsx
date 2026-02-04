@@ -52,6 +52,8 @@ export default function SharePage({ id, regions, diversification, inflation, rwa
     }
   };
 
+  const miniAppEmbedJson = JSON.stringify(miniAppEmbed);
+
   return (
     <>
       <Head>
@@ -72,9 +74,9 @@ export default function SharePage({ id, regions, diversification, inflation, rwa
         <meta name="twitter:image" content={ogImageUrl} />
         
         {/* Farcaster Mini App Embed - THE KEY FOR VIRALITY */}
-        <meta name="fc:miniapp" content={JSON.stringify(miniAppEmbed)} />
+        <meta name="fc:miniapp" content={miniAppEmbedJson} />
         {/* Backward compatibility */}
-        <meta name="fc:frame" content={JSON.stringify(miniAppEmbed)} />
+        <meta name="fc:frame" content={miniAppEmbedJson} />
       </Head>
       
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
