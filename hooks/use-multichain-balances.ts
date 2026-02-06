@@ -24,6 +24,7 @@ import {
   type PortfolioAnalysis,
 } from "../utils/portfolio-analysis";
 import { useInflationData } from "./use-inflation-data";
+import { useMacroData } from "./use-macro-data";
 
 // ============================================================================
 // TYPES
@@ -60,6 +61,14 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
     value: number;
     color: string;
     usdValue: number;
+  }>;
+  macroData?: Record<string, {
+    gdpGrowth: number | null;
+    corruptionControl: number | null;
+    politicalStability: number | null;
+    ruleOfLaw: number | null;
+    governmentEffectiveness: number | null;
+    year: number;
   }>;
   isLoading: boolean;
   isStale: boolean;
@@ -289,6 +298,8 @@ async function fetchChainBalances(
 
 export function useMultichainBalances(address: string | undefined | null) {
   const { inflationData } = useInflationData();
+  const { macroData } = useMacroData(); // Fetch macro data for advanced analysis
+
   const [chainBalances, setChainBalances] = useState<
     Record<number, ChainBalance>
   >({});
@@ -299,7 +310,7 @@ export function useMultichainBalances(address: string | undefined | null) {
   // Aggregate data across all chains
   const portfolio = useMemo<MultichainPortfolio>(() => {
     const activeChains = Object.values(chainBalances).filter(
-      (c) => c.totalValue > 0,
+      (c) => c.totalValue > 0 || c.balances.length > 0,
     );
     const allTokens = activeChains.flatMap((c) => c.balances);
 
@@ -342,6 +353,8 @@ export function useMultichainBalances(address: string | undefined | null) {
     const analysis = analyzePortfolio(
       { chains: Object.values(chainBalances), totalValue },
       inflationData || {},
+      "exploring",
+      macroData, // Pass real macro data for improved scoring
     );
 
     const errors = activeChains
@@ -361,7 +374,7 @@ export function useMultichainBalances(address: string | undefined | null) {
       errors,
       lastUpdated,
     };
-  }, [chainBalances, isLoading, lastUpdated, inflationData]);
+  }, [chainBalances, isLoading, lastUpdated, inflationData, macroData]);
 
   // Main fetch function
   const fetchAllBalances = useCallback(
@@ -458,6 +471,7 @@ export function useMultichainBalances(address: string | undefined | null) {
 
   return {
     ...portfolio,
+    macroData,
     refresh,
     getChainBalance,
     hasBalanceOnChain,

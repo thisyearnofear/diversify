@@ -157,7 +157,7 @@ export default function SimplePieChart({
 
       startAngle += sliceAngle;
     });
-  }, [data, minimal, animationProgress, activeIndex, interactive]);
+  }, [data, minimal, animationProgress, activeIndex, interactive, showLabels]);
 
   // Handle mouse/touch interactions
   const handleInteraction = useCallback((event: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {

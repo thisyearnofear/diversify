@@ -26,6 +26,15 @@ interface AIAssistantProps {
   aggregatedPortfolio?: MultichainPortfolio;
   /** User's home region for personalized recommendations */
   userRegion?: Region;
+  /** Macro economic data for advanced insights */
+  macroData?: Record<string, {
+    gdpGrowth: number | null;
+    corruptionControl: number | null;
+    politicalStability: number | null;
+    ruleOfLaw: number | null;
+    governmentEffectiveness: number | null;
+    year: number;
+  }>;
 }
 
 export default function AIAssistant({
@@ -37,6 +46,7 @@ export default function AIAssistant({
   onExecute,
   aggregatedPortfolio,
   userRegion,
+  macroData,
 }: AIAssistantProps) {
   // Use the userRegion prop if provided, otherwise default to Africa
   const effectiveRegion = userRegion || "Africa";
@@ -111,9 +121,10 @@ export default function AIAssistant({
   }, [initializeAI]);
 
   // Milestone haptics for Farcaster
+  const analysisProgressRounded = Math.round(analysisProgress);
+
   useEffect(() => {
-    const roundedProgress = Math.round(analysisProgress);
-    if (isAnalyzing && roundedProgress % 25 === 0 && roundedProgress > 0) {
+    if (isAnalyzing && analysisProgressRounded % 25 === 0 && analysisProgressRounded > 0) {
       try {
         (
           sdk.actions as unknown as {
@@ -122,7 +133,7 @@ export default function AIAssistant({
         ).hapticFeedback({ type: "light" });
       } catch {}
     }
-    if (roundedProgress === 100) {
+    if (analysisProgressRounded === 100) {
       try {
         (
           sdk.actions as unknown as {
@@ -131,7 +142,7 @@ export default function AIAssistant({
         ).hapticFeedback({ type: "success" });
       } catch {}
     }
-  }, [Math.round(analysisProgress), isAnalyzing]);
+  }, [analysisProgressRounded, isAnalyzing]);
 
   const handleExecuteRecommendation = (token: string, amount?: number) => {
     if (onExecute) {
@@ -212,6 +223,7 @@ export default function AIAssistant({
       portfolio,
       selectedRegion,
       analysisGoal,
+      macroData,
     );
   };
 

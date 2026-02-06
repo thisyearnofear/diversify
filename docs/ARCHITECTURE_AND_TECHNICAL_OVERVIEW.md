@@ -37,7 +37,7 @@
 ### 2. Data Acquisition (x402 Micropayments)
 ```
 Premium Data Sources:
-├── Macro Regime Oracle ($0.15)
+├── Macro Regime Oracle (World Bank Free / x402 $0.15)
 ├── Truflation Premium ($0.08)
 ├── Glassnode Institutional ($0.12)
 ├── DeFi Yield Analytics ($0.05)
@@ -105,6 +105,7 @@ AI Recommendation → Automation Service → External Systems
 ### ✅ Completed
 - [x] Gemini 3 AI integration with structured outputs
 - [x] x402 micropayment system for premium data
+- [x] **Macro-Economic Scoring Engine**: GDP & Governance (WGI) integration via World Bank
 - [x] Circle Gateway service for unified USDC balance
 - [x] Circle Bridge Kit integration
 - [x] Automation service (email, Zapier, Slack)

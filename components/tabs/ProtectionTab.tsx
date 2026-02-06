@@ -528,6 +528,7 @@ export default function ProtectionTab({
             onExecute={handleExecuteSwap}
             embedded
             userRegion={userRegion}
+            macroData={portfolio.macroData}
           />
 
           {/* =================================================================

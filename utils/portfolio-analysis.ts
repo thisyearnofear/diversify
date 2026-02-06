@@ -21,6 +21,7 @@ import {
   DEFAULT_MARKET_CONTEXT,
   getTokenApy,
 } from "./token-scoring";
+import { macroService, type MacroIndicator } from "./macro-economic-service";
 
 // ============================================================================
 // TYPES
@@ -64,12 +65,10 @@ export interface TargetAllocation {
 }
 
 export interface PortfolioAnalysis {
-  // Current state
+  // Aggregate stats
   totalValue: number;
   tokenCount: number;
   regionCount: number;
-
-  // Current allocations
   tokens: TokenAllocation[];
   regionalExposure: RegionalExposure[];
 
@@ -82,28 +81,26 @@ export interface PortfolioAnalysis {
 
   // Goal grades (for UI)
   goalScores: {
-    hedge: number;
-    diversify: number;
-    rwa: number;
+    hedge: number; // 0-100
+    diversify: number; // 0-100
+    rwa: number; // 0-100
   };
 
-  // Yield metrics
+  // Financial metrics
   totalAnnualYield: number;
   totalInflationCost: number;
-  netAnnualGain: number;
+  netAnnualGain: number; // APY minus inflation
   avgYieldRate: number;
   netRate: number;
   isNetPositive: boolean;
 
-  // Gap analysis
+  // Analysis results
   missingRegions: string[];
   overExposedRegions: string[];
   underExposedRegions: string[];
-
-  // Opportunities
   rebalancingOpportunities: RebalancingOpportunity[];
 
-  // Goal-based recommendations
+  // Recommendations
   targetAllocations: {
     inflation_protection: TargetAllocation[];
     geographic_diversification: TargetAllocation[];
@@ -126,6 +123,9 @@ export interface PortfolioAnalysis {
   };
 }
 
+/**
+ * Creates an empty analysis object for initialization
+ */
 export function createEmptyAnalysis(): PortfolioAnalysis {
   return {
     totalValue: 0,
@@ -148,7 +148,7 @@ export function createEmptyAnalysis(): PortfolioAnalysis {
     netAnnualGain: 0,
     avgYieldRate: 0,
     netRate: 0,
-    isNetPositive: false,
+    isNetPositive: true,
     missingRegions: [],
     overExposedRegions: [],
     underExposedRegions: [],
@@ -242,11 +242,11 @@ const TOKEN_REGION_MAP: Record<string, string> = {
 };
 
 // ============================================================================
-// PURE CALCULATION FUNCTIONS
+// CORE CALCULATIONS
 // ============================================================================
 
 /**
- * Calculate inflation rate for a specific token
+ * Get inflation rate for a specific token symbol
  */
 export function getTokenInflationRate(
   symbol: string,
@@ -254,16 +254,14 @@ export function getTokenInflationRate(
 ): number {
   const normalizedSymbol = symbol.toUpperCase();
   const region = TOKEN_REGION_MAP[normalizedSymbol];
+  if (!region || !inflationData[region]) return 3; // Neutral fallback
 
-  if (!region || !inflationData[region]) {
-    return 3.0; // Default conservative estimate
-  }
-
+  // If region found, use regional average
   return inflationData[region].avgRate;
 }
 
 /**
- * Get region for a token
+ * Get region for a specific token symbol
  */
 export function getTokenRegion(symbol: string): string {
   const normalizedSymbol = symbol.toUpperCase();
@@ -292,11 +290,12 @@ export function calculateWeightedInflationRisk(
 }
 
 /**
- * Calculate diversification score (0-100)
+ * Calculate diversification score based on concentration and variety
  */
 export function calculateDiversificationScore(
   tokens: TokenAllocation[],
   regionalExposure: RegionalExposure[],
+  macroData?: Record<string, MacroIndicator>,
 ): {
   score: number;
   rating: "Excellent" | "Good" | "Fair" | "Poor" | "Very Poor";
@@ -311,8 +310,8 @@ export function calculateDiversificationScore(
   const hhi = regionWeights.reduce((sum, weight) => sum + weight * weight, 0);
   const concentrationScore = Math.max(0, Math.min(100, (1 - hhi) * 100));
 
-  // Weight contribution: 60% of total score based on distribution (max ~50-60 pts)
-  const weightedConcentration = concentrationScore * 0.6;
+  // Weight contribution: 50% of total score based on distribution
+  const weightedConcentration = concentrationScore * 0.5;
 
   // 2. Diversity Bonuses (Stricter requirements)
   // Max 10 points: Need 5+ tokens (2 pts each)
@@ -329,13 +328,56 @@ export function calculateDiversificationScore(
   );
   const rwaBonus = hasRWA ? 10 : 0;
 
+  // 4. Macro Stability Bonus (New: 10 points)
+  let macroBonus = 0;
+  if (macroData && Object.keys(macroData).length > 0) {
+    // Representative countries per region for scoring
+    const regionProxies: Record<string, string[]> = {
+      USA: ["USA"],
+      Europe: ["DEU", "FRA"],
+      Africa: ["ZAF", "NGA"],
+      LatAm: ["BRA", "MEX"],
+      Asia: ["JPN", "CHN"],
+    };
+
+    let totalMacroScore = 0;
+    let exposureWithData = 0;
+
+    regionalExposure.forEach((exposure) => {
+      const proxies = regionProxies[exposure.region] || [];
+      const regionScores = proxies
+        .map((code) => macroData[code])
+        .filter(Boolean)
+        .map((d) => macroService.calculateStabilityScore(d!));
+
+      if (regionScores.length > 0) {
+        const avgRegionScore =
+          regionScores.reduce((a, b) => a + b, 0) / regionScores.length;
+        // Weighted by portfolio exposure
+        totalMacroScore += avgRegionScore * (exposure.percentage / 100);
+        exposureWithData += exposure.percentage / 100;
+      } else if (exposure.region === "Global") {
+        // Assume Global (Gold/PAXG) has high stability (80)
+        totalMacroScore += 80 * (exposure.percentage / 100);
+        exposureWithData += exposure.percentage / 100;
+      }
+    });
+
+    if (exposureWithData > 0.5) {
+      // Normalize to 0-100 scale for the covered portion
+      const normalizedScore = totalMacroScore / exposureWithData;
+      // Bonus: 0 points for score < 50, up to 10 points for score 100
+      macroBonus = Math.max(0, (normalizedScore - 50) * 0.2);
+    }
+  }
+
   // Max score calculation:
-  // - Perfect 5 region split (HHI 0.2 -> Score 80 * 0.6 = 48) + 10 (tokens) + 20 (regions) + 10 (RWA) = 88
-  // - Perfect 7 region split (HHI 0.14 -> Score 86 * 0.6 = 51.6) + 10 + 20 + 10 = ~92
-  // 100 is theoretically possible only with extreme diversification
+  // - Concentration (50) + Tokens (10) + Regions (20) + RWA (10) + Macro (10) = 100
   const score = Math.min(
     100,
-    Math.round(weightedConcentration + tokenBonus + regionBonus + rwaBonus),
+    Math.round(
+      weightedConcentration + tokenBonus + regionBonus + rwaBonus + macroBonus,
+    ),
   );
 
   let rating: "Excellent" | "Good" | "Fair" | "Poor" | "Very Poor" =
@@ -364,7 +406,7 @@ export function getConcentrationRisk(
 }
 
 /**
- * Calculate portfolio projections
+ * Calculate 1-year and 3-year purchasing power projections
  */
 export function calculateProjections(
   currentWeightedInflation: number,
@@ -407,7 +449,7 @@ export function calculateProjections(
 }
 
 /**
- * Generate rebalancing opportunities
+ * Find swaps to improve weighted inflation risk
  */
 export function generateRebalancingOpportunities(
   tokens: TokenAllocation[],
@@ -471,7 +513,7 @@ export function generateRebalancingOpportunities(
       if (inflationDelta < minDelta) continue;
 
       // Suggest moving 25-50% of high-inflation position
-      const suggestedPercentage = highToken.percentage > 50 ? 0.5 : 0.25;
+      const suggestedPercentage = 0.5;
       const suggestedAmount = highToken.value * suggestedPercentage;
 
       // Calculate annual savings
@@ -514,16 +556,14 @@ export function generateRebalancingOpportunities(
     }
   }
 
-  // Sort by priority and annual savings
-  return opportunities
-    .sort((a, b) => {
-      const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }
-      return b.annualSavings - a.annualSavings;
-    })
-    .slice(0, 5); // Top 5 opportunities
+  // Sort by savings and priority
+  const priorityOrder = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+  return opportunities.sort((a, b) => {
+    if (a.priority !== b.priority) {
+      return priorityOrder[a.priority] - priorityOrder[b.priority];
+    }
+    return b.annualSavings - a.annualSavings;
+  });
 }
 
 /**
@@ -541,25 +581,22 @@ export function generateTargetAllocations(
   const allocationMap = GOAL_ALLOCATIONS[goal];
   const targets: TargetAllocation[] = [];
 
-  for (const [region, percentage] of Object.entries(allocationMap)) {
-    if (percentage === 0) continue;
-
-    // Find best token for this region using dynamic scoring
-    const regionToken = getBestTokenForRegion(region, inflationData, goal);
-
-    targets.push({
-      symbol: regionToken,
-      targetPercentage: percentage,
-      reason: getAllocationReason(region, goal, inflationData),
-    });
-  }
+  Object.entries(allocationMap).forEach(([region, percentage]) => {
+    if (percentage > 0) {
+      const regionToken = getBestTokenForRegion(region, inflationData, goal);
+      targets.push({
+        symbol: regionToken,
+        targetPercentage: percentage,
+        reason: getAllocationReason(region, goal, inflationData),
+      });
+    }
+  });
 
   return targets;
 }
 
 /**
- * Get the best representative token for a region
- * Uses dynamic scoring based on market conditions and user goal
+ * Helper to determine best token for a region based on goal
  */
 function getBestTokenForRegion(
   region: string,
@@ -605,7 +642,7 @@ function getBestTokenForRegion(
 }
 
 /**
- * Get human-readable reason for allocation
+ * Helper to get reasoning for a target allocation
  */
 function getAllocationReason(
   region: string,
@@ -646,50 +683,27 @@ function getAllocationReason(
     },
   };
 
-  return reasons[goal]?.[region] || `Diversification into ${region}`;
+  return reasons[goal]?.[region] || `Targeting ${region} for balanced exposure`;
 }
 
 // ============================================================================
-// MAIN ANALYSIS FUNCTION
+// MAIN ANALYZER
 // ============================================================================
 
 /**
- * Perform complete portfolio analysis
- * Single entry point for all portfolio calculations
+ * Main function to perform comprehensive portfolio analysis
  */
 export function analyzePortfolio(
   portfolio: { chains: ChainBalance[]; totalValue: number } | null,
   inflationData: Record<string, RegionalInflationData>,
   currentGoal: string = "exploring",
+  macroData?: Record<string, MacroIndicator>,
 ): PortfolioAnalysis {
   // Handle empty portfolio
   if (!portfolio || portfolio.totalValue === 0) {
     return {
-      totalValue: 0,
-      tokenCount: 0,
-      regionCount: 0,
-      tokens: [],
-      regionalExposure: [],
-      weightedInflationRisk: 0,
-      diversificationScore: 0,
-      diversificationRating: "Very Poor",
-      diversificationTips: [],
-      concentrationRisk: "LOW",
-      goalScores: {
-        hedge: 0,
-        diversify: 0,
-        rwa: 0,
-      },
-      totalAnnualYield: 0,
-      totalInflationCost: 0,
-      netAnnualGain: 0,
-      avgYieldRate: 0,
-      netRate: 0,
-      isNetPositive: true,
+      ...createEmptyAnalysis(),
       missingRegions: Object.keys(inflationData).filter((r) => r !== "Global"),
-      overExposedRegions: [],
-      underExposedRegions: [],
-      rebalancingOpportunities: [],
       targetAllocations: {
         inflation_protection: generateTargetAllocations(
           "inflation_protection",
@@ -704,37 +718,35 @@ export function analyzePortfolio(
         rwa_access: generateTargetAllocations("rwa_access", 0, inflationData),
         exploring: generateTargetAllocations("exploring", 0, inflationData),
       },
-      projections: {
-        currentPath: { value1Year: 0, value3Year: 0, purchasingPowerLost: 0 },
-        optimizedPath: {
-          value1Year: 0,
-          value3Year: 0,
-          purchasingPowerPreserved: 0,
-        },
-      },
     };
   }
 
-  // Build token allocations
+  // 1. Flatten and aggregate tokens across chains
   const tokens: TokenAllocation[] = [];
-  for (const chain of portfolio.chains) {
-    for (const balance of chain.balances) {
-      const symbol = balance.symbol;
+  portfolio.chains.forEach((chain) => {
+    chain.balances.forEach((balance) => {
+      const symbol = balance.symbol.toUpperCase();
+      const value = balance.value;
+      const percentage = (value / portfolio.totalValue) * 100;
+      const region = getTokenRegion(symbol);
+      const inflationRate = getTokenInflationRate(symbol, inflationData);
+      const yieldRate = getTokenApy(symbol);
+
       tokens.push({
         symbol,
-        value: balance.value,
-        percentage: (balance.value / portfolio.totalValue) * 100,
-        region: getTokenRegion(symbol),
-        inflationRate: getTokenInflationRate(symbol, inflationData),
-        yieldRate: getTokenApy(symbol),
+        value,
+        percentage,
+        region,
+        inflationRate,
+        yieldRate,
         chainId: chain.chainId,
       });
-    }
-  }
+    });
+  });
 
-  // Calculate regional exposure
+  // 2. Calculate regional exposure
   const regionMap = new Map<string, RegionalExposure>();
-  for (const token of tokens) {
+  tokens.forEach((token) => {
     const existing = regionMap.get(token.region);
     if (existing) {
       existing.value += token.value;
@@ -743,12 +755,12 @@ export function analyzePortfolio(
       regionMap.set(token.region, {
         region: token.region,
         value: token.value,
-        percentage: 0, // Calculate after
-        avgInflationRate: token.inflationRate,
+        percentage: 0,
+        avgInflationRate: inflationData[token.region]?.avgRate || 0,
         tokens: [token.symbol],
       });
     }
-  }
+  });
 
   // Calculate percentages for regional exposure
   const regionalExposure = Array.from(regionMap.values()).map((r) => ({
@@ -759,11 +771,10 @@ export function analyzePortfolio(
   // Calculate risk and diversification metrics
   const weightedInflationRisk = calculateWeightedInflationRisk(tokens);
   const { score: diversificationScore, rating: diversificationRating } =
-    calculateDiversificationScore(tokens, regionalExposure);
+    calculateDiversificationScore(tokens, regionalExposure, macroData);
   const concentrationRisk = getConcentrationRisk(regionalExposure);
 
   // Calculate yield metrics
-  // Using fallback APY values if not provided by config
   const APY_MAP: Record<string, number> = {
     USDY: 5.0,
     SYRUPUSDC: 4.5,
@@ -831,7 +842,9 @@ export function analyzePortfolio(
     );
   if (missingRegions.length > 0)
     diversificationTips.push(
-      `Consider adding exposure to ${missingRegions.slice(0, 2).join(", ")} to improve diversification.`,
+      `Consider adding exposure to ${missingRegions
+        .slice(0, 2)
+        .join(", ")} to improve diversification.`,
     );
   if (concentrationRisk === "HIGH")
     diversificationTips.push(
@@ -841,6 +854,37 @@ export function analyzePortfolio(
     diversificationTips.push(
       "Add PAXG on Arbitrum as a hedge against currency debasement.",
     );
+
+  // 5. Macro Stability Tips
+  if (macroData && Object.keys(macroData).length > 0) {
+    const regionProxies: Record<string, string[]> = {
+      USA: ["USA"],
+      Europe: ["DEU", "FRA"],
+      Africa: ["NGA", "ZAF"],
+      LatAm: ["BRA", "MEX"],
+      Asia: ["JPN", "CHN"],
+    };
+
+    const lowStabilityRegions = regionalExposure
+      .filter((r) => {
+        const proxies = regionProxies[r.region] || [];
+        const scores = proxies
+          .map((p) => macroData[p])
+          .filter(Boolean)
+          .map((d) => macroService.calculateStabilityScore(d!));
+        return (
+          scores.length > 0 &&
+          scores.reduce((a, b) => a + b, 0) / scores.length < 50
+        );
+      })
+      .map((r) => r.region);
+
+    if (lowStabilityRegions.length > 0) {
+      diversificationTips.push(
+        `Macro Risk: ${lowStabilityRegions.join(", ")} exposure carries higher risk due to governance or growth factors.`,
+      );
+    }
+  }
 
   return {
     totalValue: portfolio.totalValue,
@@ -920,8 +964,7 @@ export interface GuidedTourRecommendation {
 }
 
 /**
- * Detect if user would benefit from a guided tour
- * ENHANCEMENT: Extends portfolio analysis with tour recommendations
+ * Logic to detect if a guided tour would benefit the user
  */
 export function detectGuidedTour(
   analysis: PortfolioAnalysis,
@@ -938,7 +981,9 @@ export function detectGuidedTour(
     return {
       tourId: "inflation_fighter",
       title: "High Inflation Protection",
-      description: `Your portfolio faces ${analysis.weightedInflationRisk.toFixed(1)}% inflation risk. Let me show you protection strategies.`,
+      description: `Your portfolio faces ${analysis.weightedInflationRisk.toFixed(
+        1,
+      )}% inflation risk. Let me show you protection strategies.`,
       estimatedBenefit: topOpp
         ? `Save $${topOpp.annualSavings.toFixed(0)}/year`
         : "Reduce inflation exposure",
@@ -1044,7 +1089,9 @@ export function detectGuidedTour(
       title: "Discover Real-World Assets",
       description:
         "Your stablecoins earn 0% yield. Explore RWAs earning 4-5% APY.",
-      estimatedBenefit: `Potential ${(analysis.totalValue * 0.05).toFixed(0)} USDC/year`,
+      estimatedBenefit: `Potential ${(analysis.totalValue * 0.05).toFixed(
+        0,
+      )} USDC/year`,
       priority: "HIGH",
       steps: [
         {
@@ -1070,13 +1117,11 @@ export function detectGuidedTour(
   return null;
 }
 
-// ============================================================================
-// EXPORT HELPERS
-// ============================================================================
-
+/**
+ * Main Export Object
+ */
 export const PortfolioAnalysisUtils = {
-  getTokenInflationRate,
-  getTokenRegion,
+  analyzePortfolio,
   calculateWeightedInflationRisk,
   calculateDiversificationScore,
   getConcentrationRisk,
@@ -1084,4 +1129,5 @@ export const PortfolioAnalysisUtils = {
   generateRebalancingOpportunities,
   generateTargetAllocations,
   detectGuidedTour,
+  createEmptyAnalysis,
 };

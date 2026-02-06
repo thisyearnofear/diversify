@@ -17,7 +17,18 @@ const WORLD_BANK_URL = 'https://api.worldbank.org/v2';
 // Simple server-side cache to prevent hitting IMF too often
 // This persists as long as the lambda is warm
 let serverCache: {
-  data: any;
+  data: {
+    countries: Array<{
+      country: string;
+      countryCode: string;
+      value: number | null;
+      year: number;
+      source: string;
+      isGlobal?: boolean;
+    }>;
+    source: string;
+    lastUpdated: string;
+  };
   timestamp: number;
   countries: string;
 } | null = null;

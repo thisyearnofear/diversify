@@ -1,0 +1,7 @@
+{
+  "projectId": "f77a6bb9-623f-4720-bc77-f3f5b3bb6567",
+  "createdAt": 1770333537432,
+  "startupCommands": [
+    "pnpm dev"
+  ]
+}

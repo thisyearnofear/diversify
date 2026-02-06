@@ -85,20 +85,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(500).json({ error: 'AI providers (GEMINI or VENICE) not configured' });
         }
 
-        const { inflationData, userBalance, currentHoldings, config, networkContext, portfolio, analysis, userRegion } = req.body;
+        const { inflationData, macroData, userBalance, currentHoldings, config, networkContext, portfolio, analysis, userRegion } = req.body;
 
-        // Debug: Log the inflation data received by the API
-        console.log('[Analyze API] Received inflation data:', {
+        // Debug: Log the inflation and macro data received by the API
+        console.log('[Analyze API] Received data:', {
             hasInflationData: !!inflationData,
-            inflationDataType: typeof inflationData,
-            inflationDataKeys: inflationData ? Object.keys(inflationData) : 'No keys',
+            hasMacroData: !!macroData,
             userRegion: userRegion,
-            sampleInflationData: inflationData ? Object.entries(inflationData).slice(0, 2).map(([region, data]: [string, any]) => ({
-                region,
-                avgRate: data?.avgRate,
-                countryCount: data?.countries?.length || 0,
-                stablecoinCount: data?.stablecoins?.length || 0
-            })) : 'No data'
+            sampleInflationData: inflationData ? Object.entries(inflationData).slice(0, 2).map(([region, data]) => {
+                const d = data as any;
+                return {
+                    region,
+                    avgRate: d?.avgRate,
+                    countryCount: d?.countries?.length || 0,
+                };
+            }) : 'No data',
+            sampleMacroData: macroData ? Object.keys(macroData).slice(0, 3) : 'No macro data'
         });
 
         // Use pre-computed analysis if provided, otherwise calculate it
@@ -135,23 +137,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             );
         }
 
+        // Market context for prompt
+        const treasuryYield = 4.5; // Would fetch from API in production
+        const currentInflation = 3.2; // Would fetch from API in production
+        const realYield = treasuryYield - currentInflation;
+
         const systemInstruction = `
             You are the DiversiFi Wealth Protection Oracle - a data-driven AI that provides ACTIONABLE financial advice.
             
-            CORE MISSION: Protect user wealth from inflation using quantified analysis.
+            CORE MISSION: Protect user wealth from inflation using quantified analysis and macro-economic stability indicators.
             
             ANALYSIS FRAMEWORK:
-            1. DATA INTERPRETATION: Explain what the portfolio analysis means for the user
-            2. RISK VISUALIZATION: Help them understand their exposure in concrete terms
-            3. ACTION PLAN: Provide specific, executable recommendations based on calculated opportunities
-            4. FIAT ONRAMP GUIDANCE: Help users buy/sell crypto using available onramp providers
+            1. DATA INTERPRETATION: Explain what the portfolio analysis means for the user.
+            2. MACRO STABILITY ASSESSMENT: Use the provided World Bank indicators (GDP Growth, Governance Score) to assess regional risk.
+               - High Governance (>70): Stable, reliable anchor.
+               - Low Governance (<50): High institutional risk; recommend diversifying away even if inflation is moderate.
+               - GDP Growth: Reward stable positive growth; flag volatility or recessions.
+            3. RISK VISUALIZATION: Help them understand their exposure in concrete terms.
+            4. ACTION PLAN: Provide specific, executable recommendations based on calculated opportunities.
             
             RESPONSE REQUIREMENTS:
             - Be SPECIFIC with NUMBERS: "Your portfolio faces 6.8% weighted inflation risk"
-            - Show the MATH: Reference the calculated projections and savings
-            - Be GOAL-ALIGNED: Tailor advice to their selected objective
-            - Be PRACTICAL: Recommend actions they can execute immediately
-            - HELP WITH ONRAMPS: Guide users on buying/selling crypto when needed
+            - CITE MACRO DATA: "While ${userRegion || 'your region'} shows ${currentInflation}% inflation, its Governance Score of X/100 suggests..."
+            - Show the MATH: Reference the calculated projections and savings.
+            - Be GOAL-ALIGNED: Tailor advice to their selected objective.
+            - Be PRACTICAL: Recommend actions they can execute immediately.
             
             AVAILABLE ACTIONS:
             - SWAP: Move between stablecoins (USDm→EURm, USDC→USDY, etc.)
@@ -206,11 +216,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const topOpportunities = portfolioAnalysis.rebalancingOpportunities.slice(0, 3);
         const targetAllocation = portfolioAnalysis.targetAllocations[userGoal as keyof typeof portfolioAnalysis.targetAllocations] || [];
 
-        // Calculate real yield for context
-        const treasuryYield = 4.5; // Would fetch from API in production
-        const currentInflation = 3.2; // Would fetch from API in production
-        const realYield = treasuryYield - currentInflation;
-
         const userPrompt = `
             WEALTH PROTECTION ANALYSIS REQUEST
             
@@ -221,6 +226,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             - Selected Goal: ${goalLabels[userGoal] || 'Exploration'}
             - Home Region: ${userRegion || 'Not specified'}
             ${userRegion && inflationData[userRegion] ? `- Home Region Inflation: ${inflationData[userRegion].avgRate.toFixed(1)}% (${inflationData[userRegion].countries.length} countries)` : ''}
+            
+            MACRO STABILITY FACTORS (World Bank Indicators):
+            ${macroData && Object.keys(macroData).length > 0 
+                ? Object.entries(macroData).map(([code, data]) => {
+                    const d = data as any; // Cast locally for concise prompt building
+                    return `- ${code}: GDP Growth: ${d.gdpGrowth ?? 'N/A'}%, Governance: ${d.corruptionControl ?? 'N/A'}/100`;
+                }).join('\n')
+                : 'Limited macro data available - rely on regional averages.'}
             
             CURRENT MARKET CONTEXT (CRITICAL FOR RECOMMENDATIONS):
             - 10-Year Treasury Yield: ${treasuryYield}%
@@ -427,7 +440,7 @@ TRANSPARENCY REQUIREMENTS:
                 provider: result.provider,
                 model: result.model
             });
-        } catch (parseError) {
+        } catch {
             // First parse failed - attempt repair retry with simpler prompt
             console.warn('[Analyze API] Initial parse failed, attempting repair retry...');
 

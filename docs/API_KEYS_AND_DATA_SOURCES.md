@@ -48,6 +48,16 @@
 - **Environment variable**: None needed
 - **Worth it?**: ✅ YES - Free professional yield data
 
+### 5. **World Bank API** - Macro-Economic Stability (FREE!)
+- **Website**: https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-api
+- **Pricing**: FREE (No key needed)
+- **What you get**:
+  - **GDP Growth**: Annual % growth for all supported countries.
+  - **Worldwide Governance Indicators (WGI)**: Political Stability, Rule of Law, Government Effectiveness, and Control of Corruption.
+  - **Regional Stability Scoring**: Automated 0-100 scores for every asset region.
+- **Environment variable**: None needed
+- **Worth it?**: ✅ YES - The foundation of our institutional-grade regional risk assessment.
+
 ## Optional Premium APIs
 
 ### 5. **Messari** - Market Intelligence
@@ -153,6 +163,7 @@ pnpm test-x402-comprehensive
 ### Caching Strategy:
 - Cache inflation data for 1 hour
 - Cache yield data for 15 minutes
+- Cache macro stability data for 24 hours (Yearly indicators change slowly)
 - Cache market data for 5 minutes
 - This reduces API costs significantly
 

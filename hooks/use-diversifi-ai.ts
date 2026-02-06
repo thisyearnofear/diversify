@@ -266,6 +266,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     userGoal?: string,
     userRegion?: string,
     analysisGoal?: string,
+    macroData?: Record<string, any>,
   ) => {
     if (!capabilities.analysis) {
       console.warn('[DiversifiAI] Analysis not available');
@@ -286,7 +287,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
       setAnalysisProgress(15); // Slower increment
       setThinkingStep('Calibrating inflation models...');
-      const localAnalysis = analyzePortfolio(portfolio, inflationData, userGoal || config.goal);
+      const localAnalysis = analyzePortfolio(portfolio, inflationData, userGoal || config.goal, macroData);
       setPortfolioAnalysis(localAnalysis);
 
       // Phase 2: AI Consultation (15-90%) - More time for AI analysis
@@ -332,6 +333,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         body: JSON.stringify({
           portfolio,
           inflationData,
+          macroData,
           goal: analysisGoal || userGoal || config.goal,
           riskTolerance: config.riskTolerance,
           userRegion: userRegion,
@@ -388,6 +390,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     aggregatedPortfolio?: MultichainPortfolio,
     userRegion?: string,
     analysisGoal?: string,
+    macroData?: Record<string, any>,
   ) => {
     // Debug: Log the parameters received
     console.log('[useDiversifiAI] analyze called with:', {
@@ -427,7 +430,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       portfolio = userBalanceOrPortfolio;
     }
 
-    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion, analysisGoal);
+    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion, analysisGoal, macroData);
   }, [analyzePortfolioAI]);
 
   /**
