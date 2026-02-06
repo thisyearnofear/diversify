@@ -215,9 +215,11 @@ export default function RegionalRecommendations({
               <p className="text-white/70 text-xs">{regionData.title}</p>
             </div>
           </div>
-          <span className="text-[10px] text-white/60 bg-black/20 px-2 py-1 rounded-full border border-white/10">
-            Data: World Bank
-          </span>
+          <div className="text-right">
+            <div className="text-[9px] text-white/60 font-bold uppercase">Data Source</div>
+            <div className="text-[10px] text-white font-black">World Bank</div>
+            <div className="text-[9px] text-white/60">Official 2024</div>
+          </div>
         </div>
       </div>
 

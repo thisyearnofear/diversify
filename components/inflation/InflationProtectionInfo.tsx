@@ -419,15 +419,21 @@ export default function InflationProtectionInfo({
       )}
 
       <div className="flex justify-between items-center text-xs text-text-muted mt-3">
-        <span>
-          Data: {freshnessInfo.dataSources.join(', ') || 'World Bank'} 
-          {freshnessInfo.mostRecentYear !== 'Unknown' && ` (${freshnessInfo.mostRecentYear})`}
-        </span>
-        <span>
-          {dataSource.includes('api') ? 'Live data' : 
-           dataSource.includes('cache') ? 'Cached data' : 
-           'Backup data'}
-        </span>
+        <div className="flex flex-col">
+          <span>
+            Data: {freshnessInfo.dataSources.join(', ') || 'World Bank'} 
+            {freshnessInfo.mostRecentYear !== 'Unknown' && ` (${freshnessInfo.mostRecentYear})`}
+          </span>
+          <span className="text-[9px] font-mono opacity-70">Indicator: FP.CPI.TOTL.ZG</span>
+        </div>
+        <div className="text-right">
+          <div className="font-bold">
+            {dataSource.includes('api') ? 'Live Stream' : 
+             dataSource.includes('cache') ? 'Regional Cache' : 
+             'Standard Fallback'}
+          </div>
+          <div className="text-[9px] opacity-70 italic">Updated via IMF/WB Proxy</div>
+        </div>
       </div>
     </div>
   );

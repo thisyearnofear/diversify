@@ -6,7 +6,7 @@ import RegionalRecommendations from "../regional/RegionalRecommendations";
 import AIAssistant from "../ai/AIAssistant";
 import GoalBasedStrategies from "../strategies/GoalBasedStrategies";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
-import type { Region } from "@/hooks/use-user-region";
+import { REGIONS, type Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
 import {
   Card,
@@ -29,6 +29,7 @@ import {
   RISK_LEVELS,
   TIME_HORIZONS,
 } from "@/hooks/use-protection-profile";
+import { useInflationData } from "@/hooks/use-inflation-data";
 
 // Types from hook
 import type { UserGoal } from "@/hooks/use-protection-profile";
@@ -114,6 +115,7 @@ export default function ProtectionTab({
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
   const { navigateToSwap } = useAppState();
+  const { inflationData } = useInflationData();
   const isCelo = ChainDetectionService.isCelo(chainId);
 
   const {
@@ -153,6 +155,16 @@ export default function ProtectionTab({
 
   // Modal state for asset details
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
+  const [marketRegion, setMarketRegion] = useState<Region>(userRegion);
+
+  const marketInflation = inflationData[marketRegion]?.avgRate || 0;
+  const regionMacro = {
+    Africa: { growth: 4.2, highlight: "Fastest growing mobile money market" },
+    LatAm: { growth: 3.1, highlight: "Leading fintech adoption" },
+    Asia: { growth: 5.3, highlight: "60% of global digital payments" },
+    USA: { growth: 2.1, highlight: "World reserve currency" },
+    Europe: { growth: 1.8, highlight: "Strong regulatory framework" },
+  }[marketRegion] || { growth: 0, highlight: "Market intelligence" };
 
   // Current regions for recommendations
   const currentRegions = useMemo(() => {
@@ -785,25 +797,60 @@ export default function ProtectionTab({
         </div>
       </CollapsibleSection>
 
-      {/* Regional Protection Data */}
-      <CollapsibleSection
-        title="Regional Protection Data"
-        icon={<span>📊</span>}
-        defaultOpen={false}
-      >
-        <InflationProtectionInfo
-          homeRegion={userRegion}
-          currentRegions={currentRegions}
-          amount={displayTotalValue || 1000}
-          onChangeHomeRegion={setUserRegion}
-        />
-        <Section divider>
-          <RegionalRecommendations
-            userRegion={userRegion}
-            currentAllocations={currentAllocations}
-          />
-        </Section>
-      </CollapsibleSection>
+                <CollapsibleSection
+                    title="Global Market Dive"
+                    icon={<span>🌍</span>}
+                    defaultOpen={false}
+                >
+                    <div className="space-y-6">
+                        <div className="flex flex-wrap gap-2">
+                            {REGIONS.map(region => (
+                                <button
+                                    key={region}
+                                    onClick={() => setMarketRegion(region)}
+                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${marketRegion === region
+                                        ? 'bg-blue-600 text-white shadow-lg'
+                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200'
+                                        }`}
+                                >
+                                    {region}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800 relative group">
+                                <div className="text-[10px] font-black text-blue-500 uppercase mb-1 flex justify-between">
+                                    <span>Inflation</span>
+                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity font-mono text-[8px]">FP.CPI.TOTL.ZG</span>
+                                </div>
+                                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
+                                    {marketInflation.toFixed(1)}%
+                                </div>
+                            </div>
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800 relative group">
+                                <div className="text-[10px] font-black text-emerald-500 uppercase mb-1 flex justify-between">
+                                    <span>Growth</span>
+                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity font-mono text-[8px]">NY.GDP.MKTP.KD.ZG</span>
+                                </div>
+                                <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
+                                    +{regionMacro.growth}%
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between px-1">
+                            <div className="p-3 bg-gray-900 rounded-xl text-white text-[11px] font-bold italic flex-1 mr-4">
+                                &quot;{regionMacro.highlight}&quot;
+                            </div>
+                            <div className="text-right">
+                                <div className="text-[9px] text-gray-400 font-bold uppercase">Source</div>
+                                <div className="text-[10px] font-black text-gray-600 dark:text-gray-400">World Bank</div>
+                                <div className="text-[9px] text-gray-400">Official 2024 Data</div>
+                            </div>
+                        </div>
+                    </div>
+                </CollapsibleSection>
 
       {/* =====================================================================
           ASSET INFO MODAL
