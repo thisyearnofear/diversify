@@ -66,14 +66,16 @@ export default function AIAssistant({
   const effectiveRegion = userRegion || "Africa";
   const effectiveGoal = "exploring"; // Default goal, could be made configurable later
 
-  // Debug: Log the props received by AIAssistant
-  console.log("[AIAssistant] Using region and goal:", {
-    userRegionProp: userRegion,
-    effectiveRegion: effectiveRegion,
-    effectiveGoal: effectiveGoal,
-    amount: amount,
-    holdingsCount: holdings?.length || 0,
-  });
+  // Debug: Log the props received by AIAssistant (memoized to prevent spam)
+  useEffect(() => {
+    console.log("[AIAssistant] Configuration changed:", {
+      userRegionProp: userRegion,
+      effectiveRegion: effectiveRegion,
+      effectiveGoal: effectiveGoal,
+      amount: amount,
+      holdingsCount: holdings?.length || 0,
+    });
+  }, [userRegion, effectiveRegion, effectiveGoal, amount, holdings?.length]);
 
   const {
     advice,
@@ -86,7 +88,6 @@ export default function AIAssistant({
     autonomousStatus,
     capabilities,
     clearMessages,
-    initializeAI,
     portfolioAnalysis,
   } = useDiversifiAI();
 
@@ -136,11 +137,6 @@ export default function AIAssistant({
     addUserMessage?.(prompt);
     setDrawerOpen?.(true);
   };
-
-  // Initialize AI on mount
-  useEffect(() => {
-    initializeAI();
-  }, [initializeAI]);
 
   // Milestone haptics for Farcaster
   const analysisProgressRounded = Math.round(analysisProgress);
@@ -365,12 +361,15 @@ export default function AIAssistant({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="text-[8px] font-mono text-gray-400 uppercase flex items-center gap-1"
+                        className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
                       >
-                        <span className="w-1 h-1 rounded-full bg-blue-400 animate-ping" />
-                        HIT: {thinkingStep.includes('market') ? 'ALPHA_VANTAGE_v1' : 
-                              thinkingStep.includes('macro') ? 'WORLD_BANK_WGI' : 
-                              thinkingStep.includes('inflation') ? 'IMF_PCPIPCH' : 'DIVERSIFI_ORACLE_v2'}
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                        <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' : 
+                              thinkingStep.toLowerCase().includes('inflation') ? 'IMF_PCPIPCH' : 
+                              thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
+                              thinkingStep.toLowerCase().includes('momentum') ? 'ALTERNATIVE_ME_FNG' :
+                              thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' : 
+                              thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
                       </motion.span>
                     </AnimatePresence>
                   </div>
@@ -997,12 +996,15 @@ export default function AIAssistant({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="text-[8px] font-mono text-gray-400 uppercase flex items-center gap-1"
+                        className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
                       >
-                        <span className="w-1 h-1 rounded-full bg-blue-400 animate-ping" />
-                        HIT: {thinkingStep.includes('market') ? 'ALPHA_VANTAGE_v1' : 
-                              thinkingStep.includes('macro') ? 'WORLD_BANK_WGI' : 
-                              thinkingStep.includes('inflation') ? 'IMF_PCPIPCH' : 'DIVERSIFI_ORACLE_v2'}
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+                        <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' : 
+                              thinkingStep.toLowerCase().includes('inflation') ? 'IMF_PCPIPCH' : 
+                              thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
+                              thinkingStep.toLowerCase().includes('momentum') ? 'ALTERNATIVE_ME_FNG' :
+                              thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' : 
+                              thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
                       </motion.span>
                     </AnimatePresence>
                   </div>

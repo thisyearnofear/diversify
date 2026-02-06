@@ -187,7 +187,9 @@ export default function ProtectionTab({
   // Use the pre-calculated live portfolio analysis from the portfolio prop
   const liveAnalysis = portfolio;
 
-  const topOpportunity = rebalancingOpportunities?.[0];
+  const holdingsSymbols = useMemo(() => {
+    return chains.flatMap((c) => c.balances.map((b) => b.symbol));
+  }, [chains]);
 
   // ============================================================================
   // HANDLERS
@@ -549,7 +551,7 @@ export default function ProtectionTab({
               ================================================================= */}
           <AIAssistant
             amount={displayTotalValue || 0}
-            holdings={chains.flatMap((c) => c.balances.map((b) => b.symbol))}
+            holdings={holdingsSymbols}
             onExecute={handleExecuteSwap}
             embedded
             userRegion={userRegion}

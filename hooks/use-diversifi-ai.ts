@@ -278,55 +278,56 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     setAnalysisProgress(0);
     setThinkingStep('Initializing protection protocols...');
 
+    let progressInterval: NodeJS.Timeout | null = null;
+
     try {
-      // Phase 1: Local Data Collection (0-30%) - Slower progression
-      setAnalysisProgress(5); // Start slower
+      // Phase 1: Local Data Collection (0-30%) - Faster progression
+      setAnalysisProgress(10); 
       setThinkingStep('Securing market data...');
 
-      // Simulate data gathering with more realistic timing
-      await new Promise(resolve => setTimeout(resolve, 1200)); // Increased from 800ms
+      // Simulate data gathering with professional timing
+      await new Promise(resolve => setTimeout(resolve, 600)); 
 
-      setAnalysisProgress(15); // Slower increment
+      setAnalysisProgress(25); 
       setThinkingStep('Calibrating inflation models...');
       const localAnalysis = analyzePortfolio(portfolio, inflationData, userGoal || config.goal, macroData);
       setPortfolioAnalysis(localAnalysis);
 
-      // Phase 2: AI Consultation (15-90%) - More time for AI analysis
-      setAnalysisProgress(20); // Start AI phase slower
+      // Phase 2: AI Consultation (25-90%)
+      setAnalysisProgress(35); 
 
       const THEMATIC_MESSAGES = [
-        "Consulting mathematics...",
-        "Analyzing the macro...",
-        "Calculating...",
-        "Stability loading...",
-        "Checking yield...",
-        "Scanning volatility...",
-        "Identifying inflation...",
-        "Optimizing insights...",
-        "Perambulating...",
+        "Querying World Bank Macro indicators...",
+        "Analyzing IMF Inflation forecasts...",
+        "Fetching DefiLlama yield aggregates...",
+        "Cross-referencing market momentum...",
+        "Scanning on-chain stability protocols...",
+        "Calculating geographic risk premiums...",
+        "Verifying institutional liquidity...",
+        "Optimizing wealth preservation path...",
+        "Finalizing analyst insights..."
       ];
 
       let messageIndex = 0;
       setThinkingStep(THEMATIC_MESSAGES[0]);
 
       // Enhanced AI analysis via API
-      // Slower, more realistic progress bar from 20% to 90%
-      const progressInterval = setInterval(() => {
+      // Smoother, more realistic progress bar from 35% to 90%
+      progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
-          // Much slower progression - more realistic for AI analysis
           if (prev >= 90) return 90;
-          if (prev > 80) return Math.round(prev + 0.4); // Round to whole numbers
-          if (prev > 70) return Math.round(prev + 0.7);
-          if (prev > 50) return Math.round(prev + 1.0);
-          return Math.round(prev + 1.3); // Always return whole numbers
+          if (prev > 80) return Math.round(prev + 0.6); 
+          if (prev > 70) return Math.round(prev + 0.9);
+          if (prev > 50) return Math.round(prev + 1.2);
+          return Math.round(prev + 1.6); 
         });
 
-        // Cycle messages every few ticks (less frequently for better UX)
-        if (Math.random() > 0.8) {
+        // Cycle messages every few ticks
+        if (Math.random() > 0.75) {
           messageIndex = (messageIndex + 1) % THEMATIC_MESSAGES.length;
           setThinkingStep(THEMATIC_MESSAGES[messageIndex]);
         }
-      }, 1000); // Increased from 600ms to 1000ms for much slower updates
+      }, 800); 
 
       const response = await fetch('/api/agent/analyze', {
         method: 'POST',
@@ -342,9 +343,12 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         }),
       });
 
-      clearInterval(progressInterval);
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
 
-      setAnalysisProgress(92); // Don't jump to 95% immediately
+        setAnalysisProgress(92); // Don't jump to 95% immediately
       setThinkingStep('Finalizing strategy...');
 
       // Add a small delay before completing
@@ -366,6 +370,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       // Keep error state visible for a moment
       setThinkingStep('Connection interrupted. Please retry.');
     } finally {
+      if (progressInterval) clearInterval(progressInterval);
       // Delay cleaning up state so user sees 100% or error
       if (!isAnalyzing) { // Only reset if we're not already reset (safety)
         setTimeout(() => {

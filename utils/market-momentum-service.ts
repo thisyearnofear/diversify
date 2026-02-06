@@ -38,34 +38,16 @@ export class MarketMomentumService {
 
     private async fetchAllMomentum(): Promise<{ data: MarketMomentum; source: string }> {
         try {
-            // Parallel fetch from multiple free, keyless sources
-            const [stableRes, sentimentRes] = await Promise.all([
-                fetch("https://stablecoins.llama.fi/stablecoincharts/all?stablecoin=1", { signal: AbortSignal.timeout(8000) }),
-                fetch("https://api.alternative.me/fng/", { signal: AbortSignal.timeout(5000) })
-            ]);
+            // Fetch from our server-side proxy to avoid CSP issues and minimize client workload
+            const response = await fetch("/api/finance/momentum", { 
+                signal: AbortSignal.timeout(10000) 
+            });
 
-            const stableData = stableRes.ok ? await stableRes.json() : [];
-            const sentimentData = sentimentRes.ok ? await sentimentRes.json() : null;
+            if (!response.ok) {
+                throw new Error(`Proxy returned ${response.status}`);
+            }
 
-            // 1. Calculate Stablecoin Momentum (DefiLlama)
-            // Get latest 2 days to compare
-            const latest = stableData.slice(-1)[0] || { totalCirculating: { usd: 160000000000 } };
-            const prev = stableData.slice(-2)[0] || latest;
-            const stableCap = latest.totalCirculating.usd;
-            const stableChange = ((latest.totalCirculating.usd - prev.totalCirculating.usd) / prev.totalCirculating.usd) * 100;
-
-            // 2. Market Sentiment (Fear & Greed Index)
-            const sentiment = sentimentData?.data?.[0]?.value ? parseInt(sentimentData.data[0].value) : 50;
-
-            const momentum: MarketMomentum = {
-                globalStablecoinCap: stableCap,
-                stablecoin24hChange: parseFloat(stableChange.toFixed(2)) || 0.05,
-                marketSentiment: sentiment,
-                rwaGrowth7d: 1.2, // Hardcoded fallback for specialized RWA index
-                lastUpdated: Date.now()
-            };
-
-            return { data: momentum, source: "live-aggregators" };
+            return await response.json();
         } catch (error) {
             console.warn("[Momentum] Fetch failed, using fallback:", error);
             throw error;

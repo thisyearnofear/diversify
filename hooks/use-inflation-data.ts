@@ -87,9 +87,6 @@ export function useInflationData() {
         const improvedData = await inflationService.getInflationData();
 
         if (improvedData.data?.countries) {
-          console.log(`Using improved data from ${improvedData.source}`);
-          console.log(`[Inflation] Loaded ${improvedData.data.countries.length} countries from ${improvedData.source}`);
-
           // Process the improved data - ensure countries array exists
           const countryData: InflationData[] = (improvedData.data.countries || []).map((item: any) => {
             // Special handling for WEOWORLD (global inflation)
@@ -105,11 +102,8 @@ export function useInflationData() {
             };
           });
 
-          console.log(`[Inflation] Processed country data:`, countryData.slice(0, 3)); // Log first 3 for debugging
-
           // Group by region (same logic as before)
           const regionalData = processCountryDataIntoRegions(countryData);
-          console.log(`[Inflation] Regional data:`, Object.keys(regionalData).map(r => `${r}: ${regionalData[r].countries.length} countries`));
           setInflationData(regionalData);
           setDataSource(improvedData.source as 'api' | 'cache' | 'fallback');
           return;
