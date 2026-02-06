@@ -286,7 +286,6 @@ export default function DiversiFiPage() {
             {activeTab === "protect" && (
               <ProtectionTab
                 userRegion={userRegion}
-                setUserRegion={setUserRegion}
                 portfolio={multichainPortfolio}
                 setActiveTab={setActiveTab}
               />

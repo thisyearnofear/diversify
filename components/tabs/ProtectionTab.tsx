@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SmartBuyCryptoButton } from "../onramp";
-import InflationProtectionInfo from "../inflation/InflationProtectionInfo";
-import RegionalRecommendations from "../regional/RegionalRecommendations";
 import AIAssistant from "../ai/AIAssistant";
 import GoalBasedStrategies from "../strategies/GoalBasedStrategies";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
@@ -16,7 +14,6 @@ import {
   InsightCard,
   QuickSelect,
   ProtectionScore,
-  Section,
   HeroValue,
 } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
@@ -100,7 +97,6 @@ const RWA_ASSETS = [
 
 interface ProtectionTabProps {
   userRegion: Region;
-  setUserRegion: (region: Region) => void;
   portfolio: MultichainPortfolio;
   onSelectStrategy?: (strategy: string) => void;
   setActiveTab?: (tab: string) => void;
@@ -110,7 +106,6 @@ import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 
 export default function ProtectionTab({
   userRegion,
-  setUserRegion,
   portfolio,
   onSelectStrategy,
 }: ProtectionTabProps) {
@@ -175,17 +170,9 @@ export default function ProtectionTab({
       .map((item) => item.region as Region);
   }, [displayRegionData]);
 
-  const currentAllocations = useMemo(() => {
-    return Object.fromEntries(
-      displayRegionData.map((item) => [
-        item.region,
-        (item.usdValue || item.value) / displayTotalValue,
-      ]),
-    );
-  }, [displayRegionData, displayTotalValue]);
-
   // Use the pre-calculated live portfolio analysis from the portfolio prop
   const liveAnalysis = portfolio;
+  const topOpportunity = rebalancingOpportunities?.[0];
 
   const holdingsSymbols = useMemo(() => {
     return chains.flatMap((c) => c.balances.map((b) => b.symbol));

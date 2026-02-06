@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAIConversation } from '../../context/AIConversationContext';
 import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
 import VoiceButton from '../ui/VoiceButton';
