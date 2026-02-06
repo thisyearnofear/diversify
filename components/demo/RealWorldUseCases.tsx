@@ -54,32 +54,28 @@ export default function RealWorldUseCases({
     : USE_CASES;
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <h2 className="text-lg font-semibold">Real-World Benefits</h2>
-        <span className="text-xs text-gray-500">Based on World Bank data</span>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 mb-6">
+      <div className="flex justify-between items-center mb-4 px-1">
+        <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">Wealth Outcomes</h2>
+        <span className="text-[10px] font-bold text-gray-400 uppercase">WORLD BANK DATA</span>
       </div>
-
-      <p className="text-gray-600 mb-4">
-        Examples of how stablecoin diversification helps protect savings:
-      </p>
 
       <div className="space-y-3">
         {filteredCases.map((useCase, index) => (
           <div
             key={index}
-            className="bg-gray-50 p-3 rounded-md border border-gray-100"
+            className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-50 dark:border-gray-800 hover:border-blue-100 dark:hover:border-blue-900 transition-colors group"
           >
             <div className="flex items-start">
-              <div className="text-2xl mr-3">{useCase.icon}</div>
+              <div className="text-2xl mr-4 group-hover:scale-110 transition-transform duration-300">{useCase.icon}</div>
               <div>
-                <h3 className="font-medium text-gray-900">{useCase.title}</h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight mb-1">{useCase.title}</h3>
+                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 leading-relaxed">
                   {useCase.description}
                 </p>
                 {useCase.region !== "Global" && (
                   <div className="mt-2">
-                    <span className="inline-block text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+                    <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
                       {useCase.region}
                     </span>
                   </div>
@@ -90,13 +86,12 @@ export default function RealWorldUseCases({
         ))}
       </div>
 
-      <div className="mt-4 bg-blue-50 p-3 rounded-md">
-        <h3 className="font-medium text-blue-700 mb-1">Why This Matters</h3>
-        <p className="text-sm text-blue-600">
+      <div className="mt-5 p-4 bg-gray-900 rounded-2xl relative overflow-hidden shadow-xl">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-12 -mt-12" />
+        <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2 relative">WHY IT MATTERS</h3>
+        <p className="text-[11px] font-bold text-white leading-relaxed relative">
           In many emerging markets, local currencies can lose 10-30% of their
-          value in a single year due to inflation and devaluation. Diversifying
-          across stablecoins from different regions provides a practical way to
-          preserve purchasing power.
+          value in a single year. Geographic diversification is the <span className="text-blue-400">ultimate hedge</span>.
         </p>
       </div>
     </div>

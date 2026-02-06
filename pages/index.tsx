@@ -305,6 +305,8 @@ export default function DiversiFiPage() {
             {activeTab === "info" && (
               <InfoTab
                 availableTokens={availableTokens}
+                setActiveTab={setActiveTab}
+                userRegion={userRegion}
               />
             )}
           </ErrorBoundary>

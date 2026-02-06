@@ -1,10 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { Card, CollapsibleSection, TabHeader } from "../shared/TabComponents";
+import { Card } from "../shared/TabComponents";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
-
-const isDev = process.env.NODE_ENV === 'development';
+import InflationVisualizer from "../inflation/InflationVisualizer";
+import RealWorldUseCases from "../demo/RealWorldUseCases";
+import WealthJourneyWidget from "../demo/WealthJourneyWidget";
+import type { Region } from "@/hooks/use-user-region";
 
 interface InfoTabProps {
   availableTokens: Array<{
@@ -12,10 +14,13 @@ interface InfoTabProps {
     name: string;
     region: string;
   }>;
+  setActiveTab: (tab: string) => void;
+  userRegion: Region;
 }
 
-export default function InfoTab({ availableTokens }: InfoTabProps) {
-  const { address, chainId, isMiniPay, formatAddress } = useWalletContext();
+export default function InfoTab({ availableTokens, setActiveTab, userRegion }: InfoTabProps) {
+  const { address, chainId, formatAddress } = useWalletContext();
+  const [showNetworkInfo, setShowNetworkInfo] = useState(false);
 
   // Use ChainDetectionService for all chain checks
   const isCelo = ChainDetectionService.isCelo(chainId);
@@ -30,177 +35,166 @@ export default function InfoTab({ availableTokens }: InfoTabProps) {
   const networkName = ChainDetectionService.getNetworkName(chainId);
 
   return (
-    <div className="space-y-4">
-      {/* Header Card */}
-      <Card>
-        <TabHeader title="About DiversiFi" chainId={chainId} showNetworkSwitcher={false} />
-
-        <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-          DiversiFi helps you protect your wealth from inflation by diversifying across regional stablecoins and real-world assets.
+    <div className="space-y-6">
+      {/* Header & Hero */}
+      <div className="px-1">
+        <h2 className="text-[28px] font-black text-gray-900 dark:text-white leading-tight tracking-tight mb-2">
+          MASTER YOUR <br />
+          <span className="text-blue-600">WEALTH JOURNEY</span>
+        </h2>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-[90%]">
+          DiversiFi helps you protect your savings from inflation by diversifying across regional stablecoins and real-world assets.
         </p>
+      </div>
 
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 rounded-r">
-          <p className="text-sm text-blue-800">
-            <span className="font-medium">What is DiversiFi?</span> A multi-chain platform that enables geographic diversification of your stablecoin holdings to hedge against inflation and economic instability in your region.
-          </p>
+      {/* The Roadmap */}
+      <WealthJourneyWidget 
+        totalValue={address ? 100 : 0} // Simplified logic for demo
+        setActiveTab={setActiveTab}
+        userRegion={userRegion}
+      />
+
+      {/* Interactive Education: Inflation Protection */}
+      <div>
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <div className="size-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center text-lg">🛡️</div>
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Wealth Protection</h3>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Why Diversify?</p>
+          </div>
         </div>
+        
+        <InflationVisualizer 
+          region={userRegion}
+          inflationRate={userRegion === "Africa" ? 15.4 : userRegion === "LatAm" ? 12.2 : 4.5}
+          years={5}
+        />
+      </div>
 
-        {/* Quick Features Grid */}
-        <div className="grid grid-cols-2 gap-2">
+      {/* Use Cases */}
+      <div>
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <div className="size-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-lg">💡</div>
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Practical Applications</h3>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Real-World Benefits</p>
+          </div>
+        </div>
+        <RealWorldUseCases focusRegion={userRegion} />
+      </div>
+
+      {/* Core Capabilities Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        {[
+          { 
+            title: "REGIONAL STABLECOINS", 
+            desc: "Hold digital dollars pegged to local economies (KES, PHP, BRL) to hedge regional risks.",
+            icon: "🌍",
+            color: "blue"
+          },
+          { 
+            title: "REAL-WORLD ASSETS", 
+            desc: "Direct access to tokenized Gold (PAXG) and US Treasuries (USDY) on Arbitrum.",
+            icon: "💎",
+            color: "emerald"
+          }
+        ].map((cap) => (
+          <div key={cap.title} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+            <div className="text-2xl mb-3">{cap.icon}</div>
+            <h4 className="text-[10px] font-black text-gray-900 dark:text-white mb-2 tracking-wider">{cap.title}</h4>
+            <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">{cap.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Simplified How It Works */}
+      <Card>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">The Process</h3>
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">4 EASY STEPS</span>
+        </div>
+        <div className="space-y-4">
           {[
-            { icon: "🌍", label: "Regional Stablecoins", desc: "13+ on Celo" },
-            { icon: "💎", label: "Real-World Assets", desc: "Gold & Treasuries" },
-            { icon: "🛡️", label: "Inflation Protection", desc: "AI-powered" },
-            { icon: "⚡", label: "Multi-Chain", desc: "Celo, Arbitrum, Arc" },
-          ].map((feature) => (
-            <div key={feature.label} className="bg-gray-50 dark:bg-gray-800 p-2 rounded-lg text-center">
-              <span className="text-lg">{feature.icon}</span>
-              <div className="text-xs font-medium text-gray-900 dark:text-gray-100">{feature.label}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">{feature.desc}</div>
+            { step: 1, text: "Connect your wallet via MiniPay or MetaMask", done: !!address },
+            { step: 2, text: "Analyze your local inflation risk profile", done: true },
+            { step: 3, text: "Get AI-powered diversification picks", done: false },
+            { step: 4, text: "Execute swaps or bridge to RWAs", done: false },
+          ].map((item) => (
+            <div key={item.step} className="flex items-center gap-3">
+              <div className={`size-6 rounded-full flex items-center justify-center text-[10px] font-black ${
+                item.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+              }`}>
+                {item.done ? '✓' : item.step}
+              </div>
+              <span className={`text-xs font-medium ${item.done ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
+                {item.text}
+              </span>
             </div>
           ))}
         </div>
-
-        {/* Educational Section */}
-        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Why Geographic Diversification?</h3>
-          <ul className="text-xs text-gray-700 dark:text-gray-300 space-y-1">
-            <li>• Different economies experience different inflation rates</li>
-            <li>• Economic cycles vary by region</li>
-            <li>• Political stability differs across countries</li>
-            <li>• Diversifying across regions reduces risk concentration</li>
-          </ul>
-        </div>
       </Card>
 
-      {/* Collapsible Sections */}
-      <div className="space-y-3">
-        {/* How It Works */}
-        <CollapsibleSection title="How It Works" icon={<span>📋</span>}>
-          <ol className="space-y-2">
-            {[
-              "Connect your wallet (MiniPay or MetaMask)",
-              "View your diversification score",
-              "Get AI-powered recommendations",
-              "Swap stablecoins or bridge to RWAs",
-            ].map((step, idx) => (
-              <li key={idx} className="flex items-center gap-2 text-sm">
-                <span className="w-5 h-5 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center font-bold">
-                  {idx + 1}
-                </span>
-                {step}
-              </li>
-            ))}
-          </ol>
-        </CollapsibleSection>
-
-        {/* Consolidated Network & Wallet Section */}
-        <CollapsibleSection 
-          title="Network & Wallet" 
-          icon={<span>🌐</span>}
-          badge={address && <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full">Connected</span>}
+      {/* Network & Wallet (Minimized) */}
+      <div className="pt-2">
+        <button 
+          onClick={() => setShowNetworkInfo(!showNetworkInfo)}
+          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors"
         >
-          <div className="space-y-4">
-            {/* Current Network & Wallet Info */}
+          <div className="flex items-center gap-2">
+            <span>🌐</span>
+            <span>NETWORK & WALLET INFO</span>
+          </div>
+          <span>{showNetworkInfo ? '−' : '+'}</span>
+        </button>
+
+        {showNetworkInfo && (
+          <div className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
             {address ? (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2">
-                    <span>{isArbitrum ? "🔷" : isCelo ? "🌍" : "⚡"}</span>
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{networkName}</div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">Current Network</div>
-                    </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-gray-400">ACTIVE NETWORK</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="size-2 bg-green-500 rounded-full animate-pulse" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">{networkName}</span>
                   </div>
-                  {isMiniPay && (
-                    <span className="text-xs bg-green-600 dark:bg-green-700 text-white px-2 py-0.5 rounded-full">
-                      MiniPay
-                    </span>
-                  )}
                 </div>
-                <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Wallet Address</span>
-                  <code className="text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 px-2 py-1 rounded border border-gray-200 dark:border-gray-600">{formatAddress(address)}</code>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black text-gray-400">WALLET</span>
+                  <code className="text-[10px] font-mono bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                    {formatAddress(address)}
+                  </code>
                 </div>
               </div>
             ) : (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                  💡 Connect your wallet to see available tokens on your network
-                </p>
-              </div>
+              <p className="text-xs text-center text-gray-500 italic">Connect wallet to view details</p>
             )}
 
-            {/* Available Tokens on Current Network */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                  Available Tokens {address && `(${displayTokens.length})`}
-                </h4>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
+            <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
+              <h4 className="text-[10px] font-black text-gray-400 mb-3 uppercase tracking-tighter">Available Tokens on {networkName}</h4>
+              <div className="flex flex-wrap gap-2">
                 {displayTokens.map((token) => (
                   <div
                     key={token.symbol}
-                    className="p-2 rounded-lg border text-center bg-white dark:bg-gray-800"
+                    className="px-2 py-1 rounded-md border text-[10px] font-bold bg-white dark:bg-gray-900 flex items-center gap-1.5"
                     style={{ borderColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] || "#e5e7eb" }}
                   >
-                    <div className="font-bold text-sm text-gray-900 dark:text-gray-100">{token.symbol}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{token.region}</div>
+                    <span className="size-1.5 rounded-full" style={{ backgroundColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] }} />
+                    {token.symbol}
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Supported Networks */}
-            <div>
-              <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                All Supported Networks
-              </h4>
-              <div className="space-y-2">
-                {[
-                  { name: "Celo", icon: "🌍", status: "Production", color: "green", tokens: "13+ Stablecoins" },
-                  { name: "Arbitrum", icon: "🔷", status: "Production", color: "blue", tokens: "4 RWA Tokens" },
-                  ...(isDev ? [{ name: "Arc Testnet", icon: "⚡", status: "Coming 2026", color: "purple", tokens: "USDC, EURC" }] : []),
-                ].map((network) => {
-                  const isCurrentNetwork = 
-                    (network.name === "Celo" && isCelo) || 
-                    (network.name === "Arbitrum" && isArbitrum) ||
-                    (network.name === "Arc Testnet" && !isCelo && !isArbitrum);
-                  
-                  return (
-                    <div 
-                      key={network.name} 
-                      className={`flex items-center justify-between p-2 rounded-lg border transition-all ${
-                        isCurrentNetwork 
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 shadow-sm' 
-                          : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span>{network.icon}</span>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100 flex items-center gap-1">
-                            {network.name}
-                            {isCurrentNetwork && <span className="text-xs text-blue-600 dark:text-blue-400">✓</span>}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">{network.tokens}</div>
-                        </div>
-                      </div>
-                      <span className={`text-xs ${
-                        network.status === "Production" 
-                          ? "bg-green-600 dark:bg-green-700" 
-                          : "bg-purple-600 dark:bg-purple-700"
-                      } text-white px-2 py-0.5 rounded-full`}>
-                        {network.status}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
           </div>
-        </CollapsibleSection>
+        )}
+      </div>
+
+      {/* Mission Statement */}
+      <div className="text-center px-4 py-8">
+        <div className="text-2xl mb-2 opacity-20">🌍</div>
+        <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] mb-4">OUR MISSION</h3>
+        <p className="text-sm font-medium text-gray-500 leading-relaxed italic">
+          &quot;Democratizing access to global wealth preservation tools for everyone, everywhere.&quot;
+        </p>
       </div>
     </div>
   );

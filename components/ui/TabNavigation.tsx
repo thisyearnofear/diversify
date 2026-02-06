@@ -82,6 +82,7 @@ export default function TabNavigation({
     {
       id: "info",
       label: "Learn",
+      badge: 1, // Add a persistent badge for the update
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -105,7 +106,7 @@ export default function TabNavigation({
     <div className="mb-4">
       <div className="flex bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1">
         {tabs.map((tab) => {
-          const badgeCount = badges[tab.id];
+          const badgeCount = tab.badge || badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
           
           return (
