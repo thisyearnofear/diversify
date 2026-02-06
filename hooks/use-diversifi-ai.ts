@@ -267,6 +267,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     userRegion?: string,
     analysisGoal?: string,
     macroData?: Record<string, any>,
+    networkActivity?: any,
   ) => {
     if (!capabilities.analysis) {
       console.warn('[DiversifiAI] Analysis not available');
@@ -334,6 +335,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           portfolio,
           inflationData,
           macroData,
+          networkActivity,
           goal: analysisGoal || userGoal || config.goal,
           riskTolerance: config.riskTolerance,
           userRegion: userRegion,
@@ -391,6 +393,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     userRegion?: string,
     analysisGoal?: string,
     macroData?: Record<string, any>,
+    networkActivity?: any,
   ) => {
     // Debug: Log the parameters received
     console.log('[useDiversifiAI] analyze called with:', {
@@ -430,7 +433,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       portfolio = userBalanceOrPortfolio;
     }
 
-    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion, analysisGoal, macroData);
+    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion, analysisGoal, macroData, networkActivity);
   }, [analyzePortfolioAI]);
 
   /**

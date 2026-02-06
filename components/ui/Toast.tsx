@@ -1,12 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useCallback, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNetworkActivity } from '../../hooks/use-network-activity';
+
+interface ToastData {
+    cost?: number;
+    sources?: number;
+    [key: string]: unknown;
+}
 
 export const Toast: React.FC<{
     message: string;
     type?: 'success' | 'error' | 'info' | 'warning' | 'ai';
     onClose: () => void;
     duration?: number;
-    data?: ToastData; // For AI-specific data like spending info
+    data?: ToastData;
 }> = ({ message, type = 'info', onClose, duration = 3000, data }) => {
 
     useEffect(() => {
@@ -50,14 +57,7 @@ export const Toast: React.FC<{
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                         </svg>
                     )}
-                    {type === 'warning' && (
-                        <svg className="w-5 h-5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.493-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-4a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clipRule="evenodd" />
-                        </svg>
-                    )}
-                    {type === 'ai' && (
-                        <span className="text-lg">🧠</span>
-                    )}
+                    {type === 'ai' && <span className="text-lg">🧠</span>}
                     <div>
                         <span className="text-sm font-medium">{message}</span>
                         {type === 'ai' && data?.cost && (
@@ -67,10 +67,7 @@ export const Toast: React.FC<{
                         )}
                     </div>
                 </div>
-                <button
-                    onClick={onClose}
-                    className="ml-3 text-gray-400 hover:text-gray-600 transition-colors"
-                >
+                <button onClick={onClose} className="ml-3 text-gray-400 hover:text-gray-600 transition-colors">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
@@ -80,11 +77,11 @@ export const Toast: React.FC<{
     );
 };
 
-interface ToastData {
-    cost?: number;
-    sources?: number;
-    [key: string]: unknown; // Allow additional properties
-}
+export const ToastContext = createContext<{
+    showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning' | 'ai', data?: ToastData) => void
+}>({
+    showToast: () => { }
+});
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [toasts, setToasts] = useState<{
@@ -94,18 +91,36 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         data?: ToastData;
     }[]>([]);
 
-    const showToast = (
+    const { getRandomNudge } = useNetworkActivity();
+
+    const showToast = useCallback((
         message: string,
         type: 'success' | 'error' | 'info' | 'warning' | 'ai' = 'info',
         data?: ToastData
     ) => {
         const id = Date.now();
         setToasts(prev => [...prev, { id, message, type, data }]);
-    };
+    }, []);
 
-    const removeToast = (id: number) => {
+    const removeToast = useCallback((id: number) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
-    };
+    }, []);
+
+    // Periodic Behavioral Nudge
+    useEffect(() => {
+        const interval = setInterval(() => {
+            // Randomly show a nudge every few minutes if no active toasts
+            if (document.visibilityState === 'visible' && Math.random() > 0.5) {
+                setToasts(prev => {
+                    if (prev.length > 0) return prev;
+                    const nudge = getRandomNudge();
+                    return [{ id: Date.now(), message: nudge.message, type: 'info' }];
+                });
+            }
+        }, 180000); // 3 minutes
+
+        return () => clearInterval(interval);
+    }, [getRandomNudge]);
 
     return (
         <ToastContext.Provider value={{ showToast }}>
@@ -125,13 +140,4 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
 };
 
-// Create context
-import { createContext } from 'react';
-
-export const ToastContext = createContext<{
-    showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning' | 'ai', data?: ToastData) => void
-}>({
-    showToast: () => { }
-});
-
-export const useToast = () => React.useContext(ToastContext);
+export const useToast = () => useContext(ToastContext);

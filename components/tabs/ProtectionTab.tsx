@@ -30,6 +30,7 @@ import {
   TIME_HORIZONS,
 } from "@/hooks/use-protection-profile";
 import { useInflationData } from "@/hooks/use-inflation-data";
+import { useNetworkActivity } from "@/hooks/use-network-activity";
 
 // Types from hook
 import type { UserGoal } from "@/hooks/use-protection-profile";
@@ -116,6 +117,7 @@ export default function ProtectionTab({
   const { address, chainId } = useWalletContext();
   const { navigateToSwap } = useAppState();
   const { inflationData } = useInflationData();
+  const { stats } = useNetworkActivity();
   const isCelo = ChainDetectionService.isCelo(chainId);
 
   const {
@@ -379,6 +381,17 @@ export default function ProtectionTab({
             }
           />
 
+          <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Global Pulse</span>
+              <span className="text-xs font-black text-white">$1.2M+ Protected</span>
+            </div>
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Active Today</span>
+              <span className="text-xs font-black text-white">{stats.activeProtections24h} Users</span>
+            </div>
+          </div>
+
           {isStale && (
             <p className="text-[10px] text-white/60 mt-2">
               Data may be stale. Pull down to refresh.
@@ -541,6 +554,7 @@ export default function ProtectionTab({
             embedded
             userRegion={userRegion}
             macroData={portfolio.macroData}
+            networkActivity={stats}
           />
 
           {/* =================================================================

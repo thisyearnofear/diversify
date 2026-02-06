@@ -23,11 +23,13 @@ import ThemeToggle from "../components/ui/ThemeToggle";
 import VoiceButton from "../components/ui/VoiceButton";
 import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
+import { useNetworkActivity } from "../hooks/use-network-activity";
 
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab, guidedTour, exitTour } = useAppState();
   const { showToast } = useToast();
   const { unreadCount, markAsRead } = useAIConversation();
+  const { currentPulse } = useNetworkActivity();
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -199,6 +201,30 @@ export default function DiversiFiPage() {
             />
             <ThemeToggle />
             {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
+          </div>
+        </div>
+
+        {/* Network Pulse Ticker (Virality & FOMO) */}
+        <div className="px-1 mb-2">
+          <div className="bg-gray-50/50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl py-1.5 px-3 flex items-center justify-center overflow-hidden h-8">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPulse.id}
+                initial={{ y: 10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="flex items-center gap-2"
+              >
+                <span className="text-xs">{currentPulse.icon}</span>
+                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                  {currentPulse.message}
+                </span>
+                {currentPulse.priority === 'high' && (
+                  <span className="flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
         </div>
 

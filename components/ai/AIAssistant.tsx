@@ -35,6 +35,8 @@ interface AIAssistantProps {
     governmentEffectiveness: number | null;
     year: number;
   }>;
+  /** Network activity for social proof and behavioral nudges */
+  networkActivity?: any;
 }
 
 export default function AIAssistant({
@@ -47,6 +49,7 @@ export default function AIAssistant({
   aggregatedPortfolio,
   userRegion,
   macroData,
+  networkActivity,
 }: AIAssistantProps) {
   // Use the userRegion prop if provided, otherwise default to Africa
   const effectiveRegion = userRegion || "Africa";
@@ -224,6 +227,7 @@ export default function AIAssistant({
       selectedRegion,
       analysisGoal,
       macroData,
+      networkActivity,
     );
   };
 
