@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDiversifiAI, type AIAdvice } from "../../hooks/use-diversifi-ai";
 import { createEmptyAnalysis } from "../../utils/portfolio-analysis";
+import { useAnimatedCounter } from "../../hooks/use-animated-counter";
 import { useToast } from "../ui/Toast";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import { useInflationData } from "../../hooks/use-inflation-data";
@@ -15,6 +16,16 @@ import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 
 import sdk from "@farcaster/miniapp-sdk";
+
+const KineticSavings = ({ value }: { value: number }) => {
+  const { formattedValue } = useAnimatedCounter({
+    target: value,
+    duration: 1000,
+    easing: "easeOut",
+    decimals: 0,
+  });
+  return <span>${formattedValue}</span>;
+};
 
 interface AIAssistantProps {
   amount: number;
@@ -335,6 +346,23 @@ export default function AIAssistant({
                   <p className="text-sm text-blue-600 font-bold mt-1 truncate">
                     {thinkingStep || "Connecting..."}
                   </p>
+                  {/* Analyst's Log (Kinetic Proof of Work) */}
+                  <div className="mt-2 h-4 overflow-hidden relative">
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={thinkingStep}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="text-[8px] font-mono text-gray-400 uppercase flex items-center gap-1"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-blue-400 animate-ping" />
+                        HIT: {thinkingStep.includes('market') ? 'ALPHA_VANTAGE_v1' : 
+                              thinkingStep.includes('macro') ? 'WORLD_BANK_WGI' : 
+                              thinkingStep.includes('inflation') ? 'IMF_PCPIPCH' : 'DIVERSIFI_ORACLE_v2'}
+                      </motion.span>
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -430,14 +458,10 @@ export default function AIAssistant({
                           />
                         </div>
                         <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
-                          +$
-                          {advice.expectedSavings?.toFixed(0) ||
-                            (advice.comparisonProjection?.oraclePathValue
-                              ? (
-                                  advice.comparisonProjection.oraclePathValue -
-                                  advice.comparisonProjection.currentPathValue
-                                ).toFixed(0)
-                              : (amount * 0.2).toFixed(0))}
+                          +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
+                              ? advice.comparisonProjection.oraclePathValue -
+                                advice.comparisonProjection.currentPathValue
+                              : amount * 0.2)} />
                         </span>
                       </div>
                     </div>
@@ -954,6 +978,23 @@ export default function AIAssistant({
                   <p className="text-sm text-blue-600 font-bold mt-1 bg-blue-50 dark:bg-blue-900/30 px-3 py-1 rounded-full">
                     {thinkingStep || "Connecting to data hub..."}
                   </p>
+                  {/* Analyst's Log (Kinetic Proof of Work) */}
+                  <div className="mt-2 h-4 overflow-hidden relative flex justify-center">
+                    <AnimatePresence mode="wait">
+                      <motion.span
+                        key={thinkingStep}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="text-[8px] font-mono text-gray-400 uppercase flex items-center gap-1"
+                      >
+                        <span className="w-1 h-1 rounded-full bg-blue-400 animate-ping" />
+                        HIT: {thinkingStep.includes('market') ? 'ALPHA_VANTAGE_v1' : 
+                              thinkingStep.includes('macro') ? 'WORLD_BANK_WGI' : 
+                              thinkingStep.includes('inflation') ? 'IMF_PCPIPCH' : 'DIVERSIFI_ORACLE_v2'}
+                      </motion.span>
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -1069,15 +1110,10 @@ export default function AIAssistant({
                         <div className="flex justify-between text-[10px] font-bold">
                           <span className="text-blue-600">Optimized Path</span>
                           <span className="text-green-600">
-                            +$
-                            {advice.expectedSavings?.toFixed(2) ||
-                              (advice.comparisonProjection?.oraclePathValue
-                                ? (
-                                    advice.comparisonProjection
-                                      .oraclePathValue -
-                                    advice.comparisonProjection.currentPathValue
-                                  ).toFixed(2)
-                                : (amount * 0.2).toFixed(2))}
+                            +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
+                                ? advice.comparisonProjection.oraclePathValue -
+                                  advice.comparisonProjection.currentPathValue
+                                : amount * 0.2)} />
                           </span>
                         </div>
                         <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
