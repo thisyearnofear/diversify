@@ -40,6 +40,7 @@ interface AppState {
 interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
   setActiveTab: (tab: string) => void;
   setChainId: (chainId: number | null) => void;
+  setSwapPrefill: (prefill: SwapPrefill | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
   initializeFromStorage: () => void;
@@ -160,6 +161,11 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
   // Set chainId
   const setChainId = useCallback((chainId: number | null) => {
     setState((prev) => ({ ...prev, chainId }));
+  }, []);
+
+  // Set swap prefill
+  const setSwapPrefill = useCallback((swapPrefill: SwapPrefill | null) => {
+    setState((prev) => ({ ...prev, swapPrefill }));
   }, []);
 
   // Set active tab (ENHANCEMENT: tracks visited tabs for tour detection)
@@ -298,6 +304,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     visitedTabs: state.visitedTabs,
     setActiveTab,
     setChainId,
+    setSwapPrefill,
     navigateToSwap,
     clearSwapPrefill,
     initializeFromStorage,

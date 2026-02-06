@@ -12,7 +12,7 @@ import { marketMomentumService, type MarketMomentum } from '../utils/market-mome
 
 export interface NetworkPulse {
     id: string;
-    type: 'social' | 'market' | 'volume' | 'education' | 'sentiment';
+    type: 'social' | 'market' | 'volume' | 'education' | 'sentiment' | 'voice';
     message: string;
     icon: string;
     priority: 'low' | 'medium' | 'high';
@@ -56,6 +56,7 @@ export function useNetworkActivity() {
     });
 
     const [currentPulseIndex, setCurrentPulseIndex] = useState(0);
+    const [overridePulse, setOverridePulse] = useState<NetworkPulse | null>(null);
 
     // 4. Define Pulses with "Honesty Logic"
     const pulses: NetworkPulse[] = useMemo(() => {
@@ -78,7 +79,7 @@ export function useNetworkActivity() {
             list.push({
                 id: 'm3',
                 type: 'volume',
-                message: `Global stablecoin market reached ${capInBillions}B this week`,
+                message: `Global stablecoin market reached $${capInBillions}B this week`,
                 icon: '🏦',
                 priority: 'medium'
             });
@@ -123,7 +124,7 @@ export function useNetworkActivity() {
         const baseNudges: Nudge[] = [
             { message: "Gold reserves on Arbitrum up 15% this week", type: 'market' },
             { message: "Institutional volume for USDY rising", type: 'volume' },
-            { message: `Total global stablecoin supply: ${((globalMomentum?.globalStablecoinCap || 160000000000) / 1000000000).toFixed(0)}B`, type: 'market' },
+            { message: `Total global stablecoin supply: $${((globalMomentum?.globalStablecoinCap || 160000000000) / 1000000000).toFixed(0)}B`, type: 'market' },
             { message: "Sentiment Check: Diversification is high priority right now", type: 'market' }
         ];
 
@@ -136,18 +137,19 @@ export function useNetworkActivity() {
 
     // Auto-cycle the pulse
     useEffect(() => {
-        if (pulses.length === 0) return;
+        if (pulses.length === 0 || overridePulse) return;
         const interval = setInterval(() => {
             setCurrentPulseIndex(prev => (prev + 1) % pulses.length);
         }, 8000);
         return () => clearInterval(interval);
-    }, [pulses.length]);
+    }, [pulses.length, !!overridePulse]);
 
     return {
         stats,
         pulses,
-        currentPulse: pulses[currentPulseIndex] || pulses[0],
+        currentPulse: overridePulse || pulses[currentPulseIndex] || pulses[0],
         nextPulse: () => setCurrentPulseIndex(prev => (prev + 1) % pulses.length),
-        getRandomNudge: () => nudges[Math.floor(Math.random() * nudges.length)]
+        getRandomNudge: () => nudges[Math.floor(Math.random() * nudges.length)],
+        setOverridePulse
     };
 }

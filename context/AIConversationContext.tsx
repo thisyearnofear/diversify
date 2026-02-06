@@ -21,6 +21,10 @@ interface AIConversationContextType {
   // Active conversation metadata
   lastMessageTimestamp: Date | null;
   isConversationActive: boolean;
+
+  // Drawer state
+  isDrawerOpen: boolean;
+  setDrawerOpen: (isOpen: boolean) => void;
 }
 
 const AIConversationContext = createContext<AIConversationContextType | undefined>(undefined);
@@ -57,6 +61,8 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
+
+  const [isDrawerOpen, setDrawerOpen] = useState(false);
 
   // Persist messages to localStorage
   useEffect(() => {
@@ -132,6 +138,8 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     hasUnread,
     lastMessageTimestamp,
     isConversationActive,
+    isDrawerOpen,
+    setDrawerOpen
   };
 
   return (

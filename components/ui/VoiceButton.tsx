@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
+import { useNetworkActivity } from '../../hooks/use-network-activity';
 import { useToast } from './Toast';
 import sdk from '@farcaster/miniapp-sdk';
 
@@ -40,6 +41,7 @@ export default function VoiceButton({
 }: VoiceButtonProps) {
     const { transcribeAudio, capabilities } = useDiversifiAI();
     const { showToast } = useToast();
+    const { setOverridePulse } = useNetworkActivity();
 
     const [recordingState, setRecordingState] = useState<RecordingState>('idle');
     const [isDisabled, setIsDisabled] = useState(false);
@@ -63,7 +65,7 @@ export default function VoiceButton({
 
     // Silence detection parameters
     const SILENCE_THRESHOLD = 0.01;
-    const SILENCE_DURATION = 2000; // 2 seconds of silence to auto-stop
+    const SILENCE_DURATION = 3000; // 3 seconds of silence to auto-stop
 
     // Load disabled state and first visit from localStorage
     useEffect(() => {
@@ -149,8 +151,11 @@ export default function VoiceButton({
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
         }
+        
+        // Clear Ghosting Ticker
+        setOverridePulse(null);
         setVolume(0);
-    }, []);
+    }, [setOverridePulse]);
 
     const startRecording = async () => {
         if (!capabilities.voiceInput) {
@@ -161,6 +166,15 @@ export default function VoiceButton({
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
+
+            // Ghosting Ticker State
+            setOverridePulse({
+                id: 'voice-ghost',
+                type: 'voice',
+                message: 'Listening for your command...',
+                icon: '🎤',
+                priority: 'medium'
+            });
 
             // Initialize Audio Context for visualization and silence detection
             interface AudioContextWindow extends Window {
@@ -231,18 +245,35 @@ export default function VoiceButton({
 
             mediaRecorder.onstop = async () => {
                 setRecordingState('processing');
+                setOverridePulse({
+                    id: 'voice-ghost',
+                    type: 'voice',
+                    message: 'Processing analysis...',
+                    icon: '🧠',
+                    priority: 'medium'
+                });
+
                 try {
                     const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
                     const transcription = await transcribeAudio(audioBlob);
                     if (transcription) {
-                        showToast(`Heard: "${transcription}"`, 'ai');
+                        setOverridePulse({
+                            id: 'voice-ghost',
+                            type: 'voice',
+                            message: `Heard: "${transcription}"`,
+                            icon: '✅',
+                            priority: 'medium'
+                        });
+                        setTimeout(() => setOverridePulse(null), 2000);
                         onTranscription?.(transcription);
                     } else {
                         showToast('Could not understand audio. Try again?', 'error');
+                        setOverridePulse(null);
                     }
                 } catch (err) {
                     console.error('[VoiceButton] Stop error:', err);
                     showToast('Failed to process audio', 'error');
+                    setOverridePulse(null);
                 } finally {
                     setRecordingState('idle');
                 }
@@ -254,6 +285,7 @@ export default function VoiceButton({
         } catch {
             showToast('Microphone access required', 'error');
             setRecordingState('idle');
+            setOverridePulse(null);
         }
     };
 
@@ -297,7 +329,6 @@ export default function VoiceButton({
     };
 
     // Don't render if user disabled it
-    // Note: We check capabilities.voiceInput (renamed from transcription)
     const isVoiceInputAvailable = capabilities.voiceInput;
 
     if (isDisabled) {

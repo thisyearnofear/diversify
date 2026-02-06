@@ -95,6 +95,8 @@ export default function AIAssistant({
   const { showToast } = useToast();
   const { startTour, dismissTour, isTourDismissed } = useAppState();
   const globalConversation = useAIConversationOptional();
+  const setDrawerOpen = globalConversation?.setDrawerOpen;
+  const addUserMessage = globalConversation?.addUserMessage;
   const unreadCount = globalConversation?.unreadCount ?? 0;
   const markAsRead = globalConversation?.markAsRead;
 
@@ -121,13 +123,18 @@ export default function AIAssistant({
   const handleChatSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!chatInput.trim() || isAnalyzing) return;
-    sendMessage(chatInput.trim());
+    
+    // Switch to global drawer for conversation
+    addUserMessage?.(chatInput.trim());
+    setDrawerOpen?.(true);
+    
     setChatInput("");
     setShowChatInput(false);
   };
 
   const handleQuickAsk = (prompt: string) => {
-    sendMessage(prompt);
+    addUserMessage?.(prompt);
+    setDrawerOpen?.(true);
   };
 
   // Initialize AI on mount
@@ -251,13 +258,17 @@ export default function AIAssistant({
         }
       ).hapticFeedback({ type: "selection" });
     } catch {}
-    sendMessage(transcription);
+    
+    // Switch to global drawer for conversation
+    addUserMessage?.(transcription);
+    setDrawerOpen?.(true);
   };
 
   // Listen for voice queries from main page
   useEffect(() => {
     const handleVoiceQuery = (event: CustomEvent) => {
-      sendMessage(event.detail);
+      addUserMessage?.(event.detail);
+      setDrawerOpen?.(true);
     };
 
     window.addEventListener("voiceQuery", handleVoiceQuery as EventListener);

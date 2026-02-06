@@ -24,11 +24,12 @@ import VoiceButton from "../components/ui/VoiceButton";
 import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
 import { useNetworkActivity } from "../hooks/use-network-activity";
+import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, guidedTour, exitTour } = useAppState();
+  const { activeTab, setActiveTab, guidedTour, exitTour, setSwapPrefill } = useAppState();
   const { showToast } = useToast();
-  const { unreadCount, markAsRead } = useAIConversation();
+  const { unreadCount, markAsRead, setDrawerOpen, addUserMessage } = useAIConversation();
   const { currentPulse } = useNetworkActivity();
 
   // Static OG image for consistent social sharing
@@ -158,44 +159,32 @@ export default function DiversiFiPage() {
               size="sm"
               variant="default"
               onTranscription={(text) => {
-                // Handle voice commands globally with user feedback
-                console.log('[Voice] Transcribed:', text);
+                console.log("[Voice] Intent Discovery for:", text);
+                const intent = IntentDiscoveryService.discover(text);
 
-                const query = text.toLowerCase();
-                let targetTab: string | null = null;
-                let tabName = '';
+                switch (intent.type) {
+                  case "NAVIGATE":
+                    showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
+                    setActiveTab(intent.tab);
+                    break;
 
-                // Intent routing
-                if (query.includes('swap') || query.includes('exchange') || query.includes('buy') || query.includes('convert')) {
-                  targetTab = 'swap';
-                  tabName = 'Swap';
-                } else if (query.includes('protect') || query.includes('analyze') || query.includes('advice') || query.includes('score')) {
-                  targetTab = 'protect';
-                  tabName = 'Protection';
-                } else if (query.includes('balance') || query.includes('portfolio') || query.includes('holding') || query.includes('asset')) {
-                  targetTab = 'overview';
-                  tabName = 'Overview';
-                } else if (query.includes('info') || query.includes('learn') || query.includes('help') || query.includes('about')) {
-                  targetTab = 'info';
-                  tabName = 'Info';
-                }
+                  case "SWAP_SHORTCUT":
+                    showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
+                    setSwapPrefill({
+                      fromToken: intent.fromToken,
+                      toToken: intent.toToken,
+                      amount: intent.amount,
+                      reason: `Voice shortcut: "${text}"`
+                    });
+                    setActiveTab("swap");
+                    break;
 
-                // Show feedback to user
-                if (targetTab && targetTab !== activeTab) {
-                  showToast(`"${text}" → Switching to ${tabName}`, 'info');
-                  setActiveTab(targetTab);
-                } else if (targetTab && targetTab === activeTab) {
-                  showToast(`"${text}" → You're already on ${tabName}`, 'info');
-                } else {
-                  // If no navigation intent, switch to protect tab and send to AI
-                  showToast(`"${text}" → Asking AI assistant`, 'info');
-                  setActiveTab('protect');
-                  // Send to AI after a brief delay to allow tab switch
-                  setTimeout(() => {
-                    // Trigger AI analysis with the voice query
-                    const event = new CustomEvent('voiceQuery', { detail: text });
-                    window.dispatchEvent(event);
-                  }, 100);
+                  case "QUERY":
+                  default:
+                    // Open global drawer for questions
+                    addUserMessage(text);
+                    setDrawerOpen(true);
+                    break;
                 }
               }}
             />
