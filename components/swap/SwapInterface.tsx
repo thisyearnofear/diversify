@@ -25,7 +25,7 @@ interface SwapInterfaceProps {
     toToken: string,
     amount: string,
     fromChainId?: number,
-    toChainId?: number
+    toChainId?: number,
   ) => Promise<unknown>;
   title?: string;
   address?: string | null;
@@ -36,7 +36,16 @@ interface SwapInterfaceProps {
 }
 
 const SwapInterface = forwardRef<
-  { refreshBalances: () => void; setTokens: (from: string, to: string, amount?: string) => void },
+  {
+    refreshBalances: () => void;
+    setTokens: (
+      from: string,
+      to: string,
+      amount?: string,
+      fromChainId?: number,
+      toChainId?: number,
+    ) => void;
+  },
   SwapInterfaceProps
 >(function SwapInterface(
   {
@@ -49,25 +58,47 @@ const SwapInterface = forwardRef<
     chainId,
     enableCrossChain = false,
   },
-  ref
+  ref,
 ) {
   const {
-    fromToken, setFromToken,
-    toToken, setToToken,
-    amount, setAmount,
-    slippageTolerance, setSlippageTolerance,
-    fromChainId, setFromChainId,
-    toChainId, setToChainId,
-    status, localError, localTxHash, isLoading, mounted,
-    availableFromTokens, availableToTokens,
-    tokenBalances, expectedOutput,
+    fromToken,
+    setFromToken,
+    toToken,
+    setToToken,
+    amount,
+    setAmount,
+    slippageTolerance,
+    setSlippageTolerance,
+    fromChainId,
+    setFromChainId,
+    toChainId,
+    setToChainId,
+    status,
+    localError,
+    localTxHash,
+    isLoading,
+    mounted,
+    availableFromTokens,
+    availableToTokens,
+    tokenBalances,
+    expectedOutput,
     inflationDataSource,
-    fromTokenInflationRate, toTokenInflationRate, fromTokenRegion, toTokenRegion,
-    inflationDifference, hasInflationBenefit,
-    handleSwitchTokens, executeSwap, refreshBalances
+    fromTokenInflationRate,
+    toTokenInflationRate,
+    fromTokenRegion,
+    toTokenRegion,
+    inflationDifference,
+    hasInflationBenefit,
+    handleSwitchTokens,
+    executeSwap,
+    refreshBalances,
   } = useSwapController({
-    address, chainId, availableTokens, enableCrossChain,
-    preferredFromRegion, preferredToRegion
+    address,
+    chainId,
+    availableTokens,
+    enableCrossChain,
+    preferredFromRegion,
+    preferredToRegion,
   });
 
   // Expose methods to parent
@@ -76,12 +107,26 @@ const SwapInterface = forwardRef<
       console.log("Refreshing token balances from SwapInterface");
       refreshBalances();
     },
-    setTokens: (from: string, to: string, inputAmount?: string) => {
-      console.log(`[SwapInterface] Setting tokens: ${from} → ${to}, amount: ${inputAmount}`);
-      const fromExists = availableTokens.some(t => t.symbol.toUpperCase() === from.toUpperCase());
-      const toExists = availableTokens.some(t => t.symbol.toUpperCase() === to.toUpperCase());
-      if (fromExists) setFromToken(from.toUpperCase());
-      if (toExists) setToToken(to.toUpperCase());
+    setTokens: (
+      from: string,
+      to: string,
+      inputAmount?: string,
+      fromChain?: number,
+      toChain?: number,
+    ) => {
+      console.log(
+        `[SwapInterface] Setting tokens: ${from} → ${to}, amount: ${inputAmount}, chains: ${fromChain}→${toChain}`,
+      );
+
+      if (fromChain) setFromChainId(fromChain);
+      if (toChain) setToChainId(toChain);
+
+      // Directly set tokens to support cross-chain prefilling where tokens might
+      // not be in the current chain's availableTokens list.
+      // useSwapController will validate/reset these if invalid for the selected chain.
+      setFromToken(from.toUpperCase());
+      setToToken(to.toUpperCase());
+
       if (inputAmount) setAmount(inputAmount);
     },
   }));
@@ -98,7 +143,9 @@ const SwapInterface = forwardRef<
       )}
       <div className="relative">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">{title}</h3>
+          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
+            {title}
+          </h3>
           {inflationDataSource === "api" && (
             <span className="text-[10px] bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
               Live Data
@@ -110,7 +157,9 @@ const SwapInterface = forwardRef<
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-blue-600 dark:text-blue-400">🌉</span>
-              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Cross-Chain Bridge</span>
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                Cross-Chain Bridge
+              </span>
               {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
                 <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
                   Bridge Required
@@ -146,7 +195,7 @@ const SwapInterface = forwardRef<
         <SwapAIInsight
           toToken={toToken}
           inflationDifference={inflationDifference}
-          onAskAI={() => console.log('AI insight requested')}
+          onAskAI={() => console.log("AI insight requested")}
         />
 
         <div className="space-y-3">
@@ -168,14 +217,24 @@ const SwapInterface = forwardRef<
           <div className="flex justify-center my-2">
             <button
               onClick={handleSwitchTokens}
-              className={`p-3 rounded-full transition-colors shadow-md ${fromTokenRegion && toTokenRegion
-                ? `bg-gradient-to-b from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-gray-200`
-                : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
-                }`}
+              className={`p-3 rounded-full transition-colors shadow-md ${
+                fromTokenRegion && toTokenRegion
+                  ? `bg-gradient-to-b from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-gray-200`
+                  : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
+              }`}
               disabled={isLoading}
               aria-label="Switch tokens"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="size-7 text-gray-800" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="size-7 text-gray-800"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <polyline points="19 12 12 19 5 12"></polyline>
               </svg>
@@ -216,8 +275,17 @@ const SwapInterface = forwardRef<
 
           <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
             <label className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-1.5 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="size-4 mr-1 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1v-3a1 1 0 00-1-1z" clipRule="evenodd" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="size-4 mr-1 text-gray-700"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1v-3a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
               </svg>
               Slippage Tolerance
             </label>
@@ -226,10 +294,11 @@ const SwapInterface = forwardRef<
                 <button
                   key={tolerance}
                   onClick={() => setSlippageTolerance(tolerance)}
-                  className={`px-3 py-1.5 text-xs rounded-md shadow-md ${slippageTolerance === tolerance
-                    ? `bg-blue-600 text-white border-2 border-blue-700 font-bold`
-                    : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-                    }`}
+                  className={`px-3 py-1.5 text-xs rounded-md shadow-md ${
+                    slippageTolerance === tolerance
+                      ? `bg-blue-600 text-white border-2 border-blue-700 font-bold`
+                      : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`}
                   disabled={isLoading}
                 >
                   {tolerance}%
@@ -252,7 +321,12 @@ const SwapInterface = forwardRef<
             toToken={toToken}
             fromTokenRegion={fromTokenRegion}
             toTokenRegion={toTokenRegion}
-            disabled={!address || fromToken === toToken || !amount || parseFloat(amount) <= 0}
+            disabled={
+              !address ||
+              fromToken === toToken ||
+              !amount ||
+              parseFloat(amount) <= 0
+            }
             onClick={() => executeSwap(onSwap)}
           />
         </div>

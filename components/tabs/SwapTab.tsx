@@ -68,7 +68,13 @@ export default function SwapTab({
 
   const swapInterfaceRef = useRef<{
     refreshBalances: () => void;
-    setTokens: (from: string, to: string, amount?: string) => void;
+    setTokens: (
+      from: string,
+      to: string,
+      amount?: string,
+      fromChainId?: number,
+      toChainId?: number,
+    ) => void;
   }>(null);
 
   // Get multichain balances for the header
@@ -96,7 +102,7 @@ export default function SwapTab({
       // Also refresh multichain data
       await refreshMultichain();
     },
-    [refreshBalances, refreshMultichain]
+    [refreshBalances, refreshMultichain],
   );
 
   // Fetch tradeable tokens from Mento
@@ -122,11 +128,23 @@ export default function SwapTab({
 
     const combined = [...filtered, ...essentials];
 
-    console.log("[SwapTab] Network tokens:", networkTokens.map(t => t.symbol));
+    console.log(
+      "[SwapTab] Network tokens:",
+      networkTokens.map((t) => t.symbol),
+    );
     console.log("[SwapTab] Tradeable symbols from Mento:", tradeableSymbols);
-    console.log("[SwapTab] Filtered tokens:", filtered.map(t => t.symbol));
-    console.log("[SwapTab] Essential tokens added:", essentials.map(t => t.symbol));
-    console.log("[SwapTab] Final tradeable tokens:", combined.map(t => t.symbol));
+    console.log(
+      "[SwapTab] Filtered tokens:",
+      filtered.map((t) => t.symbol),
+    );
+    console.log(
+      "[SwapTab] Essential tokens added:",
+      essentials.map((t) => t.symbol),
+    );
+    console.log(
+      "[SwapTab] Final tradeable tokens:",
+      combined.map((t) => t.symbol),
+    );
 
     return combined;
   }, [networkTokens, tradeableSymbols]);
@@ -150,6 +168,8 @@ export default function SwapTab({
         swapPrefill.fromToken || "USDm",
         swapPrefill.toToken || "EURm",
         swapPrefill.amount,
+        swapPrefill.fromChainId,
+        swapPrefill.toChainId,
       );
       if (swapPrefill.reason) {
         setAiRecommendationReason(swapPrefill.reason);
@@ -227,7 +247,7 @@ export default function SwapTab({
 
   // Prepare chain data for the header
   const chainBalancesData = useMemo(() => {
-    return chains.map(chain => ({
+    return chains.map((chain) => ({
       chainId: chain.chainId,
       chainName: chain.chainName,
       totalValue: chain.totalValue,
@@ -328,17 +348,19 @@ export default function SwapTab({
 
             {swapStatus && (
               <div
-                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${swapStatus.includes("Error")
-                  ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
-                  : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
-                  }`}
+                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${
+                  swapStatus.includes("Error")
+                    ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
+                    : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
+                }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div
-                    className={`size-2 rounded-full ${swapStatus.includes("Error")
-                      ? "bg-red-500"
-                      : "bg-green-500 animate-pulse"
-                      }`}
+                    className={`size-2 rounded-full ${
+                      swapStatus.includes("Error")
+                        ? "bg-red-500"
+                        : "bg-green-500 animate-pulse"
+                    }`}
                   />
                   <span className="text-xs font-black uppercase tracking-tight">
                     {swapStatus}

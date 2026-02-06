@@ -20,9 +20,15 @@ import {
   HeroValue,
 } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
+import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import WalletButton from "../wallet/WalletButton";
 import { useAppState } from "@/context/AppStateContext";
-import { useProtectionProfile, USER_GOALS, RISK_LEVELS, TIME_HORIZONS } from "@/hooks/use-protection-profile";
+import {
+  useProtectionProfile,
+  USER_GOALS,
+  RISK_LEVELS,
+  TIME_HORIZONS,
+} from "@/hooks/use-protection-profile";
 
 // Types from hook
 import type { UserGoal } from "@/hooks/use-protection-profile";
@@ -41,14 +47,15 @@ const RWA_ASSETS = [
     benefits: [
       "~5% APY auto-accruing",
       "No KYC required",
-      "Deep DEX liquidity ($10M+)"
+      "Deep DEX liquidity ($10M+)",
     ],
     gradient: "from-green-600 to-emerald-700",
     icon: "📈",
     textColor: "text-green-700",
     bgColor: "bg-green-100",
     expectedSlippage: "0.5%",
-    yieldTooltip: "Your USDY balance grows automatically at ~5% APY. Just hold it in your wallet—no claiming needed. The yield accrues continuously and compounds automatically.",
+    yieldTooltip:
+      "Your USDY balance grows automatically at ~5% APY. Just hold it in your wallet—no claiming needed. The yield accrues continuously and compounds automatically.",
   },
   {
     symbol: "PAXG",
@@ -65,7 +72,8 @@ const RWA_ASSETS = [
     icon: "🏆",
     textColor: "text-amber-700",
     bgColor: "bg-amber-100",
-    yieldTooltip: "PAXG tracks the price of physical gold. No yield—it's a store of value that protects against currency debasement and inflation over time.",
+    yieldTooltip:
+      "PAXG tracks the price of physical gold. No yield—it's a store of value that protects against currency debasement and inflation over time.",
   },
   {
     symbol: "SYRUPUSDC",
@@ -73,17 +81,14 @@ const RWA_ASSETS = [
     label: "Syrup USDC",
     description:
       "Yield-bearing USDC from Syrup Finance powered by Morpho. Earn passive yield on your USDC holdings.",
-    benefits: [
-      "~4.5% APY",
-      "Morpho-powered lending",
-      "Auto-compounding"
-    ],
+    benefits: ["~4.5% APY", "Morpho-powered lending", "Auto-compounding"],
     gradient: "from-purple-500 to-indigo-600",
     icon: "🍯",
     textColor: "text-purple-700",
     bgColor: "bg-purple-100",
     expectedSlippage: "0.3%",
-    yieldTooltip: "Your SYRUPUSDC balance increases automatically at ~4.5% APY from Morpho lending markets. Just hold it—yield accrues automatically with no action needed.",
+    yieldTooltip:
+      "Your SYRUPUSDC balance increases automatically at ~4.5% APY from Morpho lending markets. Just hold it—yield accrues automatically with no action needed.",
   },
 ];
 
@@ -158,7 +163,10 @@ export default function ProtectionTab({
 
   const currentAllocations = useMemo(() => {
     return Object.fromEntries(
-      displayRegionData.map((item) => [item.region, (item.usdValue || item.value) / displayTotalValue])
+      displayRegionData.map((item) => [
+        item.region,
+        (item.usdValue || item.value) / displayTotalValue,
+      ]),
     );
   }, [displayRegionData, displayTotalValue]);
 
@@ -179,28 +187,79 @@ export default function ProtectionTab({
     const sourceToken = fromToken || getBestFromToken(targetToken);
     const swapAmount = amount || getSwapAmount(sourceToken);
 
+    // Find source chain from balances
+    const sourceTokenObj = chains
+      .flatMap((c) => c.balances)
+      .find((t) => t.symbol === sourceToken && t.value > 0);
+
+    const fromChainId = sourceTokenObj?.chainId;
+
+    // Determine target chain based on asset availability
+    let toChainId: number | undefined;
+
+    // 1. Try to find on same chain (avoid bridging)
+    if (fromChainId && NETWORK_TOKENS[fromChainId]?.includes(targetToken)) {
+      toChainId = fromChainId;
+    } else {
+      // 2. Find any chain that supports this token, preferring Mainnets
+      const PREFERRED_CHAINS = [
+        NETWORKS.CELO_MAINNET.chainId,
+        NETWORKS.ARBITRUM_ONE.chainId,
+      ];
+
+      // Check preferred chains first
+      for (const chainId of PREFERRED_CHAINS) {
+        if (NETWORK_TOKENS[chainId]?.includes(targetToken)) {
+          toChainId = chainId;
+          break;
+        }
+      }
+
+      // Fallback to any chain if not found in preferred
+      if (!toChainId) {
+        for (const [chainIdStr, tokens] of Object.entries(NETWORK_TOKENS)) {
+          if (tokens.includes(targetToken)) {
+            toChainId = Number(chainIdStr);
+            break;
+          }
+        }
+      }
+    }
+
     navigateToSwap({
       fromToken: sourceToken,
       toToken: targetToken,
       amount: swapAmount,
       reason: `Swap to ${targetToken} for ${currentGoalLabel}`,
+      fromChainId,
+      toChainId,
     });
   };
 
   const getBestFromToken = (targetToken: string): string => {
     // Get all tokens with balances across chains
-    const allTokens = chains.flatMap(c => c.balances);
+    const allTokens = chains.flatMap((c) => c.balances);
     const tokensWithBalances = allTokens
-      .filter(t => t.value > 0)
+      .filter((t) => t.value > 0)
       .sort((a, b) => b.value - a.value);
 
     if (tokensWithBalances.length === 0) return "USDC";
 
     // For gold, prefer high-inflation regional tokens
     if (targetToken === "PAXG") {
-      const highInflationTokens = ["KESm", "COPm", "ZARm", "BRLm", "XOFm", "GHSm", "NGNm"];
+      const highInflationTokens = [
+        "KESm",
+        "COPm",
+        "ZARm",
+        "BRLm",
+        "XOFm",
+        "GHSm",
+        "NGNm",
+      ];
       const foundHighInflation = tokensWithBalances.find((t) =>
-        highInflationTokens.some(hit => t.symbol.toUpperCase().includes(hit.toUpperCase())),
+        highInflationTokens.some((hit) =>
+          t.symbol.toUpperCase().includes(hit.toUpperCase()),
+        ),
       );
       if (foundHighInflation) return foundHighInflation.symbol;
     }
@@ -214,12 +273,13 @@ export default function ProtectionTab({
   const getSwapAmount = (fromToken: string): string => {
     // Find token across all chains
     const token = chains
-      .flatMap(c => c.balances)
-      .find(t => t.symbol === fromToken);
+      .flatMap((c) => c.balances)
+      .find((t) => t.symbol === fromToken);
 
     const balance = token?.value || 0;
     if (balance <= 0) return "10";
-    const percentage = config.userGoal === 'geographic_diversification' ? 0.25 : 0.5;
+    const percentage =
+      config.userGoal === "geographic_diversification" ? 0.25 : 0.5;
     return (balance * percentage).toFixed(2);
   };
 
@@ -300,9 +360,11 @@ export default function ProtectionTab({
 
           <HeroValue
             value={`$${displayTotalValue.toFixed(0)}`}
-            label={isMultichainLoading
-              ? "Loading multichain data..."
-              : `Protected across ${displayChainCount} chain${displayChainCount !== 1 ? 's' : ''}`}
+            label={
+              isMultichainLoading
+                ? "Loading multichain data..."
+                : `Protected across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`
+            }
           />
 
           {isStale && (
@@ -317,7 +379,7 @@ export default function ProtectionTab({
               PROFILE SETUP FLOW (3 Steps)
               ================================================================= */}
           <AnimatePresence mode="wait">
-            {profileMode === 'editing' && (
+            {profileMode === "editing" && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -336,13 +398,13 @@ export default function ProtectionTab({
                     canProceed={!!config.userGoal}
                   >
                     <QuickSelect
-                      options={USER_GOALS.map(g => ({
+                      options={USER_GOALS.map((g) => ({
                         value: g.value,
                         label: g.label,
                         icon: g.icon,
                         description: g.description,
                       }))}
-                      value={config.userGoal || 'exploring'}
+                      value={config.userGoal || "exploring"}
                       onChange={(v) => setUserGoal(v as UserGoal)}
                     />
                   </StepCard>
@@ -359,13 +421,17 @@ export default function ProtectionTab({
                     canProceed={!!config.riskTolerance}
                   >
                     <QuickSelect
-                      options={RISK_LEVELS.map(r => ({
+                      options={RISK_LEVELS.map((r) => ({
                         value: r.value,
                         label: r.label,
                         icon: r.icon,
                       }))}
-                      value={config.riskTolerance || 'Balanced'}
-                      onChange={(v) => setRiskTolerance(v as 'Conservative' | 'Balanced' | 'Aggressive')}
+                      value={config.riskTolerance || "Balanced"}
+                      onChange={(v) =>
+                        setRiskTolerance(
+                          v as "Conservative" | "Balanced" | "Aggressive",
+                        )
+                      }
                       columns={3}
                     />
                   </StepCard>
@@ -383,13 +449,15 @@ export default function ProtectionTab({
                     canProceed={!!config.timeHorizon}
                   >
                     <QuickSelect
-                      options={TIME_HORIZONS.map(t => ({
+                      options={TIME_HORIZONS.map((t) => ({
                         value: t.value,
                         label: t.label,
                         description: t.description,
                       }))}
-                      value={config.timeHorizon || '3 months'}
-                      onChange={(v) => setTimeHorizon(v as '1 month' | '3 months' | '1 year')}
+                      value={config.timeHorizon || "3 months"}
+                      onChange={(v) =>
+                        setTimeHorizon(v as "1 month" | "3 months" | "1 year")
+                      }
                       columns={3}
                     />
                   </StepCard>
@@ -401,7 +469,7 @@ export default function ProtectionTab({
           {/* =================================================================
               PROFILE SUMMARY (shown when complete)
               ================================================================= */}
-          {profileMode === 'complete' && (
+          {profileMode === "complete" && (
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -456,7 +524,7 @@ export default function ProtectionTab({
               ================================================================= */}
           <AIAssistant
             amount={displayTotalValue || 0}
-            holdings={chains.flatMap(c => c.balances.map(b => b.symbol))}
+            holdings={chains.flatMap((c) => c.balances.map((b) => b.symbol))}
             onExecute={handleExecuteSwap}
             embedded
             userRegion={userRegion}
@@ -470,7 +538,7 @@ export default function ProtectionTab({
               score={Math.round(
                 (liveAnalysis.diversificationScore +
                   (100 - liveAnalysis.weightedInflationRisk * 5)) /
-                2,
+                  2,
               )}
               factors={[
                 {
@@ -491,7 +559,7 @@ export default function ProtectionTab({
                 {
                   label: "Chain Diversification",
                   value: displayChainCount > 1 ? 90 : 60,
-                  status: `${displayChainCount} chain${displayChainCount !== 1 ? 's' : ''}`,
+                  status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`,
                   icon: "🔗",
                 },
                 {
@@ -502,7 +570,10 @@ export default function ProtectionTab({
                 },
                 {
                   label: "Inflation Risk",
-                  value: Math.max(0, 100 - liveAnalysis.weightedInflationRisk * 10),
+                  value: Math.max(
+                    0,
+                    100 - liveAnalysis.weightedInflationRisk * 10,
+                  ),
                   status: `${liveAnalysis.weightedInflationRisk.toFixed(1)}% weighted`,
                   icon: "🛡️",
                 },
@@ -517,10 +588,10 @@ export default function ProtectionTab({
           RWA ASSET CARDS
           ===================================================================== */}
       {RWA_ASSETS.map((asset) => {
-        const hasAsset = chains.some(chain =>
-          chain.balances.some(b => b.symbol === asset.symbol)
+        const hasAsset = chains.some((chain) =>
+          chain.balances.some((b) => b.symbol === asset.symbol),
         );
-        const showCard = !hasAsset || config.userGoal === 'rwa_access';
+        const showCard = !hasAsset || config.userGoal === "rwa_access";
 
         if (!showCard) return null;
 
@@ -605,7 +676,7 @@ export default function ProtectionTab({
       {liveAnalysis && liveAnalysis.rebalancingOpportunities.length > 1 && (
         <CollapsibleSection
           title={
-            config.userGoal === 'geographic_diversification'
+            config.userGoal === "geographic_diversification"
               ? "Diversification Options"
               : "More Opportunities"
           }
@@ -620,7 +691,7 @@ export default function ProtectionTab({
           <div className="space-y-2">
             {liveAnalysis.rebalancingOpportunities
               .filter((opp) => {
-                if (config.userGoal !== 'geographic_diversification')
+                if (config.userGoal !== "geographic_diversification")
                   return true;
                 return (
                   opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion
@@ -640,7 +711,7 @@ export default function ProtectionTab({
                     <span className="text-xs font-bold text-blue-600">
                       {opp.toToken}
                     </span>
-                    {config.userGoal === 'geographic_diversification' &&
+                    {config.userGoal === "geographic_diversification" &&
                       opp.fromRegion !== opp.toRegion && (
                         <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
                           +region
@@ -678,18 +749,18 @@ export default function ProtectionTab({
           defaultOpen={false}
           badge={
             <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
-              {displayChainCount} Chain{displayChainCount !== 1 ? 's' : ''}
+              {displayChainCount} Chain{displayChainCount !== 1 ? "s" : ""}
             </span>
           }
         >
           <MultichainPortfolioBreakdown
-            regionData={displayRegionData.map(r => ({
+            regionData={displayRegionData.map((r) => ({
               region: r.region,
               value: r.value,
-              color: r.color
+              color: r.color,
             }))}
             totalValue={displayTotalValue}
-            chainBreakdown={chains.map(c => ({
+            chainBreakdown={chains.map((c) => ({
               chainId: c.chainId,
               chainName: c.chainName,
               totalValue: c.totalValue,
@@ -708,7 +779,7 @@ export default function ProtectionTab({
         <div className="space-y-4">
           <GoalBasedStrategies
             userRegion={userRegion}
-            onSelectStrategy={onSelectStrategy || (() => { })}
+            onSelectStrategy={onSelectStrategy || (() => {})}
           />
         </div>
       </CollapsibleSection>

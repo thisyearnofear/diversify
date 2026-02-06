@@ -1,13 +1,13 @@
 /**
  * Unified Multichain Balance Hook
- * 
+ *
  * Production-focused: Arbitrum + Celo only
  * Fetches balances from both chains in parallel
  * Returns accurate chain count, region data, and total value
  */
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ethers } from 'ethers';
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { ethers } from "ethers";
 import {
   getTokenAddresses,
   ABIS,
@@ -17,10 +17,13 @@ import {
   NETWORK_TOKENS,
   type AssetRegion,
   REGION_COLORS,
-} from '../config';
-import { executeMulticall, type ContractCall } from '../utils/multicall';
-import { analyzePortfolio, type PortfolioAnalysis } from '../utils/portfolio-analysis';
-import { useInflationData } from './use-inflation-data';
+} from "../config";
+import { executeMulticall, type ContractCall } from "../utils/multicall";
+import {
+  analyzePortfolio,
+  type PortfolioAnalysis,
+} from "../utils/portfolio-analysis";
+import { useInflationData } from "./use-inflation-data";
 
 // ============================================================================
 // TYPES
@@ -52,7 +55,12 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
   chains: ChainBalance[];
   allTokens: TokenBalance[];
   tokenMap: Record<string, TokenBalance>;
-  regionData: Array<{ region: AssetRegion; value: number; color: string; usdValue: number }>;
+  regionData: Array<{
+    region: AssetRegion;
+    value: number;
+    color: string;
+    usdValue: number;
+  }>;
   isLoading: boolean;
   isStale: boolean;
   errors: string[];
@@ -63,39 +71,41 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
 // CONFIGURATION - Production Chains Only
 // ============================================================================
 
-const isDev = process.env.NODE_ENV === 'development';
+const isDev = process.env.NODE_ENV === "development";
 const PRODUCTION_CHAINS = [
-  { chainId: NETWORKS.CELO_MAINNET.chainId, name: 'Celo', rpcUrl: NETWORKS.CELO_MAINNET.rpcUrl },
-  { chainId: NETWORKS.ARBITRUM_ONE.chainId, name: 'Arbitrum', rpcUrl: NETWORKS.ARBITRUM_ONE.rpcUrl },
-  ...(isDev ? [{ chainId: NETWORKS.ARC_TESTNET.chainId, name: 'Arc Testnet', rpcUrl: NETWORKS.ARC_TESTNET.rpcUrl }] : []),
+  {
+    chainId: NETWORKS.CELO_MAINNET.chainId,
+    name: "Celo",
+    rpcUrl: NETWORKS.CELO_MAINNET.rpcUrl,
+  },
+  {
+    chainId: NETWORKS.ARBITRUM_ONE.chainId,
+    name: "Arbitrum",
+    rpcUrl: NETWORKS.ARBITRUM_ONE.rpcUrl,
+  },
+  ...(isDev
+    ? [
+        {
+          chainId: NETWORKS.ARC_TESTNET.chainId,
+          name: "Arc Testnet",
+          rpcUrl: NETWORKS.ARC_TESTNET.rpcUrl,
+        },
+      ]
+    : []),
 ] as const;
 
 // Helper function to normalize region names
 function normalizeRegion(region: string): AssetRegion {
   const legacyMap: Record<string, string> = {
-    'GLOBAL': 'Global',
-    'EUROPE': 'Europe',
-    'AFRICA': 'Africa',
-    'ASIA': 'Asia',
-    'LATAM': 'LatAm',
-    'COMMODITIES': 'Commodities',
-    'USA': 'USA',
+    GLOBAL: "Global",
+    EUROPE: "Europe",
+    AFRICA: "Africa",
+    ASIA: "Asia",
+    LATAM: "LatAm",
+    COMMODITIES: "Commodities",
+    USA: "USA",
   };
   return (legacyMap[region] || region) as AssetRegion;
-}
-
-// Calculate diversification score (0-100)
-function calculateDiversificationScore(chains: ChainBalance[]): number {
-  if (chains.length === 0) return 0;
-  const allTokens = chains.flatMap(c => c.balances);
-  const uniqueHoldings = new Set(allTokens.map(t => t.symbol));
-  const uniqueRegions = new Set(allTokens.map(t => t.region));
-
-  const chainScore = Math.min(30, chains.length * 15);
-  const tokenScore = Math.min(40, uniqueHoldings.size * 8);
-  const regionScore = Math.min(30, uniqueRegions.size * 10);
-
-  return chainScore + tokenScore + regionScore;
 }
 
 const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
@@ -135,7 +145,11 @@ function getCachedBalance(address: string, chainId: number): CacheEntry | null {
   }
 }
 
-function setCachedBalance(address: string, chainId: number, data: ChainBalance): void {
+function setCachedBalance(
+  address: string,
+  chainId: number,
+  data: ChainBalance,
+): void {
   try {
     const key = getCacheKey(address, chainId);
     const entry: CacheEntry = { data, timestamp: Date.now() };
@@ -147,7 +161,7 @@ function setCachedBalance(address: string, chainId: number, data: ChainBalance):
 
 function clearAllCachedBalances(address: string): void {
   try {
-    PRODUCTION_CHAINS.forEach(chain => {
+    PRODUCTION_CHAINS.forEach((chain) => {
       localStorage.removeItem(getCacheKey(address, chain.chainId));
     });
   } catch {
@@ -161,7 +175,7 @@ function clearAllCachedBalances(address: string): void {
 
 async function fetchChainBalances(
   address: string,
-  chain: typeof PRODUCTION_CHAINS[number]
+  chain: (typeof PRODUCTION_CHAINS)[number],
 ): Promise<ChainBalance> {
   const provider = new ethers.providers.JsonRpcProvider(chain.rpcUrl);
   const tokensToFetch = NETWORK_TOKENS[chain.chainId] || [];
@@ -181,7 +195,7 @@ async function fetchChainBalances(
   const calls: ContractCall[] = [];
   const tokenInfoList: Array<{
     symbol: string;
-    metadata: typeof TOKEN_METADATA[string];
+    metadata: (typeof TOKEN_METADATA)[string];
     exchangeRate: number;
   }> = [];
 
@@ -194,18 +208,22 @@ async function fetchChainBalances(
     calls.push({
       address: tokenAddress,
       abi: ABIS.ERC20,
-      method: 'balanceOf',
+      method: "balanceOf",
       params: [address],
     });
 
     const metadata = TOKEN_METADATA[symbol] ||
       TOKEN_METADATA[symbol.toUpperCase()] ||
-      TOKEN_METADATA[symbol.toLowerCase()] ||
-      { name: symbol, region: 'Global' as AssetRegion };
+      TOKEN_METADATA[symbol.toLowerCase()] || {
+        name: symbol,
+        region: "Global" as AssetRegion,
+      };
 
-    const exchangeRate = EXCHANGE_RATES[symbol] ||
+    const exchangeRate =
+      EXCHANGE_RATES[symbol] ||
       EXCHANGE_RATES[symbol.toUpperCase()] ||
-      EXCHANGE_RATES[symbol.toLowerCase()] || 1;
+      EXCHANGE_RATES[symbol.toLowerCase()] ||
+      1;
 
     tokenInfoList.push({ symbol, metadata, exchangeRate });
   }
@@ -234,7 +252,7 @@ async function fetchChainBalances(
         balance: balance.toString(),
         formattedBalance: formattedBalance.slice(0, 10), // Limit precision
         value,
-        region: normalizeRegion(metadata.region || 'Global'),
+        region: normalizeRegion(metadata.region || "Global"),
         chainId: chain.chainId,
         chainName: chain.name,
       });
@@ -260,7 +278,7 @@ async function fetchChainBalances(
       tokenCount: 0,
       balances: [],
       isLoading: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -271,37 +289,51 @@ async function fetchChainBalances(
 
 export function useMultichainBalances(address: string | undefined | null) {
   const { inflationData } = useInflationData();
-  const [chainBalances, setChainBalances] = useState<Record<number, ChainBalance>>({});
+  const [chainBalances, setChainBalances] = useState<
+    Record<number, ChainBalance>
+  >({});
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
   const fetchIdRef = useRef(0);
 
   // Aggregate data across all chains
   const portfolio = useMemo<MultichainPortfolio>(() => {
-    const activeChains = Object.values(chainBalances).filter(c => c.totalValue > 0);
-    const allTokens = activeChains.flatMap(c => c.balances);
+    const activeChains = Object.values(chainBalances).filter(
+      (c) => c.totalValue > 0,
+    );
+    const allTokens = activeChains.flatMap((c) => c.balances);
 
     // Calculate region totals
-    const regionTotals: Record<AssetRegion, number> = {} as Record<AssetRegion, number>;
-    allTokens.forEach(token => {
-      regionTotals[token.region] = (regionTotals[token.region] || 0) + token.value;
+    const regionTotals: Record<AssetRegion, number> = {} as Record<
+      AssetRegion,
+      number
+    >;
+    allTokens.forEach((token) => {
+      regionTotals[token.region] =
+        (regionTotals[token.region] || 0) + token.value;
     });
 
     const totalValue = activeChains.reduce((sum, c) => sum + c.totalValue, 0);
 
     // Build region data with percentages
-    const regionData = Object.entries(regionTotals).map(([region, usdValue]) => ({
-      region: region as AssetRegion,
-      value: usdValue,
-      color: REGION_COLORS[region as AssetRegion] || '#CBD5E0',
-      usdValue,
-    })).sort((a, b) => b.usdValue - a.usdValue);
+    const regionData = Object.entries(regionTotals)
+      .map(([region, usdValue]) => ({
+        region: region as AssetRegion,
+        value: usdValue,
+        color: REGION_COLORS[region as AssetRegion] || "#CBD5E0",
+        usdValue,
+      }))
+      .sort((a, b) => b.usdValue - a.usdValue);
 
     // Build token map for fast lookup
     const tokenMap: Record<string, TokenBalance> = {};
-    allTokens.forEach(t => {
+    allTokens.forEach((t) => {
       // Keep highest balance if same token on multiple chains
-      if (!tokenMap[t.symbol] || (parseFloat(t.formattedBalance) > parseFloat(tokenMap[t.symbol].formattedBalance))) {
+      if (
+        !tokenMap[t.symbol] ||
+        parseFloat(t.formattedBalance) >
+          parseFloat(tokenMap[t.symbol].formattedBalance)
+      ) {
         tokenMap[t.symbol] = t;
       }
     });
@@ -309,12 +341,12 @@ export function useMultichainBalances(address: string | undefined | null) {
     // PERFORM ANALYTICS
     const analysis = analyzePortfolio(
       { chains: Object.values(chainBalances), totalValue },
-      inflationData as any || {}
+      inflationData || {},
     );
 
     const errors = activeChains
-      .filter(c => c.error)
-      .map(c => `${c.chainName}: ${c.error}`);
+      .filter((c) => c.error)
+      .map((c) => `${c.chainName}: ${c.error}`);
 
     const isStale = lastUpdated ? Date.now() - lastUpdated > STALE_TTL : false;
     return {
@@ -332,60 +364,63 @@ export function useMultichainBalances(address: string | undefined | null) {
   }, [chainBalances, isLoading, lastUpdated, inflationData]);
 
   // Main fetch function
-  const fetchAllBalances = useCallback(async (force = false) => {
-    if (!address) return;
+  const fetchAllBalances = useCallback(
+    async (force = false) => {
+      if (!address) return;
 
-    const fetchId = ++fetchIdRef.current;
-    setIsLoading(true);
+      const fetchId = ++fetchIdRef.current;
+      setIsLoading(true);
 
-    try {
-      // Check cache first (unless forced)
-      const cachedResults: Record<number, ChainBalance> = {};
-      const chainsToFetch: Array<typeof PRODUCTION_CHAINS[number]> = [];
+      try {
+        // Check cache first (unless forced)
+        const cachedResults: Record<number, ChainBalance> = {};
+        const chainsToFetch: Array<(typeof PRODUCTION_CHAINS)[number]> = [];
 
-      for (const chain of PRODUCTION_CHAINS) {
-        if (!force) {
-          const cached = getCachedBalance(address, chain.chainId);
-          if (cached) {
-            cachedResults[chain.chainId] = cached.data;
-            continue;
+        for (const chain of PRODUCTION_CHAINS) {
+          if (!force) {
+            const cached = getCachedBalance(address, chain.chainId);
+            if (cached) {
+              cachedResults[chain.chainId] = cached.data;
+              continue;
+            }
           }
+          chainsToFetch.push(chain);
         }
-        chainsToFetch.push(chain);
+
+        // Update with cached data immediately
+        if (Object.keys(cachedResults).length > 0) {
+          setChainBalances((prev) => ({ ...prev, ...cachedResults }));
+        }
+
+        // Fetch remaining chains in parallel
+        if (chainsToFetch.length > 0) {
+          const results = await Promise.all(
+            chainsToFetch.map((chain) => fetchChainBalances(address, chain)),
+          );
+
+          // Check if this fetch is still relevant
+          if (fetchId !== fetchIdRef.current) return;
+
+          const newBalances: Record<number, ChainBalance> = {};
+          results.forEach((result) => {
+            newBalances[result.chainId] = result;
+            setCachedBalance(address, result.chainId, result);
+          });
+
+          setChainBalances((prev) => ({ ...prev, ...newBalances }));
+        }
+
+        setLastUpdated(Date.now());
+      } catch (error) {
+        console.error("[Multichain] Fetch error:", error);
+      } finally {
+        if (fetchId === fetchIdRef.current) {
+          setIsLoading(false);
+        }
       }
-
-      // Update with cached data immediately
-      if (Object.keys(cachedResults).length > 0) {
-        setChainBalances(prev => ({ ...prev, ...cachedResults }));
-      }
-
-      // Fetch remaining chains in parallel
-      if (chainsToFetch.length > 0) {
-        const results = await Promise.all(
-          chainsToFetch.map(chain => fetchChainBalances(address, chain))
-        );
-
-        // Check if this fetch is still relevant
-        if (fetchId !== fetchIdRef.current) return;
-
-        const newBalances: Record<number, ChainBalance> = {};
-        results.forEach(result => {
-          newBalances[result.chainId] = result;
-          setCachedBalance(address, result.chainId, result);
-        });
-
-        setChainBalances(prev => ({ ...prev, ...newBalances }));
-      }
-
-      setLastUpdated(Date.now());
-    } catch (error) {
-      console.error('[Multichain] Fetch error:', error);
-    } finally {
-      if (fetchId === fetchIdRef.current) {
-        setIsLoading(false);
-      }
-    }
-  }, [address]);
+    },
+    [address],
+  );
 
   // Auto-fetch on mount and when address changes
   useEffect(() => {
@@ -406,14 +441,20 @@ export function useMultichainBalances(address: string | undefined | null) {
   }, [address, fetchAllBalances]);
 
   // Get balance for specific chain
-  const getChainBalance = useCallback((chainId: number): ChainBalance | undefined => {
-    return chainBalances[chainId];
-  }, [chainBalances]);
+  const getChainBalance = useCallback(
+    (chainId: number): ChainBalance | undefined => {
+      return chainBalances[chainId];
+    },
+    [chainBalances],
+  );
 
   // Check if user has balance on specific chain
-  const hasBalanceOnChain = useCallback((chainId: number): boolean => {
-    return (chainBalances[chainId]?.totalValue || 0) > 0;
-  }, [chainBalances]);
+  const hasBalanceOnChain = useCallback(
+    (chainId: number): boolean => {
+      return (chainBalances[chainId]?.totalValue || 0) > 0;
+    },
+    [chainBalances],
+  );
 
   return {
     ...portfolio,

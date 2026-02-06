@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from "react";
 
 // Swap pre-fill configuration from AI recommendations
 interface SwapPrefill {
@@ -6,6 +13,8 @@ interface SwapPrefill {
   toToken?: string;
   amount?: string;
   reason?: string;
+  fromChainId?: number;
+  toChainId?: number;
 }
 
 // Guided tour state (ENHANCEMENT: extends navigation system)
@@ -28,7 +37,7 @@ interface AppState {
 }
 
 // Define the context type
-interface AppStateContextType extends Omit<AppState, 'themeLoaded'> {
+interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
   setActiveTab: (tab: string) => void;
   setChainId: (chainId: number | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
@@ -38,31 +47,42 @@ interface AppStateContextType extends Omit<AppState, 'themeLoaded'> {
   setDarkMode: (darkMode: boolean) => void;
   themeLoaded: boolean;
   // Guided tour methods (ENHANCEMENT: adds tour orchestration)
-  startTour: (tourId: string, totalSteps: number, initialTab: string, section?: string) => void;
-  nextTourStep: (nextTab: string, section?: string, prefill?: SwapPrefill) => void;
+  startTour: (
+    tourId: string,
+    totalSteps: number,
+    initialTab: string,
+    section?: string,
+  ) => void;
+  nextTourStep: (
+    nextTab: string,
+    section?: string,
+    prefill?: SwapPrefill,
+  ) => void;
   exitTour: () => void;
   dismissTour: (tourId: string) => void;
   isTourDismissed: (tourId: string) => boolean;
 }
 
 // Create the context with default values
-const AppStateContext = createContext<AppStateContextType | undefined>(undefined);
+const AppStateContext = createContext<AppStateContextType | undefined>(
+  undefined,
+);
 
 // Helper to get system preference
 function getSystemPreference(): boolean {
-  if (typeof window === 'undefined') return false;
-  return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
 }
 
 // Helper to get stored preference
 function getStoredPreference(): boolean | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
   try {
-    const stored = localStorage.getItem('darkMode');
+    const stored = localStorage.getItem("darkMode");
     if (stored !== null) {
-      return stored === 'true';
+      return stored === "true";
     }
-  } catch (e) {
+  } catch {
     // localStorage may be unavailable
   }
   return null;
@@ -70,19 +90,21 @@ function getStoredPreference(): boolean | null {
 
 // Helper to apply theme to document
 function applyTheme(isDark: boolean) {
-  if (typeof document === 'undefined') return;
+  if (typeof document === "undefined") return;
 
   if (isDark) {
-    document.documentElement.classList.add('dark');
+    document.documentElement.classList.add("dark");
   } else {
-    document.documentElement.classList.remove('dark');
+    document.documentElement.classList.remove("dark");
   }
 }
 
 // Provider component
-export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
   const [state, setState] = useState<AppState>({
-    activeTab: 'info',
+    activeTab: "info",
     chainId: null,
     swapPrefill: null,
     darkMode: false,
@@ -93,16 +115,17 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Initialize theme on mount (client-side only)
   useEffect(() => {
-    const savedTab = localStorage.getItem('activeTab');
+    const savedTab = localStorage.getItem("activeTab");
     const storedPreference = getStoredPreference();
-    const initialDarkMode = storedPreference !== null ? storedPreference : getSystemPreference();
+    const initialDarkMode =
+      storedPreference !== null ? storedPreference : getSystemPreference();
 
     // Apply theme immediately
     applyTheme(initialDarkMode);
 
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      activeTab: savedTab || 'info',
+      activeTab: savedTab || "info",
       darkMode: initialDarkMode,
       themeLoaded: true,
     }));
@@ -110,59 +133,61 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Listen for system preference changes
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
     const handleChange = (e: MediaQueryListEvent) => {
       // Only apply system preference if no stored preference exists
       if (getStoredPreference() === null) {
         const newDarkMode = e.matches;
         applyTheme(newDarkMode);
-        setState(prev => ({ ...prev, darkMode: newDarkMode }));
+        setState((prev) => ({ ...prev, darkMode: newDarkMode }));
       }
     };
 
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    mediaQuery.addEventListener("change", handleChange);
+    return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
   // Save tab to localStorage whenever it changes
   useEffect(() => {
     if (state.themeLoaded) {
-      localStorage.setItem('activeTab', state.activeTab);
+      localStorage.setItem("activeTab", state.activeTab);
     }
   }, [state.activeTab, state.themeLoaded]);
 
   // Set chainId
   const setChainId = useCallback((chainId: number | null) => {
-    setState(prev => ({ ...prev, chainId }));
+    setState((prev) => ({ ...prev, chainId }));
   }, []);
 
   // Set active tab (ENHANCEMENT: tracks visited tabs for tour detection)
   const setActiveTab = useCallback((tab: string) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       activeTab: tab,
-      visitedTabs: prev.visitedTabs.includes(tab) ? prev.visitedTabs : [...prev.visitedTabs, tab],
+      visitedTabs: prev.visitedTabs.includes(tab)
+        ? prev.visitedTabs
+        : [...prev.visitedTabs, tab],
     }));
   }, []);
 
   // Navigate to swap with pre-filled values (from AI recommendations)
   const navigateToSwap = useCallback((prefill: SwapPrefill) => {
-    setState(prev => ({ ...prev, activeTab: 'swap', swapPrefill: prefill }));
+    setState((prev) => ({ ...prev, activeTab: "swap", swapPrefill: prefill }));
   }, []);
 
   // Clear swap prefill after it's been consumed
   const clearSwapPrefill = useCallback(() => {
-    setState(prev => ({ ...prev, swapPrefill: null }));
+    setState((prev) => ({ ...prev, swapPrefill: null }));
   }, []);
 
   // Toggle dark mode
   const toggleDarkMode = useCallback(() => {
-    setState(prev => {
+    setState((prev) => {
       const newDarkMode = !prev.darkMode;
-      localStorage.setItem('darkMode', String(newDarkMode));
+      localStorage.setItem("darkMode", String(newDarkMode));
       applyTheme(newDarkMode);
       return { ...prev, darkMode: newDarkMode };
     });
@@ -170,65 +195,95 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // Set dark mode directly
   const setDarkMode = useCallback((darkMode: boolean) => {
-    localStorage.setItem('darkMode', String(darkMode));
+    localStorage.setItem("darkMode", String(darkMode));
     applyTheme(darkMode);
-    setState(prev => ({ ...prev, darkMode }));
+    setState((prev) => ({ ...prev, darkMode }));
   }, []);
 
   // Initialize from storage
   const initializeFromStorage = useCallback(() => {
-    const savedTab = localStorage.getItem('activeTab');
-    const deprecatedTabs = ['analytics', 'strategies', 'protect']; // protection renamed to oracle but ID kept, but for others
+    const savedTab = localStorage.getItem("activeTab");
+    const deprecatedTabs = ["analytics", "strategies", "protect"]; // protection renamed to oracle but ID kept, but for others
     if (savedTab) {
       if (deprecatedTabs.includes(savedTab)) {
-        setState(prev => ({ ...prev, activeTab: 'overview' }));
+        setState((prev) => ({ ...prev, activeTab: "overview" }));
       } else {
-        setState(prev => ({ ...prev, activeTab: savedTab }));
+        setState((prev) => ({ ...prev, activeTab: savedTab }));
       }
     }
   }, []);
 
   // Guided tour methods (ENHANCEMENT: minimal tour orchestration)
-  const startTour = useCallback((tourId: string, totalSteps: number, initialTab: string, section?: string) => {
-    setState(prev => ({
-      ...prev,
-      activeTab: initialTab,
-      guidedTour: { tourId, currentStep: 0, totalSteps, highlightSection: section },
-    }));
-  }, []);
-
-  const nextTourStep = useCallback((nextTab: string, section?: string, prefill?: SwapPrefill) => {
-    setState(prev => {
-      if (!prev.guidedTour) return prev;
-      const nextStep = prev.guidedTour.currentStep + 1;
-      return {
+  const startTour = useCallback(
+    (
+      tourId: string,
+      totalSteps: number,
+      initialTab: string,
+      section?: string,
+    ) => {
+      setState((prev) => ({
         ...prev,
-        activeTab: nextTab,
-        guidedTour: { ...prev.guidedTour, currentStep: nextStep, highlightSection: section },
-        swapPrefill: prefill || prev.swapPrefill,
-      };
-    });
-  }, []);
+        activeTab: initialTab,
+        guidedTour: {
+          tourId,
+          currentStep: 0,
+          totalSteps,
+          highlightSection: section,
+        },
+      }));
+    },
+    [],
+  );
+
+  const nextTourStep = useCallback(
+    (nextTab: string, section?: string, prefill?: SwapPrefill) => {
+      setState((prev) => {
+        if (!prev.guidedTour) return prev;
+        const nextStep = prev.guidedTour.currentStep + 1;
+        return {
+          ...prev,
+          activeTab: nextTab,
+          guidedTour: {
+            ...prev.guidedTour,
+            currentStep: nextStep,
+            highlightSection: section,
+          },
+          swapPrefill: prefill || prev.swapPrefill,
+        };
+      });
+    },
+    [],
+  );
 
   const exitTour = useCallback(() => {
-    setState(prev => ({ ...prev, guidedTour: null }));
+    setState((prev) => ({ ...prev, guidedTour: null }));
   }, []);
 
-  const dismissTour = useCallback((tourId: string) => {
-    try {
-      const dismissed = JSON.parse(localStorage.getItem('dismissedTours') || '[]');
-      localStorage.setItem('dismissedTours', JSON.stringify([...dismissed, tourId]));
-    } catch (e) {
-      console.error('Failed to dismiss tour:', e);
-    }
-    exitTour();
-  }, [exitTour]);
+  const dismissTour = useCallback(
+    (tourId: string) => {
+      try {
+        const dismissed = JSON.parse(
+          localStorage.getItem("dismissedTours") || "[]",
+        );
+        localStorage.setItem(
+          "dismissedTours",
+          JSON.stringify([...dismissed, tourId]),
+        );
+      } catch (e) {
+        console.error("Failed to dismiss tour:", e);
+      }
+      exitTour();
+    },
+    [exitTour],
+  );
 
   const isTourDismissed = useCallback((tourId: string): boolean => {
     try {
-      const dismissed = JSON.parse(localStorage.getItem('dismissedTours') || '[]');
+      const dismissed = JSON.parse(
+        localStorage.getItem("dismissedTours") || "[]",
+      );
       return dismissed.includes(tourId);
-    } catch (e) {
+    } catch {
       return false;
     }
   }, []);
@@ -266,7 +321,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
 export const useAppState = (): AppStateContextType => {
   const context = useContext(AppStateContext);
   if (!context) {
-    throw new Error('useAppState must be used within an AppStateProvider');
+    throw new Error("useAppState must be used within an AppStateProvider");
   }
   return context;
 };
