@@ -58,6 +58,21 @@
 - **Environment variable**: None needed
 - **Worth it?**: ✅ YES - The foundation of our institutional-grade regional risk assessment.
 
+### 6. **DefiLlama Stablecoin API** - Global Momentum (FREE!)
+- **Website**: https://stablecoins.llama.fi
+- **Pricing**: FREE (No key needed)
+- **What you get**:
+  - **Total Stablecoin Market Cap**: Surfaced in the header "Pulse" to drive category FOMO.
+  - **Stablecoin 24h Volume**: Institutional demand signals.
+- **Usage**: Automatically used by the `MarketMomentumService`.
+
+### 7. **Alternative.me** - Market Sentiment (FREE!)
+- **Website**: https://alternative.me/crypto/fear-and-greed-index/
+- **Pricing**: FREE (No key needed)
+- **What you get**:
+  - **Fear & Greed Index**: Real-time market sentiment score.
+- **Usage**: Used to context-aware AI recommendations (e.g., "Greedy" market suggests higher gold allocation).
+
 ## Optional Premium APIs
 
 ### 5. **Messari** - Market Intelligence
