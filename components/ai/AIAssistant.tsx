@@ -5,6 +5,7 @@ import { createEmptyAnalysis } from "../../utils/portfolio-analysis";
 import { useToast } from "../ui/Toast";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import { useInflationData } from "../../hooks/use-inflation-data";
+import { useNetworkActivity } from "../../hooks/use-network-activity";
 import { useAppState } from "../../context/AppStateContext";
 import { useAIConversationOptional } from "../../context/AIConversationContext";
 import VoiceButton from "../ui/VoiceButton";
@@ -49,7 +50,6 @@ export default function AIAssistant({
   aggregatedPortfolio,
   userRegion,
   macroData,
-  networkActivity,
 }: AIAssistantProps) {
   // Use the userRegion prop if provided, otherwise default to Africa
   const effectiveRegion = userRegion || "Africa";
@@ -79,6 +79,7 @@ export default function AIAssistant({
     portfolioAnalysis,
   } = useDiversifiAI();
 
+  const { stats: networkActivityStats } = useNetworkActivity();
   const { inflationData: liveInflationData } = useInflationData();
   const { showToast } = useToast();
   const { startTour, dismissTour, isTourDismissed } = useAppState();
@@ -227,7 +228,7 @@ export default function AIAssistant({
       selectedRegion,
       analysisGoal,
       macroData,
-      networkActivity,
+      networkActivityStats,
     );
   };
 
