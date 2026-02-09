@@ -27,6 +27,7 @@ import {
 } from "../../hooks/use-tradeable-tokens";
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
+import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -44,7 +45,7 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill } = useAppState();
+  const { swapPrefill, clearSwapPrefill, recordSwap } = useAppState();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
 
@@ -186,11 +187,13 @@ export default function SwapTab({
     } else if (hookSwapStep === "completed") {
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
+      // Record swap completion for experience progression
+      recordSwap();
       refreshWithRetries();
     } else if (swapTxHash) {
       setSwapStatus("Transaction submitted...");
     }
-  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries]);
+  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordSwap]);
 
   const handleSwap = async (
     fromToken: string,
@@ -311,6 +314,8 @@ export default function SwapTab({
           />
         ) : (
           <>
+            <ExperienceModeNotification />
+
             {showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
                 <p className="text-xs font-bold text-blue-800 dark:text-blue-200">
@@ -348,19 +353,17 @@ export default function SwapTab({
 
             {swapStatus && (
               <div
-                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${
-                  swapStatus.includes("Error")
-                    ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
-                    : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
-                }`}
+                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${swapStatus.includes("Error")
+                  ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
+                  : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
+                  }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <div
-                    className={`size-2 rounded-full ${
-                      swapStatus.includes("Error")
-                        ? "bg-red-500"
-                        : "bg-green-500 animate-pulse"
-                    }`}
+                    className={`size-2 rounded-full ${swapStatus.includes("Error")
+                      ? "bg-red-500"
+                      : "bg-green-500 animate-pulse"
+                      }`}
                   />
                   <span className="text-xs font-black uppercase tracking-tight">
                     {swapStatus}

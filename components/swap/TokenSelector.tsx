@@ -2,6 +2,7 @@ import React from "react";
 import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { REGION_COLORS, TOKEN_METADATA } from "../../config";
+import type { UserExperienceMode } from "@/context/AppStateContext";
 
 
 interface Token {
@@ -25,6 +26,7 @@ interface TokenSelectorProps {
   tokenBalances?: Record<string, { formattedBalance: string; value: number }>;
   currentChainId?: number;
   tokenChainId?: number;
+  experienceMode?: UserExperienceMode;
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({
@@ -41,7 +43,10 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   tokenBalances = {},
   currentChainId,
   tokenChainId,
+  experienceMode = "beginner",
 }) => {
+  const isBeginnerMode = experienceMode === "beginner";
+  const showRegionalInfo = experienceMode !== "beginner";
   // Determine if this is a cross-chain scenario
   const isCrossChain = currentChainId && tokenChainId && currentChainId !== tokenChainId;
 
@@ -82,11 +87,50 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     }
   };
 
+  // Simplified token display for beginners
+  const getSimplifiedTokenName = (symbol: string) => {
+    const metadata = TOKEN_METADATA[symbol];
+    if (!metadata) return symbol;
+
+    // For beginners, show friendly names without technical suffixes
+    if (isBeginnerMode) {
+      // Remove 'm' suffix from Mento tokens
+      if (symbol.endsWith('m')) {
+        const base = symbol.slice(0, -1);
+        // Map to currency names
+        const currencyNames: Record<string, string> = {
+          'USD': 'US Dollar',
+          'EUR': 'Euro',
+          'BRL': 'Brazilian Real',
+          'KES': 'Kenyan Shilling',
+          'COP': 'Colombian Peso',
+          'PHP': 'Philippine Peso',
+          'GHS': 'Ghana Cedi',
+          'XOF': 'CFA Franc',
+          'GBP': 'British Pound',
+          'ZAR': 'South African Rand',
+          'CAD': 'Canadian Dollar',
+          'AUD': 'Australian Dollar',
+          'CHF': 'Swiss Franc',
+          'JPY': 'Japanese Yen',
+          'NGN': 'Nigerian Naira',
+        };
+        return currencyNames[base] || metadata.name;
+      }
+      // For other tokens, use friendly names
+      if (symbol === 'USDC') return 'US Dollar';
+      if (symbol === 'USDT') return 'US Dollar (Tether)';
+      if (symbol === 'PAXG') return 'Gold';
+    }
+
+    return `${symbol} - ${metadata.name}`;
+  };
+
   return (
     <div>
       <label className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
         <span className="mr-2">{label}</span>
-        {tokenRegion && tokenRegion !== 'Unknown' && (
+        {showRegionalInfo && tokenRegion && tokenRegion !== 'Unknown' && (
           <div
             className="flex items-center px-2 py-1 rounded-md"
             style={{ backgroundColor: `${regionColor}30` }}
@@ -106,34 +150,18 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         )}
       </label>
 
-      {/* Balance display - fixed for dark mode */}
-      <div className="flex justify-end mb-1">
-        <div
-          className={`text-xs font-medium px-2 py-0.5 rounded-md flex items-center ${isCrossChain && !hasBalance
-            ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-            }`}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="size-3 mr-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+      {/* Balance display - only show in intermediate/advanced modes */}
+      {!isBeginnerMode && (
+        <div className="flex justify-end mb-1">
+          <div
+            className={`text-xs font-medium px-2 py-0.5 rounded-md flex items-center ${isCrossChain && !hasBalance
+              ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+              }`}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-            />
-          </svg>
-          <span className="mr-1">{getBalanceLabel()}</span>
-          {getBalanceDisplay()}
-          {isCrossChain && !hasBalance && (
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="size-3 ml-1 text-amber-500"
+              className="size-3 mr-1"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -142,12 +170,30 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
               />
             </svg>
-          )}
+            <span className="mr-1">{getBalanceLabel()}</span>
+            {getBalanceDisplay()}
+            {isCrossChain && !hasBalance && (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="size-3 ml-1 text-amber-500"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex space-x-2">
         <select
@@ -161,15 +207,14 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           disabled={disabled}
         >
           {availableTokens.map((token) => {
-            const metadata = TOKEN_METADATA[token.symbol];
-            const displayName = metadata?.name || token.name;
+            const displayName = getSimplifiedTokenName(token.symbol);
             return (
               <option
                 key={token.symbol}
                 value={token.symbol}
                 className="font-medium bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
               >
-                {token.symbol} - {displayName}
+                {displayName}
               </option>
             );
           })}
@@ -209,8 +254,8 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         )}
       </div>
 
-      {/* Token info card - compact version */}
-      {selectedToken && (
+      {/* Token info card - compact version, hide in beginner mode */}
+      {selectedToken && showRegionalInfo && (
         <div
           className="relative mt-1.5 text-sm px-2 py-1.5 rounded-lg border-2 shadow-sm bg-white dark:bg-gray-900"
           style={regionColor ? { borderColor: regionColor } : {}}

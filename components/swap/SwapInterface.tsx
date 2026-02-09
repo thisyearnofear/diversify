@@ -10,6 +10,7 @@ import SwapStatus from "./SwapStatus";
 import SwapActionButton from "./SwapActionButton";
 import { RegionalPattern } from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
+import { useAppState } from "@/context/AppStateContext";
 
 interface Token {
   symbol: string;
@@ -60,6 +61,8 @@ const SwapInterface = forwardRef<
   },
   ref,
 ) {
+  const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useAppState();
+
   const {
     fromToken,
     setFromToken,
@@ -153,7 +156,7 @@ const SwapInterface = forwardRef<
           )}
         </div>
 
-        {enableCrossChain && (
+        {enableCrossChain && shouldShowIntermediateFeatures() && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-blue-600 dark:text-blue-400">🌉</span>
@@ -192,11 +195,13 @@ const SwapInterface = forwardRef<
           </div>
         )}
 
-        <SwapAIInsight
-          toToken={toToken}
-          inflationDifference={inflationDifference}
-          onAskAI={() => console.log("AI insight requested")}
-        />
+        {shouldShowIntermediateFeatures() && (
+          <SwapAIInsight
+            toToken={toToken}
+            inflationDifference={inflationDifference}
+            onAskAI={() => console.log("AI insight requested")}
+          />
+        )}
 
         <div className="space-y-3">
           <TokenSelector
@@ -212,16 +217,16 @@ const SwapInterface = forwardRef<
             tokenBalances={tokenBalances}
             currentChainId={chainId ?? undefined}
             tokenChainId={fromChainId}
+            experienceMode={experienceMode}
           />
 
           <div className="flex justify-center my-2">
             <button
               onClick={handleSwitchTokens}
-              className={`p-3 rounded-full transition-colors shadow-md ${
-                fromTokenRegion && toTokenRegion
-                  ? `bg-gradient-to-b from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-gray-200`
-                  : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
-              }`}
+              className={`p-3 rounded-full transition-colors shadow-md ${fromTokenRegion && toTokenRegion
+                ? `bg-gradient-to-b from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-gray-200`
+                : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
+                }`}
               disabled={isLoading}
               aria-label="Switch tokens"
             >
@@ -253,6 +258,7 @@ const SwapInterface = forwardRef<
             tokenBalances={tokenBalances}
             currentChainId={chainId ?? undefined}
             tokenChainId={toChainId}
+            experienceMode={experienceMode}
           />
 
           <ExpectedOutputCard
@@ -264,48 +270,51 @@ const SwapInterface = forwardRef<
             mounted={mounted}
           />
 
-          <InflationBenefitCard
-            fromToken={fromToken}
-            toToken={toToken}
-            fromTokenRegion={fromTokenRegion}
-            toTokenRegion={toTokenRegion}
-            inflationDifference={inflationDifference}
-            hasInflationBenefit={hasInflationBenefit}
-          />
+          {shouldShowIntermediateFeatures() && (
+            <InflationBenefitCard
+              fromToken={fromToken}
+              toToken={toToken}
+              fromTokenRegion={fromTokenRegion}
+              toTokenRegion={toTokenRegion}
+              inflationDifference={inflationDifference}
+              hasInflationBenefit={hasInflationBenefit}
+            />
+          )}
 
-          <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-            <label className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-1.5 flex items-center">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="size-4 mr-1 text-gray-700"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1v-3a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Slippage Tolerance
-            </label>
-            <div className="flex space-x-2">
-              {[0.1, 0.5, 1.0, 2.0].map((tolerance) => (
-                <button
-                  key={tolerance}
-                  onClick={() => setSlippageTolerance(tolerance)}
-                  className={`px-3 py-1.5 text-xs rounded-md shadow-md ${
-                    slippageTolerance === tolerance
+          {shouldShowAdvancedFeatures() && (
+            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <label className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-1.5 flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="size-4 mr-1 text-gray-700"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1v-3a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                Slippage Tolerance
+              </label>
+              <div className="flex space-x-2">
+                {[0.1, 0.5, 1.0, 2.0].map((tolerance) => (
+                  <button
+                    key={tolerance}
+                    onClick={() => setSlippageTolerance(tolerance)}
+                    className={`px-3 py-1.5 text-xs rounded-md shadow-md ${slippageTolerance === tolerance
                       ? `bg-blue-600 text-white border-2 border-blue-700 font-bold`
                       : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  }`}
-                  disabled={isLoading}
-                >
-                  {tolerance}%
-                </button>
-              ))}
+                      }`}
+                    disabled={isLoading}
+                  >
+                    {tolerance}%
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <SwapStatus
             status={status}

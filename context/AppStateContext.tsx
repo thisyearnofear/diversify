@@ -25,6 +25,17 @@ interface GuidedTourState {
   highlightSection?: string;
 }
 
+// User experience modes for progressive disclosure
+export type UserExperienceMode = 'beginner' | 'intermediate' | 'advanced';
+
+// User activity tracking for auto-progression
+interface UserActivity {
+  swapCount: number;
+  lastSwapDate: number | null;
+  hasViewedProtection: boolean;
+  hasViewedAnalytics: boolean;
+}
+
 // Define the application state interface
 interface AppState {
   activeTab: string;
@@ -34,6 +45,8 @@ interface AppState {
   themeLoaded: boolean;
   guidedTour: GuidedTourState | null;
   visitedTabs: string[];
+  experienceMode: UserExperienceMode;
+  userActivity: UserActivity;
 }
 
 // Define the context type
@@ -62,6 +75,11 @@ interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
   exitTour: () => void;
   dismissTour: (tourId: string) => void;
   isTourDismissed: (tourId: string) => boolean;
+  // Experience mode methods (ENHANCEMENT: progressive disclosure)
+  setExperienceMode: (mode: UserExperienceMode) => void;
+  recordSwap: () => void;
+  shouldShowAdvancedFeatures: () => boolean;
+  shouldShowIntermediateFeatures: () => boolean;
 }
 
 // Create the context with default values
@@ -112,6 +130,13 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     themeLoaded: false,
     guidedTour: null,
     visitedTabs: [],
+    experienceMode: "beginner",
+    userActivity: {
+      swapCount: 0,
+      lastSwapDate: null,
+      hasViewedProtection: false,
+      hasViewedAnalytics: false,
+    },
   });
 
   // Initialize theme on mount (client-side only)
@@ -121,6 +146,37 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     const initialDarkMode =
       storedPreference !== null ? storedPreference : getSystemPreference();
 
+    // Load experience mode and activity from storage
+    const savedMode = localStorage.getItem("experienceMode") as UserExperienceMode | null;
+    const savedActivity = localStorage.getItem("userActivity");
+
+    let experienceMode: UserExperienceMode = "beginner";
+    let userActivity: UserActivity = {
+      swapCount: 0,
+      lastSwapDate: null,
+      hasViewedProtection: false,
+      hasViewedAnalytics: false,
+    };
+
+    if (savedMode && ["beginner", "intermediate", "advanced"].includes(savedMode)) {
+      experienceMode = savedMode;
+    }
+
+    if (savedActivity) {
+      try {
+        userActivity = JSON.parse(savedActivity);
+      } catch (e) {
+        console.warn("Failed to parse user activity:", e);
+      }
+    }
+
+    // Auto-upgrade based on activity
+    if (experienceMode === "beginner" && userActivity.swapCount >= 3) {
+      experienceMode = "intermediate";
+    } else if (experienceMode === "intermediate" && userActivity.swapCount >= 10) {
+      experienceMode = "advanced";
+    }
+
     // Apply theme immediately
     applyTheme(initialDarkMode);
 
@@ -129,6 +185,8 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
       activeTab: savedTab || "info",
       darkMode: initialDarkMode,
       themeLoaded: true,
+      experienceMode,
+      userActivity,
     }));
   }, []);
 
@@ -294,6 +352,50 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, []);
 
+  // Experience mode methods (ENHANCEMENT: progressive disclosure)
+  const setExperienceMode = useCallback((mode: UserExperienceMode) => {
+    setState((prev) => ({ ...prev, experienceMode: mode }));
+    localStorage.setItem("experienceMode", mode);
+  }, []);
+
+  const recordSwap = useCallback(() => {
+    setState((prev) => {
+      const newActivity = {
+        ...prev.userActivity,
+        swapCount: prev.userActivity.swapCount + 1,
+        lastSwapDate: Date.now(),
+      };
+
+      // Auto-upgrade experience mode based on activity
+      let newMode = prev.experienceMode;
+      if (newMode === "beginner" && newActivity.swapCount >= 3) {
+        newMode = "intermediate";
+      } else if (newMode === "intermediate" && newActivity.swapCount >= 10) {
+        newMode = "advanced";
+      }
+
+      // Persist to storage
+      localStorage.setItem("userActivity", JSON.stringify(newActivity));
+      if (newMode !== prev.experienceMode) {
+        localStorage.setItem("experienceMode", newMode);
+      }
+
+      return {
+        ...prev,
+        userActivity: newActivity,
+        experienceMode: newMode,
+      };
+    });
+  }, []);
+
+  const shouldShowAdvancedFeatures = useCallback(() => {
+    return state.experienceMode === "advanced";
+  }, [state.experienceMode]);
+
+  const shouldShowIntermediateFeatures = useCallback(() => {
+    return state.experienceMode === "intermediate" || state.experienceMode === "advanced";
+  }, [state.experienceMode]);
+
   const contextValue: AppStateContextType = {
     activeTab: state.activeTab,
     chainId: state.chainId,
@@ -302,6 +404,8 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     themeLoaded: state.themeLoaded,
     guidedTour: state.guidedTour,
     visitedTabs: state.visitedTabs,
+    experienceMode: state.experienceMode,
+    userActivity: state.userActivity,
     setActiveTab,
     setChainId,
     setSwapPrefill,
@@ -315,6 +419,10 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     exitTour,
     dismissTour,
     isTourDismissed,
+    setExperienceMode,
+    recordSwap,
+    shouldShowAdvancedFeatures,
+    shouldShowIntermediateFeatures,
   };
 
   return (
