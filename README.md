@@ -14,16 +14,14 @@
 ### 🌐 Multi-Chain Operations
 - **Arbitrum**: Advanced RWA (Real World Assets) monitoring and analytics with sophisticated yield strategies.
 - **Celo**: Global and local stablecoin management for emerging market access and financial inclusion.
-- **Arc Network**: Self-paying autonomous agents using x402 protocol for premium data access and automated actions.
 
 ### 🤖 Autonomous AI Agent (Arc Network)
 - **Self-Paying**: The agent uses the **x402 protocol** to autonomously pay for its own API calls (Truflation, Glassnode, Macro Data) using USDC.
-- **USDC-Native**: Operates on **Arc Network**, using USDC as the native gas token for efficient, transparent operations.
 - **On-Chain Audit**: Every analysis and decision is recorded on the Arc blockchain for complete transparency.
 
 ### 💳 Cross-Chain Infrastructure
 - **Unified Balance**: Uses **Circle Gateway** to view and manage USDC balances across multiple chains instantly.
-- **Cross-Chain Bridging**: Integrates **Circle Bridge Kit** and **CCTP** for secure, native USDC transfers between Arbitrum, Celo, and Arc.
+- **Cross-Chain Bridging**: Integrates **Circle Bridge Kit** and **CCTP** for secure, native USDC transfers between Arbitrum, Celo as well as Lifi.
 - **Programmable Wallets**: Enterprise-grade security for multi-chain operations.
 
 ### 🧠 Advanced Intelligence & Analytics
@@ -38,34 +36,8 @@
 - **Wealth Stabilization**: Algorithmic rebalancing to maintain optimal risk-adjusted returns across volatile markets.
 
 ### ⚡ Smart Automation & Integrations
-- **Zapier MCP**: Full integration with Zapier via Model Context Protocol (MCP) to trigger workflows (Email, Slack, Spreadsheets).
-- **Multi-Channel Alerts**: Configurable notifications via Email (SendGrid/Resend) and Slack.
-- **Risk-Free Demo**: Fully functional "Testnet Demo" mode using free USDC/EURC from the Circle Faucet on Arc Testnet.
-
-## 🏗 System Architecture
-
-```mermaid
-graph TD
-    User[User] -->|Configures| Dashboard[DiversiFi Dashboard]
-    Dashboard -->|Manages| Agent[Arc AI Agent]
-    
-    subgraph "Arc Network & Circle"
-        Agent -->|Pays Gas| Arc[Arc Network (USDC)]
-        Agent -->|Unified Balance| Gateway[Circle Gateway]
-        Agent -->|Cross-Chain| Bridge[Circle Bridge Kit]
-    end
-    
-    subgraph "Data & Intelligence"
-        Agent -->|x402 Payment| PremiumData[Premium Data Sources]
-        PremiumData -->|Macro/Inflation| Analysis[Gemini 3.0 Analysis]
-    end
-    
-    subgraph "Execution & Automation"
-        Analysis -->|Trigger| Zapier[Zapier MCP]
-        Analysis -->|Notify| Email[Email/Slack]
-        Analysis -->|Execute| Swap[Stablecoin Swap]
-    end
-```
+- **Zapier MCP**: Full integration with Zapier via Model Context Protocol (MCP) to trigger workflows (Email, Slack, Spreadsheets). [WIP]
+- **Multi-Channel Alerts**: Configurable notifications via Email (SendGrid/Resend) and Slack. [WIP]
 
 ## 🚀 Quick Start
 
@@ -108,15 +80,6 @@ To spawn a dedicated agent wallet:
 ```bash
 pnpm setup-arc-agent
 ```
-
-## 🧪 Testnet Demo (Risk-Free)
-
-Experience the full power of agentic wealth protection without spending real money:
-
-1.  **Get Free Funds**: Visit [faucet.circle.com](https://faucet.circle.com) and request USDC and EURC on **Arc Testnet**.
-2.  **Connect Wallet**: Connect your wallet to DiversiFi (Arc Testnet).
-3.  **Run Analysis**: The agent will detect your USD exposure and recommend diversifying into EURC to hedge against inflation.
-4.  **Automate**: Enable "Test Automation" to see how the agent would trigger Zapier and email alerts in a real scenario.
 
 ## 📂 Documentation
 
