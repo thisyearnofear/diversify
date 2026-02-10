@@ -130,7 +130,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     themeLoaded: false,
     guidedTour: null,
     visitedTabs: [],
-    experienceMode: "beginner",
+    experienceMode: "advanced",
     userActivity: {
       swapCount: 0,
       lastSwapDate: null,
@@ -150,7 +150,8 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     const savedMode = localStorage.getItem("experienceMode") as UserExperienceMode | null;
     const savedActivity = localStorage.getItem("userActivity");
 
-    let experienceMode: UserExperienceMode = "beginner";
+    // Default to advanced for new users - they can opt-down if overwhelmed
+    let experienceMode: UserExperienceMode = "advanced";
     let userActivity: UserActivity = {
       swapCount: 0,
       lastSwapDate: null,

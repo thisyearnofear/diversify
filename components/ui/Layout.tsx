@@ -63,23 +63,23 @@ export default function Layout({
               )}
             </h1>
             <div className="flex items-center space-x-2">
-              {/* Always show mode switcher, but with different styling for beginners */}
+              {/* Mode switcher - prominent for non-beginners to encourage opt-down */}
               <button
                 onClick={cycleMode}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${isBeginner
-                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-md hover:shadow-lg hover:scale-105"
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${!isBeginner
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:shadow-lg hover:scale-105"
                     : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
                   }`}
-                title={isBeginner
-                  ? `Ready for more? Click to unlock advanced features (${userActivity.swapCount} swaps completed)`
-                  : `Current mode: ${getModeLabel()}. Click to change.`
+                title={!isBeginner
+                  ? `Too much info? Click to simplify the interface`
+                  : `Current mode: ${getModeLabel()}. Click to unlock more features.`
                 }
               >
                 <span className="text-sm">{getModeEmoji()}</span>
                 <span>{getModeLabel()}</span>
-                {isBeginner && (
+                {!isBeginner && (
                   <svg className="size-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                   </svg>
                 )}
               </button>

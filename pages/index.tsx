@@ -25,7 +25,6 @@ import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
 import { useNetworkActivity } from "../hooks/use-network-activity";
 import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
-import ModeUpgradeModal from "../components/ui/ModeUpgradeModal";
 
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab, guidedTour, exitTour, setSwapPrefill, experienceMode } = useAppState();
@@ -328,9 +327,6 @@ export default function DiversiFiPage() {
           onConnect={connectWallet}
           isMiniPay={isInMiniPay}
         />
-
-        {/* Mode Upgrade Celebration */}
-        <ModeUpgradeModal />
       </div>
     </div>
   );
