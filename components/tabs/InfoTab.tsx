@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
+import { useAppState } from "../../context/AppStateContext";
 import { Card } from "../shared/TabComponents";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import InflationVisualizer from "../inflation/InflationVisualizer";
