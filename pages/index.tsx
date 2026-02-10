@@ -27,7 +27,7 @@ import { useNetworkActivity } from "../hooks/use-network-activity";
 import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, guidedTour, exitTour, setSwapPrefill, experienceMode } = useAppState();
+  const { activeTab, setActiveTab, guidedTour, exitTour, setSwapPrefill, experienceMode, setExperienceMode } = useAppState();
   const { showToast } = useToast();
   const { unreadCount, markAsRead, setDrawerOpen, addUserMessage } = useAIConversation();
   const { currentPulse } = useNetworkActivity();
@@ -164,6 +164,22 @@ export default function DiversiFiPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Mode Toggle - cycles through Simple → Standard → Advanced */}
+            <button
+              onClick={() => {
+                if (experienceMode === "beginner") setExperienceMode("intermediate");
+                else if (experienceMode === "intermediate") setExperienceMode("advanced");
+                else setExperienceMode("beginner");
+              }}
+              className={`px-2.5 py-1.5 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 ${experienceMode !== "beginner"
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                }`}
+              title={experienceMode !== "beginner" ? "Too much info? Click to simplify" : "Click for more features"}
+            >
+              <span>{experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}</span>
+              <span className="hidden sm:inline">{experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}</span>
+            </button>
             <VoiceButton
               size="sm"
               variant="default"
