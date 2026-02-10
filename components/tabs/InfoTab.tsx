@@ -20,7 +20,10 @@ interface InfoTabProps {
 
 export default function InfoTab({ availableTokens, setActiveTab, userRegion }: InfoTabProps) {
   const { address, chainId, formatAddress } = useWalletContext();
+  const { experienceMode } = useAppState();
   const [showNetworkInfo, setShowNetworkInfo] = useState(false);
+
+  const isBeginner = experienceMode === "beginner";
 
   // Use ChainDetectionService for all chain checks
   const isCelo = ChainDetectionService.isCelo(chainId);
@@ -39,20 +42,34 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
       {/* Header & Hero */}
       <div className="px-1">
         <h2 className="text-[28px] font-black text-gray-900 dark:text-white leading-tight tracking-tight mb-2">
-          MASTER YOUR <br />
-          <span className="text-blue-600">WEALTH JOURNEY</span>
+          {isBeginner ? (
+            <>
+              PROTECT YOUR <br />
+              <span className="text-blue-600">SAVINGS</span>
+            </>
+          ) : (
+            <>
+              MASTER YOUR <br />
+              <span className="text-blue-600">WEALTH JOURNEY</span>
+            </>
+          )}
         </h2>
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-[90%]">
-          DiversiFi helps you protect your savings from inflation by diversifying across regional stablecoins and real-world assets.
+          {isBeginner
+            ? "Your money loses value over time. We help you protect it by spreading it across different currencies."
+            : "DiversiFi helps you protect your savings from inflation by diversifying across regional stablecoins and real-world assets."
+          }
         </p>
       </div>
 
-      {/* The Roadmap */}
-      <WealthJourneyWidget 
-        totalValue={address ? 100 : 0} // Simplified logic for demo
-        setActiveTab={setActiveTab}
-        userRegion={userRegion}
-      />
+      {/* Show journey widget only for intermediate+ */}
+      {!isBeginner && (
+        <WealthJourneyWidget
+          totalValue={address ? 100 : 0} // Simplified logic for demo
+          setActiveTab={setActiveTab}
+          userRegion={userRegion}
+        />
+      )}
 
       {/* Interactive Education: Inflation Protection */}
       <div>
@@ -63,8 +80,8 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
             <p className="text-sm font-bold text-gray-900 dark:text-white">Why Diversify?</p>
           </div>
         </div>
-        
-        <InflationVisualizer 
+
+        <InflationVisualizer
           region={userRegion}
           inflationRate={userRegion === "Africa" ? 15.4 : userRegion === "LatAm" ? 12.2 : 4.5}
           years={5}
@@ -83,29 +100,31 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
         <RealWorldUseCases focusRegion={userRegion} />
       </div>
 
-      {/* Core Capabilities Grid */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { 
-            title: "REGIONAL STABLECOINS", 
-            desc: "Hold digital dollars pegged to local economies (KES, PHP, BRL) to hedge regional risks.",
-            icon: "🌍",
-            color: "blue"
-          },
-          { 
-            title: "REAL-WORLD ASSETS", 
-            desc: "Direct access to tokenized Gold (PAXG) and US Treasuries (USDY) on Arbitrum.",
-            icon: "💎",
-            color: "emerald"
-          }
-        ].map((cap) => (
-          <div key={cap.title} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-            <div className="text-2xl mb-3">{cap.icon}</div>
-            <h4 className="text-[10px] font-black text-gray-900 dark:text-white mb-2 tracking-wider">{cap.title}</h4>
-            <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">{cap.desc}</p>
-          </div>
-        ))}
-      </div>
+      {/* Core Capabilities Grid - Hide for beginners */}
+      {!isBeginner && (
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            {
+              title: "REGIONAL STABLECOINS",
+              desc: "Hold digital dollars pegged to local economies (KES, PHP, BRL) to hedge regional risks.",
+              icon: "🌍",
+              color: "blue"
+            },
+            {
+              title: "REAL-WORLD ASSETS",
+              desc: "Direct access to tokenized Gold (PAXG) and US Treasuries (USDY) on Arbitrum.",
+              icon: "💎",
+              color: "emerald"
+            }
+          ].map((cap) => (
+            <div key={cap.title} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+              <div className="text-2xl mb-3">{cap.icon}</div>
+              <h4 className="text-[10px] font-black text-gray-900 dark:text-white mb-2 tracking-wider">{cap.title}</h4>
+              <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">{cap.desc}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Simplified How It Works */}
       <Card>
@@ -121,9 +140,8 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
             { step: 4, text: "Execute swaps or bridge to RWAs", done: false },
           ].map((item) => (
             <div key={item.step} className="flex items-center gap-3">
-              <div className={`size-6 rounded-full flex items-center justify-center text-[10px] font-black ${
-                item.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
-              }`}>
+              <div className={`size-6 rounded-full flex items-center justify-center text-[10px] font-black ${item.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+                }`}>
                 {item.done ? '✓' : item.step}
               </div>
               <span className={`text-xs font-medium ${item.done ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
@@ -136,7 +154,7 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
 
       {/* Network & Wallet (Minimized) */}
       <div className="pt-2">
-        <button 
+        <button
           onClick={() => setShowNetworkInfo(!showNetworkInfo)}
           className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors"
         >

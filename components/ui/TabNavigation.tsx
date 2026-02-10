@@ -5,63 +5,28 @@ interface TabItem {
   label: string;
   icon: React.ReactNode;
   badge?: number;
+  minLevel: 'beginner' | 'intermediate' | 'advanced';
 }
 
 interface TabNavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   badges?: Record<string, number>;
+  experienceMode?: 'beginner' | 'intermediate' | 'advanced';
 }
 
 export default function TabNavigation({
   activeTab,
   setActiveTab,
   badges = {},
+  experienceMode = 'advanced',
 }: TabNavigationProps) {
-  const tabs: TabItem[] = [
-    {
-      id: "overview",
-      label: "Station",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="size-6 mb-1"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-          />
-        </svg>
-      ),
-    },
-    {
-      id: "protect",
-      label: "Protect",
-      icon: (
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          className="size-6 mb-1"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-          />
-        </svg>
-      ),
-    },
+  // Define all tabs with their unlock requirements
+  const allTabs: TabItem[] = [
     {
       id: "swap",
-      label: "Action",
+      label: experienceMode === "beginner" ? "Convert" : "Action",
+      minLevel: "beginner",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -82,7 +47,7 @@ export default function TabNavigation({
     {
       id: "info",
       label: "Learn",
-      badge: 1, // Add a persistent badge for the update
+      minLevel: "beginner",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -100,7 +65,59 @@ export default function TabNavigation({
         </svg>
       ),
     },
+    {
+      id: "overview",
+      label: experienceMode === "intermediate" ? "Portfolio" : "Station",
+      minLevel: "intermediate",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="size-6 mb-1"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: "protect",
+      label: "Protect",
+      minLevel: "advanced",
+      icon: (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="size-6 mb-1"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+          />
+        </svg>
+      ),
+    },
   ];
+
+  // Filter tabs based on experience level
+  const levelOrder = { beginner: 0, intermediate: 1, advanced: 2 };
+  const currentLevelIndex = levelOrder[experienceMode];
+
+  const tabs = allTabs.filter(tab => levelOrder[tab.minLevel] <= currentLevelIndex);
+
+  // Show hint about locked features for beginners
+  const lockedTabsCount = allTabs.length - tabs.length;
+  const showUnlockHint = experienceMode === "beginner" && lockedTabsCount > 0;
 
   return (
     <div className="mb-4">
@@ -108,13 +125,13 @@ export default function TabNavigation({
         {tabs.map((tab) => {
           const badgeCount = tab.badge || badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
-          
+
           return (
             <button
               key={tab.id}
               className={`flex-1 py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg relative ${activeTab === tab.id
-                  ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm"
+                : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 }`}
               onClick={() => setActiveTab(tab.id)}
             >
@@ -133,6 +150,15 @@ export default function TabNavigation({
           );
         })}
       </div>
+
+      {/* Unlock hint for beginners */}
+      {showUnlockHint && (
+        <div className="mt-2 text-center">
+          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+            🔒 <span className="font-bold">{lockedTabsCount} more feature{lockedTabsCount !== 1 ? 's' : ''}</span> unlock as you use the app
+          </p>
+        </div>
+      )}
     </div>
   );
 }

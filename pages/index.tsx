@@ -25,12 +25,22 @@ import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
 import { useNetworkActivity } from "../hooks/use-network-activity";
 import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
+import ModeUpgradeModal from "../components/ui/ModeUpgradeModal";
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, guidedTour, exitTour, setSwapPrefill } = useAppState();
+  const { activeTab, setActiveTab, guidedTour, exitTour, setSwapPrefill, experienceMode } = useAppState();
   const { showToast } = useToast();
   const { unreadCount, markAsRead, setDrawerOpen, addUserMessage } = useAIConversation();
   const { currentPulse } = useNetworkActivity();
+
+  // Redirect beginners away from locked tabs
+  useEffect(() => {
+    if (experienceMode === 'beginner' && (activeTab === 'overview' || activeTab === 'protect')) {
+      setActiveTab('swap');
+    } else if (experienceMode === 'intermediate' && activeTab === 'protect') {
+      setActiveTab('overview');
+    }
+  }, [experienceMode, activeTab, setActiveTab]);
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -227,6 +237,7 @@ export default function DiversiFiPage() {
               }
               setActiveTab(tab);
             }}
+            experienceMode={experienceMode}
           />
         </div>
 
@@ -317,6 +328,9 @@ export default function DiversiFiPage() {
           onConnect={connectWallet}
           isMiniPay={isInMiniPay}
         />
+
+        {/* Mode Upgrade Celebration */}
+        <ModeUpgradeModal />
       </div>
     </div>
   );

@@ -45,9 +45,12 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill, recordSwap } = useAppState();
+  const { swapPrefill, clearSwapPrefill, recordSwap, experienceMode } = useAppState();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
+
+  const isBeginner = experienceMode === "beginner";
+  const isIntermediate = experienceMode === "intermediate";
 
   const {
     swap: performSwap,
@@ -262,16 +265,29 @@ export default function SwapTab({
   return (
     <div className="space-y-4">
       <Card>
-        <TabHeader
-          title="Action Hub"
-          chainId={walletChainId}
-          onRefresh={handleRefresh}
-          isLoading={isBalancesLoading || isSwapLoading}
-          onNetworkChange={handleRefresh}
-        />
+        {/* Hide complex header for beginners */}
+        {!isBeginner && (
+          <TabHeader
+            title="Action Hub"
+            chainId={walletChainId}
+            onRefresh={handleRefresh}
+            isLoading={isBalancesLoading || isSwapLoading}
+            onNetworkChange={handleRefresh}
+          />
+        )}
 
-        {/* NEW: Chain Balances Header - Always visible when connected */}
-        {address && (
+        {/* Beginner: Simple title */}
+        {isBeginner && (
+          <div className="mb-4">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Convert Your Money</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Protect your savings by converting to more stable currencies
+            </p>
+          </div>
+        )}
+
+        {/* Hide chain balances header for beginners */}
+        {address && !isBeginner && (
           <ChainBalancesHeader
             chains={chainBalancesData}
             currentChainId={walletChainId}
@@ -280,32 +296,35 @@ export default function SwapTab({
           />
         )}
 
-        <div className="mb-4">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg
-                className="size-4 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={3}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
+        {/* Hide search for beginners */}
+        {!isBeginner && (
+          <div className="mb-4">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg
+                  className="size-4 text-gray-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={3}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
+                </svg>
+              </div>
+              <input
+                type="text"
+                placeholder="Search assets (e.g. 'USDm', 'Gold')..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="block w-full pl-10 pr-3 py-2 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900 text-sm font-bold focus:border-blue-500 outline-none"
+              />
             </div>
-            <input
-              type="text"
-              placeholder="Search assets (e.g. 'USDm', 'Gold')..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900 text-sm font-bold focus:border-blue-500 outline-none"
-            />
           </div>
-        </div>
+        )}
 
         {!address ? (
           <ConnectWalletPrompt
@@ -405,7 +424,8 @@ export default function SwapTab({
         )}
       </Card>
 
-      {!isArbitrum && address && (
+      {/* Hide collapsible sections for beginners */}
+      {!isArbitrum && address && !isBeginner && (
         <div className="space-y-4">
           <CollapsibleSection
             title={`Regional Hedge: ${userRegion} → ${targetRegion}`}
