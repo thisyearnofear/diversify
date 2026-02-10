@@ -1,47 +1,22 @@
-# 🧠 DiversiFi Oracle - Multi-Chain AI Wealth Protection & Analytics Platform
+# 🧠 DiversiFi - Multi-Chain AI Wealth Protection
 
-**An intelligent AI platform protecting wealth across multiple blockchains by monitoring markets, analyzing RWAs, managing global/local stablecoins, and providing inflation protection tools.**
+**AI-powered wealth protection across Celo and Arbitrum. Smart stablecoin diversification, inflation hedging, and real-world asset access.**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Network](https://img.shields.io/badge/network-Multi_Chain-blue.svg)
 ![AI](https://img.shields.io/badge/AI-Gemini_3.0-orange.svg)
 
-## 🌟 Core Value Proposition
+## 🌟 What It Does
 
-**comprehensive multi-chain wealth protection and analytics platform**.
+DiversiFi helps you protect wealth from inflation and currency volatility through:
 
-### 🌐 Multi-Chain Operations
-- **Arbitrum**: Advanced RWA (Real World Assets) monitoring and analytics with sophisticated yield strategies.
-- **Celo**: Global and local stablecoin management for emerging market access and financial inclusion.
-
-### 🤖 Autonomous AI Agent (Arc Network)
-- **Self-Paying**: The agent uses the **x402 protocol** to autonomously pay for its own API calls (Truflation, Glassnode, Macro Data) using USDC.
-- **On-Chain Audit**: Every analysis and decision is recorded on the Arc blockchain for complete transparency.
-
-### 💳 Cross-Chain Infrastructure
-- **Unified Balance**: Uses **Circle Gateway** to view and manage USDC balances across multiple chains instantly.
-- **Cross-Chain Bridging**: Integrates **Circle Bridge Kit** and **CCTP** for secure, native USDC transfers between Arbitrum, Celo as well as Lifi.
-- **Programmable Wallets**: Enterprise-grade security for multi-chain operations.
-
-### 🧠 Advanced Intelligence & Analytics
-- **Oracle Insights**: Real-time market intelligence with predictive analytics across all supported chains.
-- **Gemini 3.0 Flash**: Powered by Google's latest `gemini-3-flash-preview` model for deep financial reasoning and structured JSON outputs.
-- **Multimodal Vision**: Can analyze charts and screenshots to assess market sentiment.
-- **Real-Time Data**: Accesses premium data sources (Inflation, Yields, Sentiment) that are normally behind paywalls.
-
-### 🛡️ Wealth Protection Tools
-- **Inflation Protection**: Automated hedging strategies using global and local stablecoins based on real-time economic indicators.
-- **Asset Visualization**: Comprehensive portfolio tracking and visualization tools for multi-chain assets.
-- **Wealth Stabilization**: Algorithmic rebalancing to maintain optimal risk-adjusted returns across volatile markets.
-
-### ⚡ Smart Automation & Integrations
-- **Zapier MCP**: Full integration with Zapier via Model Context Protocol (MCP) to trigger workflows (Email, Slack, Spreadsheets). [WIP]
-- **Multi-Channel Alerts**: Configurable notifications via Email (SendGrid/Resend) and Slack. [WIP]
+- **Smart Stablecoin Swaps** - Exchange between global (USDC) and local stablecoins using AI-powered recommendations
+- **Cross-Chain Bridging** - Move assets seamlessly between Celo and Arbitrum via [LiFi](https://li.fi/)
+- **Inflation Protection** - Real-time economic data analysis to hedge against currency devaluation
+- **RWA Access** - Exposure to tokenized real-world assets (treasury yields, gold) on Arbitrum
 
 ## 🚀 Quick Start
-
-### 1. Installation
 
 ```bash
 # Install dependencies
@@ -49,62 +24,64 @@ pnpm install
 
 # Setup environment
 cp .env.example .env.local
-```
 
-### 2. Configuration
+# Add your API keys to .env.local:
+# - GOOGLE_AI_API_KEY (get from https://aistudio.google.com/)
+# - VENICE_API_KEY (optional, from https://venice.ai/api)
+# - NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID (from https://cloud.walletconnect.com/)
 
-Add your keys to `.env.local`:
-```bash
-# Arc Agent Setup
-ARC_AGENT_PRIVATE_KEY=your_private_key
-ARC_AGENT_TESTNET=true
-
-# AI Configuration
-GOOGLE_AI_API_KEY=your_gemini_key
-
-# Zapier Automation (Optional)
-ZAPIER_EMBED_ID=your_id
-ZAPIER_EMBED_SECRET=your_secret
-```
-
-### 3. Run the App
-
-```bash
-# Start development server
+# Run dev server
 pnpm dev
 ```
 
-### 4. Agent Setup (Optional)
+## 🏗️ Architecture
 
-To spawn a dedicated agent wallet:
-```bash
-pnpm setup-arc-agent
-```
+### Supported Chains
+- **Celo** - Local stablecoin access (cUSD, cEUR, cREAL) via Mento
+- **Arbitrum** - RWA yield tokens (USDY, PAXG, SYRUPUSDC) via LiFi/Uniswap
+
+### AI Intelligence
+- **Gemini 3.0 Flash** - Portfolio analysis and recommendations
+- **Venice AI** (optional) - Web search, voice, private inference
+- **Real-time Data** - Inflation rates, exchange rates, macro indicators
+
+### Cross-Chain Infrastructure
+- **LiFi SDK** - Cross-chain swaps and bridging (primary)
+- **Circle Programmable Wallets** - Enterprise wallet infrastructure
+- **1inch** - Arbitrum DEX aggregation
 
 ## 📂 Documentation
 
-Comprehensive documentation is available in the `/docs` directory:
-
-- [**Architecture & Technical Overview**](docs/ARCHITECTURE_AND_TECHNICAL_OVERVIEW.md): Complete system architecture and technical implementation.
-- [**API Keys & Data Sources**](docs/API_KEYS_AND_DATA_SOURCES.md): Guide to setting up premium and free data sources with API keys.
-- [**Integration Guides**](docs/INTEGRATION_GUIDES.md): Step-by-step instructions for Farcaster, Arc, Guardarian, and Zapier integrations.
-- [**Business Model & Economics**](docs/BUSINESS_MODEL_ECONOMICS.md): Explanation of the freemium x402 model and economic projections.
-- [**Development Guidelines**](docs/DEVELOPMENT_GUIDELINES.md): Coding standards, project structure, and development best practices.
+- [**Architecture & Technical Overview**](docs/ARCHITECTURE_AND_TECHNICAL_OVERVIEW.md) - System design and implementation
+- [**API Keys & Data Sources**](docs/API_KEYS_AND_DATA_SOURCES.md) - Setup guide for data providers
+- [**Integration Guides**](docs/INTEGRATION_GUIDES.md) - Farcaster, Guardarian on-ramp, and wallet setup
+- [**Development Guidelines**](docs/DEVELOPMENT_GUIDELINES.md) - Coding standards and best practices
+- [**Business Model**](docs/BUSINESS_MODEL_ECONOMICS.md) - Economics and monetization
 
 ## 🛠️ Tech Stack
 
--   **AI**: Google Gemini 3.0 Flash Preview
--   **Blockchain**: Arc Network (Chain ID 5042002), Arbitrum One, Celo
--   **Infrastructure**: Circle Programmable Wallets, CCTP, Gateway
--   **Payments**: x402 Protocol (Micropayments)
--   **Automation**: Zapier MCP, SendGrid
--   **Frontend**: Next.js, React, Tailwind CSS
+| Category | Technology |
+|----------|------------|
+| **Frontend** | Next.js 15, React 19, Tailwind CSS |
+| **AI** | Google Gemini 3.0, Venice AI |
+| **Swaps** | Mento (Celo), LiFi (cross-chain), 1inch (Arbitrum) |
+| **Wallet** | WalletConnect, RainbowKit, Circle Programmable Wallets |
+| **Voice** | OpenAI Whisper, ElevenLabs TTS |
 
 ## 🔮 Roadmap
 
--   **Mainnet CCTP**: Full mainnet execution for cross-chain swaps.
--   **Multi-Agent System**: Specialized agents for Yield Farming vs. Protection.
--   **Enterprise API**: White-label agent solutions for fintechs.
+- **Multi-Agent System** - Specialized agents for yield vs protection strategies
+- **Additional Chains** - Base, Optimism support via LiFi
+- **Enhanced Automation** - Zapier MCP integration (in development)
+
+## 🧪 Development Features
+
+> ⚠️ **Testnet Only**: The following features are experimental and only available in development:
+>
+> - **Arc Network Integration** - Autonomous agent on Arc testnet (Chain ID 5042002)
+> - **x402 Protocol** - Micropayments for API access (in development)
+>
+> Enable with `NEXT_PUBLIC_ENABLE_ARC=true` and `ENABLE_AUTONOMOUS_MODE=true`
 
 ## 📄 License
 
