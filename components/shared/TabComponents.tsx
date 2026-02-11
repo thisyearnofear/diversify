@@ -605,7 +605,8 @@ export const LoadingSpinner = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) =
   );
 };
 
-// Connect wallet prompt (standardized across tabs)
+// ENHANCEMENT: Connect wallet prompt (standardized across tabs)
+// Note: Buy crypto CTA handled in OverviewTab's empty wallet detection
 export const ConnectWalletPrompt = ({
   message = "Connect your wallet to continue.",
   WalletButtonComponent,

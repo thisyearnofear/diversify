@@ -97,52 +97,60 @@ export default function OverviewTab({
 
     return (
       <div className="space-y-4">
-        {/* EMOTIONAL HOOK: Show them what they're losing RIGHT NOW */}
-        <Card padding="p-0" className="overflow-hidden border-2 border-red-200 dark:border-red-900">
-          <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-6">
+        {/* ENHANCEMENT: Hope-first approach - show value before fear */}
+        <Card padding="p-0" className="overflow-hidden border-2 border-emerald-200 dark:border-emerald-900">
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <span className="text-2xl">⚠️</span>
-                  <h3 className="text-lg font-black text-red-900 dark:text-red-100">
-                    Your Money is Losing Value
+                  <span className="text-2xl">🛡️</span>
+                  <h3 className="text-lg font-black text-emerald-900 dark:text-emerald-100">
+                    Protect Your Savings from Inflation
                   </h3>
                 </div>
-                <p className="text-sm text-red-700 dark:text-red-300 font-medium">
-                  {userRegion} inflation: {regionalInflation.toFixed(1)}% per year
+                <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
+                  Smart diversification for {userRegion} ({regionalInflation.toFixed(1)}% inflation)
                 </p>
               </div>
               <RegionalIconography region={userRegion} size="md" />
             </div>
 
-            {/* THE SHOCKING MATH */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-red-100 dark:border-red-900">
+            {/* THE OPPORTUNITY (reframed from threat) */}
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-emerald-100 dark:border-emerald-900">
               <div className="text-center mb-3">
-                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">If you have</div>
-                <div className="text-3xl font-black text-gray-900 dark:text-white">$1,000</div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold">Protect $1,000 →</div>
+                <div className="text-3xl font-black text-emerald-900 dark:text-emerald-100">Save ${yearlyLoss}/year</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-800">
-                  <div className="text-xs text-red-600 dark:text-red-400 font-bold mb-1">Lost per month</div>
-                  <div className="text-xl font-black text-red-700 dark:text-red-300">-${monthlyLoss}</div>
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">Per month</div>
+                  <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">+${monthlyLoss}</div>
                 </div>
-                <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-lg border border-red-200 dark:border-red-700">
-                  <div className="text-xs text-red-700 dark:text-red-300 font-bold mb-1">Lost per year</div>
-                  <div className="text-xl font-black text-red-800 dark:text-red-200">-${yearlyLoss}</div>
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-lg border border-emerald-200 dark:border-emerald-700">
+                  <div className="text-xs text-emerald-700 dark:text-emerald-300 font-bold mb-1">Per year</div>
+                  <div className="text-xl font-black text-emerald-800 dark:text-emerald-200">+${yearlyLoss}</div>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-start gap-2 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-              <span className="text-lg">💡</span>
-              <p className="text-xs text-amber-900 dark:text-amber-100 leading-relaxed">
-                <strong>The good news:</strong> You can protect your savings by spreading them across more stable currencies. It takes 2 minutes.
+            <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <span className="text-lg">✨</span>
+              <p className="text-xs text-blue-900 dark:text-blue-100 leading-relaxed">
+                <strong>How it works:</strong> Spread your savings across stable currencies to reduce inflation risk. Free to try, takes 2 minutes.
               </p>
             </div>
           </div>
 
           <div className="p-4 bg-white dark:bg-gray-800 space-y-3">
-            <WalletButton variant="inline" className="w-full" />
+            {/* ENHANCEMENT: Demo-first approach - lowest friction for beginners */}
+            <button
+              onClick={enableDemoMode}
+              className="w-full py-3 px-4 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md shadow-blue-500/20 hover:shadow-blue-500/30 flex items-center justify-center gap-2"
+            >
+              <span className="text-lg">🎮</span>
+              <span>Try Demo First</span>
+              <span className="text-xs opacity-80 ml-1">(No wallet needed)</span>
+            </button>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -150,20 +158,28 @@ export default function OverviewTab({
               </div>
               <div className="relative flex justify-center text-xs">
                 <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">
-                  or
+                  Ready to protect your money?
                 </span>
               </div>
             </div>
 
-            <button
-              onClick={enableDemoMode}
-              className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border-2 border-blue-200 dark:border-blue-800"
+            {/* Secondary CTA: Buy Crypto (creates wallet too) */}
+            <a
+              href="https://widget.mtpelerin.com/?type=direct-link&tabs=buy&tab=buy&net=celo&cur=USD&amount=100&lang=en"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
             >
-              🎮 Try Demo First
-            </button>
+              <span className="text-base">💳</span>
+              <span>Buy Crypto</span>
+              <span className="text-xs opacity-80">(Wallet included)</span>
+            </a>
+
+            {/* Tertiary CTA: Connect existing wallet */}
+            <WalletButton variant="inline" className="w-full !bg-gray-100 dark:!bg-gray-700 !text-gray-700 dark:!text-gray-200 hover:!bg-gray-200 dark:hover:!bg-gray-600" />
 
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-              Free to use • No account needed • Your keys, your crypto
+              🔒 Secure • 🇨🇭 Swiss regulated • 💯 Free to try
             </p>
           </div>
         </Card>
@@ -230,6 +246,56 @@ export default function OverviewTab({
                 </button>
                 <WalletButton variant="inline" />
               </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* ENHANCEMENT: Empty wallet detection - guide users to add funds */}
+      {!isDemo && address && !hasHoldings && (
+        <Card padding="p-0" className="overflow-hidden border-2 border-amber-200 dark:border-amber-900">
+          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <span className="text-2xl">👋</span>
+              <div>
+                <h3 className="text-lg font-black text-amber-900 dark:text-amber-100">
+                  Welcome! Let's Add Some Funds
+                </h3>
+                <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mt-1">
+                  Your wallet is connected but empty. Add crypto to start protecting your savings.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <a
+                href={`https://widget.mtpelerin.com/?type=direct-link&tabs=buy&tab=buy&net=celo&cur=USD&amount=100&lang=en&addr=${address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2"
+              >
+                <span className="text-lg">💳</span>
+                <span>Buy Crypto with Card</span>
+                <span className="text-xs opacity-80">(Funds sent to your wallet)</span>
+              </a>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-amber-200 dark:border-amber-700" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-amber-50 dark:bg-amber-900/20 px-2 text-amber-700 dark:text-amber-300">
+                    or
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={enableDemoMode}
+                className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors"
+              >
+                🎮 Try Demo While You Wait
+              </button>
             </div>
           </div>
         </Card>
