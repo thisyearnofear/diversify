@@ -107,7 +107,7 @@ export default function GoodDollarInfoCard({
                             onClick={onStake}
                             className="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-3 px-4 rounded-xl transition-all text-sm"
                         >
-                            🌱 Stake for UBI
+                            🌱 Support UBI
                         </button>
                     )}
                     {onLearnMore && (
@@ -119,6 +119,15 @@ export default function GoodDollarInfoCard({
                         </button>
                     )}
                 </div>
+
+                {/* Staking info note */}
+                {onStake && (
+                    <div className="mt-3 p-3 bg-emerald-50 dark:bg-emerald-900/10 rounded-lg border border-emerald-100 dark:border-emerald-900/30">
+                        <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                            💡 <strong>Want to help fund UBI?</strong> Stake stablecoins to earn yield while supporting universal basic income for people worldwide.
+                        </p>
+                    </div>
+                )}
             </div>
         </DashboardCard>
     );

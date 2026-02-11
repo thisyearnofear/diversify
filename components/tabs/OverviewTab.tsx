@@ -8,7 +8,7 @@ import type { Region } from "@/hooks/use-user-region";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
-import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
+import { StreakRewardsCard, RewardsStats } from "../rewards/StreakRewardsCard";
 import SimplePieChart from "../portfolio/SimplePieChart";
 import { useAppState } from "../../context/AppStateContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
@@ -330,6 +330,8 @@ export default function OverviewTab({
           onSaveClick={() => setActiveTab("swap")}
         />
 
+        {/* Community Stats - Social Proof */}
+        <RewardsStats />
       </div>
 
       {/* 3. ASSET BREAKDOWN (Simplified for Beginners) */}

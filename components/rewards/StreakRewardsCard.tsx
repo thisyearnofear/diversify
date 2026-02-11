@@ -124,6 +124,36 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
         variant={canClaim ? 'reward' : 'success'}
       />
 
+      {/* Milestone Progress - Show next achievement */}
+      {isEligible && streak && streak.daysActive > 0 && (
+        <div className="mt-3 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 rounded-lg border border-amber-200 dark:border-amber-900/30">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <div className="text-xs font-black text-amber-700 dark:text-amber-400 mb-1">
+                {streak.daysActive < 7 ? '🔥 Next: 7-Day Badge' :
+                  streak.daysActive < 30 ? '🏆 Next: 30-Day Badge' :
+                    streak.daysActive < 100 ? '💎 Next: 100-Day Badge' :
+                      streak.daysActive < 365 ? '👑 Next: 365-Day Badge' :
+                        '👑 Legend Status!'}
+              </div>
+              <div className="text-xs text-amber-600 dark:text-amber-500">
+                {streak.daysActive < 7 ? `${7 - streak.daysActive} days to go` :
+                  streak.daysActive < 30 ? `${30 - streak.daysActive} days to go` :
+                    streak.daysActive < 100 ? `${100 - streak.daysActive} days to go` :
+                      streak.daysActive < 365 ? `${365 - streak.daysActive} days to go` :
+                        'All milestones achieved!'}
+              </div>
+            </div>
+            <div className="text-2xl">
+              {streak.daysActive < 7 ? '🔥' :
+                streak.daysActive < 30 ? '🏆' :
+                  streak.daysActive < 100 ? '💎' :
+                    streak.daysActive < 365 ? '👑' : '✨'}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Claim Flow Modal */}
       {showClaimFlow && (
         <GoodDollarClaimFlow
@@ -140,25 +170,66 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
 
 // Social proof stats - shows community activity
 export function RewardsStats({ className = '' }: { className?: string }) {
-  // TODO: Fetch from backend or subgraph
-  const mockStats = {
-    todayClaims: 47,
-    totalClaimed: '12,450',
-    activeStreaks: 156,
-  };
+  const [stats, setStats] = React.useState({
+    todayClaims: 0,
+    totalClaimed: '0',
+    activeStreaks: 0,
+    topStreak: 0,
+  });
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/streaks/stats');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error('[RewardsStats] Failed to fetch:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStats();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchStats, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className={`grid grid-cols-3 gap-2 ${className}`}>
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 animate-pulse">
+            <div className="h-6 bg-green-200 dark:bg-green-800 rounded mb-1" />
+            <div className="h-3 bg-green-100 dark:bg-green-900 rounded" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Threshold: Don't show social proof if it's "social disproof" (too few users)
+  // We want to see at least 5 active streakers before surfacing this.
+  if (stats.activeStreaks < 5) {
+    return null;
+  }
 
   return (
     <div className={`grid grid-cols-3 gap-2 ${className}`}>
       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
-        <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.todayClaims}</div>
+        <div className="text-lg font-bold text-green-700 dark:text-green-300">{stats.todayClaims}</div>
         <div className="text-xs text-green-600 dark:text-green-400">Claims today</div>
       </div>
       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
-        <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.totalClaimed}</div>
+        <div className="text-lg font-bold text-green-700 dark:text-green-300">{stats.totalClaimed}</div>
         <div className="text-xs text-green-600 dark:text-green-400">G$ earned</div>
       </div>
       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
-        <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.activeStreaks}</div>
+        <div className="text-lg font-bold text-green-700 dark:text-green-300">{stats.activeStreaks}</div>
         <div className="text-xs text-green-600 dark:text-green-400">Active streaks</div>
       </div>
     </div>

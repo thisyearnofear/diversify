@@ -25,26 +25,52 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
 
     const [claimStatus, setClaimStatus] = useState<'ready' | 'claiming' | 'success' | 'error'>('ready');
     const [showCelebration, setShowCelebration] = useState(false);
+    const [txHash, setTxHash] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Handle claim action
     const handleClaim = async () => {
         if (!canClaim) return;
 
         setClaimStatus('claiming');
+        setErrorMessage(null);
 
         try {
-            // Open GoodDollar claim page in new tab
-            claimG();
+            // Call the enhanced claimG function
+            const result = await claimG();
 
-            // Show success state
-            setTimeout(() => {
+            if (result.success && result.txHash) {
+                // Actual on-chain claim succeeded
+                setTxHash(result.txHash);
                 setClaimStatus('success');
                 setShowCelebration(true);
                 onClaimSuccess?.();
-            }, 1000);
+            } else if (result.success && !result.txHash) {
+                // Fallback to external page (no error, just different flow)
+                setClaimStatus('success');
+                setShowCelebration(true);
+                onClaimSuccess?.();
+            } else {
+                // Claim failed
+                setErrorMessage(result.error || 'Failed to claim. Please try again.');
+                setClaimStatus('error');
+
+                // Auto-reset error state after 5 seconds
+                setTimeout(() => {
+                    setClaimStatus('ready');
+                    setErrorMessage(null);
+                }, 5000);
+            }
         } catch (error) {
             console.error('[ClaimFlow] Error:', error);
+            setErrorMessage('Unexpected error. Please try again.');
             setClaimStatus('error');
+
+            // Auto-reset error state after 5 seconds
+            setTimeout(() => {
+                setClaimStatus('ready');
+                setErrorMessage(null);
+            }, 5000);
         }
     };
 
@@ -97,6 +123,18 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                             </div>
                         </div>
                     </div>
+
+                    {/* Transaction link if available */}
+                    {txHash && (
+                        <a
+                            href={`https://celoscan.io/tx/${txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-center text-xs text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            🔗 View transaction on Celoscan
+                        </a>
+                    )}
 
                     <button
                         onClick={onClose}
@@ -168,10 +206,10 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                         </h3>
                         <div className="space-y-2">
                             {[
-                                { icon: '1️⃣', text: 'Opens GoodDollar claim page' },
-                                { icon: '2️⃣', text: 'Verify your identity (if first time)' },
-                                { icon: '3️⃣', text: 'Claim your daily G$ tokens' },
-                                { icon: '4️⃣', text: 'G$ appears in your Celo wallet' },
+                                { icon: '1️⃣', text: 'Sign transaction with your wallet' },
+                                { icon: '2️⃣', text: 'Claim executes on Celo blockchain' },
+                                { icon: '3️⃣', text: 'G$ tokens sent to your wallet' },
+                                { icon: '4️⃣', text: 'Come back tomorrow for more!' },
                             ].map((step, i) => (
                                 <div key={i} className="flex items-start gap-3">
                                     <span className="text-lg">{step.icon}</span>
@@ -182,6 +220,18 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                             ))}
                         </div>
                     </div>
+
+                    {/* Error message */}
+                    {errorMessage && (
+                        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="flex items-start gap-2">
+                                <span className="text-lg">⚠️</span>
+                                <p className="text-xs text-red-700 dark:text-red-300 leading-relaxed">
+                                    {errorMessage}
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* CTA */}
                     <button
@@ -198,7 +248,7 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                                 </svg>
-                                Opening claim page...
+                                Claiming UBI...
                             </span>
                         ) : (
                             'Claim G$ Now →'

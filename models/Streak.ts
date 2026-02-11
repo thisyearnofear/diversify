@@ -14,6 +14,23 @@ export interface IStreak extends Document {
   daysActive: number;
   gracePeriodsUsed: number;
   totalSaved: number;
+
+  // Historical tracking
+  longestStreak: number;
+  totalStreaksCompleted: number;
+
+  // Milestones
+  milestones: {
+    days7: boolean;
+    days30: boolean;
+    days100: boolean;
+    days365: boolean;
+  };
+
+  // Leaderboard (opt-in)
+  displayName?: string;
+  isPublic: boolean;
+
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +71,40 @@ const StreakSchema: Schema = new Schema(
       required: true,
       default: 0,
       min: 0,
+    },
+
+    // Historical tracking
+    longestStreak: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+    totalStreaksCompleted: {
+      type: Number,
+      required: true,
+      default: 0,
+      min: 0,
+    },
+
+    // Milestones
+    milestones: {
+      days7: { type: Boolean, default: false },
+      days30: { type: Boolean, default: false },
+      days100: { type: Boolean, default: false },
+      days365: { type: Boolean, default: false },
+    },
+
+    // Leaderboard opt-in
+    displayName: {
+      type: String,
+      required: false,
+      maxlength: 20,
+    },
+    isPublic: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
   },
   {

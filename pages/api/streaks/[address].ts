@@ -127,6 +127,15 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
         daysActive: 1,
         gracePeriodsUsed: 0,
         totalSaved: amountUSD,
+        longestStreak: 1,
+        totalStreaksCompleted: 0,
+        milestones: {
+          days7: false,
+          days30: false,
+          days100: false,
+          days365: false,
+        },
+        isPublic: false,
       });
     } else {
       const lastDay = Math.floor(streak.lastActivity / 86400000);
@@ -147,7 +156,17 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
         streak.lastActivity = Date.now();
         streak.totalSaved += amountUSD;
       } else {
-        // Streak broken - start over
+        // Streak broken - record it and start over
+        if (streak.daysActive >= 7) {
+          streak.totalStreaksCompleted += 1;
+        }
+
+        // Update longest streak if current was longer
+        if (streak.daysActive > streak.longestStreak) {
+          streak.longestStreak = streak.daysActive;
+        }
+
+        // Start fresh
         streak.startTime = Date.now();
         streak.lastActivity = Date.now();
         streak.daysActive = 1;
@@ -156,12 +175,38 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
       }
     }
 
+    // Check and award milestones
+    const newMilestones: string[] = [];
+
+    if (streak.daysActive >= 7 && !streak.milestones.days7) {
+      streak.milestones.days7 = true;
+      newMilestones.push('7-Day Streak! 🔥');
+    }
+    if (streak.daysActive >= 30 && !streak.milestones.days30) {
+      streak.milestones.days30 = true;
+      newMilestones.push('30-Day Streak! 🏆');
+    }
+    if (streak.daysActive >= 100 && !streak.milestones.days100) {
+      streak.milestones.days100 = true;
+      newMilestones.push('100-Day Streak! 💎');
+    }
+    if (streak.daysActive >= 365 && !streak.milestones.days365) {
+      streak.milestones.days365 = true;
+      newMilestones.push('365-Day Streak! 👑');
+    }
+
+    // Update longest streak if current is longer
+    if (streak.daysActive > streak.longestStreak) {
+      streak.longestStreak = streak.daysActive;
+    }
+
     await streak.save();
 
     const state = calculateStreakState(streak);
     return res.status(200).json({
       success: true,
       ...state,
+      newMilestones,
       message: `Streak updated! ${streak.daysActive} day${streak.daysActive !== 1 ? 's' : ''} active`
     });
   } catch (error) {

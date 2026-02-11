@@ -51,7 +51,7 @@ interface StreakState {
 
 interface StreakActions {
   recordSwap: (amountUSD: number) => Promise<void>;
-  claimG: () => void;
+  claimG: () => Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }>;
   resetStreak: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -300,10 +300,41 @@ export function useStreakRewards(): StreakState & StreakActions {
     }
   }, [address]);
 
-  // Open GoodDollar claim page
-  const claimG = useCallback(() => {
-    if (!state.canClaim) return;
-    window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
+  // Claim G$ tokens directly in-app
+  const claimG = useCallback(async (): Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }> => {
+    if (!state.canClaim) {
+      return { success: false, error: 'Not eligible to claim yet' };
+    }
+
+    try {
+      // Dynamic import to avoid loading service on every render
+      const { GoodDollarService } = await import('../services/gooddollar-service');
+
+      // Get wallet provider
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        // Fallback to external URL if no provider
+        window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
+        return { success: true, error: 'Opened external claim page' };
+      }
+
+      const service = await GoodDollarService.fromWeb3Provider((window as any).ethereum);
+      const result = await service.claimUBI();
+
+      if (result.success) {
+        console.log('[StreakRewards] UBI claimed successfully:', result);
+      } else {
+        console.warn('[StreakRewards] Claim failed, opening external page');
+        // Fallback to external URL on error
+        window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[StreakRewards] Error claiming UBI:', error);
+      // Fallback to external URL on error
+      window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
+      return { success: false, error: 'Opened external claim page as fallback' };
+    }
   }, [state.canClaim]);
 
   // Reset streak (dev/testing)
