@@ -18,17 +18,17 @@ const MTP_WIDGET_BASE = "https://widget.mtpelerin.com";
 function getNetworkName(chainId: number | null): string {
   switch (chainId) {
     case 42220:
-      return "celo";
+      return "celo_mainnet";
     case 42161:
-      return "arbitrum";
+      return "arbitrum_mainnet";
     case 1:
-      return "ethereum";
+      return "mainnet";
     case 137:
-      return "polygon";
+      return "matic_mainnet";
     case 8453:
-      return "base";
+      return "base_mainnet";
     default:
-      return "celo"; // Default to Celo for DiversiFi
+      return "celo_mainnet"; // Default to Celo for DiversiFi
   }
 }
 
@@ -47,20 +47,16 @@ export function MtPelerinOnramp({
     if (!address) return;
 
     const params = new URLSearchParams({
-      type: "direct-link",
-      tabs: "buy,sell,swap",
-      tab: mode,
       addr: address,
       lang: "en",
-      // Auto-detect network based on chainId
       net: getNetworkName(chainId),
+      wdc: "CELO", // Wallet Destination Code
+      fiat: "USD",
+      amount: "100",
+      // Embedded optimizations
+      theme: "light",
+      redirectUrl: typeof window !== 'undefined' ? window.location.origin : '',
     });
-
-    // Add specific params for better UX
-    if (mode === "buy") {
-      params.set("amount", "100"); // Default amount
-      params.set("cur", "USD");
-    }
 
     setWidgetUrl(`${MTP_WIDGET_BASE}/?${params.toString()}`);
   }, [address, chainId, mode]);
@@ -200,11 +196,11 @@ function MtPelerinModal({ widgetUrl, onClose }: MtPelerinModalProps) {
   const [hasError, setHasError] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
 
-  // Safety timeout - if iframe doesn't load in 8 seconds, show fallback option
+  // Safety timeout - if iframe doesn't load in 5 seconds, show fallback option
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isLoading) setShowFallback(true);
-    }, 8000);
+    }, 5000);
     return () => clearTimeout(timer);
   }, [isLoading]);
 

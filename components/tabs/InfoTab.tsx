@@ -8,6 +8,7 @@ import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
 import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
 import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
+import { DepositHub } from "../onramp/DepositHub";
 import type { Region } from "@/hooks/use-user-region";
 
 interface InfoTabProps {
@@ -63,6 +64,9 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
           }
         </p>
       </div>
+
+      {/* Add Funds Hub - Critical for Onboarding */}
+      <DepositHub />
 
       {/* Interactive Education: Inflation Protection */}
       <div>

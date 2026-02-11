@@ -164,17 +164,14 @@ export default function OverviewTab({
               </div>
             </div>
 
-            {/* Secondary CTA: Buy Crypto (creates wallet too) */}
-            <a
-              href="https://widget.mtpelerin.com/?type=direct-link&tabs=buy&tab=buy&net=celo&cur=USD&amount=100&lang=en"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
-            >
-              <span className="text-base">💳</span>
-              <span>Buy Crypto</span>
-              <span className="text-xs opacity-80">(Wallet included)</span>
-            </a>
+            {/* Secondary CTA: Buy Crypto */}
+            <div className="w-full">
+              <NetworkOptimizedOnramp
+                variant="default"
+                defaultAmount="100"
+                className="w-full !rounded-lg !py-2.5"
+              />
+            </div>
 
             {/* Tertiary CTA: Connect existing wallet */}
             <WalletButton variant="inline" className="w-full !bg-gray-100 dark:!bg-gray-700 !text-gray-700 dark:!text-gray-200 hover:!bg-gray-200 dark:hover:!bg-gray-600" />
@@ -268,47 +265,45 @@ export default function OverviewTab({
               </div>
             </div>
 
-            <div className="space-y-3">
-              <div className="space-y-4">
-                <NetworkOptimizedOnramp
-                  variant="white"
-                  defaultAmount="100"
-                  className="w-full"
-                />
+            <div className="space-y-4 mt-2">
+              <NetworkOptimizedOnramp
+                variant="white"
+                defaultAmount="100"
+                className="w-full"
+              />
 
-                <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
-                  <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">Deposit from exchange</p>
-                  <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                    <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">{address}</code>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(address);
-                      }}
-                      className="p-1 px-2 text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 transition-colors"
-                    >
-                      Copy
-                    </button>
-                  </div>
+              <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">Deposit from exchange</p>
+                <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">{address}</code>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(address);
+                    }}
+                    className="p-1 px-2 text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 transition-colors"
+                  >
+                    Copy
+                  </button>
                 </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-amber-200 dark:border-amber-700" />
-                  </div>
-                  <div className="relative flex justify-center text-xs">
-                    <span className="bg-amber-50 dark:bg-amber-900/20 px-2 text-amber-700 dark:text-amber-300">
-                      or
-                    </span>
-                  </div>
-                </div>
-
-                <button
-                  onClick={enableDemoMode}
-                  className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors"
-                >
-                  🎮 Try Demo While You Wait
-                </button>
               </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-amber-200 dark:border-amber-700" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-amber-50 dark:bg-amber-900/20 px-2 text-amber-700 dark:text-amber-300">
+                    or
+                  </span>
+                </div>
+              </div>
+
+              <button
+                onClick={enableDemoMode}
+                className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors"
+              >
+                🎮 Try Demo While You Wait
+              </button>
             </div>
           </div>
         </Card>

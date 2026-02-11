@@ -74,7 +74,7 @@ export function GuardarianOnramp({
             network: getNetworkParam(chainId),
 
             // Wallet integration
-            payout_address: address,
+            address: address,
 
             // UX optimizations
             theme: "auto", // Adapts to user's system theme
