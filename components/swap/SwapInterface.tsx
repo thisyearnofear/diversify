@@ -339,7 +339,8 @@ const SwapInterface = forwardRef<
               !address ||
               fromToken === toToken ||
               !amount ||
-              parseFloat(amount) <= 0
+              parseFloat(amount) <= 0 ||
+              parseFloat(amount) > parseFloat(tokenBalances[fromToken]?.formattedBalance || "0")
             }
             onClick={() => executeSwap(onSwap)}
           />

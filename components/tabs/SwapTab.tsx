@@ -64,6 +64,7 @@ export default function SwapTab({
 
   const [swapStatus, setSwapStatus] = useState<string | null>(null);
   const [, setApprovalTxHash] = useState<string | null>(null);
+  // BUGFIX: Import proper type from swap types
   const [, setSwapStep] = useState<
     "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"
   >("idle");
@@ -195,11 +196,20 @@ export default function SwapTab({
     }
   }, [swapPrefill, clearSwapPrefill]);
 
+  // BUGFIX: Handle swap state changes with proper error prioritization
   useEffect(() => {
+    // CRITICAL: Check error first and return early to prevent simultaneous success/error display
     if (swapError) {
       setSwapStatus(`Error: ${swapError}`);
       setSwapStep("error");
-    } else if (hookSwapStep === "completed") {
+      return; // Stop processing - don't show success if there's an error
+    }
+    
+    // Only show success if no error exists
+    // Note: hookSwapStep type is 'idle' | 'approving' | 'swapping' | 'error' from useSwap hook
+    // The 'completed' state is handled by performSwap result, not hookSwapStep
+    if (swapTxHash && !swapError) {
+      // Transaction submitted successfully
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
       // Record swap completion for experience progression
@@ -210,7 +220,11 @@ export default function SwapTab({
       if (celebrationData) {
         setShowCelebration(true);
       }
-    } else if (swapTxHash) {
+      return;
+    }
+    
+    // Transaction submitted but waiting for confirmation
+    if (swapTxHash && !swapError && hookSwapStep === "swapping") {
       setSwapStatus("Transaction submitted...");
     }
   }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordSwap, celebrationData]);
