@@ -38,6 +38,10 @@ export default function StrategyModal({ isOpen, onClose, onComplete }: StrategyM
         } else if (selected === 'custom') {
             // Custom strategy goes straight to app (will show settings)
             setFinancialStrategy(selected);
+            // ENHANCEMENT: Remove onboarding attribute to show wallet UI
+            if (typeof document !== 'undefined') {
+                document.documentElement.removeAttribute('data-pending-onboarding');
+            }
             onClose();
             if (onComplete) {
                 onComplete();
@@ -48,6 +52,10 @@ export default function StrategyModal({ isOpen, onClose, onComplete }: StrategyM
     const handleConfirm = () => {
         if (selected) {
             setFinancialStrategy(selected);
+        }
+        // ENHANCEMENT: Remove onboarding attribute to show wallet UI
+        if (typeof document !== 'undefined') {
+            document.documentElement.removeAttribute('data-pending-onboarding');
         }
         onClose();
         if (onComplete) {
@@ -64,6 +72,10 @@ export default function StrategyModal({ isOpen, onClose, onComplete }: StrategyM
     };
 
     const handleSkip = () => {
+        // ENHANCEMENT: Remove onboarding attribute to show wallet UI
+        if (typeof document !== 'undefined') {
+            document.documentElement.removeAttribute('data-pending-onboarding');
+        }
         onClose();
         if (onComplete) {
             onComplete();
