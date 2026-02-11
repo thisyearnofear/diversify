@@ -284,6 +284,40 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         ],
     },
     {
+        symbol: 'USDT',
+        name: 'Tether USD',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS.USDT,
+                decimals: 6,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS.USDT,
+                decimals: 6,
+            },
+        ],
+    },
+    {
+        symbol: 'G$',
+        name: 'GoodDollar',
+        region: 'Global',
+        chains: [
+            {
+                chainId: NETWORKS.CELO_MAINNET.chainId,
+                address: MAINNET_TOKENS['G$'],
+                decimals: 18,
+            },
+            {
+                chainId: NETWORKS.ALFAJORES.chainId,
+                address: ALFAJORES_TOKENS['G$'],
+                decimals: 18,
+            },
+        ],
+    },
+    {
         symbol: 'PAXG',
         name: 'Paxos Gold',
         region: 'Global',
