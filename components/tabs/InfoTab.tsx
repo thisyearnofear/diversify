@@ -3,10 +3,11 @@ import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
 import { Card } from "../shared/TabComponents";
-import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import InflationVisualizer from "../inflation/InflationVisualizer";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
 import WealthJourneyWidget from "../demo/WealthJourneyWidget";
+import { StreakRewardsCard, RewardsStats } from "../rewards/StreakRewardsCard";
 import type { Region } from "@/hooks/use-user-region";
 
 interface InfoTabProps {
@@ -62,6 +63,14 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
           }
         </p>
       </div>
+
+      {/* Streak Rewards - Makes Learn tab more dynamic */}
+      {address && (
+        <>
+          <StreakRewardsCard onSaveClick={() => setActiveTab("swap")} />
+          <RewardsStats />
+        </>
+      )}
 
       {/* Show journey widget only for intermediate+ */}
       {!isBeginner && (

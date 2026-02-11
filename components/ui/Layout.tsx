@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import Head from "next/head";
 import WalletButton from "../wallet/WalletButton";
 import ThemeToggle from "./ThemeToggle";
-import { StreakBadge } from "../rewards/StreakRewardsCard";
 import { useAppState } from "../../context/AppStateContext";
 
 interface LayoutProps {
@@ -64,9 +63,6 @@ export default function Layout({
               )}
             </h1>
             <div className="flex items-center space-x-2">
-              {/* Streak Badge - FOMO element */}
-              <StreakBadge />
-              
               {/* Mode switcher - prominent for non-beginners to encourage opt-down */}
               <button
                 onClick={cycleMode}

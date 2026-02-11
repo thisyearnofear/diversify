@@ -1,19 +1,18 @@
 /**
- * useStreakRewards - GoodDollar $G streak tracking (NO CONTRACT NEEDED)
+ * useStreakRewards - GoodDollar $G streak tracking with MongoDB persistence
  * 
  * How it works:
- * 1. We track "saves" (swaps of $10+) in localStorage
- * 2. User builds a streak by saving daily
- * 3. When streak is active, we show the GoodDollar claim link
- * 4. User claims $G directly on GoodDollar's wallet site
+ * 1. Primary: MongoDB via API for cross-device persistence
+ * 2. Fallback: localStorage if API is unavailable
+ * 3. User claims $G directly on GoodDollar's wallet site
  * 
  * Core Principles:
  * - DRY: Centralized streak logic
- * - MODULAR: Works without any smart contracts
- * - CLEAN: Simple localStorage persistence
+ * - MODULAR: Works with or without backend
+ * - RESILIENT: Falls back to localStorage if API fails
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAccount } from 'wagmi';
 
 // Configuration
@@ -24,7 +23,11 @@ const STREAK_CONFIG = {
   G_TOKEN_ADDRESS: '0x62B8B11039CBcfba9E2676772F2E96C64BCbc9d9', // Celo
 } as const;
 
+// LocalStorage fallback key
+const STORAGE_KEY = 'diversifi_streak_v1';
+
 interface StreakData {
+  walletAddress: string;
   startTime: number;
   lastActivity: number;
   daysActive: number;
@@ -38,41 +41,28 @@ interface StreakState {
   isEligible: boolean;
   nextClaimTime: Date | null;
   estimatedReward: string;
+  isLoading: boolean;
+  error: string | null;
+  usingFallback: boolean;
 }
 
 interface StreakActions {
-  recordSave: (amountUSD: number) => void;
+  recordSave: (amountUSD: number) => Promise<void>;
   claimG: () => void;
-  resetStreak: () => void;
-  refresh: () => void;
+  resetStreak: () => Promise<void>;
+  refresh: () => Promise<void>;
 }
 
-// Simple storage helper
-const STORAGE_KEY = 'diversifi_streak_v1';
-
-function getStorageKey(address: string): string {
-  return `${STORAGE_KEY}_${address.toLowerCase()}`;
+// Helper: Calculate reward estimate
+function calculateReward(streakDays: number): string {
+  const baseReward = 0.25;
+  const multiplier = Math.min(1 + (streakDays * 0.02), 1.5);
+  const estimated = baseReward * multiplier;
+  return `~$${estimated.toFixed(2)}`;
 }
 
-function getStreakData(address: string): StreakData | null {
-  if (typeof window === 'undefined') return null;
-  
-  const data = localStorage.getItem(getStorageKey(address));
-  if (!data) return null;
-  
-  try {
-    return JSON.parse(data);
-  } catch {
-    return null;
-  }
-}
-
-function saveStreakData(address: string, data: StreakData): void {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(getStorageKey(address), JSON.stringify(data));
-}
-
-function calculateStreakState(streak: StreakData | null): StreakState {
+// Helper: Calculate streak state
+function calculateStreakState(streak: StreakData | null): Partial<StreakState> {
   if (!streak) {
     return {
       streak: null,
@@ -87,13 +77,9 @@ function calculateStreakState(streak: StreakData | null): StreakState {
   const lastActivityDay = Math.floor(streak.lastActivity / 86400000);
   const daysSinceActivity = today - lastActivityDay;
   
-  // Streak is active if they saved today or yesterday
   const isStreakActive = daysSinceActivity <= 1;
-  
-  // Can claim if streak is active
   const canClaim = isStreakActive && streak.daysActive > 0;
   
-  // Next claim is tomorrow
   const nextClaimTime = canClaim 
     ? null 
     : new Date((today + 1) * 86400000);
@@ -107,164 +93,257 @@ function calculateStreakState(streak: StreakData | null): StreakState {
   };
 }
 
-function calculateReward(streakDays: number): string {
-  // GoodDollar UBI is typically $0.10-$0.50
-  // We show higher estimates for longer streaks as encouragement
-  const baseReward = 0.25;
-  const multiplier = Math.min(1 + (streakDays * 0.02), 1.5);
-  const estimated = baseReward * multiplier;
-  return `~$${estimated.toFixed(2)}`;
+// LocalStorage fallback functions
+function getLocalStreak(address: string): StreakData | null {
+  if (typeof window === 'undefined') return null;
+  const key = `${STORAGE_KEY}_${address.toLowerCase()}`;
+  const data = localStorage.getItem(key);
+  if (!data) return null;
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
 }
 
-// Cache for performance
-const streakCache = new Map<string, { data: StreakState; timestamp: number }>();
-const CACHE_TTL = 10000; // 10 seconds
+function saveLocalStreak(address: string, data: StreakData): void {
+  if (typeof window === 'undefined') return;
+  const key = `${STORAGE_KEY}_${address.toLowerCase()}`;
+  localStorage.setItem(key, JSON.stringify(data));
+}
 
-export function useStreakRewards(): StreakState & StreakActions & { isLoading: boolean } {
+function clearLocalStreak(address: string): void {
+  if (typeof window === 'undefined') return;
+  const key = `${STORAGE_KEY}_${address.toLowerCase()}`;
+  localStorage.removeItem(key);
+}
+
+export function useStreakRewards(): StreakState & StreakActions {
   const { address, isConnected } = useAccount();
-  const [isLoading, setIsLoading] = useState(false);
   const [state, setState] = useState<StreakState>({
     streak: null,
     canClaim: false,
     isEligible: false,
     nextClaimTime: null,
     estimatedReward: '~$0.25',
+    isLoading: false,
+    error: null,
+    usingFallback: false,
   });
 
-  const refresh = useCallback(() => {
+  // Fetch streak from API or fallback to localStorage
+  const refresh = useCallback(async () => {
     if (!address || !isConnected) {
-      setState({
-        streak: null,
-        canClaim: false,
-        isEligible: false,
-        nextClaimTime: null,
-        estimatedReward: '~$0.25',
+      setState(prev => ({
+        ...prev,
+        ...calculateStreakState(null),
+        isLoading: false,
+        error: null,
+      }));
+      return;
+    }
+
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      // Try API first
+      const response = await fetch(`/api/streaks/${address}`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
       });
-      return;
-    }
 
-    // Check cache
-    const cacheKey = address.toLowerCase();
-    const cached = streakCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      setState(cached.data);
-      return;
-    }
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Convert API response to StreakData format
+        const streak: StreakData | null = data.exists ? {
+          walletAddress: data.walletAddress,
+          startTime: data.startTime,
+          lastActivity: data.lastActivity,
+          daysActive: data.daysActive,
+          gracePeriodsUsed: data.gracePeriodsUsed,
+          totalSaved: data.totalSaved,
+        } : null;
 
-    const streak = getStreakData(address);
-    const newState = calculateStreakState(streak);
-    
-    setState(newState);
-    streakCache.set(cacheKey, { data: newState, timestamp: Date.now() });
+        setState(prev => ({
+          ...prev,
+          ...calculateStreakState(streak),
+          isLoading: false,
+          error: null,
+          usingFallback: false,
+        }));
+
+        // Sync to localStorage as backup
+        if (streak) {
+          saveLocalStreak(address, streak);
+        }
+      } else {
+        throw new Error('API request failed');
+      }
+    } catch (err) {
+      console.warn('[StreakRewards] API failed, using localStorage fallback:', err);
+      
+      // Fallback to localStorage
+      const localStreak = getLocalStreak(address);
+      setState(prev => ({
+        ...prev,
+        ...calculateStreakState(localStreak),
+        isLoading: false,
+        error: 'Using offline mode',
+        usingFallback: true,
+      }));
+    }
   }, [address, isConnected]);
 
   // Record a save activity
-  const recordSave = useCallback((amountUSD: number) => {
-    if (!address) return;
+  const recordSave = useCallback(async (amountUSD: number) => {
+    if (!address) throw new Error('Wallet not connected');
     if (amountUSD < STREAK_CONFIG.MIN_SAVE_USD) return;
 
-    setIsLoading(true);
-    
-    const today = Math.floor(Date.now() / 86400000);
-    const current = getStreakData(address);
-    
-    let newStreak: StreakData;
-    
-    if (!current) {
-      // First save
-      newStreak = {
-        startTime: Date.now(),
-        lastActivity: Date.now(),
-        daysActive: 1,
-        gracePeriodsUsed: 0,
-        totalSaved: amountUSD,
-      };
-    } else {
-      const lastDay = Math.floor(current.lastActivity / 86400000);
-      
-      if (today === lastDay) {
-        // Already saved today - update amount
-        newStreak = {
-          ...current,
-          lastActivity: Date.now(),
-          totalSaved: current.totalSaved + amountUSD,
+    setState(prev => ({ ...prev, isLoading: true, error: null }));
+
+    try {
+      // Try API first
+      const response = await fetch(`/api/streaks/${address}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amountUSD }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        const streak: StreakData = {
+          walletAddress: address,
+          startTime: data.startTime,
+          lastActivity: data.lastActivity,
+          daysActive: data.daysActive,
+          gracePeriodsUsed: data.gracePeriodsUsed,
+          totalSaved: data.totalSaved,
         };
-      } else if (today === lastDay + 1) {
-        // Consecutive day - streak continues
-        newStreak = {
-          ...current,
-          daysActive: current.daysActive + 1,
-          lastActivity: Date.now(),
-          totalSaved: current.totalSaved + amountUSD,
-        };
-      } else if (today <= lastDay + 2 && current.gracePeriodsUsed < STREAK_CONFIG.GRACE_PERIODS_PER_WEEK) {
-        // Used grace period (1 miss allowed per week)
-        newStreak = {
-          ...current,
-          daysActive: current.daysActive + 1,
-          gracePeriodsUsed: current.gracePeriodsUsed + 1,
-          lastActivity: Date.now(),
-          totalSaved: current.totalSaved + amountUSD,
-        };
+
+        setState(prev => ({
+          ...prev,
+          ...calculateStreakState(streak),
+          isLoading: false,
+          error: null,
+          usingFallback: false,
+        }));
+
+        // Sync to localStorage
+        saveLocalStreak(address, streak);
       } else {
-        // Streak broken - start over
+        throw new Error('API request failed');
+      }
+    } catch (err) {
+      console.warn('[StreakRewards] API save failed, using localStorage:', err);
+      
+      // Fallback: Calculate and save locally
+      const today = Math.floor(Date.now() / 86400000);
+      const current = getLocalStreak(address);
+      
+      let newStreak: StreakData;
+      
+      if (!current) {
         newStreak = {
+          walletAddress: address,
           startTime: Date.now(),
           lastActivity: Date.now(),
           daysActive: 1,
           gracePeriodsUsed: 0,
           totalSaved: amountUSD,
         };
+      } else {
+        const lastDay = Math.floor(current.lastActivity / 86400000);
+        
+        if (today === lastDay) {
+          newStreak = { ...current, totalSaved: current.totalSaved + amountUSD };
+        } else if (today === lastDay + 1) {
+          newStreak = {
+            ...current,
+            daysActive: current.daysActive + 1,
+            lastActivity: Date.now(),
+            totalSaved: current.totalSaved + amountUSD,
+          };
+        } else if (today <= lastDay + 2 && current.gracePeriodsUsed < 1) {
+          newStreak = {
+            ...current,
+            daysActive: current.daysActive + 1,
+            gracePeriodsUsed: current.gracePeriodsUsed + 1,
+            lastActivity: Date.now(),
+            totalSaved: current.totalSaved + amountUSD,
+          };
+        } else {
+          newStreak = {
+            walletAddress: address,
+            startTime: Date.now(),
+            lastActivity: Date.now(),
+            daysActive: 1,
+            gracePeriodsUsed: 0,
+            totalSaved: amountUSD,
+          };
+        }
       }
+      
+      saveLocalStreak(address, newStreak);
+      
+      setState(prev => ({
+        ...prev,
+        ...calculateStreakState(newStreak),
+        isLoading: false,
+        error: 'Saved locally (sync when online)',
+        usingFallback: true,
+      }));
     }
-    
-    saveStreakData(address, newStreak);
-    
-    // Clear cache to force refresh
-    streakCache.delete(address.toLowerCase());
-    
-    setIsLoading(false);
-    refresh();
-  }, [address, refresh]);
+  }, [address]);
 
   // Open GoodDollar claim page
   const claimG = useCallback(() => {
     if (!state.canClaim) return;
-    
-    // Open GoodDollar wallet in new tab
-    // User claims their UBI directly on GoodDollar's site
     window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
-    
-    // Note: We don't verify they claimed - we trust the user
-    // In a future version, we could check their G$ balance on Celo
   }, [state.canClaim]);
 
-  // Reset streak (for testing)
-  const resetStreak = useCallback(() => {
+  // Reset streak (dev/testing)
+  const resetStreak = useCallback(async () => {
     if (!address) return;
-    localStorage.removeItem(getStorageKey(address));
-    streakCache.delete(address.toLowerCase());
-    refresh();
-  }, [address, refresh]);
+    
+    setState(prev => ({ ...prev, isLoading: true }));
+
+    try {
+      // Try API
+      await fetch(`/api/streaks/${address}`, { method: 'DELETE' });
+    } catch (err) {
+      console.warn('[StreakRewards] API reset failed:', err);
+    }
+    
+    // Always clear localStorage
+    clearLocalStreak(address);
+    
+    setState(prev => ({
+      ...prev,
+      ...calculateStreakState(null),
+      isLoading: false,
+    }));
+  }, [address]);
 
   // Initial load and polling
   useEffect(() => {
     refresh();
     
-    // Refresh every 30 seconds to update claim eligibility
-    const interval = setInterval(refresh, 30000);
+    // Refresh every 60 seconds
+    const interval = setInterval(refresh, 60000);
     return () => clearInterval(interval);
   }, [refresh]);
 
   // Refresh on window focus
   useEffect(() => {
-    window.addEventListener('focus', refresh);
-    return () => window.removeEventListener('focus', refresh);
+    const handleFocus = () => refresh();
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
   }, [refresh]);
 
   return {
     ...state,
-    isLoading,
     recordSave,
     claimG,
     resetStreak,

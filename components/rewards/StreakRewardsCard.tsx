@@ -131,26 +131,3 @@ export function RewardsStats({ className = '' }: { className?: string }) {
   );
 }
 
-// Compact version for header/dashboard integration
-export function StreakBadge({ className = '' }: { className?: string }) {
-  const { streak, canClaim } = useStreakRewards();
-  const { isConnected } = useAccount();
-
-  if (!isConnected || !streak?.daysActive) return null;
-
-  return (
-    <button
-      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-      className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-bold transition-all ${
-        canClaim
-          ? 'bg-green-100 text-green-700 hover:bg-green-200 animate-pulse'
-          : 'bg-orange-100 text-orange-700 hover:bg-orange-200'
-      } ${className}`}
-    >
-      <span>{canClaim ? '💚' : '🔥'}</span>
-      <span>
-        {canClaim ? 'Claim $G' : `${streak.daysActive} day streak`}
-      </span>
-    </button>
-  );
-}
