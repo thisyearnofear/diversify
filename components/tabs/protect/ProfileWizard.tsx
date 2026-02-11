@@ -2,10 +2,10 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { StepCard, QuickSelect } from "../../shared/TabComponents";
 import { USER_GOALS, RISK_LEVELS, TIME_HORIZONS } from "@/hooks/use-protection-profile";
-import type { UserGoal } from "@/hooks/use-protection-profile";
+import type { UserGoal, ProfileMode } from "@/hooks/use-protection-profile";
 
 interface ProfileWizardProps {
-    mode: "idle" | "editing" | "complete";
+    mode: ProfileMode;
     currentStep: number;
     config: {
         userGoal: UserGoal | null;

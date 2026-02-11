@@ -209,17 +209,13 @@ export default function DiversiFiPage() {
               <>
                 <button
                   onClick={() => {
-                    if (experienceMode === "beginner") setExperienceMode("intermediate");
-                    else if (experienceMode === "intermediate") setExperienceMode("advanced");
+                    if (experienceMode === "intermediate") setExperienceMode("advanced");
                     else setExperienceMode("beginner");
                   }}
-                  className={`w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center ${experienceMode !== "beginner"
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                    }`}
-                  title={`Mode: ${experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}`}
+                  className="w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
+                  title={`Mode: ${experienceMode === "intermediate" ? "Standard" : "Advanced"}`}
                 >
-                  {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
+                  {experienceMode === "intermediate" ? "🚀" : "⚡"}
                 </button>
 
                 {/* Show voice only when connected */}

@@ -170,7 +170,7 @@ export default function OverviewTab({
 
         {/* Quick preview of what they'll get */}
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
-          <h4 className="text-xs font-black uppercase text-gray-400 mb-3 tracking-widest">What You'll Get</h4>
+          <h4 className="text-xs font-black uppercase text-gray-400 mb-3 tracking-widest">What You&apos;ll Get</h4>
           <div className="space-y-2">
             {[
               { icon: "📊", text: "Real-time protection score across multiple currencies" },

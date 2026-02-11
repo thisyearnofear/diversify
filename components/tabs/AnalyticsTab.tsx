@@ -3,7 +3,7 @@ import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { useInflationData } from "@/hooks/use-inflation-data";
-import InflationVisualizer from "../inflation/InflationVisualizer";
+import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import { REGION_COLORS } from "@/config";
 import { Card, TabHeader, CollapsibleSection, StatBadge } from "../shared/TabComponents";
 
@@ -68,8 +68,8 @@ export default function AnalyticsTab({
               key={region}
               onClick={() => changeRegion(region as Region)}
               className={`px-3 py-1.5 text-xs rounded-full transition-colors flex items-center gap-1 ${region === selectedRegion
-                  ? "text-white font-medium"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                ? "text-white font-medium"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                 }`}
               style={region === selectedRegion ? { backgroundColor: REGION_COLORS[region as keyof typeof REGION_COLORS] } : {}}
             >

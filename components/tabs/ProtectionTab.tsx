@@ -23,6 +23,7 @@ import { useAIConversation } from "@/context/AIConversationContext";
 
 import ProtectHeroCard from "./protect/ProtectHeroCard";
 import ProfileWizard from "./protect/ProfileWizard";
+import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
@@ -123,7 +124,7 @@ export default function ProtectionTab({
 
     // Find source chain from balances
     const sourceTokenObj = chains
-      .flatMap((c) => c.balances)
+      .flatMap((c) => c.balances as TokenBalance[])
       .find((t) => t.symbol === sourceToken && t.value > 0);
 
     const fromChainId = sourceTokenObj?.chainId;
@@ -172,7 +173,7 @@ export default function ProtectionTab({
 
   const getBestFromToken = (targetToken: string): string => {
     // Get all tokens with balances across chains
-    const allTokens = chains.flatMap((c) => c.balances);
+    const allTokens = chains.flatMap((c) => c.balances as TokenBalance[]);
     const tokensWithBalances = allTokens
       .filter((t) => t.value > 0)
       .sort((a, b) => b.value - a.value);
@@ -207,7 +208,7 @@ export default function ProtectionTab({
   const getSwapAmount = (fromToken: string): string => {
     // Find token across all chains
     const token = chains
-      .flatMap((c) => c.balances)
+      .flatMap((c) => c.balances as TokenBalance[])
       .find((t) => t.symbol === fromToken);
 
     const balance = token?.value || 0;
