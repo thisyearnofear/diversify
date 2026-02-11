@@ -94,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             hasNetworkActivity: !!networkActivity,
             userRegion: userRegion,
             sampleInflationData: inflationData ? Object.entries(inflationData).slice(0, 2).map(([region, data]) => {
-                const d = data as any;
+                const d = data as { avgRate: number; countries: any[] };
                 return {
                     region,
                     avgRate: d?.avgRate,
@@ -234,7 +234,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             MACRO STABILITY FACTORS (World Bank Indicators):
             ${macroData && Object.keys(macroData).length > 0 
                 ? Object.entries(macroData).map(([code, data]) => {
-                    const d = data as any; // Cast locally for concise prompt building
+                    const d = data as { gdpGrowth: number; corruptionControl: number }; // Cast locally for concise prompt building
                     return `- ${code}: GDP Growth: ${d.gdpGrowth ?? 'N/A'}%, Governance: ${d.corruptionControl ?? 'N/A'}/100`;
                 }).join('\n')
                 : 'Limited macro data available - rely on regional averages.'}

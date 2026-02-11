@@ -64,12 +64,21 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
         </p>
       </div>
 
-      {/* Streak Rewards - Makes Learn tab more dynamic */}
+      {/* Gamified Rewards Section - Dynamic and engaging */}
       {address && (
-        <>
-          <StreakRewardsCard onSaveClick={() => setActiveTab("swap")} />
+        <div className="space-y-4">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-800/50">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="size-10 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold">🔥</div>
+              <div>
+                <h3 className="font-black text-gray-900 dark:text-white">Daily Rewards</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Keep your streak alive for $G tokens</p>
+              </div>
+            </div>
+            <StreakRewardsCard onSaveClick={() => setActiveTab("swap")} />
+          </div>
           <RewardsStats />
-        </>
+        </div>
       )}
 
       {/* Show journey widget only for intermediate+ */}

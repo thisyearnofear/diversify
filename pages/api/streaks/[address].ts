@@ -19,7 +19,7 @@ function isValidAddress(address: string): boolean {
 }
 
 // Calculate streak state based on last activity
-function calculateStreakState(streak: any) {
+function calculateStreakState(streak: { lastActivity: number; daysActive: number; toObject: () => any }) {
   const today = Math.floor(Date.now() / 86400000);
   const lastActivityDay = Math.floor(streak.lastActivity / 86400000);
   const daysSinceActivity = today - lastActivityDay;
@@ -77,7 +77,7 @@ export default async function handler(
 // GET - Retrieve streak data
 async function handleGet(address: string, res: NextApiResponse) {
   try {
-    let streak = await Streak.findOne({ walletAddress: address });
+    const streak = await Streak.findOne({ walletAddress: address });
     
     if (!streak) {
       // Return default state for new users

@@ -15,7 +15,7 @@ export default function Layout({
   title = "DiversiFi - Stablecoin Portfolio Diversification",
   isInMiniPay = false,
 }: LayoutProps) {
-  const { experienceMode, setExperienceMode, userActivity } = useAppState();
+  const { experienceMode, setExperienceMode } = useAppState();
 
   const getModeLabel = () => {
     if (experienceMode === "beginner") return "Simple";

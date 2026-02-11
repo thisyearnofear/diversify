@@ -50,7 +50,6 @@ export default function SwapTab({
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
 
   const isBeginner = experienceMode === "beginner";
-  const isIntermediate = experienceMode === "intermediate";
 
   const {
     swap: performSwap,

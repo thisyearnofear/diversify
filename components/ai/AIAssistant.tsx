@@ -48,7 +48,12 @@ interface AIAssistantProps {
     year: number;
   }>;
   /** Network activity for social proof and behavioral nudges */
-  networkActivity?: any;
+  networkActivity?: {
+    activeProtections24h: number;
+    totalProtected: number;
+    topTrendingRegion: string;
+    goldPriceChange24h: number;
+  };
 }
 
 export default function AIAssistant({

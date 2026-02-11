@@ -18,7 +18,7 @@ interface StreakRewardsCardProps {
   className?: string;
 }
 
-export function StreakRewardsCard({ onSaveClick, className = '' }: StreakRewardsCardProps) {
+export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
   const { isConnected } = useAccount();
   const {
     streak,
@@ -27,6 +27,7 @@ export function StreakRewardsCard({ onSaveClick, className = '' }: StreakRewards
     estimatedReward,
     nextClaimTime,
     claimG,
+    isLoading,
   } = useStreakRewards();
 
   // Not connected state
