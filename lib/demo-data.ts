@@ -122,6 +122,16 @@ export const DEMO_PORTFOLIO = {
         },
     ],
 
+    // Derived fields for UI components
+    get allTokens() {
+        return this.chains.flatMap(c => c.balances.map(b => ({
+            ...b,
+            formattedBalance: b.balance,
+            chainName: c.chainName,
+            region: b.region as any // Cast to satisfy AssetRegion
+        })));
+    },
+
     isLoading: false,
     isStale: false,
     refresh: async () => { },

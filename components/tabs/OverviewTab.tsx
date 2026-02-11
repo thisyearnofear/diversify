@@ -13,6 +13,7 @@ import SimplePieChart from "../portfolio/SimplePieChart";
 import { useAppState } from "../../context/AppStateContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 import { NetworkOptimizedOnramp } from "../onramp";
+import { AssetInventory } from "../portfolio/AssetInventory";
 
 import { Card, EmptyState, HeroValue } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
@@ -61,6 +62,7 @@ export default function OverviewTab({
   const { address, isConnecting, chainId } = useWalletContext();
   const { inflationData } = useInflationData();
   const [selectedMarket, setSelectedMarket] = useState<Region>(userRegion);
+  const [showAssetDetails, setShowAssetDetails] = useState(false);
 
   const { experienceMode, demoMode, disableDemoMode, enableDemoMode } = useAppState();
   const isBeginner = experienceMode === "beginner";
@@ -353,13 +355,29 @@ export default function OverviewTab({
             <SimplePieChart
               data={regionData}
             />
-            <div className="mt-4 flex flex-wrap justify-center gap-2">
+            <div className="mt-4 flex flex-wrap justify-center gap-2 mb-6">
               {regionData.map(r => (
                 <div key={r.region} className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-800">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: r.color }} />
                   <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{r.region}</span>
                 </div>
               ))}
+            </div>
+
+            <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+              <button
+                onClick={() => setShowAssetDetails(!showAssetDetails)}
+                className="w-full flex items-center justify-between py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
+              >
+                <span>{showAssetDetails ? "Hide" : "View"} Asset Inventory</span>
+                <span>{showAssetDetails ? "↑" : "↓"}</span>
+              </button>
+
+              {showAssetDetails && (
+                <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <AssetInventory tokens={(activePortfolio as any).allTokens || []} />
+                </div>
+              )}
             </div>
           </Card>
         ) : (

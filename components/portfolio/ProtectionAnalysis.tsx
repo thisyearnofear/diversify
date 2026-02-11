@@ -7,6 +7,7 @@ import sdk from '@farcaster/miniapp-sdk';
 import { useAnimatedCounter } from '../../hooks/use-animated-counter';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import type { TokenAllocation } from '../../utils/portfolio-analysis';
+import { AssetInventory } from './AssetInventory';
 
 interface ProtectionAnalysisProps {
     regionData: Array<{ region: string; value: number; color: string }>;
@@ -75,6 +76,7 @@ export default function ProtectionAnalysis({
     const [highlightedRegionIndex, setHighlightedRegionIndex] = useState<number | null>(null);
     const [expandedGrade, setExpandedGrade] = useState<string | null>(null);
     const [showGrades, setShowGrades] = useState(false);
+    const [showAssetInventory, setShowAssetInventory] = useState(false);
 
     // Animated counter for diversification score
     const { formattedValue: animatedScore, isComplete: scoreAnimationComplete } = useAnimatedCounter({
@@ -354,6 +356,33 @@ export default function ProtectionAnalysis({
                         />
                     </div>
                 )}
+
+                {/* Asset Inventory - Essential Balance Visibility */}
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <button
+                        onClick={() => setShowAssetInventory(!showAssetInventory)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-gray-400">📋</span>
+                            <h3 className="font-black text-gray-900 dark:text-white text-sm uppercase tracking-tight">Your Assets</h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-blue-500 uppercase">
+                                {yieldSummary?.allTokens?.length || 0} Assets
+                            </span>
+                            <span className="text-gray-400">{showAssetInventory ? "↑" : "↓"}</span>
+                        </div>
+                    </button>
+
+                    {showAssetInventory && (
+                        <div className="p-4 pt-0 border-t border-gray-100 dark:border-gray-700/50 animate-in fade-in slide-in-from-top-1">
+                            <AssetInventory
+                                tokens={yieldSummary?.allTokens || []}
+                            />
+                        </div>
+                    )}
+                </div>
 
                 {/* Yield Summary */}
                 {yieldSummary && (
