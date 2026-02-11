@@ -81,7 +81,7 @@ export default function FarcasterUserInfo() {
 
       {/* Farcaster Welcome Message */}
       <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
-        Welcome to DiversiFi on Farcaster! Your decentralized finance journey starts here.
+        DiversiFi - your decentralized finance journey starts here.
       </div>
     </div>
   );
