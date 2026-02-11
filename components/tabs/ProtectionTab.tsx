@@ -19,11 +19,13 @@ import {
   USER_GOALS,
 } from "@/hooks/use-protection-profile";
 import { useAIConversation } from "@/context/AIConversationContext";
+import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 
 import ProtectHeroCard from "./protect/ProtectHeroCard";
 import ProfileWizard from "./protect/ProfileWizard";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
+import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -44,9 +46,14 @@ export default function ProtectionTab({
   onSelectStrategy,
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
-  const { navigateToSwap } = useAppState();
+  const { navigateToSwap, demoMode, experienceMode } = useAppState();
   const { setDrawerOpen, addUserMessage } = useAIConversation();
   const isCelo = ChainDetectionService.isCelo(chainId);
+  const isDemo = demoMode.isActive;
+  const isBeginner = experienceMode === "beginner";
+
+  // Use demo data if in demo mode
+  const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
 
   const {
     totalValue,
@@ -56,7 +63,7 @@ export default function ProtectionTab({
     isLoading: isMultichainLoading,
     isStale,
     rebalancingOpportunities,
-  } = portfolio;
+  } = activePortfolio;
 
   // Use values directly from portfolio
   const displayTotalValue = totalValue;
@@ -84,8 +91,6 @@ export default function ProtectionTab({
   } = useProtectionProfile();
 
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
-  const { experienceMode } = useAppState();
-  const isBeginner = experienceMode === "beginner";
 
   // Current regions for recommendations
   const currentRegions = useMemo(() => {
@@ -95,7 +100,7 @@ export default function ProtectionTab({
   }, [displayRegionData]);
 
   // Use the pre-calculated live portfolio analysis from the portfolio prop
-  const liveAnalysis = portfolio;
+  const liveAnalysis = activePortfolio;
   const topOpportunity = rebalancingOpportunities?.[0];
 
   // ============================================================================
@@ -107,6 +112,12 @@ export default function ProtectionTab({
     fromToken?: string,
     amount?: string,
   ) => {
+    // In demo mode, show connect prompt
+    if (isDemo) {
+      alert("Connect your wallet to execute real swaps!");
+      return;
+    }
+
     const sourceToken = fromToken || getBestFromToken(targetToken);
     const swapAmount = amount || getSwapAmount(sourceToken);
 
@@ -210,7 +221,7 @@ export default function ProtectionTab({
   // RENDER: Not Connected
   // ============================================================================
 
-  if (!address) {
+  if (!address && !isDemo) {
     return (
       <div className="space-y-4">
         <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6">

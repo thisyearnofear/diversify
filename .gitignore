@@ -47,3 +47,8 @@ debug.log
 *.swp
 *~
 *.tmp
+
+*.junie
+*.kiro
+.junie
+.kiro

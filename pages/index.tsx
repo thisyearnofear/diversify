@@ -21,6 +21,7 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTutorial";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import VoiceButton from "../components/ui/VoiceButton";
+import HeaderMenu from "../components/ui/HeaderMenu";
 import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
 import GuidedTour from "../components/tour/GuidedTour";
@@ -142,65 +143,125 @@ export default function DiversiFiPage() {
       <div className="max-w-md mx-auto">
         <TourTrigger />
 
+        {/* HEADER - Adaptive based on mode and connection */}
         <div className="flex items-center justify-between mb-2 py-1">
+          {/* Left: Logo */}
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
               <span className="text-white text-sm font-black">D</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">DiversiFi</h1>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                {experienceMode === "beginner" ? "Protect" : "DiversiFi"}
+              </h1>
+              {address && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
             </div>
           </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => {
-                if (experienceMode === "beginner") setExperienceMode("intermediate");
-                else if (experienceMode === "intermediate") setExperienceMode("advanced");
-                else setExperienceMode("beginner");
-              }}
-              className={`w-7 h-7 text-sm rounded-lg transition-all flex items-center justify-center ${experienceMode !== "beginner"
-                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-                }`}
-              title={`Mode: ${experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}`}
-            >
-              {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
-            </button>
-            <VoiceButton
-              size="sm"
-              variant="default"
-              onTranscription={(text) => {
-                console.log("[Voice] Intent Discovery for:", text);
-                const intent = IntentDiscoveryService.discover(text);
 
-                switch (intent.type) {
-                  case "NAVIGATE":
-                    showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
-                    setActiveTab(intent.tab);
-                    break;
+          {/* Right: Adaptive Controls */}
+          <div className="flex items-center gap-2">
+            {/* BEGINNER MODE: Menu + Wallet only */}
+            {experienceMode === "beginner" && (
+              <>
+                <HeaderMenu
+                  experienceMode={experienceMode}
+                  onModeChange={() => {
+                    if (experienceMode === "beginner") setExperienceMode("intermediate");
+                    else if (experienceMode === "intermediate") setExperienceMode("advanced");
+                    else setExperienceMode("beginner");
+                  }}
+                  onVoiceTranscription={(text) => {
+                    console.log("[Voice] Intent Discovery for:", text);
+                    const intent = IntentDiscoveryService.discover(text);
 
-                  case "SWAP_SHORTCUT":
-                    showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
-                    setSwapPrefill({
-                      fromToken: intent.fromToken,
-                      toToken: intent.toToken,
-                      amount: intent.amount,
-                      reason: `Voice shortcut: "${text}"`
-                    });
-                    setActiveTab("swap");
-                    break;
+                    switch (intent.type) {
+                      case "NAVIGATE":
+                        showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
+                        setActiveTab(intent.tab);
+                        break;
 
-                  case "QUERY":
-                  default:
-                    addUserMessage(text);
-                    setDrawerOpen(true);
-                    break;
-                }
-              }}
-            />
-            <ThemeToggle />
-            {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
+                      case "SWAP_SHORTCUT":
+                        showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
+                        setSwapPrefill({
+                          fromToken: intent.fromToken,
+                          toToken: intent.toToken,
+                          amount: intent.amount,
+                          reason: `Voice shortcut: "${text}"`
+                        });
+                        setActiveTab("swap");
+                        break;
+
+                      case "QUERY":
+                      default:
+                        addUserMessage(text);
+                        setDrawerOpen(true);
+                        break;
+                    }
+                  }}
+                  showVoice={!!address}
+                />
+                {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
+              </>
+            )}
+
+            {/* INTERMEDIATE/ADVANCED MODE: Show more controls */}
+            {experienceMode !== "beginner" && (
+              <>
+                <button
+                  onClick={() => {
+                    if (experienceMode === "beginner") setExperienceMode("intermediate");
+                    else if (experienceMode === "intermediate") setExperienceMode("advanced");
+                    else setExperienceMode("beginner");
+                  }}
+                  className={`w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center ${experienceMode !== "beginner"
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                    }`}
+                  title={`Mode: ${experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}`}
+                >
+                  {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
+                </button>
+
+                {/* Show voice only when connected */}
+                {address && (
+                  <VoiceButton
+                    size="sm"
+                    variant="default"
+                    onTranscription={(text) => {
+                      console.log("[Voice] Intent Discovery for:", text);
+                      const intent = IntentDiscoveryService.discover(text);
+
+                      switch (intent.type) {
+                        case "NAVIGATE":
+                          showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
+                          setActiveTab(intent.tab);
+                          break;
+
+                        case "SWAP_SHORTCUT":
+                          showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
+                          setSwapPrefill({
+                            fromToken: intent.fromToken,
+                            toToken: intent.toToken,
+                            amount: intent.amount,
+                            reason: `Voice shortcut: "${text}"`
+                          });
+                          setActiveTab("swap");
+                          break;
+
+                        case "QUERY":
+                        default:
+                          addUserMessage(text);
+                          setDrawerOpen(true);
+                          break;
+                      }
+                    }}
+                  />
+                )}
+
+                <ThemeToggle />
+                {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
+              </>
+            )}
           </div>
         </div>
 

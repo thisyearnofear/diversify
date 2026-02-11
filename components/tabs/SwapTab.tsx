@@ -28,6 +28,8 @@ import {
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
+import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
+import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -45,11 +47,12 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill, recordSwap, experienceMode } = useAppState();
+  const { swapPrefill, clearSwapPrefill, recordSwap, experienceMode, demoMode } = useAppState();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
 
   const isBeginner = experienceMode === "beginner";
+  const isDemo = demoMode.isActive;
 
   const {
     swap: performSwap,
@@ -68,6 +71,14 @@ export default function SwapTab({
   const [aiRecommendationReason, setAiRecommendationReason] = useState<
     string | null
   >(null);
+
+  // Success celebration state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationData, setCelebrationData] = useState<{
+    fromToken: string;
+    toToken: string;
+    amount: string;
+  } | null>(null);
 
   const swapInterfaceRef = useRef<{
     refreshBalances: () => void;
@@ -192,10 +203,15 @@ export default function SwapTab({
       // Record swap completion for experience progression
       recordSwap();
       refreshWithRetries();
+
+      // Show celebration if we have swap data
+      if (celebrationData) {
+        setShowCelebration(true);
+      }
     } else if (swapTxHash) {
       setSwapStatus("Transaction submitted...");
     }
-  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordSwap]);
+  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordSwap, celebrationData]);
 
   const handleSwap = async (
     fromToken: string,
@@ -206,6 +222,10 @@ export default function SwapTab({
   ) => {
     setSwapStatus("Initiating swap...");
     setSwapStep("approving");
+
+    // Store swap data for celebration
+    setCelebrationData({ fromToken, toToken, amount });
+
     try {
       if (!address) throw new Error("Wallet not connected");
       const result = await performSwap({
@@ -264,6 +284,22 @@ export default function SwapTab({
   return (
     <div className="space-y-4">
       <Card>
+        {/* DEMO MODE BANNER */}
+        {isDemo && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">🎮</span>
+                <div>
+                  <p className="text-xs font-bold text-blue-900 dark:text-blue-100">Demo Mode</p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">Connect wallet to execute real swaps</p>
+                </div>
+              </div>
+              <WalletButton variant="inline" />
+            </div>
+          </div>
+        )}
+
         {/* Hide complex header for beginners */}
         {!isBeginner && (
           <TabHeader
@@ -327,7 +363,7 @@ export default function SwapTab({
 
         {!address ? (
           <ConnectWalletPrompt
-            message="Connect your wallet to swap tokens."
+            message={isDemo ? "Connect your wallet to execute real swaps with live prices." : "Connect your wallet to swap tokens."}
             WalletButtonComponent={<WalletButton variant="inline" />}
           />
         ) : (
@@ -482,6 +518,22 @@ export default function SwapTab({
             {getRecommendations(userRegion, inflationData, homeInflationRate)}
           </CollapsibleSection>
         </div>
+      )}
+
+      {/* Success Celebration Modal */}
+      {celebrationData && (
+        <SwapSuccessCelebration
+          isVisible={showCelebration}
+          onClose={() => {
+            setShowCelebration(false);
+            setCelebrationData(null);
+          }}
+          fromToken={celebrationData.fromToken}
+          toToken={celebrationData.toToken}
+          amount={celebrationData.amount}
+          protectionScoreIncrease={5}
+          annualSavings={parseFloat(celebrationData.amount) * 0.05 * (homeInflationRate / 100)}
+        />
       )}
     </div>
   );

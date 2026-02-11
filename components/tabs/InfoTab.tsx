@@ -4,8 +4,9 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
 import { Card } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
-import InflationVisualizer from "../inflation/InflationVisualizer";
+import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
+import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 import type { Region } from "@/hooks/use-user-region";
 
 interface InfoTabProps {
@@ -57,7 +58,7 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
         <p className="text-sm font-medium text-gray-500 dark:text-gray-400 max-w-[90%]">
           {isBeginner
             ? "Your money loses value over time. We help you protect it by spreading it across different currencies."
-            : "DiversiFi helps you protect your savings from inflation by diversifying across regional stablecoins and real-world assets."
+            : <>DiversiFi helps you protect your savings from <Tooltip content={TOOLTIPS.inflation}>inflation</Tooltip> by <Tooltip content={TOOLTIPS.diversification}>diversifying</Tooltip> across regional <Tooltip content={TOOLTIPS.stablecoin}>stablecoins</Tooltip> and <Tooltip content={TOOLTIPS.rwa}>real-world assets</Tooltip>.</>
           }
         </p>
       </div>
