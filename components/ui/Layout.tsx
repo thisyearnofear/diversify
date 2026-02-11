@@ -63,26 +63,29 @@ export default function Layout({
               )}
             </h1>
             <div className="flex items-center space-x-2">
-              {/* Mode switcher - prominent for non-beginners to encourage opt-down */}
-              <button
-                onClick={cycleMode}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${!isBeginner
-                    ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md hover:shadow-lg hover:scale-105"
-                    : "bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600"
-                  }`}
-                title={!isBeginner
-                  ? `Too much info? Click to simplify the interface`
-                  : `Current mode: ${getModeLabel()}. Click to unlock more features.`
-                }
-              >
-                <span className="text-sm">{getModeEmoji()}</span>
-                <span>{getModeLabel()}</span>
-                {!isBeginner && (
-                  <svg className="size-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-                  </svg>
+              {/* Mode switcher - Refined for discovery */}
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={cycleMode}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-1.5 ${!isBeginner
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
+                    : "bg-white dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500"
+                    }`}
+                >
+                  <span className="text-xs">{getModeEmoji()}</span>
+                  <span>{getModeLabel()} Mode</span>
+                  {!isBeginner && (
+                    <svg className="size-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  )}
+                </button>
+                {isBeginner && (
+                  <span className="text-[8px] font-bold text-blue-500 mt-1 animate-pulse uppercase tracking-tighter">
+                    Unlock Features →
+                  </span>
                 )}
-              </button>
+              </div>
               <ThemeToggle />
               <WalletButton />
             </div>

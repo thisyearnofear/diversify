@@ -530,6 +530,7 @@ function ConfirmationScreen({
     onConfirm: () => void;
     onBack: () => void;
 }) {
+    const { experienceMode, setExperienceMode } = useAppState();
     const strategyData = STRATEGIES.find(s => s.id === strategy);
     if (!strategyData) return null;
 
@@ -623,12 +624,52 @@ function ConfirmationScreen({
                     </div>
                 </div>
 
+                {/* Technical Mode Selection - Address "Unawareness" problem */}
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl">⚙️</span>
+                            <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                                Choose Your View
+                            </h4>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <button
+                            onClick={() => setExperienceMode('beginner')}
+                            className={`p-3 rounded-xl border-2 transition-all text-left ${experienceMode === 'beginner'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                                }`}
+                        >
+                            <div className="text-xl mb-1">🌱</div>
+                            <div className={`text-xs font-black ${experienceMode === 'beginner' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-500'}`}>Simple</div>
+                            <div className="text-[9px] text-gray-400 font-medium leading-tight mt-1">Focus on protection scores</div>
+                        </button>
+                        <button
+                            onClick={() => setExperienceMode('intermediate')}
+                            className={`p-3 rounded-xl border-2 transition-all text-left ${experienceMode === 'intermediate' || experienceMode === 'advanced'
+                                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
+                                }`}
+                        >
+                            <div className="text-xl mb-1">🚀</div>
+                            <div className={`text-xs font-black ${experienceMode === 'intermediate' || experienceMode === 'advanced' ? 'text-blue-700 dark:text-blue-300' : 'text-gray-500'}`}>Standard</div>
+                            <div className="text-[9px] text-gray-400 font-medium leading-tight mt-1">Full balance transparency</div>
+                        </button>
+                    </div>
+                    <p className="mt-3 text-[9px] text-gray-400 font-bold text-center uppercase tracking-tighter">
+                        You can switch this anytime in the header.
+                    </p>
+                </div>
+
                 {/* Note */}
                 <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
                     <div className="flex items-start gap-3">
                         <span className="text-xl">💡</span>
                         <div className="text-xs text-amber-900 dark:text-amber-100 leading-relaxed">
-                            <strong>You can change this anytime</strong> in settings. Your strategy affects recommendations, metrics, and what the app considers "good" diversification.
+                            Your strategy affects recommendations, metrics, and what the app considers "good" diversification.
                         </div>
                     </div>
                 </div>

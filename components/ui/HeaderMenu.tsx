@@ -26,17 +26,12 @@ export default function HeaderMenu({
     const [isOpen, setIsOpen] = useState(false);
     const { financialStrategy } = useAppState();
 
-    const getModeLabel = () => {
-        if (experienceMode === "beginner") return "Simple Mode";
-        if (experienceMode === "intermediate") return "Standard Mode";
-        return "Advanced Mode";
+    const getModeInfo = () => {
+        if (experienceMode === "beginner") return { label: "Simple", summary: "Protected \u0026 Focused", emoji: "🌱" };
+        if (experienceMode === "intermediate") return { label: "Standard", summary: "Full Transparency", emoji: "🚀" };
+        return { label: "Advanced", summary: "Power Portfolio Ops", emoji: "⚡" };
     };
 
-    const getModeEmoji = () => {
-        if (experienceMode === "beginner") return "🌱";
-        if (experienceMode === "intermediate") return "🚀";
-        return "⚡";
-    };
 
     const getStrategyIcon = () => {
         if (!financialStrategy) return "🎯";
@@ -126,29 +121,19 @@ export default function HeaderMenu({
                                 className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700"
                             >
                                 <div className="flex items-center gap-3">
-                                    <span className="text-xl">{getModeEmoji()}</span>
+                                    <span className="text-xl">{getModeInfo().emoji}</span>
                                     <div className="text-left">
-                                        <div className="text-sm font-bold text-gray-900 dark:text-white">
-                                            {getModeLabel()}
+                                        <div className="text-sm font-black text-gray-900 dark:text-white leading-tight">
+                                            {getModeInfo().label} Mode
                                         </div>
-                                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                                            Tap to change
+                                        <div className="text-[10px] text-blue-500 font-bold uppercase tracking-tight">
+                                            {getModeInfo().summary}
                                         </div>
                                     </div>
                                 </div>
-                                <svg
-                                    className="w-4 h-4 text-gray-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M9 5l7 7-7 7"
-                                    />
-                                </svg>
+                                <div className="text-[10px] font-black p-1 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded uppercase">
+                                    Change
+                                </div>
                             </button>
 
                             {/* Financial Strategy */}

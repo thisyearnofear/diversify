@@ -19,21 +19,24 @@ export default function ExperienceModeNotification() {
     const [dismissed, setDismissed] = useState(false);
 
     useEffect(() => {
-        // Show notification to suggest simplifying after user has some activity
+        // Show notification to suggest changing modes after user has some activity
         if (dismissed) return;
 
-        // Only suggest simplifying if user is in advanced or intermediate mode
+        const hasActivity = userActivity.swapCount >= 2 || userActivity.hasViewedProtection;
+
         if (experienceMode === "advanced" && userActivity.swapCount >= 2 && userActivity.swapCount <= 3) {
-            // After 2-3 swaps in advanced mode, offer to simplify
+            // Suggest simplifying
+            setShowNotification(true);
+        } else if (experienceMode === "beginner" && hasActivity && userActivity.swapCount < 5) {
+            // Suggest upgrading
             setShowNotification(true);
         } else {
             setShowNotification(false);
         }
-    }, [experienceMode, userActivity.swapCount, dismissed]);
+    }, [experienceMode, userActivity.swapCount, userActivity.hasViewedProtection, dismissed]);
 
-    const handleSimplify = () => {
-        // Simplify to beginner mode
-        setExperienceMode("beginner");
+    const handleAction = () => {
+        content.onAction();
         setShowNotification(false);
         setDismissed(true);
     };
@@ -44,12 +47,23 @@ export default function ExperienceModeNotification() {
     };
 
     const getNotificationContent = () => {
+        if (experienceMode === "beginner") {
+            return {
+                emoji: "🚀",
+                title: "Unlock More Details?",
+                description: "You're doing great! Want to see your full token balances and transaction history by default?",
+                buttonText: "Upgrade to Standard Mode",
+                gradient: "from-blue-600 to-indigo-600",
+                onAction: () => setExperienceMode("intermediate"),
+            };
+        }
         return {
             emoji: "🌱",
             title: "Want a Simpler View?",
             description: "You can switch to Simple Mode for a cleaner, more focused experience with just the essentials.",
             buttonText: "Switch to Simple Mode",
             gradient: "from-emerald-500 to-teal-600",
+            onAction: () => setExperienceMode("beginner"),
         };
     };
 
@@ -93,7 +107,7 @@ export default function ExperienceModeNotification() {
 
                             <div className="flex gap-2">
                                 <button
-                                    onClick={handleSimplify}
+                                    onClick={handleAction}
                                     className="px-4 py-2 text-xs font-black rounded-xl bg-white text-gray-900 hover:bg-gray-100 transition-all shadow-md hover:shadow-lg hover:scale-105"
                                 >
                                     {content.buttonText} →
