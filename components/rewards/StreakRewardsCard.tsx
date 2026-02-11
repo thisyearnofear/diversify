@@ -8,10 +8,16 @@
  * - MODULAR: Self-contained, can be placed in any tab
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards, STREAK_CONFIG } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
+import dynamic from 'next/dynamic';
+
+// Lazy load claim flow for better performance
+const GoodDollarClaimFlow = dynamic(() => import('../gooddollar/GoodDollarClaimFlow'), {
+  ssr: false,
+});
 
 interface StreakRewardsCardProps {
   onSaveClick?: () => void;
@@ -26,9 +32,10 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     isEligible,
     estimatedReward,
     nextClaimTime,
-    claimG,
     isLoading,
   } = useStreakRewards();
+
+  const [showClaimFlow, setShowClaimFlow] = useState(false);
 
   // Not connected state
   if (!isConnected) {
@@ -53,9 +60,9 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
         action={
           onSaveClick
             ? {
-                label: 'Start Saving',
-                onClick: onSaveClick,
-              }
+              label: 'Start Saving',
+              onClick: onSaveClick,
+            }
             : undefined
         }
         variant="default"
@@ -76,32 +83,45 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
 
   // Has streak - show claim status
   return (
-    <InsightCard
-      icon={canClaim ? '💚' : '🔥'}
-      title={canClaim ? 'Claim Your $G' : `${streak?.daysActive || 0}-Day Streak`}
-      description={
-        canClaim
-          ? `Your daily $G reward is ready! Claim now to keep your streak alive.`
-          : `Save $${STREAK_CONFIG.MIN_SAVE_USD}+ to maintain your streak and unlock your daily claim.`
-      }
-      impact={canClaim ? estimatedReward : `${streak?.daysActive} days active`}
-      action={
-        canClaim
-          ? {
+    <>
+      <InsightCard
+        icon={canClaim ? '💚' : '🔥'}
+        title={canClaim ? 'Claim Your $G' : `${streak?.daysActive || 0}-Day Streak`}
+        description={
+          canClaim
+            ? `Your daily $G reward is ready! Claim ${estimatedReward} now to keep your streak alive.`
+            : `Save $${STREAK_CONFIG.MIN_SAVE_USD}+ to maintain your streak and unlock your daily claim.`
+        }
+        impact={canClaim ? estimatedReward : `${streak?.daysActive} days active`}
+        action={
+          canClaim
+            ? {
               label: 'Claim $G',
-              onClick: claimG,
+              onClick: () => setShowClaimFlow(true),
               loading: isLoading,
             }
-          : nextClaimTime
-          ? {
-              label: `Next claim in ${formatTimeUntil(nextClaimTime)}`,
-              onClick: () => {},
-              disabled: true,
-            }
-          : undefined
-      }
-      variant={canClaim ? 'reward' : 'success'}
-    />
+            : nextClaimTime
+              ? {
+                label: `Next claim in ${formatTimeUntil(nextClaimTime)}`,
+                onClick: () => { },
+                disabled: true,
+              }
+              : undefined
+        }
+        variant={canClaim ? 'reward' : 'success'}
+      />
+
+      {/* Claim Flow Modal */}
+      {showClaimFlow && (
+        <GoodDollarClaimFlow
+          onClose={() => setShowClaimFlow(false)}
+          onClaimSuccess={() => {
+            // Could trigger confetti or other celebration
+            console.log('[StreakRewards] Claim successful!');
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -116,19 +136,18 @@ export function RewardsStats({ className = '' }: { className?: string }) {
 
   return (
     <div className={`grid grid-cols-3 gap-2 ${className}`}>
-      <div className="bg-green-50 rounded-lg p-2 text-center">
-        <div className="text-lg font-bold text-green-700">{mockStats.todayClaims}</div>
-        <div className="text-[10px] text-green-600">Claims today</div>
+      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
+        <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.todayClaims}</div>
+        <div className="text-xs text-green-600 dark:text-green-400">Claims today</div>
       </div>
-      <div className="bg-green-50 rounded-lg p-2 text-center">
-        <div className="text-lg font-bold text-green-700">{mockStats.totalClaimed}</div>
-        <div className="text-[10px] text-green-600">$G earned</div>
+      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
+        <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.totalClaimed}</div>
+        <div className="text-xs text-green-600 dark:text-green-400">$G earned</div>
       </div>
-      <div className="bg-green-50 rounded-lg p-2 text-center">
-        <div className="text-lg font-bold text-green-700">{mockStats.activeStreaks}</div>
-        <div className="text-[10px] text-green-600">Active streaks</div>
+      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
+        <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.activeStreaks}</div>
+        <div className="text-xs text-green-600 dark:text-green-400">Active streaks</div>
       </div>
     </div>
   );
 }
-

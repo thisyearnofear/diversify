@@ -15,6 +15,8 @@ DiversiFi helps you protect wealth from inflation and currency volatility throug
 - **Cross-Chain Bridging** - Move assets seamlessly between Celo and Arbitrum via [LiFi](https://li.fi/)
 - **Inflation Protection** - Real-time economic data analysis to hedge against currency devaluation
 - **RWA Access** - Exposure to tokenized real-world assets (treasury yields, gold) on Arbitrum
+- **GoodDollar UBI** - Earn free G$ tokens daily by maintaining saving streaks ($0.50+ minimum)
+- **Mobile-Optimized Claims** - Seamless in-app G$ claiming with guided bottom-sheet interface
 
 ## 🚀 Quick Start
 
@@ -52,11 +54,10 @@ pnpm dev
 
 ## 📂 Documentation
 
-- [**Architecture & Technical Overview**](docs/ARCHITECTURE_AND_TECHNICAL_OVERVIEW.md) - System design and implementation
-- [**API Keys & Data Sources**](docs/API_KEYS_AND_DATA_SOURCES.md) - Setup guide for data providers
-- [**Integration Guides**](docs/INTEGRATION_GUIDES.md) - Farcaster, Guardarian on-ramp, and wallet setup
-- [**Development Guidelines**](docs/DEVELOPMENT_GUIDELINES.md) - Coding standards and best practices
-- [**Business Model**](docs/BUSINESS_MODEL_ECONOMICS.md) - Economics and monetization
+- [**Getting Started Guide**](docs/GETTING_STARTED_GUIDE.md) - API keys, setup, and freemium model
+- [**Technical Architecture**](docs/TECHNICAL_ARCHITECTURE.md) - System design and implementation details
+- [**Integration Guides**](docs/INTEGRATION_GUIDES.md) - Farcaster, Circle, GoodDollar, and other integrations
+- [**Business Model**](docs/BUSINESS_MODEL.md) - Economics and monetization strategy
 
 ## 🛠️ Tech Stack
 
@@ -73,15 +74,6 @@ pnpm dev
 - **Multi-Agent System** - Specialized agents for yield vs protection strategies
 - **Additional Chains** - Base, Optimism support via LiFi
 - **Enhanced Automation** - Zapier MCP integration (in development)
-
-## 🧪 Development Features
-
-> ⚠️ **Testnet Only**: The following features are experimental and only available in development:
->
-> - **Arc Network Integration** - Autonomous agent on Arc testnet (Chain ID 5042002)
-> - **x402 Protocol** - Micropayments for API access (in development)
->
-> Enable with `NEXT_PUBLIC_ENABLE_ARC=true` and `ENABLE_AUTONOMOUS_MODE=true`
 
 ## 📄 License
 
