@@ -162,8 +162,8 @@ export default function ProtectionAnalysis({
                 // Not in Farcaster Mini App context, fall through to URL intent
             }
 
-            // Fallback for external browsers
-            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds[]=${encodeURIComponent(sharePageUrl)}`;
+            // Fallback for external browsers - use 'embeds' not 'embeds[]'
+            const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds=${encodeURIComponent(sharePageUrl)}`;
             window.open(warpcastUrl);
         }
     };
