@@ -13,7 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
+import { useWalletContext } from '../components/wallet/WalletProvider';
 
 // Configuration
 const STREAK_CONFIG = {
@@ -119,7 +119,7 @@ function clearLocalStreak(address: string): void {
 }
 
 export function useStreakRewards(): StreakState & StreakActions {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWalletContext();
   const [state, setState] = useState<StreakState>({
     streak: null,
     canClaim: false,
