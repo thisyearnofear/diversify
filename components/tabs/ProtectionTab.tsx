@@ -8,6 +8,7 @@ import {
   ConnectWalletPrompt,
   InsightCard,
   ProtectionScore,
+  HeroValue,
 } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
@@ -19,7 +20,6 @@ import {
   USER_GOALS,
 } from "@/hooks/use-protection-profile";
 import { useAIConversation } from "@/context/AIConversationContext";
-import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 
 import ProtectHeroCard from "./protect/ProtectHeroCard";
 import ProfileWizard from "./protect/ProfileWizard";

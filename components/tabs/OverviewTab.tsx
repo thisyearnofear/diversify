@@ -187,263 +187,256 @@ export default function OverviewTab({
       </div>
     );
   }
-  <div className="mt-4">
-    <WalletButton variant="inline" className="w-full" />
-  </div>
-        </Card >
-      </div >
-    );
-}
 
-// Connecting state
-if (isConnecting) {
-  return (
-    <div className="space-y-4">
-      <Card className="text-center py-8">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 bg-blue-100 rounded-full mb-4 flex items-center justify-center">
-            <svg className="animate-spin w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-          </div>
-          <p className="text-gray-600">Connecting wallet...</p>
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-return (
-  <div className="space-y-6">
-    {/* DEMO MODE BANNER */}
-    {isDemo && (
-      <Card padding="p-0" className="overflow-hidden border-2 border-blue-500 dark:border-blue-600">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🎮</span>
-              <div>
-                <h3 className="text-sm font-black text-white">Demo Mode Active</h3>
-                <p className="text-xs text-blue-100">Exploring with sample data • Connect wallet for real portfolio</p>
-              </div>
+  // Connecting state
+  if (isConnecting) {
+    return (
+      <div className="space-y-4">
+        <Card className="text-center py-8">
+          <div className="animate-pulse flex flex-col items-center">
+            <div className="w-12 h-12 bg-blue-100 rounded-full mb-4 flex items-center justify-center">
+              <svg className="animate-spin w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={disableDemoMode}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
-              >
-                Exit Demo
-              </button>
-              <WalletButton variant="inline" />
-            </div>
-          </div>
-        </div>
-      </Card>
-    )}
-
-    {/* 1. PRIMARY HEALTH SCORE / HERO (Dynamic by Mode) */}
-    <Card padding="p-6" className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
-      <div className="relative z-10">
-        <HeroValue
-          value={isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
-          label={isBeginner ? "Health Score" : "Total Value"}
-        />
-        <div className={`mt-2 text-sm font-bold px-4 py-1.5 rounded-full inline-block ${diversificationScore >= 80 ? 'bg-green-100 text-green-800' :
-          diversificationScore >= 60 ? 'bg-blue-100 text-blue-800' :
-            'bg-red-100 text-red-800'
-          }`}>
-          {diversificationRating}
-        </div>
-        {isBeginner && (
-          <p className="text-xs text-gray-500 mt-3 max-w-[200px] mx-auto leading-relaxed">
-            Your money is currently <strong>{diversificationScore}% protected</strong> from local inflation.
-          </p>
-        )}
-      </div>
-      {/* Visual background element */}
-      <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
-    </Card>
-
-    {/* 2. REWARDS (Unified Insight Card) */}
-    <div className="space-y-4">
-      <StreakRewardsCard
-        onSaveClick={() => setActiveTab("swap")}
-      />
-
-    </div>
-
-    {/* 3. ASSET BREAKDOWN (Simplified for Beginners) */}
-    {hasHoldings && (
-      isBeginner ? (
-        <Card>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest">Global Spread</h3>
-            <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
-          </div>
-          <SimplePieChart
-            data={regionData}
-          />
-          <div className="mt-4 flex flex-wrap justify-center gap-2">
-            {regionData.map(r => (
-              <div key={r.region} className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-800">
-                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: r.color }} />
-                <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{r.region}</span>
-              </div>
-            ))}
+            <p className="text-gray-600">Connecting wallet...</p>
           </div>
         </Card>
-      ) : (
-        <ProtectionAnalysis
-          regionData={regionData}
-          totalValue={totalValue}
-          goalScores={portfolio.goalScores}
-          diversificationScore={diversificationScore}
-          diversificationRating={diversificationRating}
-          onOptimize={() => setActiveTab("protect")}
-          onSwap={() => setActiveTab("swap")}
-          chainId={chainId}
-          onNetworkChange={refreshChainId ? handleRefresh : undefined}
-          refreshBalances={refreshBalances}
-          yieldSummary={portfolio}
-        />
-      )
-    )}
-
-    {/* 4. MARKET DISCOVERY - Dashboard Cards (No Collapsible) */}
-    <DashboardCard
-      title={isBeginner ? "Global Opportunities" : "Market Intelligence"}
-      icon={<span>🌍</span>}
-      color="blue"
-      size="lg"
-    >
-      {/* Region Selection */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        {REGIONS.map((region) => (
-          <button
-            key={region}
-            onClick={() => setSelectedMarket(region)}
-            className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-all ${region === selectedMarket
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
-          >
-            {region}
-          </button>
-        ))}
       </div>
+    );
+  }
 
-      {/* Core Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
-          <div className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase mb-1">
-            {isBeginner ? "Living Costs Up" : "Inflation"}
-          </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white">
-            {selectedMarketInflation.toFixed(1)}%
-          </div>
-        </div>
-        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
-          <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase mb-1">
-            {isBeginner ? "Growth Potential" : "Market Growth"}
-          </div>
-          <div className="text-2xl font-black text-gray-900 dark:text-white">
-            +{selectedMarketData.growth}%
-          </div>
-        </div>
-      </div>
-
-      {/* Market Highlight */}
-      <div className="p-3 bg-gray-900 dark:bg-gray-950 rounded-xl text-white text-xs font-bold italic mb-4">
-        &quot;{selectedMarketData.highlight}&quot;
-      </div>
-
-      {/* Advanced: Performance Chart */}
-      {isAdvanced && currencyPerformanceData && (
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-          <div className="text-xs font-black text-gray-400 uppercase mb-3">Currency Velocity (30D)</div>
-          <CurrencyPerformanceChart data={currencyPerformanceData} title="" />
-        </div>
-      )}
-    </DashboardCard>
-
-    {/* 5. SMART RECOMMENDATIONS - Dashboard Card */}
-    {diversificationTips.length > 0 && (
-      <DashboardCard
-        title="Smart Recommendations"
-        icon={<span>💡</span>}
-        color="amber"
-        size="md"
-      >
-        <div className="space-y-2">
-          {diversificationTips.slice(0, 3).map((tip, idx) => (
-            <div
-              key={idx}
-              className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg"
-            >
-              <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">•</span>
-              <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
-                {tip}
-              </span>
+  return (
+    <div className="space-y-6">
+      {/* DEMO MODE BANNER */}
+      {isDemo && (
+        <Card padding="p-0" className="overflow-hidden border-2 border-blue-500 dark:border-blue-600">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🎮</span>
+                <div>
+                  <h3 className="text-sm font-black text-white">Demo Mode Active</h3>
+                  <p className="text-xs text-blue-100">Exploring with sample data • Connect wallet for real portfolio</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={disableDemoMode}
+                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
+                >
+                  Exit Demo
+                </button>
+                <WalletButton variant="inline" />
+              </div>
             </div>
-          ))}
-        </div>
-      </DashboardCard>
-    )}
+          </div>
+        </Card>
+      )}
 
-    {/* 6. REGION SELECTOR - Dashboard Card (Advanced Only) */}
-    {!isBeginner && (
+      {/* 1. PRIMARY HEALTH SCORE / HERO (Dynamic by Mode) */}
+      <Card padding="p-6" className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
+        <div className="relative z-10">
+          <HeroValue
+            value={isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+            label={isBeginner ? "Health Score" : "Total Value"}
+          />
+          <div className={`mt-2 text-sm font-bold px-4 py-1.5 rounded-full inline-block ${diversificationScore >= 80 ? 'bg-green-100 text-green-800' :
+            diversificationScore >= 60 ? 'bg-blue-100 text-blue-800' :
+              'bg-red-100 text-red-800'
+            }`}>
+            {diversificationRating}
+          </div>
+          {isBeginner && (
+            <p className="text-xs text-gray-500 mt-3 max-w-[200px] mx-auto leading-relaxed">
+              Your money is currently <strong>{diversificationScore}% protected</strong> from local inflation.
+            </p>
+          )}
+        </div>
+        {/* Visual background element */}
+        <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
+      </Card>
+
+      {/* 2. REWARDS (Unified Insight Card) */}
+      <div className="space-y-4">
+        <StreakRewardsCard
+          onSaveClick={() => setActiveTab("swap")}
+        />
+
+      </div>
+
+      {/* 3. ASSET BREAKDOWN (Simplified for Beginners) */}
+      {hasHoldings && (
+        isBeginner ? (
+          <Card>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest">Global Spread</h3>
+              <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
+            </div>
+            <SimplePieChart
+              data={regionData}
+            />
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              {regionData.map(r => (
+                <div key={r.region} className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-800">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: r.color }} />
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{r.region}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : (
+          <ProtectionAnalysis
+            regionData={regionData}
+            totalValue={totalValue}
+            goalScores={portfolio.goalScores}
+            diversificationScore={diversificationScore}
+            diversificationRating={diversificationRating}
+            onOptimize={() => setActiveTab("protect")}
+            onSwap={() => setActiveTab("swap")}
+            chainId={chainId}
+            onNetworkChange={refreshChainId ? handleRefresh : undefined}
+            refreshBalances={refreshBalances}
+            yieldSummary={portfolio}
+          />
+        )
+      )}
+
+      {/* 4. MARKET DISCOVERY - Dashboard Cards (No Collapsible) */}
       <DashboardCard
-        title="Your Home Region"
-        icon={<RegionalIconography region={userRegion} size="sm" />}
-        color="purple"
-        size="sm"
+        title={isBeginner ? "Global Opportunities" : "Market Intelligence"}
+        icon={<span>🌍</span>}
+        color="blue"
+        size="lg"
       >
-        <div className="flex flex-wrap gap-2">
+        {/* Region Selection */}
+        <div className="flex flex-wrap gap-2 mb-4">
           {REGIONS.map((region) => (
             <button
               key={region}
-              onClick={() => setUserRegion(region)}
-              className={`px-3 py-1.5 text-xs rounded-full transition-all font-bold ${userRegion === region
-                  ? "bg-purple-600 text-white shadow-md"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+              onClick={() => setSelectedMarket(region)}
+              className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-all ${region === selectedMarket
+                ? "bg-blue-600 text-white shadow-lg"
+                : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
                 }`}
             >
               {region}
             </button>
           ))}
         </div>
-      </DashboardCard>
-    )}
 
-    {/* 7. EMPTY STATE WITH CLEAR FUNNEL */}
-    {!hasHoldings && (
-      <Card padding="p-6" className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-2 border-blue-200 dark:border-blue-800">
-        <EmptyState
-          icon="🛡️"
-          title={isBeginner ? "Ready to Protect Your Money?" : "Start Building Protection"}
-          description={isBeginner
-            ? "Your money loses value every day due to inflation. Let's fix that by converting it to more stable currencies."
-            : "Convert your local currency into diversified stablecoins to protect against inflation and currency debasement."
-          }
-          action={{
-            label: isBeginner ? "Convert Money Now" : "Start Swapping",
-            onClick: () => setActiveTab("swap"),
-            icon: <span>→</span>,
-          }}
-        />
-        {isBeginner && (
-          <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-xl border border-blue-100 dark:border-blue-900">
-            <div className="flex items-start gap-2">
-              <span className="text-lg">💡</span>
-              <div className="text-xs text-gray-600 dark:text-gray-400">
-                <strong className="text-gray-900 dark:text-white">Quick tip:</strong> Start small! Convert just $10-20 to see how it works. You can always do more later.
-              </div>
+        {/* Core Stats Grid */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
+            <div className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase mb-1">
+              {isBeginner ? "Living Costs Up" : "Inflation"}
+            </div>
+            <div className="text-2xl font-black text-gray-900 dark:text-white">
+              {selectedMarketInflation.toFixed(1)}%
             </div>
           </div>
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
+            <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase mb-1">
+              {isBeginner ? "Growth Potential" : "Market Growth"}
+            </div>
+            <div className="text-2xl font-black text-gray-900 dark:text-white">
+              +{selectedMarketData.growth}%
+            </div>
+          </div>
+        </div>
+
+        {/* Market Highlight */}
+        <div className="p-3 bg-gray-900 dark:bg-gray-950 rounded-xl text-white text-xs font-bold italic mb-4">
+          &quot;{selectedMarketData.highlight}&quot;
+        </div>
+
+        {/* Advanced: Performance Chart */}
+        {isAdvanced && currencyPerformanceData && (
+          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="text-xs font-black text-gray-400 uppercase mb-3">Currency Velocity (30D)</div>
+            <CurrencyPerformanceChart data={currencyPerformanceData} title="" />
+          </div>
         )}
-      </Card>
-    )}
-  </div>
-);
+      </DashboardCard>
+
+      {/* 5. SMART RECOMMENDATIONS - Dashboard Card */}
+      {diversificationTips.length > 0 && (
+        <DashboardCard
+          title="Smart Recommendations"
+          icon={<span>💡</span>}
+          color="amber"
+          size="md"
+        >
+          <div className="space-y-2">
+            {diversificationTips.slice(0, 3).map((tip, idx) => (
+              <div
+                key={idx}
+                className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg"
+              >
+                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">•</span>
+                <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                  {tip}
+                </span>
+              </div>
+            ))}
+          </div>
+        </DashboardCard>
+      )}
+
+      {/* 6. REGION SELECTOR - Dashboard Card (Advanced Only) */}
+      {!isBeginner && (
+        <DashboardCard
+          title="Your Home Region"
+          icon={<RegionalIconography region={userRegion} size="sm" />}
+          color="purple"
+          size="sm"
+        >
+          <div className="flex flex-wrap gap-2">
+            {REGIONS.map((region) => (
+              <button
+                key={region}
+                onClick={() => setUserRegion(region)}
+                className={`px-3 py-1.5 text-xs rounded-full transition-all font-bold ${userRegion === region
+                  ? "bg-purple-600 text-white shadow-md"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+                  }`}
+              >
+                {region}
+              </button>
+            ))}
+          </div>
+        </DashboardCard>
+      )}
+
+      {/* 7. EMPTY STATE WITH CLEAR FUNNEL */}
+      {!hasHoldings && (
+        <Card padding="p-6" className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-2 border-blue-200 dark:border-blue-800">
+          <EmptyState
+            icon="🛡️"
+            title={isBeginner ? "Ready to Protect Your Money?" : "Start Building Protection"}
+            description={isBeginner
+              ? "Your money loses value every day due to inflation. Let's fix that by converting it to more stable currencies."
+              : "Convert your local currency into diversified stablecoins to protect against inflation and currency debasement."
+            }
+            action={{
+              label: isBeginner ? "Convert Money Now" : "Start Swapping",
+              onClick: () => setActiveTab("swap"),
+              icon: <span>→</span>,
+            }}
+          />
+          {isBeginner && (
+            <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-xl border border-blue-100 dark:border-blue-900">
+              <div className="flex items-start gap-2">
+                <span className="text-lg">💡</span>
+                <div className="text-xs text-gray-600 dark:text-gray-400">
+                  <strong className="text-gray-900 dark:text-white">Quick tip:</strong> Start small! Convert just $10-20 to see how it works. You can always do more later.
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  );
 }

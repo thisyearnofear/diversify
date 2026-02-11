@@ -133,7 +133,7 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
 
                     {/* Reward amount */}
                     <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
-                        <div className="text-xs text-emerald-100 mb-1">You'll receive</div>
+                        <div className="text-xs text-emerald-100 mb-1">You&apos;ll receive</div>
                         <div className="text-3xl font-black">{estimatedReward}</div>
                         <div className="text-xs text-emerald-100 mt-1">GoodDollar tokens</div>
                     </div>
@@ -188,8 +188,8 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                         onClick={handleClaim}
                         disabled={!canClaim || isLoading || claimStatus === 'claiming'}
                         className={`w-full py-4 rounded-xl font-bold text-sm transition-all ${canClaim && claimStatus === 'ready'
-                                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg'
-                                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg'
+                            : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                             }`}
                     >
                         {claimStatus === 'claiming' ? (

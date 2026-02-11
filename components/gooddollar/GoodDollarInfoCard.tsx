@@ -54,7 +54,7 @@ export default function GoodDollarInfoCard({
                 {/* How it works */}
                 <div className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-emerald-200 dark:border-emerald-800">
                     <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase mb-2">
-                        How It's Funded (Sustainable!)
+                        How It&apos;s Funded (Sustainable!)
                     </h4>
                     <div className="space-y-2 text-xs text-gray-700 dark:text-gray-300">
                         <div className="flex items-start gap-2">
