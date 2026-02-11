@@ -11,6 +11,7 @@ import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
 import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
 import SimplePieChart from "../portfolio/SimplePieChart";
 import { useAppState } from "../../context/AppStateContext";
+import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 
 import { Card, CollapsibleSection, EmptyState, HeroValue } from "../shared/TabComponents";
 
@@ -59,9 +60,13 @@ export default function OverviewTab({
   const { inflationData } = useInflationData();
   const [selectedMarket, setSelectedMarket] = useState<Region>(userRegion);
 
-  const { experienceMode } = useAppState();
+  const { experienceMode, demoMode, disableDemoMode, enableDemoMode } = useAppState();
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
+
+  // Use demo data if in demo mode, otherwise use real portfolio
+  const activePortfolio = demoMode.isActive ? DEMO_PORTFOLIO : portfolio;
+  const isDemo = demoMode.isActive;
 
   const {
     diversificationScore,
@@ -69,7 +74,7 @@ export default function OverviewTab({
     totalValue,
     regionData,
     diversificationTips,
-  } = portfolio;
+  } = activePortfolio;
 
 
 
@@ -83,8 +88,8 @@ export default function OverviewTab({
   const selectedMarketData = EMERGING_MARKETS[selectedMarket as keyof typeof EMERGING_MARKETS] || EMERGING_MARKETS.Africa;
   const selectedMarketInflation = inflationData[selectedMarket]?.avgRate || 0;
 
-  // Not connected state - ENHANCED: Show the problem viscerally
-  if (!address && !isConnecting) {
+  // Not connected state - ENHANCED: Show the problem viscerally + Demo Mode option
+  if (!address && !isConnecting && !isDemo) {
     const regionalInflation = inflationData[userRegion]?.avgRate || 15.4;
     const monthlyLoss = (1000 * (regionalInflation / 100) / 12).toFixed(2);
     const yearlyLoss = (1000 * (regionalInflation / 100)).toFixed(0);
@@ -135,9 +140,28 @@ export default function OverviewTab({
             </div>
           </div>
 
-          <div className="p-4 bg-white dark:bg-gray-800">
+          <div className="p-4 bg-white dark:bg-gray-800 space-y-3">
             <WalletButton variant="inline" className="w-full" />
-            <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
+
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">
+                  or
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={enableDemoMode}
+              className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-xl text-sm font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border-2 border-blue-200 dark:border-blue-800"
+            >
+              🎮 Try Demo First
+            </button>
+
+            <p className="text-xs text-center text-gray-500 dark:text-gray-400">
               Free to use • No account needed • Your keys, your crypto
             </p>
           </div>
@@ -191,6 +215,32 @@ if (isConnecting) {
 
 return (
   <div className="space-y-6">
+    {/* DEMO MODE BANNER */}
+    {isDemo && (
+      <Card padding="p-0" className="overflow-hidden border-2 border-blue-500 dark:border-blue-600">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🎮</span>
+              <div>
+                <h3 className="text-sm font-black text-white">Demo Mode Active</h3>
+                <p className="text-xs text-blue-100">Exploring with sample data • Connect wallet for real portfolio</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={disableDemoMode}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
+              >
+                Exit Demo
+              </button>
+              <WalletButton variant="inline" />
+            </div>
+          </div>
+        </div>
+      </Card>
+    )}
+
     {/* 1. PRIMARY HEALTH SCORE / HERO (Dynamic by Mode) */}
     <Card padding="p-6" className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
       <div className="relative z-10">

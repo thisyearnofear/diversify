@@ -36,6 +36,13 @@ interface UserActivity {
   hasViewedAnalytics: boolean;
 }
 
+// Demo mode for trying the app without connecting wallet
+interface DemoModeState {
+  isActive: boolean;
+  mockAddress: string;
+  mockChainId: number;
+}
+
 // Define the application state interface
 interface AppState {
   activeTab: string;
@@ -47,6 +54,7 @@ interface AppState {
   visitedTabs: string[];
   experienceMode: UserExperienceMode;
   userActivity: UserActivity;
+  demoMode: DemoModeState;
 }
 
 // Define the context type
@@ -80,6 +88,10 @@ interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
   recordSwap: () => void;
   shouldShowAdvancedFeatures: () => boolean;
   shouldShowIntermediateFeatures: () => boolean;
+  // Demo mode methods
+  demoMode: DemoModeState;
+  enableDemoMode: () => void;
+  disableDemoMode: () => void;
 }
 
 // Create the context with default values
@@ -136,6 +148,11 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
       lastSwapDate: null,
       hasViewedProtection: false,
       hasViewedAnalytics: false,
+    },
+    demoMode: {
+      isActive: false,
+      mockAddress: "0xDemo1234567890123456789012345678901234",
+      mockChainId: 42220, // Celo Mainnet
     },
   });
 
@@ -396,6 +413,22 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     return state.experienceMode === "intermediate" || state.experienceMode === "advanced";
   }, [state.experienceMode]);
 
+  // Demo mode methods
+  const enableDemoMode = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      demoMode: { ...prev.demoMode, isActive: true },
+      activeTab: "overview", // Start at overview
+    }));
+  }, []);
+
+  const disableDemoMode = useCallback(() => {
+    setState((prev) => ({
+      ...prev,
+      demoMode: { ...prev.demoMode, isActive: false },
+    }));
+  }, []);
+
   const contextValue: AppStateContextType = {
     activeTab: state.activeTab,
     chainId: state.chainId,
@@ -423,6 +456,9 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     recordSwap,
     shouldShowAdvancedFeatures,
     shouldShowIntermediateFeatures,
+    demoMode: state.demoMode,
+    enableDemoMode,
+    disableDemoMode,
   };
 
   return (
