@@ -268,6 +268,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     analysisGoal?: string,
     macroData?: Record<string, any>,
     networkActivity?: any,
+    strategyPrompt?: string,
   ) => {
     if (!capabilities.analysis) {
       console.warn('[DiversifiAI] Analysis not available');
@@ -282,19 +283,19 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
     try {
       // Phase 1: Local Data Collection (0-30%) - Faster progression
-      setAnalysisProgress(10); 
+      setAnalysisProgress(10);
       setThinkingStep('Securing market data...');
 
       // Simulate data gathering with professional timing
-      await new Promise(resolve => setTimeout(resolve, 600)); 
+      await new Promise(resolve => setTimeout(resolve, 600));
 
-      setAnalysisProgress(25); 
+      setAnalysisProgress(25);
       setThinkingStep('Calibrating inflation models...');
       const localAnalysis = analyzePortfolio(portfolio, inflationData, userGoal || config.goal, macroData);
       setPortfolioAnalysis(localAnalysis);
 
       // Phase 2: AI Consultation (25-90%)
-      setAnalysisProgress(35); 
+      setAnalysisProgress(35);
 
       const THEMATIC_MESSAGES = [
         "Querying World Bank Macro indicators...",
@@ -316,10 +317,10 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       progressInterval = setInterval(() => {
         setAnalysisProgress(prev => {
           if (prev >= 90) return 90;
-          if (prev > 80) return Math.round(prev + 0.6); 
+          if (prev > 80) return Math.round(prev + 0.6);
           if (prev > 70) return Math.round(prev + 0.9);
           if (prev > 50) return Math.round(prev + 1.2);
-          return Math.round(prev + 1.6); 
+          return Math.round(prev + 1.6);
         });
 
         // Cycle messages every few ticks
@@ -327,7 +328,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           messageIndex = (messageIndex + 1) % THEMATIC_MESSAGES.length;
           setThinkingStep(THEMATIC_MESSAGES[messageIndex]);
         }
-      }, 800); 
+      }, 800);
 
       const response = await fetch('/api/agent/analyze', {
         method: 'POST',
@@ -340,6 +341,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           goal: analysisGoal || userGoal || config.goal,
           riskTolerance: config.riskTolerance,
           userRegion: userRegion,
+          strategyPrompt: strategyPrompt, // Include strategy context
         }),
       });
 
@@ -348,7 +350,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         progressInterval = null;
       }
 
-        setAnalysisProgress(92); // Don't jump to 95% immediately
+      setAnalysisProgress(92); // Don't jump to 95% immediately
       setThinkingStep('Finalizing strategy...');
 
       // Add a small delay before completing
@@ -399,6 +401,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     analysisGoal?: string,
     macroData?: Record<string, any>,
     networkActivity?: any,
+    strategyPrompt?: string,
   ) => {
     // Debug: Log the parameters received
     console.log('[useDiversifiAI] analyze called with:', {
@@ -438,7 +441,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       portfolio = userBalanceOrPortfolio;
     }
 
-    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion, analysisGoal, macroData, networkActivity);
+    return analyzePortfolioAI(inflationData, portfolio, undefined, userRegion, analysisGoal, macroData, networkActivity, strategyPrompt);
   }, [analyzePortfolioAI]);
 
   /**

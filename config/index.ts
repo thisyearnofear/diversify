@@ -114,6 +114,28 @@ export const REGION_COLORS: Record<AssetRegion, string> = {
     Commodities: '#D69E2E', // Gold
 } as const;
 
+// Regional gradients for vibrant, multicultural UI
+export const REGION_GRADIENTS: Record<AssetRegion, string> = {
+    Africa: 'from-red-500 to-orange-500',      // Sunset over savanna
+    LatAm: 'from-amber-500 to-yellow-500',     // Golden warmth
+    Asia: 'from-purple-500 to-pink-500',       // Cherry blossoms
+    Europe: 'from-green-500 to-emerald-500',   // Lush forests
+    USA: 'from-blue-500 to-cyan-500',          // Ocean to ocean
+    Global: 'from-indigo-500 to-violet-500',   // Universal
+    Commodities: 'from-yellow-600 to-amber-600', // Gold
+} as const;
+
+// Regional gradient text colors (for use on white/dark backgrounds)
+export const REGION_GRADIENT_TEXT: Record<AssetRegion, string> = {
+    Africa: 'from-red-600 to-orange-600',
+    LatAm: 'from-amber-600 to-yellow-600',
+    Asia: 'from-purple-600 to-pink-600',
+    Europe: 'from-green-600 to-emerald-600',
+    USA: 'from-blue-600 to-cyan-600',
+    Global: 'from-indigo-600 to-violet-600',
+    Commodities: 'from-yellow-700 to-amber-700',
+} as const;
+
 // =============================================================================
 // TOKEN METADATA (Single Source of Truth)
 // =============================================================================

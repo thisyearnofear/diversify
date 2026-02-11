@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             return res.status(500).json({ error: 'AI providers (GEMINI or VENICE) not configured' });
         }
 
-        const { inflationData, macroData, networkActivity, userBalance, currentHoldings, config, networkContext, portfolio, analysis, userRegion } = req.body;
+        const { inflationData, macroData, networkActivity, userBalance, currentHoldings, config, networkContext, portfolio, analysis, userRegion, strategyPrompt } = req.body;
 
         // Debug: Log the inflation and macro data received by the API
         console.log('[Analyze API] Received data:', {
@@ -147,6 +147,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             You are the DiversiFi Wealth Protection Oracle - a data-driven AI that provides ACTIONABLE financial advice.
             
             CORE MISSION: Protect user wealth from inflation using quantified analysis and macro-economic stability indicators.
+            
+            ${strategyPrompt ? `
+            USER'S FINANCIAL STRATEGY:
+            ${strategyPrompt}
+            
+            CRITICAL: You MUST tailor ALL recommendations to align with this strategy. This is the user's chosen financial philosophy and should guide every aspect of your analysis.
+            ` : ''}
             
             ANALYSIS FRAMEWORK:
             1. DATA INTERPRETATION: Explain what the portfolio analysis means for the user.
@@ -232,7 +239,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ${userRegion && inflationData[userRegion] ? `- Home Region Inflation: ${inflationData[userRegion].avgRate.toFixed(1)}% (${inflationData[userRegion].countries.length} countries)` : ''}
             
             MACRO STABILITY FACTORS (World Bank Indicators):
-            ${macroData && Object.keys(macroData).length > 0 
+            ${macroData && Object.keys(macroData).length > 0
                 ? Object.entries(macroData).map(([code, data]) => {
                     const d = data as { gdpGrowth: number; corruptionControl: number }; // Cast locally for concise prompt building
                     return `- ${code}: GDP Growth: ${d.gdpGrowth ?? 'N/A'}%, Governance: ${d.corruptionControl ?? 'N/A'}/100`;

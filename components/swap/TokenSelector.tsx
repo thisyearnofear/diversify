@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { REGION_COLORS, TOKEN_METADATA } from "../../config";
-import type { UserExperienceMode } from "@/context/AppStateContext";
+import type { UserExperienceMode, FinancialStrategy } from "@/context/AppStateContext";
+import { StrategyService } from "@/services/strategy/strategy.service";
 
 
 interface Token {
@@ -27,6 +28,7 @@ interface TokenSelectorProps {
   currentChainId?: number;
   tokenChainId?: number;
   experienceMode?: UserExperienceMode;
+  financialStrategy?: FinancialStrategy;
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({
@@ -44,9 +46,69 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   currentChainId,
   tokenChainId,
   experienceMode = "beginner",
+  financialStrategy,
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const showRegionalInfo = experienceMode !== "beginner";
+  const [showWarning, setShowWarning] = useState(false);
+
+  // Check if token violates strategy
+  const getComplianceInfo = (tokenSymbol: string) => {
+    if (!financialStrategy) return { isCompliant: true };
+    return StrategyService.getAssetCompliance(financialStrategy, tokenSymbol);
+  };
+
+  // Check if token is recommended for strategy
+  const isRecommended = (tokenSymbol: string): boolean => {
+    if (!financialStrategy) return false;
+    const recommended = StrategyService.getRecommendedAssets(financialStrategy);
+    return recommended.some(rec =>
+      tokenSymbol.toUpperCase().includes(rec.toUpperCase()) ||
+      rec.toUpperCase().includes(tokenSymbol.toUpperCase())
+    );
+  };
+
+  // Get strategy badge for token
+  const getStrategyBadge = (tokenSymbol: string): { emoji: string; label: string } | null => {
+    if (!financialStrategy || !isRecommended(tokenSymbol)) return null;
+
+    switch (financialStrategy) {
+      case 'africapitalism':
+        if (tokenSymbol.match(/KES|GHS|ZAR|NGN|XOF/i)) {
+          return { emoji: '🌍', label: 'Builds Africa' };
+        }
+        break;
+      case 'buen_vivir':
+        if (tokenSymbol.match(/BRL|COP|MXN|ARS/i)) {
+          return { emoji: '🌎', label: 'LatAm Unity' };
+        }
+        break;
+      case 'confucian':
+        if (tokenSymbol.match(/USD|EUR|USDY/i)) {
+          return { emoji: '🏮', label: 'Stable Wealth' };
+        }
+        break;
+      case 'gotong_royong':
+        if (tokenSymbol.match(/PHP|IDR|THB|VND/i)) {
+          return { emoji: '🤝', label: 'Community' };
+        }
+        break;
+      case 'islamic':
+        if (tokenSymbol.match(/PAXG|USDm|EURm/i)) {
+          return { emoji: '☪️', label: 'Halal' };
+        }
+        break;
+      case 'global':
+        // All assets are good for global diversification
+        return { emoji: '🌐', label: 'Diversifies' };
+    }
+    return null;
+  };
+
+  const selectedTokenCompliance = getComplianceInfo(selectedToken);
+  const selectedTokenCompliant = selectedTokenCompliance.isCompliant;
+  const selectedTokenBadge = getStrategyBadge(selectedToken);
+
   // Determine if this is a cross-chain scenario
   const isCrossChain = currentChainId && tokenChainId && currentChainId !== tokenChainId;
 
@@ -198,23 +260,42 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       <div className="flex space-x-2">
         <select
           value={selectedToken}
-          onChange={(e) => onTokenChange(e.target.value)}
+          onChange={(e) => {
+            const newToken = e.target.value;
+            const compliance = getComplianceInfo(newToken);
+            if (!compliance.isCompliant) {
+              setShowWarning(true);
+            }
+            onTokenChange(newToken);
+          }}
           className={`${showAmountInput ? "w-1/3" : "w-full"
-            } rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800`}
-          style={regionColor ? {
+            } rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800 ${!selectedTokenCompliant ? 'border-red-500 dark:border-red-500' : ''
+            }`}
+          style={regionColor && selectedTokenCompliant ? {
             borderColor: regionColor,
           } : {}}
           disabled={disabled}
         >
           {availableTokens.map((token) => {
             const displayName = getSimplifiedTokenName(token.symbol);
+            const compliance = getComplianceInfo(token.symbol);
+            const badge = getStrategyBadge(token.symbol);
             return (
               <option
                 key={token.symbol}
                 value={token.symbol}
-                className="font-medium bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                className={`font-medium bg-white dark:bg-gray-900 ${compliance.isCompliant
+                  ? 'text-gray-900 dark:text-gray-100'
+                  : 'text-gray-400 dark:text-gray-600'
+                  }`}
+                disabled={!compliance.isCompliant}
               >
-                {displayName}
+                {!compliance.isCompliant
+                  ? `⚠️ ${displayName} (Not compliant)`
+                  : badge
+                    ? `${badge.emoji} ${displayName} • ${badge.label}`
+                    : displayName
+                }
               </option>
             );
           })}
@@ -253,6 +334,49 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           </div>
         )}
       </div>
+
+      {/* Strategy Violation Warning */}
+      {!selectedTokenCompliant && selectedTokenCompliance.reason && (
+        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
+          <div className="flex items-start gap-2">
+            <span className="text-lg shrink-0">⚠️</span>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs font-black text-red-900 dark:text-red-100 uppercase tracking-wide">
+                Strategy Violation
+              </h4>
+              <p className="text-xs text-red-800 dark:text-red-200 mt-1 leading-relaxed">
+                {selectedTokenCompliance.reason}
+              </p>
+              {selectedTokenCompliance.alternatives && selectedTokenCompliance.alternatives.length > 0 && (
+                <p className="text-xs text-red-700 dark:text-red-300 mt-2 leading-relaxed">
+                  <strong>Recommended alternatives:</strong> {selectedTokenCompliance.alternatives.join(', ')}
+                </p>
+              )}
+              <button
+                onClick={() => setShowWarning(false)}
+                className="mt-2 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline"
+              >
+                I understand the risk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Positive Reinforcement Badge */}
+      {selectedTokenCompliant && selectedTokenBadge && (
+        <div className="mt-2 p-2.5 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-2 border-emerald-200 dark:border-emerald-800 rounded-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-lg shrink-0">{selectedTokenBadge.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-emerald-900 dark:text-emerald-100 leading-relaxed">
+                <span className="uppercase tracking-wide">{selectedTokenBadge.label}</span> • Aligned with your {financialStrategy?.replace('_', ' ')} strategy
+              </p>
+            </div>
+            <span className="text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>
+          </div>
+        </div>
+      )}
 
       {/* Token info card - compact version, hide in beginner mode */}
       {selectedToken && showRegionalInfo && (

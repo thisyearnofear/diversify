@@ -1,5 +1,5 @@
 import React from "react";
-import { NETWORKS } from "../../config";
+import { NETWORKS, REGION_GRADIENTS, type AssetRegion } from "../../config";
 
 interface ChainBreakdown {
     chainId: number;
@@ -55,8 +55,8 @@ export default function MultichainPortfolioBreakdown({
 }: MultichainPortfolioBreakdownProps) {
     // Calculate network allocations from actual chain data
     const networkAllocations = React.useMemo(() => {
-        const allocations: Record<string, { 
-            percentage: number; 
+        const allocations: Record<string, {
+            percentage: number;
             usdValue: number;
             chainId: number;
             tokenCount: number;
@@ -164,10 +164,13 @@ export default function MultichainPortfolioBreakdown({
                     if (!info) return null;
 
                     return (
-                        <div key={network} className="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                        <div key={network} className={`p-4 rounded-xl border-2 bg-gradient-to-br ${network === 'Celo'
+                            ? 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800'
+                            : 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800'
+                            }`}>
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
-                                    <span 
+                                    <span
                                         className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
                                         style={{ backgroundColor: `${info.color}30` }}
                                     >
@@ -184,13 +187,13 @@ export default function MultichainPortfolioBreakdown({
                                 </div>
                             </div>
 
-                            {/* Progress bar */}
-                            <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                            {/* Progress bar with gradient */}
+                            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-3">
                                 <div
-                                    className="h-2 rounded-full transition-all duration-500"
+                                    className={`h-2.5 rounded-full transition-all duration-500 bg-gradient-to-r ${network === 'Celo' ? 'from-green-500 to-emerald-500' : 'from-blue-500 to-cyan-500'
+                                        }`}
                                     style={{
                                         width: `${data.percentage}%`,
-                                        backgroundColor: info.color,
                                     }}
                                 />
                             </div>

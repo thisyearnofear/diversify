@@ -14,6 +14,7 @@ import { REGIONS, type Region } from "../../hooks/use-user-region";
 import InteractiveAdviceCard from "../agent/InteractiveAdviceCard";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
+import { StrategyService } from "../../services/strategy/strategy.service";
 
 import sdk from "@farcaster/miniapp-sdk";
 
@@ -99,7 +100,7 @@ export default function AIAssistant({
   const { stats: networkActivityStats } = useNetworkActivity();
   const { inflationData: liveInflationData } = useInflationData();
   const { showToast } = useToast();
-  const { startTour, dismissTour, isTourDismissed } = useAppState();
+  const { startTour, dismissTour, isTourDismissed, financialStrategy } = useAppState();
   const globalConversation = useAIConversationOptional();
   const setDrawerOpen = globalConversation?.setDrawerOpen;
   const addUserMessage = globalConversation?.addUserMessage;
@@ -129,11 +130,11 @@ export default function AIAssistant({
   const handleChatSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!chatInput.trim() || isAnalyzing) return;
-    
+
     // Switch to global drawer for conversation
     addUserMessage?.(chatInput.trim());
     setDrawerOpen?.(true);
-    
+
     setChatInput("");
     setShowChatInput(false);
   };
@@ -154,7 +155,7 @@ export default function AIAssistant({
             hapticFeedback: (options: { type: string }) => void;
           }
         ).hapticFeedback({ type: "light" });
-      } catch {}
+      } catch { }
     }
     if (analysisProgressRounded === 100) {
       try {
@@ -163,7 +164,7 @@ export default function AIAssistant({
             hapticFeedback: (options: { type: string }) => void;
           }
         ).hapticFeedback({ type: "success" });
-      } catch {}
+      } catch { }
     }
   }, [analysisProgressRounded, isAnalyzing]);
 
@@ -212,13 +213,13 @@ export default function AIAssistant({
       holdingsCount: holdings?.length || 0,
       sampleData: inflationDataToUse
         ? Object.entries(inflationDataToUse)
-            .slice(0, 2)
-            .map(([region, data]) => ({
-              region,
-              avgRate: data.avgRate,
-              countryCount: data.countries?.length || 0,
-              stablecoinCount: data.stablecoins?.length || 0,
-            }))
+          .slice(0, 2)
+          .map(([region, data]) => ({
+            region,
+            avgRate: data.avgRate,
+            countryCount: data.countries?.length || 0,
+            stablecoinCount: data.stablecoins?.length || 0,
+          }))
         : "No data",
     });
 
@@ -237,6 +238,9 @@ export default function AIAssistant({
       errors: [],
     };
 
+    // Get strategy-specific AI prompt
+    const strategyPrompt = StrategyService.getAIPrompt(financialStrategy);
+
     analyze(
       inflationDataToUse,
       amount,
@@ -248,6 +252,7 @@ export default function AIAssistant({
       analysisGoal,
       macroData,
       networkActivityStats,
+      strategyPrompt, // Inject strategy context
     );
   };
 
@@ -258,8 +263,8 @@ export default function AIAssistant({
           hapticFeedback: (options: { type: string }) => void;
         }
       ).hapticFeedback({ type: "selection" });
-    } catch {}
-    
+    } catch { }
+
     // Switch to global drawer for conversation
     addUserMessage?.(transcription);
     setDrawerOpen?.(true);
@@ -369,12 +374,12 @@ export default function AIAssistant({
                         className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-                        <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' : 
-                              thinkingStep.toLowerCase().includes('inflation') ? 'IMF_PCPIPCH' : 
-                              thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
+                        <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' :
+                          thinkingStep.toLowerCase().includes('inflation') ? 'IMF_PCPIPCH' :
+                            thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
                               thinkingStep.toLowerCase().includes('momentum') ? 'ALTERNATIVE_ME_FNG' :
-                              thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' : 
-                              thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
+                                thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' :
+                                  thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
                       </motion.span>
                     </AnimatePresence>
                   </div>
@@ -416,13 +421,12 @@ export default function AIAssistant({
                       </span>
                       {portfolioAnalysis && (
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                            portfolioAnalysis.diversificationScore > 70
-                              ? "bg-emerald-100 text-emerald-700"
-                              : portfolioAnalysis.diversificationScore > 40
-                                ? "bg-amber-100 text-amber-700"
-                                : "bg-red-100 text-red-700"
-                          }`}
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${portfolioAnalysis.diversificationScore > 70
+                            ? "bg-emerald-100 text-emerald-700"
+                            : portfolioAnalysis.diversificationScore > 40
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-red-100 text-red-700"
+                            }`}
                         >
                           Diversification:{" "}
                           {portfolioAnalysis.diversificationScore}/100
@@ -439,14 +443,13 @@ export default function AIAssistant({
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{
-                              width: `${
-                                advice.comparisonProjection
-                                  ? (advice.comparisonProjection
-                                      .currentPathValue /
-                                      amount) *
-                                    100
-                                  : 85
-                              }%`,
+                              width: `${advice.comparisonProjection
+                                ? (advice.comparisonProjection
+                                  .currentPathValue /
+                                  amount) *
+                                100
+                                : 85
+                                }%`,
                             }}
                             className="h-full bg-red-400"
                           />
@@ -455,9 +458,9 @@ export default function AIAssistant({
                           -$
                           {advice.comparisonProjection
                             ? (
-                                amount -
-                                advice.comparisonProjection.currentPathValue
-                              ).toFixed(0)
+                              amount -
+                              advice.comparisonProjection.currentPathValue
+                            ).toFixed(0)
                             : (amount * 0.15).toFixed(0)}
                         </span>
                       </div>
@@ -474,9 +477,9 @@ export default function AIAssistant({
                         </div>
                         <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
                           +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
-                              ? advice.comparisonProjection.oraclePathValue -
-                                advice.comparisonProjection.currentPathValue
-                              : amount * 0.2)} />
+                            ? advice.comparisonProjection.oraclePathValue -
+                            advice.comparisonProjection.currentPathValue
+                            : amount * 0.2)} />
                         </span>
                       </div>
                     </div>
@@ -714,11 +717,10 @@ export default function AIAssistant({
                       <button
                         key={region}
                         onClick={() => setSelectedRegion(region)}
-                        className={`p-2 text-xs rounded-lg font-medium transition-all ${
-                          selectedRegion === region
-                            ? "bg-blue-600 text-white shadow-md"
-                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                        }`}
+                        className={`p-2 text-xs rounded-lg font-medium transition-all ${selectedRegion === region
+                          ? "bg-blue-600 text-white shadow-md"
+                          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          }`}
                       >
                         {region}
                       </button>
@@ -807,11 +809,10 @@ export default function AIAssistant({
                       className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs ${
-                          msg.role === "user"
-                            ? "bg-blue-600 text-white rounded-br-md"
-                            : "bg-gray-100 text-gray-800 rounded-bl-md"
-                        }`}
+                        className={`max-w-[85%] px-3 py-2 rounded-2xl text-xs ${msg.role === "user"
+                          ? "bg-blue-600 text-white rounded-br-md"
+                          : "bg-gray-100 text-gray-800 rounded-bl-md"
+                          }`}
                       >
                         {msg.content.length > 120
                           ? msg.content.slice(0, 120) + "..."
@@ -837,11 +838,10 @@ export default function AIAssistant({
                     handleAnalyze();
                   }}
                   disabled={!capabilities.analysis}
-                  className={`flex-1 py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${
-                    capabilities.analysis
-                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  }`}
+                  className={`flex-1 py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-[0.98] flex items-center justify-center gap-2 ${capabilities.analysis
+                    ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20"
+                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    }`}
                 >
                   <span>
                     {capabilities.analysis ? "Run Analysis" : "AI Unavailable"}
@@ -1004,12 +1004,12 @@ export default function AIAssistant({
                         className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-                        <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' : 
-                              thinkingStep.toLowerCase().includes('inflation') ? 'IMF_PCPIPCH' : 
-                              thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
+                        <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' :
+                          thinkingStep.toLowerCase().includes('inflation') ? 'IMF_PCPIPCH' :
+                            thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
                               thinkingStep.toLowerCase().includes('momentum') ? 'ALTERNATIVE_ME_FNG' :
-                              thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' : 
-                              thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
+                                thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' :
+                                  thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
                       </motion.span>
                     </AnimatePresence>
                   </div>
@@ -1094,9 +1094,9 @@ export default function AIAssistant({
                             -$
                             {advice.comparisonProjection
                               ? (
-                                  amount -
-                                  advice.comparisonProjection.currentPathValue
-                                ).toFixed(2)
+                                amount -
+                                advice.comparisonProjection.currentPathValue
+                              ).toFixed(2)
                               : (amount * 0.15).toFixed(2)}
                           </span>
                         </div>
@@ -1104,14 +1104,13 @@ export default function AIAssistant({
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{
-                              width: `${
-                                advice.comparisonProjection
-                                  ? (advice.comparisonProjection
-                                      .currentPathValue /
-                                      amount) *
-                                    100
-                                  : 85
-                              }%`,
+                              width: `${advice.comparisonProjection
+                                ? (advice.comparisonProjection
+                                  .currentPathValue /
+                                  amount) *
+                                100
+                                : 85
+                                }%`,
                             }}
                             className="h-full bg-red-400"
                           />
@@ -1129,23 +1128,22 @@ export default function AIAssistant({
                           <span className="text-blue-600">Optimized Path</span>
                           <span className="text-green-600">
                             +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
-                                ? advice.comparisonProjection.oraclePathValue -
-                                  advice.comparisonProjection.currentPathValue
-                                : amount * 0.2)} />
+                              ? advice.comparisonProjection.oraclePathValue -
+                              advice.comparisonProjection.currentPathValue
+                              : amount * 0.2)} />
                           </span>
                         </div>
                         <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{
-                              width: `${
-                                advice.comparisonProjection?.oraclePathValue
-                                  ? (advice.comparisonProjection
-                                      .oraclePathValue /
-                                      amount) *
-                                    100
-                                  : 100
-                              }%`,
+                              width: `${advice.comparisonProjection?.oraclePathValue
+                                ? (advice.comparisonProjection
+                                  .oraclePathValue /
+                                  amount) *
+                                100
+                                : 100
+                                }%`,
                             }}
                             className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                           />
@@ -1166,13 +1164,12 @@ export default function AIAssistant({
                             Diversification Score
                           </span>
                           <span
-                            className={`font-bold ${
-                              portfolioAnalysis.diversificationScore > 70
-                                ? "text-emerald-600"
-                                : portfolioAnalysis.diversificationScore > 40
-                                  ? "text-amber-600"
-                                  : "text-red-600"
-                            }`}
+                            className={`font-bold ${portfolioAnalysis.diversificationScore > 70
+                              ? "text-emerald-600"
+                              : portfolioAnalysis.diversificationScore > 40
+                                ? "text-amber-600"
+                                : "text-red-600"
+                              }`}
                           >
                             {portfolioAnalysis.diversificationScore}/100
                           </span>
@@ -1263,7 +1260,7 @@ export default function AIAssistant({
                           )}
                           {advice.onrampRecommendation.alternatives &&
                             advice.onrampRecommendation.alternatives.length >
-                              0 && (
+                            0 && (
                               <div className="text-xs text-blue-500 dark:text-blue-400">
                                 <span className="font-medium">
                                   Alternatives:
@@ -1289,14 +1286,13 @@ export default function AIAssistant({
                             Inflation Risk
                           </div>
                           <div
-                            className={`text-sm font-bold ${
-                              advice.portfolioAnalysis.weightedInflationRisk > 5
-                                ? "text-red-600"
-                                : advice.portfolioAnalysis
-                                      .weightedInflationRisk > 3
-                                  ? "text-amber-600"
-                                  : "text-green-600"
-                            }`}
+                            className={`text-sm font-bold ${advice.portfolioAnalysis.weightedInflationRisk > 5
+                              ? "text-red-600"
+                              : advice.portfolioAnalysis
+                                .weightedInflationRisk > 3
+                                ? "text-amber-600"
+                                : "text-green-600"
+                              }`}
                           >
                             {advice.portfolioAnalysis.weightedInflationRisk.toFixed(
                               1,
@@ -1309,14 +1305,13 @@ export default function AIAssistant({
                             Diversification
                           </div>
                           <div
-                            className={`text-sm font-bold ${
-                              advice.portfolioAnalysis.diversificationScore > 70
-                                ? "text-green-600"
-                                : advice.portfolioAnalysis
-                                      .diversificationScore > 40
-                                  ? "text-amber-600"
-                                  : "text-red-600"
-                            }`}
+                            className={`text-sm font-bold ${advice.portfolioAnalysis.diversificationScore > 70
+                              ? "text-green-600"
+                              : advice.portfolioAnalysis
+                                .diversificationScore > 40
+                                ? "text-amber-600"
+                                : "text-red-600"
+                              }`}
                           >
                             {advice.portfolioAnalysis.diversificationScore}/100
                           </div>
@@ -1388,11 +1383,10 @@ export default function AIAssistant({
                       <button
                         key={region}
                         onClick={() => setSelectedRegion(region)}
-                        className={`p-3 rounded-lg font-medium transition-all ${
-                          selectedRegion === region
-                            ? "bg-blue-600 text-white shadow-lg"
-                            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                        }`}
+                        className={`p-3 rounded-lg font-medium transition-all ${selectedRegion === region
+                          ? "bg-blue-600 text-white shadow-lg"
+                          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          }`}
                       >
                         {region}
                       </button>
@@ -1483,11 +1477,10 @@ export default function AIAssistant({
                       className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${
-                          msg.role === "user"
-                            ? "bg-blue-600 text-white rounded-br-md"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md"
-                        }`}
+                        className={`max-w-[80%] px-4 py-3 rounded-2xl text-sm ${msg.role === "user"
+                          ? "bg-blue-600 text-white rounded-br-md"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md"
+                          }`}
                       >
                         {msg.content}
                       </div>
@@ -1559,11 +1552,10 @@ export default function AIAssistant({
                     }
                   }}
                   disabled={!capabilities.analysis}
-                  className={`w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 border-b-4 ${
-                    capabilities.analysis
-                      ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30 border-blue-800"
-                      : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed shadow-none"
-                  }`}
+                  className={`w-full py-4 px-6 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 border-b-4 ${capabilities.analysis
+                    ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/30 border-blue-800"
+                    : "bg-gray-200 text-gray-500 border-gray-300 cursor-not-allowed shadow-none"
+                    }`}
                 >
                   <span>
                     {capabilities.analysis

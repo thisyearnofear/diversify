@@ -61,7 +61,7 @@ const SwapInterface = forwardRef<
   },
   ref,
 ) {
-  const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useAppState();
+  const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures, financialStrategy } = useAppState();
   const isBeginner = experienceMode === "beginner";
 
   const {
@@ -219,6 +219,7 @@ const SwapInterface = forwardRef<
             currentChainId={chainId ?? undefined}
             tokenChainId={fromChainId}
             experienceMode={experienceMode}
+            financialStrategy={financialStrategy}
           />
 
           <div className="flex justify-center my-2">
@@ -260,6 +261,7 @@ const SwapInterface = forwardRef<
             currentChainId={chainId ?? undefined}
             tokenChainId={toChainId}
             experienceMode={experienceMode}
+            financialStrategy={financialStrategy}
           />
 
           <ExpectedOutputCard

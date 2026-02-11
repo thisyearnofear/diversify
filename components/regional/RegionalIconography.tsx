@@ -1,5 +1,6 @@
 import React from "react";
 import type { Region } from "../../hooks/use-user-region";
+import { REGION_GRADIENTS, type AssetRegion } from "../../config";
 
 interface RegionalIconographyProps {
   region: Region;
@@ -23,61 +24,45 @@ export default function RegionalIconography({
     lg: "w-16 h-16",
   };
 
-  // Get region-specific icon and background color
+  // Get region-specific icon and gradient
   const getRegionStyles = (region: Region) => {
+    const gradient = REGION_GRADIENTS[region as AssetRegion] || 'from-gray-400 to-gray-500';
+
     switch (region) {
       case "Africa":
         return {
-          bgColor: "bg-region-africa-light",
-          textColor: "text-region-africa-dark",
-          borderColor: "border-region-africa-medium",
-          icon: "🌍", // Africa globe
-          pattern: "bg-[url('/images/patterns/africa-pattern.svg')]",
+          gradient: 'from-red-500 to-orange-500',
+          icon: "🌍",
           alt: "African pattern",
         };
       case "USA":
         return {
-          bgColor: "bg-region-usa-light",
-          textColor: "text-region-usa-dark",
-          borderColor: "border-region-usa-medium",
-          icon: "🏙️", // City skyline
-          pattern: "bg-[url('/images/patterns/usa-pattern.svg')]",
+          gradient: 'from-blue-500 to-cyan-500',
+          icon: "🏙️",
           alt: "USA pattern",
         };
       case "Europe":
         return {
-          bgColor: "bg-region-europe-light",
-          textColor: "text-region-europe-dark",
-          borderColor: "border-region-europe-medium",
-          icon: "🏰", // Castle
-          pattern: "bg-[url('/images/patterns/europe-pattern.svg')]",
+          gradient: 'from-green-500 to-emerald-500',
+          icon: "🏰",
           alt: "European pattern",
         };
       case "LatAm":
         return {
-          bgColor: "bg-region-latam-light",
-          textColor: "text-region-latam-dark",
-          borderColor: "border-region-latam-medium",
-          icon: "🌴", // Palm tree
-          pattern: "bg-[url('/images/patterns/latam-pattern.svg')]",
+          gradient: 'from-amber-500 to-yellow-500',
+          icon: "🌴",
           alt: "Latin American pattern",
         };
       case "Asia":
         return {
-          bgColor: "bg-region-asia-light",
-          textColor: "text-region-asia-dark",
-          borderColor: "border-region-asia-medium",
-          icon: "🏮", // Lantern
-          pattern: "bg-[url('/images/patterns/asia-pattern.svg')]",
+          gradient: 'from-purple-500 to-pink-500',
+          icon: "🏮",
           alt: "Asian pattern",
         };
       default:
         return {
-          bgColor: "bg-gray-100",
-          textColor: "text-gray-700",
-          borderColor: "border-gray-300",
-          icon: "🌎", // Globe
-          pattern: "",
+          gradient: 'from-indigo-500 to-violet-500',
+          icon: "🌎",
           alt: "Global pattern",
         };
     }
@@ -87,10 +72,10 @@ export default function RegionalIconography({
 
   return (
     <div
-      className={`flex items-center justify-center rounded-full border-2 ${regionStyles.borderColor} ${regionStyles.bgColor} ${sizeClasses[size]} ${className}`}
+      className={`flex items-center justify-center rounded-full border-2 border-white/50 bg-gradient-to-br ${regionStyles.gradient} shadow-lg ${sizeClasses[size]} ${className}`}
       title={`${region} region`}
     >
-      <span className="text-2xl" role="img" aria-label={regionStyles.alt}>
+      <span className="text-2xl drop-shadow-sm" role="img" aria-label={regionStyles.alt}>
         {regionStyles.icon}
       </span>
     </div>
