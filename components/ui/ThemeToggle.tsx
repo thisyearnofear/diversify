@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppState } from '../../context/AppStateContext';
 
 const ThemeToggle: React.FC = () => {
-  const { darkMode, toggleDarkMode, themeLoaded } = useAppState();
+  const { darkMode, themeMode, toggleDarkMode, themeLoaded } = useAppState();
 
   // Prevent flash by not rendering until theme is loaded
   if (!themeLoaded) {
@@ -11,12 +11,23 @@ const ThemeToggle: React.FC = () => {
     );
   }
 
+  // ENHANCEMENT: Dynamic tooltip based on current mode
+  const getTooltip = () => {
+    if (themeMode === 'auto') {
+      return '🌅 Auto (time-based) • Click for light mode';
+    } else if (themeMode === 'light') {
+      return '☀️ Light mode • Click for dark mode';
+    } else {
+      return '🌙 Dark mode • Click for auto mode';
+    }
+  };
+
   return (
     <button
       onClick={toggleDarkMode}
       className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105 active:scale-95"
-      aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
-      title={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={getTooltip()}
+      title={getTooltip()}
     >
       <div className="relative w-5 h-5">
         {/* Sun icon */}

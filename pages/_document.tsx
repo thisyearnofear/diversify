@@ -2,14 +2,33 @@ import { Html, Head, Main, NextScript } from 'next/document';
 
 const themeScript = `
 (function() {
+  function shouldBeDarkBasedOnTime() {
+    var hour = new Date().getHours();
+    return hour >= 18 || hour < 6;
+  }
+  
   function getInitialTheme() {
     try {
-      const stored = localStorage.getItem('darkMode');
-      if (stored !== null) {
-        return stored === 'true';
+      var themeMode = localStorage.getItem('themeMode');
+      
+      // Migration: check old darkMode if no themeMode
+      if (!themeMode) {
+        var legacyDarkMode = localStorage.getItem('darkMode');
+        if (legacyDarkMode !== null) {
+          themeMode = legacyDarkMode === 'true' ? 'dark' : 'light';
+          localStorage.setItem('themeMode', themeMode);
+        } else {
+          themeMode = 'auto';
+        }
       }
+      
+      // Calculate based on mode
+      if (themeMode === 'auto') {
+        return shouldBeDarkBasedOnTime();
+      }
+      return themeMode === 'dark';
     } catch (e) {}
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return shouldBeDarkBasedOnTime();
   }
   
   if (getInitialTheme()) {

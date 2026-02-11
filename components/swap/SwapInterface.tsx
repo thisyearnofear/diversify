@@ -27,6 +27,8 @@ interface SwapInterfaceProps {
     amount: string,
     fromChainId?: number,
     toChainId?: number,
+    fromInflation?: number,
+    toInflation?: number,
   ) => Promise<unknown>;
   title?: string;
   address?: string | null;

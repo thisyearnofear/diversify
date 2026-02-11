@@ -338,6 +338,7 @@ export function useInflationData() {
 
     // Global
     if (stablecoinUpper === 'PAXG') return 'Global';
+    if (stablecoinUpper === 'G$') return 'Global'; // GoodDollar UBI token
 
     // USA region (Yield-bearing USD assets)
     if (stablecoinUpper === 'USDY') return 'USA';

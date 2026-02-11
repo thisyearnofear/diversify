@@ -329,12 +329,13 @@ export function useStreakRewards(): StreakState & StreakActions {
     }));
   }, [address]);
 
-  // Initial load and polling
+  // Initial load and polling (only when tab is visible)
   useEffect(() => {
     refresh();
 
-    // Refresh every 60 seconds
-    const interval = setInterval(refresh, 60000);
+    // Refresh every 5 minutes (reduced from 60 seconds)
+    // Streak data doesn't change that frequently
+    const interval = setInterval(refresh, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [refresh]);
 

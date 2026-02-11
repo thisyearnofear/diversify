@@ -22,7 +22,7 @@ export class UnifiedCacheService {
 
   // Smart TTL configuration based on data volatility
   private readonly TTL_CONFIG: Record<CacheCategory, number> = {
-    volatile: 1000 * 60 * 15,    // 15 minutes - exchange rates, stock prices
+    volatile: 1000 * 60 * 30,    // 30 minutes - token prices (stablecoins don't move much)
     moderate: 1000 * 60 * 60,    // 1 hour - inflation data, economic indicators
     stable: 1000 * 60 * 60 * 6,  // 6 hours - country data, static reference data
     static: 1000 * 60 * 60 * 24  // 24 hours - very stable data

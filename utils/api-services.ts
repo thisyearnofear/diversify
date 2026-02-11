@@ -177,6 +177,11 @@ export const ExchangeRateService = {
 export const TokenPriceService = {
   /**
    * Get USD price for a token by chain and address, with optional symbol hint
+   * Uses multiple free APIs with fallback chain:
+   * 1. DefiLlama (free, no key needed)
+   * 2. CoinGecko (free tier: 50 calls/min)
+   * 3. CoinPaprika (free, no key needed)
+   * 4. Hardcoded fallback rates
    */
   async getTokenUsdPrice(params: {
     chainId: number;
@@ -188,7 +193,7 @@ export const TokenPriceService = {
     const result = await unifiedCache.getOrFetch(
       cacheKey,
       async () => {
-        // Try DefiLlama first for address-based lookups
+        // Try DefiLlama first for address-based lookups (FREE, no rate limits)
         if (params.address) {
           const defiLlamaPrice = await this.fetchDefiLlamaPrice(params.chainId, params.address);
           if (typeof defiLlamaPrice === 'number') {
@@ -196,7 +201,7 @@ export const TokenPriceService = {
           }
         }
 
-        // Try CoinGecko for symbol-based lookups
+        // Try CoinGecko for symbol-based lookups (FREE tier: 50 calls/min)
         if (params.symbol) {
           const cgId = this.mapToCoingeckoId(params.symbol);
           if (cgId) {
@@ -204,6 +209,14 @@ export const TokenPriceService = {
             if (typeof coingeckoPrice === 'number') {
               return { data: coingeckoPrice, source: 'coingecko' as const };
             }
+          }
+        }
+
+        // Try CoinPaprika as fallback (FREE, no key needed)
+        if (params.symbol) {
+          const paprikaPrice = await this.fetchCoinPaprikaPrice(params.symbol);
+          if (typeof paprikaPrice === 'number') {
+            return { data: paprikaPrice, source: 'coinpaprika' as const };
           }
         }
 
@@ -289,7 +302,7 @@ export const TokenPriceService = {
   },
 
   /**
-   * Coingecko simple price
+   * Coingecko simple price (FREE tier: 50 calls/min)
    */
   async fetchCoingeckoPrice(id: string, vsCurrency = 'usd'): Promise<number | null> {
     try {
@@ -305,15 +318,56 @@ export const TokenPriceService = {
   },
 
   /**
+   * CoinPaprika price (FREE, no API key needed, no rate limits)
+   */
+  async fetchCoinPaprikaPrice(symbol: string): Promise<number | null> {
+    try {
+      const paprikaId = this.mapToCoinPaprikaId(symbol);
+      if (!paprikaId) return null;
+
+      const url = `https://api.coinpaprika.com/v1/tickers/${paprikaId}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const price = data?.quotes?.USD?.price;
+      return typeof price === 'number' ? price : null;
+    } catch {
+      return null;
+    }
+  },
+
+  /**
    * Map our symbols to Coingecko IDs (minimal, grow as needed)
    */
   mapToCoingeckoId(symbol?: string): string | null {
     if (!symbol) return null;
     const idMap: Record<string, string> = {
       USDC: 'usd-coin',
+      USDT: 'tether',
       PAXG: 'pax-gold',
       USDm: 'celo-dollar',
       EURm: 'celo-euro',
+      BRLm: 'celo-brazilian-real',
+      'G$': 'gooddollar',
+      USDY: 'ondo-us-dollar-yield',
+      WETH: 'weth',
+      WBTC: 'wrapped-bitcoin',
+    };
+    return idMap[symbol.toUpperCase()] || null;
+  },
+
+  /**
+   * Map our symbols to CoinPaprika IDs
+   */
+  mapToCoinPaprikaId(symbol?: string): string | null {
+    if (!symbol) return null;
+    const idMap: Record<string, string> = {
+      USDC: 'usdc-usd-coin',
+      USDT: 'usdt-tether',
+      PAXG: 'paxg-pax-gold',
+      'G$': 'g-gooddollar',
+      WETH: 'eth-ethereum',
+      WBTC: 'wbtc-wrapped-bitcoin',
     };
     return idMap[symbol.toUpperCase()] || null;
   },

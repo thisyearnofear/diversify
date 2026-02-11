@@ -50,18 +50,30 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     );
   }
 
-  // No streak yet - prompt to swap
+  // No streak yet - prompt to swap with progress tracking
   if (!isEligible) {
+    // Check if user has made any swaps today (from localStorage)
+    const todaySwaps = typeof window !== 'undefined'
+      ? parseFloat(localStorage.getItem(`diversifi_today_swaps_${Date.now().toString().slice(0, 8)}`) || '0')
+      : 0;
+
+    const remaining = Math.max(0, 1 - todaySwaps);
+    const progress = Math.min(100, (todaySwaps / 1) * 100);
+
     return (
       <InsightCard
         icon="🔓"
         title="Unlock Daily G$ Claim"
-        description="Swap $1+ today to unlock your free daily G$ claim from GoodDollar"
-        impact="Free daily UBI"
+        description={
+          todaySwaps > 0
+            ? `You've swapped $${todaySwaps.toFixed(2)} today. Swap $${remaining.toFixed(2)} more to unlock your free daily G$ claim!`
+            : "Swap $1+ today to unlock your free daily G$ claim from GoodDollar"
+        }
+        impact={todaySwaps > 0 ? `${progress.toFixed(0)}% to unlock` : "Free daily UBI"}
         action={
           onSaveClick
             ? {
-              label: 'Make a Swap',
+              label: todaySwaps > 0 ? `Swap $${remaining.toFixed(2)} More` : 'Make a Swap',
               onClick: onSaveClick,
             }
             : undefined

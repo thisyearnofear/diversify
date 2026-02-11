@@ -54,12 +54,16 @@ interface DemoModeState {
   mockChainId: number;
 }
 
+// Theme preference mode
+export type ThemeMode = 'auto' | 'light' | 'dark';
+
 // Define the application state interface
 interface AppState {
   activeTab: string;
   chainId: number | null;
   swapPrefill: SwapPrefill | null;
   darkMode: boolean;
+  themeMode: ThemeMode; // ENHANCEMENT: auto time-based switching
   themeLoaded: boolean;
   guidedTour: GuidedTourState | null;
   visitedTabs: string[];
@@ -77,9 +81,10 @@ interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
   initializeFromStorage: () => void;
-  toggleDarkMode: () => void;
+  toggleDarkMode: () => void; // ENHANCEMENT: now cycles through auto → light → dark → auto
   setDarkMode: (darkMode: boolean) => void;
   themeLoaded: boolean;
+  themeMode: ThemeMode;
   // Guided tour methods (ENHANCEMENT: adds tour orchestration)
   startTour: (
     tourId: string,
@@ -134,6 +139,34 @@ function getStoredPreference(): boolean | null {
   return null;
 }
 
+// ENHANCEMENT: Time-based theme calculation (6PM-6AM = dark)
+function shouldBeDarkBasedOnTime(): boolean {
+  const hour = new Date().getHours();
+  return hour >= 18 || hour < 6; // 6PM to 6AM
+}
+
+// Helper to get stored theme mode
+function getStoredThemeMode(): ThemeMode {
+  if (typeof window === "undefined") return 'auto';
+  try {
+    const stored = localStorage.getItem("themeMode") as ThemeMode;
+    if (stored && ['auto', 'light', 'dark'].includes(stored)) {
+      return stored;
+    }
+  } catch {
+    // localStorage may be unavailable
+  }
+  return 'auto';
+}
+
+// Helper to calculate effective dark mode based on theme mode
+function calculateDarkMode(themeMode: ThemeMode): boolean {
+  if (themeMode === 'auto') {
+    return shouldBeDarkBasedOnTime();
+  }
+  return themeMode === 'dark';
+}
+
 // Helper to apply theme to document
 function applyTheme(isDark: boolean) {
   if (typeof document === "undefined") return;
@@ -154,6 +187,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     chainId: null,
     swapPrefill: null,
     darkMode: false,
+    themeMode: 'auto', // ENHANCEMENT: default to auto time-based
     themeLoaded: false,
     guidedTour: null,
     visitedTabs: [],
@@ -175,9 +209,18 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
   // Initialize theme on mount (client-side only)
   useEffect(() => {
     const savedTab = localStorage.getItem("activeTab");
-    const storedPreference = getStoredPreference();
-    const initialDarkMode =
-      storedPreference !== null ? storedPreference : getSystemPreference();
+    
+    // ENHANCEMENT: Check for new themeMode, migrate from old darkMode if needed
+    let themeMode = getStoredThemeMode();
+    const legacyDarkMode = getStoredPreference();
+    
+    // Migration: if old darkMode exists but no themeMode, migrate to manual mode
+    if (legacyDarkMode !== null && !localStorage.getItem("themeMode")) {
+      themeMode = legacyDarkMode ? 'dark' : 'light';
+      localStorage.setItem("themeMode", themeMode);
+    }
+    
+    const initialDarkMode = calculateDarkMode(themeMode);
 
     // Load experience mode and activity from storage
     const savedMode = localStorage.getItem("experienceMode") as UserExperienceMode | null;
@@ -218,6 +261,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
       ...prev,
       activeTab: savedTab || "overview",
       darkMode: initialDarkMode,
+      themeMode,
       themeLoaded: true,
       experienceMode,
       userActivity,
@@ -225,19 +269,38 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     }));
   }, []);
 
-  // Listen for system preference changes
+  // ENHANCEMENT: Auto-update theme in auto mode (checks every hour)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const updateAutoTheme = () => {
+      setState((prev) => {
+        // Only update if in auto mode
+        if (prev.themeMode === 'auto') {
+          const newDarkMode = shouldBeDarkBasedOnTime();
+          if (newDarkMode !== prev.darkMode) {
+            applyTheme(newDarkMode);
+            return { ...prev, darkMode: newDarkMode };
+          }
+        }
+        return prev;
+      });
+    };
+    
+    // Check every hour
+    const interval = setInterval(updateAutoTheme, 60 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  // Listen for system preference changes (fallback for manual mode)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
     const handleChange = (e: MediaQueryListEvent) => {
-      // Only apply system preference if no stored preference exists
-      if (getStoredPreference() === null) {
-        const newDarkMode = e.matches;
-        applyTheme(newDarkMode);
-        setState((prev) => ({ ...prev, darkMode: newDarkMode }));
-      }
+      // Ignore - we handle theme via themeMode now
     };
 
     mediaQuery.addEventListener("change", handleChange);
@@ -282,21 +345,37 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     setState((prev) => ({ ...prev, swapPrefill: null }));
   }, []);
 
-  // Toggle dark mode
+  // ENHANCEMENT: Toggle through theme modes (auto → light → dark → auto)
   const toggleDarkMode = useCallback(() => {
     setState((prev) => {
-      const newDarkMode = !prev.darkMode;
+      let newThemeMode: ThemeMode;
+      
+      // Cycle through modes
+      if (prev.themeMode === 'auto') {
+        newThemeMode = 'light';
+      } else if (prev.themeMode === 'light') {
+        newThemeMode = 'dark';
+      } else {
+        newThemeMode = 'auto';
+      }
+      
+      const newDarkMode = calculateDarkMode(newThemeMode);
+      localStorage.setItem("themeMode", newThemeMode);
+      // Keep legacy darkMode in sync for compatibility
       localStorage.setItem("darkMode", String(newDarkMode));
       applyTheme(newDarkMode);
-      return { ...prev, darkMode: newDarkMode };
+      
+      return { ...prev, darkMode: newDarkMode, themeMode: newThemeMode };
     });
   }, []);
 
-  // Set dark mode directly
+  // Set dark mode directly (sets to manual mode)
   const setDarkMode = useCallback((darkMode: boolean) => {
+    const themeMode: ThemeMode = darkMode ? 'dark' : 'light';
+    localStorage.setItem("themeMode", themeMode);
     localStorage.setItem("darkMode", String(darkMode));
     applyTheme(darkMode);
-    setState((prev) => ({ ...prev, darkMode }));
+    setState((prev) => ({ ...prev, darkMode, themeMode }));
   }, []);
 
   // Initialize from storage
@@ -468,6 +547,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     swapPrefill: state.swapPrefill,
     darkMode: state.darkMode,
     themeLoaded: state.themeLoaded,
+    themeMode: state.themeMode,
     guidedTour: state.guidedTour,
     visitedTabs: state.visitedTabs,
     experienceMode: state.experienceMode,

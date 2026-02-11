@@ -218,6 +218,8 @@ export function useSwapController({
         amount: string,
         fromChainId: number,
         toChainId: number,
+        fromInflation: number,
+        toInflation: number,
       ) => Promise<unknown>,
     ) => {
       if (
@@ -240,12 +242,17 @@ export function useSwapController({
 
       try {
         if (onSwapProp) {
+          const fromInflation = fromToken ? getInflationRateForStablecoin(fromToken) : 0;
+          const toInflation = toToken ? getInflationRateForStablecoin(toToken) : 0;
+
           const result = (await onSwapProp(
             fromToken,
             toToken,
             amount,
             fromChainId,
             toChainId,
+            fromInflation,
+            toInflation,
           )) as { swapTxHash?: string };
           if (result?.swapTxHash) setLocalTxHash(result.swapTxHash);
           setStatus("completed");
@@ -279,6 +286,7 @@ export function useSwapController({
       slippageTolerance,
       performSwap,
       refreshWithRetries,
+      getInflationRateForStablecoin,
     ],
   );
 
@@ -293,6 +301,13 @@ export function useSwapController({
       if (amountNum >= 1) {
         // $1 minimum for streak
         recordSwap(amountNum);
+      }
+
+      // Track today's swap progress (for UI display)
+      if (typeof window !== 'undefined' && amountNum > 0) {
+        const todayKey = `diversifi_today_swaps_${Date.now().toString().slice(0, 8)}`;
+        const currentTotal = parseFloat(localStorage.getItem(todayKey) || '0');
+        localStorage.setItem(todayKey, (currentTotal + amountNum).toString());
       }
     } else if (swapError) {
       setLocalError(swapError);

@@ -78,6 +78,8 @@ export default function SwapTab({
     fromToken: string;
     toToken: string;
     amount: string;
+    fromTokenInflation: number;
+    toTokenInflation: number;
   } | null>(null);
 
   const swapInterfaceRef = useRef<{
@@ -219,12 +221,20 @@ export default function SwapTab({
     amount: string,
     fromChainId?: number,
     toChainId?: number,
+    fromTokenInflation?: number,
+    toTokenInflation?: number,
   ) => {
     setSwapStatus("Initiating swap...");
     setSwapStep("approving");
 
-    // Store swap data for celebration
-    setCelebrationData({ fromToken, toToken, amount });
+    // Store swap data for celebration (including inflation rates for savings calculation)
+    setCelebrationData({
+      fromToken,
+      toToken,
+      amount,
+      fromTokenInflation: fromTokenInflation || 0,
+      toTokenInflation: toTokenInflation || 0,
+    });
 
     try {
       if (!address) throw new Error("Wallet not connected");
@@ -476,8 +486,8 @@ export default function SwapTab({
                     key={r}
                     onClick={() => setTargetRegion(r as Region)}
                     className={`px-3 py-1 rounded-full text-xs font-black uppercase ${targetRegion === r
-                        ? "bg-amber-600 text-white"
-                        : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100"
+                      ? "bg-amber-600 text-white"
+                      : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100"
                       }`}
                   >
                     {r}
@@ -542,7 +552,7 @@ export default function SwapTab({
           toToken={celebrationData.toToken}
           amount={celebrationData.amount}
           protectionScoreIncrease={5}
-          annualSavings={parseFloat(celebrationData.amount) * 0.05 * (homeInflationRate / 100)}
+          annualSavings={parseFloat(celebrationData.amount) * ((celebrationData.fromTokenInflation - celebrationData.toTokenInflation) / 100)}
         />
       )}
     </div>

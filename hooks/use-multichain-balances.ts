@@ -94,12 +94,12 @@ const PRODUCTION_CHAINS = [
   },
   ...(isDev
     ? [
-        {
-          chainId: NETWORKS.ARC_TESTNET.chainId,
-          name: "Arc Testnet",
-          rpcUrl: NETWORKS.ARC_TESTNET.rpcUrl,
-        },
-      ]
+      {
+        chainId: NETWORKS.ARC_TESTNET.chainId,
+        name: "Arc Testnet",
+        rpcUrl: NETWORKS.ARC_TESTNET.rpcUrl,
+      },
+    ]
     : []),
 ] as const;
 
@@ -117,8 +117,8 @@ function normalizeRegion(region: string): AssetRegion {
   return (legacyMap[region] || region) as AssetRegion;
 }
 
-const CACHE_TTL = 2 * 60 * 1000; // 2 minutes
-const STALE_TTL = 30 * 1000; // 30 seconds for stale check
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes (increased from 2 minutes)
+const STALE_TTL = 60 * 1000; // 60 seconds for stale check (increased from 30s)
 
 // ============================================================================
 // CACHE HELPERS
@@ -205,7 +205,7 @@ async function fetchChainBalances(
   const tokenInfoList: Array<{
     symbol: string;
     metadata: (typeof TOKEN_METADATA)[string];
-    exchangeRate: number;
+    tokenAddress: string;
   }> = [];
 
   for (const symbol of tokensToFetch) {
@@ -224,17 +224,11 @@ async function fetchChainBalances(
     const metadata = TOKEN_METADATA[symbol] ||
       TOKEN_METADATA[symbol.toUpperCase()] ||
       TOKEN_METADATA[symbol.toLowerCase()] || {
-        name: symbol,
-        region: "Global" as AssetRegion,
-      };
+      name: symbol,
+      region: "Global" as AssetRegion,
+    };
 
-    const exchangeRate =
-      EXCHANGE_RATES[symbol] ||
-      EXCHANGE_RATES[symbol.toUpperCase()] ||
-      EXCHANGE_RATES[symbol.toLowerCase()] ||
-      1;
-
-    tokenInfoList.push({ symbol, metadata, exchangeRate });
+    tokenInfoList.push({ symbol, metadata, tokenAddress });
   }
 
   try {
@@ -243,10 +237,39 @@ async function fetchChainBalances(
     const balances: TokenBalance[] = [];
     let totalValue = 0;
 
+    // Fetch live prices for all tokens in parallel
+    const pricePromises = tokenInfoList.map(async ({ symbol, tokenAddress }) => {
+      try {
+        const { TokenPriceService } = await import('../utils/api-services');
+        const livePrice = await TokenPriceService.getTokenUsdPrice({
+          chainId: chain.chainId,
+          address: tokenAddress,
+          symbol: symbol,
+        });
+
+        // Fallback to hardcoded rate if live price unavailable
+        const fallbackRate = EXCHANGE_RATES[symbol] ||
+          EXCHANGE_RATES[symbol.toUpperCase()] ||
+          EXCHANGE_RATES[symbol.toLowerCase()] ||
+          1;
+
+        return livePrice ?? fallbackRate;
+      } catch (error) {
+        console.warn(`[Multichain] Failed to fetch price for ${symbol}:`, error);
+        return EXCHANGE_RATES[symbol] ||
+          EXCHANGE_RATES[symbol.toUpperCase()] ||
+          EXCHANGE_RATES[symbol.toLowerCase()] ||
+          1;
+      }
+    });
+
+    const exchangeRates = await Promise.all(pricePromises);
+
     results.forEach((balance, index) => {
       if (!balance) return;
 
-      const { symbol, metadata, exchangeRate } = tokenInfoList[index];
+      const { symbol, metadata } = tokenInfoList[index];
+      const exchangeRate = exchangeRates[index];
       const decimals = metadata.decimals || 18;
       const formattedBalance = ethers.utils.formatUnits(balance, decimals);
       const numericBalance = parseFloat(formattedBalance);
@@ -343,7 +366,7 @@ export function useMultichainBalances(address: string | undefined | null) {
       if (
         !tokenMap[t.symbol] ||
         parseFloat(t.formattedBalance) >
-          parseFloat(tokenMap[t.symbol].formattedBalance)
+        parseFloat(tokenMap[t.symbol].formattedBalance)
       ) {
         tokenMap[t.symbol] = t;
       }

@@ -227,7 +227,9 @@ export function getChainAssets(chainId: number) {
     }));
 }
 
-// Exchange Rates (USD equivalent)
+// Exchange Rates (USD equivalent) - FALLBACK ONLY
+// These are used only when live API prices fail (DefiLlama, CoinGecko, CoinPaprika)
+// Live prices are fetched via TokenPriceService with aggressive caching
 export const EXCHANGE_RATES: Record<string, number> = {
     USDm: 1,
     EURm: 1.08,
@@ -244,7 +246,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CHFm: 1.10,
     JPYm: 0.0067,
     NGNm: 0.00061,
-    'G$': 0.001, // ~$0.001 per G$ (varies by market)
+    'G$': 0.0002, // ~$0.0002 per G$ (GoodDollar UBI token, market rate varies)
     USDT: 1,
     USDC: 1,
     EURC: 1.08,
