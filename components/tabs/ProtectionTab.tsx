@@ -5,11 +5,11 @@ import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
 import {
   Card,
-  CollapsibleSection,
   ConnectWalletPrompt,
   InsightCard,
   ProtectionScore,
 } from "../shared/TabComponents";
+import DashboardCard from "../shared/DashboardCard";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import WalletButton from "../wallet/WalletButton";
@@ -432,89 +432,17 @@ export default function ProtectionTab({
       />
 
       {/* =====================================================================
-          COLLAPSIBLE SECTIONS
+          DASHBOARD CARDS (Replaced Collapsible Sections)
           ===================================================================== */}
 
-      {/* Rebalancing Opportunities */}
-      {liveAnalysis && liveAnalysis.rebalancingOpportunities.length > 1 && (
-        <CollapsibleSection
-          title={
-            config.userGoal === "geographic_diversification"
-              ? "Diversification Options"
-              : "More Opportunities"
-          }
-          icon={<span>⚖️</span>}
-          defaultOpen={false}
-          badge={
-            <span className="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
-              +{liveAnalysis.rebalancingOpportunities.length - 1}
-            </span>
-          }
-        >
-          <div className="space-y-2">
-            {liveAnalysis.rebalancingOpportunities
-              .filter((opp) => {
-                if (config.userGoal !== "geographic_diversification")
-                  return true;
-                return (
-                  opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion
-                );
-              })
-              .slice(0, 4)
-              .map((opp, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-600">
-                      {opp.fromToken}
-                    </span>
-                    <span className="text-gray-400">→</span>
-                    <span className="text-xs font-bold text-blue-600">
-                      {opp.toToken}
-                    </span>
-                    {config.userGoal === "geographic_diversification" &&
-                      opp.fromRegion !== opp.toRegion && (
-                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
-                          +region
-                        </span>
-                      )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-green-600 font-bold">
-                      +${opp.annualSavings.toFixed(2)}/yr
-                    </span>
-                    <button
-                      onClick={() =>
-                        handleExecuteSwap(
-                          opp.toToken,
-                          opp.fromToken,
-                          opp.suggestedAmount.toFixed(2),
-                        )
-                      }
-                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700"
-                    >
-                      Swap
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </CollapsibleSection>
-      )}
-
-      {/* Chain Distribution - Now with real multichain data */}
+      {/* Chain Distribution - Always Visible Dashboard Card */}
       {displayTotalValue > 0 && (
-        <CollapsibleSection
+        <DashboardCard
           title="Chain Distribution"
           icon={<span>🔗</span>}
-          defaultOpen={false}
-          badge={
-            <span className="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
-              {displayChainCount} Chain{displayChainCount !== 1 ? "s" : ""}
-            </span>
-          }
+          subtitle={`${displayChainCount} Chain${displayChainCount !== 1 ? "s" : ""}`}
+          color="blue"
+          size="lg"
         >
           <MultichainPortfolioBreakdown
             regionData={displayRegionData.map((r) => ({
@@ -530,22 +458,89 @@ export default function ProtectionTab({
               tokenCount: c.tokenCount,
             }))}
           />
-        </CollapsibleSection>
+        </DashboardCard>
       )}
 
-      {/* Strategies */}
-      <CollapsibleSection
-        title="Goal-Based Strategies"
-        icon={<span>🎯</span>}
-        defaultOpen={false}
-      >
-        <div className="space-y-4">
+      {/* Rebalancing Opportunities - Dashboard Card */}
+      {liveAnalysis && liveAnalysis.rebalancingOpportunities.length > 1 && (
+        <DashboardCard
+          title={
+            config.userGoal === "geographic_diversification"
+              ? "Diversification Options"
+              : "More Opportunities"
+          }
+          icon={<span>⚖️</span>}
+          subtitle={`${liveAnalysis.rebalancingOpportunities.length - 1} more ways to optimize`}
+          color="green"
+          size="md"
+        >
+          <div className="space-y-2">
+            {liveAnalysis.rebalancingOpportunities
+              .filter((opp) => {
+                if (config.userGoal !== "geographic_diversification")
+                  return true;
+                return (
+                  opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion
+                );
+              })
+              .slice(0, 3)
+              .map((opp, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
+                      {opp.fromToken}
+                    </span>
+                    <span className="text-gray-400">→</span>
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                      {opp.toToken}
+                    </span>
+                    {config.userGoal === "geographic_diversification" &&
+                      opp.fromRegion !== opp.toRegion && (
+                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">
+                          +region
+                        </span>
+                      )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-green-600 dark:text-green-400 font-bold">
+                      +${opp.annualSavings.toFixed(2)}/yr
+                    </span>
+                    <button
+                      onClick={() =>
+                        handleExecuteSwap(
+                          opp.toToken,
+                          opp.fromToken,
+                          opp.suggestedAmount.toFixed(2),
+                        )
+                      }
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
+                    >
+                      Swap
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </DashboardCard>
+      )}
+
+      {/* Strategies - Dashboard Card (Advanced Only) */}
+      {!isBeginner && (
+        <DashboardCard
+          title="Goal-Based Strategies"
+          icon={<span>🎯</span>}
+          color="purple"
+          size="md"
+        >
           <GoalBasedStrategies
             userRegion={userRegion}
             onSelectStrategy={onSelectStrategy || (() => { })}
           />
-        </div>
-      </CollapsibleSection>
+        </DashboardCard>
+      )}
 
       <AssetModal
         assetSymbol={showAssetModal}

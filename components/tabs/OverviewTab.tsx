@@ -6,14 +6,15 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
 import type { Region } from "@/hooks/use-user-region";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
-import InflationVisualizer from "../inflation/InflationVisualizer";
+import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
 import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
 import SimplePieChart from "../portfolio/SimplePieChart";
 import { useAppState } from "../../context/AppStateContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 
-import { Card, CollapsibleSection, EmptyState, HeroValue } from "../shared/TabComponents";
+import { Card, EmptyState, HeroValue } from "../shared/TabComponents";
+import DashboardCard from "../shared/DashboardCard";
 
 interface OverviewTabProps {
   portfolio: MultichainPortfolio;
@@ -309,124 +310,113 @@ return (
       )
     )}
 
-    {/* 4. MARKET DISCOVERY (Always there, but zoom level changes) */}
-    <CollapsibleSection
+    {/* 4. MARKET DISCOVERY - Dashboard Cards (No Collapsible) */}
+    <DashboardCard
       title={isBeginner ? "Global Opportunities" : "Market Intelligence"}
       icon={<span>🌍</span>}
-      defaultOpen={isBeginner && !hasHoldings}
+      color="blue"
+      size="lg"
     >
-      <div className="space-y-6">
-        {/* Region Selection with simple labels for beginners */}
+      {/* Region Selection */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {REGIONS.map((region) => (
+          <button
+            key={region}
+            onClick={() => setSelectedMarket(region)}
+            className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-all ${region === selectedMarket
+                ? "bg-blue-600 text-white shadow-lg"
+                : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+          >
+            {region}
+          </button>
+        ))}
+      </div>
+
+      {/* Core Stats Grid */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
+          <div className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase mb-1">
+            {isBeginner ? "Living Costs Up" : "Inflation"}
+          </div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white">
+            {selectedMarketInflation.toFixed(1)}%
+          </div>
+        </div>
+        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
+          <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase mb-1">
+            {isBeginner ? "Growth Potential" : "Market Growth"}
+          </div>
+          <div className="text-2xl font-black text-gray-900 dark:text-white">
+            +{selectedMarketData.growth}%
+          </div>
+        </div>
+      </div>
+
+      {/* Market Highlight */}
+      <div className="p-3 bg-gray-900 dark:bg-gray-950 rounded-xl text-white text-xs font-bold italic mb-4">
+        &quot;{selectedMarketData.highlight}&quot;
+      </div>
+
+      {/* Advanced: Performance Chart */}
+      {isAdvanced && currencyPerformanceData && (
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-xs font-black text-gray-400 uppercase mb-3">Currency Velocity (30D)</div>
+          <CurrencyPerformanceChart data={currencyPerformanceData} title="" />
+        </div>
+      )}
+    </DashboardCard>
+
+    {/* 5. SMART RECOMMENDATIONS - Dashboard Card */}
+    {diversificationTips.length > 0 && (
+      <DashboardCard
+        title="Smart Recommendations"
+        icon={<span>💡</span>}
+        color="amber"
+        size="md"
+      >
+        <div className="space-y-2">
+          {diversificationTips.slice(0, 3).map((tip, idx) => (
+            <div
+              key={idx}
+              className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg"
+            >
+              <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">•</span>
+              <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                {tip}
+              </span>
+            </div>
+          ))}
+        </div>
+      </DashboardCard>
+    )}
+
+    {/* 6. REGION SELECTOR - Dashboard Card (Advanced Only) */}
+    {!isBeginner && (
+      <DashboardCard
+        title="Your Home Region"
+        icon={<RegionalIconography region={userRegion} size="sm" />}
+        color="purple"
+        size="sm"
+      >
         <div className="flex flex-wrap gap-2">
           {REGIONS.map((region) => (
             <button
               key={region}
-              onClick={() => setSelectedMarket(region)}
-              className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-all ${region === selectedMarket
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200"
+              onClick={() => setUserRegion(region)}
+              className={`px-3 py-1.5 text-xs rounded-full transition-all font-bold ${userRegion === region
+                  ? "bg-purple-600 text-white shadow-md"
+                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
                 }`}
             >
               {region}
             </button>
           ))}
         </div>
-
-        {/* Core Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
-            <div className="text-xs font-black text-blue-500 uppercase mb-1">
-              {isBeginner ? "Living Costs Up" : "Inflation"}
-            </div>
-            <div className="text-lg font-bold text-blue-900 dark:text-blue-100">{selectedMarketInflation.toFixed(1)}%</div>
-          </div>
-          <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
-            <div className="text-xs font-black text-emerald-500 uppercase mb-1">
-              {isBeginner ? "Growth Potential" : "Market Growth"}
-            </div>
-            <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">+{selectedMarketData.growth}%</div>
-          </div>
-        </div>
-
-        {/* Advanced Visualizer only for non-beginners */}
-        {!isBeginner && (
-          <>
-            <div className="p-3 bg-gray-900 rounded-xl text-white text-xs font-bold italic">
-              &quot;{selectedMarketData.highlight}&quot;
-            </div>
-            <InflationVisualizer
-              region={selectedMarket}
-              inflationRate={selectedMarketInflation}
-              years={5}
-              initialAmount={100}
-            />
-          </>
-        )}
-
-        {/* Performance Chart only for advanced */}
-        {isAdvanced && currencyPerformanceData && (
-          <div className="pt-4 border-t border-gray-100 dark:border-gray-800">
-            <div className="text-xs font-black text-gray-400 uppercase mb-3">Currency Velocity (30D)</div>
-            <CurrencyPerformanceChart
-              data={currencyPerformanceData}
-              title=""
-            />
-          </div>
-        )}
-      </div>
-    </CollapsibleSection>
-
-    {/* 5. SETTINGS & INSIGHTS */}
-    {!isBeginner && (
-      <CollapsibleSection
-        title="Insights & Configuration"
-        icon={<span>🧠</span>}
-      >
-        <div className="space-y-6">
-          {/* Tips Section */}
-          {diversificationTips.length > 0 && (
-            <div>
-              <h4 className="text-xs font-black uppercase text-gray-400 mb-3 flex items-center gap-2">
-                <span>💡</span>
-                Smart Picks
-              </h4>
-              <div className="space-y-3">
-                {diversificationTips.map((tip, idx) => (
-                  <div key={idx} className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                    <span className="text-blue-600 dark:text-blue-400 font-bold text-sm mt-0.5">•</span>
-                    <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{tip}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Home Region Selector */}
-          <div>
-            <h4 className="text-xs font-black uppercase text-gray-400 mb-3 flex items-center gap-2">
-              <RegionalIconography region={userRegion} size="sm" />
-              Your Home Region
-            </h4>
-            <div className="flex flex-wrap gap-2">
-              {REGIONS.map((region) => (
-                <button
-                  key={region}
-                  onClick={() => setUserRegion(region)}
-                  className={`px-3 py-1.5 text-xs rounded-full transition-all font-bold ${userRegion === region
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
-                    }`}
-                >
-                  {region}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </CollapsibleSection>
+      </DashboardCard>
     )}
 
-    {/* 6. EMPTY STATE WITH CLEAR FUNNEL */}
+    {/* 7. EMPTY STATE WITH CLEAR FUNNEL */}
     {!hasHoldings && (
       <Card padding="p-6" className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-2 border-blue-200 dark:border-blue-800">
         <EmptyState

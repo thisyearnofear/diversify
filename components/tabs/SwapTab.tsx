@@ -13,10 +13,10 @@ import { getChainAssets, NETWORKS } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import {
   TabHeader,
-  CollapsibleSection,
   Card,
   ConnectWalletPrompt,
 } from "../shared/TabComponents";
+import DashboardCard from "../shared/DashboardCard";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
@@ -459,12 +459,14 @@ export default function SwapTab({
         )}
       </Card>
 
-      {/* Hide collapsible sections for beginners */}
+      {/* Advanced: Regional Hedge & Action Guidance - Dashboard Cards */}
       {!isArbitrum && address && !isBeginner && (
         <div className="space-y-4">
-          <CollapsibleSection
+          <DashboardCard
             title={`Regional Hedge: ${userRegion} → ${targetRegion}`}
             icon={<span>🛡️</span>}
+            color="amber"
+            size="md"
           >
             <div className="flex flex-wrap gap-2 mb-4">
               {Object.keys(inflationData)
@@ -473,39 +475,47 @@ export default function SwapTab({
                   <button
                     key={r}
                     onClick={() => setTargetRegion(r as Region)}
-                    className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${targetRegion === r ? "bg-blue-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-500"}`}
+                    className={`px-3 py-1 rounded-full text-xs font-black uppercase ${targetRegion === r
+                        ? "bg-amber-600 text-white"
+                        : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100"
+                      }`}
                   >
                     {r}
                   </button>
                 ))}
             </div>
-            <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl flex justify-between items-center">
+            <div className="p-3 bg-white dark:bg-gray-800 rounded-xl flex justify-between items-center">
               <div className="text-center">
-                <div className="text-[10px] font-black text-gray-400 lowercase">
+                <div className="text-xs font-black text-gray-400 uppercase">
                   {userRegion}
                 </div>
-                <div className="text-lg font-black">
+                <div className="text-xl font-black text-gray-900 dark:text-white">
                   {homeInflationRate.toFixed(1)}%
                 </div>
               </div>
               <div className="text-gray-300">→</div>
               <div className="text-center">
-                <div className="text-[10px] font-black text-gray-400 lowercase">
+                <div className="text-xs font-black text-gray-400 uppercase">
                   {targetRegion}
                 </div>
-                <div className="text-lg font-black">
+                <div className="text-xl font-black text-gray-900 dark:text-white">
                   {targetInflationRate.toFixed(1)}%
                 </div>
               </div>
               {inflationDifference > 0 && (
-                <div className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-[10px] font-black">
-                  +{inflationDifference.toFixed(1)}% Yield
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-2 py-1 rounded text-xs font-black">
+                  +{inflationDifference.toFixed(1)}%
                 </div>
               )}
             </div>
-          </CollapsibleSection>
+          </DashboardCard>
 
-          <CollapsibleSection title="Action Guidance" icon={<span>🧠</span>}>
+          <DashboardCard
+            title="Action Guidance"
+            icon={<span>🧠</span>}
+            color="blue"
+            size="md"
+          >
             <RealLifeScenario
               region={userRegion}
               targetRegion={targetRegion}
@@ -516,7 +526,7 @@ export default function SwapTab({
               monthlyAmount={100}
             />
             {getRecommendations(userRegion, inflationData, homeInflationRate)}
-          </CollapsibleSection>
+          </DashboardCard>
         </div>
       )}
 
