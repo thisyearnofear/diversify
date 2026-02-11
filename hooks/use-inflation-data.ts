@@ -260,7 +260,8 @@ export function useInflationData() {
       return rate;
     }
 
-    if (normalizedStablecoin === 'EURC') {
+    // BUGFIX: Handle both EURC and EURM (Mento EUR stablecoin)
+    if (normalizedStablecoin === 'EURC' || normalizedStablecoin === 'EURM') {
       const rate = getInflationRateForCurrency('EUR');
       // console.log(`[Inflation] ${stablecoin} -> EUR rate: ${rate}`);
       return rate;

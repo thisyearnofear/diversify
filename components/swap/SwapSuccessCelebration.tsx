@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useStreakRewards, STREAK_CONFIG } from "../../hooks/use-streak-rewards";
 
 interface SwapSuccessCelebrationProps {
     isVisible: boolean;
@@ -25,6 +26,9 @@ export default function SwapSuccessCelebration({
     annualSavings = 0,
 }: SwapSuccessCelebrationProps) {
     const [confettiPieces, setConfettiPieces] = useState<Array<{ id: number; x: number; color: string; delay: number }>>([]);
+    
+    // ENHANCEMENT: Track GoodDollar claim progress
+    const { canClaim, isEligible, estimatedReward } = useStreakRewards();
 
     useEffect(() => {
         if (isVisible) {
@@ -157,12 +161,54 @@ export default function SwapSuccessCelebration({
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: 0.7 }}
-                            className="bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-xl p-4 mb-6 border border-emerald-200 dark:border-emerald-800"
+                            className="bg-gradient-to-r from-emerald-500/10 to-blue-500/10 rounded-xl p-4 mb-4 border border-emerald-200 dark:border-emerald-800"
                         >
                             <p className="text-sm font-bold text-center text-gray-700 dark:text-gray-300">
                                 Your wealth is now better protected against inflation! 🚀
                             </p>
                         </motion.div>
+
+                        {/* ENHANCEMENT: GoodDollar Progress Indicator */}
+                        {parseFloat(amount) >= STREAK_CONFIG.MIN_SWAP_USD && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.8 }}
+                                className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl p-4 mb-4 border border-green-200 dark:border-green-800"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">💚</span>
+                                        <div>
+                                            <p className="text-xs font-black text-green-800 dark:text-green-200">
+                                                {canClaim 
+                                                    ? `${estimatedReward} G$ Ready to Claim!` 
+                                                    : isEligible
+                                                        ? 'Keep Your Streak Alive!'
+                                                        : 'G$ Daily Claim Unlocked!'}
+                                            </p>
+                                            <p className="text-[10px] text-green-600 dark:text-green-400">
+                                                {canClaim 
+                                                    ? 'Claim on GoodDollar wallet' 
+                                                    : isEligible
+                                                        ? 'Come back tomorrow for your G$'
+                                                        : `$${parseFloat(amount).toFixed(2)} qualifies for daily UBI`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {canClaim && (
+                                        <a
+                                            href={STREAK_CONFIG.G_CLAIM_URL}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] font-black px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
+                                        >
+                                            Claim →
+                                        </a>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
 
                         {/* Close Button */}
                         <motion.button
