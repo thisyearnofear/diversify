@@ -17,7 +17,7 @@ import { useWalletContext } from '../components/wallet/WalletProvider';
 
 // Configuration
 const STREAK_CONFIG = {
-  MIN_SAVE_USD: 10,
+  MIN_SAVE_USD: 0.50, // More accessible - just $0.50/day or $5/week
   GRACE_PERIODS_PER_WEEK: 1,
   G_CLAIM_URL: 'https://wallet.gooddollar.org/?utm_source=diversifi',
   G_TOKEN_ADDRESS: '0x62B8B11039CBcfba9E2676772F2E96C64BCbc9d9', // Celo
@@ -76,12 +76,12 @@ function calculateStreakState(streak: StreakData | null): Partial<StreakState> {
   const today = Math.floor(Date.now() / 86400000);
   const lastActivityDay = Math.floor(streak.lastActivity / 86400000);
   const daysSinceActivity = today - lastActivityDay;
-  
+
   const isStreakActive = daysSinceActivity <= 1;
   const canClaim = isStreakActive && streak.daysActive > 0;
-  
-  const nextClaimTime = canClaim 
-    ? null 
+
+  const nextClaimTime = canClaim
+    ? null
     : new Date((today + 1) * 86400000);
 
   return {
@@ -154,7 +154,7 @@ export function useStreakRewards(): StreakState & StreakActions {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         // Convert API response to StreakData format
         const streak: StreakData | null = data.exists ? {
           walletAddress: data.walletAddress,
@@ -182,7 +182,7 @@ export function useStreakRewards(): StreakState & StreakActions {
       }
     } catch (err) {
       console.warn('[StreakRewards] API failed, using localStorage fallback:', err);
-      
+
       // Fallback to localStorage
       const localStreak = getLocalStreak(address);
       setState(prev => ({
@@ -212,7 +212,7 @@ export function useStreakRewards(): StreakState & StreakActions {
 
       if (response.ok) {
         const data = await response.json();
-        
+
         const streak: StreakData = {
           walletAddress: address,
           startTime: data.startTime,
@@ -237,13 +237,13 @@ export function useStreakRewards(): StreakState & StreakActions {
       }
     } catch (err) {
       console.warn('[StreakRewards] API save failed, using localStorage:', err);
-      
+
       // Fallback: Calculate and save locally
       const today = Math.floor(Date.now() / 86400000);
       const current = getLocalStreak(address);
-      
+
       let newStreak: StreakData;
-      
+
       if (!current) {
         newStreak = {
           walletAddress: address,
@@ -255,7 +255,7 @@ export function useStreakRewards(): StreakState & StreakActions {
         };
       } else {
         const lastDay = Math.floor(current.lastActivity / 86400000);
-        
+
         if (today === lastDay) {
           newStreak = { ...current, totalSaved: current.totalSaved + amountUSD };
         } else if (today === lastDay + 1) {
@@ -284,9 +284,9 @@ export function useStreakRewards(): StreakState & StreakActions {
           };
         }
       }
-      
+
       saveLocalStreak(address, newStreak);
-      
+
       setState(prev => ({
         ...prev,
         ...calculateStreakState(newStreak),
@@ -306,7 +306,7 @@ export function useStreakRewards(): StreakState & StreakActions {
   // Reset streak (dev/testing)
   const resetStreak = useCallback(async () => {
     if (!address) return;
-    
+
     setState(prev => ({ ...prev, isLoading: true }));
 
     try {
@@ -315,10 +315,10 @@ export function useStreakRewards(): StreakState & StreakActions {
     } catch (err) {
       console.warn('[StreakRewards] API reset failed:', err);
     }
-    
+
     // Always clear localStorage
     clearLocalStreak(address);
-    
+
     setState(prev => ({
       ...prev,
       ...calculateStreakState(null),
@@ -329,7 +329,7 @@ export function useStreakRewards(): StreakState & StreakActions {
   // Initial load and polling
   useEffect(() => {
     refresh();
-    
+
     // Refresh every 60 seconds
     const interval = setInterval(refresh, 60000);
     return () => clearInterval(interval);

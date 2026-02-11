@@ -6,6 +6,7 @@ import { Card } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
+import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
 import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 import type { Region } from "@/hooks/use-user-region";
 
@@ -90,6 +91,21 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
           </div>
         </div>
         <RealWorldUseCases focusRegion={userRegion} />
+      </div>
+
+      {/* GoodDollar Education */}
+      <div>
+        <div className="flex items-center gap-2 mb-4 px-1">
+          <div className="size-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-lg">💚</div>
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Universal Basic Income</h3>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">Free Daily G$ on Celo</p>
+          </div>
+        </div>
+        <GoodDollarInfoCard
+          onLearnMore={() => window.open('https://docs.gooddollar.org', '_blank')}
+          onStake={() => window.open('https://gooddollar.org/stake', '_blank')}
+        />
       </div>
 
 

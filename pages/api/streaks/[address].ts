@@ -10,7 +10,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '../../../lib/mongodb';
 import Streak from '../../../models/Streak';
 
-const MIN_SAVE_USD = 10;
+const MIN_SAVE_USD = 0.50; // Accessible threshold - $0.50/day or $5/week
 const GRACE_PERIODS_PER_WEEK = 1;
 
 // Validate Ethereum address
@@ -23,10 +23,10 @@ function calculateStreakState(streak: { lastActivity: number; daysActive: number
   const today = Math.floor(Date.now() / 86400000);
   const lastActivityDay = Math.floor(streak.lastActivity / 86400000);
   const daysSinceActivity = today - lastActivityDay;
-  
+
   const isStreakActive = daysSinceActivity <= 1;
   const canClaim = isStreakActive && streak.daysActive > 0;
-  
+
   return {
     ...streak.toObject(),
     isStreakActive,
@@ -57,13 +57,13 @@ export default async function handler(
     switch (req.method) {
       case 'GET':
         return await handleGet(normalizedAddress, res);
-      
+
       case 'POST':
         return await handlePost(normalizedAddress, req, res);
-      
+
       case 'DELETE':
         return await handleDelete(normalizedAddress, res);
-      
+
       default:
         res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -78,7 +78,7 @@ export default async function handler(
 async function handleGet(address: string, res: NextApiResponse) {
   try {
     const streak = await Streak.findOne({ walletAddress: address });
-    
+
     if (!streak) {
       // Return default state for new users
       return res.status(200).json({
@@ -108,16 +108,16 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
     const { amountUSD } = req.body;
 
     if (!amountUSD || amountUSD < MIN_SAVE_USD) {
-      return res.status(400).json({ 
-        error: `Minimum save amount is $${MIN_SAVE_USD}` 
+      return res.status(400).json({
+        error: `Minimum save amount is $${MIN_SAVE_USD}`
       });
     }
 
     const today = Math.floor(Date.now() / 86400000);
-    
+
     // Find or create streak
     let streak = await Streak.findOne({ walletAddress: address });
-    
+
     if (!streak) {
       // Create new streak
       streak = new Streak({
@@ -130,7 +130,7 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
       });
     } else {
       const lastDay = Math.floor(streak.lastActivity / 86400000);
-      
+
       if (today === lastDay) {
         // Already saved today - just update amount
         streak.totalSaved += amountUSD;
@@ -157,10 +157,10 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
     }
 
     await streak.save();
-    
+
     const state = calculateStreakState(streak);
-    return res.status(200).json({ 
-      success: true, 
+    return res.status(200).json({
+      success: true,
       ...state,
       message: `Streak updated! ${streak.daysActive} day${streak.daysActive !== 1 ? 's' : ''} active`
     });

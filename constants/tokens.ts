@@ -216,6 +216,21 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shortLabel: 'PHPm',
   },
 
+  // UBI Token
+  'G$': {
+    symbol: 'G$',
+    name: 'GoodDollar',
+    gradient: 'from-emerald-400 via-green-500 to-teal-500',
+    icon: '💚',
+    textColor: 'text-emerald-700',
+    bgColor: 'bg-emerald-100',
+    borderColor: 'border-emerald-300',
+    shadowColor: 'shadow-emerald-500/30',
+    category: 'stablecoin',
+    description: 'Universal Basic Income token - claim free daily G$ on Celo',
+    shortLabel: 'G$',
+  },
+
   // Default fallback
   'default': {
     symbol: 'TOKEN',

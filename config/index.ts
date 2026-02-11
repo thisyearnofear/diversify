@@ -152,16 +152,19 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     CHFm: { name: 'Swiss Franc', region: REGIONS.EUROPE },
     JPYm: { name: 'Mento Japanese Yen', region: REGIONS.ASIA },
     NGNm: { name: 'Mento Nigerian Naira', region: REGIONS.AFRICA },
-    
+
+    // UBI Token
+    'G$': { name: 'GoodDollar', region: REGIONS.GLOBAL, decimals: 18, apy: null, isInflationHedge: false },
+
     // Global Stablecoins (no yield, low inflation exposure)
     USDT: { name: 'Tether USD', region: REGIONS.USA, decimals: 6 },
     USDC: { name: 'USD Coin', region: REGIONS.GLOBAL, decimals: 6 },
     EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
-    
+
     // Yield-Bearing Assets (Arbitrum RWAs)
     USDY: { name: 'Ondo US Dollar Yield', region: REGIONS.USA, decimals: 18, apy: 5.0 },
     SYRUPUSDC: { name: 'Syrup USDC', region: REGIONS.USA, decimals: 18, apy: 4.5 },
-    
+
     // Inflation Hedges (store of value, no yield)
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
 };
@@ -186,8 +189,8 @@ export function getTokenRegion(symbol: string): RegionValue {
 
 // Single Source of Truth for Network Assets
 export const NETWORK_TOKENS: Record<number, string[]> = {
-    [NETWORKS.CELO_MAINNET.chainId]: ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'USDT'],
-    [NETWORKS.ALFAJORES.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'USDT'],
+    [NETWORKS.CELO_MAINNET.chainId]: ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'G$', 'USDT'],
+    [NETWORKS.ALFAJORES.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
 };
@@ -219,6 +222,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     CHFm: 1.10,
     JPYm: 0.0067,
     NGNm: 0.00061,
+    'G$': 0.001, // ~$0.001 per G$ (varies by market)
     USDT: 1,
     USDC: 1,
     EURC: 1.08,
@@ -311,6 +315,7 @@ export const MAINNET_TOKENS = {
     CHFm: '0xb55a79F398E759E43C95b979163f30eC87Ee131D',
     JPYm: '0xc45eCF20f3CD864B32D9794d6f76814aE8892e20',
     NGNm: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71',
+    'G$': '0x62B8B11039CBcfba9E2676772F2E96C64BCbc9d9', // GoodDollar UBI token
     USDT: '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e',
 } as const;
 
@@ -329,6 +334,7 @@ export const ALFAJORES_TOKENS = {
     CADm: '0x02EC9E0D2Fd73e89168C1709e542a48f58d7B133',
     AUDm: '0x84CBD49F5aE07632B6B88094E81Cce8236125Fe0',
     NGNm: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71',
+    'G$': '0x62B8B11039CBcfba9E2676772F2E96C64BCbc9d9', // GoodDollar UBI token (same on testnet)
     USDT: '0xd077A400968890Eacc75cdc901F0356c943e4fDb',
 } as const;
 
