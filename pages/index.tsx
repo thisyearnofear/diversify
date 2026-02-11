@@ -144,37 +144,30 @@ export default function DiversiFiPage() {
       </Head>
 
       <div className="max-w-md mx-auto">
-        <div className="flex items-center justify-between mb-4 py-2">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <span className="text-white text-lg font-black">D</span>
+        <div className="flex items-center justify-between mb-2 py-1">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
+              <span className="text-white text-sm font-black">D</span>
             </div>
-            <div>
+            <div className="flex items-center gap-1.5">
               <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">DiversiFi</h1>
-              <div className="flex items-center gap-1 opacity-60">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-                  {isMultichainLoading ? 'Loading...' : `${chainCount} Chain${chainCount !== 1 ? 's' : ''} Active`}
-                </span>
-              </div>
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Mode Toggle - cycles through Simple → Standard → Advanced */}
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => {
                 if (experienceMode === "beginner") setExperienceMode("intermediate");
                 else if (experienceMode === "intermediate") setExperienceMode("advanced");
                 else setExperienceMode("beginner");
               }}
-              className={`px-2.5 py-1.5 text-[10px] font-black rounded-lg transition-all flex items-center gap-1 ${experienceMode !== "beginner"
+              className={`w-7 h-7 text-sm rounded-lg transition-all flex items-center justify-center ${experienceMode !== "beginner"
                   ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                 }`}
-              title={experienceMode !== "beginner" ? "Too much info? Click to simplify" : "Click for more features"}
+              title={`Mode: ${experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}`}
             >
-              <span>{experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}</span>
-              <span className="hidden sm:inline">{experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}</span>
+              {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
             </button>
             <VoiceButton
               size="sm"
@@ -202,7 +195,6 @@ export default function DiversiFiPage() {
 
                   case "QUERY":
                   default:
-                    // Open global drawer for questions
                     addUserMessage(text);
                     setDrawerOpen(true);
                     break;

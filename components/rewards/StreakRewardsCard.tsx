@@ -11,7 +11,7 @@
 import React from 'react';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards, STREAK_CONFIG } from '../../hooks/use-streak-rewards';
-import { useAccount } from 'wagmi';
+import { useWalletContext } from '../wallet/WalletProvider';
 
 interface StreakRewardsCardProps {
   onSaveClick?: () => void;
@@ -19,7 +19,7 @@ interface StreakRewardsCardProps {
 }
 
 export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
-  const { isConnected } = useAccount();
+  const { isConnected } = useWalletContext();
   const {
     streak,
     canClaim,
