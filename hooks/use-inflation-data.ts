@@ -254,16 +254,24 @@ export function useInflationData() {
       return rate;
     }
 
-    if (normalizedStablecoin === 'USDC' || normalizedStablecoin === 'USDT') {
+    // USD-backed stablecoins (including legacy Celo)
+    if (normalizedStablecoin === 'USDC' || normalizedStablecoin === 'USDT' || normalizedStablecoin === 'CUSD') {
       const rate = getInflationRateForCurrency('USD');
       // console.log(`[Inflation] ${stablecoin} -> USD rate: ${rate}`);
       return rate;
     }
 
-    // BUGFIX: Handle both EURC and EURM (Mento EUR stablecoin)
-    if (normalizedStablecoin === 'EURC' || normalizedStablecoin === 'EURM') {
+    // EUR-backed stablecoins (including legacy Celo)
+    if (normalizedStablecoin === 'EURC' || normalizedStablecoin === 'EURM' || normalizedStablecoin === 'CEUR') {
       const rate = getInflationRateForCurrency('EUR');
       // console.log(`[Inflation] ${stablecoin} -> EUR rate: ${rate}`);
+      return rate;
+    }
+
+    // BRL-backed stablecoins (legacy Celo Real)
+    if (normalizedStablecoin === 'CREAL') {
+      const rate = getInflationRateForCurrency('BRL');
+      // console.log(`[Inflation] ${stablecoin} -> BRL rate: ${rate}`);
       return rate;
     }
 
