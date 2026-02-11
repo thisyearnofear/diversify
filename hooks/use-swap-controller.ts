@@ -292,9 +292,7 @@ export function useSwapController({
       const amountNum = parseFloat(amount);
       if (amountNum >= 10) {
         // $10 minimum for streak
-        recordSave(amountNum).catch((err) => {
-          console.warn('[StreakRewards] Failed to record save:', err);
-        });
+        recordSave(amountNum);
       }
     } else if (swapError) {
       setLocalError(swapError);

@@ -1,33 +1,27 @@
 /**
- * useStreakRewards - Single source of truth for GoodDollar $G streak tracking
+ * useStreakRewards - GoodDollar $G streak tracking (NO CONTRACT NEEDED)
+ * 
+ * How it works:
+ * 1. We track "saves" (swaps of $10+) in localStorage
+ * 2. User builds a streak by saving daily
+ * 3. When streak is active, we show the GoodDollar claim link
+ * 4. User claims $G directly on GoodDollar's wallet site
  * 
  * Core Principles:
- * - DRY: Centralized streak logic used across all components
- * - MODULAR: Independent of UI, composable with any component
- * - CLEAN: Clear separation between on-chain data and UI state
+ * - DRY: Centralized streak logic
+ * - MODULAR: Works without any smart contracts
+ * - CLEAN: Simple localStorage persistence
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAccount, useChainId } from 'wagmi';
-import { ethers } from 'ethers';
-
-// Minimal contract ABI - only what we need
-const STREAK_VERIFIER_ABI = [
-  'function streaks(address) view returns (uint256 startTime, uint256 lastActivity, uint16 daysActive, uint16 gracePeriodsUsed)',
-  'function lastClaimDay(address) view returns (uint256)',
-  'function canClaim(address) view returns (bool)',
-  'function recordClaim(address) external',
-  'event ActivityRecorded(address indexed user, uint256 amount, uint16 streakDays)',
-  'event StreakBroken(address indexed user, uint256 previousStreak)',
-];
+import { useAccount } from 'wagmi';
 
 // Configuration
 const STREAK_CONFIG = {
-  CONTRACT_ADDRESS: '0x0000000000000000000000000000000000000000', // TODO: Deploy and update
   MIN_SAVE_USD: 10,
-  GRACE_PERIODS: 1,
-  CHAIN_ID: 42220, // Celo mainnet
-  G_TOKEN_ADDRESS: '0x62B8B11039CBcfba9E2676772F2E96C64BCbc9d9',
+  GRACE_PERIODS_PER_WEEK: 1,
+  G_CLAIM_URL: 'https://wallet.gooddollar.org/?utm_source=diversifi',
+  G_TOKEN_ADDRESS: '0x62B8B11039CBcfba9E2676772F2E96C64BCbc9d9', // Celo
 } as const;
 
 interface StreakData {
@@ -35,248 +29,249 @@ interface StreakData {
   lastActivity: number;
   daysActive: number;
   gracePeriodsUsed: number;
+  totalSaved: number;
 }
 
 interface StreakState {
   streak: StreakData | null;
   canClaim: boolean;
-  lastClaimDay: number;
   isEligible: boolean;
   nextClaimTime: Date | null;
   estimatedReward: string;
 }
 
 interface StreakActions {
-  recordSave: (amountUSD: number) => Promise<void>;
-  claimG: () => Promise<void>;
-  refresh: () => Promise<void>;
+  recordSave: (amountUSD: number) => void;
+  claimG: () => void;
+  resetStreak: () => void;
+  refresh: () => void;
 }
 
-// Cache to prevent unnecessary re-fetches
-const streakCache = new Map<string, { data: StreakState; timestamp: number }>();
-const CACHE_TTL = 30000; // 30 seconds
+// Simple storage helper
+const STORAGE_KEY = 'diversifi_streak_v1';
 
-export function useStreakRewards(): StreakState & StreakActions & { isLoading: boolean; error: Error | null } {
+function getStorageKey(address: string): string {
+  return `${STORAGE_KEY}_${address.toLowerCase()}`;
+}
+
+function getStreakData(address: string): StreakData | null {
+  if (typeof window === 'undefined') return null;
+  
+  const data = localStorage.getItem(getStorageKey(address));
+  if (!data) return null;
+  
+  try {
+    return JSON.parse(data);
+  } catch {
+    return null;
+  }
+}
+
+function saveStreakData(address: string, data: StreakData): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(getStorageKey(address), JSON.stringify(data));
+}
+
+function calculateStreakState(streak: StreakData | null): StreakState {
+  if (!streak) {
+    return {
+      streak: null,
+      canClaim: false,
+      isEligible: false,
+      nextClaimTime: null,
+      estimatedReward: '~$0.25',
+    };
+  }
+
+  const today = Math.floor(Date.now() / 86400000);
+  const lastActivityDay = Math.floor(streak.lastActivity / 86400000);
+  const daysSinceActivity = today - lastActivityDay;
+  
+  // Streak is active if they saved today or yesterday
+  const isStreakActive = daysSinceActivity <= 1;
+  
+  // Can claim if streak is active
+  const canClaim = isStreakActive && streak.daysActive > 0;
+  
+  // Next claim is tomorrow
+  const nextClaimTime = canClaim 
+    ? null 
+    : new Date((today + 1) * 86400000);
+
+  return {
+    streak,
+    canClaim,
+    isEligible: streak.daysActive > 0,
+    nextClaimTime,
+    estimatedReward: calculateReward(streak.daysActive),
+  };
+}
+
+function calculateReward(streakDays: number): string {
+  // GoodDollar UBI is typically $0.10-$0.50
+  // We show higher estimates for longer streaks as encouragement
+  const baseReward = 0.25;
+  const multiplier = Math.min(1 + (streakDays * 0.02), 1.5);
+  const estimated = baseReward * multiplier;
+  return `~$${estimated.toFixed(2)}`;
+}
+
+// Cache for performance
+const streakCache = new Map<string, { data: StreakState; timestamp: number }>();
+const CACHE_TTL = 10000; // 10 seconds
+
+export function useStreakRewards(): StreakState & StreakActions & { isLoading: boolean } {
   const { address, isConnected } = useAccount();
-  const chainId = useChainId();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
   const [state, setState] = useState<StreakState>({
     streak: null,
     canClaim: false,
-    lastClaimDay: 0,
     isEligible: false,
     nextClaimTime: null,
     estimatedReward: '~$0.25',
   });
 
-  // Use ref to prevent duplicate fetches
-  const isFetchingRef = useRef(false);
+  const refresh = useCallback(() => {
+    if (!address || !isConnected) {
+      setState({
+        streak: null,
+        canClaim: false,
+        isEligible: false,
+        nextClaimTime: null,
+        estimatedReward: '~$0.25',
+      });
+      return;
+    }
 
-  const fetchStreakData = useCallback(async () => {
-    if (!address || !isConnected || isFetchingRef.current) return;
-    
     // Check cache
-    const cacheKey = `${address}-${chainId}`;
+    const cacheKey = address.toLowerCase();
     const cached = streakCache.get(cacheKey);
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
       setState(cached.data);
       return;
     }
 
-    isFetchingRef.current = true;
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // TODO: Replace with actual contract call once deployed
-      // For now, simulate with localStorage fallback for development
-      const mockData = getMockStreakData(address);
-      
-      const today = Math.floor(Date.now() / 86400000);
-      const canClaim = mockData.lastActivity >= today - 1 && mockData.lastClaimDay < today;
-      
-      const newState: StreakState = {
-        streak: mockData,
-        canClaim,
-        lastClaimDay: mockData.lastClaimDay,
-        isEligible: mockData.daysActive > 0,
-        nextClaimTime: canClaim ? null : new Date((today + 1) * 86400000),
-        estimatedReward: calculateReward(mockData.daysActive),
-      };
-
-      setState(newState);
-      streakCache.set(cacheKey, { data: newState, timestamp: Date.now() });
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch streak data'));
-    } finally {
-      setIsLoading(false);
-      isFetchingRef.current = false;
-    }
-  }, [address, isConnected, chainId]);
+    const streak = getStreakData(address);
+    const newState = calculateStreakState(streak);
+    
+    setState(newState);
+    streakCache.set(cacheKey, { data: newState, timestamp: Date.now() });
+  }, [address, isConnected]);
 
   // Record a save activity
-  const recordSave = useCallback(async (amountUSD: number) => {
-    if (!address) throw new Error('Wallet not connected');
-    if (amountUSD < STREAK_CONFIG.MIN_SAVE_USD) {
-      throw new Error(`Minimum save amount is $${STREAK_CONFIG.MIN_SAVE_USD}`);
-    }
+  const recordSave = useCallback((amountUSD: number) => {
+    if (!address) return;
+    if (amountUSD < STREAK_CONFIG.MIN_SAVE_USD) return;
 
     setIsLoading(true);
-    try {
-      // TODO: Call contract method once deployed
-      // await contract.recordSave(address, ethers.parseUnits(amountUSD.toString(), 18), Date.now());
-      
-      // For now, use localStorage mock
-      saveMockActivity(address, amountUSD);
-      
-      // Refresh state
-      await fetchStreakData();
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to record save'));
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, fetchStreakData]);
-
-  // Claim G$ tokens
-  const claimG = useCallback(async () => {
-    if (!address) throw new Error('Wallet not connected');
-    if (!state.canClaim) throw new Error('Cannot claim at this time');
-
-    setIsLoading(true);
-    try {
-      // 1. Record claim in our contract (prevents double-claim)
-      // await contract.recordClaim(address);
-      recordMockClaim(address);
-
-      // 2. Open GoodDollar wallet for actual claim
-      window.open(
-        `https://wallet.gooddollar.org/?claim=true&referrer=diversifi&streak=${state.streak?.daysActive || 0}`,
-        '_blank'
-      );
-
-      // 3. Refresh state
-      await fetchStreakData();
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to claim'));
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [address, state.canClaim, state.streak?.daysActive, fetchStreakData]);
-
-  // Initial fetch and polling
-  useEffect(() => {
-    fetchStreakData();
     
-    // Poll every 60 seconds
-    const interval = setInterval(fetchStreakData, 60000);
+    const today = Math.floor(Date.now() / 86400000);
+    const current = getStreakData(address);
+    
+    let newStreak: StreakData;
+    
+    if (!current) {
+      // First save
+      newStreak = {
+        startTime: Date.now(),
+        lastActivity: Date.now(),
+        daysActive: 1,
+        gracePeriodsUsed: 0,
+        totalSaved: amountUSD,
+      };
+    } else {
+      const lastDay = Math.floor(current.lastActivity / 86400000);
+      
+      if (today === lastDay) {
+        // Already saved today - update amount
+        newStreak = {
+          ...current,
+          lastActivity: Date.now(),
+          totalSaved: current.totalSaved + amountUSD,
+        };
+      } else if (today === lastDay + 1) {
+        // Consecutive day - streak continues
+        newStreak = {
+          ...current,
+          daysActive: current.daysActive + 1,
+          lastActivity: Date.now(),
+          totalSaved: current.totalSaved + amountUSD,
+        };
+      } else if (today <= lastDay + 2 && current.gracePeriodsUsed < STREAK_CONFIG.GRACE_PERIODS_PER_WEEK) {
+        // Used grace period (1 miss allowed per week)
+        newStreak = {
+          ...current,
+          daysActive: current.daysActive + 1,
+          gracePeriodsUsed: current.gracePeriodsUsed + 1,
+          lastActivity: Date.now(),
+          totalSaved: current.totalSaved + amountUSD,
+        };
+      } else {
+        // Streak broken - start over
+        newStreak = {
+          startTime: Date.now(),
+          lastActivity: Date.now(),
+          daysActive: 1,
+          gracePeriodsUsed: 0,
+          totalSaved: amountUSD,
+        };
+      }
+    }
+    
+    saveStreakData(address, newStreak);
+    
+    // Clear cache to force refresh
+    streakCache.delete(address.toLowerCase());
+    
+    setIsLoading(false);
+    refresh();
+  }, [address, refresh]);
+
+  // Open GoodDollar claim page
+  const claimG = useCallback(() => {
+    if (!state.canClaim) return;
+    
+    // Open GoodDollar wallet in new tab
+    // User claims their UBI directly on GoodDollar's site
+    window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
+    
+    // Note: We don't verify they claimed - we trust the user
+    // In a future version, we could check their G$ balance on Celo
+  }, [state.canClaim]);
+
+  // Reset streak (for testing)
+  const resetStreak = useCallback(() => {
+    if (!address) return;
+    localStorage.removeItem(getStorageKey(address));
+    streakCache.delete(address.toLowerCase());
+    refresh();
+  }, [address, refresh]);
+
+  // Initial load and polling
+  useEffect(() => {
+    refresh();
+    
+    // Refresh every 30 seconds to update claim eligibility
+    const interval = setInterval(refresh, 30000);
     return () => clearInterval(interval);
-  }, [fetchStreakData]);
+  }, [refresh]);
 
   // Refresh on window focus
   useEffect(() => {
-    const handleFocus = () => fetchStreakData();
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [fetchStreakData]);
+    window.addEventListener('focus', refresh);
+    return () => window.removeEventListener('focus', refresh);
+  }, [refresh]);
 
   return {
     ...state,
     isLoading,
-    error,
     recordSave,
     claimG,
-    refresh: fetchStreakData,
+    resetStreak,
+    refresh,
   };
-}
-
-// Helper to calculate estimated reward based on streak
-function calculateReward(streakDays: number): string {
-  // GoodDollar UBI is typically $0.10-$0.50, can vary
-  const baseReward = 0.25;
-  const multiplier = Math.min(1 + (streakDays * 0.05), 2); // Max 2x
-  const estimated = baseReward * multiplier;
-  return `~$${estimated.toFixed(2)}`;
-}
-
-// Mock implementations for development (remove after contract deployment)
-const STORAGE_KEY = 'diversifi_streak_mock';
-
-interface MockStreakData {
-  startTime: number;
-  lastActivity: number;
-  daysActive: number;
-  gracePeriodsUsed: number;
-  lastClaimDay: number;
-}
-
-function getMockStreakData(address: string): MockStreakData {
-  if (typeof window === 'undefined') {
-    return { startTime: 0, lastActivity: 0, daysActive: 0, gracePeriodsUsed: 0, lastClaimDay: 0 };
-  }
-  
-  const data = localStorage.getItem(`${STORAGE_KEY}_${address}`);
-  if (data) {
-    return JSON.parse(data);
-  }
-  
-  return { startTime: 0, lastActivity: 0, daysActive: 0, gracePeriodsUsed: 0, lastClaimDay: 0 };
-}
-
-function saveMockActivity(address: string, amountUSD: number) {
-  const today = Math.floor(Date.now() / 86400000);
-  const current = getMockStreakData(address);
-  
-  const lastDay = Math.floor(current.lastActivity / 86400000);
-  
-  let newData: MockStreakData;
-  
-  if (today === lastDay) {
-    // Already active today
-    newData = { ...current, lastActivity: Date.now() };
-  } else if (today === lastDay + 1) {
-    // Consecutive day
-    newData = {
-      ...current,
-      daysActive: current.daysActive + 1,
-      lastActivity: Date.now(),
-      startTime: current.startTime || Date.now(),
-    };
-  } else if (today <= lastDay + 2 && current.gracePeriodsUsed < 1) {
-    // Used grace period
-    newData = {
-      ...current,
-      daysActive: current.daysActive + 1,
-      gracePeriodsUsed: current.gracePeriodsUsed + 1,
-      lastActivity: Date.now(),
-    };
-  } else {
-    // Streak broken
-    newData = {
-      startTime: Date.now(),
-      lastActivity: Date.now(),
-      daysActive: 1,
-      gracePeriodsUsed: 0,
-      lastClaimDay: current.lastClaimDay,
-    };
-  }
-  
-  localStorage.setItem(`${STORAGE_KEY}_${address}`, JSON.stringify(newData));
-}
-
-function recordMockClaim(address: string) {
-  const current = getMockStreakData(address);
-  const today = Math.floor(Date.now() / 86400000);
-  
-  localStorage.setItem(
-    `${STORAGE_KEY}_${address}`,
-    JSON.stringify({ ...current, lastClaimDay: today })
-  );
 }
 
 // Export config for use in other components
 export { STREAK_CONFIG };
-export type { StreakData, StreakState };
+export type { StreakData };

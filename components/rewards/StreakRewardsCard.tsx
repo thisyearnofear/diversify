@@ -26,7 +26,6 @@ export function StreakRewardsCard({ onSaveClick, className = '' }: StreakRewards
     isEligible,
     estimatedReward,
     nextClaimTime,
-    isLoading,
     claimG,
   } = useStreakRewards();
 
