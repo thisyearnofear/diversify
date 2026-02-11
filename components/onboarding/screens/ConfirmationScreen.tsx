@@ -14,6 +14,7 @@ export function ConfirmationScreen({
     strategy,
     onConfirm,
     onBack,
+    onSkip,
 }: ConfirmationScreenProps) {
     const { experienceMode } = useAppState();
     const strategyData = STRATEGIES.find(s => s.id === strategy);
@@ -157,7 +158,7 @@ export function ConfirmationScreen({
             </div>
 
             {/* Persistent Actions */}
-            <div className="p-8 pb-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 space-y-4">
+            <div className="p-8 pb-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-800 space-y-2">
                 <motion.button
                     onClick={onConfirm}
                     className="w-full px-8 py-5 rounded-[2rem] font-black text-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-2xl active:scale-95 transition-all text-center"
@@ -165,14 +166,24 @@ export function ConfirmationScreen({
                 >
                     Deploy Strategy 🛡️
                 </motion.button>
-                {onBack && (
-                    <button
-                        onClick={onBack}
-                        className="w-full px-6 py-3 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
-                    >
-                        Back to View Choice
-                    </button>
-                )}
+                <div className="flex gap-2">
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="flex-1 px-6 py-3 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
+                        >
+                            Back
+                        </button>
+                    )}
+                    {onSkip && (
+                        <button
+                            onClick={onSkip}
+                            className="flex-1 px-6 py-3 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
+                        >
+                            Skip
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

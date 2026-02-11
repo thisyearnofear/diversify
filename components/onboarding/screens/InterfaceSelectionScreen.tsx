@@ -7,7 +7,7 @@ interface InterfaceSelectionScreenProps extends OnboardingScreenProps {
     onContinue: () => void;
 }
 
-export function InterfaceSelectionScreen({ onContinue, onBack }: InterfaceSelectionScreenProps) {
+export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: InterfaceSelectionScreenProps) {
     const { experienceMode, setExperienceMode } = useAppState();
 
     return (
@@ -31,8 +31,8 @@ export function InterfaceSelectionScreen({ onContinue, onBack }: InterfaceSelect
                         <button
                             onClick={() => setExperienceMode('beginner')}
                             className={`w-full p-6 rounded-[2.5rem] border-2 transition-all group relative overflow-hidden ${experienceMode === 'beginner'
-                                    ? 'border-blue-500 bg-white dark:bg-gray-800 shadow-2xl shadow-blue-500/10'
-                                    : 'border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 grayscale hover:grayscale-0'
+                                ? 'border-blue-500 bg-white dark:bg-gray-800 shadow-2xl shadow-blue-500/10'
+                                : 'border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 grayscale hover:grayscale-0'
                                 }`}
                         >
                             <div className="flex items-center gap-6 relative z-10">
@@ -52,8 +52,8 @@ export function InterfaceSelectionScreen({ onContinue, onBack }: InterfaceSelect
                         <button
                             onClick={() => setExperienceMode('intermediate')}
                             className={`w-full p-6 rounded-[2.5rem] border-2 transition-all group relative overflow-hidden ${experienceMode === 'intermediate' || experienceMode === 'advanced'
-                                    ? 'border-blue-500 bg-white dark:bg-gray-800 shadow-2xl shadow-blue-500/10'
-                                    : 'border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 grayscale hover:grayscale-0'
+                                ? 'border-blue-500 bg-white dark:bg-gray-800 shadow-2xl shadow-blue-500/10'
+                                : 'border-gray-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 grayscale hover:grayscale-0'
                                 }`}
                         >
                             <div className="flex items-center gap-6 relative z-10">
@@ -79,21 +79,31 @@ export function InterfaceSelectionScreen({ onContinue, onBack }: InterfaceSelect
                 </div>
             </div>
 
-            <div className="p-8 border-t border-gray-100 dark:border-gray-800 space-y-4">
+            <div className="p-8 border-t border-gray-100 dark:border-gray-800 space-y-2">
                 <motion.button
                     onClick={onContinue}
                     className="w-full px-8 py-5 rounded-[2rem] font-black text-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-xl active:scale-95 transition-all"
                 >
                     Continue to Summary →
                 </motion.button>
-                {onBack && (
-                    <button
-                        onClick={onBack}
-                        className="w-full px-6 py-3 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
-                    >
-                        Back to Philosophy
-                    </button>
-                )}
+                <div className="flex gap-2">
+                    {onBack && (
+                        <button
+                            onClick={onBack}
+                            className="flex-1 px-6 py-3 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
+                        >
+                            Back
+                        </button>
+                    )}
+                    {onSkip && (
+                        <button
+                            onClick={onSkip}
+                            className="flex-1 px-6 py-3 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
+                        >
+                            Skip
+                        </button>
+                    )}
+                </div>
             </div>
         </div>
     );

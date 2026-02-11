@@ -129,6 +129,7 @@ export default function StrategyModal({ isOpen, onClose, onComplete }: StrategyM
                             <InterfaceSelectionScreen
                                 onContinue={() => setStep('confirm')}
                                 onBack={handleBack}
+                                onSkip={handleSkip}
                             />
                         )}
                         {step === 'confirm' && (
@@ -136,6 +137,7 @@ export default function StrategyModal({ isOpen, onClose, onComplete }: StrategyM
                                 strategy={selected!}
                                 onConfirm={handleConfirm}
                                 onBack={handleBack}
+                                onSkip={handleSkip}
                             />
                         )}
                     </motion.div>
