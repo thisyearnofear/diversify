@@ -6,8 +6,6 @@ import { Card } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import InflationVisualizer from "../inflation/InflationVisualizer";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
-import WealthJourneyWidget from "../demo/WealthJourneyWidget";
-import { StreakRewardsCard, RewardsStats } from "../rewards/StreakRewardsCard";
 import type { Region } from "@/hooks/use-user-region";
 
 interface InfoTabProps {
@@ -64,32 +62,6 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
         </p>
       </div>
 
-      {/* Gamified Rewards Section - Dynamic and engaging */}
-      {address && (
-        <div className="space-y-4">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-5 border border-blue-100 dark:border-blue-800/50">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="size-10 bg-blue-500 rounded-xl flex items-center justify-center text-white font-bold">🔥</div>
-              <div>
-                <h3 className="font-black text-gray-900 dark:text-white">Daily Rewards</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Keep your streak alive for $G tokens</p>
-              </div>
-            </div>
-            <StreakRewardsCard onSaveClick={() => setActiveTab("swap")} />
-          </div>
-          <RewardsStats />
-        </div>
-      )}
-
-      {/* Show journey widget only for intermediate+ */}
-      {!isBeginner && (
-        <WealthJourneyWidget
-          totalValue={address ? 100 : 0} // Simplified logic for demo
-          setActiveTab={setActiveTab}
-          userRegion={userRegion}
-        />
-      )}
-
       {/* Interactive Education: Inflation Protection */}
       <div>
         <div className="flex items-center gap-2 mb-4 px-1">
@@ -119,57 +91,9 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
         <RealWorldUseCases focusRegion={userRegion} />
       </div>
 
-      {/* Core Capabilities Grid - Hide for beginners */}
-      {!isBeginner && (
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            {
-              title: "REGIONAL STABLECOINS",
-              desc: "Hold digital dollars pegged to local economies (KES, PHP, BRL) to hedge regional risks.",
-              icon: "🌍",
-              color: "blue"
-            },
-            {
-              title: "REAL-WORLD ASSETS",
-              desc: "Direct access to tokenized Gold (PAXG) and US Treasuries (USDY) on Arbitrum.",
-              icon: "💎",
-              color: "emerald"
-            }
-          ].map((cap) => (
-            <div key={cap.title} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-              <div className="text-2xl mb-3">{cap.icon}</div>
-              <h4 className="text-[10px] font-black text-gray-900 dark:text-white mb-2 tracking-wider">{cap.title}</h4>
-              <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">{cap.desc}</p>
-            </div>
-          ))}
-        </div>
-      )}
 
-      {/* Simplified How It Works */}
-      <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">The Process</h3>
-          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full">4 EASY STEPS</span>
-        </div>
-        <div className="space-y-4">
-          {[
-            { step: 1, text: "Connect your wallet via MiniPay or MetaMask", done: !!address },
-            { step: 2, text: "Analyze your local inflation risk profile", done: true },
-            { step: 3, text: "Get AI-powered diversification picks", done: false },
-            { step: 4, text: "Execute swaps or bridge to RWAs", done: false },
-          ].map((item) => (
-            <div key={item.step} className="flex items-center gap-3">
-              <div className={`size-6 rounded-full flex items-center justify-center text-[10px] font-black ${item.done ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
-                }`}>
-                {item.done ? '✓' : item.step}
-              </div>
-              <span className={`text-xs font-medium ${item.done ? 'text-gray-900 dark:text-white' : 'text-gray-500'}`}>
-                {item.text}
-              </span>
-            </div>
-          ))}
-        </div>
-      </Card>
+
+
 
       {/* Network & Wallet (Minimized) */}
       <div className="pt-2">
@@ -189,15 +113,15 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
             {address ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-gray-400">ACTIVE NETWORK</span>
+                  <span className="text-xs font-black text-gray-400">ACTIVE NETWORK</span>
                   <div className="flex items-center gap-1.5">
                     <span className="size-2 bg-green-500 rounded-full animate-pulse" />
                     <span className="text-xs font-bold text-gray-900 dark:text-white">{networkName}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black text-gray-400">WALLET</span>
-                  <code className="text-[10px] font-mono bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                  <span className="text-xs font-black text-gray-400">WALLET</span>
+                  <code className="text-xs font-mono bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
                     {formatAddress(address)}
                   </code>
                 </div>
@@ -207,12 +131,12 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
             )}
 
             <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
-              <h4 className="text-[10px] font-black text-gray-400 mb-3 uppercase tracking-tighter">Available Tokens on {networkName}</h4>
+              <h4 className="text-xs font-black text-gray-400 mb-3 uppercase tracking-tighter">Available Tokens on {networkName}</h4>
               <div className="flex flex-wrap gap-2">
                 {displayTokens.map((token) => (
                   <div
                     key={token.symbol}
-                    className="px-2 py-1 rounded-md border text-[10px] font-bold bg-white dark:bg-gray-900 flex items-center gap-1.5"
+                    className="px-2 py-1 rounded-md border text-xs font-bold bg-white dark:bg-gray-900 flex items-center gap-1.5"
                     style={{ borderColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] || "#e5e7eb" }}
                   >
                     <span className="size-1.5 rounded-full" style={{ backgroundColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] }} />
@@ -225,14 +149,7 @@ export default function InfoTab({ availableTokens, setActiveTab, userRegion }: I
         )}
       </div>
 
-      {/* Mission Statement */}
-      <div className="text-center px-4 py-8">
-        <div className="text-2xl mb-2 opacity-20">🌍</div>
-        <h3 className="text-xs font-black text-gray-300 uppercase tracking-[0.2em] mb-4">OUR MISSION</h3>
-        <p className="text-sm font-medium text-gray-500 leading-relaxed italic">
-          &quot;Democratizing access to global wealth preservation tools for everyone, everywhere.&quot;
-        </p>
-      </div>
+
     </div>
   );
 }

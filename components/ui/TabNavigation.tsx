@@ -26,7 +26,7 @@ export default function TabNavigation({
   const allTabs: TabItem[] = [
     {
       id: "overview",
-      label: experienceMode === "beginner" ? "Money" : (experienceMode === "intermediate" ? "Portfolio" : "Station"),
+      label: "Overview",
       minLevel: "beginner",
       icon: (
         <svg
@@ -47,7 +47,7 @@ export default function TabNavigation({
     },
     {
       id: "swap",
-      label: experienceMode === "beginner" ? "Convert" : "Action",
+      label: "Swap",
       minLevel: "beginner",
       icon: (
         <svg
@@ -68,7 +68,7 @@ export default function TabNavigation({
     },
     {
       id: "protect",
-      label: experienceMode === "beginner" ? "Shield" : "Protect",
+      label: "Protect",
       minLevel: "beginner",
       icon: (
         <svg
@@ -140,7 +140,7 @@ export default function TabNavigation({
                   </span>
                 )}
               </div>
-              <span className={`text-[10px] font-bold uppercase tracking-wider mt-0.5 ${activeTab === tab.id ? 'opacity-100' : 'opacity-60'}`}>
+              <span className={`text-xs font-bold uppercase tracking-wider mt-0.5 ${activeTab === tab.id ? 'opacity-100' : 'opacity-60'}`}>
                 {tab.label}
               </span>
             </button>

@@ -51,7 +51,7 @@ export function useNetworkActivity() {
         totalProtected: 0,
         activeProtections24h: 0,
         topTrendingRegion: 'Africa',
-        goldPriceChange24h: goldData?.percentChange || 1.25,
+        goldPriceChange24h: goldData?.percentChange || 0,
         globalMomentum: globalMomentum
     });
 
@@ -63,15 +63,17 @@ export function useNetworkActivity() {
         const list: NetworkPulse[] = [];
 
         // ALWAYS HONEST: Market Momentum (Gold)
-        const goldValue = stats.goldPriceChange24h || 1.25;
+        const goldValue = stats.goldPriceChange24h;
         const goldUp = goldValue > 0;
-        list.push({
-            id: 'm1',
-            type: 'market',
-            message: `Gold (PAXG) momentum: ${goldUp ? '+' : ''}${goldValue.toFixed(2)}% vs fiat today`,
-            icon: '🏆',
-            priority: goldValue > 1 ? 'high' : 'medium'
-        });
+        if (goldValue !== 0) {
+            list.push({
+                id: 'm1',
+                type: 'market',
+                message: `Gold (PAXG) momentum: ${goldUp ? '+' : ''}${goldValue.toFixed(2)}% vs fiat today`,
+                icon: '🏆',
+                priority: goldValue > 1 ? 'high' : 'medium'
+            });
+        }
 
         // LIVE INSTITUTIONAL MOMENTUM: Global Stablecoin Cap
         if (globalMomentum) {
@@ -106,12 +108,12 @@ export function useNetworkActivity() {
                 priority: 'medium'
             });
         } else {
-            // HONEST FALLBACK: Institutional Demand Fact
+            // HONEST FALLBACK: Education fact
             list.push({
                 id: 'e1',
                 type: 'education',
-                message: "Demand for tokenized real-world assets up 12% globally this year",
-                icon: '🏛️',
+                message: "Stablecoins enable inflation-protected savings across borders",
+                icon: '📚',
                 priority: 'low'
             });
         }
@@ -124,7 +126,7 @@ export function useNetworkActivity() {
         const baseNudges: Nudge[] = [
             { message: "Gold reserves on Arbitrum up 15% this week", type: 'market' },
             { message: "Institutional volume for USDY rising", type: 'volume' },
-            { message: `Total global stablecoin supply: $${((globalMomentum?.globalStablecoinCap || 160000000000) / 1000000000).toFixed(0)}B`, type: 'market' },
+            ...(globalMomentum ? [{ message: `Total global stablecoin supply: $${(globalMomentum.globalStablecoinCap / 1000000000).toFixed(0)}B`, type: 'market' as const }] : []),
             { message: "Sentiment Check: Diversification is high priority right now", type: 'market' }
         ];
 

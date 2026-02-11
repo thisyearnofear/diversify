@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import Head from "next/head";
 import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
@@ -23,19 +23,15 @@ import ThemeToggle from "../components/ui/ThemeToggle";
 import VoiceButton from "../components/ui/VoiceButton";
 import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
-import { useNetworkActivity } from "../hooks/use-network-activity";
+import GuidedTour from "../components/tour/GuidedTour";
+import TourTrigger from "../components/tour/TourTrigger";
+
 import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, guidedTour, exitTour, setSwapPrefill, experienceMode, setExperienceMode } = useAppState();
+  const { activeTab, setActiveTab, setSwapPrefill, experienceMode, setExperienceMode } = useAppState();
   const { showToast } = useToast();
   const { unreadCount, markAsRead, setDrawerOpen, addUserMessage } = useAIConversation();
-  const { currentPulse } = useNetworkActivity();
-
-  // No redirect for beginners. All tabs are now unlocked but simplified.
-  useEffect(() => {
-    // Keep consistent navigation
-  }, [experienceMode, activeTab, setActiveTab]);
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -144,6 +140,8 @@ export default function DiversiFiPage() {
       </Head>
 
       <div className="max-w-md mx-auto">
+        <TourTrigger />
+
         <div className="flex items-center justify-between mb-2 py-1">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
@@ -162,8 +160,8 @@ export default function DiversiFiPage() {
                 else setExperienceMode("beginner");
               }}
               className={`w-7 h-7 text-sm rounded-lg transition-all flex items-center justify-center ${experienceMode !== "beginner"
-                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
+                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                 }`}
               title={`Mode: ${experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}`}
             >
@@ -206,30 +204,6 @@ export default function DiversiFiPage() {
           </div>
         </div>
 
-        {/* Network Pulse Ticker (Virality & FOMO) */}
-        <div className="px-1 mb-2">
-          <div className="bg-gray-50/50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl py-1.5 px-3 flex items-center justify-center overflow-hidden h-8">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentPulse.id}
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                exit={{ y: -10, opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="flex items-center gap-2"
-              >
-                <span className="text-xs">{currentPulse.icon}</span>
-                <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">
-                  {currentPulse.message}
-                </span>
-                {currentPulse.priority === 'high' && (
-                  <span className="flex h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse shrink-0" />
-                )}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-
         <div className="sticky top-0 z-40 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
           <TabNavigation
             activeTab={activeTab}
@@ -244,42 +218,8 @@ export default function DiversiFiPage() {
           />
         </div>
 
-        {/* Guided Tour Progress Indicator */}
         <AnimatePresence>
-          {guidedTour && (
-            <motion.div
-              initial={{ y: -20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              className="mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-3 rounded-xl shadow-lg"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="text-lg">🎯</span>
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold">
-                      Tour Step {guidedTour.currentStep + 1}/{guidedTour.totalSteps}
-                    </span>
-                    <div className="flex gap-1 mt-1">
-                      {Array.from({ length: guidedTour.totalSteps }).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`h-1 w-4 rounded-full ${i <= guidedTour.currentStep ? 'bg-white' : 'bg-white/30'
-                            }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={exitTour}
-                  className="text-white/80 hover:text-white text-sm font-bold px-2"
-                >
-                  ✕
-                </button>
-              </div>
-            </motion.div>
-          )}
+          <GuidedTour />
         </AnimatePresence>
 
         <div className="space-y-4 pt-2">

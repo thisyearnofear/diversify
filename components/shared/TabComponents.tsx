@@ -34,16 +34,15 @@ export const StepCard = ({
   <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl p-4 border border-blue-100">
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-black uppercase text-blue-600 tracking-widest">
+        <span className="text-xs font-black uppercase text-blue-600 tracking-widest">
           Step {step} of {totalSteps}
         </span>
         <div className="flex gap-1">
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div
               key={i}
-              className={`w-6 h-1 rounded-full ${
-                i < step ? 'bg-blue-600' : 'bg-gray-200'
-              }`}
+              className={`w-6 h-1 rounded-full ${i < step ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
             />
           ))}
         </div>
@@ -51,7 +50,7 @@ export const StepCard = ({
       {canSkip && onSkip && (
         <button
           onClick={onSkip}
-          className="text-[10px] text-gray-400 hover:text-gray-600 font-bold"
+          className="text-xs text-gray-400 hover:text-gray-600 font-bold"
         >
           Skip →
         </button>
@@ -63,11 +62,10 @@ export const StepCard = ({
       <button
         onClick={onNext}
         disabled={!canProceed}
-        className={`w-full mt-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-          canProceed
+        className={`w-full mt-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${canProceed
             ? 'bg-blue-600 text-white hover:bg-blue-700'
             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-        }`}
+          }`}
       >
         {isLast ? 'Complete' : 'Continue'} →
       </button>
@@ -118,7 +116,7 @@ export const InsightCard = ({
         <div className="flex-1 min-w-0">
           <h4 className="font-bold text-sm text-gray-900">{title}</h4>
           <p className="text-xs text-gray-600 mt-1 leading-relaxed">{description}</p>
-          
+
           {impact && (
             <div className="flex items-center gap-2 mt-2">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${variant === 'reward' ? 'text-green-700 bg-green-200' : 'text-green-600 bg-green-100'}`}>
@@ -128,18 +126,17 @@ export const InsightCard = ({
           )}
         </div>
       </div>
-      
+
       {action && (
         <button
           onClick={action.onClick}
           disabled={action.disabled || action.loading}
-          className={`w-full mt-3 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
-            action.disabled
+          className={`w-full mt-3 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${action.disabled
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : variant === 'reward'
-              ? 'bg-green-600 hover:bg-green-700 text-white'
-              : 'bg-blue-600 hover:bg-blue-700 text-white'
-          }`}
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
         >
           {action.loading ? (
             <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
@@ -176,18 +173,17 @@ export const QuickSelect = <T extends string>({
   columns?: 1 | 2 | 3;
 }) => {
   const gridCols = { 1: 'grid-cols-1', 2: 'grid-cols-2', 3: 'grid-cols-3' };
-  
+
   return (
     <div className={`grid ${gridCols[columns]} gap-2`}>
       {options.map((opt) => (
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`p-3 border-2 rounded-xl text-center transition-all ${
-            value === opt.value
+          className={`p-3 border-2 rounded-xl text-center transition-all ${value === opt.value
               ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-600/10'
               : 'border-gray-100 bg-white hover:border-gray-200'
-          }`}
+            }`}
         >
           {opt.icon && <div className="text-xl mb-1">{opt.icon}</div>}
           <div className="text-[10px] font-black uppercase text-gray-900 leading-tight">
@@ -227,13 +223,13 @@ export const ProtectionScore = ({
   defaultOpen?: boolean;
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  
-  const colorClass = score >= 80 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' : 
-                     score >= 60 ? 'text-amber-600 bg-amber-50 border-amber-200' : 
-                     'text-red-600 bg-red-50 border-red-200';
-  
+
+  const colorClass = score >= 80 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' :
+    score >= 60 ? 'text-amber-600 bg-amber-50 border-amber-200' :
+      'text-red-600 bg-red-50 border-red-200';
+
   const dotColor = score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500';
-  
+
   return (
     <div className={`rounded-xl border ${colorClass} overflow-hidden ${className}`}>
       {/* Main Score - Always Visible */}
@@ -254,17 +250,17 @@ export const ProtectionScore = ({
           </div>
         </div>
         {factors && (
-          <svg 
-            className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
-            fill="none" 
-            viewBox="0 0 24 24" 
+          <svg
+            className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         )}
       </button>
-      
+
       {/* Factor Breakdown - Collapsible for Power Users */}
       {factors && isOpen && (
         <div className="px-3 pb-3 border-t border-black/5">
@@ -278,12 +274,11 @@ export const ProtectionScore = ({
                     <span className="text-[9px] text-gray-500">{factor.status}</span>
                   </div>
                   <div className="mt-1 h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full rounded-full ${
-                        factor.value >= 80 ? 'bg-emerald-500' : 
-                        factor.value >= 60 ? 'bg-amber-500' : 
-                        'bg-red-500'
-                      }`}
+                    <div
+                      className={`h-full rounded-full ${factor.value >= 80 ? 'bg-emerald-500' :
+                          factor.value >= 60 ? 'bg-amber-500' :
+                            'bg-red-500'
+                        }`}
                       style={{ width: `${factor.value}%` }}
                     />
                   </div>
@@ -415,7 +410,7 @@ export const Card = ({
   className?: string;
   padding?: string;
 } & React.HTMLAttributes<HTMLDivElement>) => (
-  <div 
+  <div
     className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 ${padding} ${className}`}
     {...props}
   >

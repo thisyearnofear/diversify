@@ -1,20 +1,14 @@
 import React, { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { SmartBuyCryptoButton } from "../onramp";
-import AIAssistant from "../ai/AIAssistant";
 import GoalBasedStrategies from "../strategies/GoalBasedStrategies";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
-import { REGIONS, type Region } from "@/hooks/use-user-region";
+import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
 import {
   Card,
   CollapsibleSection,
   ConnectWalletPrompt,
-  StepCard,
   InsightCard,
-  QuickSelect,
   ProtectionScore,
-  HeroValue,
 } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
@@ -23,73 +17,13 @@ import { useAppState } from "@/context/AppStateContext";
 import {
   useProtectionProfile,
   USER_GOALS,
-  RISK_LEVELS,
-  TIME_HORIZONS,
 } from "@/hooks/use-protection-profile";
-import { useInflationData } from "@/hooks/use-inflation-data";
-import { useNetworkActivity } from "@/hooks/use-network-activity";
+import { useAIConversation } from "@/context/AIConversationContext";
 
-// Types from hook
-import type { UserGoal } from "@/hooks/use-protection-profile";
-
-// ============================================================================
-// RWA ASSETS CONFIGURATION
-// ============================================================================
-
-const RWA_ASSETS = [
-  {
-    symbol: "USDY",
-    type: "Yield Bearing",
-    label: "US Treasury Yield",
-    description:
-      "Tokenized US Treasuries via Ondo. ~5% APY auto-accrues in your wallet. No KYC needed.",
-    benefits: [
-      "~5% APY auto-accruing",
-      "No KYC required",
-      "Deep DEX liquidity ($10M+)",
-    ],
-    gradient: "from-green-600 to-emerald-700",
-    icon: "📈",
-    textColor: "text-green-700",
-    bgColor: "bg-green-100",
-    expectedSlippage: "0.5%",
-    yieldTooltip:
-      "Your USDY balance grows automatically at ~5% APY. Just hold it in your wallet—no claiming needed. The yield accrues continuously and compounds automatically.",
-  },
-  {
-    symbol: "PAXG",
-    type: "Store of Value",
-    label: "Inflation Hedge",
-    description:
-      "Tokenized physical gold backed 1:1 by London Good Delivery gold bars held in Brink's vaults.",
-    benefits: [
-      "No storage fees",
-      "Redeemable for physical gold",
-      "24/7 trading",
-    ],
-    gradient: "from-amber-500 to-orange-600",
-    icon: "🏆",
-    textColor: "text-amber-700",
-    bgColor: "bg-amber-100",
-    yieldTooltip:
-      "PAXG tracks the price of physical gold. No yield—it's a store of value that protects against currency debasement and inflation over time.",
-  },
-  {
-    symbol: "SYRUPUSDC",
-    type: "Stable Yield",
-    label: "Syrup USDC",
-    description:
-      "Yield-bearing USDC from Syrup Finance powered by Morpho. Earn passive yield on your USDC holdings.",
-    benefits: ["~4.5% APY", "Morpho-powered lending", "Auto-compounding"],
-    gradient: "from-purple-500 to-indigo-600",
-    icon: "🍯",
-    textColor: "text-purple-700",
-    bgColor: "bg-purple-100",
-    expectedSlippage: "0.3%",
-    yieldTooltip:
-      "Your SYRUPUSDC balance increases automatically at ~4.5% APY from Morpho lending markets. Just hold it—yield accrues automatically with no action needed.",
-  },
-];
+import ProtectHeroCard from "./protect/ProtectHeroCard";
+import ProfileWizard from "./protect/ProfileWizard";
+import RwaAssetCards from "./protect/RwaAssetCards";
+import AssetModal from "./protect/AssetModal";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -111,8 +45,7 @@ export default function ProtectionTab({
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
   const { navigateToSwap } = useAppState();
-  const { inflationData } = useInflationData();
-  const { stats } = useNetworkActivity();
+  const { setDrawerOpen, addUserMessage } = useAIConversation();
   const isCelo = ChainDetectionService.isCelo(chainId);
 
   const {
@@ -150,21 +83,9 @@ export default function ProtectionTab({
     setTimeHorizon,
   } = useProtectionProfile();
 
-  // Modal state for asset details
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
-  const [marketRegion, setMarketRegion] = useState<Region>(userRegion);
-
   const { experienceMode } = useAppState();
   const isBeginner = experienceMode === "beginner";
-
-  const marketInflation = inflationData[marketRegion]?.avgRate || 0;
-  const regionMacro = {
-    Africa: { growth: 4.2, highlight: "Fastest growing mobile money market" },
-    LatAm: { growth: 3.1, highlight: "Leading fintech adoption" },
-    Asia: { growth: 5.3, highlight: "60% of global digital payments" },
-    USA: { growth: 2.1, highlight: "World reserve currency" },
-    Europe: { growth: 1.8, highlight: "Strong regulatory framework" },
-  }[marketRegion] || { growth: 0, highlight: "Market intelligence" };
 
   // Current regions for recommendations
   const currentRegions = useMemo(() => {
@@ -176,10 +97,6 @@ export default function ProtectionTab({
   // Use the pre-calculated live portfolio analysis from the portfolio prop
   const liveAnalysis = portfolio;
   const topOpportunity = rebalancingOpportunities?.[0];
-
-  const holdingsSymbols = useMemo(() => {
-    return chains.flatMap((c) => c.balances.map((b) => b.symbol));
-  }, [chains]);
 
   // ============================================================================
   // HANDLERS
@@ -326,7 +243,7 @@ export default function ProtectionTab({
                 className="p-3 bg-white border border-gray-200 rounded-xl text-center"
               >
                 <div className="text-xl mb-1">{goal.icon}</div>
-                <div className="text-[10px] font-black uppercase text-gray-900">
+                <div className="text-xs font-black uppercase text-gray-900">
                   {goal.label}
                 </div>
               </div>
@@ -367,7 +284,7 @@ export default function ProtectionTab({
           <HeroValue
             value={isBeginner ? `${Math.round((liveAnalysis.diversificationScore + (100 - liveAnalysis.weightedInflationRisk * 5)) / 2)}%` : `$${displayTotalValue.toFixed(0)}`}
             label={
-              isBeginner 
+              isBeginner
                 ? "Protection Level"
                 : (isMultichainLoading
                   ? "Loading multichain data..."
@@ -375,144 +292,30 @@ export default function ProtectionTab({
             }
           />
 
-          <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-center">
-            <div className="flex flex-col">
-              <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Global Pulse</span>
-              <span className="text-xs font-black text-white">$1.2M+ Protected</span>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] text-indigo-200 font-bold uppercase tracking-wider">Active Today</span>
-              <span className="text-xs font-black text-white">{stats.activeProtections24h} Users</span>
-            </div>
-          </div>
-
           {isStale && (
-            <p className="text-[10px] text-white/60 mt-2">
+            <p className="text-xs text-white/60 mt-2">
               Data may be stale. Pull down to refresh.
             </p>
           )}
         </div>
 
         <div className="p-4 space-y-4">
-          {/* =================================================================
-              PROFILE SETUP FLOW (3 Steps)
-              ================================================================= */}
-          <AnimatePresence mode="wait">
-            {profileMode === "editing" && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                {/* Step 1: Goal */}
-                {currentStep === 0 && (
-                  <StepCard
-                    step={1}
-                    totalSteps={3}
-                    title="What's your primary goal?"
-                    onNext={() => {
-                      if (config.userGoal) nextStep();
-                    }}
-                    onSkip={skipToEnd}
-                    canProceed={!!config.userGoal}
-                  >
-                    <QuickSelect
-                      options={USER_GOALS.map((g) => ({
-                        value: g.value,
-                        label: g.label,
-                        icon: g.icon,
-                        description: g.description,
-                      }))}
-                      value={config.userGoal || "exploring"}
-                      onChange={(v) => setUserGoal(v as UserGoal)}
-                    />
-                  </StepCard>
-                )}
-
-                {/* Step 2: Risk Tolerance */}
-                {currentStep === 1 && (
-                  <StepCard
-                    step={2}
-                    totalSteps={3}
-                    title="What's your risk tolerance?"
-                    onNext={nextStep}
-                    onSkip={skipToEnd}
-                    canProceed={!!config.riskTolerance}
-                  >
-                    <QuickSelect
-                      options={RISK_LEVELS.map((r) => ({
-                        value: r.value,
-                        label: r.label,
-                        icon: r.icon,
-                      }))}
-                      value={config.riskTolerance || "Balanced"}
-                      onChange={(v) =>
-                        setRiskTolerance(
-                          v as "Conservative" | "Balanced" | "Aggressive",
-                        )
-                      }
-                      columns={3}
-                    />
-                  </StepCard>
-                )}
-
-                {/* Step 3: Time Horizon */}
-                {currentStep === 2 && (
-                  <StepCard
-                    step={3}
-                    totalSteps={3}
-                    title="What's your time horizon?"
-                    onNext={completeEditing}
-                    onSkip={skipToEnd}
-                    isLast
-                    canProceed={!!config.timeHorizon}
-                  >
-                    <QuickSelect
-                      options={TIME_HORIZONS.map((t) => ({
-                        value: t.value,
-                        label: t.label,
-                        description: t.description,
-                      }))}
-                      value={config.timeHorizon || "3 months"}
-                      onChange={(v) =>
-                        setTimeHorizon(v as "1 month" | "3 months" | "1 year")
-                      }
-                      columns={3}
-                    />
-                  </StepCard>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* =================================================================
-              PROFILE SUMMARY (shown when complete)
-              ================================================================= */}
-          {profileMode === "complete" && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-lg">{currentGoalIcon}</span>
-                <div>
-                  <div className="text-xs font-bold text-gray-900">
-                    {currentGoalLabel}
-                  </div>
-                  <div className="text-[10px] text-gray-500">
-                    {currentRiskLabel} • {currentTimeHorizonLabel}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={startEditing}
-                className="text-[10px] font-bold text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
-              >
-                Edit
-              </button>
-            </motion.div>
-          )}
+          <ProfileWizard
+            mode={profileMode}
+            currentStep={currentStep}
+            config={config}
+            currentGoalIcon={currentGoalIcon}
+            currentGoalLabel={currentGoalLabel}
+            currentRiskLabel={currentRiskLabel}
+            currentTimeHorizonLabel={currentTimeHorizonLabel}
+            onSetUserGoal={setUserGoal}
+            onSetRiskTolerance={setRiskTolerance}
+            onSetTimeHorizon={setTimeHorizon}
+            onNextStep={nextStep}
+            onSkipToEnd={skipToEnd}
+            onCompleteEditing={completeEditing}
+            onStartEditing={startEditing}
+          />
 
           {/* =================================================================
               PRIMARY INSIGHT CARD
@@ -539,16 +342,20 @@ export default function ProtectionTab({
           )}
 
           {/* =================================================================
-              AI ANALYSIS SECTION
+              AI ANALYSIS CTA — opens global AI drawer
               ================================================================= */}
-          <AIAssistant
-            amount={displayTotalValue || 0}
-            holdings={holdingsSymbols}
-            onExecute={handleExecuteSwap}
-            embedded
-            userRegion={userRegion}
-            macroData={portfolio.macroData}
-            networkActivity={stats}
+          <InsightCard
+            icon="🤖"
+            title="AI Portfolio Analysis"
+            description="Get personalized recommendations based on your holdings, inflation data, and market conditions."
+            variant="default"
+            action={{
+              label: "Analyze My Portfolio",
+              onClick: () => {
+                addUserMessage(`Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? 's' : ''}. My goal is ${currentGoalLabel}. I'm in the ${userRegion} region.`);
+                setDrawerOpen(true);
+              },
+            }}
           />
 
           {/* =================================================================
@@ -559,7 +366,7 @@ export default function ProtectionTab({
               score={Math.round(
                 (liveAnalysis.diversificationScore +
                   (100 - liveAnalysis.weightedInflationRisk * 5)) /
-                  2,
+                2,
               )}
               factors={[
                 {
@@ -605,89 +412,13 @@ export default function ProtectionTab({
         </div>
       </Card>
 
-      {/* =====================================================================
-          RWA ASSET CARDS
-          ===================================================================== */}
-      {RWA_ASSETS.map((asset) => {
-        const hasAsset = chains.some((chain) =>
-          chain.balances.some((b) => b.symbol === asset.symbol),
-        );
-        const showCard = !hasAsset || config.userGoal === "rwa_access";
-
-        if (!showCard) return null;
-
-        return (
-          <Card
-            key={asset.symbol}
-            className={`bg-gradient-to-br ${asset.gradient} text-white p-4 mb-4 cursor-pointer hover:shadow-lg transition-all`}
-            onClick={() => setShowAssetModal(asset.symbol)}
-          >
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
-                  {asset.icon}
-                </div>
-                <div>
-                  <h3 className="font-black text-sm">{asset.label}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
-                      {asset.symbol} on Arbitrum
-                    </span>
-                    <span className="text-[10px] bg-green-500/40 px-2 py-0.5 rounded-full">
-                      ✓ Open Market
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-white/80 mb-3">{asset.description}</p>
-            {asset.expectedSlippage && (
-              <p className="text-[10px] text-white/60 mb-2">
-                Expected slippage: ~{asset.expectedSlippage}
-              </p>
-            )}
-            {isCelo && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleExecuteSwap(asset.symbol);
-                }}
-                className={`w-full py-3 bg-white ${asset.textColor} rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-all`}
-              >
-                Get {asset.symbol} →
-              </button>
-            )}
-          </Card>
-        );
-      })}
-
-      {/* =====================================================================
-          FIAT ON-RAMP CARD
-          ===================================================================== */}
-      {(!displayTotalValue || displayTotalValue < 50) && (
-        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl">
-                💳
-              </div>
-              <div>
-                <h3 className="font-black text-sm">Add Funds</h3>
-                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
-                  Buy with Card/Bank
-                </span>
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-white/80 mb-3">
-            Buy crypto instantly with card or bank transfer. No KYC required
-            under limits. Swiss-regulated.
-          </p>
-          <div className="flex gap-2">
-            <SmartBuyCryptoButton className="flex-1" variant="white" />
-          </div>
-        </Card>
-      )}
+      <RwaAssetCards
+        chains={chains}
+        userGoal={config.userGoal}
+        chainId={chainId}
+        onSwap={handleExecuteSwap}
+        onShowModal={setShowAssetModal}
+      />
 
       {/* =====================================================================
           COLLAPSIBLE SECTIONS
@@ -704,7 +435,7 @@ export default function ProtectionTab({
           icon={<span>⚖️</span>}
           defaultOpen={false}
           badge={
-            <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
+            <span className="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
               +{liveAnalysis.rebalancingOpportunities.length - 1}
             </span>
           }
@@ -734,13 +465,13 @@ export default function ProtectionTab({
                     </span>
                     {config.userGoal === "geographic_diversification" &&
                       opp.fromRegion !== opp.toRegion && (
-                        <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
+                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded">
                           +region
                         </span>
                       )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-green-600 font-bold">
+                    <span className="text-xs text-green-600 font-bold">
                       +${opp.annualSavings.toFixed(2)}/yr
                     </span>
                     <button
@@ -751,7 +482,7 @@ export default function ProtectionTab({
                           opp.suggestedAmount.toFixed(2),
                         )
                       }
-                      className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700"
+                      className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700"
                     >
                       Swap
                     </button>
@@ -769,7 +500,7 @@ export default function ProtectionTab({
           icon={<span>🔗</span>}
           defaultOpen={false}
           badge={
-            <span className="ml-1 text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
+            <span className="ml-1 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">
               {displayChainCount} Chain{displayChainCount !== 1 ? "s" : ""}
             </span>
           }
@@ -800,165 +531,16 @@ export default function ProtectionTab({
         <div className="space-y-4">
           <GoalBasedStrategies
             userRegion={userRegion}
-            onSelectStrategy={onSelectStrategy || (() => {})}
+            onSelectStrategy={onSelectStrategy || (() => { })}
           />
         </div>
       </CollapsibleSection>
 
-                <CollapsibleSection
-                    title="Global Market Dive"
-                    icon={<span>🌍</span>}
-                    defaultOpen={false}
-                >
-                    <div className="space-y-6">
-                        <div className="flex flex-wrap gap-2">
-                            {REGIONS.map(region => (
-                                <button
-                                    key={region}
-                                    onClick={() => setMarketRegion(region)}
-                                    className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-all ${marketRegion === region
-                                        ? 'bg-blue-600 text-white shadow-lg'
-                                        : 'bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    {region}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800 relative group">
-                                <div className="text-[10px] font-black text-blue-500 uppercase mb-1 flex justify-between">
-                                    <span>Inflation</span>
-                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity font-mono text-[8px]">FP.CPI.TOTL.ZG</span>
-                                </div>
-                                <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                                    {marketInflation.toFixed(1)}%
-                                </div>
-                            </div>
-                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800 relative group">
-                                <div className="text-[10px] font-black text-emerald-500 uppercase mb-1 flex justify-between">
-                                    <span>Growth</span>
-                                    <span className="opacity-0 group-hover:opacity-100 transition-opacity font-mono text-[8px]">NY.GDP.MKTP.KD.ZG</span>
-                                </div>
-                                <div className="text-lg font-bold text-emerald-900 dark:text-emerald-100">
-                                    +{regionMacro.growth}%
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-between px-1">
-                            <div className="p-3 bg-gray-900 rounded-xl text-white text-[11px] font-bold italic flex-1 mr-4">
-                                &quot;{regionMacro.highlight}&quot;
-                            </div>
-                            <div className="text-right">
-                                <div className="text-[9px] text-gray-400 font-bold uppercase">Source</div>
-                                <div className="text-[10px] font-black text-gray-600 dark:text-gray-400">World Bank</div>
-                                <div className="text-[9px] text-gray-400">Official 2024 Data</div>
-                            </div>
-                        </div>
-                    </div>
-                </CollapsibleSection>
-
-      {/* =====================================================================
-          ASSET INFO MODAL
-          ===================================================================== */}
-      {showAssetModal && (
-        <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setShowAssetModal(null)}
-        >
-          <div
-            className="bg-white dark:bg-gray-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {RWA_ASSETS.filter((a) => a.symbol === showAssetModal).map(
-              (asset) => (
-                <div key={asset.symbol}>
-                  <div className="flex items-center gap-4 mb-6">
-                    <div
-                      className={`w-16 h-16 ${asset.bgColor} dark:bg-opacity-30 rounded-2xl flex items-center justify-center text-4xl shadow-inner`}
-                    >
-                      {asset.icon}
-                    </div>
-                    <div>
-                      <h3 className="font-black text-xl text-gray-900 dark:text-gray-100">
-                        {asset.symbol}
-                      </h3>
-                      <span
-                        className={`text-[10px] font-black uppercase ${asset.bgColor} dark:bg-opacity-30 ${asset.textColor} dark:text-opacity-90 px-2 py-1 rounded-md`}
-                      >
-                        {asset.type}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed font-medium">
-                    {asset.description}
-                  </p>
-
-                  {/* Market Type Badge */}
-                  <div className="mb-4">
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
-                      <div className="flex items-center gap-2 text-green-700 dark:text-green-400 font-bold text-xs">
-                        <span>✓</span>
-                        <span>Open Market - No KYC Required</span>
-                      </div>
-                      {asset.expectedSlippage && (
-                        <p className="text-[10px] text-green-600 dark:text-green-400 mt-1">
-                          Expected slippage: ~{asset.expectedSlippage}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Yield Explanation Tooltip */}
-                  {asset.yieldTooltip && (
-                    <div className="mb-4">
-                      <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
-                        <div className="flex items-start gap-2">
-                          <span className="text-blue-500 mt-0.5">💡</span>
-                          <p className="text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed">
-                            {asset.yieldTooltip}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3 mb-8">
-                    {asset.benefits.map((benefit, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5 font-bold"
-                      >
-                        <span className="text-green-500 text-lg">✓</span>
-                        <span>{benefit}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowAssetModal(null)}
-                      className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 transition-all"
-                    >
-                      Close
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowAssetModal(null);
-                        handleExecuteSwap(asset.symbol);
-                      }}
-                      className="flex-1 py-3 bg-blue-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30"
-                    >
-                      Get {asset.symbol}
-                    </button>
-                  </div>
-                </div>
-              ),
-            )}
-          </div>
-        </div>
-      )}
+      <AssetModal
+        assetSymbol={showAssetModal}
+        onClose={() => setShowAssetModal(null)}
+        onSwap={handleExecuteSwap}
+      />
     </div>
   );
 }
