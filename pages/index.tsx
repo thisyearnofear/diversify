@@ -32,13 +32,9 @@ export default function DiversiFiPage() {
   const { unreadCount, markAsRead, setDrawerOpen, addUserMessage } = useAIConversation();
   const { currentPulse } = useNetworkActivity();
 
-  // Redirect beginners away from locked tabs
+  // No redirect for beginners. All tabs are now unlocked but simplified.
   useEffect(() => {
-    if (experienceMode === 'beginner' && (activeTab === 'overview' || activeTab === 'protect')) {
-      setActiveTab('swap');
-    } else if (experienceMode === 'intermediate' && activeTab === 'protect') {
-      setActiveTab('overview');
-    }
+    // Keep consistent navigation
   }, [experienceMode, activeTab, setActiveTab]);
 
   // Static OG image for consistent social sharing

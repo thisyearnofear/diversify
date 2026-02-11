@@ -154,6 +154,9 @@ export default function ProtectionTab({
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
   const [marketRegion, setMarketRegion] = useState<Region>(userRegion);
 
+  const { experienceMode } = useAppState();
+  const isBeginner = experienceMode === "beginner";
+
   const marketInflation = inflationData[marketRegion]?.avgRate || 0;
   const regionMacro = {
     Africa: { growth: 4.2, highlight: "Fastest growing mobile money market" },
@@ -348,12 +351,12 @@ export default function ProtectionTab({
           <div className="flex justify-between items-start mb-6">
             <div>
               <h3 className="text-xl font-black uppercase tracking-tight">
-                Protection Engine
+                {isBeginner ? "Shield Engine" : "Protection Engine"}
               </h3>
               <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
                 {isComplete
-                  ? "Personalized protection active"
-                  : "Set your protection profile"}
+                  ? (isBeginner ? "Your Shield is Active" : "Personalized protection active")
+                  : (isBeginner ? "Set up your shield" : "Set your protection profile")}
               </p>
             </div>
             <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">
@@ -362,11 +365,13 @@ export default function ProtectionTab({
           </div>
 
           <HeroValue
-            value={`$${displayTotalValue.toFixed(0)}`}
+            value={isBeginner ? `${Math.round((liveAnalysis.diversificationScore + (100 - liveAnalysis.weightedInflationRisk * 5)) / 2)}%` : `$${displayTotalValue.toFixed(0)}`}
             label={
-              isMultichainLoading
-                ? "Loading multichain data..."
-                : `Protected across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`
+              isBeginner 
+                ? "Protection Level"
+                : (isMultichainLoading
+                  ? "Loading multichain data..."
+                  : `Protected across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`)
             }
           />
 
@@ -547,9 +552,9 @@ export default function ProtectionTab({
           />
 
           {/* =================================================================
-              PROTECTION SCORE
+              PROTECTION SCORE - Non-beginner only
               ================================================================= */}
-          {liveAnalysis && (
+          {liveAnalysis && !isBeginner && (
             <ProtectionScore
               score={Math.round(
                 (liveAnalysis.diversificationScore +

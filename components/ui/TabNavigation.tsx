@@ -26,8 +26,8 @@ export default function TabNavigation({
   const allTabs: TabItem[] = [
     {
       id: "overview",
-      label: experienceMode === "intermediate" ? "Portfolio" : "Station",
-      minLevel: "intermediate",
+      label: experienceMode === "beginner" ? "Money" : (experienceMode === "intermediate" ? "Portfolio" : "Station"),
+      minLevel: "beginner",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -68,8 +68,8 @@ export default function TabNavigation({
     },
     {
       id: "protect",
-      label: "Protect",
-      minLevel: "advanced",
+      label: experienceMode === "beginner" ? "Shield" : "Protect",
+      minLevel: "beginner",
       icon: (
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -110,15 +110,11 @@ export default function TabNavigation({
     },
   ];
 
-  // Filter tabs based on experience level
-  const levelOrder = { beginner: 0, intermediate: 1, advanced: 2 };
-  const currentLevelIndex = levelOrder[experienceMode];
+  // No longer filtering tabs by level - all are available for better discovery
+  const tabs = allTabs;
 
-  const tabs = allTabs.filter(tab => levelOrder[tab.minLevel] <= currentLevelIndex);
-
-  // Show hint about locked features for beginners
-  const lockedTabsCount = allTabs.length - tabs.length;
-  const showUnlockHint = experienceMode === "beginner" && lockedTabsCount > 0;
+  // No longer showing unlock hint as everything is unlocked
+  const showUnlockHint = false;
 
   return (
     <div className="mb-4">
@@ -155,9 +151,6 @@ export default function TabNavigation({
       {/* Unlock hint for beginners */}
       {showUnlockHint && (
         <div className="mt-2 text-center">
-          <p className="text-[10px] text-gray-400 dark:text-gray-500">
-            🔒 <span className="font-bold">{lockedTabsCount} more feature{lockedTabsCount !== 1 ? 's' : ''}</span> unlock as you use the app
-          </p>
         </div>
       )}
     </div>

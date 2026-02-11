@@ -62,6 +62,7 @@ const SwapInterface = forwardRef<
   ref,
 ) {
   const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useAppState();
+  const isBeginner = experienceMode === "beginner";
 
   const {
     fromToken,
@@ -146,10 +147,10 @@ const SwapInterface = forwardRef<
       )}
       <div className="relative">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100">
-            {title}
+          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
+            {isBeginner ? "Convert Money" : title}
           </h3>
-          {inflationDataSource === "api" && (
+          {!isBeginner && inflationDataSource === "api" && (
             <span className="text-[10px] bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
               Live Data
             </span>
