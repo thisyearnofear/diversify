@@ -6,10 +6,13 @@
  * 2. Fallback: localStorage if API is unavailable
  * 3. User claims $G directly on GoodDollar's wallet site
  * 
+ * Unlock Criteria: Any swap of $1+ unlocks daily G$ claim
+ * 
  * Core Principles:
  * - DRY: Centralized streak logic
  * - MODULAR: Works with or without backend
  * - RESILIENT: Falls back to localStorage if API fails
+ * - NEUTRAL: No judgment on swap strategy (Africapitalism, diversification, yield, etc.)
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -17,10 +20,10 @@ import { useWalletContext } from '../components/wallet/WalletProvider';
 
 // Configuration
 const STREAK_CONFIG = {
-  MIN_SAVE_USD: 0.50, // More accessible - just $0.50/day or $5/week
+  MIN_SWAP_USD: 1.00, // Any $1+ swap unlocks G$ claim
   GRACE_PERIODS_PER_WEEK: 1,
   G_CLAIM_URL: 'https://wallet.gooddollar.org/?utm_source=diversifi',
-  G_TOKEN_ADDRESS: '0x62B8B11039CBcfba9E2676772F2E96C64BCbc9d9', // Celo
+  G_TOKEN_ADDRESS: '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A', // Celo (checksummed)
 } as const;
 
 // LocalStorage fallback key
@@ -47,7 +50,7 @@ interface StreakState {
 }
 
 interface StreakActions {
-  recordSave: (amountUSD: number) => Promise<void>;
+  recordSwap: (amountUSD: number) => Promise<void>;
   claimG: () => void;
   resetStreak: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -195,10 +198,10 @@ export function useStreakRewards(): StreakState & StreakActions {
     }
   }, [address, isConnected]);
 
-  // Record a save activity
-  const recordSave = useCallback(async (amountUSD: number) => {
+  // Record a swap activity
+  const recordSwap = useCallback(async (amountUSD: number) => {
     if (!address) throw new Error('Wallet not connected');
-    if (amountUSD < STREAK_CONFIG.MIN_SAVE_USD) return;
+    if (amountUSD < STREAK_CONFIG.MIN_SWAP_USD) return;
 
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
@@ -344,7 +347,7 @@ export function useStreakRewards(): StreakState & StreakActions {
 
   return {
     ...state,
-    recordSave,
+    recordSwap,
     claimG,
     resetStreak,
     refresh,

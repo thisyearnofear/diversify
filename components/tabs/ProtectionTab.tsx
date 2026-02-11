@@ -27,6 +27,7 @@ import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
+import StrategyMetrics from "../portfolio/StrategyMetrics";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -382,12 +383,6 @@ export default function ProtectionTab({
               )}
               factors={[
                 {
-                  label: "Data Freshness",
-                  value: 90,
-                  status: "Live (IMF)",
-                  icon: "📊",
-                },
-                {
                   label: "Portfolio Coverage",
                   value: liveAnalysis.tokenCount > 0 ? 95 : 50,
                   status:
@@ -435,6 +430,28 @@ export default function ProtectionTab({
       {/* =====================================================================
           DASHBOARD CARDS (Replaced Collapsible Sections)
           ===================================================================== */}
+
+      {/* Strategy Metrics - Show if user has selected a strategy */}
+      {displayTotalValue > 0 && (
+        <DashboardCard
+          title="Your Strategy"
+          icon={<span>🎯</span>}
+          subtitle="Cultural wealth philosophy"
+          color="purple"
+          size="lg"
+        >
+          <StrategyMetrics
+            portfolioData={{
+              regions: displayRegionData.reduce((acc, r) => {
+                acc[r.region] = (r.value / displayTotalValue) * 100;
+                return acc;
+              }, {} as Record<string, number>),
+              chains: chains.map(c => c.chainName),
+              tokens: chains.flatMap(c => c.balances as TokenBalance[]),
+            }}
+          />
+        </DashboardCard>
+      )}
 
       {/* Chain Distribution - Always Visible Dashboard Card */}
       {displayTotalValue > 0 && (

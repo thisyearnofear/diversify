@@ -1,11 +1,12 @@
 /**
- * StreakRewardsCard - GoodDollar $G rewards display
+ * StreakRewardsCard - GoodDollar $G access display
  * 
  * Core Principles:
  * - ENHANCEMENT FIRST: Uses existing InsightCard component
  * - DRY: Consumes useStreakRewards hook (single source of truth)
  * - CLEAN: Presentation layer only, no business logic
  * - MODULAR: Self-contained, can be placed in any tab
+ * - NEUTRAL: No judgment on swap strategy
  */
 
 import React, { useState } from 'react';
@@ -42,25 +43,25 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     return (
       <InsightCard
         icon="💰"
-        title="Daily Rewards"
-        description="Connect your wallet to start earning $G for saving"
+        title="Daily G$ Access"
+        description="Connect your wallet to unlock free daily G$ through platform usage"
         variant="default"
       />
     );
   }
 
-  // No streak yet - prompt to save
+  // No streak yet - prompt to swap
   if (!isEligible) {
     return (
       <InsightCard
         icon="🔓"
-        title="Unlock Daily Rewards"
-        description={`Save $${STREAK_CONFIG.MIN_SAVE_USD}+ today to unlock free daily $G rewards from GoodDollar`}
+        title="Unlock Daily G$ Claim"
+        description="Swap $1+ today to unlock your free daily G$ claim from GoodDollar"
         impact="Free daily UBI"
         action={
           onSaveClick
             ? {
-              label: 'Start Saving',
+              label: 'Make a Swap',
               onClick: onSaveClick,
             }
             : undefined
@@ -86,17 +87,17 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     <>
       <InsightCard
         icon={canClaim ? '💚' : '🔥'}
-        title={canClaim ? 'Claim Your $G' : `${streak?.daysActive || 0}-Day Streak`}
+        title={canClaim ? 'Claim Your G$' : `${streak?.daysActive || 0}-Day Streak`}
         description={
           canClaim
-            ? `Your daily $G reward is ready! Claim ${estimatedReward} now to keep your streak alive.`
-            : `Save $${STREAK_CONFIG.MIN_SAVE_USD}+ to maintain your streak and unlock your daily claim.`
+            ? `Your daily G$ is ready! Claim ${estimatedReward} now to keep your streak alive.`
+            : `Swap $1+ to maintain your streak and unlock your daily G$ claim.`
         }
         impact={canClaim ? estimatedReward : `${streak?.daysActive} days active`}
         action={
           canClaim
             ? {
-              label: 'Claim $G',
+              label: 'Claim G$',
               onClick: () => setShowClaimFlow(true),
               loading: isLoading,
             }
@@ -142,7 +143,7 @@ export function RewardsStats({ className = '' }: { className?: string }) {
       </div>
       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
         <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.totalClaimed}</div>
-        <div className="text-xs text-green-600 dark:text-green-400">$G earned</div>
+        <div className="text-xs text-green-600 dark:text-green-400">G$ earned</div>
       </div>
       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
         <div className="text-lg font-bold text-green-700 dark:text-green-300">{mockStats.activeStreaks}</div>

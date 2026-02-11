@@ -26,6 +26,7 @@ import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
 import GuidedTour from "../components/tour/GuidedTour";
 import TourTrigger from "../components/tour/TourTrigger";
+import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 
 import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
 
@@ -49,6 +50,8 @@ export default function DiversiFiPage() {
     isTutorialOpen,
     closeTutorial,
   } = useWalletTutorial();
+
+  const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal, openModal: openStrategyModal } = useStrategyModal();
 
   const { region: detectedRegion, isLoading: isRegionLoading } =
     useUserRegion();
@@ -199,6 +202,7 @@ export default function DiversiFiPage() {
                     }
                   }}
                   showVoice={!!address}
+                  onOpenStrategyModal={openStrategyModal}
                 />
                 {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
               </>
@@ -327,6 +331,11 @@ export default function DiversiFiPage() {
           onClose={closeTutorial}
           onConnect={connectWallet}
           isMiniPay={isInMiniPay}
+        />
+
+        <StrategyModal
+          isOpen={isStrategyModalOpen}
+          onClose={closeStrategyModal}
         />
       </div>
     </div>

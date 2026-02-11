@@ -10,7 +10,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '../../../lib/mongodb';
 import Streak from '../../../models/Streak';
 
-const MIN_SAVE_USD = 0.50; // Accessible threshold - $0.50/day or $5/week
+const MIN_SWAP_USD = 1.00; // Any $1+ swap unlocks G$ claim
 const GRACE_PERIODS_PER_WEEK = 1;
 
 // Validate Ethereum address
@@ -107,9 +107,9 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
   try {
     const { amountUSD } = req.body;
 
-    if (!amountUSD || amountUSD < MIN_SAVE_USD) {
+    if (!amountUSD || amountUSD < MIN_SWAP_USD) {
       return res.status(400).json({
-        error: `Minimum save amount is $${MIN_SAVE_USD}`
+        error: `Minimum swap amount is $${MIN_SWAP_USD}`
       });
     }
 

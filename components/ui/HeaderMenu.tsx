@@ -2,12 +2,14 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 import VoiceButton from "./VoiceButton";
+import { useAppState } from "@/context/AppStateContext";
 
 interface HeaderMenuProps {
     experienceMode: "beginner" | "intermediate" | "advanced";
     onModeChange: () => void;
     onVoiceTranscription: (text: string) => void;
     showVoice?: boolean;
+    onOpenStrategyModal?: () => void;
 }
 
 /**
@@ -19,8 +21,10 @@ export default function HeaderMenu({
     onModeChange,
     onVoiceTranscription,
     showVoice = true,
+    onOpenStrategyModal,
 }: HeaderMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
+    const { financialStrategy } = useAppState();
 
     const getModeLabel = () => {
         if (experienceMode === "beginner") return "Simple Mode";
@@ -32,6 +36,34 @@ export default function HeaderMenu({
         if (experienceMode === "beginner") return "🌱";
         if (experienceMode === "intermediate") return "🚀";
         return "⚡";
+    };
+
+    const getStrategyIcon = () => {
+        if (!financialStrategy) return "🎯";
+        const icons: Record<string, string> = {
+            africapitalism: "🌍",
+            buen_vivir: "🌎",
+            confucian: "🏮",
+            gotong_royong: "🤝",
+            islamic: "☪️",
+            global: "🌐",
+            custom: "🎯",
+        };
+        return icons[financialStrategy] || "🎯";
+    };
+
+    const getStrategyName = () => {
+        if (!financialStrategy) return "Not set";
+        const names: Record<string, string> = {
+            africapitalism: "Africapitalism",
+            buen_vivir: "Buen Vivir",
+            confucian: "Family Wealth",
+            gotong_royong: "Mutual Aid",
+            islamic: "Islamic Finance",
+            global: "Global",
+            custom: "Custom",
+        };
+        return names[financialStrategy] || "Custom";
     };
 
     return (
@@ -118,6 +150,42 @@ export default function HeaderMenu({
                                     />
                                 </svg>
                             </button>
+
+                            {/* Financial Strategy */}
+                            {onOpenStrategyModal && (
+                                <button
+                                    onClick={() => {
+                                        onOpenStrategyModal();
+                                        setIsOpen(false);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xl">{getStrategyIcon()}</span>
+                                        <div className="text-left">
+                                            <div className="text-sm font-bold text-gray-900 dark:text-white">
+                                                {getStrategyName()}
+                                            </div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                Financial philosophy
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <svg
+                                        className="w-4 h-4 text-gray-400"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M9 5l7 7-7 7"
+                                        />
+                                    </svg>
+                                </button>
+                            )}
 
                             {/* Voice Button */}
                             {showVoice && (

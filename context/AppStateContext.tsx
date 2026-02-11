@@ -28,6 +28,17 @@ interface GuidedTourState {
 // User experience modes for progressive disclosure
 export type UserExperienceMode = 'beginner' | 'intermediate' | 'advanced';
 
+// Financial strategy based on cultural philosophy
+export type FinancialStrategy =
+  | 'africapitalism'
+  | 'buen_vivir'
+  | 'confucian'
+  | 'gotong_royong'
+  | 'islamic'
+  | 'global'
+  | 'custom'
+  | null; // null = not yet selected
+
 // User activity tracking for auto-progression
 interface UserActivity {
   swapCount: number;
@@ -55,6 +66,7 @@ interface AppState {
   experienceMode: UserExperienceMode;
   userActivity: UserActivity;
   demoMode: DemoModeState;
+  financialStrategy: FinancialStrategy;
 }
 
 // Define the context type
@@ -92,6 +104,9 @@ interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
   demoMode: DemoModeState;
   enableDemoMode: () => void;
   disableDemoMode: () => void;
+  // Financial strategy methods
+  financialStrategy: FinancialStrategy;
+  setFinancialStrategy: (strategy: FinancialStrategy) => void;
 }
 
 // Create the context with default values
@@ -154,6 +169,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
       mockAddress: "0xDemo1234567890123456789012345678901234",
       mockChainId: 42220, // Celo Mainnet
     },
+    financialStrategy: null, // User hasn't selected yet
   });
 
   // Initialize theme on mount (client-side only)
@@ -166,6 +182,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     // Load experience mode and activity from storage
     const savedMode = localStorage.getItem("experienceMode") as UserExperienceMode | null;
     const savedActivity = localStorage.getItem("userActivity");
+    const savedStrategy = localStorage.getItem("financialStrategy") as FinancialStrategy | null;
 
     let experienceMode: UserExperienceMode = "beginner";
     let userActivity: UserActivity = {
@@ -204,6 +221,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
       themeLoaded: true,
       experienceMode,
       userActivity,
+      financialStrategy: savedStrategy || null,
     }));
   }, []);
 
@@ -429,6 +447,21 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     }));
   }, []);
 
+  const setFinancialStrategy = useCallback((strategy: FinancialStrategy) => {
+    setState((prev) => ({
+      ...prev,
+      financialStrategy: strategy,
+    }));
+    // Persist to localStorage
+    if (typeof window !== 'undefined') {
+      if (strategy) {
+        localStorage.setItem('financialStrategy', strategy);
+      } else {
+        localStorage.removeItem('financialStrategy');
+      }
+    }
+  }, []);
+
   const contextValue: AppStateContextType = {
     activeTab: state.activeTab,
     chainId: state.chainId,
@@ -439,6 +472,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     visitedTabs: state.visitedTabs,
     experienceMode: state.experienceMode,
     userActivity: state.userActivity,
+    financialStrategy: state.financialStrategy,
     setActiveTab,
     setChainId,
     setSwapPrefill,
@@ -459,6 +493,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     demoMode: state.demoMode,
     enableDemoMode,
     disableDemoMode,
+    setFinancialStrategy,
   };
 
   return (

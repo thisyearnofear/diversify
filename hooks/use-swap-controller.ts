@@ -38,29 +38,29 @@ export function useSwapController({
   const defaultFromToken = useMemo(() => {
     return preferredFromRegion
       ? availableTokens.find((token) => token.region === preferredFromRegion)
-          ?.symbol ||
-          availableTokens.find((token) => token.symbol.toUpperCase() === "USDT")
-            ?.symbol ||
-          availableTokens[0]?.symbol ||
-          ""
+        ?.symbol ||
+      availableTokens.find((token) => token.symbol.toUpperCase() === "USDT")
+        ?.symbol ||
+      availableTokens[0]?.symbol ||
+      ""
       : availableTokens.find((token) => token.symbol.toUpperCase() === "USDT")
-          ?.symbol ||
-          availableTokens[0]?.symbol ||
-          "";
+        ?.symbol ||
+      availableTokens[0]?.symbol ||
+      "";
   }, [preferredFromRegion, availableTokens]);
 
   const defaultToToken = useMemo(() => {
     return preferredToRegion
       ? availableTokens.find((token) => token.region === preferredToRegion)
-          ?.symbol ||
-          availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")
-            ?.symbol ||
-          availableTokens[1]?.symbol ||
-          ""
+        ?.symbol ||
+      availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")
+        ?.symbol ||
+      availableTokens[1]?.symbol ||
+      ""
       : availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")
-          ?.symbol ||
-          availableTokens[1]?.symbol ||
-          "";
+        ?.symbol ||
+      availableTokens[1]?.symbol ||
+      "";
   }, [preferredToRegion, availableTokens]);
 
   const [fromToken, setFromToken] = useState<string>(defaultFromToken);
@@ -103,7 +103,7 @@ export function useSwapController({
     getRegionForStablecoin,
     dataSource: inflationDataSource,
   } = useInflationData();
-  const { recordSave } = useStreakRewards();
+  const { recordSwap } = useStreakRewards();
 
   // 3. Derived Token Lists
   const availableFromTokens = useMemo(() => {
@@ -287,19 +287,19 @@ export function useSwapController({
     if (swapStep === "completed" && status !== "completed") {
       setStatus("completed");
       refreshWithRetries();
-      
+
       // Record streak activity for qualifying saves
       const amountNum = parseFloat(amount);
-      if (amountNum >= 10) {
-        // $10 minimum for streak
-        recordSave(amountNum);
+      if (amountNum >= 1) {
+        // $1 minimum for streak
+        recordSwap(amountNum);
       }
     } else if (swapError) {
       setLocalError(swapError);
       setStatus("error");
     }
     if (swapTxHash) setLocalTxHash(swapTxHash);
-  }, [swapStep, swapError, swapTxHash, refreshWithRetries, status, amount, recordSave]);
+  }, [swapStep, swapError, swapTxHash, refreshWithRetries, status, amount, recordSwap]);
 
   // 6. Inflation Data Processing
   const {
