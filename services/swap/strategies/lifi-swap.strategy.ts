@@ -28,9 +28,11 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Supports same-chain swaps on Arbitrum only (not Arc Testnet)
+        // Supports same-chain swaps on Arbitrum and Celo (not Arc Testnet)
+        // LiFi aggregates DEXes on both chains (Uniswap V3, etc.)
         return (
-            ChainDetectionService.isArbitrum(params.fromChainId) &&
+            (ChainDetectionService.isArbitrum(params.fromChainId) ||
+                ChainDetectionService.isCelo(params.fromChainId)) &&
             params.fromChainId === params.toChainId
         );
     }

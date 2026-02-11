@@ -27,11 +27,20 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Supports same-chain swaps on Celo networks
-        return (
-            ChainDetectionService.isCelo(params.fromChainId) &&
-            params.fromChainId === params.toChainId
-        );
+        // Only supports same-chain swaps on Celo networks for Mento tokens
+        // G$ and other non-Mento tokens should fall through to LiFi
+        if (!ChainDetectionService.isCelo(params.fromChainId) ||
+            params.fromChainId !== params.toChainId) {
+            return false;
+        }
+
+        // Check if both tokens are Mento tokens (not G$ or other non-Mento tokens)
+        const nonMentoTokens = ['G$', 'USDT']; // Tokens that exist on Celo but aren't Mento
+        const isFromNonMento = nonMentoTokens.includes(params.fromToken);
+        const isToNonMento = nonMentoTokens.includes(params.toToken);
+
+        // If either token is non-Mento, let LiFi handle it
+        return !isFromNonMento && !isToNonMento;
     }
 
     async validate(params: SwapParams): Promise<boolean> {

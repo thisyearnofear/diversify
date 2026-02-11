@@ -11,10 +11,12 @@
 
 DiversiFi helps you protect wealth from inflation and currency volatility through:
 
-- **Smart Stablecoin Swaps** - Exchange between global (USDC) and local stablecoins using AI-powered recommendations
+- **Cultural Financial Strategies** - Choose from 7 authentic philosophies (Africapitalism, Buen Vivir, Islamic Finance, etc.) that shape AI recommendations and asset filtering
+- **Smart Stablecoin Swaps** - Exchange between global (USDC) and local stablecoins using strategy-aware AI recommendations
 - **Cross-Chain Bridging** - Move assets seamlessly between Celo and Arbitrum via [LiFi](https://li.fi/)
 - **Inflation Protection** - Real-time economic data analysis to hedge against currency devaluation
 - **RWA Access** - Exposure to tokenized real-world assets (treasury yields, gold) on Arbitrum
+- **Strategy-Aligned Asset Filtering** - Automatic compliance checking (e.g., Islamic Finance excludes interest-bearing assets)
 - **GoodDollar UBI** - Earn free G$ tokens daily by maintaining saving streaks ($0.50+ minimum)
 - **Mobile-Optimized Claims** - Seamless in-app G$ claiming with guided bottom-sheet interface
 
@@ -38,6 +40,22 @@ pnpm dev
 
 ## 🏗️ Architecture
 
+### Financial Strategies (New!)
+Choose from 7 cultural approaches to wealth:
+- **Africapitalism** 🌍 - Keep wealth in African economies
+- **Buen Vivir** 🌎 - Balance material wealth with community well-being (LatAm)
+- **Confucian/Family Wealth** 🏮 - Multi-generational stability (East Asia)
+- **Gotong Royong** 🤝 - Mutual aid and remittances (Southeast Asia)
+- **Islamic Finance** ☪️ - Sharia-compliant, no interest-bearing assets
+- **Global Diversification** 🌐 - Maximum geographic spread
+- **Custom** 🎯 - Define your own approach
+
+Each strategy shapes:
+- AI recommendations (prioritizes aligned assets)
+- Asset filtering (blocks violations for Islamic Finance)
+- Success metrics (strategy-specific diversification scoring)
+- Positive reinforcement (badges for recommended assets)
+
 ### Supported Chains
 - **Celo** - Local stablecoin access (cUSD, cEUR, cREAL) via Mento
 - **Arbitrum** - RWA yield tokens (USDY, PAXG, SYRUPUSDC) via LiFi/Uniswap
@@ -54,10 +72,10 @@ pnpm dev
 
 ## 📂 Documentation
 
-- [**Getting Started Guide**](docs/GETTING_STARTED_GUIDE.md) - API keys, setup, and freemium model
-- [**Technical Architecture**](docs/TECHNICAL_ARCHITECTURE.md) - System design and implementation details
-- [**Integration Guides**](docs/INTEGRATION_GUIDES.md) - Farcaster, Circle, GoodDollar, and other integrations
-- [**Business Model**](docs/BUSINESS_MODEL.md) - Economics and monetization strategy
+- [**Product Guide**](docs/PRODUCT_GUIDE.md) - Core features and supported assets
+- [**Technical Architecture**](docs/TECHNICAL_ARCHITECTURE.md) - System design and technology stack
+- [**User Guide**](docs/USER_GUIDE.md) - Getting started and platform usage
+- [**Integration Guide**](docs/INTEGRATION_GUIDE.md) - API and third-party service integrations
 
 ## 🛠️ Tech Stack
 
@@ -71,9 +89,11 @@ pnpm dev
 
 ## 🔮 Roadmap
 
+- **Enhanced Strategy Features** - More granular controls for custom strategies
 - **Multi-Agent System** - Specialized agents for yield vs protection strategies
 - **Additional Chains** - Base, Optimism support via LiFi
 - **Enhanced Automation** - Zapier MCP integration (in development)
+- **Community Strategies** - User-created and shared financial philosophies
 
 ## 📄 License
 

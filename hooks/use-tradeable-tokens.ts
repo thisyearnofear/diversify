@@ -86,8 +86,9 @@ const FALLBACK_TRADEABLE_SYMBOLS: Record<number, string[]> = {
     "USDC",
     "EURC",
     "USDT",
+    "G$", // GoodDollar UBI token (not Mento, but swappable on Celo)
   ], // Celo Mainnet
-  44787: ["USDm", "EURm", "BRLm", "KESm", "CELO", "USDT"], // Alfajores (approximate)
+  44787: ["USDm", "EURm", "BRLm", "KESm", "CELO", "USDT", "G$"], // Alfajores (approximate)
 };
 
 export function useTradeableTokens(
@@ -146,6 +147,7 @@ export function useTradeableTokens(
         if (!configSymbols.includes("USDT")) configSymbols.push("USDT");
         if (!configSymbols.includes("USDm")) configSymbols.push("USDm");
         if (!configSymbols.includes("CELO")) configSymbols.push("CELO");
+        if (!configSymbols.includes("G$")) configSymbols.push("G$"); // GoodDollar UBI token
       }
 
       // Remove duplicates (e.g., AXLUSDC and USDC both map to USDC)
