@@ -97,19 +97,22 @@ export const InsightCard = ({
     label: string;
     onClick: () => void;
     cost?: string;
+    disabled?: boolean;
+    loading?: boolean;
   };
-  variant?: 'urgent' | 'default' | 'success';
+  variant?: 'urgent' | 'default' | 'success' | 'reward';
 }) => {
   const variants = {
     urgent: 'bg-amber-50 border-amber-200',
     default: 'bg-blue-50 border-blue-200',
     success: 'bg-emerald-50 border-emerald-200',
+    reward: 'bg-gradient-to-br from-green-50 to-emerald-100 border-green-200',
   };
 
   return (
     <div className={`rounded-xl p-4 border-2 ${variants[variant]}`}>
       <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-xl shadow-sm shrink-0">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl shadow-sm shrink-0 ${variant === 'reward' ? 'bg-white' : 'bg-white'}`}>
           {icon}
         </div>
         <div className="flex-1 min-w-0">
@@ -118,7 +121,7 @@ export const InsightCard = ({
           
           {impact && (
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-[10px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded">
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${variant === 'reward' ? 'text-green-700 bg-green-200' : 'text-green-600 bg-green-100'}`}>
                 {impact}
               </span>
             </div>
@@ -129,10 +132,24 @@ export const InsightCard = ({
       {action && (
         <button
           onClick={action.onClick}
-          className="w-full mt-3 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+          disabled={action.disabled || action.loading}
+          className={`w-full mt-3 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${
+            action.disabled
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : variant === 'reward'
+              ? 'bg-green-600 hover:bg-green-700 text-white'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
         >
-          {action.label}
-          {action.cost && (
+          {action.loading ? (
+            <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            action.label
+          )}
+          {action.cost && !action.loading && (
             <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">
               {action.cost}
             </span>

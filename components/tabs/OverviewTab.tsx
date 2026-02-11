@@ -8,6 +8,7 @@ import type { Region } from "@/hooks/use-user-region";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import InflationVisualizer from "../inflation/InflationVisualizer";
 import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
+import { StreakRewardsCard, RewardsStats } from "../rewards/StreakRewardsCard";
 
 import { Card, CollapsibleSection, EmptyState } from "../shared/TabComponents";
 import { SmartBuyCryptoButton } from "../onramp";
@@ -117,6 +118,14 @@ export default function OverviewTab({
 
   return (
     <div className="space-y-6">
+      {/* Streak Rewards - Always visible when connected */}
+      <StreakRewardsCard 
+        onSaveClick={() => setActiveTab("swap")}
+      />
+      
+      {/* Social Proof Stats */}
+      <RewardsStats />
+
       {!hasHoldings ? (
         <Card className="space-y-4" padding="p-6">
           <div className="pt-4 space-y-4">

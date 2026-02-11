@@ -3,6 +3,7 @@ import { useSwap } from "./use-swap";
 import { useExpectedAmountOut } from "./use-expected-amount-out";
 import { useMultichainBalances } from "./use-multichain-balances";
 import { useInflationData } from "./use-inflation-data";
+import { useStreakRewards } from "./use-streak-rewards";
 import { NETWORKS } from "../config";
 import {
   isTokenAvailableOnChain,
@@ -102,6 +103,7 @@ export function useSwapController({
     getRegionForStablecoin,
     dataSource: inflationDataSource,
   } = useInflationData();
+  const { recordSave } = useStreakRewards();
 
   // 3. Derived Token Lists
   const availableFromTokens = useMemo(() => {
@@ -285,12 +287,21 @@ export function useSwapController({
     if (swapStep === "completed" && status !== "completed") {
       setStatus("completed");
       refreshWithRetries();
+      
+      // Record streak activity for qualifying saves
+      const amountNum = parseFloat(amount);
+      if (amountNum >= 10) {
+        // $10 minimum for streak
+        recordSave(amountNum).catch((err) => {
+          console.warn('[StreakRewards] Failed to record save:', err);
+        });
+      }
     } else if (swapError) {
       setLocalError(swapError);
       setStatus("error");
     }
     if (swapTxHash) setLocalTxHash(swapTxHash);
-  }, [swapStep, swapError, swapTxHash, refreshWithRetries, status]);
+  }, [swapStep, swapError, swapTxHash, refreshWithRetries, status, amount, recordSave]);
 
   // 6. Inflation Data Processing
   const {
