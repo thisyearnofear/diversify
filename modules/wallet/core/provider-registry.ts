@@ -29,37 +29,55 @@ async function resolveEnvironment(): Promise<WalletEnvironment> {
 async function resolveProvider(prefer: 'auto' | 'injected' | 'farcaster'): Promise<WalletProviderCache> {
   const environment = await resolveEnvironment();
 
-  if (prefer === 'injected') {
-    const injected = getInjectedProvider();
-    return { provider: injected, environment };
-  }
-
+  // 1. Handle explicit preferences first
   if (prefer === 'farcaster' || environment.isFarcaster) {
     const farcasterProvider = await getFarcasterProvider();
     if (farcasterProvider) {
+      console.log('[Wallet] Using Farcaster provider');
       return { provider: farcasterProvider, environment };
     }
   }
 
+  if (prefer === 'injected') {
+    const injected = getInjectedProvider();
+    console.log('[Wallet] Explicitly requested injected provider');
+    return { provider: injected, environment };
+  }
+
+  // 2. MiniPay always uses injected provider
   if (environment.isMiniPay) {
     const injected = getInjectedProvider();
     if (injected) {
+      console.log('[Wallet] Using MiniPay injected provider');
       return { provider: injected, environment };
     }
   }
 
+  // 3. PRIORITY: Check for injected wallet FIRST (MetaMask, Coinbase, etc.)
+  // This is best practice - respect user's installed wallet choice
+  const injected = getInjectedProvider();
+  if (injected) {
+    console.log('[Wallet] Detected injected wallet (MetaMask/Coinbase/etc), using it as primary provider');
+    return { provider: injected, environment };
+  }
+
+  // 4. FALLBACK: No injected wallet detected → Use AppKit (WalletConnect + Email/Social login)
+  // This provides wallet creation for users without browser wallets
   if (shouldUseWebAppKit(environment.isMiniPay, environment.isFarcaster)) {
+    console.log('[Wallet] No injected wallet detected, initializing AppKit (WalletConnect + Email/Social)');
     const appKit = await ensureWebAppKit();
     if (appKit) {
       const appKitProvider = getAppKitProvider();
       if (appKitProvider) {
+        console.log('[Wallet] AppKit provider ready');
         return { provider: appKitProvider, environment };
       }
     }
   }
 
-  const injected = getInjectedProvider();
-  return { provider: injected, environment };
+  // 5. Final fallback - no provider available
+  console.warn('[Wallet] No wallet provider available');
+  return { provider: null, environment };
 }
 
 export async function getWalletProvider(opts?: { prefer?: 'farcaster' | 'injected' | 'auto' }): Promise<any> {

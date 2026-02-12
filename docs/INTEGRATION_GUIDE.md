@@ -26,29 +26,34 @@ const analysis = await getGeminiAnalysis({
 - Caching implemented for repeated requests
 - Fallback logic for API failures
 
-### WalletConnect Integration
-Multi-wallet support through WalletConnect for seamless user experience.
+### Reown AppKit Integration
+Multi-wallet support with email/social login for seamless onboarding and Web2-like UX.
 
 #### Configuration
 ```typescript
-// config/wallet.ts
-export const WALLET_CONNECT_CONFIG = {
-  projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID!,
-  metadata: {
-    name: 'DiversiFi',
-    description: 'AI-powered wealth protection',
-    url: 'https://diversifi.app',
-    icons: ['/favicon.ico']
-  }
+// config/features.ts
+export const WALLET_FEATURES = {
+  APPKIT_WEB: process.env.NEXT_PUBLIC_ENABLE_APPKIT_WALLET !== 'false',
+  APPKIT_EMAIL: process.env.NEXT_PUBLIC_ENABLE_APPKIT_EMAIL !== 'false',
+  APPKIT_SOCIALS: process.env.NEXT_PUBLIC_ENABLE_APPKIT_SOCIALS !== 'false',
+  APPKIT_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_APPKIT_ANALYTICS !== 'false',
+  APPKIT_PROJECT_ID: process.env.NEXT_PUBLIC_REOWN_PROJECT_ID || '',
 };
 ```
 
-#### Supported Wallets
-- MetaMask
-- Coinbase Wallet
-- Trust Wallet
-- Rainbow Wallet
-- And many others via WalletConnect
+#### Wallet Provider Priority Order
+1. **Farcaster** - If accessed within Farcaster frame
+2. **MiniPay** - If detected in Opera MiniPay environment
+3. **Injected Wallets** - MetaMask, Coinbase Wallet (auto-detected, takes priority)
+4. **AppKit Modal** - Email/social login, WalletConnect (fallback if no injected wallet)
+
+#### Supported Authentication Methods
+- **Email Sign-In**: Verification code sent to email
+- **Social Sign-In**: Google, X (Twitter), Discord, Apple
+- **Browser Wallets**: MetaMask, Coinbase Wallet, Brave Wallet
+- **Mobile Wallets**: WalletConnect QR code support
+- **MiniPay**: Opera MiniPay integration
+- **Farcaster**: Frame-based authentication
 
 ## Blockchain Integrations
 

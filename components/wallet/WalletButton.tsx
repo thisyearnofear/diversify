@@ -209,6 +209,9 @@ export default function WalletButton({
   }
 
   // 4. Default: Connect Wallet
+  // Detect if user likely has an injected wallet
+  const hasInjectedWallet = typeof window !== 'undefined' && !!(window as any).ethereum;
+
   return (
     <div className="flex flex-col items-end">
       <motion.button
@@ -216,6 +219,7 @@ export default function WalletButton({
         whileTap={{ scale: 0.95 }}
         onClick={handleConnect}
         className={`group relative flex items-center justify-center px-5 py-2 rounded-full font-medium transition-all duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
+        title={hasInjectedWallet ? "Connect with MetaMask/Coinbase or other browser wallet" : "Connect via WalletConnect, Email, or Social login"}
       >
         {variant === 'primary' && (
           <div className="absolute top-0 -left-10 w-10 h-full bg-white/20 skew-x-[25deg] group-hover:animate-[shine_1s_infinite]" />

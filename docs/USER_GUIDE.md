@@ -4,19 +4,26 @@
 
 ### Prerequisites
 - Modern web browser (Chrome, Firefox, Safari, Edge)
-- Wallet connection capability (MetaMask, Coinbase Wallet, etc.)
+- **No wallet or crypto required!** You can create a wallet using:
+  - Email address (verification code sent)
+  - Google, X (Twitter), Discord, or Apple account
+  - Existing wallet (MetaMask, Coinbase Wallet, etc.)
 - Internet connection
 
 ### Initial Setup
 1. Visit the DiversiFi application
-2. Connect your wallet when prompted
+2. Click "Connect Wallet" and choose your preferred method:
+   - **Email Sign-In**: Enter email → Verify code → Wallet created
+   - **Social Sign-In**: One-click with Google/X/Discord/Apple
+   - **Browser Wallet**: MetaMask, Coinbase Wallet (auto-detected if installed)
+   - **Mobile Wallet**: Scan WalletConnect QR code
 3. Select your preferred cultural financial strategy
 4. Review supported assets for your connected network
 
 ### Environment Variables
 For development setup, copy `.env.example` to `.env.local` and add:
 - `GOOGLE_AI_API_KEY` - for AI analysis
-- `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` - for wallet connectivity
+- `NEXT_PUBLIC_REOWN_PROJECT_ID` - for Reown AppKit (wallet connectivity with email/social login)
 
 ## Using the Platform
 
@@ -96,10 +103,12 @@ For development setup, copy `.env.example` to `.env.local` and add:
 ### Common Issues
 
 #### Wallet Connection Problems
-- Ensure your wallet extension is enabled
-- Check that you're on the correct network
-- Refresh the page if connection fails
+- **If you have MetaMask/Coinbase**: Ensure your wallet extension is enabled
+- **If using email/social login**: Check your email for verification code
+- **If modal doesn't open**: Refresh the page and try again
+- **Network issues**: Check that you're on a supported network (Celo, Arbitrum, etc.)
 - Try disconnecting and reconnecting your wallet
+- Clear browser cache if connection persists in failing
 
 #### Swap Failures
 - Verify sufficient balance for the swap amount
