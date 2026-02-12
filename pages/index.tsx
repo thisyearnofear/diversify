@@ -352,7 +352,7 @@ export default function DiversiFiPage() {
           onClose={closeStrategyModal}
           onComplete={() => {
             if (!address && !isInMiniPay && !isFarcaster) {
-              setTimeout(() => openTutorial(), 800);
+              setTimeout(() => openWalletTutorial(), 800);
             }
           }}
         />
