@@ -72,63 +72,81 @@ async function getAppKitProviderAsync(): Promise<any | null> {
 async function createAppKitInstance(): Promise<any | null> {
   if (typeof window === 'undefined') return null;
 
+  const projectId = getProjectId();
+  if (!projectId) {
+    console.warn('[Wallet/AppKit] Missing NEXT_PUBLIC_REOWN_PROJECT_ID. Reown AppKit will not be initialized.');
+    return null;
+  }
+
   try {
-    const [{ createAppKit }, { WagmiAdapter }, { arbitrum, celo, celoAlfajores }] = await Promise.all([
-      import('@reown/appkit'),
-      import('@reown/appkit-adapter-wagmi'),
-      import('@reown/appkit/networks'),
+    console.log('[Wallet/AppKit] Initializing AppKit with Project ID:', `${projectId.substring(0, 4)}...${projectId.substring(projectId.length - 4)}`);
+
+    // Add a race to prevent long hangs during library import or initialization
+    const TIMEOUT_MS = 10000;
+
+    const initResult = await Promise.race([
+      (async () => {
+        const [{ createAppKit }, { WagmiAdapter }, { arbitrum, celo, celoAlfajores }] = await Promise.all([
+          import('@reown/appkit'),
+          import('@reown/appkit-adapter-wagmi'),
+          import('@reown/appkit/networks'),
+        ]);
+
+        const arcTestnet = {
+          id: 5042002,
+          caipNetworkId: 'eip155:5042002',
+          chainNamespace: 'eip155',
+          name: 'Arc Testnet',
+          nativeCurrency: {
+            decimals: 18,
+            name: 'ARC',
+            symbol: 'ARC',
+          },
+          rpcUrls: {
+            default: {
+              http: [process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network'],
+            },
+          },
+          blockExplorers: {
+            default: {
+              name: 'Arcscan Testnet',
+              url: 'https://testnet.arcscan.app',
+            },
+          },
+        };
+
+        const networks = [celo, celoAlfajores, arbitrum, arcTestnet] as const;
+        wagmiAdapterInstance = new WagmiAdapter({ projectId, networks: [...networks] });
+
+        const metadata = {
+          name: 'DiversiFi',
+          description: 'Stablecoin portfolio diversification',
+          url: typeof window !== 'undefined' ? window.location.origin : 'https://diversifiapp.vercel.app',
+          icons: ['https://diversifiapp.vercel.app/icon.png'],
+        };
+
+        appKitInstance = createAppKit({
+          adapters: [wagmiAdapterInstance],
+          networks: [networks[0], ...networks.slice(1)],
+          metadata,
+          projectId,
+          features: {
+            analytics: WALLET_FEATURES.APPKIT_ANALYTICS,
+            email: WALLET_FEATURES.APPKIT_EMAIL,
+            socials: WALLET_FEATURES.APPKIT_SOCIALS ? ['google', 'x', 'discord', 'apple'] : false as const,
+          },
+        });
+
+        return appKitInstance;
+      })(),
+      new Promise<null>((_, reject) =>
+        setTimeout(() => reject(new Error('AppKit initialization timed out')), TIMEOUT_MS)
+      )
     ]);
 
-    const projectId = getProjectId();
-
-    const arcTestnet = {
-      id: 5042002,
-      caipNetworkId: 'eip155:5042002',
-      chainNamespace: 'eip155',
-      name: 'Arc Testnet',
-      nativeCurrency: {
-        decimals: 18,
-        name: 'ARC',
-        symbol: 'ARC',
-      },
-      rpcUrls: {
-        default: {
-          http: [process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network'],
-        },
-      },
-      blockExplorers: {
-        default: {
-          name: 'Arcscan Testnet',
-          url: 'https://testnet.arcscan.app',
-        },
-      },
-    };
-
-    const networks = [celo, celoAlfajores, arbitrum, arcTestnet] as const;
-    wagmiAdapterInstance = new WagmiAdapter({ projectId, networks: [...networks] });
-
-    const metadata = {
-      name: 'DiversiFi',
-      description: 'Stablecoin portfolio diversification',
-      url: typeof window !== 'undefined' ? window.location.origin : 'https://diversifiapp.vercel.app',
-      icons: ['https://diversifiapp.vercel.app/icon.png'],
-    };
-
-    appKitInstance = createAppKit({
-      adapters: [wagmiAdapterInstance],
-      networks: [networks[0], ...networks.slice(1)],
-      metadata,
-      projectId,
-      features: {
-        analytics: true,
-        email: WALLET_FEATURES.APPKIT_EMAIL,
-        socials: WALLET_FEATURES.APPKIT_SOCIALS ? ['google', 'x', 'discord', 'apple'] : false as const,
-      },
-    });
-
-    return appKitInstance;
+    return initResult;
   } catch (error) {
-    console.warn('[Wallet/AppKit] Failed to initialize AppKit, falling back to injected provider', error);
+    console.warn('[Wallet/AppKit] Failed to initialize AppKit. If this hangs, ensure your Reown Project ID is of type "App" and not "Wallet" in the dashboard.', error);
     return null;
   }
 }

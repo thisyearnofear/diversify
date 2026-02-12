@@ -14,16 +14,16 @@
 export const AI_FEATURES = {
   /** Portfolio analysis and recommendations via Venice/Gemini */
   ANALYSIS: !!(process.env.VENICE_API_KEY || process.env.GEMINI_API_KEY),
-  
+
   /** Voice transcription via OpenAI Whisper or ElevenLabs Scribe */
   VOICE_INPUT: !!(process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY),
-  
+
   /** Text-to-speech via Venice/ElevenLabs */
   VOICE_OUTPUT: !!(process.env.VENICE_API_KEY || process.env.ELEVENLABS_API_KEY),
-  
+
   /** AI chat assistant */
   CHAT: !!(process.env.VENICE_API_KEY || process.env.GEMINI_API_KEY),
-  
+
   /** Web-enriched analysis (Venice only) */
   WEB_SEARCH: !!process.env.VENICE_API_KEY,
 } as const;
@@ -36,29 +36,29 @@ export const AUTONOMOUS_FEATURES = {
    * Status: Testnet only, experimental
    */
   AUTONOMOUS_MODE: process.env.ENABLE_AUTONOMOUS_MODE === 'true',
-  
+
   /** 
    * Arc Network integration
    * Status: Testnet only (chainId: 5042002)
    */
   ARC_NETWORK: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true',
-  
+
   /** 
    * Premium data via x402 payments
    * Status: Requires Arc Network
    */
-  PREMIUM_DATA: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true' && 
-                process.env.ENABLE_AUTONOMOUS_MODE === 'true',
+  PREMIUM_DATA: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true' &&
+    process.env.ENABLE_AUTONOMOUS_MODE === 'true',
 } as const;
 
 // UI/UX features
 export const UI_FEATURES = {
   /** Show voice button in header */
   VOICE_UI: AI_FEATURES.VOICE_INPUT,
-  
+
   /** Show AI assistant panel */
   AI_ASSISTANT: AI_FEATURES.ANALYSIS || AI_FEATURES.CHAT,
-  
+
   /** Show autonomous mode toggle (only if available) */
   AUTONOMOUS_UI: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
 } as const;
@@ -73,6 +73,9 @@ export const WALLET_FEATURES = {
 
   /** Enable social sign-in options in AppKit */
   APPKIT_SOCIALS: process.env.NEXT_PUBLIC_ENABLE_APPKIT_SOCIALS !== 'false',
+
+  /** Enable AppKit analytics */
+  APPKIT_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_APPKIT_ANALYTICS !== 'false',
 
   /** WalletConnect/Reown project ID */
   APPKIT_PROJECT_ID:
@@ -103,9 +106,9 @@ export const FEATURE_DESCRIPTIONS = {
 } as const;
 
 // Helper to check if any AI features are available
-export const hasAIFeatures = () => 
-  AI_FEATURES.ANALYSIS || 
-  AI_FEATURES.VOICE_INPUT || 
+export const hasAIFeatures = () =>
+  AI_FEATURES.ANALYSIS ||
+  AI_FEATURES.VOICE_INPUT ||
   AI_FEATURES.CHAT;
 
 // Helper to check if autonomous features are available
