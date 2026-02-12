@@ -30,12 +30,17 @@ export default function WalletButton({
 
   const { showToast } = useToast();
   const [showDropdown, setShowDropdown] = useState(false);
+  const prevAddressRef = React.useRef<string | null>(null);
 
   useEffect(() => {
+    if (address && !prevAddressRef.current) {
+      showToast("Wallet connected successfully", "success");
+    }
     if (address && onConnect) {
       onConnect(address);
     }
-  }, [address, onConnect]);
+    prevAddressRef.current = address;
+  }, [address, onConnect, showToast]);
 
   const handleConnect = async () => {
     try {
@@ -178,13 +183,15 @@ export default function WalletButton({
   // 2. Connecting State
   if (isConnecting) {
     return (
-      <button
+      <motion.button
         disabled
-        className={`flex items-center space-x-2 bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-full text-gray-500 dark:text-gray-400 shadow-inner cursor-wait ${className}`}
+        animate={{ opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        className={`flex items-center space-x-2 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 dark:from-blue-500/30 dark:to-indigo-500/30 border border-blue-200 dark:border-blue-700 px-5 py-2.5 rounded-full text-blue-700 dark:text-blue-300 cursor-wait ${className}`}
       >
-        <div className="w-4 h-4 border-2 border-gray-400 border-t-blue-500 rounded-full animate-spin" />
-        <span className="text-sm font-medium">Connecting...</span>
-      </button>
+        <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 dark:border-blue-600 dark:border-t-blue-300 rounded-full animate-spin" />
+        <span className="text-sm font-bold">Connecting...</span>
+      </motion.button>
     );
   }
 

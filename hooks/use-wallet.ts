@@ -36,12 +36,20 @@ export function useWallet() {
         setIsFarcaster(environment.isFarcaster);
         setFarcasterContext(environment.farcasterContext);
 
-        const provider = await getWalletProvider({ prefer: environment.isFarcaster ? 'farcaster' : 'auto' });
+        const shouldAutoConnect = environment.isFarcaster || environment.isMiniPay;
+        const provider = await getWalletProvider({
+          prefer: environment.isFarcaster ? 'farcaster' : 'auto',
+        });
+
+        if (!provider) {
+          return;
+        }
+
         providerRef.current = provider;
 
         const detectedChainId = await detectChainId(provider, environment.isMiniPay, environment.isFarcaster);
 
-        if (!isSupportedChainId(detectedChainId) && (environment.isFarcaster || environment.isMiniPay)) {
+        if (!isSupportedChainId(detectedChainId) && shouldAutoConnect) {
           await switchToDefaultChain(provider);
           setChainId(DEFAULT_CHAIN_ID);
           cacheChainId(DEFAULT_CHAIN_ID);
@@ -51,7 +59,7 @@ export function useWallet() {
         }
 
         try {
-          const method = environment.isFarcaster || environment.isMiniPay ? 'eth_requestAccounts' : 'eth_accounts';
+          const method = shouldAutoConnect ? 'eth_requestAccounts' : 'eth_accounts';
           const accounts = await provider.request({ method }) as string[];
           if (accounts.length > 0) {
             setAddress(accounts[0]);
@@ -97,7 +105,9 @@ export function useWallet() {
     }
 
     const provider = await getWalletProvider({ prefer: isFarcaster ? 'farcaster' : 'auto' });
-    providerRef.current = provider;
+    if (provider) {
+      providerRef.current = provider;
+    }
     return provider;
   };
 
@@ -107,19 +117,25 @@ export function useWallet() {
       setError(null);
 
       if (shouldUseWebAppKit(isMiniPay, isFarcaster)) {
-        const appKitAccounts = await connectWithWebAppKit();
-        if (appKitAccounts && appKitAccounts.length > 0) {
-          const provider = await getActiveProvider();
-          const chainIdHex = await provider.request({ method: 'eth_chainId' });
+        const result = await connectWithWebAppKit();
+        if (result && result.accounts.length > 0) {
+          providerRef.current = result.provider;
+          const chainIdHex = await result.provider.request({ method: 'eth_chainId' });
 
-          setAddress(appKitAccounts[0]);
+          setAddress(result.accounts[0]);
           setIsConnected(true);
           setChainId(parseInt(chainIdHex as string, 16));
           return;
         }
+        return;
       }
 
       const provider = await getActiveProvider();
+      if (!provider) {
+        setError('No wallet found. Please install a wallet extension or connect via WalletConnect.');
+        return;
+      }
+
       const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
 
       if (accounts.length === 0) {
@@ -145,6 +161,10 @@ export function useWallet() {
   const switchNetwork = async (targetChainId: number) => {
     try {
       const provider = await getActiveProvider();
+      if (!provider) {
+        setError('No wallet connected');
+        return;
+      }
       await provider.request({
         method: 'wallet_switchEthereumChain',
         params: [{ chainId: toHexChainId(targetChainId) }],
@@ -186,7 +206,7 @@ export function useWallet() {
   };
 
   const connectFarcasterWallet = async () => {
-    if (!isFarcaster || !farcasterContext) {
+    if (!isFarcaster) {
       setError('Farcaster wallet connection is not available');
       return;
     }
@@ -195,13 +215,30 @@ export function useWallet() {
       setIsConnecting(true);
       setError(null);
 
-      if (farcasterContext.connectedAddress) {
+      if (farcasterContext?.connectedAddress) {
         setAddress(farcasterContext.connectedAddress);
         setIsConnected(true);
         return;
       }
 
-      await connect();
+      const provider = await getWalletProvider({ prefer: 'farcaster' });
+      if (!provider) {
+        setError('Farcaster wallet provider not found');
+        return;
+      }
+
+      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+      if (!accounts || accounts.length === 0) {
+        setError('No Farcaster accounts found');
+        return;
+      }
+
+      providerRef.current = provider;
+      setAddress(accounts[0]);
+      setIsConnected(true);
+
+      const chainIdHex = await provider.request({ method: 'eth_chainId' });
+      setChainId(parseInt(chainIdHex as string, 16));
     } catch (farcasterError) {
       console.error('[Farcaster] Connect error:', farcasterError);
       setError(farcasterError instanceof Error ? farcasterError.message : 'Failed to connect Farcaster wallet');

@@ -3,6 +3,7 @@ import { getInjectedProvider } from './injected';
 
 let appKitInitPromise: Promise<any | null> | null = null;
 let appKitInstance: any | null = null;
+let wagmiAdapterInstance: any | null = null;
 
 function dynamicImport(moduleName: string): Promise<any> {
   return new Function('m', 'return import(m)')(moduleName) as Promise<any>;
@@ -16,6 +17,60 @@ export function shouldUseWebAppKit(isMiniPay: boolean, isFarcaster: boolean): bo
   if (!WALLET_FEATURES.APPKIT_WEB) return false;
   if (isMiniPay || isFarcaster) return false;
   return !!getProjectId();
+}
+
+export function getAppKitProvider(): any | null {
+  if (!wagmiAdapterInstance) return null;
+
+  try {
+    const wagmiConfig = wagmiAdapterInstance.wagmiConfig;
+    if (!wagmiConfig) return null;
+
+    const transport = wagmiConfig._internal?.transports;
+    const connectors = wagmiConfig.connectors;
+
+    if (connectors && connectors.length > 0) {
+      for (const connector of connectors) {
+        if (typeof connector.getProvider === 'function') {
+          const provider = connector.getProvider();
+          if (provider && typeof provider.then !== 'function' && provider.request) {
+            return provider;
+          }
+        }
+      }
+    }
+  } catch {
+    // Fall through
+  }
+
+  return getInjectedProvider();
+}
+
+async function getAppKitProviderAsync(): Promise<any | null> {
+  if (!wagmiAdapterInstance) return null;
+
+  try {
+    const wagmiConfig = wagmiAdapterInstance.wagmiConfig;
+    if (!wagmiConfig) return null;
+
+    const connectors = wagmiConfig.connectors;
+    if (connectors && connectors.length > 0) {
+      for (const connector of connectors) {
+        if (typeof connector.getProvider === 'function') {
+          try {
+            const provider = await connector.getProvider();
+            if (provider?.request) return provider;
+          } catch {
+            continue;
+          }
+        }
+      }
+    }
+  } catch {
+    // Fall through
+  }
+
+  return getInjectedProvider();
 }
 
 async function createAppKitInstance(): Promise<any | null> {
@@ -54,7 +109,7 @@ async function createAppKitInstance(): Promise<any | null> {
     };
 
     const networks = [celo, celoAlfajores, arbitrum, arcTestnet];
-    const wagmiAdapter = new WagmiAdapter({ projectId, networks });
+    wagmiAdapterInstance = new WagmiAdapter({ projectId, networks });
 
     const metadata = {
       name: 'DiversiFi',
@@ -64,7 +119,7 @@ async function createAppKitInstance(): Promise<any | null> {
     };
 
     appKitInstance = createAppKit({
-      adapters: [wagmiAdapter],
+      adapters: [wagmiAdapterInstance],
       networks,
       metadata,
       projectId,
@@ -91,7 +146,70 @@ export async function ensureWebAppKit(): Promise<any | null> {
   return appKitInstance;
 }
 
-export async function connectWithWebAppKit(): Promise<string[] | null> {
+async function waitForAppKitConnection(
+  appKit: any,
+  timeoutMs = 120_000
+): Promise<{ accounts: string[]; provider: any } | null> {
+  const tryGetAccounts = async (): Promise<{ accounts: string[]; provider: any } | null> => {
+    const provider = await getAppKitProviderAsync();
+    if (!provider?.request) return null;
+    try {
+      const accounts = await provider.request({ method: 'eth_accounts' });
+      if (Array.isArray(accounts) && accounts.length > 0) {
+        return { accounts, provider };
+      }
+    } catch {
+      // Not connected yet
+    }
+    return null;
+  };
+
+  const immediate = await tryGetAccounts();
+  if (immediate) return immediate;
+
+  return new Promise<{ accounts: string[]; provider: any } | null>((resolve) => {
+    let unsub: (() => void) | null = null;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+    let resolved = false;
+
+    const cleanup = () => {
+      if (resolved) return;
+      resolved = true;
+      unsub?.();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+
+    const timer = setTimeout(() => {
+      cleanup();
+      resolve(null);
+    }, timeoutMs);
+
+    const checkAndResolve = async () => {
+      if (resolved) return;
+      const result = await tryGetAccounts();
+      if (result) {
+        clearTimeout(timer);
+        cleanup();
+        resolve(result);
+      }
+    };
+
+    if (typeof appKit.subscribeState === 'function') {
+      unsub = appKit.subscribeState(async (state: any) => {
+        await checkAndResolve();
+        if (!resolved && state?.open === false) {
+          clearTimeout(timer);
+          cleanup();
+          resolve(null);
+        }
+      });
+    }
+
+    pollInterval = setInterval(checkAndResolve, 500);
+  });
+}
+
+export async function connectWithWebAppKit(): Promise<{ accounts: string[]; provider: any } | null> {
   const appKit = await ensureWebAppKit();
   if (!appKit) return null;
 
@@ -101,15 +219,8 @@ export async function connectWithWebAppKit(): Promise<string[] | null> {
     }
   } catch (error) {
     console.warn('[Wallet/AppKit] Failed to open connect modal', error);
-  }
-
-  const provider = getInjectedProvider();
-  if (!provider?.request) return null;
-
-  try {
-    const accounts = await provider.request({ method: 'eth_requestAccounts' });
-    return Array.isArray(accounts) ? accounts : null;
-  } catch {
     return null;
   }
+
+  return waitForAppKitConnection(appKit);
 }

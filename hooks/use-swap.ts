@@ -74,6 +74,7 @@ export function useSwap() {
         const setupListeners = async () => {
             try {
                 const provider = await getWalletProvider();
+                if (!provider) return;
                 cleanup = setupWalletEventListenersForProvider(
                     provider,
                     (chainIdHex: string) => {

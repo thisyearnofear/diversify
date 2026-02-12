@@ -48,6 +48,7 @@ export default function DiversiFiPage() {
 
   const {
     isTutorialOpen,
+    openTutorial,
     closeTutorial,
   } = useWalletTutorial();
 
@@ -336,6 +337,11 @@ export default function DiversiFiPage() {
         <StrategyModal
           isOpen={isStrategyModalOpen}
           onClose={closeStrategyModal}
+          onComplete={() => {
+            if (!address && !isInMiniPay && !isFarcaster) {
+              setTimeout(() => openTutorial(), 800);
+            }
+          }}
         />
       </div>
     </div>

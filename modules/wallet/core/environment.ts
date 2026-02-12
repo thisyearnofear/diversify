@@ -26,7 +26,7 @@ export async function detectWalletEnvironment(): Promise<WalletEnvironment> {
       sdk.actions.ready();
     }
 
-    const farcasterContext = await withTimeout(sdk.context, 250);
+    const farcasterContext = await withTimeout(sdk.context, 1000);
     if (farcasterContext) {
       return {
         isMiniPay,

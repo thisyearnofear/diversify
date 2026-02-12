@@ -31,6 +31,9 @@ export function initializeLiFiConfig(): void {
                 EVM({
                     getWalletClient: async () => {
                         const provider = await getWalletProvider();
+                        if (!provider) {
+                            throw new Error('Wallet not connected');
+                        }
 
                         // Ensure wallet is connected first and get accounts
                         let accounts: string[];
@@ -86,6 +89,9 @@ export function initializeLiFiConfig(): void {
                     },
                     switchChain: async (chainId) => {
                         const provider = await getWalletProvider();
+                        if (!provider) {
+                            throw new Error('Wallet not connected');
+                        }
 
                         console.log('[LiFi Config] Switching to chain:', chainId);
 
@@ -225,6 +231,9 @@ export function resetLiFiConfig(): void {
  */
 export async function ensureWalletConnection(): Promise<void> {
     const provider = await getWalletProvider();
+    if (!provider) {
+        throw new Error('No wallet provider available. Please connect your wallet.');
+    }
 
     try {
         // Request accounts to ensure wallet is connected
@@ -261,6 +270,9 @@ export async function ensureWalletConnection(): Promise<void> {
 export async function validateWalletProvider(): Promise<void> {
     try {
         const provider = await getWalletProvider();
+        if (!provider) {
+            throw new Error('Wallet provider is missing. Please ensure you have a compatible Web3 wallet.');
+        }
 
         // Additional checks for common wallet properties
         if (!provider.request) {
@@ -310,6 +322,10 @@ export async function checkExecutionProviders(): Promise<void> {
         // Check if wallet provider is available for execution
         try {
             const provider = await getWalletProvider();
+            if (!provider) {
+                console.warn('[LiFi Config] No wallet provider available');
+                return;
+            }
 
             // Get current accounts
             let accounts: string[] = [];

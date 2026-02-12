@@ -34,6 +34,9 @@ export class ProviderFactoryService {
      */
     static async getWeb3Provider(): Promise<ethers.providers.Web3Provider> {
         const provider = await getWalletProvider();
+        if (!provider) {
+            throw new Error('No wallet provider available. Please connect your wallet.');
+        }
         console.log('[ProviderFactory] Using wallet provider');
         return new ethers.providers.Web3Provider(provider);
     }
@@ -68,6 +71,9 @@ export class ProviderFactoryService {
      */
     static async getCurrentChainId(): Promise<number> {
         const provider = await getWalletProvider();
+        if (!provider) {
+            throw new Error('No wallet provider available. Please connect your wallet.');
+        }
         const chainIdHex = await provider.request({ method: 'eth_chainId' });
         return parseInt(chainIdHex as string, 16);
     }

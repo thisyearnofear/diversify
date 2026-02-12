@@ -226,6 +226,7 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
                                         setTimeout(async () => {
                                             try {
                                                 const provider = await getWalletProvider();
+                                                if (!provider) return;
                                                 const accounts = await provider.request({ method: 'eth_accounts' });
                                                 if (!accounts || accounts.length === 0) {
                                                     console.warn('[LiFi Bridge] Provider connection lost, attempting reconnect');

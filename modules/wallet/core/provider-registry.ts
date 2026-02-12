@@ -1,7 +1,7 @@
 import { detectWalletEnvironment, type WalletEnvironment } from './environment';
 import { getFarcasterProvider } from '../adapters/farcaster';
 import { getInjectedProvider } from '../adapters/injected';
-import { ensureWebAppKit, shouldUseWebAppKit } from '../adapters/web-appkit';
+import { ensureWebAppKit, shouldUseWebAppKit, getAppKitProvider } from '../adapters/web-appkit';
 
 export interface WalletProviderCache {
   provider: any | null;
@@ -9,34 +9,53 @@ export interface WalletProviderCache {
 }
 
 let cache: WalletProviderCache | null = null;
-let initPromise: Promise<WalletProviderCache> | null = null;
+let envCache: WalletEnvironment | null = null;
 
 export function resetWalletProviderCache(): void {
   cache = null;
-  initPromise = null;
+  envCache = null;
 }
 
 export function isFarcasterProvider(): boolean {
-  return cache?.environment.isFarcaster ?? false;
+  return envCache?.isFarcaster ?? cache?.environment.isFarcaster ?? false;
+}
+
+async function resolveEnvironment(): Promise<WalletEnvironment> {
+  if (envCache) return envCache;
+  envCache = await detectWalletEnvironment();
+  return envCache;
 }
 
 async function resolveProvider(prefer: 'auto' | 'injected' | 'farcaster'): Promise<WalletProviderCache> {
-  const environment = await detectWalletEnvironment();
+  const environment = await resolveEnvironment();
 
   if (prefer === 'injected') {
     const injected = getInjectedProvider();
     return { provider: injected, environment };
   }
 
-  if ((prefer === 'farcaster' || environment.isFarcaster)) {
+  if (prefer === 'farcaster' || environment.isFarcaster) {
     const farcasterProvider = await getFarcasterProvider();
     if (farcasterProvider) {
       return { provider: farcasterProvider, environment };
     }
   }
 
+  if (environment.isMiniPay) {
+    const injected = getInjectedProvider();
+    if (injected) {
+      return { provider: injected, environment };
+    }
+  }
+
   if (shouldUseWebAppKit(environment.isMiniPay, environment.isFarcaster)) {
-    await ensureWebAppKit();
+    const appKit = await ensureWebAppKit();
+    if (appKit) {
+      const appKitProvider = getAppKitProvider();
+      if (appKitProvider) {
+        return { provider: appKitProvider, environment };
+      }
+    }
   }
 
   const injected = getInjectedProvider();
@@ -50,39 +69,23 @@ export async function getWalletProvider(opts?: { prefer?: 'farcaster' | 'injecte
     return cache.provider;
   }
 
-  if (!initPromise) {
-    initPromise = resolveProvider(prefer);
+  const result = await resolveProvider(prefer);
+
+  if (result.provider) {
+    cache = result;
+    return result.provider;
   }
 
-  cache = await initPromise;
-
-  if (!cache.provider) {
-    throw new Error('No wallet provider available');
-  }
-
-  return cache.provider;
+  return null;
 }
 
 export async function getWalletEnvironment(): Promise<WalletEnvironment> {
-  if (cache?.environment) {
-    return cache.environment;
-  }
-
-  if (!initPromise) {
-    initPromise = resolveProvider('auto');
-  }
-
-  cache = await initPromise;
-  return cache.environment;
+  return resolveEnvironment();
 }
 
 export async function isWalletProviderAvailable(): Promise<boolean> {
-  try {
-    await getWalletProvider();
-    return true;
-  } catch {
-    return false;
-  }
+  const provider = await getWalletProvider();
+  return !!provider;
 }
 
 export function setupWalletEventListenersForProvider(
