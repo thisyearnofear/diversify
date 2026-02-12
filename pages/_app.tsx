@@ -8,6 +8,7 @@ import { WalletProvider } from "../components/wallet/WalletProvider";
 import { ToastProvider } from "../components/ui/Toast";
 import { AppStateProvider } from "../context/AppStateContext";
 import { AIConversationProvider } from "../context/AIConversationContext";
+import { AppKitProvider } from "../context/AppKitProvider";
 import AIChat from "../components/agent/AIChat";
 import { useRouter } from "next/router";
 import sdk from "@farcaster/miniapp-sdk";
@@ -89,16 +90,18 @@ export default function App({ Component, pageProps }: AppProps) {
         {/* Debug overlay removed */}
 
         {/* Wrap with AppStateProvider and other providers */}
-        <AppStateProvider>
-          <AIConversationProvider>
-            <ToastProvider>
-              <WalletProvider>
-                <Component {...pageProps} isInMiniPay={isInMiniPay} />
-                <AIChat />
-              </WalletProvider>
-            </ToastProvider>
-          </AIConversationProvider>
-        </AppStateProvider>
+        <AppKitProvider>
+          <AppStateProvider>
+            <AIConversationProvider>
+              <ToastProvider>
+                <WalletProvider>
+                  <Component {...pageProps} isInMiniPay={isInMiniPay} />
+                  <AIChat />
+                </WalletProvider>
+              </ToastProvider>
+            </AIConversationProvider>
+          </AppStateProvider>
+        </AppKitProvider>
       </ErrorBoundary>
     </>
   );
