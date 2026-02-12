@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reown Project Test</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-top: 0;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px 10px 0;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+
+        .test-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #ddd;
+            background: #f8f9fa;
+        }
+
+        .test-item.pass {
+            border-left-color: #28a745;
+        }
+
+        .test-item.fail {
+            border-left-color: #dc3545;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card">
+        <h1>🔍 Reown AppKit Configuration Test</h1>
+        <p>Project ID: <code>814ecf5712aa00d66d29bf12eed3df22</code></p>
+
+        <button onclick="runTests()">Run All Tests</button>
+        <button onclick="testSocialLogin()">Test Social Login</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script type="module">
+        const PROJECT_ID = '814ecf5712aa00d66d29bf12eed3df22';
+        const results = document.getElementById('results');
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function testItem(title, passed, details) {
+            const div = document.createElement('div');
+            div.className = `test-item ${passed ? 'pass' : 'fail'}`;
+            div.innerHTML = `
+                <strong>${passed ? '✅' : '❌'} ${title}</strong>
+                ${details ? `<div style="margin-top: 8px; font-size: 14px;">${details}</div>` : ''}
+            `;
+            results.appendChild(div);
+        }
+
+        window.runTests = async function () {
+            results.innerHTML = '<h2>Running Tests...</h2>';
+
+            // Test 1: Check current origin
+            const currentOrigin = window.location.origin;
+            log(`Current Origin: <code>${currentOrigin}</code>`, 'info');
+
+            // Test 2: Try to initialize AppKit
+            try {
+                log('Loading Reown AppKit libraries...', 'info');
+
+                const { createAppKit } = await import('https://esm.sh/@reown/appkit@1.8.3');
+                const { WagmiAdapter } = await import('https://esm.sh/@reown/appkit-adapter-wagmi@1.8.3');
+                const { mainnet } = await import('https://esm.sh/@reown/appkit@1.8.3/networks');
+
+                testItem('Libraries Loaded', true, 'Successfully imported Reown AppKit modules');
+
+                // Test 3: Initialize AppKit
+                log('Initializing AppKit...', 'info');
+
+                const wagmiAdapter = new WagmiAdapter({
+                    projectId: PROJECT_ID,
+                    networks: [mainnet]
+                });
+
+                const modal = createAppKit({
+                    adapters: [wagmiAdapter],
+                    projectId: PROJECT_ID,
+                    networks: [mainnet],
+                    metadata: {
+                        name: 'Reown Test',
+                        description: 'Testing Reown Configuration',
+                        url: currentOrigin,
+                        icons: ['https://diversifiapp.vercel.app/icon.png']
+                    },
+                    features: {
+                        email: true,
+                        socials: ['google', 'x', 'discord', 'apple']
+                    }
+                });
+
+                testItem('AppKit Initialized', true, 'Modal created successfully');
+
+                log('✅ All tests passed! Your Reown project is configured correctly.', 'success');
+                log(`
+                    <strong>Next Steps:</strong><br>
+                    1. Make sure this domain (<code>${currentOrigin}</code>) is in your Reown allowlist<br>
+                    2. Add your production domain to the allowlist<br>
+                    3. Verify project type is "App" (not "Wallet")<br>
+                    <br>
+                    <a href="https://dashboard.reown.com" target="_blank">Open Reown Dashboard →</a>
+                `, 'info');
+
+            } catch (error) {
+                testItem('AppKit Initialization', false, error.message);
+                log(`❌ Error: ${error.message}`, 'error');
+
+                if (error.message.includes('projectId')) {
+                    log(`
+                        <strong>Project ID Issue:</strong><br>
+                        • Verify the project exists at <a href="https://dashboard.reown.com" target="_blank">dashboard.reown.com</a><br>
+                        • Check that it's type "App" (not "Wallet")<br>
+                        • Ensure it's not deleted or suspended
+                    `, 'warning');
+                } else if (error.message.includes('origin') || error.message.includes('domain')) {
+                    log(`
+                        <strong>Domain Allowlist Issue:</strong><br>
+                        • Add <code>${currentOrigin}</code> to your project's allowlist<br>
+                        • Go to Dashboard → Your Project → Settings → Allowlist<br>
+                        • Add: <code>${currentOrigin}</code><br>
+                        • Wait 15 minutes for changes to apply
+                    `, 'warning');
+                }
+            }
+        };
+
+        window.testSocialLogin = async function () {
+            results.innerHTML = '<h2>Testing Social Login...</h2>';
+            log('This will open the AppKit modal. Try logging in with Google or another social provider.', 'info');
+
+            try {
+                const { createAppKit } = await import('https://esm.sh/@reown/appkit@1.8.3');
+                const { WagmiAdapter } = await import('https://esm.sh/@reown/appkit-adapter-wagmi@1.8.3');
+                const { mainnet } = await import('https://esm.sh/@reown/appkit@1.8.3/networks');
+
+                const wagmiAdapter = new WagmiAdapter({
+                    projectId: PROJECT_ID,
+                    networks: [mainnet]
+                });
+
+                const modal = createAppKit({
+                    adapters: [wagmiAdapter],
+                    projectId: PROJECT_ID,
+                    networks: [mainnet],
+                    metadata: {
+                        name: 'Reown Test',
+                        description: 'Testing Social Login',
+                        url: window.location.origin,
+                        icons: ['https://diversifiapp.vercel.app/icon.png']
+                    },
+                    features: {
+                        email: true,
+                        socials: ['google', 'x', 'discord', 'apple']
+                    }
+                });
+
+                // Open the modal
+                await modal.open({ view: 'Connect' });
+
+                log('✅ Modal opened! Try connecting with a social provider.', 'success');
+                log('If you see "CancelledError", check your Reown dashboard configuration.', 'warning');
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        };
+
+        // Auto-run tests on load
+        log('Ready to test. Click "Run All Tests" to begin.', 'info');
+    </script>
+</body>
+
+</html>

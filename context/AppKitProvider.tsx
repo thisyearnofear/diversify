@@ -46,12 +46,16 @@ const networks = [celo, celoAlfajores, arbitrum, arcTestnet] as const
 
 // Create wagmiAdapter
 let wagmiAdapter: WagmiAdapter | null = null
+let modal: any = null
 
 if (projectId && typeof window !== 'undefined') {
     wagmiAdapter = new WagmiAdapter({
         projectId,
         networks: [...networks],
     })
+
+        // Expose wagmiAdapter globally for other parts of the app
+        ; (window as any).__APPKIT_WAGMI_ADAPTER__ = wagmiAdapter
 
     // Set up metadata
     const metadata = {
@@ -62,7 +66,7 @@ if (projectId && typeof window !== 'undefined') {
     }
 
     // Create the modal - this should only run once
-    createAppKit({
+    modal = createAppKit({
         adapters: [wagmiAdapter],
         projectId,
         networks: [networks[0], ...networks.slice(1)],
@@ -74,6 +78,11 @@ if (projectId && typeof window !== 'undefined') {
             socials: WALLET_FEATURES.APPKIT_SOCIALS ? ['google', 'x', 'discord', 'apple'] : false,
         },
     })
+
+        // Expose modal globally for other parts of the app
+        ; (window as any).__APPKIT_INSTANCE__ = modal
+
+    console.log('[AppKit] Initialized successfully with social login support')
 }
 
 export function AppKitProvider({ children }: { children: ReactNode }) {
