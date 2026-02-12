@@ -3,6 +3,8 @@ import Head from "next/head";
 import WalletButton from "../wallet/WalletButton";
 import ThemeToggle from "./ThemeToggle";
 import { useAppState } from "../../context/AppStateContext";
+import { useWalletContext } from "../wallet/WalletProvider";
+import { NetworkOptimizedOnramp } from "../onramp";
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,6 +18,7 @@ export default function Layout({
   isInMiniPay = false,
 }: LayoutProps) {
   const { experienceMode, setExperienceMode } = useAppState();
+  const { isConnected } = useWalletContext();
 
   const getModeLabel = () => {
     if (experienceMode === "beginner") return "Simple";
@@ -53,7 +56,9 @@ export default function Layout({
 
       <header className="bg-white dark:bg-gray-800 shadow transition-colors duration-300">
         <div className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center">
+          {/* Mobile: Two-row layout, Desktop: Single row */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
+            {/* Logo row */}
             <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300">
               {isBeginner ? "💰 Protect Your Money" : "DiversiFi"}
               {isInMiniPay && (
@@ -62,34 +67,44 @@ export default function Layout({
                 </span>
               )}
             </h1>
-            <div className="flex items-center space-x-2">
-              {/* Mode switcher - Refined for discovery */}
-              <div className="flex flex-col items-end">
-                <button
-                  onClick={cycleMode}
-                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-1.5 ${!isBeginner
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
-                    : "bg-white dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500"
-                    }`}
-                >
-                  <span className="text-xs">{getModeEmoji()}</span>
-                  <span>{getModeLabel()} Mode</span>
-                  {!isBeginner && (
-                    <svg className="size-3 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  )}
-                </button>
-                {isBeginner && (
-                  <span className="text-[8px] font-bold text-blue-500 mt-1 animate-pulse uppercase tracking-tighter">
-                    Unlock Features →
-                  </span>
-                )}
-              </div>
+
+            {/* Controls row - wraps on mobile, single line on desktop */}
+            <div className="flex items-center justify-between sm:justify-end gap-2">
+              {/* Buy Crypto button - visible when connected */}
+              {isConnected && (
+                <NetworkOptimizedOnramp
+                  variant="default"
+                  defaultAmount="100"
+                  className="!py-2 !px-3 !text-xs !rounded-lg hidden md:block"
+                />
+              )}
+
+              {/* Mode switcher - Compact on mobile */}
+              <button
+                onClick={cycleMode}
+                className={`px-2.5 sm:px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-1 sm:gap-1.5 ${!isBeginner
+                  ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
+                  : "bg-white dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500"
+                  }`}
+              >
+                <span className="text-xs">{getModeEmoji()}</span>
+                <span className="hidden sm:inline">{getModeLabel()} Mode</span>
+                <span className="sm:hidden">{getModeLabel()}</span>
+              </button>
+
               <ThemeToggle />
               <WalletButton />
             </div>
           </div>
+
+          {/* Beginner mode hint - now below everything */}
+          {isBeginner && (
+            <div className="mt-2 text-center sm:text-right">
+              <span className="text-[8px] font-bold text-blue-500 animate-pulse uppercase tracking-tighter">
+                Unlock Features →
+              </span>
+            </div>
+          )}
         </div>
       </header>
 

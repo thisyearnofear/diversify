@@ -223,41 +223,54 @@ export default function DiversiFiPage() {
                   {experienceMode === "intermediate" ? "🚀" : "⚡"}
                 </button>
 
-                {/* Show voice only when connected */}
-                {address && (
-                  <VoiceButton
-                    size="sm"
-                    variant="default"
-                    onTranscription={(text) => {
-                      console.log("[Voice] Intent Discovery for:", text);
-                      const intent = IntentDiscoveryService.discover(text);
+                {/* Voice assistant - always available for questions and commands */}
+                <VoiceButton
+                  size="sm"
+                  variant="default"
+                  onTranscription={(text) => {
+                    console.log("[Voice] Intent Discovery for:", text);
+                    const intent = IntentDiscoveryService.discover(text);
 
-                      switch (intent.type) {
-                        case "NAVIGATE":
-                          showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
-                          setActiveTab(intent.tab);
-                          break;
-
-                        case "SWAP_SHORTCUT":
-                          showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
-                          setSwapPrefill({
-                            fromToken: intent.fromToken,
-                            toToken: intent.toToken,
-                            amount: intent.amount,
-                            reason: `Voice shortcut: "${text}"`
-                          });
-                          setActiveTab("swap");
-                          break;
-
-                        case "QUERY":
-                        default:
+                    switch (intent.type) {
+                      case "ONBOARDING":
+                        // Handle onboarding questions with contextual responses
+                        if (intent.topic === 'demo') {
+                          showToast("Enabling demo mode...", "info");
+                          enableDemoMode();
+                        } else if (intent.topic === 'wallet-help' && !address) {
+                          showToast("Opening wallet tutorial...", "info");
+                          openWalletTutorial();
+                        } else {
+                          // Send to AI for detailed explanation
                           addUserMessage(text);
                           setDrawerOpen(true);
-                          break;
-                      }
-                    }}
-                  />
-                )}
+                        }
+                        break;
+
+                      case "NAVIGATE":
+                        showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
+                        setActiveTab(intent.tab);
+                        break;
+
+                      case "SWAP_SHORTCUT":
+                        showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
+                        setSwapPrefill({
+                          fromToken: intent.fromToken,
+                          toToken: intent.toToken,
+                          amount: intent.amount,
+                          reason: `Voice shortcut: "${text}"`
+                        });
+                        setActiveTab("swap");
+                        break;
+
+                      case "QUERY":
+                      default:
+                        addUserMessage(text);
+                        setDrawerOpen(true);
+                        break;
+                    }
+                  }}
+                />
 
                 <ThemeToggle />
                 {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}

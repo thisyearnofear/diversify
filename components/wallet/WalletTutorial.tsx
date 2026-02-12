@@ -243,10 +243,22 @@ export const WalletTutorial: React.FC<{
                               <span className="text-white text-xl">🔗</span>
                             </div>
                             <div>
-                              <p className="font-bold text-sm text-gray-900 dark:text-white">Connect Any Wallet</p>
+                              <p className="font-bold text-sm text-gray-900 dark:text-white">I Have a Wallet</p>
                               <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">MetaMask, Coinbase, WalletConnect, and more</p>
                             </div>
                           </motion.button>
+
+                          <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                              <div className="w-full border-t border-gray-200 dark:border-gray-700" />
+                            </div>
+                            <div className="relative flex justify-center text-xs">
+                              <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
+                                or create new wallet
+                              </span>
+                            </div>
+                          </div>
+
                           <motion.button
                             onClick={handleConnect}
                             whileHover={{ scale: 1.01 }}
@@ -257,22 +269,8 @@ export const WalletTutorial: React.FC<{
                               <span className="text-white text-xl">&#9993;&#65039;</span>
                             </div>
                             <div>
-                              <p className="font-bold text-sm text-gray-900 dark:text-white">Sign in with Email</p>
-                              <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">Create a wallet with just your email address</p>
-                            </div>
-                          </motion.button>
-                          <motion.button
-                            onClick={handleConnect}
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="w-full flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 hover:shadow-md transition-all text-left"
-                          >
-                            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-md shrink-0">
-                              <span className="text-white text-xl">📱</span>
-                            </div>
-                            <div>
-                              <p className="font-bold text-sm text-gray-900 dark:text-white">New to Crypto?</p>
-                              <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">We&#39;ll set up a wallet for you in seconds</p>
+                              <p className="font-bold text-sm text-gray-900 dark:text-white">Create with Email</p>
+                              <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">Easiest option - uses your email address</p>
                             </div>
                           </motion.button>
                         </div>
@@ -338,13 +336,13 @@ export const useWalletTutorial = () => {
     const hasSeenTutorial = localStorage.getItem('hasSeenWalletTutorial') === 'true';
     if (hasSeenTutorial) return;
 
-    const hasCompletedOnboarding = localStorage.getItem('hasSeenStrategyModal') === 'true';
-    if (!hasCompletedOnboarding) return;
+    // Auto-open tutorial after strategy modal OR if user dismissed strategy modal
+    const hasSeenStrategyModal = localStorage.getItem('hasSeenStrategyModal') === 'true';
 
     const timer = setTimeout(() => {
       setIsTutorialOpen(true);
       localStorage.setItem('hasSeenWalletTutorial', 'true');
-    }, 1500);
+    }, hasSeenStrategyModal ? 1500 : 3000); // Longer delay if no strategy modal
 
     return () => clearTimeout(timer);
   }, [isMiniPay, isFarcaster, isConnected]);

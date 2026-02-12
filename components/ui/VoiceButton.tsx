@@ -22,13 +22,13 @@ interface VoiceButtonProps {
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
-// Example voice commands to suggest
+// Example voice commands to suggest (context-aware)
 const VOICE_SUGGESTIONS = [
+    { command: "What is DiversiFi?", icon: "❓" },
+    { command: "How does this protect my money?", icon: "🛡️" },
+    { command: "Is this safe to use?", icon: "🔒" },
+    { command: "Show my portfolio", icon: "📊" },
     { command: "Swap $100 to gold", icon: "🥇" },
-    { command: "Protect my savings", icon: "🛡️" },
-    { command: "Analyze my portfolio", icon: "📊" },
-    { command: "What's my balance?", icon: "💰" },
-    { command: "Show inflation data", icon: "📈" },
 ];
 
 export default function VoiceButton({
@@ -151,7 +151,7 @@ export default function VoiceButton({
             clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = null;
         }
-        
+
         // Clear Ghosting Ticker
         setOverridePulse(null);
         setVolume(0);
@@ -368,8 +368,8 @@ export default function VoiceButton({
                             <div className="flex items-center gap-2">
                                 <span className="text-lg">🎤</span>
                                 <div>
-                                    <p className="font-bold text-sm">Try Voice Commands!</p>
-                                    <p className="text-xs text-blue-100">Tap and say &quot;Swap $100 to gold&quot;</p>
+                                    <p className="font-bold text-sm">Ask Me Anything!</p>
+                                    <p className="text-xs text-blue-100">Try &quot;What is DiversiFi?&quot;</p>
                                 </div>
                             </div>
                             {/* Arrow */}
@@ -521,7 +521,7 @@ export default function VoiceButton({
                     >
                         <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
                             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                Try saying...
+                                Ask me anything...
                             </p>
                         </div>
                         {VOICE_SUGGESTIONS.map(({ command, icon }, idx) => (
@@ -536,7 +536,7 @@ export default function VoiceButton({
                         ))}
                         <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800 mt-1">
                             <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                Or tap 🎤 and speak naturally
+                                Ask questions or give commands
                             </p>
                         </div>
                     </motion.div>

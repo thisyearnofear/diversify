@@ -155,27 +155,31 @@ export default function OverviewTab({
               <span className="text-xs opacity-80 ml-1">(No wallet needed)</span>
             </button>
 
+            {/* Primary CTA: Buy Crypto */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-blue-800 dark:text-blue-200 uppercase tracking-wide">Start Here</p>
+              <NetworkOptimizedOnramp
+                variant="default"
+                defaultAmount="100"
+                className="w-full !rounded-lg !py-3"
+              />
+              <p className="text-[10px] text-blue-600 dark:text-blue-400 text-center">
+                💳 Buy with card or bank transfer • Low KYC
+              </p>
+            </div>
+
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200 dark:border-gray-700" />
               </div>
               <div className="relative flex justify-center text-xs">
                 <span className="bg-white dark:bg-gray-800 px-2 text-gray-500 dark:text-gray-400">
-                  Ready to protect your money?
+                  or connect existing wallet
                 </span>
               </div>
             </div>
 
-            {/* Secondary CTA: Buy Crypto */}
-            <div className="w-full">
-              <NetworkOptimizedOnramp
-                variant="default"
-                defaultAmount="100"
-                className="w-full !rounded-lg !py-2.5"
-              />
-            </div>
-
-            {/* Tertiary CTA: Connect existing wallet */}
+            {/* Secondary CTA: Connect existing wallet */}
             <WalletButton variant="inline" className="w-full !bg-gray-100 dark:!bg-gray-700 !text-gray-700 dark:!text-gray-200 hover:!bg-gray-200 dark:hover:!bg-gray-600" />
 
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
@@ -268,14 +272,31 @@ export default function OverviewTab({
             </div>
 
             <div className="space-y-4 mt-2">
-              <NetworkOptimizedOnramp
-                variant="white"
-                defaultAmount="100"
-                className="w-full"
-              />
+              <div className="space-y-2">
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">Recommended</p>
+                <NetworkOptimizedOnramp
+                  variant="white"
+                  defaultAmount="100"
+                  className="w-full"
+                />
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 text-center">
+                  💳 Buy with card or bank transfer • Low KYC
+                </p>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-amber-200 dark:border-amber-700" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-amber-50 dark:bg-amber-900/20 px-2 text-amber-700 dark:text-amber-300">
+                    or
+                  </span>
+                </div>
+              </div>
 
               <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
-                <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">Deposit from exchange</p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">Transfer from exchange</p>
                 <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
                   <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">{address}</code>
                   <button
@@ -295,7 +316,7 @@ export default function OverviewTab({
                 </div>
                 <div className="relative flex justify-center text-xs">
                   <span className="bg-amber-50 dark:bg-amber-900/20 px-2 text-amber-700 dark:text-amber-300">
-                    or
+                    just exploring?
                   </span>
                 </div>
               </div>
@@ -304,7 +325,7 @@ export default function OverviewTab({
                 onClick={enableDemoMode}
                 className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors"
               >
-                🎮 Try Demo While You Wait
+                🎮 Try Demo Mode
               </button>
             </div>
           </div>
