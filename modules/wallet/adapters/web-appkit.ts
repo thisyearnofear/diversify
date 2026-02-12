@@ -185,6 +185,7 @@ async function waitForAppKitConnection(
     let unsub: (() => void) | null = null;
     let pollInterval: ReturnType<typeof setInterval> | null = null;
     let resolved = false;
+    let lastModalState = true;
 
     const cleanup = () => {
       if (resolved) return;
@@ -195,6 +196,7 @@ async function waitForAppKitConnection(
 
     const timer = setTimeout(() => {
       cleanup();
+      console.warn('[Wallet/AppKit] Connection timeout - user may have cancelled or closed the modal');
       resolve(null);
     }, timeoutMs);
 
@@ -210,12 +212,17 @@ async function waitForAppKitConnection(
 
     if (typeof appKit.subscribeState === 'function') {
       unsub = appKit.subscribeState(async (state: any) => {
-        await checkAndResolve();
-        if (!resolved && state?.open === false) {
+        // Check if modal was closed (user cancelled)
+        if (!resolved && lastModalState === true && state?.open === false) {
+          console.log('[Wallet/AppKit] Modal closed by user - cancelling connection');
           clearTimeout(timer);
           cleanup();
           resolve(null);
+          return;
         }
+
+        lastModalState = state?.open;
+        await checkAndResolve();
       });
     }
 
@@ -236,5 +243,36 @@ export async function connectWithWebAppKit(): Promise<{ accounts: string[]; prov
     return null;
   }
 
-  return waitForAppKitConnection(appKit);
+  try {
+    const result = await waitForAppKitConnection(appKit);
+
+    // If connection failed or was cancelled, ensure modal is closed
+    if (!result && typeof appKit.close === 'function') {
+      try {
+        await appKit.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
+
+    return result;
+  } catch (error: any) {
+    // Handle Magic Link cancellation errors specifically
+    if (error?.message?.includes('CancelledError') || error?.message?.includes('Magic RPC Error')) {
+      console.log('[Wallet/AppKit] Social login cancelled by user');
+    } else {
+      console.warn('[Wallet/AppKit] Connection error:', error);
+    }
+
+    // Ensure modal is closed on error
+    if (typeof appKit.close === 'function') {
+      try {
+        await appKit.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
+
+    return null;
+  }
 }

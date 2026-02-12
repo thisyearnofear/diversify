@@ -118,7 +118,7 @@ export function useWallet() {
 
       // PRIORITY: Check for injected wallet FIRST (MetaMask, Coinbase, etc)
       const provider = await getActiveProvider();
-      
+
       if (provider && typeof window !== 'undefined' && (window as any).ethereum) {
         // Injected wallet detected - use it directly (no AppKit modal)
         console.log('[Wallet] Using detected injected wallet');
@@ -133,7 +133,7 @@ export function useWallet() {
             const parsedChainId = parseInt(chainIdHex as string, 16);
             setChainId(parsedChainId);
             cacheChainId(parsedChainId);
-            
+
             // Cache wallet preference
             cacheWalletPreference('injected', accounts[0]);
             return;
@@ -147,20 +147,38 @@ export function useWallet() {
       // FALLBACK: No injected wallet or user rejected - use AppKit modal
       if (shouldUseWebAppKit(isMiniPay, isFarcaster)) {
         console.log('[Wallet] Opening AppKit modal (no injected wallet or connection rejected)');
-        const result = await connectWithWebAppKit();
-        if (result && result.accounts.length > 0) {
-          providerRef.current = result.provider;
-          const chainIdHex = await result.provider.request({ method: 'eth_chainId' });
 
-          setAddress(result.accounts[0]);
-          setIsConnected(true);
-          setChainId(parseInt(chainIdHex as string, 16));
-          
-          // Cache wallet preference
-          cacheWalletPreference('appkit', result.accounts[0]);
+        try {
+          const result = await connectWithWebAppKit();
+
+          if (result && result.accounts.length > 0) {
+            providerRef.current = result.provider;
+            const chainIdHex = await result.provider.request({ method: 'eth_chainId' });
+
+            setAddress(result.accounts[0]);
+            setIsConnected(true);
+            setChainId(parseInt(chainIdHex as string, 16));
+
+            // Cache wallet preference
+            cacheWalletPreference('appkit', result.accounts[0]);
+            return;
+          }
+
+          // User cancelled or closed modal
+          console.log('[Wallet] AppKit connection cancelled or closed by user');
+          return;
+        } catch (appKitError: any) {
+          // Handle specific Magic Link errors
+          if (appKitError?.message?.includes('CancelledError') ||
+            appKitError?.message?.includes('Magic RPC Error')) {
+            console.log('[Wallet] Social login cancelled by user');
+            return; // Don't show error for user cancellation
+          }
+
+          console.warn('[Wallet] AppKit connection error:', appKitError);
+          setError('Connection failed. Please try again.');
           return;
         }
-        return;
       }
 
       // No wallet available
@@ -218,10 +236,10 @@ export function useWallet() {
     setIsConnected(false);
     setChainId(null);
     setError(null);
-    
+
     // Clear wallet preference from cache
     clearWalletPreference();
-    
+
     console.log('[Wallet] Disconnected and cleared preferences');
   };
 
@@ -390,16 +408,16 @@ function getWalletPreference(): { type: 'injected' | 'appkit'; address: string; 
   try {
     const stored = localStorage.getItem('diversifi-wallet-preference');
     if (!stored) return null;
-    
+
     const preference = JSON.parse(stored);
-    
+
     // Expire after 30 days
     const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
     if (Date.now() - preference.timestamp > THIRTY_DAYS_MS) {
       clearWalletPreference();
       return null;
     }
-    
+
     return preference;
   } catch {
     return null;
