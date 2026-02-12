@@ -32,7 +32,7 @@ cp .env.example .env.local
 # Add your API keys to .env.local:
 # - GOOGLE_AI_API_KEY (get from https://aistudio.google.com/)
 # - VENICE_API_KEY (optional, from https://venice.ai/api)
-# - NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID (from https://cloud.walletconnect.com/)
+# - NEXT_PUBLIC_REOWN_PROJECT_ID (or NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID, from https://cloud.walletconnect.com/)
 
 # Run dev server
 pnpm dev
@@ -84,7 +84,7 @@ Each strategy shapes:
 | **Frontend** | Next.js 15, React 19, Tailwind CSS |
 | **AI** | Google Gemini 3.0, Venice AI |
 | **Swaps** | Mento (Celo), LiFi (cross-chain), 1inch (Arbitrum) |
-| **Wallet** | WalletConnect, RainbowKit, Circle Programmable Wallets |
+| **Wallet** | Reown AppKit (WalletConnect), Farcaster Mini App SDK, Circle Programmable Wallets |
 | **Voice** | OpenAI Whisper, ElevenLabs TTS |
 
 ## 🔮 Roadmap

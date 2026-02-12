@@ -1,0 +1,66 @@
+import { NETWORKS } from '../../../config';
+
+export interface AddEthereumChainParameter {
+  chainId: string;
+  chainName: string;
+  nativeCurrency: { name: string; symbol: string; decimals: number };
+  rpcUrls: string[];
+  blockExplorerUrls: string[];
+}
+
+export const SUPPORTED_CHAIN_IDS = [
+  NETWORKS.CELO_MAINNET.chainId,
+  NETWORKS.ALFAJORES.chainId,
+  NETWORKS.ARBITRUM_ONE.chainId,
+  NETWORKS.ARC_TESTNET.chainId,
+] as const;
+
+export const DEFAULT_CHAIN_ID = NETWORKS.CELO_MAINNET.chainId;
+
+export function isSupportedChainId(chainId: number): boolean {
+  return SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number]);
+}
+
+export function getAddChainParameter(targetChainId: number): AddEthereumChainParameter {
+  if (targetChainId === NETWORKS.ALFAJORES.chainId) {
+    return {
+      chainId: '0xaf13',
+      chainName: 'Alfajores',
+      nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+      rpcUrls: [NETWORKS.ALFAJORES.rpcUrl],
+      blockExplorerUrls: [NETWORKS.ALFAJORES.explorerUrl],
+    };
+  }
+
+  if (targetChainId === NETWORKS.ARC_TESTNET.chainId) {
+    return {
+      chainId: '0x4cef52',
+      chainName: 'Arc Testnet',
+      nativeCurrency: { name: 'ARC', symbol: 'ARC', decimals: 18 },
+      rpcUrls: [NETWORKS.ARC_TESTNET.rpcUrl],
+      blockExplorerUrls: [NETWORKS.ARC_TESTNET.explorerUrl],
+    };
+  }
+
+  if (targetChainId === NETWORKS.ARBITRUM_ONE.chainId) {
+    return {
+      chainId: '0xa4b1',
+      chainName: 'Arbitrum One',
+      nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+      rpcUrls: [NETWORKS.ARBITRUM_ONE.rpcUrl],
+      blockExplorerUrls: [NETWORKS.ARBITRUM_ONE.explorerUrl],
+    };
+  }
+
+  return {
+    chainId: '0xa4ec',
+    chainName: 'Celo',
+    nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+    rpcUrls: [NETWORKS.CELO_MAINNET.rpcUrl],
+    blockExplorerUrls: [NETWORKS.CELO_MAINNET.explorerUrl],
+  };
+}
+
+export function toHexChainId(chainId: number): string {
+  return `0x${chainId.toString(16)}`;
+}

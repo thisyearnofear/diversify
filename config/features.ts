@@ -63,6 +63,24 @@ export const UI_FEATURES = {
   AUTONOMOUS_UI: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
 } as const;
 
+// Wallet UX features (web onboarding + wallet connection)
+export const WALLET_FEATURES = {
+  /** Enable Reown AppKit flow for regular web users */
+  APPKIT_WEB: process.env.NEXT_PUBLIC_ENABLE_APPKIT_WALLET !== 'false',
+
+  /** Enable email sign-in / wallet creation in AppKit */
+  APPKIT_EMAIL: process.env.NEXT_PUBLIC_ENABLE_APPKIT_EMAIL !== 'false',
+
+  /** Enable social sign-in options in AppKit */
+  APPKIT_SOCIALS: process.env.NEXT_PUBLIC_ENABLE_APPKIT_SOCIALS !== 'false',
+
+  /** WalletConnect/Reown project ID */
+  APPKIT_PROJECT_ID:
+    process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
+    '',
+} as const;
+
 // Feature descriptions for user-facing UI
 export const FEATURE_DESCRIPTIONS = {
   aiAnalysis: {

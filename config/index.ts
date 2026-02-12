@@ -397,4 +397,4 @@ export function getNetworkConfig(chainId: number) {
 }
 
 // Re-export features for convenience
-export { AI_FEATURES, AUTONOMOUS_FEATURES, UI_FEATURES, hasAIFeatures, hasAutonomousFeatures } from './features';
+export { AI_FEATURES, AUTONOMOUS_FEATURES, UI_FEATURES, WALLET_FEATURES, hasAIFeatures, hasAutonomousFeatures } from './features';
