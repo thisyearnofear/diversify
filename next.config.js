@@ -1,8 +1,19 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ["@stable-station/mento-utils"],
-  // We'll add shared packages here as we extract them
+  transpilePackages: [
+    "@stable-station/mento-utils",
+    "@reown/appkit",
+    "@reown/appkit-adapter-wagmi",
+  ],
+
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push("pino-pretty", "lokijs", "encoding");
+    }
+    return config;
+  },
 
   // Configure base path if needed
   // basePath: '/diversifi',

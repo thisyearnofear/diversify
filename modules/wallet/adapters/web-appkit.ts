@@ -5,10 +5,6 @@ let appKitInitPromise: Promise<any | null> | null = null;
 let appKitInstance: any | null = null;
 let wagmiAdapterInstance: any | null = null;
 
-function dynamicImport(moduleName: string): Promise<any> {
-  return new Function('m', 'return import(m)')(moduleName) as Promise<any>;
-}
-
 function getProjectId(): string {
   return WALLET_FEATURES.APPKIT_PROJECT_ID;
 }
@@ -78,9 +74,9 @@ async function createAppKitInstance(): Promise<any | null> {
 
   try {
     const [{ createAppKit }, { WagmiAdapter }, { arbitrum, celo, celoAlfajores }] = await Promise.all([
-      dynamicImport('@reown/appkit'),
-      dynamicImport('@reown/appkit-adapter-wagmi'),
-      dynamicImport('@reown/appkit/networks'),
+      import('@reown/appkit'),
+      import('@reown/appkit-adapter-wagmi'),
+      import('@reown/appkit/networks'),
     ]);
 
     const projectId = getProjectId();
@@ -108,8 +104,8 @@ async function createAppKitInstance(): Promise<any | null> {
       },
     };
 
-    const networks = [celo, celoAlfajores, arbitrum, arcTestnet];
-    wagmiAdapterInstance = new WagmiAdapter({ projectId, networks });
+    const networks = [celo, celoAlfajores, arbitrum, arcTestnet] as const;
+    wagmiAdapterInstance = new WagmiAdapter({ projectId, networks: [...networks] });
 
     const metadata = {
       name: 'DiversiFi',
@@ -120,13 +116,13 @@ async function createAppKitInstance(): Promise<any | null> {
 
     appKitInstance = createAppKit({
       adapters: [wagmiAdapterInstance],
-      networks,
+      networks: [networks[0], ...networks.slice(1)],
       metadata,
       projectId,
       features: {
         analytics: true,
         email: WALLET_FEATURES.APPKIT_EMAIL,
-        socials: WALLET_FEATURES.APPKIT_SOCIALS,
+        socials: WALLET_FEATURES.APPKIT_SOCIALS ? ['google', 'x', 'discord', 'apple'] : false as const,
       },
     });
 
