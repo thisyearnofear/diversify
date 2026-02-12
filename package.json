@@ -28,6 +28,7 @@
     "@reown/appkit": "^1.8.3",
     "@reown/appkit-adapter-wagmi": "^1.8.3",
     "@stable-station/mento-utils": "workspace:*",
+    "@tanstack/react-query": "5.90.21",
     "@vercel/og": "0.8.6",
     "autoprefixer": "^10.4.0",
     "axios": "1.13.2",

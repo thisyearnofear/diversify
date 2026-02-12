@@ -5,7 +5,7 @@ import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { arbitrum, celo, celoAlfajores } from '@reown/appkit/networks'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { WagmiProvider, type Config } from 'wagmi'
-import { ReactNode, useMemo } from 'react'
+import { ReactNode } from 'react'
 import { WALLET_FEATURES } from '../config/features'
 
 // Set up queryClient
