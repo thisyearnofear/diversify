@@ -31,7 +31,7 @@ import StrategyModal, { useStrategyModal } from "../components/onboarding/Strate
 import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, setSwapPrefill, experienceMode, setExperienceMode } = useAppState();
+  const { activeTab, setActiveTab, setSwapPrefill, experienceMode, setExperienceMode, enableDemoMode } = useAppState();
   const { showToast } = useToast();
   const { unreadCount, markAsRead, setDrawerOpen, addUserMessage } = useAIConversation();
 
@@ -48,7 +48,7 @@ export default function DiversiFiPage() {
 
   const {
     isTutorialOpen,
-    openTutorial,
+    openTutorial: openWalletTutorial,
     closeTutorial,
   } = useWalletTutorial();
 
