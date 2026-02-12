@@ -116,7 +116,37 @@ export function useWallet() {
       setIsConnecting(true);
       setError(null);
 
+      // PRIORITY: Check for injected wallet FIRST (MetaMask, Coinbase, etc)
+      const provider = await getActiveProvider();
+      
+      if (provider && typeof window !== 'undefined' && (window as any).ethereum) {
+        // Injected wallet detected - use it directly (no AppKit modal)
+        console.log('[Wallet] Using detected injected wallet');
+        try {
+          const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+
+          if (accounts.length > 0) {
+            setAddress(accounts[0]);
+            setIsConnected(true);
+
+            const chainIdHex = await provider.request({ method: 'eth_chainId' });
+            const parsedChainId = parseInt(chainIdHex as string, 16);
+            setChainId(parsedChainId);
+            cacheChainId(parsedChainId);
+            
+            // Cache wallet preference
+            cacheWalletPreference('injected', accounts[0]);
+            return;
+          }
+        } catch (injectedError) {
+          console.warn('[Wallet] Injected wallet rejected:', injectedError);
+          // Fall through to AppKit if user rejects
+        }
+      }
+
+      // FALLBACK: No injected wallet or user rejected - use AppKit modal
       if (shouldUseWebAppKit(isMiniPay, isFarcaster)) {
+        console.log('[Wallet] Opening AppKit modal (no injected wallet or connection rejected)');
         const result = await connectWithWebAppKit();
         if (result && result.accounts.length > 0) {
           providerRef.current = result.provider;
@@ -125,31 +155,16 @@ export function useWallet() {
           setAddress(result.accounts[0]);
           setIsConnected(true);
           setChainId(parseInt(chainIdHex as string, 16));
+          
+          // Cache wallet preference
+          cacheWalletPreference('appkit', result.accounts[0]);
           return;
         }
         return;
       }
 
-      const provider = await getActiveProvider();
-      if (!provider) {
-        setError('No wallet found. Please install a wallet extension or connect via WalletConnect.');
-        return;
-      }
-
-      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
-
-      if (accounts.length === 0) {
-        setError('No accounts found');
-        return;
-      }
-
-      setAddress(accounts[0]);
-      setIsConnected(true);
-
-      const chainIdHex = await provider.request({ method: 'eth_chainId' });
-      const parsedChainId = parseInt(chainIdHex as string, 16);
-      setChainId(parsedChainId);
-      cacheChainId(parsedChainId);
+      // No wallet available
+      setError('No wallet found. Please install a wallet extension or enable AppKit.');
     } catch (connectError: any) {
       console.error('[Wallet] Connect error:', connectError);
       setError(connectError?.message || 'Failed to connect wallet');
@@ -203,6 +218,11 @@ export function useWallet() {
     setIsConnected(false);
     setChainId(null);
     setError(null);
+    
+    // Clear wallet preference from cache
+    clearWalletPreference();
+    
+    console.log('[Wallet] Disconnected and cleared preferences');
   };
 
   const connectFarcasterWallet = async () => {
@@ -343,6 +363,54 @@ function cacheChainId(chainId: number): void {
 
   try {
     localStorage.setItem('diversifi-last-chain-id', chainId.toString());
+  } catch {
+    // Optional cache only.
+  }
+}
+
+function cacheWalletPreference(type: 'injected' | 'appkit', address: string): void {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    const preference = {
+      type,
+      address,
+      timestamp: Date.now(),
+    };
+    localStorage.setItem('diversifi-wallet-preference', JSON.stringify(preference));
+    console.log(`[Wallet] Cached preference: ${type} wallet (${address.substring(0, 6)}...${address.substring(address.length - 4)})`);
+  } catch {
+    // Optional cache only.
+  }
+}
+
+function getWalletPreference(): { type: 'injected' | 'appkit'; address: string; timestamp: number } | null {
+  if (typeof localStorage === 'undefined') return null;
+
+  try {
+    const stored = localStorage.getItem('diversifi-wallet-preference');
+    if (!stored) return null;
+    
+    const preference = JSON.parse(stored);
+    
+    // Expire after 30 days
+    const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - preference.timestamp > THIRTY_DAYS_MS) {
+      clearWalletPreference();
+      return null;
+    }
+    
+    return preference;
+  } catch {
+    return null;
+  }
+}
+
+function clearWalletPreference(): void {
+  if (typeof localStorage === 'undefined') return;
+
+  try {
+    localStorage.removeItem('diversifi-wallet-preference');
   } catch {
     // Optional cache only.
   }
