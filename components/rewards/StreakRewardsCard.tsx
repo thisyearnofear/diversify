@@ -37,6 +37,43 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
   } = useStreakRewards();
 
   const [showClaimFlow, setShowClaimFlow] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+  const [isCompact, setIsCompact] = useState(false);
+
+  // Calculate time until next claim
+  const formatTimeUntil = (date: Date | null) => {
+    if (!date) return '';
+    const now = new Date();
+    const diff = date.getTime() - now.getTime();
+    if (diff <= 0) return 'Available now';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Reset dismissed state when claim becomes available
+  React.useEffect(() => {
+    if (canClaim) {
+      setIsDismissed(false);
+      setIsCompact(false);
+    }
+  }, [canClaim]);
+
+  // If dismissed, show minimal restore button
+  if (isDismissed) {
+    return (
+      <button
+        onClick={() => setIsDismissed(false)}
+        className="w-full p-2 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-800 transition-colors flex items-center justify-between group"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm">💚</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">G$ Streak Hidden</span>
+        </div>
+        <span className="text-xs text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">Show →</span>
+      </button>
+    );
+  }
 
   // Not connected state
   if (!isConnected) {
@@ -66,14 +103,14 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
         title="Unlock Daily G$ Claim"
         description={
           todaySwaps > 0
-            ? `You've swapped $${todaySwaps.toFixed(2)} today. Swap $${remaining.toFixed(2)} more to unlock your free daily G$ claim!`
+            ? `You've swapped ${todaySwaps.toFixed(2)} today. Swap ${remaining.toFixed(2)} more to unlock your free daily G$ claim!`
             : "Swap $1+ today to unlock your free daily G$ claim from GoodDollar"
         }
         impact={todaySwaps > 0 ? `${progress.toFixed(0)}% to unlock` : "Free daily UBI"}
         action={
           onSaveClick
             ? {
-              label: todaySwaps > 0 ? `Swap $${remaining.toFixed(2)} More` : 'Make a Swap',
+              label: todaySwaps > 0 ? `Swap ${remaining.toFixed(2)} More` : 'Make a Swap',
               onClick: onSaveClick,
             }
             : undefined
@@ -83,49 +120,105 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     );
   }
 
-  // Calculate time until next claim
-  const formatTimeUntil = (date: Date | null) => {
-    if (!date) return '';
-    const now = new Date();
-    const diff = date.getTime() - now.getTime();
-    if (diff <= 0) return 'Available now';
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    return `${hours}h ${minutes}m`;
-  };
+  // Compact mode - after claiming, show minimal state
+  if (isCompact && !canClaim && isEligible) {
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setIsCompact(false)}
+          className="w-full p-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-900/20 dark:hover:to-yellow-900/20 rounded-lg border border-amber-200 dark:border-amber-900/30 transition-all flex items-center justify-between group"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🔥</span>
+            <div className="text-left">
+              <div className="text-sm font-black text-amber-700 dark:text-amber-400">
+                {streak?.daysActive || 0}-Day Streak
+              </div>
+              <div className="text-xs text-amber-600 dark:text-amber-500">
+                {nextClaimTime ? `Next claim in ${formatTimeUntil(nextClaimTime)}` : 'Keep it alive!'}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity">Expand</span>
+            <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsDismissed(true);
+          }}
+          className="absolute top-1 right-1 p-1 text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
+          title="Hide until next claim"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
 
-  // Has streak - show claim status
+  // Has streak - show claim status (full card)
   return (
     <>
-      <InsightCard
-        icon={canClaim ? '💚' : '🔥'}
-        title={canClaim ? 'Claim Your G$' : `${streak?.daysActive || 0}-Day Streak`}
-        description={
-          canClaim
-            ? `Your daily G$ is ready! Claim ${estimatedReward} now to keep your streak alive.`
-            : `Swap $1+ to maintain your streak and unlock your daily G$ claim.`
-        }
-        impact={canClaim ? estimatedReward : `${streak?.daysActive} days active`}
-        action={
-          canClaim
-            ? {
-              label: 'Claim G$',
-              onClick: () => setShowClaimFlow(true),
-              loading: isLoading,
-            }
-            : nextClaimTime
+      <div className="relative">
+        <InsightCard
+          icon={canClaim ? '💚' : '🔥'}
+          title={canClaim ? 'Claim Your G$' : `${streak?.daysActive || 0}-Day Streak`}
+          description={
+            canClaim
+              ? `Your daily G$ is ready! Claim ${estimatedReward} now to keep your streak alive.`
+              : `Swap $1+ to maintain your streak and unlock your daily G$ claim.`
+          }
+          impact={canClaim ? estimatedReward : `${streak?.daysActive} days active`}
+          action={
+            canClaim
               ? {
-                label: `Next claim in ${formatTimeUntil(nextClaimTime)}`,
-                onClick: () => { },
-                disabled: true,
+                label: 'Claim G$',
+                onClick: () => setShowClaimFlow(true),
+                loading: isLoading,
               }
-              : undefined
-        }
-        variant={canClaim ? 'reward' : 'success'}
-      />
+              : nextClaimTime
+                ? {
+                  label: `Next claim in ${formatTimeUntil(nextClaimTime)}`,
+                  onClick: () => { },
+                  disabled: true,
+                }
+                : undefined
+          }
+          variant={canClaim ? 'reward' : 'success'}
+        />
+        {/* Minimize/Dismiss buttons - only show when not claimable */}
+        {!canClaim && isEligible && (
+          <div className="absolute top-2 right-2 flex gap-1">
+            <button
+              onClick={() => setIsCompact(true)}
+              className="p-1.5 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shadow-sm"
+              title="Minimize"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setIsDismissed(true)}
+              className="p-1.5 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shadow-sm"
+              title="Hide until next claim"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Milestone Progress - Show next achievement */}
-      {isEligible && streak && streak.daysActive > 0 && (
+      {isEligible && streak && streak.daysActive > 0 && !isCompact && (
         <div className="mt-3 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 rounded-lg border border-amber-200 dark:border-amber-900/30">
           <div className="flex items-center justify-between">
             <div className="flex-1">
