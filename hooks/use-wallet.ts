@@ -222,23 +222,41 @@ export function useWallet() {
       // PRIORITY 2: No injected wallet or user rejected - use Privy for social login
       if (privyEnabled && privy.ready) {
         // Check if already authenticated
-        if (privy.authenticated && privyWallets.length > 0) {
-          console.log('[Wallet] Already authenticated with Privy, syncing wallet');
-          // Trigger sync by updating state
-          const embeddedWallet = privyWallets[0];
-          if (embeddedWallet.address) {
-            setAddress(embeddedWallet.address);
-            setIsConnected(true);
-            cacheWalletPreference('privy', embeddedWallet.address);
+        if (privy.authenticated) {
+          console.log('[Wallet] Already authenticated with Privy');
+
+          // Check if wallet exists
+          if (privyWallets.length > 0) {
+            console.log('[Wallet] Privy wallet exists, syncing');
+            const embeddedWallet = privyWallets[0];
+            if (embeddedWallet.address) {
+              setAddress(embeddedWallet.address);
+              setIsConnected(true);
+              cacheWalletPreference('privy', embeddedWallet.address);
+            }
+            return;
+          } else {
+            console.log('[Wallet] No Privy wallet found, creating one...');
+            // Wallet doesn't exist yet - create it
+            try {
+              await privy.createWallet();
+              console.log('[Wallet] Privy wallet created, waiting for sync...');
+              // The useEffect will pick it up once created
+              return;
+            } catch (createError) {
+              console.error('[Wallet] Failed to create Privy wallet:', createError);
+              setError('Failed to create wallet. Please try again.');
+              return;
+            }
           }
-          return;
         }
 
         console.log('[Wallet] Opening Privy modal (social login)');
 
         try {
           await privy.login();
-          // Privy state will be synced via the useEffect above
+          // After login, check if wallet needs to be created
+          // The useEffect will handle syncing
           return;
         } catch (privyError: any) {
           // Handle user cancellation
