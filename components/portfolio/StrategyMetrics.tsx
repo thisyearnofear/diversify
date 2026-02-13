@@ -153,13 +153,6 @@ function getAfricapitalismMetrics(
 
     return [
         {
-            label: 'Strategy Score',
-            value: `${Math.round(score)}%`,
-            icon: '🎯',
-            description: rating === 'excellent' ? 'Excellent alignment!' : rating === 'good' ? 'Good progress' : 'Needs work',
-            status: rating === 'excellent' ? 'good' : rating === 'good' ? 'neutral' : 'warning',
-        },
-        {
             label: 'Pan-African Exposure',
             value: `${africanExposure.toFixed(0)}%`,
             icon: '🌍',
@@ -191,13 +184,6 @@ function getBuenVivirMetrics(
     const latamCountries = Object.keys(data.regions).filter(r => latamRegions.includes(r)).length;
 
     return [
-        {
-            label: 'Strategy Score',
-            value: `${Math.round(score)}%`,
-            icon: '🎯',
-            description: rating === 'excellent' ? 'Excellent harmony!' : rating === 'good' ? 'Good balance' : 'Needs work',
-            status: rating === 'excellent' ? 'good' : rating === 'good' ? 'neutral' : 'warning',
-        },
         {
             label: 'Patria Grande',
             value: `${latamExposure.toFixed(0)}%`,

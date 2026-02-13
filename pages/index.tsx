@@ -288,7 +288,6 @@ export default function DiversiFiPage() {
               }
               setActiveTab(tab);
             }}
-            experienceMode={experienceMode}
           />
         </div>
 
@@ -332,7 +331,6 @@ export default function DiversiFiPage() {
             {activeTab === "info" && (
               <InfoTab
                 availableTokens={availableTokens}
-                setActiveTab={setActiveTab}
                 userRegion={userRegion}
               />
             )}
