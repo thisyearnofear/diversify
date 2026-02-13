@@ -74,6 +74,7 @@ export function useWallet() {
           console.log('[Wallet] Syncing Privy wallet to app state');
           setAddress(walletAddress);
           setIsConnected(true);
+          setIsConnecting(false); // Stop the connecting state
           cacheWalletPreference('privy', walletAddress);
 
           // Try to get chain ID from Privy wallet
