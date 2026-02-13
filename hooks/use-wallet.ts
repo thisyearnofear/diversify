@@ -42,20 +42,36 @@ export function useWallet() {
       ready: privy.ready,
       authenticated: privy.authenticated,
       walletsCount: privyWallets.length,
-      currentAddress: address
+      currentAddress: address,
+      user: privy.user ? 'exists' : 'null'
     });
 
-    if (!privyEnabled || !privy.ready || !privy.authenticated) return;
+    if (!privyEnabled) {
+      console.log('[Wallet] Privy not enabled');
+      return;
+    }
+
+    if (!privy.ready) {
+      console.log('[Wallet] Privy not ready yet');
+      return;
+    }
+
+    if (!privy.authenticated) {
+      console.log('[Wallet] Privy not authenticated');
+      return;
+    }
 
     const syncPrivyWallet = async () => {
+      console.log('[Wallet] Privy is ready and authenticated, checking wallets...');
+
       if (privyWallets.length > 0) {
         const embeddedWallet = privyWallets[0];
         const walletAddress = embeddedWallet.address;
 
-        console.log('[Wallet] Attempting to sync Privy wallet:', walletAddress);
+        console.log('[Wallet] Found Privy wallet:', walletAddress);
 
         if (walletAddress) {
-          console.log('[Wallet] Syncing Privy wallet:', walletAddress);
+          console.log('[Wallet] Syncing Privy wallet to app state');
           setAddress(walletAddress);
           setIsConnected(true);
           cacheWalletPreference('privy', walletAddress);
@@ -69,18 +85,19 @@ export function useWallet() {
               const parsedChainId = parseInt(chainIdHex as string, 16);
               setChainId(parsedChainId);
               cacheChainId(parsedChainId);
+              console.log('[Wallet] Privy wallet synced successfully, chainId:', parsedChainId);
             }
           } catch (err) {
             console.warn('[Wallet] Could not get Privy chain ID:', err);
           }
         }
       } else {
-        console.log('[Wallet] No Privy wallets found yet');
+        console.log('[Wallet] Privy authenticated but no wallets found yet, waiting...');
       }
     };
 
     syncPrivyWallet();
-  }, [privyEnabled, privy.ready, privy.authenticated, privyWallets]);
+  }, [privyEnabled, privy.ready, privy.authenticated, privyWallets, privy.user]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
