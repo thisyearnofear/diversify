@@ -8,7 +8,7 @@ import { WalletProvider } from "../components/wallet/WalletProvider";
 import { ToastProvider } from "../components/ui/Toast";
 import { AppStateProvider } from "../context/AppStateContext";
 import { AIConversationProvider } from "../context/AIConversationContext";
-import { AppKitProvider } from "../context/AppKitProvider";
+import { PrivyProvider } from "../context/PrivyProvider";
 import AIChat from "../components/agent/AIChat";
 import { useRouter } from "next/router";
 import sdk from "@farcaster/miniapp-sdk";
@@ -89,8 +89,8 @@ export default function App({ Component, pageProps }: AppProps) {
       <ErrorBoundary>
         {/* Debug overlay removed */}
 
-        {/* Wrap with AppStateProvider and other providers */}
-        <AppKitProvider>
+        {/* Wrap with PrivyProvider and other providers */}
+        <PrivyProvider>
           <AppStateProvider>
             <AIConversationProvider>
               <ToastProvider>
@@ -101,7 +101,7 @@ export default function App({ Component, pageProps }: AppProps) {
               </ToastProvider>
             </AIConversationProvider>
           </AppStateProvider>
-        </AppKitProvider>
+        </PrivyProvider>
       </ErrorBoundary>
     </>
   );

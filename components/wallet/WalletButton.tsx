@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { usePrivy } from '@privy-io/react-auth';
 import { useWalletContext } from './WalletProvider';
 import { useToast } from '../ui/Toast';
 import { SmartBuyCryptoButton, SmartSellCryptoButton } from '../onramp';
+import { WALLET_FEATURES } from '../../config/features';
 
 type ButtonVariant = 'primary' | 'secondary' | 'inline' | 'minimal';
 
@@ -27,6 +29,13 @@ export default function WalletButton({
     disconnect,
     formatAddress,
   } = useWalletContext();
+
+  // Privy integration (always call hooks, but check if enabled)
+  const privy = usePrivy();
+  const isPrivyUser = WALLET_FEATURES.PRIVY_ENABLED &&
+    WALLET_FEATURES.PRIVY_APP_ID &&
+    privy.authenticated &&
+    privy.user;
 
   const { showToast } = useToast();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -86,6 +95,14 @@ export default function WalletButton({
 
   // 1. Connected State
   if (address) {
+    // Determine display text based on connection type
+    const privyEmail = isPrivyUser && privy.user?.email
+      ? (typeof privy.user.email === 'string' ? privy.user.email : privy.user.email.address)
+      : null;
+
+    const displayText = privyEmail || formatAddress(address);
+    const displayIcon = privyEmail ? '📧' : '🔗';
+
     return (
       <div className="relative">
         <motion.button
@@ -98,7 +115,7 @@ export default function WalletButton({
           aria-haspopup="true"
         >
           <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-          <span className="text-sm font-medium font-mono">{formatAddress(address)}</span>
+          <span className="text-sm font-medium">{displayIcon} {displayText}</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className={`h-4 w-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}

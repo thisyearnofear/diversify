@@ -1,16 +1,22 @@
 /**
  * Consolidated wallet hook
  * Single source of truth for connection state and provider operations.
+ * 
+ * Priority order:
+ * 1. Farcaster/MiniPay (auto-connect)
+ * 2. Injected wallet (MetaMask/Coinbase)
+ * 3. Privy (social login fallback)
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { getAddChainParameter, isSupportedChainId, DEFAULT_CHAIN_ID, toHexChainId } from '../modules/wallet/core/chains';
-import { connectWithWebAppKit, shouldUseWebAppKit } from '../modules/wallet/adapters/web-appkit';
 import {
   getWalletEnvironment,
   getWalletProvider,
   setupWalletEventListenersForProvider,
 } from '../utils/wallet-provider';
+import { WALLET_FEATURES } from '../config/features';
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
@@ -23,6 +29,46 @@ export function useWallet() {
   const [farcasterContext, setFarcasterContext] = useState<any | null>(null);
 
   const providerRef = useRef<any | null>(null);
+
+  // Privy hooks (always call hooks, check enabled status separately)
+  const privy = usePrivy();
+  const { wallets: privyWallets } = useWallets();
+  const privyEnabled = WALLET_FEATURES.PRIVY_ENABLED && WALLET_FEATURES.PRIVY_APP_ID;
+
+  // Sync Privy wallet state with our wallet state
+  useEffect(() => {
+    if (!privyEnabled || !privy.ready || !privy.authenticated) return;
+
+    const syncPrivyWallet = async () => {
+      if (privyWallets.length > 0) {
+        const embeddedWallet = privyWallets[0];
+        const walletAddress = embeddedWallet.address;
+
+        if (walletAddress && walletAddress !== address) {
+          console.log('[Wallet] Syncing Privy wallet:', walletAddress);
+          setAddress(walletAddress);
+          setIsConnected(true);
+          cacheWalletPreference('privy', walletAddress);
+
+          // Try to get chain ID from Privy wallet
+          try {
+            const provider = await embeddedWallet.getEthereumProvider();
+            if (provider) {
+              providerRef.current = provider;
+              const chainIdHex = await provider.request({ method: 'eth_chainId' });
+              const parsedChainId = parseInt(chainIdHex as string, 16);
+              setChainId(parsedChainId);
+              cacheChainId(parsedChainId);
+            }
+          } catch (err) {
+            console.warn('[Wallet] Could not get Privy chain ID:', err);
+          }
+        }
+      }
+    };
+
+    syncPrivyWallet();
+  }, [privyEnabled, privy.ready, privy.authenticated, privyWallets, address]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -116,11 +162,11 @@ export function useWallet() {
       setIsConnecting(true);
       setError(null);
 
-      // PRIORITY: Check for injected wallet FIRST (MetaMask, Coinbase, etc)
+      // PRIORITY 1: Check for injected wallet FIRST (MetaMask, Coinbase, etc)
       const provider = await getActiveProvider();
 
       if (provider && typeof window !== 'undefined' && (window as any).ethereum) {
-        // Injected wallet detected - use it directly (no AppKit modal)
+        // Injected wallet detected - use it directly (no Privy modal)
         console.log('[Wallet] Using detected injected wallet');
         try {
           const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
@@ -140,49 +186,34 @@ export function useWallet() {
           }
         } catch (injectedError) {
           console.warn('[Wallet] Injected wallet rejected:', injectedError);
-          // Fall through to AppKit if user rejects
+          // Fall through to Privy if user rejects
         }
       }
 
-      // FALLBACK: No injected wallet or user rejected - use AppKit modal
-      if (shouldUseWebAppKit(isMiniPay, isFarcaster)) {
-        console.log('[Wallet] Opening AppKit modal (no injected wallet or connection rejected)');
+      // PRIORITY 2: No injected wallet or user rejected - use Privy for social login
+      if (privyEnabled && privy.ready) {
+        console.log('[Wallet] Opening Privy modal (social login)');
 
         try {
-          const result = await connectWithWebAppKit();
-
-          if (result && result.accounts.length > 0) {
-            providerRef.current = result.provider;
-            const chainIdHex = await result.provider.request({ method: 'eth_chainId' });
-
-            setAddress(result.accounts[0]);
-            setIsConnected(true);
-            setChainId(parseInt(chainIdHex as string, 16));
-
-            // Cache wallet preference
-            cacheWalletPreference('appkit', result.accounts[0]);
+          await privy.login();
+          // Privy state will be synced via the useEffect above
+          return;
+        } catch (privyError: any) {
+          // Handle user cancellation
+          if (privyError?.message?.includes('User closed modal') ||
+            privyError?.message?.includes('cancelled')) {
+            console.log('[Wallet] Privy login cancelled by user');
             return;
           }
 
-          // User cancelled or closed modal
-          console.log('[Wallet] AppKit connection cancelled or closed by user');
-          return;
-        } catch (appKitError: any) {
-          // Handle specific Magic Link errors
-          if (appKitError?.message?.includes('CancelledError') ||
-            appKitError?.message?.includes('Magic RPC Error')) {
-            console.log('[Wallet] Social login cancelled by user');
-            return; // Don't show error for user cancellation
-          }
-
-          console.warn('[Wallet] AppKit connection error:', appKitError);
-          setError('Connection failed. Please try again.');
+          console.warn('[Wallet] Privy login error:', privyError);
+          setError('Social login failed. Please try again.');
           return;
         }
       }
 
       // No wallet available
-      setError('No wallet found. Please install a wallet extension or enable AppKit.');
+      setError('No wallet found. Please install a wallet extension or enable social login.');
     } catch (connectError: any) {
       console.error('[Wallet] Connect error:', connectError);
       setError(connectError?.message || 'Failed to connect wallet');
@@ -239,6 +270,16 @@ export function useWallet() {
 
     // Clear wallet preference from cache
     clearWalletPreference();
+
+    // Logout from Privy if authenticated
+    if (privyEnabled && privy.authenticated) {
+      try {
+        await privy.logout();
+        console.log('[Wallet] Logged out from Privy');
+      } catch (err) {
+        console.warn('[Wallet] Error logging out from Privy:', err);
+      }
+    }
 
     console.log('[Wallet] Disconnected and cleared preferences');
   };
@@ -386,7 +427,7 @@ function cacheChainId(chainId: number): void {
   }
 }
 
-function cacheWalletPreference(type: 'injected' | 'appkit', address: string): void {
+function cacheWalletPreference(type: 'injected' | 'privy', address: string): void {
   if (typeof localStorage === 'undefined') return;
 
   try {
@@ -402,7 +443,7 @@ function cacheWalletPreference(type: 'injected' | 'appkit', address: string): vo
   }
 }
 
-function getWalletPreference(): { type: 'injected' | 'appkit'; address: string; timestamp: number } | null {
+function getWalletPreference(): { type: 'injected' | 'privy'; address: string; timestamp: number } | null {
   if (typeof localStorage === 'undefined') return null;
 
   try {

@@ -1,7 +1,6 @@
 import { detectWalletEnvironment, type WalletEnvironment } from './environment';
 import { getFarcasterProvider } from '../adapters/farcaster';
 import { getInjectedProvider } from '../adapters/injected';
-import { ensureWebAppKit, shouldUseWebAppKit, getAppKitProvider } from '../adapters/web-appkit';
 
 export interface WalletProviderCache {
   provider: any | null;
@@ -61,22 +60,8 @@ async function resolveProvider(prefer: 'auto' | 'injected' | 'farcaster'): Promi
     return { provider: injected, environment };
   }
 
-  // 4. FALLBACK: No injected wallet detected → Use AppKit (WalletConnect + Email/Social login)
-  // This provides wallet creation for users without browser wallets
-  if (shouldUseWebAppKit(environment.isMiniPay, environment.isFarcaster)) {
-    console.log('[Wallet] No injected wallet detected, initializing AppKit (WalletConnect + Email/Social)');
-    const appKit = await ensureWebAppKit();
-    if (appKit) {
-      const appKitProvider = getAppKitProvider();
-      if (appKitProvider) {
-        console.log('[Wallet] AppKit provider ready');
-        return { provider: appKitProvider, environment };
-      }
-    }
-  }
-
-  // 5. Final fallback - no provider available
-  console.warn('[Wallet] No wallet provider available');
+  // 4. No provider available - Privy will handle social login in the connect() function
+  console.log('[Wallet] No injected wallet detected - Privy will be used for social login');
   return { provider: null, environment };
 }
 
@@ -112,7 +97,7 @@ export function setupWalletEventListenersForProvider(
   onAccountsChanged: (accounts: string[]) => void
 ): () => void {
   if (!provider?.on) {
-    return () => {};
+    return () => { };
   }
 
   provider.on('chainChanged', onChainChanged);

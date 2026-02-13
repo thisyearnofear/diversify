@@ -65,23 +65,11 @@ export const UI_FEATURES = {
 
 // Wallet UX features (web onboarding + wallet connection)
 export const WALLET_FEATURES = {
-  /** Enable Reown AppKit flow for regular web users */
-  APPKIT_WEB: process.env.NEXT_PUBLIC_ENABLE_APPKIT_WALLET !== 'false',
+  /** Enable Privy for social login (email/Google/X/Discord/Apple/SMS/Farcaster) */
+  PRIVY_ENABLED: process.env.NEXT_PUBLIC_ENABLE_PRIVY !== 'false',
 
-  /** Enable email sign-in / wallet creation in AppKit */
-  APPKIT_EMAIL: process.env.NEXT_PUBLIC_ENABLE_APPKIT_EMAIL !== 'false',
-
-  /** Enable social sign-in options in AppKit */
-  APPKIT_SOCIALS: process.env.NEXT_PUBLIC_ENABLE_APPKIT_SOCIALS !== 'false',
-
-  /** Enable AppKit analytics */
-  APPKIT_ANALYTICS: process.env.NEXT_PUBLIC_ENABLE_APPKIT_ANALYTICS !== 'false',
-
-  /** WalletConnect/Reown project ID */
-  APPKIT_PROJECT_ID:
-    process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ||
-    process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
-    '',
+  /** Privy App ID */
+  PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID || '',
 } as const;
 
 // Feature descriptions for user-facing UI
