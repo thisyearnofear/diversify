@@ -239,7 +239,7 @@ export default function SwapTab({
     if (swapTxHash && !swapError && hookSwapStep === "swapping") {
       setSwapStatus("Transaction submitted...");
     }
-  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordSwap, celebrationData]);
+  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordExperienceSwap, recordStreakSwap, celebrationData]);
 
   const handleSwap = async (
     fromToken: string,

@@ -187,7 +187,7 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
                   }
                   : undefined
           }
-          variant={!isWhitelisted ? 'warning' : (canClaim ? 'reward' : 'success')}
+          variant={!isWhitelisted ? 'urgent' : (canClaim ? 'reward' : 'success')}
         />
         {/* Minimize/Dismiss buttons - only show when not claimable */}
         {!canClaim && isEligible && (
