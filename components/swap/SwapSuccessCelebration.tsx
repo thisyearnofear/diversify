@@ -26,7 +26,7 @@ export default function SwapSuccessCelebration({
     annualSavings = 0,
 }: SwapSuccessCelebrationProps) {
     const [confettiPieces, setConfettiPieces] = useState<Array<{ id: number; x: number; color: string; delay: number }>>([]);
-    
+
     // ENHANCEMENT: Track GoodDollar claim progress
     const { canClaim, isEligible, estimatedReward } = useStreakRewards();
 
@@ -168,44 +168,46 @@ export default function SwapSuccessCelebration({
                             </p>
                         </motion.div>
 
-                        {/* ENHANCEMENT: GoodDollar Progress Indicator */}
+                        {/* ENHANCEMENT: GoodDollar UBI Unlock - PROMINENT */}
                         {parseFloat(amount) >= STREAK_CONFIG.MIN_SWAP_USD && (
                             <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: 0.8 }}
-                                className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl p-4 mb-4 border border-green-200 dark:border-green-800"
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.8, type: "spring" }}
+                                className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 mb-4 shadow-xl border-2 border-emerald-300 dark:border-emerald-700"
                             >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-2xl">💚</span>
-                                        <div>
-                                            <p className="text-xs font-black text-green-800 dark:text-green-200">
-                                                {canClaim 
-                                                    ? `${estimatedReward} G$ Ready to Claim!` 
-                                                    : isEligible
-                                                        ? 'Keep Your Streak Alive!'
-                                                        : 'G$ Daily Claim Unlocked!'}
-                                            </p>
-                                            <p className="text-[10px] text-green-600 dark:text-green-400">
-                                                {canClaim 
-                                                    ? 'Claim on GoodDollar wallet' 
-                                                    : isEligible
-                                                        ? 'Come back tomorrow for your G$'
-                                                        : `$${parseFloat(amount).toFixed(2)} qualifies for daily UBI`}
-                                            </p>
-                                        </div>
+                                <div className="flex items-start gap-3">
+                                    <div className="text-4xl">💚</div>
+                                    <div className="flex-1">
+                                        <p className="text-base font-black text-white mb-1">
+                                            {canClaim
+                                                ? `🎉 ${estimatedReward} G$ Ready!`
+                                                : isEligible
+                                                    ? '🔥 Streak Active!'
+                                                    : '🎁 Daily UBI Unlocked!'}
+                                        </p>
+                                        <p className="text-xs text-emerald-50 mb-3 leading-relaxed">
+                                            {canClaim
+                                                ? 'Your free daily GoodDollar UBI is ready to claim now!'
+                                                : isEligible
+                                                    ? 'Keep swapping to maintain your streak and claim tomorrow'
+                                                    : 'You can now claim free G$ tokens daily from GoodDollar'}
+                                        </p>
+                                        {canClaim ? (
+                                            <a
+                                                href={STREAK_CONFIG.G_CLAIM_URL}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-block text-sm font-black px-4 py-2 bg-white hover:bg-emerald-50 text-emerald-700 rounded-lg transition-all shadow-md hover:shadow-lg"
+                                            >
+                                                Claim G$ Now →
+                                            </a>
+                                        ) : (
+                                            <div className="text-xs font-bold text-emerald-100">
+                                                ✓ Check Swap tab to track your streak
+                                            </div>
+                                        )}
                                     </div>
-                                    {canClaim && (
-                                        <a
-                                            href={STREAK_CONFIG.G_CLAIM_URL}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-[10px] font-black px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-                                        >
-                                            Claim →
-                                        </a>
-                                    )}
                                 </div>
                             </motion.div>
                         )}
@@ -214,7 +216,7 @@ export default function SwapSuccessCelebration({
                         <motion.button
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
-                            transition={{ delay: 0.8 }}
+                            transition={{ delay: 0.9 }}
                             onClick={onClose}
                             className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black py-3 rounded-xl transition-all shadow-lg hover:shadow-xl"
                         >

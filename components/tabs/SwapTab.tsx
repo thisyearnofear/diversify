@@ -29,6 +29,7 @@ import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
+import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -203,7 +204,7 @@ export default function SwapTab({
       setSwapStep("error");
       return; // Stop processing - don't show success if there's an error
     }
-    
+
     // Only show success if no error exists
     // Note: hookSwapStep type is 'idle' | 'approving' | 'swapping' | 'error' from useSwap hook
     // The 'completed' state is handled by performSwap result, not hookSwapStep
@@ -221,7 +222,7 @@ export default function SwapTab({
       }
       return;
     }
-    
+
     // Transaction submitted but waiting for confirmation
     if (swapTxHash && !swapError && hookSwapStep === "swapping") {
       setSwapStatus("Transaction submitted...");
@@ -392,6 +393,11 @@ export default function SwapTab({
         ) : (
           <>
             <ExperienceModeNotification />
+
+            {/* GoodDollar UBI Streak Card - Persistent visibility */}
+            <div className="mb-4">
+              <StreakRewardsCard />
+            </div>
 
             {showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
