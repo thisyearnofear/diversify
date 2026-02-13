@@ -22,7 +22,7 @@ import { useWalletContext } from '../components/wallet/WalletProvider';
 const STREAK_CONFIG = {
   MIN_SWAP_USD: 1.00, // Any $1+ swap unlocks G$ claim
   GRACE_PERIODS_PER_WEEK: 1,
-  G_CLAIM_URL: 'https://wallet.gooddollar.org/?utm_source=diversifi',
+  G_CLAIM_URL: 'http://goodwallet.xyz?inviteCode=4AJXLg3ynL',
   G_TOKEN_ADDRESS: '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A', // Celo (checksummed)
 } as const;
 
@@ -160,7 +160,12 @@ export function useStreakRewards(): StreakState & StreakActions {
 
     try {
       // 1. Check On-chain GoodDollar status
-      let onChainStatus = { isWhitelisted: true, entitlement: '0', alreadyClaimedOnChain: false };
+      let onChainStatus = { 
+        isWhitelisted: true, 
+        entitlement: '0', 
+        alreadyClaimedOnChain: false,
+        canClaimOnChain: false 
+      };
       try {
         const { GoodDollarService } = await import('../services/gooddollar-service');
         // Use read-only provider for quick check
@@ -168,15 +173,11 @@ export function useStreakRewards(): StreakState & StreakActions {
         const eligibility = await service.checkClaimEligibility(address);
         
         onChainStatus = {
-          isWhitelisted: eligibility.claimAmountRaw.gt(0) || eligibility.alreadyClaimed,
+          isWhitelisted: eligibility.isWhitelisted,
           entitlement: eligibility.claimAmount,
-          alreadyClaimedOnChain: eligibility.alreadyClaimed
+          alreadyClaimedOnChain: eligibility.alreadyClaimed,
+          canClaimOnChain: eligibility.canClaim
         };
-
-        // If checkEntitlement returns 0 and they haven't claimed, they aren't whitelisted
-        if (eligibility.claimAmountRaw.isZero() && !eligibility.alreadyClaimed) {
-          onChainStatus.isWhitelisted = false;
-        }
       } catch (e) {
         console.warn('[StreakRewards] On-chain check failed:', e);
       }
@@ -200,10 +201,14 @@ export function useStreakRewards(): StreakState & StreakActions {
           totalSaved: data.totalSaved,
         } : null;
 
+        const streakState = calculateStreakState(streak);
+
         setState(prev => ({
           ...prev,
-          ...calculateStreakState(streak),
+          ...streakState,
           ...onChainStatus,
+          // Final canClaim depends on both streak eligibility AND on-chain eligibility
+          canClaim: (streakState.canClaim || false) && onChainStatus.canClaimOnChain,
           isLoading: false,
           error: null,
           usingFallback: false,

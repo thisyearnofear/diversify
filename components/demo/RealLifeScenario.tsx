@@ -73,12 +73,12 @@ export default function RealLifeScenario({
     const actionVerb = scenarioType === "remittance" ? "Sending" : "Saving";
 
     if (targetRegion) {
-      // More concise for mobile
-      description = `${actionVerb} $${monthlyAmount}/month loses $${lostValue.toFixed(
-        0
-      )}/year to inflation in ${region}. Swap to ${targetRegion} stablecoins to save $${potentialSavings.toFixed(
-        0
-      )}/year.`;
+      // Improved clarity for the description
+      const savingsText = hasSavings 
+        ? `Swapping to ${targetRegion} stablecoins could save you $${potentialSavings.toFixed(0)}/year.`
+        : `Swapping to ${targetRegion} stablecoins changes your inflation exposure.`;
+        
+      description = `${actionVerb} $${monthlyAmount}/month in ${region} results in an annual value loss of $${lostValue.toFixed(0)} due to inflation. ${savingsText}`;
     } else {
       description = `${actionVerb} $${monthlyAmount}/month loses $${lostValue.toFixed(
         0
@@ -124,24 +124,24 @@ export default function RealLifeScenario({
             {/* First row: Metrics */}
             <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-3 mb-3 sm:mb-0">
               {/* Monthly amount */}
-              <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-white p-2 rounded-md">
-                <div className="text-sm text-gray-500 font-medium">
-                  Monthly amount
+              <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm">
+                <div className="text-[10px] text-gray-500 font-black uppercase tracking-wider mb-1">
+                  Monthly
                 </div>
-                <div className="font-bold text-lg text-gray-900">
+                <div className="font-black text-xl text-gray-900">
                   ${monthlyAmount}
                 </div>
               </div>
 
               {/* Arrow - only visible on desktop */}
-              <div className="mx-1 text-gray-400 hidden sm:block">→</div>
+              <div className="mx-1 text-gray-300 hidden sm:block text-2xl">→</div>
 
               {/* Yearly loss */}
-              <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-white p-2 rounded-md">
-                <div className="text-sm text-gray-500 font-medium">
-                  Yearly loss
+              <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-red-50 p-2.5 rounded-xl border border-red-100 shadow-sm">
+                <div className="text-[10px] text-red-600 font-black uppercase tracking-wider mb-1">
+                  Annual Loss
                 </div>
-                <div className="font-bold text-lg text-red-600">
+                <div className="font-black text-xl text-red-600">
                   -${lostValue.toFixed(0)}
                 </div>
               </div>
@@ -150,13 +150,13 @@ export default function RealLifeScenario({
               {targetRegion && hasSavings && (
                 <>
                   {/* Arrow - only visible on desktop */}
-                  <div className="mx-1 text-gray-400 hidden sm:block">→</div>
+                  <div className="mx-1 text-gray-300 hidden sm:block text-2xl">→</div>
 
-                  <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-white p-2 rounded-md">
-                    <div className="text-sm text-gray-500 font-medium">
-                      Potential savings
+                  <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 shadow-sm">
+                    <div className="text-[10px] text-emerald-600 font-black uppercase tracking-wider mb-1">
+                      Potential Gain
                     </div>
-                    <div className="font-bold text-lg text-green-600">
+                    <div className="font-black text-xl text-emerald-600">
                       +${potentialSavings.toFixed(0)}
                     </div>
                   </div>
@@ -213,7 +213,7 @@ export default function RealLifeScenario({
                     });
                   }
                 }}
-                className={`w-full sm:w-auto px-4 py-2 text-sm rounded-md bg-blue-600 text-white font-medium shadow-sm hover:bg-blue-700 transition-colors`}
+                className={`w-full sm:w-auto px-6 py-2.5 text-sm rounded-xl bg-blue-600 text-white font-black shadow-lg hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 uppercase tracking-wide`}
               >
                 {scenarioContent.action}
               </button>

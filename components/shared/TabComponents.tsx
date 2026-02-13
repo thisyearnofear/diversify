@@ -86,6 +86,7 @@ export const InsightCard = ({
   impact,
   action,
   variant = 'default',
+  children,
 }: {
   icon: React.ReactNode;
   title: string;
@@ -99,6 +100,7 @@ export const InsightCard = ({
     loading?: boolean;
   };
   variant?: 'urgent' | 'default' | 'success' | 'reward';
+  children?: React.ReactNode;
 }) => {
   const variants = {
     urgent: 'bg-amber-50 border-amber-200',
@@ -126,6 +128,12 @@ export const InsightCard = ({
           )}
         </div>
       </div>
+
+      {children && (
+        <div className="mt-3">
+          {children}
+        </div>
+      )}
 
       {action && (
         <button

@@ -313,7 +313,7 @@ export function useSwapController({
       setLocalError(swapError);
       setStatus("error");
     }
-    if (swapTxHash) setLocalTxHash(swapTxHash);
+    if (swapTxHash && status !== "completed") setLocalTxHash(swapTxHash);
   }, [swapStep, swapError, swapTxHash, refreshWithRetries, status, amount, recordSwap]);
 
   // 6. Inflation Data Processing

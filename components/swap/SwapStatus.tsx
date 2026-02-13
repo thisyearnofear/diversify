@@ -14,15 +14,13 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
     txHash,
     fromChainId,
 }) => {
-    if (status === "idle") return null;
+    if (status === "idle" || status === "completed") return null;
 
     return (
         <div
             className={`p-3 rounded-card ${status === "error"
                 ? "bg-accent-error/5 text-accent-error border border-accent-error/10"
-                : status === "completed"
-                    ? "bg-accent-success/5 text-accent-success border border-accent-success/10"
-                    : "bg-accent-info/5 text-accent-info border border-accent-info/10"
+                : "bg-accent-info/5 text-accent-info border border-accent-info/10"
                 }`}
         >
             <div className="flex items-center">
@@ -75,24 +73,6 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                             />
                         </svg>
                         <span>Executing swap transaction...</span>
-                    </>
-                )}
-
-                {status === "completed" && !error && (
-                    <>
-                        <svg
-                            className="size-4 mr-2 text-accent-success"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                        >
-                            <path
-                                fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clipRule="evenodd"
-                            />
-                        </svg>
-                        <span>Swap completed successfully!</span>
                     </>
                 )}
 

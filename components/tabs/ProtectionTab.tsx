@@ -349,7 +349,65 @@ export default function ProtectionTab({
                     topOpportunity.suggestedAmount.toFixed(2),
                   ),
               }}
-            />
+            >
+              {liveAnalysis.rebalancingOpportunities.length > 1 && (
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                    {config.userGoal === "geographic_diversification"
+                      ? "More Diversification Options"
+                      : "More Opportunities"}
+                  </p>
+                  <div className="space-y-2">
+                    {liveAnalysis.rebalancingOpportunities
+                      .filter((opp) => {
+                        // Skip the one already shown in the primary card
+                        if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
+                        if (config.userGoal !== "geographic_diversification") return true;
+                        return (opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion);
+                      })
+                      .slice(0, 3)
+                      .map((opp, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-50 dark:border-gray-700/50"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">
+                              {opp.fromToken}
+                            </span>
+                            <span className="text-gray-300">→</span>
+                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+                              {opp.toToken}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] text-green-600 dark:text-green-400 font-bold">
+                              +${opp.annualSavings.toFixed(2)}
+                            </span>
+                            <button
+                              onClick={() =>
+                                handleExecuteSwap(
+                                  opp.toToken,
+                                  opp.fromToken,
+                                  opp.suggestedAmount.toFixed(2),
+                                )
+                              }
+                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase rounded-lg transition-colors"
+                            >
+                              Swap
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    {liveAnalysis.rebalancingOpportunities.length > 4 && (
+                      <p className="text-[10px] text-gray-400 text-center mt-2 font-medium">
+                        +{liveAnalysis.rebalancingOpportunities.length - 4} more ways to optimize
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </InsightCard>
           )}
 
           {/* =================================================================
@@ -477,71 +535,6 @@ export default function ProtectionTab({
         </DashboardCard>
       )}
 
-      {/* Rebalancing Opportunities - Dashboard Card */}
-      {liveAnalysis && liveAnalysis.rebalancingOpportunities.length > 1 && (
-        <DashboardCard
-          title={
-            config.userGoal === "geographic_diversification"
-              ? "Diversification Options"
-              : "More Opportunities"
-          }
-          icon={<span>⚖️</span>}
-          subtitle={`${liveAnalysis.rebalancingOpportunities.length - 1} more ways to optimize`}
-          color="green"
-          size="md"
-        >
-          <div className="space-y-2">
-            {liveAnalysis.rebalancingOpportunities
-              .filter((opp) => {
-                if (config.userGoal !== "geographic_diversification")
-                  return true;
-                return (
-                  opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion
-                );
-              })
-              .slice(0, 3)
-              .map((opp, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
-                      {opp.fromToken}
-                    </span>
-                    <span className="text-gray-400">→</span>
-                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                      {opp.toToken}
-                    </span>
-                    {config.userGoal === "geographic_diversification" &&
-                      opp.fromRegion !== opp.toRegion && (
-                        <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded">
-                          +region
-                        </span>
-                      )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-green-600 dark:text-green-400 font-bold">
-                      +${opp.annualSavings.toFixed(2)}/yr
-                    </span>
-                    <button
-                      onClick={() =>
-                        handleExecuteSwap(
-                          opp.toToken,
-                          opp.fromToken,
-                          opp.suggestedAmount.toFixed(2),
-                        )
-                      }
-                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors"
-                    >
-                      Swap
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        </DashboardCard>
-      )}
 
       {/* Strategies - Dashboard Card (Advanced Only) */}
       {!isBeginner && (

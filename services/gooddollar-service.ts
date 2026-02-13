@@ -16,6 +16,8 @@ const GOODDOLLAR_ADDRESSES = {
   G_TOKEN: '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
   // UBIScheme contract for claiming (Celo)
   UBI_SCHEME: '0xD7aC544F8A570C4d8764c3AAbCF6870CBD960D0D',
+  // Identity contract for verification status (Celo)
+  IDENTITY: '0xC361A6E660563027C6C92518e3810103C6021665',
   // GoodReserve for staking info
   RESERVE: '0xeD8F69E24fE33481f7DfE0d9D0f89F5e4F4F3E3E',
 } as const;
@@ -26,6 +28,11 @@ const UBI_SCHEME_ABI = [
   'function claim() external returns (uint256)',
   'function hasClaimed(address) external view returns (bool)',
   'function claimDistribution(address) external view returns (uint256)',
+];
+
+// Minimal ABI for Identity
+const IDENTITY_ABI = [
+  'function isWhitelisted(address) external view returns (bool)',
 ];
 
 // Minimal ABI for G$ token
@@ -40,6 +47,7 @@ export interface ClaimEligibility {
   claimAmount: string; // In G$ (formatted)
   claimAmountRaw: ethers.BigNumber;
   alreadyClaimed: boolean;
+  isWhitelisted: boolean;
   nextClaimTime?: Date;
 }
 
@@ -64,6 +72,23 @@ export class GoodDollarService {
   }
 
   /**
+   * Check if user is verified (whitelisted) on GoodDollar
+   */
+  async isVerified(userAddress: string): Promise<boolean> {
+    try {
+      const identityContract = new ethers.Contract(
+        GOODDOLLAR_ADDRESSES.IDENTITY,
+        IDENTITY_ABI,
+        this.provider
+      );
+      return await identityContract.isWhitelisted(userAddress);
+    } catch (error) {
+      console.error('[GoodDollar] Error checking verification:', error);
+      return false;
+    }
+  }
+
+  /**
    * Check if user is eligible to claim UBI
    */
   async checkClaimEligibility(userAddress: string): Promise<ClaimEligibility> {
@@ -74,11 +99,14 @@ export class GoodDollarService {
         this.provider
       );
 
-      // Check entitlement amount
-      const entitlementRaw = await ubiContract.checkEntitlement();
-      const hasClaimed = await ubiContract.hasClaimed(userAddress);
+      // Check entitlement amount, claim status, and identity verification
+      const [entitlementRaw, hasClaimed, isWhitelisted] = await Promise.all([
+        ubiContract.checkEntitlement(),
+        ubiContract.hasClaimed(userAddress),
+        this.isVerified(userAddress)
+      ]);
       
-      const canClaim = entitlementRaw.gt(0) && !hasClaimed;
+      const canClaim = isWhitelisted && entitlementRaw.gt(0) && !hasClaimed;
       const claimAmount = ethers.utils.formatUnits(entitlementRaw, 18); // G$ has 18 decimals
 
       return {
@@ -86,6 +114,7 @@ export class GoodDollarService {
         claimAmount,
         claimAmountRaw: entitlementRaw,
         alreadyClaimed: hasClaimed,
+        isWhitelisted,
         nextClaimTime: hasClaimed ? this.calculateNextClaimTime() : undefined,
       };
     } catch (error) {
@@ -95,6 +124,7 @@ export class GoodDollarService {
         claimAmount: '0',
         claimAmountRaw: ethers.BigNumber.from(0),
         alreadyClaimed: false,
+        isWhitelisted: false,
       };
     }
   }
