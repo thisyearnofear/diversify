@@ -37,12 +37,22 @@ export function useWallet() {
 
   // Sync Privy wallet state with our wallet state
   useEffect(() => {
+    console.log('[Wallet] Privy sync check:', {
+      privyEnabled,
+      ready: privy.ready,
+      authenticated: privy.authenticated,
+      walletsCount: privyWallets.length,
+      currentAddress: address
+    });
+
     if (!privyEnabled || !privy.ready || !privy.authenticated) return;
 
     const syncPrivyWallet = async () => {
       if (privyWallets.length > 0) {
         const embeddedWallet = privyWallets[0];
         const walletAddress = embeddedWallet.address;
+
+        console.log('[Wallet] Attempting to sync Privy wallet:', walletAddress);
 
         if (walletAddress) {
           console.log('[Wallet] Syncing Privy wallet:', walletAddress);
@@ -64,6 +74,8 @@ export function useWallet() {
             console.warn('[Wallet] Could not get Privy chain ID:', err);
           }
         }
+      } else {
+        console.log('[Wallet] No Privy wallets found yet');
       }
     };
 
