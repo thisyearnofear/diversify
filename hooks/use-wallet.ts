@@ -44,7 +44,7 @@ export function useWallet() {
         const embeddedWallet = privyWallets[0];
         const walletAddress = embeddedWallet.address;
 
-        if (walletAddress && walletAddress !== address) {
+        if (walletAddress) {
           console.log('[Wallet] Syncing Privy wallet:', walletAddress);
           setAddress(walletAddress);
           setIsConnected(true);
@@ -68,7 +68,7 @@ export function useWallet() {
     };
 
     syncPrivyWallet();
-  }, [privyEnabled, privy.ready, privy.authenticated, privyWallets, address]);
+  }, [privyEnabled, privy.ready, privy.authenticated, privyWallets]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
@@ -192,6 +192,19 @@ export function useWallet() {
 
       // PRIORITY 2: No injected wallet or user rejected - use Privy for social login
       if (privyEnabled && privy.ready) {
+        // Check if already authenticated
+        if (privy.authenticated && privyWallets.length > 0) {
+          console.log('[Wallet] Already authenticated with Privy, syncing wallet');
+          // Trigger sync by updating state
+          const embeddedWallet = privyWallets[0];
+          if (embeddedWallet.address) {
+            setAddress(embeddedWallet.address);
+            setIsConnected(true);
+            cacheWalletPreference('privy', embeddedWallet.address);
+          }
+          return;
+        }
+
         console.log('[Wallet] Opening Privy modal (social login)');
 
         try {
