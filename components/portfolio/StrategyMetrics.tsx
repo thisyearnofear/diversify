@@ -45,9 +45,8 @@ export default function StrategyMetrics({ portfolioData }: StrategyMetricsProps)
 
     // Use StrategyService to calculate actual score
     const currentAllocations = portfolioData.regions as Record<AssetRegion, number>;
-    const { score, rating } = StrategyService.calculateScore(financialStrategy, currentAllocations);
 
-    const metrics = getMetricsForStrategy(financialStrategy, portfolioData, score, rating);
+    const metrics = getMetricsForStrategy(financialStrategy, portfolioData);
 
     return (
         <div className="space-y-3">
@@ -123,34 +122,30 @@ export default function StrategyMetrics({ portfolioData }: StrategyMetricsProps)
 // Import all the helper functions from original file
 function getMetricsForStrategy(
     strategy: FinancialStrategy,
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     switch (strategy) {
         case 'africapitalism':
-            return getAfricapitalismMetrics(data, score, rating);
+            return getAfricapitalismMetrics(data);
         case 'buen_vivir':
-            return getBuenVivirMetrics(data, score, rating);
+            return getBuenVivirMetrics(data);
         case 'confucian':
-            return getConfucianMetrics(data, score, rating);
+            return getConfucianMetrics(data);
         case 'gotong_royong':
-            return getGotongRoyongMetrics(data, score, rating);
+            return getGotongRoyongMetrics(data);
         case 'islamic':
-            return getIslamicMetrics(data, score, rating);
+            return getIslamicMetrics(data);
         case 'global':
-            return getGlobalMetrics(data, score, rating);
+            return getGlobalMetrics(data);
         case 'custom':
-            return getCustomMetrics(data, score, rating);
+            return getCustomMetrics(data);
         default:
             return [];
     }
 }
 
 function getAfricapitalismMetrics(
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     const africanRegions = ['West Africa', 'East Africa', 'Southern Africa', 'North Africa'];
     const africanExposure = africanRegions.reduce((sum, region) => sum + (data.regions[region] || 0), 0);
@@ -189,9 +184,7 @@ function getAfricapitalismMetrics(
 }
 
 function getBuenVivirMetrics(
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     const latamRegions = ['South America', 'Central America', 'Caribbean'];
     const latamExposure = latamRegions.reduce((sum, region) => sum + (data.regions[region] || 0), 0);
@@ -237,9 +230,7 @@ function getBuenVivirMetrics(
 }
 
 function getConfucianMetrics(
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     const totalValue = data.tokens.reduce((sum, t) => {
         const value = typeof t.balance === 'number' ? t.balance : (t.value || 0);
@@ -279,9 +270,7 @@ function getConfucianMetrics(
 }
 
 function getGotongRoyongMetrics(
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     const seAsiaRegions = ['Southeast Asia'];
     const seAsiaExposure = seAsiaRegions.reduce((sum, region) => sum + (data.regions[region] || 0), 0);
@@ -319,9 +308,7 @@ function getGotongRoyongMetrics(
 }
 
 function getIslamicMetrics(
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     const hasGold = data.tokens.some(t => t.symbol.includes('PAX') || t.symbol.includes('GOLD'));
     const totalValue = data.tokens.reduce((sum, t) => {
@@ -363,9 +350,7 @@ function getIslamicMetrics(
 }
 
 function getGlobalMetrics(
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     const regionCount = Object.keys(data.regions).length;
     const maxRegionExposure = Math.max(...Object.values(data.regions));
@@ -403,9 +388,7 @@ function getGlobalMetrics(
 }
 
 function getCustomMetrics(
-    data: StrategyMetricsProps['portfolioData'],
-    score: number,
-    rating: 'excellent' | 'good' | 'needs_work'
+    data: StrategyMetricsProps['portfolioData']
 ): StrategyMetric[] {
     const regionCount = Object.keys(data.regions).length;
     const totalValue = data.tokens.reduce((sum, t) => {

@@ -128,7 +128,7 @@ export const DEMO_PORTFOLIO = {
             ...b,
             formattedBalance: b.balance,
             chainName: c.chainName,
-            region: b.region as any // Cast to satisfy AssetRegion
+            region: b.region
         })));
     },
 

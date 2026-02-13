@@ -29,7 +29,6 @@ import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
-import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 
 interface SwapTabProps {
   userRegion: Region;

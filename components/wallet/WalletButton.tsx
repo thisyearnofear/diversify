@@ -227,7 +227,7 @@ export default function WalletButton({
 
   // 4. Default: Connect Wallet
   // Detect if user likely has an injected wallet
-  const hasInjectedWallet = typeof window !== 'undefined' && !!(window as any).ethereum;
+  const hasInjectedWallet = typeof window !== 'undefined' && !!(window as typeof window & { ethereum?: any }).ethereum;
 
   return (
     <div className="flex flex-col items-end">

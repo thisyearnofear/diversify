@@ -50,7 +50,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const showRegionalInfo = experienceMode !== "beginner";
-  const [showWarning, setShowWarning] = useState(false);
 
   // Check if token violates strategy
   const getComplianceInfo = (tokenSymbol: string) => {
@@ -253,10 +252,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           value={selectedToken}
           onChange={(e) => {
             const newToken = e.target.value;
-            const compliance = getComplianceInfo(newToken);
-            if (!compliance.isCompliant) {
-              setShowWarning(true);
-            }
             onTokenChange(newToken);
           }}
           className={`${showAmountInput ? "w-1/3" : "w-full"
@@ -344,7 +339,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 </p>
               )}
               <button
-                onClick={() => setShowWarning(false)}
                 className="mt-2 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline"
               >
                 I understand the risk

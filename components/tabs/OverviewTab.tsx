@@ -6,7 +6,6 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import WalletButton from "../wallet/WalletButton";
 import type { Region } from "@/hooks/use-user-region";
 import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
-import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
 import { StreakRewardsCard, RewardsStats } from "../rewards/StreakRewardsCard";
 import SimplePieChart from "../portfolio/SimplePieChart";
@@ -263,7 +262,7 @@ export default function OverviewTab({
               <span className="text-2xl">👋</span>
               <div>
                 <h3 className="text-lg font-black text-amber-900 dark:text-amber-100">
-                  Welcome! Let's Add Some Funds
+                  Welcome! Let&apos;s Add Some Funds
                 </h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mt-1">
                   Your wallet is connected but empty. Add crypto to start protecting your savings.
@@ -396,7 +395,7 @@ export default function OverviewTab({
 
               {showAssetDetails && (
                 <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <AssetInventory tokens={(activePortfolio as any).allTokens || []} />
+                  <AssetInventory tokens={((activePortfolio as unknown as { allTokens?: Array<unknown> }).allTokens) || []} />
                   <p className="mt-4 text-[9px] text-gray-400 font-bold text-center uppercase tracking-tighter">
                     Tired of toggling? Switch to <span className="text-blue-500">Standard Mode</span> in the header to unlock full details.
                   </p>
@@ -534,7 +533,7 @@ export default function OverviewTab({
             icon="🛡️"
             title={isBeginner ? "Ready to Protect Your Money?" : "Start Building Protection"}
             description={isBeginner
-              ? "Your money loses value every day due to inflation. Let's fix that by converting it to more stable currencies."
+              ? "Your money loses value every day due to inflation. Let&apos;s fix that by converting it to more stable currencies."
               : "Convert your local currency into diversified stablecoins to protect against inflation and currency debasement."
             }
             action={{

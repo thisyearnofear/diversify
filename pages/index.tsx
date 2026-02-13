@@ -61,7 +61,6 @@ export default function DiversiFiPage() {
   // NEW: Use unified multichain balances hook
   const multichainPortfolio = useMultichainBalances(address);
   const {
-    chainCount,
     isLoading: isMultichainLoading,
     refresh,
   } = multichainPortfolio;

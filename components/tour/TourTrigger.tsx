@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useAppState } from "@/context/AppStateContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 

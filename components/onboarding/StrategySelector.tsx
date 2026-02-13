@@ -13,7 +13,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { STRATEGIES, FinancialStrategy, Strategy } from '@/hooks/useFinancialStrategies';
+import { STRATEGIES, FinancialStrategy } from '@/hooks/useFinancialStrategies';
 
 interface StrategySelectorProps {
     onSelect: (strategy: FinancialStrategy) => void;

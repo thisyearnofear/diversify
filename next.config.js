@@ -3,8 +3,8 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: [
     "@stable-station/mento-utils",
-    "@reown/appkit",
-    "@reown/appkit-adapter-wagmi",
+    "@privy-io/react-auth",
+    "@privy-io/wagmi",
   ],
 
   webpack: (config, { isServer }) => {
@@ -65,7 +65,7 @@ const nextConfig = {
               "img-src 'self' data: https: blob:",
               "font-src 'self' data: https://fonts.reown.com",
               "connect-src 'self' https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://privy.farcaster.xyz https://privy.warpcast.com https://auth.privy.io https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://rpc.walletconnect.org https://*.walletconnect.com https://*.walletconnect.org https://api.web3modal.org https://*.reown.com https://cca-lite.coinbase.com https://forno.celo.org https://alfajores-forno.celo-testnet.org https://arb1.arbitrum.io https://rpc.testnet.arc.network https://cloudflareinsights.com https://li.quest https://*.li.fi https://api.coingecko.com https://coins.llama.fi",
-              "frame-src 'self' https://secure.walletconnect.org https://secure.walletconnect.com https://verify.walletconnect.org https://verify.walletconnect.com",
+              "frame-src 'self' https://auth.privy.io https://*.privy.io https://secure.walletconnect.org https://secure.walletconnect.com https://verify.walletconnect.org https://verify.walletconnect.com",
               "frame-ancestors 'self' https://*.minipay.app https://minipay.app https://*.celo.org https://*.opera.com https://*.warpcast.com https://warpcast.com https://*.farcaster.xyz https://farcaster.xyz",
             ].join("; "),
           },

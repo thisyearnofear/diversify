@@ -26,8 +26,6 @@ export default function RegionalIconography({
 
   // Get region-specific icon and gradient
   const getRegionStyles = (region: Region) => {
-    const gradient = REGION_GRADIENTS[region as AssetRegion] || 'from-gray-400 to-gray-500';
-
     switch (region) {
       case "Africa":
         return {

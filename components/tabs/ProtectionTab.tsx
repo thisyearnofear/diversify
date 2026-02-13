@@ -21,7 +21,6 @@ import {
 } from "@/hooks/use-protection-profile";
 import { useAIConversation } from "@/context/AIConversationContext";
 
-import ProtectHeroCard from "./protect/ProtectHeroCard";
 import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
@@ -50,7 +49,6 @@ export default function ProtectionTab({
   const { address, chainId } = useWalletContext();
   const { navigateToSwap, demoMode, experienceMode } = useAppState();
   const { setDrawerOpen, addUserMessage } = useAIConversation();
-  const isCelo = ChainDetectionService.isCelo(chainId);
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";
 

@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
-import { Card } from "../shared/TabComponents";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
@@ -17,11 +16,10 @@ interface InfoTabProps {
     name: string;
     region: string;
   }>;
-  setActiveTab: (tab: string) => void;
   userRegion: Region;
 }
 
-export default function InfoTab({ availableTokens, setActiveTab, userRegion }: InfoTabProps) {
+export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
   const { address, chainId, formatAddress } = useWalletContext();
   const { experienceMode } = useAppState();
   const [showNetworkInfo, setShowNetworkInfo] = useState(false);

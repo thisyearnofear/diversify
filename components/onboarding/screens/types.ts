@@ -1,5 +1,3 @@
-import { FinancialStrategy } from '@/hooks/useFinancialStrategies';
-
 export interface OnboardingScreenProps {
     onBack?: () => void;
     onSkip?: () => void;

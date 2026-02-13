@@ -39,7 +39,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
                         <div>
                             <h3 className="font-black text-sm uppercase">MiniPay Detected</h3>
                             <p className="text-xs opacity-90 font-medium mt-1 mb-3">
-                                Use the native "Add Cash" button in your MiniPay wallet for the fastest experience.
+                                Use the native &quot;Add Cash&quot; button in your MiniPay wallet for the fastest experience.
                             </p>
                             <button
                                 onClick={() => showToast("Use the '+' button in your MiniPay app", "info")}

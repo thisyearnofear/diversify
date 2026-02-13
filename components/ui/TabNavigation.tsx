@@ -12,14 +12,12 @@ interface TabNavigationProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   badges?: Record<string, number>;
-  experienceMode?: 'beginner' | 'intermediate' | 'advanced';
 }
 
 export default function TabNavigation({
   activeTab,
   setActiveTab,
   badges = {},
-  experienceMode = 'advanced',
 }: TabNavigationProps) {
   // Define all tabs with their unlock requirements
   // Order: Overview (first) → Action/Protect (middle) → Learn (last, default)

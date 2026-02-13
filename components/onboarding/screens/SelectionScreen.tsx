@@ -36,13 +36,13 @@ export function SelectionScreen({
         }
     };
 
-    const handleDrag = (_: any, info: PanInfo) => {
+    const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (typeof window !== 'undefined' && 'vibrate' in navigator && Math.abs(info.offset.x) % 50 < 10) {
             navigator.vibrate(5);
         }
     };
 
-    const handleDragEnd = (_: any, info: PanInfo) => {
+    const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         const offsetX = info.offset.x;
         const velX = info.velocity.x;
         const absOffset = Math.abs(offsetX);

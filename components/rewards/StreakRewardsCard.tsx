@@ -11,7 +11,7 @@
 
 import React, { useState } from 'react';
 import { InsightCard } from '../shared/TabComponents';
-import { useStreakRewards, STREAK_CONFIG } from '../../hooks/use-streak-rewards';
+import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
 import dynamic from 'next/dynamic';
 

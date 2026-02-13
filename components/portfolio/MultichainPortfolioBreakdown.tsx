@@ -1,5 +1,5 @@
 import React from "react";
-import { NETWORKS, REGION_GRADIENTS, type AssetRegion } from "../../config";
+import { NETWORKS } from "../../config";
 
 interface ChainBreakdown {
     chainId: number;

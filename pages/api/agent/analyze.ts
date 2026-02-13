@@ -94,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             hasNetworkActivity: !!networkActivity,
             userRegion: userRegion,
             sampleInflationData: inflationData ? Object.entries(inflationData).slice(0, 2).map(([region, data]) => {
-                const d = data as { avgRate: number; countries: any[] };
+                const d = data as { avgRate: number; countries: { country: string; rate: number; year: number; source: 'api' | 'cache' | 'fallback' }[] };
                 return {
                     region,
                     avgRate: d?.avgRate,
