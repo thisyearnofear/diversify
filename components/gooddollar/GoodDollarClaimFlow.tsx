@@ -250,10 +250,36 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                                 </svg>
                                 Claiming UBI...
                             </span>
-                        ) : (
+                        ) : canClaim ? (
                             'Claim G$ Now →'
+                        ) : (
+                            'Unlock Daily G$ Claim'
                         )}
                     </button>
+
+                    {/* Help text for locked state */}
+                    {!canClaim && (
+                        <div className="text-center space-y-1">
+                            {!streak?.daysActive || streak.daysActive === 0 ? (
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    💡 Make a $1+ swap to unlock your daily G$ claim
+                                </p>
+                            ) : (
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    🔐 Complete identity verification at{' '}
+                                    <a 
+                                        href="https://wallet.gooddollar.org" 
+                                        target="_blank" 
+                                        rel="noopener noreferrer"
+                                        className="underline hover:text-amber-500"
+                                    >
+                                        wallet.gooddollar.org
+                                    </a>
+                                    {' '}to claim
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     {/* Fine print */}
                     <p className="text-xs text-center text-gray-500 dark:text-gray-400 leading-relaxed">

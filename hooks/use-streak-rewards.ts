@@ -42,6 +42,9 @@ interface StreakState {
   streak: StreakData | null;
   canClaim: boolean;
   isEligible: boolean;
+  isWhitelisted: boolean;
+  entitlement: string;
+  alreadyClaimedOnChain: boolean;
   nextClaimTime: Date | null;
   estimatedReward: string;
   isLoading: boolean;
@@ -81,16 +84,20 @@ function calculateStreakState(streak: StreakData | null): Partial<StreakState> {
   const daysSinceActivity = today - lastActivityDay;
 
   const isStreakActive = daysSinceActivity <= 1;
-  const canClaim = isStreakActive && streak.daysActive > 0;
+  // User is eligible to claim if they have an active streak AND have performed qualifying activity
+  const isEligible = isStreakActive && streak.daysActive > 0;
 
-  const nextClaimTime = canClaim
+  // We'll determine actual claimability dynamically via GoodDollar service
+  const canClaim = isEligible; // Will be updated based on actual GoodDollar eligibility
+
+  const nextClaimTime = isEligible
     ? null
-    : new Date((today + 1) * 86400000);
+    : new Date((lastActivityDay + 1) * 86400000 + 86400000); // Next day after last activity
 
   return {
     streak,
     canClaim,
-    isEligible: streak.daysActive > 0,
+    isEligible,
     nextClaimTime,
     estimatedReward: calculateReward(streak.daysActive),
   };
@@ -127,6 +134,9 @@ export function useStreakRewards(): StreakState & StreakActions {
     streak: null,
     canClaim: false,
     isEligible: false,
+    isWhitelisted: true, // Default to true until checked
+    entitlement: '0',
+    alreadyClaimedOnChain: false,
     nextClaimTime: null,
     estimatedReward: '~$0.25',
     isLoading: false,
@@ -149,7 +159,29 @@ export function useStreakRewards(): StreakState & StreakActions {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      // Try API first
+      // 1. Check On-chain GoodDollar status
+      let onChainStatus = { isWhitelisted: true, entitlement: '0', alreadyClaimedOnChain: false };
+      try {
+        const { GoodDollarService } = await import('../services/gooddollar-service');
+        // Use read-only provider for quick check
+        const service = GoodDollarService.createReadOnly();
+        const eligibility = await service.checkClaimEligibility(address);
+        
+        onChainStatus = {
+          isWhitelisted: eligibility.claimAmountRaw.gt(0) || eligibility.alreadyClaimed,
+          entitlement: eligibility.claimAmount,
+          alreadyClaimedOnChain: eligibility.alreadyClaimed
+        };
+
+        // If checkEntitlement returns 0 and they haven't claimed, they aren't whitelisted
+        if (eligibility.claimAmountRaw.isZero() && !eligibility.alreadyClaimed) {
+          onChainStatus.isWhitelisted = false;
+        }
+      } catch (e) {
+        console.warn('[StreakRewards] On-chain check failed:', e);
+      }
+
+      // 2. Try API for streak data
       const response = await fetch(`/api/streaks/${address}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
@@ -171,6 +203,7 @@ export function useStreakRewards(): StreakState & StreakActions {
         setState(prev => ({
           ...prev,
           ...calculateStreakState(streak),
+          ...onChainStatus,
           isLoading: false,
           error: null,
           usingFallback: false,

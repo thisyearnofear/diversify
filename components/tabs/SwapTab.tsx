@@ -27,6 +27,7 @@ import {
 } from "../../hooks/use-tradeable-tokens";
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
+import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
 import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
@@ -47,7 +48,8 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill, recordSwap, experienceMode, demoMode } = useAppState();
+  const { swapPrefill, clearSwapPrefill, recordSwap: recordExperienceSwap, experienceMode, demoMode } = useAppState();
+  const { recordSwap: recordStreakSwap } = useStreakRewards();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
 
@@ -212,8 +214,18 @@ export default function SwapTab({
       // Transaction submitted successfully
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
+      
       // Record swap completion for experience progression
-      recordSwap();
+      recordExperienceSwap();
+      
+      // Record streak activity for GoodDollar UBI if amount >= $1
+      if (celebrationData?.amount) {
+        const amountNum = parseFloat(celebrationData.amount);
+        if (amountNum >= 1) {
+          recordStreakSwap(amountNum);
+        }
+      }
+      
       refreshWithRetries();
 
       // Show celebration if we have swap data

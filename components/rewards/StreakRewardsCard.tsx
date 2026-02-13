@@ -31,6 +31,8 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     streak,
     canClaim,
     isEligible,
+    isWhitelisted,
+    entitlement,
     estimatedReward,
     nextClaimTime,
     isLoading,
@@ -53,11 +55,11 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
 
   // Reset dismissed state when claim becomes available
   React.useEffect(() => {
-    if (canClaim) {
+    if (canClaim && isWhitelisted) {
       setIsDismissed(false);
       setIsCompact(false);
     }
-  }, [canClaim]);
+  }, [canClaim, isWhitelisted]);
 
   // If dismissed, show minimal restore button
   if (isDismissed) {
@@ -146,18 +148,6 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
             </svg>
           </div>
         </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsDismissed(true);
-          }}
-          className="absolute top-1 right-1 p-1 text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
-          title="Hide until next claim"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
       </div>
     );
   }
@@ -167,30 +157,37 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     <>
       <div className="relative">
         <InsightCard
-          icon={canClaim ? '💚' : '🔥'}
-          title={canClaim ? 'Claim Your G$' : `${streak?.daysActive || 0}-Day Streak`}
+          icon={!isWhitelisted ? '🛡️' : (canClaim ? '💚' : '🔥')}
+          title={!isWhitelisted ? 'Verification Required' : (canClaim ? 'Claim Your G$' : `${streak?.daysActive || 0}-Day Streak`)}
           description={
-            canClaim
-              ? `Your daily G$ is ready! Claim ${estimatedReward} now to keep your streak alive.`
-              : `Swap $1+ to maintain your streak and unlock your daily G$ claim.`
+            !isWhitelisted
+              ? "Your streak is active! Now complete face verification on GoodDollar to start claiming your daily UBI."
+              : canClaim
+                ? `Your daily G$ is ready! Claim ${entitlement !== '0' ? entitlement + ' G$' : estimatedReward} now.`
+                : `Swap $1+ to maintain your streak and unlock your daily G$ claim.`
           }
-          impact={canClaim ? estimatedReward : `${streak?.daysActive} days active`}
+          impact={!isWhitelisted ? "Identity Pending" : (canClaim ? (entitlement !== '0' ? entitlement + ' G$' : estimatedReward) : `${streak?.daysActive} days active`)}
           action={
-            canClaim
+            !isWhitelisted
               ? {
-                label: 'Claim G$',
-                onClick: () => setShowClaimFlow(true),
-                loading: isLoading,
+                label: 'Verify on GoodDollar',
+                onClick: () => window.open('https://wallet.gooddollar.org', '_blank'),
               }
-              : nextClaimTime
+              : canClaim
                 ? {
-                  label: `Next claim in ${formatTimeUntil(nextClaimTime)}`,
-                  onClick: () => { },
-                  disabled: true,
+                  label: 'Claim G$',
+                  onClick: () => setShowClaimFlow(true),
+                  loading: isLoading,
                 }
-                : undefined
+                : nextClaimTime
+                  ? {
+                    label: `Next claim in ${formatTimeUntil(nextClaimTime)}`,
+                    onClick: () => { },
+                    disabled: true,
+                  }
+                  : undefined
           }
-          variant={canClaim ? 'reward' : 'success'}
+          variant={!isWhitelisted ? 'warning' : (canClaim ? 'reward' : 'success')}
         />
         {/* Minimize/Dismiss buttons - only show when not claimable */}
         {!canClaim && isEligible && (
