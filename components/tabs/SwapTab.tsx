@@ -20,6 +20,7 @@ import DashboardCard from "../shared/DashboardCard";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
+import { StrategyService } from "../../services/strategy/strategy.service";
 import WalletButton from "../wallet/WalletButton";
 import {
   useTradeableTokens,
@@ -48,7 +49,7 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill, recordSwap: recordExperienceSwap, experienceMode, demoMode } = useAppState();
+  const { swapPrefill, clearSwapPrefill, recordSwap: recordExperienceSwap, experienceMode, demoMode, financialStrategy } = useAppState();
   const { recordSwap: recordStreakSwap } = useStreakRewards();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
@@ -334,6 +335,39 @@ export default function SwapTab({
       isActive: chain.chainId === walletChainId,
     }));
   }, [chains, walletChainId]);
+
+  // Strategy-aware swap suggestions
+  const strategyRecommendations = useMemo(() => {
+    if (!financialStrategy) return null;
+    
+    const config = StrategyService.getConfig(financialStrategy);
+    const recommendedAssets = config.prioritizeAssets || [];
+    
+    if (recommendedAssets.length === 0) return null;
+    
+    // Get first recommended asset that user doesn't have
+    const currentTokens = Object.keys(tokenBalances);
+    const recommended = recommendedAssets.find((asset: string) => 
+      !currentTokens.some(t => t.toUpperCase().includes(asset.toUpperCase()))
+    );
+    
+    if (!recommended) return null;
+    
+    const strategyNames: Record<string, string> = {
+      africapitalism: 'African',
+      buen_vivir: 'Latin American',
+      confucian: 'Asian',
+      gotong_royong: 'Southeast Asian',
+      islamic: 'Sharia-compliant',
+      global: 'Global',
+    };
+    
+    return {
+      recommendedAsset: recommended,
+      strategyName: strategyNames[financialStrategy] || 'strategy-aligned',
+      message: `Swap into ${recommended} for ${financialStrategy?.replace('_', ' ')} alignment`,
+    };
+  }, [financialStrategy, tokenBalances]);
 
   return (
     <div className="space-y-4">

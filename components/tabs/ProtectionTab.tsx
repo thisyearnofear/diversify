@@ -15,6 +15,7 @@ import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import WalletButton from "../wallet/WalletButton";
 import { useAppState } from "@/context/AppStateContext";
+import { StrategyService } from "@/services/strategy/strategy.service";
 import {
   useProtectionProfile,
   USER_GOALS,
@@ -27,6 +28,7 @@ import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 import StrategyMetrics from "../portfolio/StrategyMetrics";
+import ZakatCalculator from "../portfolio/ZakatCalculator";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -47,7 +49,7 @@ export default function ProtectionTab({
   onSelectStrategy,
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
-  const { navigateToSwap, demoMode, experienceMode } = useAppState();
+  const { navigateToSwap, demoMode, experienceMode, financialStrategy } = useAppState();
   const { setDrawerOpen, addUserMessage } = useAIConversation();
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";
@@ -506,6 +508,19 @@ export default function ProtectionTab({
               tokens: chains.flatMap(c => c.balances as TokenBalance[]),
             }}
           />
+        </DashboardCard>
+      )}
+
+      {/* Zakat Calculator - Only show for Islamic strategy */}
+      {financialStrategy === 'islamic' && displayTotalValue > 0 && (
+        <DashboardCard
+          title="Zakat Calculator"
+          icon={<span>🕌</span>}
+          subtitle="Islamic charitable giving"
+          color="emerald"
+          size="lg"
+        >
+          <ZakatCalculator totalPortfolioValue={displayTotalValue} />
         </DashboardCard>
       )}
 
