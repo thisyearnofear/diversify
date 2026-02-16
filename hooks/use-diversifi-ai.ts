@@ -279,7 +279,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     setAnalysisProgress(0);
     setThinkingStep('Initializing protection protocols...');
 
-    let progressInterval: NodeJS.Timeout | null = null;
+    let progressInterval: any = null;
 
     try {
       // Phase 1: Local Data Collection (0-30%) - Faster progression

@@ -18,7 +18,7 @@ export class UnifiedCacheService {
   private cache = new Map<string, CacheEntry<any>>();
   private readonly MAX_CACHE_SIZE = 1000;
   private readonly CLEANUP_INTERVAL = 1000 * 60 * 5; // 5 minutes
-  private cleanupTimer: NodeJS.Timeout | null = null;
+  private cleanupTimer: any = null;
 
   // Smart TTL configuration based on data volatility
   private readonly TTL_CONFIG: Record<CacheCategory, number> = {

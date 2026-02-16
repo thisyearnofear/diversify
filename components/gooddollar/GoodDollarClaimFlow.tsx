@@ -21,9 +21,9 @@ interface ClaimFlowProps {
 
 export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFlowProps) {
     const { address } = useWalletContext();
-    const { streak, canClaim, isWhitelisted, alreadyClaimedOnChain, estimatedReward, claimG, isLoading } = useStreakRewards();
+    const { streak, canClaim, isWhitelisted, alreadyClaimedOnChain, estimatedReward, claimG, verifyIdentity, isLoading } = useStreakRewards();
 
-    const [claimStatus, setClaimStatus] = useState<'ready' | 'claiming' | 'success' | 'error'>('ready');
+    const [claimStatus, setClaimStatus] = useState<'ready' | 'claiming' | 'verifying' | 'success' | 'error'>('ready');
     const [showCelebration, setShowCelebration] = useState(false);
     const [txHash, setTxHash] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -71,6 +71,30 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                 setClaimStatus('ready');
                 setErrorMessage(null);
             }, 5000);
+        }
+    };
+
+    // Handle verification action
+    const handleVerify = async () => {
+        setClaimStatus('verifying');
+        setErrorMessage(null);
+
+        try {
+            const result = await verifyIdentity();
+            if (result.success) {
+                // Link opened in new tab, keep UI in verifying state for a bit
+                setTimeout(() => {
+                    setClaimStatus('ready');
+                }, 10000);
+            } else {
+                setErrorMessage(result.error || 'Failed to start verification.');
+                setClaimStatus('error');
+                setTimeout(() => setClaimStatus('ready'), 5000);
+            }
+        } catch (error) {
+            setErrorMessage('Could not connect to verification service.');
+            setClaimStatus('error');
+            setTimeout(() => setClaimStatus('ready'), 5000);
         }
     };
 
@@ -258,28 +282,48 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                     )}
 
                     {/* CTA */}
-                    <button
-                        onClick={handleClaim}
-                        disabled={!canClaim || isLoading || claimStatus === 'claiming'}
-                        className={`w-full py-4 rounded-xl font-bold text-sm transition-all ${canClaim && claimStatus === 'ready'
-                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg'
-                            : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                            }`}
-                    >
-                        {claimStatus === 'claiming' ? (
-                            <span className="flex items-center justify-center gap-2">
-                                <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                </svg>
-                                Claiming UBI...
-                            </span>
-                        ) : canClaim ? (
-                            'Claim G$ Now →'
-                        ) : (
-                            'Unlock Daily G$ Claim'
-                        )}
-                    </button>
+                    {!isWhitelisted ? (
+                        <button
+                            onClick={handleVerify}
+                            disabled={claimStatus === 'verifying'}
+                            className="w-full py-4 rounded-xl font-bold text-sm transition-all bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-600/20"
+                        >
+                            {claimStatus === 'verifying' ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                    Opening Verification...
+                                </span>
+                            ) : (
+                                'Verify Identity with Face Scan →'
+                            )}
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleClaim}
+                            disabled={!canClaim || isLoading || claimStatus === 'claiming'}
+                            className={`w-full py-4 rounded-xl font-bold text-sm transition-all ${canClaim && claimStatus === 'ready'
+                                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg'
+                                : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                                }`}
+                        >
+                            {claimStatus === 'claiming' ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                    </svg>
+                                    Claiming UBI...
+                                </span>
+                            ) : canClaim ? (
+                                'Claim G$ Now →'
+                            ) : (
+                                'Unlock Daily G$ Claim'
+                            )}
+                        </button>
+                    )}
 
                     {/* Help text for locked state */}
                     {!canClaim && (
@@ -289,17 +333,8 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                                     💡 Make a $1+ swap to unlock your daily G$ claim
                                 </p>
                             ) : !isWhitelisted ? (
-                                <p className="text-xs text-amber-600 dark:text-amber-400">
-                                    🔐 Complete identity verification at{' '}
-                                    <a 
-                                        href="http://goodwallet.xyz?inviteCode=4AJXLg3ynL"
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="underline hover:text-amber-500"
-                                    >
-                                        wallet.gooddollar.org
-                                    </a>
-                                    {' '}to claim
+                                <p className="text-xs text-blue-600 dark:text-blue-400">
+                                    🔐 You need to verify your identity to claim UBI.
                                 </p>
                             ) : alreadyClaimedOnChain ? (
                                 <p className="text-xs text-emerald-600 dark:text-emerald-400">

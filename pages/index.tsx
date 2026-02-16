@@ -29,6 +29,8 @@ import TourTrigger from "../components/tour/TourTrigger";
 import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 
 import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
+import { useStreakRewards } from "../hooks/use-streak-rewards";
+
 
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab, setSwapPrefill, experienceMode, setExperienceMode, enableDemoMode } = useAppState();
@@ -53,6 +55,7 @@ export default function DiversiFiPage() {
   } = useWalletTutorial();
 
   const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal, openModal: openStrategyModal } = useStrategyModal();
+  const { isWhitelisted } = useStreakRewards();
 
   const { region: detectedRegion, isLoading: isRegionLoading } =
     useUserRegion();
@@ -157,7 +160,16 @@ export default function DiversiFiPage() {
               <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                 {experienceMode === "beginner" ? "Protect" : "DiversiFi"}
               </h1>
-              {address && <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
+              {address && (
+                <div className="flex items-center gap-1">
+                  <div className={`w-1.5 h-1.5 rounded-full ${isWhitelisted ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
+                  {isWhitelisted && (
+                    <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
+                      Verified
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

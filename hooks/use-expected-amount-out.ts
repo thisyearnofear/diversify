@@ -76,7 +76,7 @@ export function useExpectedAmountOut({
   const [error, setError] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [debouncedAmount, setDebouncedAmount] = useState(amount);
-  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceTimerRef = useRef<any>(null);
 
   // Debounce the amount parameter
   useEffect(() => {

@@ -61,7 +61,7 @@ export default function VoiceButton({
     const audioContextRef = useRef<AudioContext | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animationFrameRef = useRef<number | null>(null);
-    const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const silenceTimerRef = useRef<any>(null);
 
     // Silence detection parameters
     const SILENCE_THRESHOLD = 0.01;

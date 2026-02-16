@@ -104,6 +104,7 @@ export default function SwapTab({
   // Get multichain balances for the header
   const {
     chains,
+    tokenMap,
     isLoading: isMultichainLoading,
     refresh: refreshMultichain,
   } = useMultichainBalances(address);
@@ -346,7 +347,7 @@ export default function SwapTab({
     if (recommendedAssets.length === 0) return null;
     
     // Get first recommended asset that user doesn't have
-    const currentTokens = Object.keys(tokenBalances);
+    const currentTokens = Object.keys(tokenMap);
     const recommended = recommendedAssets.find((asset: string) => 
       !currentTokens.some(t => t.toUpperCase().includes(asset.toUpperCase()))
     );
@@ -367,7 +368,7 @@ export default function SwapTab({
       strategyName: strategyNames[financialStrategy] || 'strategy-aligned',
       message: `Swap into ${recommended} for ${financialStrategy?.replace('_', ' ')} alignment`,
     };
-  }, [financialStrategy, tokenBalances]);
+  }, [financialStrategy, tokenMap]);
 
   return (
     <div className="space-y-4">

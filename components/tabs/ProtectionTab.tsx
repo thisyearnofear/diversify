@@ -30,6 +30,11 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 import StrategyMetrics from "../portfolio/StrategyMetrics";
 import ZakatCalculator from "../portfolio/ZakatCalculator";
 
+import GoodDollarClaimFlow from "../gooddollar/GoodDollarClaimFlow";
+import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
+import GStreamingWidget from "../gooddollar/GStreamingWidget";
+import { useStreakRewards } from "@/hooks/use-streak-rewards";
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -93,6 +98,8 @@ export default function ProtectionTab({
   } = useProtectionProfile();
 
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
+  const [showClaimFlow, setShowClaimFlow] = useState(false);
+  const { streak, canClaim, isWhitelisted } = useStreakRewards();
 
   // Current regions for recommendations
   const currentRegions = useMemo(() => {
@@ -517,7 +524,7 @@ export default function ProtectionTab({
           title="Zakat Calculator"
           icon={<span>🕌</span>}
           subtitle="Islamic charitable giving"
-          color="emerald"
+          color="green"
           size="lg"
         >
           <ZakatCalculator totalPortfolioValue={displayTotalValue} />
@@ -571,6 +578,65 @@ export default function ProtectionTab({
         onClose={() => setShowAssetModal(null)}
         onSwap={handleExecuteSwap}
       />
+
+      {/* =====================================================================
+          GOODDOLLAR & IMPACT
+          ===================================================================== */}
+      <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-gray-900">
+        <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest px-1">
+          GoodDollar & Global Impact
+        </h4>
+
+        {/* Claim Card */}
+        <DashboardCard
+          title="Daily UBI Reward"
+          icon="💚"
+          color="green"
+          size="md"
+          onClick={() => setShowClaimFlow(true)}
+          trend={canClaim ? { value: "AVAILABLE", isPositive: true } : undefined}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-black text-gray-900 dark:text-white">
+                {streak?.daysActive || 0} Day Streak
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                {!isWhitelisted 
+                  ? "Identity verification required" 
+                  : canClaim 
+                    ? "Claim your daily G$ tokens now" 
+                    : "Complete a swap to unlock today's claim"}
+              </p>
+            </div>
+            <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-2xl">
+              <span className="text-2xl">{canClaim ? "🎁" : "🔒"}</span>
+            </div>
+          </div>
+        </DashboardCard>
+
+        {/* Streaming & Info Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <GStreamingWidget />
+          <GoodDollarInfoCard 
+            compact 
+            onLearnMore={() => {
+              addUserMessage("Tell me more about GoodDollar and how the UBI protocol works.");
+              setDrawerOpen(true);
+            }} 
+          />
+        </div>
+      </div>
+
+      {showClaimFlow && (
+        <GoodDollarClaimFlow 
+          onClose={() => setShowClaimFlow(false)} 
+          onClaimSuccess={() => {
+            setShowClaimFlow(false);
+            // Refresh would be handled by hook polling
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -15,20 +15,20 @@ interface TooltipProps {
 export function Tooltip({ children, content, side = "top", className = "" }: TooltipProps) {
     const [isVisible, setIsVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    const timeoutRef = useRef<NodeJS.Timeout>();
+    const timeoutRef = useRef<any>();
 
     useEffect(() => {
         setIsMobile("ontouchstart" in window);
     }, []);
 
     const showTooltip = () => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
         setIsVisible(true);
     };
 
     const hideTooltip = () => {
         if (isMobile) {
-            timeoutRef.current = setTimeout(() => setIsVisible(false), 2000);
+            timeoutRef.current = window.setTimeout(() => setIsVisible(false), 2000);
         } else {
             setIsVisible(false);
         }

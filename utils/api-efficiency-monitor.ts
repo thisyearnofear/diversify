@@ -9,7 +9,7 @@ import { circuitBreakerManager } from './circuit-breaker-service';
 
 export class ApiEfficiencyMonitor {
   private initialized = false;
-  private monitoringInterval: NodeJS.Timeout | null = null;
+  private monitoringInterval: any = null;
 
   /**
    * Initialize all efficiency services

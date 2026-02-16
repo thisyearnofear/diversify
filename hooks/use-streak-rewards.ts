@@ -55,6 +55,7 @@ interface StreakState {
 interface StreakActions {
   recordSwap: (amountUSD: number) => Promise<void>;
   claimG: () => Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }>;
+  verifyIdentity: () => Promise<{ success: boolean; url?: string; error?: string }>;
   resetStreak: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -375,6 +376,34 @@ export function useStreakRewards(): StreakState & StreakActions {
     }
   }, [state.canClaim]);
 
+  // Generate Face Verification link
+  const verifyIdentity = useCallback(async (): Promise<{ success: boolean; url?: string; error?: string }> => {
+    if (!address) return { success: false, error: 'Wallet not connected' };
+
+    try {
+      const { GoodDollarService } = await import('../services/gooddollar-service');
+      
+      // Get wallet provider
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        return { success: false, error: 'No wallet provider found' };
+      }
+
+      const service = await GoodDollarService.fromWeb3Provider((window as any).ethereum);
+      
+      // Generate link (redirect to current page)
+      const callbackUrl = window.location.href;
+      const url = await service.getFaceVerificationLink('DiversiFi User', callbackUrl);
+      
+      // Open in new window or redirect
+      window.open(url, '_blank');
+      
+      return { success: true, url };
+    } catch (error) {
+      console.error('[StreakRewards] Error generating FV link:', error);
+      return { success: false, error: 'Failed to start verification flow' };
+    }
+  }, [address]);
+
   // Reset streak (dev/testing)
   const resetStreak = useCallback(async () => {
     if (!address) return;
@@ -419,6 +448,7 @@ export function useStreakRewards(): StreakState & StreakActions {
     ...state,
     recordSwap,
     claimG,
+    verifyIdentity,
     resetStreak,
     refresh,
   };

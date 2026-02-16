@@ -18,7 +18,7 @@ interface BatchConfig {
 
 export class BatchRequestService {
   private pendingBatches = new Map<string, Map<string, PendingRequest[]>>();
-  private batchTimers = new Map<string, NodeJS.Timeout>();
+  private batchTimers = new Map<string, any>();
   private readonly DEFAULT_BATCH_SIZE = 10;
   private readonly DEFAULT_MAX_DELAY = 50; // milliseconds
 

@@ -35,10 +35,12 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     entitlement,
     estimatedReward,
     nextClaimTime,
+    verifyIdentity,
     isLoading,
   } = useStreakRewards();
 
   const [showClaimFlow, setShowClaimFlow] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
 
@@ -51,6 +53,17 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     return `${hours}h ${minutes}m`;
+  };
+
+  const handleVerify = async () => {
+    setIsVerifying(true);
+    try {
+      await verifyIdentity();
+      // Keep loading for a bit while they are redirected
+      setTimeout(() => setIsVerifying(false), 5000);
+    } catch (e) {
+      setIsVerifying(false);
+    }
   };
 
   // Reset dismissed state when claim becomes available
@@ -170,8 +183,9 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
           action={
             !isWhitelisted
               ? {
-                label: 'Verify on GoodDollar',
-                onClick: () => window.open('http://goodwallet.xyz?inviteCode=4AJXLg3ynL', '_blank'),
+                label: 'Verify with Face Scan',
+                onClick: handleVerify,
+                loading: isVerifying,
               }
               : canClaim
                 ? {

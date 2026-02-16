@@ -10,7 +10,7 @@
 
 import { ethers } from 'ethers';
 
-// GoodDollar Contract Addresses on Celo
+// GoodDollar & Superfluid Contract Addresses on Celo
 const GOODDOLLAR_ADDRESSES = {
   // G$ Token on Celo Mainnet
   G_TOKEN: '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
@@ -20,6 +20,8 @@ const GOODDOLLAR_ADDRESSES = {
   IDENTITY: '0xC361A6E660563027C6C92518e3810103C6021665',
   // GoodReserve for staking info
   RESERVE: '0xeD8F69E24fE33481f7DfE0d9D0f89F5e4F4F3E3E',
+  // Superfluid CFA Forwarder on Celo
+  CFA_FORWARDER: '0xcfA132E353cB4E398080B9700609bb008eceB125',
 } as const;
 
 // Minimal ABI for UBI claiming
@@ -42,6 +44,15 @@ const G_TOKEN_ABI = [
   'function approve(address spender, uint256 amount) external returns (bool)',
 ];
 
+// Superfluid CFA Forwarder ABI
+const CFA_FORWARDER_ABI = [
+  'function createFlow(address token, address sender, address receiver, int96 flowRate, bytes userData) external returns (bool)',
+  'function updateFlow(address token, address sender, address receiver, int96 flowRate, bytes userData) external returns (bool)',
+  'function deleteFlow(address token, address sender, address receiver) external returns (bool)',
+  'function getFlowrate(address token, address sender, address receiver) external view returns (int96)',
+  'function getAccountFlowInfo(address token, address account) external view returns (uint256 lastUpdated, int96 flowRate, uint256 deposit, uint256 owedDeposit)',
+];
+
 export interface ClaimEligibility {
   canClaim: boolean;
   claimAmount: string; // In G$ (formatted)
@@ -58,9 +69,16 @@ export interface StakingInfo {
   canStake: boolean;
 }
 
+export interface StreamInfo {
+  flowRate: string; // G$ per second
+  monthlyAmount: string; // G$ per month
+  receiver: string;
+  isActive: boolean;
+}
+
 /**
  * GoodDollar Service
- * Handles UBI claiming and staking operations on Celo
+ * Handles UBI claiming, identity verification, and streaming on Celo
  */
 export class GoodDollarService {
   private provider: ethers.providers.Provider;
@@ -86,6 +104,14 @@ export class GoodDollarService {
       console.error('[GoodDollar] Error checking verification:', error);
       return false;
     }
+  }
+
+  /**
+   * Generate Face Verification Link
+   */
+  async getFaceVerificationLink(firstName: string, callbackUrl: string): Promise<string> {
+    // Direct URL to GoodDollar's verification flow
+    return `https://goodwallet.xyz/FaceVerification?firstName=${encodeURIComponent(firstName)}&callback=${encodeURIComponent(callbackUrl)}`;
   }
 
   /**
@@ -167,12 +193,111 @@ export class GoodDollarService {
       if (error.code === 'ACTION_REJECTED') {
         errorMessage = 'Transaction rejected by user';
       } else if (error.message?.includes('not whitelisted')) {
-        errorMessage = 'Wallet not verified. Please complete face verification at wallet.gooddollar.org';
+        errorMessage = 'Wallet not verified. Please complete face verification.';
       } else if (error.message?.includes('already claimed')) {
         errorMessage = 'Already claimed today. Come back tomorrow!';
       }
 
       return { success: false, error: errorMessage };
+    }
+  }
+
+  /**
+   * Start a G$ stream (Superfluid)
+   * @param receiver Wallet address to receive the stream
+   * @param monthlyAmount Amount in G$ to stream per month
+   */
+  async createStream(receiver: string, monthlyAmount: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (!this.signer) return { success: false, error: 'Wallet not connected' };
+
+    try {
+      const forwarder = new ethers.Contract(
+        GOODDOLLAR_ADDRESSES.CFA_FORWARDER,
+        CFA_FORWARDER_ABI,
+        this.signer
+      );
+
+      const sender = await this.signer.getAddress();
+      
+      // Calculate flowRate (amount per second)
+      // monthlyAmount / (30 * 24 * 60 * 60)
+      const amountRaw = ethers.utils.parseUnits(monthlyAmount, 18);
+      const flowRate = amountRaw.div(2592000); // 30 days in seconds
+
+      const tx = await forwarder.createFlow(
+        GOODDOLLAR_ADDRESSES.G_TOKEN,
+        sender,
+        receiver,
+        flowRate,
+        '0x'
+      );
+
+      const receipt = await tx.wait();
+      return { success: true, txHash: receipt.transactionHash };
+    } catch (error: any) {
+      console.error('[GoodDollar] Stream error:', error);
+      return { success: false, error: error.message || 'Failed to create stream' };
+    }
+  }
+
+  /**
+   * Stop an active G$ stream
+   */
+  async deleteStream(receiver: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (!this.signer) return { success: false, error: 'Wallet not connected' };
+
+    try {
+      const forwarder = new ethers.Contract(
+        GOODDOLLAR_ADDRESSES.CFA_FORWARDER,
+        CFA_FORWARDER_ABI,
+        this.signer
+      );
+
+      const sender = await this.signer.getAddress();
+      const tx = await forwarder.deleteFlow(
+        GOODDOLLAR_ADDRESSES.G_TOKEN,
+        sender,
+        receiver
+      );
+
+      const receipt = await tx.wait();
+      return { success: true, txHash: receipt.transactionHash };
+    } catch (error: any) {
+      console.error('[GoodDollar] Delete stream error:', error);
+      return { success: false, error: error.message || 'Failed to stop stream' };
+    }
+  }
+
+  /**
+   * Get stream information between sender and receiver
+   */
+  async getStreamInfo(sender: string, receiver: string): Promise<StreamInfo> {
+    try {
+      const forwarder = new ethers.Contract(
+        GOODDOLLAR_ADDRESSES.CFA_FORWARDER,
+        CFA_FORWARDER_ABI,
+        this.provider
+      );
+
+      const flowRate = await forwarder.getFlowrate(
+        GOODDOLLAR_ADDRESSES.G_TOKEN,
+        sender,
+        receiver
+      );
+
+      const flowRateFormatted = ethers.utils.formatUnits(flowRate, 18);
+      // monthly = flowRate * 30 days
+      const monthlyAmount = flowRate.mul(2592000);
+
+      return {
+        flowRate: flowRateFormatted,
+        monthlyAmount: ethers.utils.formatUnits(monthlyAmount, 18),
+        receiver,
+        isActive: flowRate.gt(0)
+      };
+    } catch (error) {
+      console.error('[GoodDollar] Error fetching stream info:', error);
+      return { flowRate: '0', monthlyAmount: '0', receiver, isActive: false };
     }
   }
 
@@ -197,11 +322,9 @@ export class GoodDollarService {
 
   /**
    * Get staking information
-   * Note: This is a simplified version. Full staking requires GoodStaking contract integration
    */
-  async getStakingInfo(userAddress?: string): Promise<StakingInfo> {
+  async getStakingInfo(): Promise<StakingInfo> {
     // Placeholder - would need actual GoodStaking contract integration
-    // For now, return basic info and direct users to gooddollar.org/stake
     return {
       totalStaked: '0',
       userStake: '0',

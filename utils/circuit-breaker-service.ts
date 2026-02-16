@@ -28,7 +28,7 @@ export class CircuitBreaker {
   private totalCalls = 0;
   private totalFailures = 0;
   private totalSuccesses = 0;
-  private halfOpenTimer: NodeJS.Timeout | null = null;
+  private halfOpenTimer: any = null;
 
   constructor(private readonly config: CircuitBreakerConfig) {}
 
