@@ -50,6 +50,31 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const showRegionalInfo = experienceMode !== "beginner";
+  const showAdvancedInfo = experienceMode === "advanced";
+  const showIntermediateInfo = experienceMode === "intermediate" || showAdvancedInfo;
+
+  // Beginner: show educational tooltip about why to swap
+  const [showWhySwapTooltip, setShowWhySwapTooltip] = React.useState(false);
+
+  // Smart default: auto-select token with highest balance
+  React.useEffect(() => {
+    if (!selectedToken && availableTokens.length > 0 && Object.keys(tokenBalances).length > 0) {
+      let highestBalanceToken = availableTokens[0].symbol;
+      let highestBalance = 0;
+      
+      for (const token of availableTokens) {
+        const balance = tokenBalances[token.symbol];
+        if (balance && parseFloat(balance.formattedBalance) > highestBalance) {
+          highestBalance = parseFloat(balance.formattedBalance);
+          highestBalanceToken = token.symbol;
+        }
+      }
+      
+      if (highestBalance > 0) {
+        onTokenChange(highestBalanceToken);
+      }
+    }
+  }, [availableTokens, tokenBalances, selectedToken, onTokenChange]);
 
   // Check if token violates strategy
   const getComplianceInfo = (tokenSymbol: string) => {
@@ -199,6 +224,17 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     <div>
       <label className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
         <span className="mr-2">{label}</span>
+        {/* Beginner mode: show "Why swap?" tooltip */}
+        {isBeginnerMode && label === 'From' && (
+          <button
+            type="button"
+            onClick={() => setShowWhySwapTooltip(!showWhySwapTooltip)}
+            className="ml-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            title="Why should I swap?"
+          >
+            💡 Why swap?
+          </button>
+        )}
         {showRegionalInfo && tokenRegion && tokenRegion !== 'Unknown' && (
           <div
             className="flex items-center px-2 py-1 rounded-md"
@@ -218,6 +254,30 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           </div>
         )}
       </label>
+
+      {/* Beginner: Educational tooltip about why to swap */}
+      {isBeginnerMode && showWhySwapTooltip && (
+        <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl">
+          <div className="flex items-start gap-2">
+            <span className="text-lg">🛡️</span>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-blue-900 dark:text-blue-100 mb-1">
+                Protect Your Money
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                Different currencies lose value at different rates. By swapping to more stable currencies, 
+                you can protect your savings from losing purchasing power over time.
+              </p>
+              <button
+                onClick={() => setShowWhySwapTooltip(false)}
+                className="mt-2 text-xs font-bold text-blue-500 hover:text-blue-700"
+              >
+                Got it! →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Balance display - Essential for all users to understand their position */}
       <div className="flex justify-end mb-1">

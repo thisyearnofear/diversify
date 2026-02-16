@@ -77,6 +77,10 @@ export default function SwapTab({
 
   // Success celebration state
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showYieldPrompt, setShowYieldPrompt] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('diversifi-yield-prompt-dismissed') !== 'true';
+  });
   const [celebrationData, setCelebrationData] = useState<{
     fromToken: string;
     toToken: string;
@@ -514,8 +518,8 @@ export default function SwapTab({
         )}
       </Card>
 
-      {/* ENHANCEMENT: Cross-chain yield prompt for Celo users */}
-      {!isArbitrum && address && (
+      {/* ENHANCEMENT: Cross-chain yield prompt for Celo users - persisted dismissal */}
+      {!isArbitrum && address && showYieldPrompt && (
         <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-4 text-white">
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -541,24 +545,36 @@ export default function SwapTab({
               </svg>
             </div>
           </div>
-          <button
-            onClick={() => {
-              // Pre-fill swap to bridge to Arbitrum
-              if (swapInterfaceRef.current?.setTokens) {
-                swapInterfaceRef.current.setTokens(
-                  'USDm',
-                  'USDY',
-                  '',
-                  NETWORKS.CELO_MAINNET.chainId,
-                  NETWORKS.ARBITRUM_ONE.chainId
-                );
-              }
-            }}
-            className="w-full mt-4 py-3 bg-white text-blue-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-          >
-            <span>Bridge to Arbitrum & Earn</span>
-            <span>→</span>
-          </button>
+          <div className="flex items-center justify-between mt-4">
+            <button
+              onClick={() => {
+                // Pre-fill swap to bridge to Arbitrum
+                if (swapInterfaceRef.current?.setTokens) {
+                  swapInterfaceRef.current.setTokens(
+                    'USDm',
+                    'USDY',
+                    '',
+                    NETWORKS.CELO_MAINNET.chainId,
+                    NETWORKS.ARBITRUM_ONE.chainId
+                  );
+                }
+              }}
+              className="flex-1 py-3 bg-white text-blue-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+            >
+              <span>Bridge to Arbitrum & Earn</span>
+              <span>→</span>
+            </button>
+            <button
+              onClick={() => {
+                setShowYieldPrompt(false);
+                localStorage.setItem('diversifi-yield-prompt-dismissed', 'true');
+              }}
+              className="ml-2 px-3 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold transition-colors"
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
