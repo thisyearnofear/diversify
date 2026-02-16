@@ -402,6 +402,39 @@ export default function OverviewTab({
         <RewardsStats />
       </div>
 
+      {/* ENHANCEMENT: Arbitrum Yield Opportunity Card */}
+      {hasHoldings && (
+        <div 
+          onClick={() => setActiveTab("protect")}
+          className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-4 text-white cursor-pointer hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-2xl">💰</span>
+                <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+                  Earn Yield
+                </span>
+              </div>
+              <h3 className="text-lg font-black mt-2">Up to 5% APY</h3>
+              <p className="text-sm text-blue-100 mt-1">
+                Tokenized treasuries on Arbitrum
+              </p>
+            </div>
+            <div className="bg-white/10 p-2 rounded-xl">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3 text-xs text-blue-200">
+            <span className="bg-green-500/30 px-2 py-0.5 rounded-full">USDY 5%</span>
+            <span className="bg-purple-500/30 px-2 py-0.5 rounded-full">SYRUP 4.5%</span>
+            <span>→</span>
+          </div>
+        </div>
+      )}
+
       {/* 3. ASSET BREAKDOWN (Simplified for Beginners) */}
       {hasHoldings && (
         isBeginner ? (
@@ -457,6 +490,34 @@ export default function OverviewTab({
           />
         )
       )}
+
+      {/* ENHANCEMENT: Multichain Identity Banner - Celebrates both ecosystems */}
+      <div className="bg-gradient-to-r from-yellow-500 via-orange-500 to-blue-600 p-0.5 rounded-2xl">
+        <div className="bg-white dark:bg-gray-900 rounded-[14px] p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex -space-x-2">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white text-lg z-10 border-2 border-white dark:border-gray-900">
+                  🌍
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg border-2 border-white dark:border-gray-900">
+                  💰
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-black">Two Chains, One Mission</h3>
+                <p className="text-xs text-gray-500">
+                  Celo for regional diversity • Arbitrum for yield
+                </p>
+              </div>
+            </div>
+            <div className="text-right hidden sm:block">
+              <div className="text-xs font-bold text-gray-400">Powered by</div>
+              <div className="text-xs font-black">LiFi</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* 4. MARKET DISCOVERY - Dashboard Cards (No Collapsible) */}
       <DashboardCard

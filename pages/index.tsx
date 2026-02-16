@@ -347,10 +347,11 @@ export default function DiversiFiPage() {
         <StrategyModal
           isOpen={isStrategyModalOpen}
           onClose={closeStrategyModal}
+          onConnectWallet={connectWallet}
+          isWalletConnected={!!address}
           onComplete={() => {
-            if (!address && !isInMiniPay && !isFarcaster) {
-              setTimeout(() => openWalletTutorial(), 800);
-            }
+            // Wallet tutorial no longer auto-triggers - users can access it via voice command or help button
+            // This reduces friction for wallet connection
           }}
         />
       </div>

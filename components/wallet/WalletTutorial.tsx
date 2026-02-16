@@ -325,27 +325,18 @@ export const WalletTutorial: React.FC<{
   );
 };
 
+/**
+ * REMOVED auto-trigger for Wallet Tutorial
+ * Users should connect wallet on their own terms, not be forced through tutorial first
+ * The "Connect Wallet" button in the header is now always visible and accessible
+ * Users can still access the tutorial manually if they want help
+ */
 export const useWalletTutorial = () => {
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-  const { isMiniPay, isFarcaster, isConnected } = useWalletContext();
+  const { isMiniPay } = useWalletContext();
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (isMiniPay || isFarcaster || isConnected) return;
-
-    const hasSeenTutorial = localStorage.getItem('hasSeenWalletTutorial') === 'true';
-    if (hasSeenTutorial) return;
-
-    // Auto-open tutorial after strategy modal OR if user dismissed strategy modal
-    const hasSeenStrategyModal = localStorage.getItem('hasSeenStrategyModal') === 'true';
-
-    const timer = setTimeout(() => {
-      setIsTutorialOpen(true);
-      localStorage.setItem('hasSeenWalletTutorial', 'true');
-    }, hasSeenStrategyModal ? 1500 : 3000); // Longer delay if no strategy modal
-
-    return () => clearTimeout(timer);
-  }, [isMiniPay, isFarcaster, isConnected]);
+  // No longer auto-opens tutorial - users can access it manually via header help button
+  // This reduces friction for wallet connection
 
   const openTutorial = () => setIsTutorialOpen(true);
   const closeTutorial = () => setIsTutorialOpen(false);

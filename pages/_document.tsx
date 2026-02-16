@@ -37,21 +37,11 @@ const themeScript = `
 })();
 `;
 
-const onboardingScript = `
-(function() {
-  try {
-    var hasSeenModal = localStorage.getItem('hasSeenStrategyModal') === 'true';
-    var hasStrategy = localStorage.getItem('financialStrategy');
-    
-    // If user hasn't completed onboarding, set attribute to hide wallet UI
-    if (!hasSeenModal && !hasStrategy) {
-      document.documentElement.setAttribute('data-pending-onboarding', 'true');
-    }
-  } catch (e) {
-    // localStorage unavailable, onboarding will handle it
-  }
-})();
-`;
+/**
+ * REMOVED: Wallet button is no longer hidden during onboarding
+ * Users should be able to connect wallet anytime
+ * The onboarding flow is now optional and parallel to wallet connection
+ */
 
 export default function Document() {
   return (
@@ -59,7 +49,6 @@ export default function Document() {
       <Head />
       <body className="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-        <script dangerouslySetInnerHTML={{ __html: onboardingScript }} />
         <Main />
         <NextScript />
       </body>

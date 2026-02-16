@@ -136,9 +136,5 @@ body {
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* ENHANCEMENT: Hide wallet button flash during onboarding */
-html[data-pending-onboarding] header button[aria-label*="wallet" i],
-html[data-pending-onboarding] header button[aria-label*="connect" i] {
-  opacity: 0;
-  pointer-events: none;
-}
+/* REMOVED: Wallet button was intentionally hidden during onboarding causing UX friction */
+/* Users should be able to connect wallet anytime, not just after completing onboarding */

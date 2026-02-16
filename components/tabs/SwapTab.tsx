@@ -514,6 +514,54 @@ export default function SwapTab({
         )}
       </Card>
 
+      {/* ENHANCEMENT: Cross-chain yield prompt for Celo users */}
+      {!isArbitrum && address && (
+        <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-4 text-white">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xl">💰</span>
+                <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+                  Boost Your Yield
+                </span>
+              </div>
+              <h3 className="text-base font-black">Earn Up to 5% APY</h3>
+              <p className="text-sm text-blue-100 mt-1 leading-relaxed">
+                Bridge your stablecoins to Arbitrum and access tokenized US Treasuries with automatic yield
+              </p>
+              <div className="flex items-center gap-2 mt-3">
+                <span className="bg-green-500/30 px-2 py-1 rounded-full text-xs">USDY 5%</span>
+                <span className="bg-purple-500/30 px-2 py-1 rounded-full text-xs">SYRUPUSDC 4.5%</span>
+                <span className="bg-amber-500/30 px-2 py-1 rounded-full text-xs">PAXG Gold</span>
+              </div>
+            </div>
+            <div className="bg-white/10 p-2 rounded-xl ml-3">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              // Pre-fill swap to bridge to Arbitrum
+              if (swapInterfaceRef.current?.setTokens) {
+                swapInterfaceRef.current.setTokens(
+                  'USDm',
+                  'USDY',
+                  '',
+                  NETWORKS.CELO_MAINNET.chainId,
+                  NETWORKS.ARBITRUM_ONE.chainId
+                );
+              }
+            }}
+            className="w-full mt-4 py-3 bg-white text-blue-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+          >
+            <span>Bridge to Arbitrum & Earn</span>
+            <span>→</span>
+          </button>
+        </div>
+      )}
+
       {/* Advanced: Regional Hedge & Action Guidance - Dashboard Cards */}
       {!isArbitrum && address && !isBeginner && (
         <div className="space-y-4">

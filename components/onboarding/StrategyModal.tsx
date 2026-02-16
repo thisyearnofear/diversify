@@ -23,9 +23,11 @@ interface StrategyModalProps {
     isOpen: boolean;
     onClose: () => void;
     onComplete?: () => void;
+    onConnectWallet?: () => void;
+    isWalletConnected?: boolean;
 }
 
-export default function StrategyModal({ isOpen, onClose, onComplete }: StrategyModalProps) {
+export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWallet, isWalletConnected }: StrategyModalProps) {
     const { financialStrategy, setFinancialStrategy } = useAppState();
     const [step, setStep] = useState<'welcome' | 'select' | 'interface' | 'confirm'>('welcome');
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -111,7 +113,12 @@ export default function StrategyModal({ isOpen, onClose, onComplete }: StrategyM
                         className="fixed inset-4 md:inset-x-auto md:inset-y-8 md:w-full md:max-w-lg md:mx-auto z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10 overflow-hidden flex flex-col"
                     >
                         {step === 'welcome' && (
-                            <WelcomeScreen onContinue={() => setStep('select')} onSkip={handleSkip} />
+                            <WelcomeScreen 
+                                onContinue={() => setStep('select')} 
+                                onSkip={handleSkip}
+                                onConnectWallet={onConnectWallet}
+                                isWalletConnected={isWalletConnected}
+                            />
                         )}
                         {step === 'select' && (
                             <SelectionScreen

@@ -187,6 +187,14 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     return `${symbol} - ${metadata.name}`;
   };
 
+  // ENHANCEMENT: Get yield badge for Arbitrum RWA tokens
+  const getYieldBadge = (symbol: string): { text: string; color: string } | null => {
+    if (symbol === 'USDY') return { text: '+5% APY', color: 'text-emerald-600 bg-emerald-100' };
+    if (symbol === 'SYRUPUSDC') return { text: '+4.5% APY', color: 'text-purple-600 bg-purple-100' };
+    if (symbol === 'PAXG') return { text: 'Gold', color: 'text-amber-600 bg-amber-100' };
+    return null;
+  };
+
   return (
     <div>
       <label className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
@@ -266,6 +274,16 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             const displayName = getSimplifiedTokenName(token.symbol);
             const compliance = getComplianceInfo(token.symbol);
             const badge = getStrategyBadge(token.symbol);
+            const yieldBadge = getYieldBadge(token.symbol);
+            
+            // Build display label with all badges
+            let label = displayName;
+            if (!compliance.isCompliant) {
+              label = `⚠️ ${displayName} (Not compliant)`;
+            } else if (badge) {
+              label = `${badge.emoji} ${displayName} • ${badge.label}`;
+            }
+            
             return (
               <option
                 key={token.symbol}
@@ -275,13 +293,9 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                   : 'text-gray-400 dark:text-gray-600'
                   }`}
                 disabled={!compliance.isCompliant}
+                data-yield={yieldBadge?.text || ''}
               >
-                {!compliance.isCompliant
-                  ? `⚠️ ${displayName} (Not compliant)`
-                  : badge
-                    ? `${badge.emoji} ${displayName} • ${badge.label}`
-                    : displayName
-                }
+                {label}
               </option>
             );
           })}
@@ -392,20 +406,36 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 </span>
               </div>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block leading-tight">
-                Inflation
-              </span>
-              <span
-                className={`font-bold text-xs block leading-tight ${inflationRate > 5
-                  ? "text-red-600 dark:text-red-400"
-                  : inflationRate > 3
-                    ? "text-amber-600 dark:text-amber-400"
-                    : "text-green-600 dark:text-green-400"
-                  }`}
-              >
-                {isNaN(inflationRate) || inflationRate === undefined ? '—' : inflationRate.toFixed(1) + '%'}
-              </span>
+            <div className="flex items-center gap-2">
+              {/* ENHANCEMENT: Yield badge for Arbitrum RWA tokens */}
+              {(() => {
+                const yieldBadge = getYieldBadge(selectedToken);
+                if (yieldBadge) {
+                  return (
+                    <div className={`px-2 py-1 rounded-md shadow-sm flex-shrink-0 ${yieldBadge.color}`}>
+                      <span className="text-[10px] font-black block leading-tight">
+                        {yieldBadge.text}
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              <div className="bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block leading-tight">
+                  Inflation
+                </span>
+                <span
+                  className={`font-bold text-xs block leading-tight ${inflationRate > 5
+                    ? "text-red-600 dark:text-red-400"
+                    : inflationRate > 3
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-green-600 dark:text-green-400"
+                    }`}
+                >
+                  {isNaN(inflationRate) || inflationRate === undefined ? '—' : inflationRate.toFixed(1) + '%'}
+                </span>
+              </div>
             </div>
           </div>
         </div>

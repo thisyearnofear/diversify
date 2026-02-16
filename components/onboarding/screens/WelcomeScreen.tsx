@@ -6,7 +6,7 @@ interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue: () => void;
 }
 
-export function WelcomeScreen({ onContinue, onSkip }: WelcomeScreenProps) {
+export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected }: WelcomeScreenProps) {
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 text-center relative overflow-y-auto custom-scrollbar">
             {/* Mesh Gradient Background */}
@@ -75,6 +75,20 @@ export function WelcomeScreen({ onContinue, onSkip }: WelcomeScreenProps) {
                 >
                     Get Started →
                 </motion.button>
+                {onConnectWallet && !isWalletConnected && (
+                    <motion.button
+                        onClick={onConnectWallet}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.6 }}
+                        className="w-full px-6 py-3 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center justify-center gap-2"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Already have a wallet? Connect Now
+                    </motion.button>
+                )}
                 {onSkip && (
                     <button
                         onClick={onSkip}
