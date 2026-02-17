@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { REGION_COLORS, TOKEN_METADATA } from "../../config";
@@ -50,8 +50,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const showRegionalInfo = experienceMode !== "beginner";
-  const showAdvancedInfo = experienceMode === "advanced";
-  const showIntermediateInfo = experienceMode === "intermediate" || showAdvancedInfo;
 
   // Beginner: show educational tooltip about why to swap
   const [showWhySwapTooltip, setShowWhySwapTooltip] = React.useState(false);

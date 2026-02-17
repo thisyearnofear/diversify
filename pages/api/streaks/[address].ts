@@ -19,7 +19,13 @@ function isValidAddress(address: string): boolean {
 }
 
 // Calculate streak state based on last activity
-function calculateStreakState(streak: { lastActivity: number; daysActive: number; toObject: () => Record<string, any> }) {
+interface StreakDocument {
+  lastActivity: number;
+  daysActive: number;
+  toObject: () => Record<string, unknown>;
+}
+
+function calculateStreakState(streak: StreakDocument) {
   const today = Math.floor(Date.now() / 86400000);
   const lastActivityDay = Math.floor(streak.lastActivity / 86400000);
   const daysSinceActivity = today - lastActivityDay;

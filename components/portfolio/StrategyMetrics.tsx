@@ -7,8 +7,6 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useAppState } from '@/context/AppStateContext';
 import type { FinancialStrategy } from '@/context/AppStateContext';
-import { StrategyService } from '@/services/strategy/strategy.service';
-import type { AssetRegion } from '@/config';
 
 interface StrategyMetric {
     label: string;
@@ -42,9 +40,6 @@ export default function StrategyMetrics({ portfolioData }: StrategyMetricsProps)
             </motion.div>
         );
     }
-
-    // Use StrategyService to calculate actual score
-    const currentAllocations = portfolioData.regions as Record<AssetRegion, number>;
 
     const metrics = getMetricsForStrategy(financialStrategy, portfolioData);
 

@@ -61,8 +61,8 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                     setErrorMessage(null);
                 }, 5000);
             }
-        } catch (error) {
-            console.error('[ClaimFlow] Error:', error);
+        } catch {
+            console.error('[ClaimFlow] Error: Unexpected error occurred');
             setErrorMessage('Unexpected error. Please try again.');
             setClaimStatus('error');
 
@@ -91,7 +91,7 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                 setClaimStatus('error');
                 setTimeout(() => setClaimStatus('ready'), 5000);
             }
-        } catch (error) {
+        } catch {
             setErrorMessage('Could not connect to verification service.');
             setClaimStatus('error');
             setTimeout(() => setClaimStatus('ready'), 5000);

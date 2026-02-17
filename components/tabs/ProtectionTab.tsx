@@ -11,11 +11,9 @@ import {
   HeroValue,
 } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
-import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import WalletButton from "../wallet/WalletButton";
 import { useAppState } from "@/context/AppStateContext";
-import { StrategyService } from "@/services/strategy/strategy.service";
 import {
   useProtectionProfile,
   USER_GOALS,

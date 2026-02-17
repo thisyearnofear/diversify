@@ -1,6 +1,5 @@
 import React from "react";
 import type { Region } from "../../hooks/use-user-region";
-import { REGION_GRADIENTS, type AssetRegion } from "../../config";
 
 interface RegionalIconographyProps {
   region: Region;

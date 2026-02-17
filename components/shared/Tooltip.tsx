@@ -15,7 +15,7 @@ interface TooltipProps {
 export function Tooltip({ children, content, side = "top", className = "" }: TooltipProps) {
     const [isVisible, setIsVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
-    const timeoutRef = useRef<any>();
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | number | null>(null);
 
     useEffect(() => {
         setIsMobile("ontouchstart" in window);

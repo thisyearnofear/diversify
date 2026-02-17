@@ -61,7 +61,7 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
       await verifyIdentity();
       // Keep loading for a bit while they are redirected
       setTimeout(() => setIsVerifying(false), 5000);
-    } catch (e) {
+    } catch {
       setIsVerifying(false);
     }
   };

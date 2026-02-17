@@ -20,7 +20,6 @@ import DashboardCard from "../shared/DashboardCard";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useAppState } from "../../context/AppStateContext";
-import { StrategyService } from "../../services/strategy/strategy.service";
 import WalletButton from "../wallet/WalletButton";
 import {
   useTradeableTokens,
@@ -49,7 +48,7 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill, recordSwap: recordExperienceSwap, experienceMode, demoMode, financialStrategy } = useAppState();
+  const { swapPrefill, clearSwapPrefill, recordSwap: recordExperienceSwap, experienceMode, demoMode } = useAppState();
   const { recordSwap: recordStreakSwap } = useStreakRewards();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
@@ -104,7 +103,6 @@ export default function SwapTab({
   // Get multichain balances for the header
   const {
     chains,
-    tokenMap,
     isLoading: isMultichainLoading,
     refresh: refreshMultichain,
   } = useMultichainBalances(address);
@@ -316,7 +314,7 @@ export default function SwapTab({
   useEffect(() => {
     // Default target region to Global if available, otherwise stay at default
     if (Object.keys(inflationData).includes("Global")) {
-      setTargetRegion("Global" as any);
+      setTargetRegion("Global" as Region);
     } else if (userRegion === "Africa") {
       setTargetRegion("USA");
     } else if (userRegion === "USA") {
@@ -324,7 +322,7 @@ export default function SwapTab({
     } else {
       setTargetRegion("Africa");
     }
-  }, [userRegion]); // Only run when userRegion changes, not inflationData to avoid loops
+  }, [userRegion, inflationData]); // Run when userRegion or inflationData changes
 
   // Prepare chain data for the header
   const chainBalancesData = useMemo(() => {
@@ -336,39 +334,6 @@ export default function SwapTab({
       isActive: chain.chainId === walletChainId,
     }));
   }, [chains, walletChainId]);
-
-  // Strategy-aware swap suggestions
-  const strategyRecommendations = useMemo(() => {
-    if (!financialStrategy) return null;
-    
-    const config = StrategyService.getConfig(financialStrategy);
-    const recommendedAssets = config.prioritizeAssets || [];
-    
-    if (recommendedAssets.length === 0) return null;
-    
-    // Get first recommended asset that user doesn't have
-    const currentTokens = Object.keys(tokenMap);
-    const recommended = recommendedAssets.find((asset: string) => 
-      !currentTokens.some(t => t.toUpperCase().includes(asset.toUpperCase()))
-    );
-    
-    if (!recommended) return null;
-    
-    const strategyNames: Record<string, string> = {
-      africapitalism: 'African',
-      buen_vivir: 'Latin American',
-      confucian: 'Asian',
-      gotong_royong: 'Southeast Asian',
-      islamic: 'Sharia-compliant',
-      global: 'Global',
-    };
-    
-    return {
-      recommendedAsset: recommended,
-      strategyName: strategyNames[financialStrategy] || 'strategy-aligned',
-      message: `Swap into ${recommended} for ${financialStrategy?.replace('_', ' ')} alignment`,
-    };
-  }, [financialStrategy, tokenMap]);
 
   return (
     <div className="space-y-4">

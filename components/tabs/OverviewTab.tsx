@@ -466,7 +466,7 @@ export default function OverviewTab({
 
               {showAssetDetails && (
                 <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <AssetInventory tokens={((activePortfolio as any).allTokens) || []} />
+                  <AssetInventory tokens={activePortfolio.allTokens || []} />
                   <p className="mt-4 text-[9px] text-gray-400 font-bold text-center uppercase tracking-tighter">
                     Tired of toggling? Switch to <span className="text-blue-500">Standard Mode</span> in the header to unlock full details.
                   </p>
