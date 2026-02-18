@@ -580,21 +580,116 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         } else {
           fastPathResponse = "To see your portfolio, you'll need to connect your wallet first. Click the **Connect Wallet** button and choose your preferred option (email, existing wallet, or 'Buy Crypto'). Once connected, your holdings will appear in the **Overview** tab!";
         }
+      } else if (
+        normalizedContent.includes("protect") ||
+        normalizedContent.includes("how to protect") ||
+        normalizedContent.includes("inflation protection") ||
+        normalizedContent.includes("hedge against inflation")
+      ) {
+        fastPathResponse = "Taking you to protection strategies... 🛡️";
+      } else if (
+        normalizedContent.includes("swap") ||
+        normalizedContent.includes("exchange") ||
+        normalizedContent.includes("trade") ||
+        normalizedContent.includes("convert") ||
+        normalizedContent.includes("buy") ||
+        normalizedContent.includes("sell")
+      ) {
+        fastPathResponse = address
+          ? "Taking you to the swap interface... 💱"
+          : "To swap tokens, you'll need to connect your wallet first. Click **Connect Wallet** to get started!";
+      } else if (
+        normalizedContent.includes("yield") ||
+        normalizedContent.includes("earn") ||
+        normalizedContent.includes("apy") ||
+        normalizedContent.includes("interest") ||
+        normalizedContent.includes("passive income")
+      ) {
+        fastPathResponse = "Taking you to yield opportunities... 📈";
+      } else if (
+        normalizedContent.includes("strategy") ||
+        normalizedContent.includes("philosophy") ||
+        normalizedContent.includes("africapitalism") ||
+        normalizedContent.includes("buen vivir") ||
+        normalizedContent.includes("islamic finance") ||
+        normalizedContent.includes("confucian")
+      ) {
+        fastPathResponse = "Taking you to strategy selection... 🎯";
+      } else if (
+        normalizedContent.includes("demo") ||
+        normalizedContent.includes("test") ||
+        normalizedContent.includes("try without wallet") ||
+        normalizedContent.includes("play money")
+      ) {
+        fastPathResponse = "Taking you to demo mode... 🎮";
+      } else if (
+        normalizedContent.includes("ubi") ||
+        normalizedContent.includes("gooddollar") ||
+        normalizedContent.includes("$g") ||
+        normalizedContent.includes("free money") ||
+        normalizedContent.includes("claim")
+      ) {
+        fastPathResponse = "Taking you to your daily UBI claim... 💰";
       }
 
       if (fastPathResponse) {
         setIsAnalyzing(true);
         setThinkingStep("Retrieving info...");
 
-        // Check if this is a portfolio navigation request
-        const isPortfolioNav = address && (
+        // Determine navigation action based on query type
+        let navAction: { type: "navigate"; tab: string; delay?: number } | undefined;
+        
+        if (address && (
           normalizedContent.includes("portfolio") ||
           normalizedContent.includes("what do i have") ||
           normalizedContent.includes("my balance") ||
           normalizedContent.includes("my holdings") ||
           normalizedContent.includes("what's in my wallet") ||
           normalizedContent.includes("whats in my wallet")
-        );
+        )) {
+          navAction = { type: "navigate", tab: "overview", delay: 1500 };
+        } else if (
+          normalizedContent.includes("protect") ||
+          normalizedContent.includes("how to protect") ||
+          normalizedContent.includes("inflation protection") ||
+          normalizedContent.includes("hedge against inflation")
+        ) {
+          navAction = { type: "navigate", tab: "protect", delay: 1500 };
+        } else if (
+          normalizedContent.includes("swap") ||
+          normalizedContent.includes("exchange") ||
+          normalizedContent.includes("trade") ||
+          normalizedContent.includes("convert") ||
+          normalizedContent.includes("buy") ||
+          normalizedContent.includes("sell")
+        ) {
+          navAction = { type: "navigate", tab: "swap", delay: 1500 };
+        } else if (
+          normalizedContent.includes("yield") ||
+          normalizedContent.includes("earn") ||
+          normalizedContent.includes("apy") ||
+          normalizedContent.includes("interest") ||
+          normalizedContent.includes("passive income")
+        ) {
+          navAction = { type: "navigate", tab: "strategies", delay: 1500 };
+        } else if (
+          normalizedContent.includes("strategy") ||
+          normalizedContent.includes("philosophy") ||
+          normalizedContent.includes("africapitalism") ||
+          normalizedContent.includes("buen vivir") ||
+          normalizedContent.includes("islamic finance") ||
+          normalizedContent.includes("confucian")
+        ) {
+          navAction = { type: "navigate", tab: "strategies", delay: 1500 };
+        } else if (
+          normalizedContent.includes("ubi") ||
+          normalizedContent.includes("gooddollar") ||
+          normalizedContent.includes("$g") ||
+          normalizedContent.includes("free money") ||
+          normalizedContent.includes("claim")
+        ) {
+          navAction = { type: "navigate", tab: "rewards", delay: 1500 };
+        }
 
         // Simulate a tiny delay for natural interaction feeling
         setTimeout(async () => {
@@ -603,9 +698,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
             content: fastPathResponse!,
             timestamp: new Date(),
             type: "text",
-            ...(isPortfolioNav && {
-              action: { type: "navigate", tab: "overview", delay: 1500 }
-            }),
+            ...(navAction && { action: navAction }),
           };
           addMessage(assistantMessage);
           setIsAnalyzing(false);
