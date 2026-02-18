@@ -83,17 +83,19 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
         />
       </div>
 
-      {/* Use Cases */}
-      <div>
-        <div className="flex items-center gap-2 mb-4 px-1">
-          <div className="size-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-lg">💡</div>
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Practical Applications</h3>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">Real-World Benefits</p>
+      {/* Use Cases - Non-beginner only */}
+      {!isBeginner && (
+        <div>
+          <div className="flex items-center gap-2 mb-4 px-1">
+            <div className="size-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-lg">💡</div>
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Practical Applications</h3>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">Real-World Benefits</p>
+            </div>
           </div>
+          <RealWorldUseCases focusRegion={userRegion} />
         </div>
-        <RealWorldUseCases focusRegion={userRegion} />
-      </div>
+      )}
 
       {/* GoodDollar Education */}
       <div>

@@ -487,20 +487,23 @@ export default function ProtectionTab({
         </div>
       </Card>
 
-      <RwaAssetCards
-        chains={chains}
-        userGoal={config.userGoal}
-        chainId={chainId}
-        onSwap={handleExecuteSwap}
-        onShowModal={setShowAssetModal}
-      />
+      {/* RWA Assets - Non-beginner only */}
+      {!isBeginner && (
+        <RwaAssetCards
+          chains={chains}
+          userGoal={config.userGoal}
+          chainId={chainId}
+          onSwap={handleExecuteSwap}
+          onShowModal={setShowAssetModal}
+        />
+      )}
 
       {/* =====================================================================
           DASHBOARD CARDS (Replaced Collapsible Sections)
           ===================================================================== */}
 
-      {/* Strategy Metrics - Show if user has selected a strategy */}
-      {displayTotalValue > 0 && (
+      {/* Strategy Metrics - Show if user has selected a strategy (non-beginner only) */}
+      {!isBeginner && displayTotalValue > 0 && (
         <DashboardCard
           title="Your Strategy"
           icon={<span>🎯</span>}
@@ -534,8 +537,8 @@ export default function ProtectionTab({
         </DashboardCard>
       )}
 
-      {/* Chain Distribution - Always Visible Dashboard Card */}
-      {displayTotalValue > 0 && (
+      {/* Chain Distribution - Non-beginner only */}
+      {!isBeginner && displayTotalValue > 0 && (
         <DashboardCard
           title="Chain Distribution"
           icon={<span>🔗</span>}
