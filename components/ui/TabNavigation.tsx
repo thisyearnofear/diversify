@@ -67,10 +67,14 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
               onClick={() => setActiveTab(tab.id)}
               className={`flex-1 py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg relative ${
                 isActive
-                  ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  ? "text-blue-600 dark:text-blue-400"
+                  : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
               }`}
             >
+              {/* Active indicator — bottom line */}
+              {isActive && (
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+              )}
               <div className={`transition-transform duration-200 ${isActive ? "scale-110" : ""} relative`}>
                 {tab.icon}
                 {hasBadge && (

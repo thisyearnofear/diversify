@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import Head from "next/head";
 import { useAppState } from "../context/AppStateContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
@@ -309,45 +309,67 @@ export default function DiversiFiPage() {
           <GuidedTour />
         </AnimatePresence>
 
-        <div className="space-y-4 pt-2">
+        <div className="pt-2">
           <ErrorBoundary>
-            {activeTab === "overview" && (
-              <OverviewTab
-                portfolio={multichainPortfolio}
-                isRegionLoading={isRegionLoading}
-                userRegion={userRegion}
-                setUserRegion={setUserRegion}
-                REGIONS={REGIONS}
-                setActiveTab={setActiveTab}
-                refreshBalances={refresh}
-                currencyPerformanceData={currencyPerformanceData}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              {activeTab === "overview" && (
+                <motion.div key="overview"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <OverviewTab
+                    portfolio={multichainPortfolio}
+                    isRegionLoading={isRegionLoading}
+                    userRegion={userRegion}
+                    setUserRegion={setUserRegion}
+                    REGIONS={REGIONS}
+                    setActiveTab={setActiveTab}
+                    refreshBalances={refresh}
+                    currencyPerformanceData={currencyPerformanceData}
+                  />
+                </motion.div>
+              )}
 
-            {activeTab === "protect" && (
-              <ProtectionTab
-                userRegion={userRegion}
-                portfolio={multichainPortfolio}
-                setActiveTab={setActiveTab}
-              />
-            )}
+              {activeTab === "protect" && (
+                <motion.div key="protect"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <ProtectionTab
+                    userRegion={userRegion}
+                    portfolio={multichainPortfolio}
+                    setActiveTab={setActiveTab}
+                  />
+                </motion.div>
+              )}
 
-            {activeTab === "swap" && (
-              <SwapTab
-                userRegion={userRegion}
-                inflationData={inflationData as Record<string, RegionalInflationData>}
-                refreshBalances={refresh}
-                refreshChainId={async () => walletChainId}
-                isBalancesLoading={isMultichainLoading}
-              />
-            )}
+              {activeTab === "swap" && (
+                <motion.div key="swap"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <SwapTab
+                    userRegion={userRegion}
+                    inflationData={inflationData as Record<string, RegionalInflationData>}
+                    refreshBalances={refresh}
+                    refreshChainId={async () => walletChainId}
+                    isBalancesLoading={isMultichainLoading}
+                  />
+                </motion.div>
+              )}
 
-            {activeTab === "info" && (
-              <InfoTab
-                availableTokens={availableTokens}
-                userRegion={userRegion}
-              />
-            )}
+              {activeTab === "info" && (
+                <motion.div key="info"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <InfoTab
+                    availableTokens={availableTokens}
+                    userRegion={userRegion}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </ErrorBoundary>
         </div>
 

@@ -11,18 +11,18 @@
 import { ethers } from 'ethers';
 
 // GoodDollar & Superfluid Contract Addresses on Celo
-const GOODDOLLAR_ADDRESSES = {
-  // G$ Token on Celo Mainnet
-  G_TOKEN: '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
-  // UBIScheme contract for claiming (Celo)
-  UBI_SCHEME: '0xD7aC544F8A570C4d8764c3AAbCF6870CBD960D0D',
-  // Identity contract for verification status (Celo)
-  IDENTITY: '0xc361a6E660563027c6c92518E3810103c6021665',
-  // GoodReserve for staking info
-  RESERVE: '0xeD8F69E24fE33481f7DfE0d9D0f89F5e4F4F3E3E',
-  // Superfluid CFA Forwarder on Celo
-  CFA_FORWARDER: '0xcfA132E353cB4E398080B9700609bb008eceB125',
+// All addresses are normalised via getAddress() so any capitalisation typo is caught at load-time.
+const _RAW_ADDRESSES = {
+  G_TOKEN:      '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
+  UBI_SCHEME:   '0xD7aC544F8A570C4d8764c3AAbCF6870CBD960D0D',
+  IDENTITY:     '0xc361a6e660563027c6c92518e3810103c6021665', // lowercase — getAddress() applies correct EIP-55
+  RESERVE:      '0xeD8F69E24fE33481f7DfE0d9D0f89F5e4F4F3E3E',
+  CFA_FORWARDER:'0xcfA132E353cB4E398080B9700609bb008eceB125',
 } as const;
+
+const GOODDOLLAR_ADDRESSES = Object.fromEntries(
+  Object.entries(_RAW_ADDRESSES).map(([k, v]) => [k, ethers.utils.getAddress(v)])
+) as { [K in keyof typeof _RAW_ADDRESSES]: string };
 
 // Minimal ABI for UBI claiming
 const UBI_SCHEME_ABI = [

@@ -219,6 +219,9 @@ export interface ProtectionFactor {
   icon: string;
 }
 
+// Radial ring circumference for r=18 circle: 2π×18 ≈ 113.1
+const RING_C = 2 * Math.PI * 18;
+
 export const ProtectionScore = ({
   score,
   factors,
@@ -232,61 +235,75 @@ export const ProtectionScore = ({
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
-  const colorClass = score >= 80 ? 'text-emerald-600 bg-emerald-50 border-emerald-200' :
-    score >= 60 ? 'text-amber-600 bg-amber-50 border-amber-200' :
-      'text-red-600 bg-red-50 border-red-200';
+  const isGood = score >= 80;
+  const isOk   = score >= 60;
 
-  const dotColor = score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-amber-500' : 'bg-red-500';
+  const ringColor  = isGood ? '#10b981' : isOk ? '#f59e0b' : '#ef4444';
+  const borderColor = isGood ? 'border-emerald-200' : isOk ? 'border-amber-200' : 'border-red-200';
+  const bgColor     = isGood ? 'bg-emerald-50'      : isOk ? 'bg-amber-50'      : 'bg-red-50';
+  const textColor   = isGood ? 'text-emerald-600'   : isOk ? 'text-amber-600'   : 'text-red-600';
+  const statusText  = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
+
+  const filled = (score / 100) * RING_C;
 
   return (
-    <div className={`rounded-xl border ${colorClass} overflow-hidden ${className}`}>
-      {/* Main Score - Always Visible */}
+    <div className={`rounded-2xl border ${bgColor} ${borderColor} overflow-hidden ${className}`}>
+      {/* Main Score Row — radial ring + text */}
       <button
         onClick={() => factors && setIsOpen(!isOpen)}
-        className={`w-full flex items-center justify-between p-3 ${factors ? 'hover:bg-black/5 cursor-pointer' : 'cursor-default'}`}
+        className={`w-full flex items-center gap-4 p-4 ${factors ? 'hover:bg-black/5 cursor-pointer' : 'cursor-default'}`}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-lg">🛡️</span>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-sm font-black">{score}% Protection Score</span>
-              <div className={`w-2 h-2 rounded-full ${dotColor}`} />
-            </div>
-            <span className="text-[10px] opacity-80">
-              {score >= 80 ? 'Excellent protection' : score >= 60 ? 'Good protection' : 'Needs attention'}
-            </span>
+        {/* SVG Radial Ring */}
+        <div className="shrink-0 relative w-14 h-14">
+          <svg viewBox="0 0 40 40" className="w-full h-full -rotate-90">
+            {/* Track */}
+            <circle cx="20" cy="20" r="18" fill="none" stroke="currentColor" strokeWidth="4"
+              className="opacity-10" style={{ color: ringColor }} />
+            {/* Progress */}
+            <circle cx="20" cy="20" r="18" fill="none" stroke={ringColor} strokeWidth="4"
+              strokeLinecap="round"
+              strokeDasharray={`${filled.toFixed(1)} ${RING_C.toFixed(1)}`} />
+          </svg>
+          {/* Score label centred over the ring */}
+          <div className={`absolute inset-0 flex items-center justify-center ${textColor}`}>
+            <span className="text-[11px] font-black leading-none">{score}%</span>
           </div>
         </div>
+
+        {/* Text */}
+        <div className="flex-1 text-left">
+          <div className="flex items-center gap-2">
+            <span className={`text-sm font-black ${textColor}`}>Protection Score</span>
+          </div>
+          <span className={`text-[11px] font-bold ${textColor} opacity-80`}>{statusText} protection</span>
+        </div>
+
         {factors && (
-          <svg
-            className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
+          <svg className={`w-4 h-4 ${textColor} shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+            fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         )}
       </button>
 
-      {/* Factor Breakdown - Collapsible for Power Users */}
+      {/* Factor Breakdown — collapsible */}
       {factors && isOpen && (
-        <div className="px-3 pb-3 border-t border-black/5">
-          <div className="pt-2 space-y-2">
+        <div className="px-4 pb-4 border-t border-black/5">
+          <div className="pt-3 space-y-2">
             {factors.map((factor, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <span className="text-xs">{factor.icon}</span>
+                <span className="text-xs w-4 shrink-0">{factor.icon}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-gray-700">{factor.label}</span>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{factor.label}</span>
                     <span className="text-[9px] text-gray-500">{factor.status}</span>
                   </div>
-                  <div className="mt-1 h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${factor.value >= 80 ? 'bg-emerald-500' :
-                          factor.value >= 60 ? 'bg-amber-500' :
-                            'bg-red-500'
-                        }`}
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        factor.value >= 80 ? 'bg-emerald-500' :
+                        factor.value >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
                       style={{ width: `${factor.value}%` }}
                     />
                   </div>
@@ -419,7 +436,7 @@ export const Card = ({
   padding?: string;
 } & React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={`bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700 ${padding} ${className}`}
+    className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 ${padding} ${className}`}
     {...props}
   >
     {children}
@@ -651,26 +668,39 @@ export const Section = ({
 
 /**
  * HeroValue - Large value display for primary metrics
+ * isLoading renders a skeleton so "$0 loading" ≠ "$0 empty"
  */
 export const HeroValue = ({
   value,
   label,
+  isLoading = false,
   trend,
 }: {
   value: string;
   label: string;
+  isLoading?: boolean;
   trend?: { value: string; positive: boolean };
 }) => (
   <div className="text-center">
-    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-      {value}
-    </div>
+    {isLoading ? (
+      <div className="h-9 w-28 bg-white/30 dark:bg-white/10 rounded-xl animate-pulse mx-auto" />
+    ) : (
+      <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+        {value}
+      </div>
+    )}
     <div className="flex items-center justify-center gap-2 mt-1">
-      <span className="text-xs text-gray-500 font-medium">{label}</span>
-      {trend && (
-        <span className={`text-[10px] font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}>
-          {trend.positive ? '↑' : '↓'} {trend.value}
-        </span>
+      {isLoading ? (
+        <div className="h-3 w-36 bg-white/20 dark:bg-white/10 rounded-full animate-pulse" />
+      ) : (
+        <>
+          <span className="text-xs text-gray-500 font-medium">{label}</span>
+          {trend && (
+            <span className={`text-[10px] font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}>
+              {trend.positive ? '↑' : '↓'} {trend.value}
+            </span>
+          )}
+        </>
       )}
     </div>
   </div>
