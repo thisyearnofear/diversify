@@ -55,50 +55,28 @@ pnpm install --frozen-lockfile
 echo "🔨 Building..."
 PORT=$PORT pnpm build
 
-# ── 6. Create/update PM2 ecosystem ──────────────────────────────────────────
-cat > "$DEPLOY_DIR/ecosystem.hetzner.js" <<EOF
-module.exports = {
-  apps: [{
-    name: '$APP_NAME',
-    script: 'node_modules/.bin/next',
-    args: 'start',
-    cwd: '$DEPLOY_DIR',
-    instances: 1,
-    exec_mode: 'fork',
-    env: {
-      NODE_ENV: 'production',
-      PORT: $PORT,
-      HOSTNAME: '127.0.0.1',
-    },
-    max_memory_restart: '600M',
-    autorestart: true,
-    max_restarts: 10,
-    min_uptime: '10s',
-    output: '/var/log/diversifi-api-out.log',
-    error: '/var/log/diversifi-api-err.log',
-    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
-  }]
-};
-EOF
+# ── 6. Start/reload server ──────────────────────────────────────────────────
+echo "⚙️  Starting server..."
+# Kill any existing next-server processes on our port
+pkill -f "next-server.*$PORT" || true
+sleep 2
 
-# ── 7. Start/reload with PM2 ────────────────────────────────────────────────
-echo "⚙️  Starting PM2..."
-# Start Next.js directly with proper env variables (ecosystem file has issues with env passthrough)
-if pm2 describe "$APP_NAME" &>/dev/null; then
-  pm2 reload "$APP_NAME"
+# Start Next.js directly with proper env variables
+cd "$DEPLOY_DIR"
+nohup sh -c "PORT=$PORT HOSTNAME=127.0.0.1 NODE_ENV=production node_modules/.bin/next start > /var/log/diversifi-api.log 2>&1" &
+
+# Wait for server to start
+echo "⏳ Waiting for server to start..."
+sleep 12
+
+# Verify it's running
+if ss -tlnp | grep -q ":$PORT "; then
+  echo "✅ Server running on port $PORT"
 else
-  cd "$DEPLOY_DIR"
-  PORT=$PORT HOSTNAME=127.0.0.1 NODE_ENV=production pm2 start node_modules/.bin/next --name "$APP_NAME" -- start
+  echo "⚠️  Server may not have started correctly. Check /var/log/diversifi-api.log"
 fi
-pm2 save
 
 echo ""
 echo "✅ Deploy complete!"
 echo "   API running on http://127.0.0.1:$PORT"
-echo "   Nginx should proxy https://api.diversifi.famile.xyz → port $PORT"
-echo ""
-echo "📋 Next steps if nginx isn't set up yet:"
-echo "   sudo cp $DEPLOY_DIR/scripts/nginx-diversifi-api.conf /etc/nginx/sites-available/api.diversifi.famile.xyz"
-echo "   sudo ln -sf /etc/nginx/sites-available/api.diversifi.famile.xyz /etc/nginx/sites-enabled/"
-echo "   sudo nginx -t && sudo systemctl reload nginx"
-echo "   sudo certbot --nginx -d api.diversifi.famile.xyz"
+echo "   Nginx proxies https://api.diversifi.famile.xyz → port $PORT"
