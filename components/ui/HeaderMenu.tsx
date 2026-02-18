@@ -4,7 +4,8 @@ import ThemeToggle from "./ThemeToggle";
 import VoiceButton from "./VoiceButton";
 import { useAppState } from "@/context/AppStateContext";
 import { useWalletContext } from "@/components/wallet/WalletProvider";
-import { NETWORKS } from "@/config";
+import { isTestnetChain } from "@/config";
+import NetworkSwitcher from "@/components/swap/NetworkSwitcher";
 
 interface HeaderMenuProps {
     experienceMode: "beginner" | "intermediate" | "advanced";
@@ -27,15 +28,8 @@ export default function HeaderMenu({
 }: HeaderMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const { financialStrategy } = useAppState();
-    const { switchNetwork, isConnected, chainId: walletChainId } = useWalletContext();
-    const isOnTestnet = walletChainId === NETWORKS.ALFAJORES.chainId ||
-        walletChainId === NETWORKS.ARC_TESTNET.chainId ||
-        walletChainId === NETWORKS.RH_TESTNET.chainId;
-
-    const handleTestDrive = async (chainId: number) => {
-        await switchNetwork?.(chainId);
-        setIsOpen(false);
-    };
+    const { isConnected, chainId: walletChainId } = useWalletContext();
+    const isOnTestnet = isTestnetChain(walletChainId ?? 0);
 
     const getModeInfo = () => {
         if (experienceMode === "beginner") return { label: "Simple", summary: "Protected & Focused", emoji: "🌱" };
@@ -200,29 +194,21 @@ export default function HeaderMenu({
                                     <div className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2 flex items-center gap-1.5">
                                         <span>🧪</span> Test Drive
                                     </div>
-                                    {isOnTestnet ? (
-                                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                                    {isOnTestnet && (
+                                        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 mb-2">
                                             <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                             </svg>
                                             <span className="text-[11px] font-black">Active — play money only</span>
                                         </div>
-                                    ) : (
-                                        <div className="flex gap-2">
-                                            <button
-                                                onClick={() => handleTestDrive(NETWORKS.ARC_TESTNET.chainId)}
-                                                className="flex-1 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-[10px] font-black rounded-lg transition-colors active:scale-95 flex items-center justify-center gap-1"
-                                            >
-                                                <span>⚡</span><span>Arc</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleTestDrive(NETWORKS.ALFAJORES.chainId)}
-                                                className="flex-1 py-1.5 bg-violet-100 dark:bg-violet-900/40 hover:bg-violet-200 dark:hover:bg-violet-900/60 text-violet-700 dark:text-violet-400 text-[10px] font-black rounded-lg transition-colors active:scale-95 flex items-center justify-center gap-1"
-                                            >
-                                                <span>🧪</span><span>Celo</span>
-                                            </button>
-                                        </div>
                                     )}
+                                    {/* Single compact network selector — replaces the custom Arc/Celo buttons */}
+                                    <NetworkSwitcher
+                                        currentChainId={walletChainId}
+                                        onNetworkChange={() => setIsOpen(false)}
+                                        compact={true}
+                                        className="w-full"
+                                    />
                                     <p className="text-[9px] text-gray-400 dark:text-gray-600 mt-1.5 leading-snug">
                                         Free test tokens. Earn badges. Graduate to mainnet.
                                     </p>

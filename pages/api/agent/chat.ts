@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AIService } from '../../../services/ai/ai-service';
+import { isTestnetChain, NETWORKS } from '../../../config';
 
 /**
  * Chat API Endpoint
@@ -67,16 +68,14 @@ TONE: Friendly expert who welcomes newcomers and provides data-driven advice to 
 function getTestDriveContext(chainId?: number): string {
   if (!chainId) return "";
 
-  // Check for testnet IDs (Alfajores: 44787, Arc: 5042002, RH: 46630)
-  const isTestnet = [44787, 5042002, 46630].includes(chainId);
-  if (!isTestnet) return "";
+  if (!isTestnetChain(chainId)) return "";
 
   let chainSpecifics = "";
-  if (chainId === 46630) { // Robinhood
+  if (chainId === NETWORKS.RH_TESTNET.chainId) {
     chainSpecifics = "- ROBINHOOD TESTNET: You are running on the Robinhood Arbitrum Orbit chain. 'Stocks' (TSLA, AMZN) are currently simulated for the hackathon context. Encourage users to 'buy' them to test the flow.";
-  } else if (chainId === 5042002) { // Arc
+  } else if (chainId === NETWORKS.ARC_TESTNET.chainId) {
     chainSpecifics = "- ARC TESTNET: You are on Arc's high-performance testnet. Encourage users to test swap speeds vs Celo.";
-  } else if (chainId === 44787) { // Alfajores
+  } else if (chainId === NETWORKS.ALFAJORES.chainId) {
     chainSpecifics = "- CELO ALFAJORES: You are on Celo's testnet. Mento stablecoins (cUSD, cEUR) are fully functional here.";
   }
 

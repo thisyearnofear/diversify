@@ -9,6 +9,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '../../../lib/mongodb';
 import Streak from '../../../models/Streak';
+import { isTestnetChain, NETWORKS } from '../../../config';
 
 const MIN_SWAP_USD = 1.00; // Any $1+ swap unlocks G$ claim
 const GRACE_PERIODS_PER_WEEK = 1;
@@ -245,9 +246,7 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
       return res.status(400).json({ error: 'Missing required fields: action, chainId, networkType' });
     }
 
-    const testnetIds = [44787, 5042002, 46630]; // Alfajores, Arc, RH
-    const isTestnet = testnetIds.includes(chainId);
-    const isMainnet = !isTestnet;
+    const isTestnet = isTestnetChain(chainId);
 
     // Find or create streak record
     let streak = await Streak.findOne({ walletAddress: address });
@@ -273,7 +272,6 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
     }
 
     // Update activity based on action and network type
-    const activityPath = isTestnet ? 'crossChainActivity.testnet' : 'crossChainActivity.mainnet';
 
     if (action === 'swap') {
       streak.crossChainActivity[isTestnet ? 'testnet' : 'mainnet'].totalSwaps += 1;
@@ -312,19 +310,19 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
     }
 
     // Speed Demon (Arc testnet)
-    if (streak.crossChainActivity.testnet.chainsUsed.includes(5042002) && !hasAchievement('speed-demon')) {
+    if (streak.crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ARC_TESTNET.chainId) && !hasAchievement('speed-demon')) {
       streak.achievements.push('speed-demon');
       newAchievements.push('speed-demon');
     }
 
     // Stock Trader (Robinhood)
-    if (streak.crossChainActivity.testnet.chainsUsed.includes(46630) && !hasAchievement('stock-trader')) {
+    if (streak.crossChainActivity.testnet.chainsUsed.includes(NETWORKS.RH_TESTNET.chainId) && !hasAchievement('stock-trader')) {
       streak.achievements.push('stock-trader');
       newAchievements.push('stock-trader');
     }
 
     // Mento Master (Alfajores)
-    if (streak.crossChainActivity.testnet.chainsUsed.includes(44787) && !hasAchievement('mento-master')) {
+    if (streak.crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ALFAJORES.chainId) && !hasAchievement('mento-master')) {
       streak.achievements.push('mento-master');
       newAchievements.push('mento-master');
     }

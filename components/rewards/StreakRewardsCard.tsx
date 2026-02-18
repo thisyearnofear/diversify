@@ -29,12 +29,58 @@ const GraduationModal = dynamic(() => import('./GraduationModal'), {
   ssr: false,
 });
 
+const DISMISSED_KEY_EXPORT = 'diversifi_streak_dismissed';
+
+/**
+ * StreakRewardsSection — lightweight gateway wrapper.
+ *
+ * Reads the dismissed flag from localStorage BEFORE mounting StreakRewardsCard
+ * so that useStreakRewards() is never called when the user has permanently
+ * hidden the card. When dismissed, shows a one-line restore affordance.
+ */
+export function StreakRewardsSection({ onSaveClick }: { onSaveClick?: () => void }) {
+  const [isDismissed, setIsDismissed] = React.useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(DISMISSED_KEY_EXPORT) === '1';
+  });
+
+  if (isDismissed) {
+    return (
+      <button
+        onClick={() => {
+          setIsDismissed(false);
+          if (typeof window !== 'undefined') localStorage.removeItem(DISMISSED_KEY_EXPORT);
+        }}
+        className="w-full p-2 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-800 transition-colors flex items-center justify-between group"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm">💚</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">G$ Streak Hidden</span>
+        </div>
+        <span className="text-xs text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">Show →</span>
+      </button>
+    );
+  }
+
+  return (
+    <StreakRewardsCard
+      onSaveClick={onSaveClick}
+      onDismiss={() => {
+        setIsDismissed(true);
+        if (typeof window !== 'undefined') localStorage.setItem(DISMISSED_KEY_EXPORT, '1');
+      }}
+    />
+  );
+}
+
 interface StreakRewardsCardProps {
   onSaveClick?: () => void;
   className?: string;
+  /** Called when the user clicks the dismiss / hide button inside the card */
+  onDismiss?: () => void;
 }
 
-export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
+export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardProps) {
   const { isConnected, switchNetwork } = useWalletContext();
   const {
     streak,
@@ -54,7 +100,10 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
   const [showClaimFlow, setShowClaimFlow] = useState(false);
   const [showGraduationModal, setShowGraduationModal] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isCompact, setIsCompact] = useState(false);
+  // Start compact when an active streak exists but claiming isn't available yet —
+  // prevents the card from occupying full height in the banner stack by default.
+  // The useEffect below auto-expands it as soon as canClaim becomes true.
+  const [isCompact, setIsCompact] = useState(true);
   const [pendingToast, setPendingToast] = useState<Badge | null>(null);
 
   // Persist isDismissed to localStorage so it survives page refresh
@@ -308,7 +357,7 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
               </svg>
             </button>
             <button
-              onClick={() => setIsDismissed(true)}
+              onClick={() => onDismiss ? onDismiss() : setIsDismissed(true)}
               className="p-1.5 bg-white/80 dark:bg-gray-800/80 hover:bg-white dark:hover:bg-gray-800 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors shadow-sm"
               title="Hide until next claim"
             >
@@ -403,13 +452,13 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
           
           {/* Chain badges */}
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {crossChainActivity.testnet.chainsUsed.includes(44787) && (
+            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ALFAJORES.chainId) && (
               <span className="px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-[10px] font-bold rounded-full">Alfajores</span>
             )}
-            {crossChainActivity.testnet.chainsUsed.includes(5042002) && (
+            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ARC_TESTNET.chainId) && (
               <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full">Arc</span>
             )}
-            {crossChainActivity.testnet.chainsUsed.includes(46630) && (
+            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.RH_TESTNET.chainId) && (
               <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-[10px] font-bold rounded-full">Robinhood</span>
             )}
             {crossChainActivity.graduation.isGraduated && (
@@ -440,9 +489,7 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
       {showClaimFlow && (
         <GoodDollarClaimFlow
           onClose={() => setShowClaimFlow(false)}
-          onClaimSuccess={() => {
-            console.log('[StreakRewards] Claim successful!');
-          }}
+          onClaimSuccess={() => setShowClaimFlow(false)}
         />
       )}
 

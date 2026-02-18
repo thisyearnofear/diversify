@@ -9,7 +9,7 @@ import SwapInterface from "../swap/SwapInterface";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RealLifeScenario from "../demo/RealLifeScenario";
-import { getChainAssets, NETWORKS } from "../../config";
+import { getChainAssets, NETWORKS, isTestnetChain } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import {
   TabHeader,
@@ -29,12 +29,15 @@ import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
-import type { UserGoal, RiskTolerance, TimeHorizon } from "../../hooks/use-protection-profile";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
 import { TestnetSimulationBanner } from "../swap/TestnetSimulationBanner";
-import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
+import { StreakRewardsSection } from "../rewards/StreakRewardsCard";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
+import SwapStatusPanel from "../swap/SwapStatusPanel";
+import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
+import SwapRecommendations from "../swap/SwapRecommendations";
+import YieldBridgePrompt from "../swap/YieldBridgePrompt";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -81,10 +84,6 @@ export default function SwapTab({
 
   // Success celebration state
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showYieldPrompt, setShowYieldPrompt] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem('diversifi-yield-prompt-dismissed') !== 'true';
-  });
   const [celebrationData, setCelebrationData] = useState<{
     fromToken: string;
     toToken: string;
@@ -117,14 +116,12 @@ export default function SwapTab({
     async (retries = 3, delay = 3000) => {
       if (!refreshBalances) return;
 
-      console.log("[SwapTab] Starting balance refresh sequence...");
       for (let i = 0; i < retries; i++) {
         try {
           await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
-          console.log(`[SwapTab] Refresh attempt ${i + 1}...`);
           await refreshBalances();
-        } catch (err) {
-          console.warn(`[SwapTab] Refresh attempt ${i + 1} failed:`, err);
+        } catch {
+          // Ignore transient refresh errors — next retry will try again
         }
       }
       // Also refresh multichain data
@@ -154,27 +151,7 @@ export default function SwapTab({
         ),
     );
 
-    const combined = [...filtered, ...essentials];
-
-    console.log(
-      "[SwapTab] Network tokens:",
-      networkTokens.map((t) => t.symbol),
-    );
-    console.log("[SwapTab] Tradeable symbols from Mento:", tradeableSymbols);
-    console.log(
-      "[SwapTab] Filtered tokens:",
-      filtered.map((t) => t.symbol),
-    );
-    console.log(
-      "[SwapTab] Essential tokens added:",
-      essentials.map((t) => t.symbol),
-    );
-    console.log(
-      "[SwapTab] Final tradeable tokens:",
-      combined.map((t) => t.symbol),
-    );
-
-    return combined;
+    return [...filtered, ...essentials];
   }, [networkTokens, tradeableSymbols]);
 
   const filteredTokens = useMemo(() => {
@@ -240,13 +217,10 @@ export default function SwapTab({
 
       // Record cross-chain activity for testnet tracking
       if (walletChainId && celebrationData) {
-        const testnetIds = [44787, 5042002, 46630];
-        const isTestnet = testnetIds.includes(walletChainId);
-        
         recordActivity({
           action: 'swap',
           chainId: walletChainId,
-          networkType: isTestnet ? 'testnet' : 'mainnet',
+          networkType: isTestnetChain(walletChainId) ? 'testnet' : 'mainnet',
           usdValue: parseFloat(celebrationData.amount),
           txHash: swapTxHash || undefined,
         });
@@ -472,9 +446,9 @@ export default function SwapTab({
               }}
             />
 
-            {/* GoodDollar UBI Streak Card - Persistent visibility */}
+            {/* GoodDollar UBI Streak — gated by StreakRewardsSection so hook only runs when visible */}
             <div className="mb-4">
-              <StreakRewardsCard />
+              <StreakRewardsSection />
             </div>
 
             {showAiRecommendation && (
@@ -491,25 +465,14 @@ export default function SwapTab({
               </div>
             )}
 
-            {/* Goal banner — shows which goal is active and what profile config is personalising */}
-            {profileComplete && profileConfig.userGoal && profileConfig.userGoal !== 'exploring' && !showAiRecommendation && (
-              <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-                <span className="text-base">
-                  {profileConfig.userGoal === 'inflation_protection' ? '🛡️' : profileConfig.userGoal === 'geographic_diversification' ? '🌍' : '🥇'}
-                </span>
-                <div className="flex-1 min-w-0">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
-                    {profileConfig.userGoal === 'inflation_protection' ? 'Hedge Inflation' : profileConfig.userGoal === 'geographic_diversification' ? 'Diversify Regions' : 'Access RWA'} mode
-                  </span>
-                  {profileConfig.riskTolerance && (
-                    <span className="ml-2 text-[10px] text-blue-400 dark:text-blue-500">
-                      • {profileConfig.riskTolerance} risk • {profileConfig.timeHorizon || 'flexible'}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black shrink-0">✓ Personalised</span>
-              </div>
-            )}
+            {/* Goal banner — delegated to GoalAlignmentBanner */}
+            <GoalAlignmentBanner
+              userGoal={profileConfig.userGoal}
+              riskTolerance={profileConfig.riskTolerance}
+              timeHorizon={profileConfig.timeHorizon}
+              profileComplete={profileComplete}
+              suppressedByAI={showAiRecommendation}
+            />
 
             {isTradeableLoading ? (
               <div className="flex items-center justify-center py-8">
@@ -532,118 +495,32 @@ export default function SwapTab({
               />
             )}
 
-            {swapStatus && hookSwapStep !== "completed" && (
-              <div
-                className={`mt-3 p-3 rounded-xl border-2 shadow-sm ${swapStatus.includes("Error")
-                  ? "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-400"
-                  : "bg-green-50 dark:bg-green-900/10 border-green-100 dark:border-green-900/30 text-green-700 dark:text-green-400"
-                  }`}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className={`size-2 rounded-full ${swapStatus.includes("Error")
-                      ? "bg-red-500"
-                      : "bg-green-500 animate-pulse"
-                      }`}
-                  />
-                  <span className="text-xs font-black uppercase tracking-tight">
-                    {swapStatus}
-                  </span>
-                </div>
-
-                {swapTxHash && (
-                  <div className="flex items-center justify-between pt-2 border-t border-current/10">
-                    <span className="text-[10px] font-bold opacity-70">
-                      Transaction Hash: {swapTxHash.slice(0, 8)}...
-                      {swapTxHash.slice(-8)}
-                    </span>
-                    <a
-                      href={`${NETWORKS[walletChainId === 5042002 ? "ARC_TESTNET" : walletChainId === 42161 ? "ARBITRUM_ONE" : walletChainId === 44787 ? "ALFAJORES" : "CELO_MAINNET"].explorerUrl}/tx/${swapTxHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] font-black uppercase underline hover:opacity-80 transition-opacity flex items-center gap-1"
-                    >
-                      View on Explorer
-                      <svg
-                        className="size-2.5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={3}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
+            {/* Transaction status + explorer link — delegated to SwapStatusPanel */}
+            <SwapStatusPanel
+              status={swapStatus ?? ''}
+              txHash={swapTxHash}
+              chainId={walletChainId}
+              isCompleted={hookSwapStep === "completed"}
+            />
           </>
         )}
       </Card>
 
-      {/* ENHANCEMENT: Cross-chain yield prompt for Celo users - persisted dismissal */}
-      {!isArbitrum && address && showYieldPrompt && (
-        <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-4 text-white">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xl">💰</span>
-                <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
-                  Boost Your Yield
-                </span>
-              </div>
-              <h3 className="text-base font-black">Earn Up to 5% APY</h3>
-              <p className="text-sm text-blue-100 mt-1 leading-relaxed">
-                Bridge your stablecoins to Arbitrum and access tokenized US Treasuries with automatic yield
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <span className="bg-green-500/30 px-2 py-1 rounded-full text-xs">USDY 5%</span>
-                <span className="bg-purple-500/30 px-2 py-1 rounded-full text-xs">SYRUPUSDC 4.5%</span>
-                <span className="bg-amber-500/30 px-2 py-1 rounded-full text-xs">PAXG Gold</span>
-              </div>
-            </div>
-            <div className="bg-white/10 p-2 rounded-xl ml-3">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-          </div>
-          <div className="flex items-center justify-between mt-4">
-            <button
-              onClick={() => {
-                // Pre-fill swap to bridge to Arbitrum
-                if (swapInterfaceRef.current?.setTokens) {
-                  swapInterfaceRef.current.setTokens(
-                    'USDm',
-                    'USDY',
-                    '',
-                    NETWORKS.CELO_MAINNET.chainId,
-                    NETWORKS.ARBITRUM_ONE.chainId
-                  );
-                }
-              }}
-              className="flex-1 py-3 bg-white text-blue-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
-            >
-              <span>Bridge to Arbitrum & Earn</span>
-              <span>→</span>
-            </button>
-            <button
-              onClick={() => {
-                setShowYieldPrompt(false);
-                localStorage.setItem('diversifi-yield-prompt-dismissed', 'true');
-              }}
-              className="ml-2 px-3 py-3 bg-white/10 hover:bg-white/20 rounded-xl text-white text-xs font-bold transition-colors"
-              title="Dismiss"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
+      {/* Yield bridge prompt — self-contained, owns its own dismissed state */}
+      {!isArbitrum && address && (
+        <YieldBridgePrompt
+          onBridgeCTA={() => {
+            if (swapInterfaceRef.current?.setTokens) {
+              swapInterfaceRef.current.setTokens(
+                'USDm',
+                'USDY',
+                '',
+                NETWORKS.CELO_MAINNET.chainId,
+                NETWORKS.ARBITRUM_ONE.chainId
+              );
+            }
+          }}
+        />
       )}
 
       {/* Advanced: Regional Hedge & Action Guidance - Dashboard Cards */}
@@ -720,7 +597,14 @@ export default function SwapTab({
               amount={1000}
               monthlyAmount={100}
             />
-            {getRecommendations(userRegion, inflationData, homeInflationRate, profileConfig.userGoal, profileConfig.riskTolerance, profileConfig.timeHorizon)}
+            <SwapRecommendations
+              userRegion={userRegion}
+              inflationData={inflationData}
+              homeInflationRate={homeInflationRate}
+              userGoal={profileConfig.userGoal}
+              riskTolerance={profileConfig.riskTolerance}
+              timeHorizon={profileConfig.timeHorizon}
+            />
           </DashboardCard>
         </div>
       )}
@@ -750,101 +634,3 @@ export default function SwapTab({
   );
 }
 
-/**
- * getRecommendations — goal-aware swap suggestions.
- * Uses the user's stated goal, risk tolerance, and time horizon (from useProtectionProfile)
- * to return token pairs that actually serve their diversification objective.
- */
-function getRecommendations(
-  userRegion: Region,
-  inflationData: Record<string, RegionalInflationData>,
-  homeInflationRate: number,
-  userGoal?: UserGoal | null,
-  riskTolerance?: RiskTolerance | null,
-  timeHorizon?: TimeHorizon | null,
-) {
-  const regionalFromToken: Record<string, string> = {
-    Africa: 'KESm', LatAm: 'BRLm', Asia: 'PHPm', USA: 'USDm', Europe: 'EURm', Global: 'USDm',
-  };
-  const fromToken = regionalFromToken[userRegion] || 'USDm';
-
-  const isConservative = riskTolerance === 'Conservative';
-  const isLongTerm = timeHorizon === '1 year';
-  const isShortTerm = timeHorizon === '1 month';
-
-  let recs: Array<{ from: string; to: string; reason: string }> = [];
-
-  switch (userGoal) {
-    case 'inflation_protection':
-      if (fromToken !== 'USDm') {
-        recs.push({ from: fromToken, to: 'USDm', reason: `Cut inflation: ${homeInflationRate.toFixed(1)}% → ~3%` });
-      }
-      if (!isShortTerm) {
-        recs.push({ from: fromToken !== 'EURm' ? fromToken : 'USDm', to: 'EURm', reason: `Eurozone hedge (${(inflationData['Europe']?.avgRate || 2.5).toFixed(1)}%)` });
-      }
-      if (isLongTerm && !isConservative) {
-        recs.push({ from: 'USDm', to: 'PAXG', reason: 'Gold: long-term inflation store of value' });
-      }
-      break;
-
-    case 'geographic_diversification': {
-      const allPairs = [
-        { from: fromToken, to: 'EURm', reason: 'Add European economic exposure' },
-        { from: fromToken, to: 'BRLm', reason: 'Add LatAm market exposure' },
-        { from: fromToken, to: 'KESm', reason: 'Add African market exposure' },
-        { from: 'USDm', to: 'XOFm', reason: 'Add West African CFA exposure' },
-      ];
-      recs = allPairs.filter(p => p.from !== p.to && !p.to.startsWith(fromToken.slice(0, 3))).slice(0, 3);
-      break;
-    }
-
-    case 'rwa_access':
-      if (!isConservative) {
-        recs.push({ from: 'USDm', to: 'PAXG', reason: 'Gold-backed: inflation-resistant real asset' });
-      }
-      recs.push({ from: 'USDm', to: 'USDY', reason: `Tokenized Treasuries: ~5% APY${isLongTerm ? ' — ideal horizon' : ''}` });
-      if (!isConservative && isLongTerm) {
-        recs.push({ from: 'USDm', to: 'SYRUPUSDC', reason: 'Maple structured yield: ~4.5% APY' });
-      }
-      break;
-
-    default:
-      // Fallback: original regional defaults
-      ({
-        Africa: [{ from: 'KESm', to: 'EURm', reason: `Hedge local inflation (${homeInflationRate.toFixed(1)}%)` }],
-        LatAm: [{ from: 'BRLm', to: 'USDm', reason: 'Stable reserve exposure' }],
-        Asia: [{ from: 'PHPm', to: 'EURm', reason: 'Diversify into Eurozone' }],
-      } as Record<string, typeof recs>)[userRegion]?.forEach(r => recs.push(r));
-  }
-
-  if (recs.length === 0) return null;
-
-  const goalLabel = userGoal && userGoal !== 'exploring'
-    ? {
-        inflation_protection: '🛡️ Inflation Protection',
-        geographic_diversification: '🌍 Geographic Diversification',
-        rwa_access: '🥇 Real-World Asset Access',
-      }[userGoal as string] ?? 'Recommended Actions'
-    : 'Recommended Actions';
-
-  return (
-    <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-        {goalLabel}
-      </p>
-      {recs.map((r, i) => (
-        <div
-          key={i}
-          className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center"
-        >
-          <span className="text-xs font-bold">
-            {r.from} → {r.to}
-          </span>
-          <span className="text-[10px] text-blue-500 font-medium">
-            {r.reason}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}

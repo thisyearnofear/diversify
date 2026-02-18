@@ -199,11 +199,10 @@ export function useSwapController({
       for (let i = 0; i < retries; i++) {
         try {
           await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
-          console.log(`[SwapController] Refresh attempt ${i + 1}...`);
           await refreshBalances();
           break;
-        } catch (e) {
-          console.error(`[SwapController] Refresh failed:`, e);
+        } catch {
+          // Ignore transient refresh errors — next retry will try again
         }
       }
     },

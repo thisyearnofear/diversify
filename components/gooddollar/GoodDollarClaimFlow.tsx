@@ -13,7 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
 import DashboardCard from '../shared/DashboardCard';
-import { NETWORKS } from '../../config';
+import { NETWORKS, isTestnetChain } from '../../config';
 
 interface ClaimFlowProps {
     onClose?: () => void;
@@ -46,11 +46,10 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
 
                 // Record testnet claim activity
                 if (chainId) {
-                    const testnetIds = [44787, 5042002, 46630];
                     await recordActivity({
                         action: 'claim',
                         chainId,
-                        networkType: testnetIds.includes(chainId) ? 'testnet' : 'mainnet',
+                        networkType: isTestnetChain(chainId) ? 'testnet' : 'mainnet',
                         usdValue: parseFloat(estimatedReward.replace(/[^0-9.]/g, '')) || 0,
                     });
                 }
@@ -72,11 +71,10 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
 
                 // Record mainnet claim activity
                 if (chainId) {
-                    const testnetIds = [44787, 5042002, 46630];
                     await recordActivity({
                         action: 'claim',
                         chainId,
-                        networkType: testnetIds.includes(chainId) ? 'testnet' : 'mainnet',
+                        networkType: isTestnetChain(chainId) ? 'testnet' : 'mainnet',
                         txHash: result.txHash,
                         usdValue: parseFloat(estimatedReward.replace(/[^0-9.]/g, '')) || 0,
                     });

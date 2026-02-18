@@ -425,5 +425,22 @@ export function getNetworkConfig(chainId: number) {
     return Object.values(NETWORKS).find(n => n.chainId === chainId) || NETWORKS.CELO_MAINNET;
 }
 
+// =============================================================================
+// TESTNET HELPERS — Single Source of Truth
+// =============================================================================
+// Derived from NETWORKS entries that carry `devOnly: true`.
+// Use these instead of inline arrays like [44787, 5042002, 46630].
+
+/** All chain IDs that are dev/testnet-only, derived from NETWORKS config. */
+export const TESTNET_CHAIN_IDS: readonly number[] = Object.values(NETWORKS)
+    .filter((n): n is typeof n & { devOnly: true } => (n as Record<string, unknown>).devOnly === true)
+    .map(n => n.chainId);
+
+/** Returns true when chainId belongs to a testnet / devOnly network. */
+export function isTestnetChain(chainId: number | null | undefined): boolean {
+    if (chainId == null) return false;
+    return TESTNET_CHAIN_IDS.includes(chainId);
+}
+
 // Re-export features for convenience
 export { AI_FEATURES, AUTONOMOUS_FEATURES, UI_FEATURES, WALLET_FEATURES, hasAIFeatures, hasAutonomousFeatures } from './features';
