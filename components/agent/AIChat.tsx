@@ -155,7 +155,7 @@ export default function AIChat() {
             </motion.div>
             <div>
               <h3 className="font-black text-amber-900 dark:text-amber-100 uppercase tracking-tight text-sm">
-                The Wealth Oracle
+                DiversiFi
               </h3>
               <div className="flex items-center gap-1.5">
                 <motion.div 
@@ -164,7 +164,7 @@ export default function AIChat() {
                   className="w-1.5 h-1.5 rounded-full bg-amber-500" 
                 />
                 <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
-                  Consulting the Markets
+                  Get Stable or Die Trying
                 </span>
               </div>
             </div>
@@ -228,7 +228,7 @@ export default function AIChat() {
               
               <div className="space-y-2">
                 <p className="text-base font-bold text-amber-800 dark:text-amber-200">
-                  The Oracle awaits your question
+                  DiversiFi awaits your question
                 </p>
                 <p className="text-sm text-amber-600/70 dark:text-amber-400/70 max-w-[240px]">
                   Ask about your portfolio, gold, yields, or inflation protection
@@ -350,7 +350,7 @@ export default function AIChat() {
                   </div>
                   <div className="flex-1">
                     <span className="text-sm font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-                      {thinkingStep || "The Oracle consults..."}
+                      {thinkingStep || "DiversiFi is analyzing..."}
                     </span>
                     {/* Gold progress bar */}
                     <div className="mt-2 h-1.5 bg-amber-200/50 dark:bg-amber-800/30 rounded-full overflow-hidden">
