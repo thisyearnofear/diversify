@@ -82,11 +82,13 @@ module.exports = {
 EOF
 
 # ── 7. Start/reload with PM2 ────────────────────────────────────────────────
-echo "⚙️  Reloading PM2..."
+echo "⚙️  Starting PM2..."
+# Start Next.js directly with proper env variables (ecosystem file has issues with env passthrough)
 if pm2 describe "$APP_NAME" &>/dev/null; then
-  pm2 reload "$DEPLOY_DIR/ecosystem.hetzner.js" --update-env
+  pm2 reload "$APP_NAME"
 else
-  pm2 start "$DEPLOY_DIR/ecosystem.hetzner.js"
+  cd "$DEPLOY_DIR"
+  PORT=$PORT HOSTNAME=127.0.0.1 NODE_ENV=production pm2 start node_modules/.bin/next --name "$APP_NAME" -- start
 fi
 pm2 save
 
