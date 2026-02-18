@@ -26,6 +26,7 @@ export default function AIChat() {
   const { isAnalyzing, thinkingStep, sendChatMessage } = useDiversifiAI();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
+  const [showClearConfirm, setShowClearConfirm] = React.useState(false);
 
   // Track user-message count via ref so the auto-open effect only fires when
   // a NEW user message is added — not when the user simply closes the drawer.
@@ -59,6 +60,11 @@ export default function AIChat() {
 
   if (!isDrawerOpen) return null;
 
+  const handleConfirmClear = () => {
+    clearMessages();
+    setShowClearConfirm(false);
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
       {/* Backdrop */}
@@ -66,9 +72,45 @@ export default function AIChat() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={() => setDrawerOpen(false)}
+        onClick={() => {
+          setDrawerOpen(false);
+          setShowClearConfirm(false);
+        }}
         className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
       />
+
+      {/* Clear Confirmation Modal */}
+      {showClearConfirm && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-sm mx-4 border border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              Clear conversation?
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              This will permanently delete your chat history. This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmClear}
+                className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-500 rounded-xl hover:bg-red-600 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
 
       {/* Drawer */}
       <motion.div
@@ -106,7 +148,7 @@ export default function AIChat() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={clearMessages}
+              onClick={() => setShowClearConfirm(true)}
               className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
             >
               Clear
