@@ -40,6 +40,13 @@ pnpm dev
 
 ## 🏗️ Architecture
 
+### Deployment
+- **Frontend**: Netlify (static hosting, client-side rendering)
+- **AI API**: Hetzner Cloud (90s timeouts for AI operations)
+- **Domain**: `api.diversifi.famile.xyz` (SSL via Let's Encrypt)
+
+See [**Hetzner Deployment Guide**](docs/HETZNER_DEPLOYMENT.md) for deployment details.
+
 ### Financial Strategies (New!)
 Choose from 7 cultural approaches to wealth:
 - **Africapitalism** 🌍 - Keep wealth in African economies
@@ -61,8 +68,8 @@ Each strategy shapes:
 - **Arbitrum** - RWA yield tokens (USDY, PAXG, SYRUPUSDC) via LiFi/Uniswap
 
 ### AI Intelligence
-- **Gemini 3.0 Flash** - Portfolio analysis and recommendations
-- **Venice AI** (optional) - Web search, voice, private inference
+- **Venice AI** (primary) - Web search, private inference, no data retention
+- **Gemini 3.0 Flash** (fallback) - Portfolio analysis and recommendations
 - **Real-time Data** - Inflation rates, exchange rates, macro indicators
 
 ### Cross-Chain Infrastructure
@@ -72,6 +79,7 @@ Each strategy shapes:
 
 ## 📂 Documentation
 
+- [**Hetzner Deployment**](docs/HETZNER_DEPLOYMENT.md) - API server deployment guide
 - [**Product Guide**](docs/PRODUCT_GUIDE.md) - Core features and supported assets
 - [**Technical Architecture**](docs/TECHNICAL_ARCHITECTURE.md) - System design and technology stack
 - [**User Guide**](docs/USER_GUIDE.md) - Getting started and platform usage

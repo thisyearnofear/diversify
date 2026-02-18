@@ -4,6 +4,29 @@
 
 DiversiFi is built as a Next.js application with multi-chain wallet integration and AI-powered analytics. The system operates across Celo, Arbitrum, and other EVM-compatible networks.
 
+## Deployment Architecture
+
+### Hybrid Cloud Setup
+
+```
+┌─────────────────┐         ┌─────────────────┐
+│   Netlify       │         │   Hetzner       │
+│   (Frontend)    │ ──────► │   (AI API)      │
+│   - Static      │         │   - Port 6174   │
+│   - Client SSR  │         │   - 90s timeout │
+└─────────────────┘         └─────────────────┘
+```
+
+**Why Hybrid?**
+- Netlify: Fast static hosting, CDN, instant cache invalidation
+- Hetzner: 90s AI timeouts (vs Netlify's 10s limit), cost-effective (~€5/mo)
+
+**Domains:**
+- Frontend: `diversifi.app` (Netlify)
+- API: `api.diversifi.famile.xyz` (Hetzner + SSL)
+
+See [**Hetzner Deployment Guide**](HETZNER_DEPLOYMENT.md) for setup details.
+
 ## Technology Stack
 
 ### Frontend
@@ -13,7 +36,8 @@ DiversiFi is built as a Next.js application with multi-chain wallet integration 
 - **UI Components**: Custom component library with mobile-first design
 
 ### Backend Services
-- **AI Integration**: Google Gemini 3.0 for portfolio analysis
+- **AI API Server**: Next.js standalone on Hetzner (90s timeouts)
+- **AI Integration**: Venice AI (primary), Google Gemini 3.0 (fallback)
 - **API Routes**: Next.js API routes for data processing
 - **State Management**: React Context and custom hooks
 - **Data Fetching**: SWR for server state management
