@@ -93,8 +93,8 @@ export default function WalletButton({
       // Switch to mainnet (Celo or Arbitrum)
       return NETWORKS.CELO_MAINNET.chainId;
     } else {
-      // Switch to testnet (Arc is the default testnet)
-      return NETWORKS.ARC_TESTNET.chainId;
+      // Switch to Robinhood testnet (showcase stock tokenization)
+      return NETWORKS.RH_TESTNET.chainId;
     }
   };
 
