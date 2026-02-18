@@ -4,6 +4,11 @@ import { useAIConversation } from "../../context/AIConversationContext";
 import { useDiversifiAI } from "../../hooks/use-diversifi-ai";
 import VoiceButton from "../ui/VoiceButton";
 
+// Track user-message count to distinguish "new message added" from "drawer closed"
+function useUserMessageCount(messages: { role: string }[]) {
+  return messages.filter(m => m.role === "user").length;
+}
+
 /**
  * AIChat - Global Bottom Sheet Drawer
  *
@@ -22,6 +27,11 @@ export default function AIChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
 
+  // Track user-message count via ref so the auto-open effect only fires when
+  // a NEW user message is added — not when the user simply closes the drawer.
+  const prevUserMsgCountRef = useRef(useUserMessageCount(messages));
+  const currentUserMsgCount = useUserMessageCount(messages);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputValue.trim() || isAnalyzing) return;
@@ -37,16 +47,15 @@ export default function AIChat() {
     }
   }, [messages, isAnalyzing]);
 
-  // Automatically open drawer if a new user message is added while closed
+  // Only auto-open the drawer when a NEW user message is added.
+  // Using a ref to track the previous count prevents re-opening when the user
+  // manually closes the drawer (closing doesn't change currentUserMsgCount).
   useEffect(() => {
-    if (
-      messages.length > 0 &&
-      messages[messages.length - 1].role === "user" &&
-      !isDrawerOpen
-    ) {
+    if (currentUserMsgCount > prevUserMsgCountRef.current) {
+      prevUserMsgCountRef.current = currentUserMsgCount;
       setDrawerOpen(true);
     }
-  }, [messages, isDrawerOpen, setDrawerOpen]);
+  }, [currentUserMsgCount, setDrawerOpen]);
 
   if (!isDrawerOpen) return null;
 
@@ -95,12 +104,24 @@ export default function AIChat() {
               </div>
             </div>
           </div>
-          <button
-            onClick={clearMessages}
-            className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
-          >
-            Clear
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={clearMessages}
+              className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
+            >
+              Clear
+            </button>
+            {/* Explicit close button so users can dismiss without confusion */}
+            <button
+              onClick={() => setDrawerOpen(false)}
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+              aria-label="Close chat"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Message List */}

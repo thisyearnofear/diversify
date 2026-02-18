@@ -19,6 +19,7 @@ import {
   USER_GOALS,
 } from "@/hooks/use-protection-profile";
 import { useAIConversation } from "@/context/AIConversationContext";
+import { useDiversifiAI } from "@/hooks/use-diversifi-ai";
 
 import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
@@ -54,6 +55,7 @@ export default function ProtectionTab({
   const { address, chainId } = useWalletContext();
   const { navigateToSwap, demoMode, experienceMode, financialStrategy } = useAppState();
   const { setDrawerOpen, addUserMessage } = useAIConversation();
+  const { sendChatMessage } = useDiversifiAI();
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";
 
@@ -428,8 +430,16 @@ export default function ProtectionTab({
             action={{
               label: "Analyze My Portfolio",
               onClick: () => {
-                addUserMessage(`Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? 's' : ''}. My goal is ${currentGoalLabel}. I'm in the ${userRegion} region.`);
-                setDrawerOpen(true);
+                // Default goal to "diversification" when user hasn't set one yet
+                const effectiveGoal =
+                  currentGoalLabel && currentGoalLabel !== "Not set"
+                    ? currentGoalLabel
+                    : "diversification";
+                const msg = `Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`;
+                // addUserMessage shows it in the chat; sendChatMessage triggers the AI
+                addUserMessage(msg);
+                sendChatMessage(msg);
+                // Drawer opens automatically via AIChat's effect when message count increases
               },
             }}
           />

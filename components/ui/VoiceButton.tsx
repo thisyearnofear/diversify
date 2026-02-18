@@ -18,6 +18,10 @@ interface VoiceButtonProps {
     showDisableOption?: boolean;
     /** Show suggestions dropdown */
     showSuggestions?: boolean;
+    /** External controlled state: if provided, parent controls whether suggestions are shown */
+    externalSuggestionsOpen?: boolean;
+    /** Called when suggestions open/close so parent can sync its own state */
+    onSuggestionsChange?: (open: boolean) => void;
 }
 
 type RecordingState = 'idle' | 'recording' | 'processing';
@@ -38,6 +42,8 @@ export default function VoiceButton({
     variant = 'default',
     showDisableOption = true,
     showSuggestions = true,
+    externalSuggestionsOpen,
+    onSuggestionsChange,
 }: VoiceButtonProps) {
     const { transcribeAudio, capabilities } = useDiversifiAI();
     const { showToast } = useToast();
@@ -50,6 +56,21 @@ export default function VoiceButton({
     const [isFirstVisit, setIsFirstVisit] = useState(false);
     const [hasBeenSeen, setHasBeenSeen] = useState(false);
     const [volume, setVolume] = useState(0);
+
+    // Effective suggestions visibility: parent-controlled takes priority over internal state
+    const effectiveSuggestionsOpen = externalSuggestionsOpen !== undefined
+        ? externalSuggestionsOpen
+        : showSuggestionsPanel;
+
+    const openSuggestions = () => {
+        setShowSuggestionsPanel(true);
+        onSuggestionsChange?.(true);
+    };
+
+    const closeSuggestions = () => {
+        setShowSuggestionsPanel(false);
+        onSuggestionsChange?.(false);
+    };
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const audioChunksRef = useRef<Blob[]>([]);
@@ -324,7 +345,7 @@ export default function VoiceButton({
     };
 
     const handleSuggestionClick = (suggestion: string) => {
-        setShowSuggestionsPanel(false);
+        closeSuggestions();
         onTranscription?.(suggestion);
     };
 
@@ -383,7 +404,7 @@ export default function VoiceButton({
                 ref={buttonRef}
                 onClick={handleToggle}
                 onContextMenu={handleContextMenu}
-                onMouseEnter={() => showSuggestions && recordingState === 'idle' && setShowSuggestionsPanel(true)}
+                onMouseEnter={() => showSuggestions && recordingState === 'idle' && openSuggestions()}
                 disabled={recordingState === 'processing'}
                 className={`
                     ${sizeClasses[size]} 
@@ -511,18 +532,25 @@ export default function VoiceButton({
 
             {/* Suggestions Panel */}
             <AnimatePresence>
-                {showSuggestionsPanel && showSuggestions && recordingState === 'idle' && (
+                {effectiveSuggestionsOpen && showSuggestions && recordingState === 'idle' && (
                     <motion.div
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 10, scale: 0.95 }}
                         className="absolute top-full mt-2 right-0 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 py-2 z-[9999] min-w-[220px]"
-                        onMouseLeave={() => setShowSuggestionsPanel(false)}
+                        onMouseLeave={closeSuggestions}
                     >
-                        <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                        <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                             <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                 Ask me anything...
                             </p>
+                            <button
+                                onClick={closeSuggestions}
+                                className="w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-xs leading-none"
+                                aria-label="Dismiss"
+                            >
+                                ✕
+                            </button>
                         </div>
                         {VOICE_SUGGESTIONS.map(({ command, icon }, idx) => (
                             <button
@@ -536,7 +564,7 @@ export default function VoiceButton({
                         ))}
                         <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800 mt-1">
                             <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                Ask questions or give commands
+                                Tap a suggestion or speak your question
                             </p>
                         </div>
                     </motion.div>

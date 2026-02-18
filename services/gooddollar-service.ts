@@ -17,7 +17,7 @@ const GOODDOLLAR_ADDRESSES = {
   // UBIScheme contract for claiming (Celo)
   UBI_SCHEME: '0xD7aC544F8A570C4d8764c3AAbCF6870CBD960D0D',
   // Identity contract for verification status (Celo)
-  IDENTITY: '0xC361A6E660563027C6C92518e3810103C6021665',
+  IDENTITY: '0xc361a6E660563027c6c92518E3810103c6021665',
   // GoodReserve for staking info
   RESERVE: '0xeD8F69E24fE33481f7DfE0d9D0f89F5e4F4F3E3E',
   // Superfluid CFA Forwarder on Celo

@@ -96,124 +96,77 @@ export default function RealLifeScenario({
   const scenarioContent = getScenarioContent();
 
   return (
-    <div className="relative overflow-hidden rounded-lg border-2 border-gray-200 bg-white p-4 shadow-md">
+    <div className="relative overflow-hidden rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
       <RegionalPattern region={region} className="opacity-10" />
       <div className="relative">
-        {/* Enhanced header with better visibility */}
-        <div className="flex items-center mb-3">
-          <span
-            className="text-2xl mr-2 bg-gray-100 p-2 rounded-md"
-            role="img"
-            aria-label={scenarioContent.title}
-          >
+        {/* Compact header */}
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <span className="text-base" role="img" aria-label={scenarioContent.title}>
             {scenarioContent.icon}
           </span>
-          <h3 className="font-bold text-lg text-gray-900">
+          <h3 className="font-bold text-sm text-gray-900 leading-tight">
             {scenarioContent.title}
           </h3>
         </div>
 
-        {/* More concise description with better contrast */}
-        <p className="text-sm text-gray-700 mb-4 font-medium leading-tight">
+        {/* Compact description */}
+        <p className="text-[11px] text-gray-600 mb-2 leading-snug">
           {scenarioContent.description}
         </p>
 
-        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-          {/* Mobile-friendly layout with stacked elements */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between">
-            {/* First row: Metrics */}
-            <div className="grid grid-cols-1 sm:flex sm:flex-wrap sm:items-center gap-3 mb-3 sm:mb-0">
-              {/* Monthly amount */}
-              <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-white p-2.5 rounded-xl border border-gray-100 shadow-sm">
-                <div className="text-[10px] text-gray-500 font-black uppercase tracking-wider mb-1">
-                  Monthly
-                </div>
-                <div className="font-black text-xl text-gray-900">
-                  ${monthlyAmount}
-                </div>
+        <div className="bg-gray-50 px-2 py-2 rounded-lg border border-gray-200">
+          {/* Single compact row: metrics + region icons + button */}
+          <div className="flex items-center justify-between gap-1.5 flex-wrap">
+            {/* Metrics */}
+            <div className="flex items-center gap-1.5">
+              {/* Monthly */}
+              <div className="flex flex-col items-center bg-white px-2 py-1 rounded-lg border border-gray-100 shadow-sm min-w-[40px]">
+                <div className="text-[8px] text-gray-500 font-black uppercase tracking-wide leading-none mb-0.5">Monthly</div>
+                <div className="font-black text-sm text-gray-900">${monthlyAmount}</div>
               </div>
-
-              {/* Arrow - only visible on desktop */}
-              <div className="mx-1 text-gray-300 hidden sm:block text-2xl">→</div>
-
-              {/* Yearly loss */}
-              <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-red-50 p-2.5 rounded-xl border border-red-100 shadow-sm">
-                <div className="text-[10px] text-red-600 font-black uppercase tracking-wider mb-1">
-                  Annual Loss
-                </div>
-                <div className="font-black text-xl text-red-600">
-                  -${lostValue.toFixed(0)}
-                </div>
+              <span className="text-gray-300 text-xs font-bold">→</span>
+              {/* Annual Loss */}
+              <div className="flex flex-col items-center bg-red-50 px-2 py-1 rounded-lg border border-red-100 shadow-sm min-w-[40px]">
+                <div className="text-[8px] text-red-600 font-black uppercase tracking-wide leading-none mb-0.5">Loss/yr</div>
+                <div className="font-black text-sm text-red-600">-${lostValue.toFixed(0)}</div>
               </div>
-
-              {/* Potential savings (if applicable) */}
+              {/* Potential Gain */}
               {targetRegion && hasSavings && (
                 <>
-                  {/* Arrow - only visible on desktop */}
-                  <div className="mx-1 text-gray-300 hidden sm:block text-2xl">→</div>
-
-                  <div className="flex items-center justify-between sm:justify-start sm:flex-col bg-emerald-50 p-2.5 rounded-xl border border-emerald-100 shadow-sm">
-                    <div className="text-[10px] text-emerald-600 font-black uppercase tracking-wider mb-1">
-                      Potential Gain
-                    </div>
-                    <div className="font-black text-xl text-emerald-600">
-                      +${potentialSavings.toFixed(0)}
-                    </div>
+                  <span className="text-gray-300 text-xs font-bold">→</span>
+                  <div className="flex flex-col items-center bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 shadow-sm min-w-[40px]">
+                    <div className="text-[8px] text-emerald-600 font-black uppercase tracking-wide leading-none mb-0.5">Save/yr</div>
+                    <div className="font-black text-sm text-emerald-600">+${potentialSavings.toFixed(0)}</div>
                   </div>
                 </>
               )}
             </div>
 
-            {/* Second row: Region icons and action button */}
-            <div className="flex flex-col sm:flex-row items-center mt-4 sm:mt-0">
-              {/* Region icons */}
+            {/* Region icons + action button */}
+            <div className="flex items-center gap-1.5 shrink-0">
               {targetRegion && (
-                <div className="flex items-center mb-3 sm:mb-0 sm:mr-3">
+                <div className="flex items-center">
                   <div
-                    className="size-10 sm:size-8 rounded-full flex items-center justify-center mr-2 border-2 border-white shadow-sm"
-                    style={{
-                      backgroundColor:
-                        REGION_COLORS[region as keyof typeof REGION_COLORS],
-                    }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                    style={{ backgroundColor: REGION_COLORS[region as keyof typeof REGION_COLORS] }}
                   >
-                    <RegionalIconography
-                      region={region}
-                      size="sm"
-                      className="text-white"
-                    />
+                    <RegionalIconography region={region} size="sm" className="text-white" />
                   </div>
-                  <span className="mx-2 text-lg sm:text-base">→</span>
+                  <span className="mx-0.5 text-[10px] text-gray-400">→</span>
                   <div
-                    className="size-10 sm:size-8 rounded-full flex items-center justify-center ml-2 border-2 border-white shadow-sm"
-                    style={{
-                      backgroundColor:
-                        REGION_COLORS[
-                        targetRegion as keyof typeof REGION_COLORS
-                        ],
-                    }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                    style={{ backgroundColor: REGION_COLORS[targetRegion as keyof typeof REGION_COLORS] }}
                   >
-                    <RegionalIconography
-                      region={targetRegion}
-                      size="sm"
-                      className="text-white"
-                    />
+                    <RegionalIconography region={targetRegion} size="sm" className="text-white" />
                   </div>
                 </div>
               )}
-
-              {/* Action button */}
               <button
                 onClick={() => {
-                  // Scroll to the swap section
                   const swapElement = document.querySelector(".SwapInterface");
-                  if (swapElement) {
-                    swapElement.scrollIntoView({
-                      behavior: "smooth",
-                      block: "start",
-                    });
-                  }
+                  if (swapElement) swapElement.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className={`w-full sm:w-auto px-6 py-2.5 text-sm rounded-xl bg-blue-600 text-white font-black shadow-lg hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 uppercase tracking-wide`}
+                className="px-2.5 py-1.5 text-[10px] rounded-lg bg-blue-600 text-white font-black shadow-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 uppercase tracking-wide whitespace-nowrap"
               >
                 {scenarioContent.action}
               </button>

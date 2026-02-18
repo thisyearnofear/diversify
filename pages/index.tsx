@@ -57,6 +57,9 @@ export default function DiversiFiPage() {
   const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal, openModal: openStrategyModal } = useStrategyModal();
   const { isWhitelisted } = useStreakRewards();
 
+  // Mutual exclusion for header hints: only one tooltip/panel open at a time
+  const [activeHint, setActiveHint] = useState<'mode' | 'voice' | null>(null);
+
   const { region: detectedRegion, isLoading: isRegionLoading } =
     useUserRegion();
   const [userRegion, setUserRegion] = useState<Region>("Africa");
@@ -205,13 +208,18 @@ export default function DiversiFiPage() {
           {/* Right: Consistent controls across ALL modes */}
           <div className="flex items-center gap-2">
             {/* Mode toggle — same button in all modes, emoji reflects current state */}
-            <div className="group relative">
+            <div
+              className="relative"
+              onMouseEnter={() => setActiveHint('mode')}
+              onMouseLeave={() => setActiveHint(null)}
+            >
               <button
                 onClick={() => {
                   const next =
                     experienceMode === "beginner" ? "intermediate" :
                     experienceMode === "intermediate" ? "advanced" : "beginner";
                   setExperienceMode(next);
+                  setActiveHint(null);
                   showToast(
                     next === "beginner" ? "Simple mode 🌱 — focused view" :
                     next === "intermediate" ? "Standard mode 🚀 — full features unlocked" :
@@ -230,29 +238,40 @@ export default function DiversiFiPage() {
               >
                 {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
               </button>
-              {/* Tooltip — consistent across all modes */}
-              <div className="pointer-events-none invisible group-hover:visible group-focus-within:visible absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
-                <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                  {experienceMode === "beginner" ? "Simple 🌱" : experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
+              {/* Tooltip — state-driven so only one hint shows at a time */}
+              {activeHint === 'mode' && (
+                <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50">
+                  <button
+                    onClick={() => setActiveHint(null)}
+                    className="absolute top-1.5 right-2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-xs leading-none"
+                    aria-label="Dismiss"
+                  >
+                    ✕
+                  </button>
+                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 pr-5">
+                    {experienceMode === "beginner" ? "Simple 🌱" : experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
+                  </div>
+                  <div className="text-xs font-bold text-white mb-0.5">
+                    Tap → {experienceMode === "beginner" ? "Standard 🚀" : experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
+                  </div>
+                  <div className="text-[10px] text-gray-300 leading-relaxed">
+                    {experienceMode === "beginner"
+                      ? "Unlocks: token search, inflation comparison, AI chat"
+                      : experienceMode === "intermediate"
+                      ? "Unlocks: power analytics, voice shortcuts, batch ops"
+                      : "Hides advanced panels — back to focused view"}
+                  </div>
+                  <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
                 </div>
-                <div className="text-xs font-bold text-white mb-0.5">
-                  Tap → {experienceMode === "beginner" ? "Standard 🚀" : experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
-                </div>
-                <div className="text-[10px] text-gray-300 leading-relaxed">
-                  {experienceMode === "beginner"
-                    ? "Unlocks: token search, inflation comparison, AI chat"
-                    : experienceMode === "intermediate"
-                    ? "Unlocks: power analytics, voice shortcuts, batch ops"
-                    : "Hides advanced panels — back to focused view"}
-                </div>
-                <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
-              </div>
+              )}
             </div>
 
             {/* Voice assistant */}
             <VoiceButton
               size="sm"
               variant="default"
+              externalSuggestionsOpen={activeHint === 'voice'}
+              onSuggestionsChange={(open) => setActiveHint(open ? 'voice' : null)}
               onTranscription={(text) => {
                 const intent = IntentDiscoveryService.discover(text);
                 switch (intent.type) {
