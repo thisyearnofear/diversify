@@ -382,6 +382,7 @@ async function callVeniceChat(
       enable_web_citations: options.enableWebSearch ? true : false,
       strip_thinking_response: !options.enableReasoning,
       disable_thinking: !options.enableReasoning,
+      include_venice_system_prompt: false, // Use only our custom system prompt
     },
   });
 
