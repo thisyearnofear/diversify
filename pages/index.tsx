@@ -23,7 +23,6 @@ import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTu
 import ThemeToggle from "../components/ui/ThemeToggle";
 import VoiceButton from "../components/ui/VoiceButton";
 import { useToast } from "../components/ui/Toast";
-import { useAIConversation } from "../context/AIConversationContext";
 import GuidedTour from "../components/tour/GuidedTour";
 import TourTrigger from "../components/tour/TourTrigger";
 import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
@@ -36,8 +35,7 @@ import { useStreakRewards } from "../hooks/use-streak-rewards";
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab, experienceMode, setExperienceMode } = useAppState();
   const { showToast } = useToast();
-  const { unreadCount } = useAIConversation();
-  const { openOracle } = useAIOracle();
+  const { openOracle, unreadCount } = useAIOracle();
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -59,7 +57,7 @@ export default function DiversiFiPage() {
   // Declared after useWalletTutorial so openWalletTutorial is in scope
   const { handleTranscription } = useVoiceIntent({ onOpenWalletTutorial: openWalletTutorial });
 
-  const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal, openModal: openStrategyModal } = useStrategyModal();
+  const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal } = useStrategyModal();
   const { isWhitelisted } = useStreakRewards();
 
   // Mutual exclusion for header hints: only one tooltip/panel open at a time

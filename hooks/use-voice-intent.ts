@@ -4,25 +4,26 @@
  * CLEAN: Single place for all voice → intent → action routing.
  * DRY: Removed duplicated routing in index.tsx, AIAssistant, etc.
  * MODULAR: Pass as `onTranscription` prop to any VoiceButton.
+ *
+ * NOTE: No imports from components/ — hooks must only import from
+ * hooks/, services/, context/, and utils/ to preserve layer boundaries.
+ * Wallet address is not needed: onOpenWalletTutorial is an always-safe
+ * callback that the caller gates on address availability.
  */
 import { useCallback } from 'react';
 import { useAppState } from '../context/AppStateContext';
-import { useAIConversation } from '../context/AIConversationContext';
 import { useAIOracle } from './use-ai-oracle';
-import { useWalletContext } from '../components/wallet/WalletProvider';
 import { useToast } from '../components/ui/Toast';
 import { IntentDiscoveryService } from '../services/ai/intent-discovery.service';
 
 interface VoiceIntentOptions {
-  /** Called when wallet tutorial should open */
+  /** Called when the user asks for wallet/connection help */
   onOpenWalletTutorial?: () => void;
 }
 
 export function useVoiceIntent(options: VoiceIntentOptions = {}) {
   const { setActiveTab, setSwapPrefill, enableDemoMode } = useAppState();
-  const { setDrawerOpen } = useAIConversation();
-  const { ask } = useAIOracle();
-  const { address } = useWalletContext();
+  const { ask, openOracle } = useAIOracle();
   const { showToast } = useToast();
 
   const handleTranscription = useCallback(
@@ -34,8 +35,8 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
           if (intent.topic === 'demo') {
             showToast('Enabling demo mode...', 'info');
             enableDemoMode();
-          } else if (intent.topic === 'wallet-help' && !address) {
-            showToast('Opening wallet tutorial...', 'info');
+          } else if (intent.topic === 'wallet-help') {
+            // Caller (index.tsx) decides whether to show tutorial or connect prompt
             options.onOpenWalletTutorial?.();
           } else {
             ask(text);
@@ -60,11 +61,11 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
 
         default:
           ask(text);
-          setDrawerOpen(true);
+          openOracle();
           break;
       }
     },
-    [ask, address, enableDemoMode, options, setActiveTab, setDrawerOpen, setSwapPrefill, showToast],
+    [ask, enableDemoMode, openOracle, options, setActiveTab, setSwapPrefill, showToast],
   );
 
   return { handleTranscription };

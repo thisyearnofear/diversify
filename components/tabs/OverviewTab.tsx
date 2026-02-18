@@ -13,6 +13,7 @@ import { useAppState } from "../../context/AppStateContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 import { NetworkOptimizedOnramp } from "../onramp";
 import { AssetInventory } from "../portfolio/AssetInventory";
+import { useStreakRewards } from "@/hooks/use-streak-rewards";
 
 import { Card, EmptyState, HeroValue } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
@@ -102,6 +103,7 @@ export default function OverviewTab({
   const [showAssetDetails, setShowAssetDetails] = useState(false);
 
   const { experienceMode, demoMode, disableDemoMode, enableDemoMode } = useAppState();
+  const { canClaim, isWhitelisted, streak } = useStreakRewards();
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
 
@@ -367,6 +369,28 @@ export default function OverviewTab({
             </div>
           </div>
         </Card>
+      )}
+
+      {/* DAILY CLAIM BANNER — shown at top when G$ reward is ready */}
+      {address && isWhitelisted && canClaim && (
+        <button
+          onClick={() => setActiveTab("protect")}
+          className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all"
+          aria-label="Claim your daily GoodDollar reward"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl animate-bounce">🎁</span>
+            <div className="text-left">
+              <div className="text-xs font-black uppercase tracking-widest">Daily G$ Reward Ready!</div>
+              <div className="text-[10px] text-emerald-100 font-medium">
+                {streak?.daysActive ? `${streak.daysActive} day streak` : "Start your streak"} — tap to claim →
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap">
+            Claim Now
+          </div>
+        </button>
       )}
 
       {/* 1. PRIMARY HEALTH SCORE / HERO (Dynamic by Mode) */}

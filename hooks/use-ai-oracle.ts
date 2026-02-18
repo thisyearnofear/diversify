@@ -11,7 +11,7 @@ import { useAIConversation } from '../context/AIConversationContext';
 import { useDiversifiAI } from './use-diversifi-ai';
 
 export function useAIOracle() {
-  const { addUserMessage, setDrawerOpen, markAsRead } = useAIConversation();
+  const { addUserMessage, setDrawerOpen, markAsRead, unreadCount } = useAIConversation();
   const { sendChatMessage } = useDiversifiAI();
 
   /** Add message to chat history AND trigger AI response in one call */
@@ -30,5 +30,5 @@ export function useAIOracle() {
     markAsRead();
   }, [setDrawerOpen, markAsRead]);
 
-  return { ask, openOracle };
+  return { ask, openOracle, unreadCount };
 }
