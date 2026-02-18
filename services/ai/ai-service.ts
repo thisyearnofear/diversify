@@ -381,6 +381,7 @@ async function callVeniceChat(
       enable_web_search: options.enableWebSearch ? "on" : "off",
       enable_web_citations: options.enableWebSearch ? true : false,
       strip_thinking_response: !options.enableReasoning,
+      disable_thinking: !options.enableReasoning,
     },
   });
 
