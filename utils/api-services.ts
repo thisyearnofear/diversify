@@ -10,6 +10,9 @@ import { unifiedCache, CacheCategory } from './unified-cache-service';
 import { circuitBreakerManager } from './circuit-breaker-service';
 import { EXCHANGE_RATES } from '../config';
 
+// Points to the AI backend — mirrors the constant in hooks/use-diversifi-ai.ts
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
 // Cache durations
 const CACHE_DURATIONS = {
   INFLATION_DATA: 1000 * 60 * 60 * 24, // 24 hours
@@ -522,7 +525,7 @@ export const GeminiService = {
   }> => {
     try {
       // Delegate to the new API endpoint which uses portfolio-analysis.ts
-      const response = await fetch('/api/agent/analyze', {
+      const response = await fetch(`${API_BASE}/api/agent/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

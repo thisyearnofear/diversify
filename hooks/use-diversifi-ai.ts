@@ -20,6 +20,11 @@ import {
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 
+// Points to the AI backend. In production, set NEXT_PUBLIC_API_BASE_URL to
+// the Hetzner API server (e.g. https://api.diversifi.famile.xyz).
+// Defaults to empty string so relative paths work on Netlify / local dev.
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -234,7 +239,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
    */
   const initializeAI = useCallback(async () => {
     try {
-      const response = await fetch("/api/agent/status");
+      const response = await fetch(`${API_BASE}/api/agent/status`);
       if (response.ok) {
         const status = await response.json();
 
@@ -357,7 +362,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           }
         }, 800);
 
-        const response = await fetch("/api/agent/analyze", {
+        const response = await fetch(`${API_BASE}/api/agent/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -504,7 +509,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       }
 
       try {
-        const response = await fetch("/api/agent/speak", {
+        const response = await fetch(`${API_BASE}/api/agent/speak`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text }),
@@ -610,7 +615,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       }, 3000);
 
       try {
-        const response = await fetch("/api/agent/chat", {
+        const response = await fetch(`${API_BASE}/api/agent/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: content, history: messages, chainId }),
@@ -686,7 +691,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         const formData = new FormData();
         formData.append("audio", audioBlob);
 
-        const response = await fetch("/api/agent/transcribe", {
+        const response = await fetch(`${API_BASE}/api/agent/transcribe`, {
           method: "POST",
           body: formData,
         });
@@ -732,7 +737,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       setThinkingStep("Running autonomous analysis...");
 
       try {
-        const response = await fetch("/api/agent/deep-analyze", {
+        const response = await fetch(`${API_BASE}/api/agent/deep-analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
