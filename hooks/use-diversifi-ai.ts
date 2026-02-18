@@ -183,7 +183,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
   // Use global conversation context if available and requested
   const globalConversation = useAIConversationOptional();
-  const { chainId } = useWalletContext();
+  const { chainId, address } = useWalletContext();
   const isUsingGlobal =
     useGlobalConversation && globalConversation !== undefined;
   const messages = isUsingGlobal ? globalConversation!.messages : localMessages;
@@ -562,6 +562,17 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       ) {
         fastPathResponse =
           "DiversiFi is non-custodial, meaning you always retain full control of your funds. We never store your private keys. All transactions are executed on-chain via secure smart contracts. However, as with all DeFi protocols, there are risks including smart contract bugs and market volatility. Always do your own research.";
+      } else if (
+        normalizedContent.includes("portfolio") ||
+        normalizedContent.includes("what do i have") ||
+        normalizedContent.includes("my balance") ||
+        normalizedContent.includes("my holdings") ||
+        normalizedContent.includes("what's in my wallet") ||
+        normalizedContent.includes("whats in my wallet")
+      ) {
+        fastPathResponse = address
+          ? "I can see your wallet is connected! 📊 Check the **Overview** tab to see your full portfolio breakdown, including your balances across Celo and Arbitrum, inflation protection score, and diversification metrics. You can also ask me for specific advice on how to optimize your holdings!"
+          : "To see your portfolio, you'll need to connect your wallet first. Click the **Connect Wallet** button and choose your preferred option (email, existing wallet, or 'Buy Crypto'). Once connected, your holdings will appear in the **Overview** tab!";
       }
 
       if (fastPathResponse) {
@@ -618,7 +629,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         const response = await fetch(`${API_BASE}/api/agent/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, history: messages, chainId }),
+          body: JSON.stringify({ message: content, history: messages, chainId, address }),
         });
 
         if (response.ok) {
