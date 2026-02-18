@@ -16,6 +16,7 @@ import { AssetInventory } from "../portfolio/AssetInventory";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
 
 import { Card, EmptyState, HeroValue } from "../shared/TabComponents";
+import { useProtectionProfile } from "../../hooks/use-protection-profile";
 import DashboardCard from "../shared/DashboardCard";
 
 interface OverviewTabProps {
@@ -48,6 +49,98 @@ const EMERGING_MARKETS = {
   USA: { growth: 2.1, highlight: "World reserve currency" },
   Europe: { growth: 1.8, highlight: "Strong regulatory framework" },
 };
+
+// Goal alignment banner — shown between hero and rewards when user has a saved profile
+function GoalAlignmentBanner({
+  goal,
+  riskTolerance,
+  timeHorizon,
+  goalScores,
+  onAction,
+}: {
+  goal: string;
+  riskTolerance: string | null;
+  timeHorizon: string | null;
+  goalScores: { hedge: number; diversify: number; rwa: number };
+  onAction: () => void;
+}) {
+  // Pick the score that actually reflects the user's stated goal
+  const score = Math.round(
+    goal === 'inflation_protection' ? goalScores.hedge :
+    goal === 'geographic_diversification' ? goalScores.diversify :
+    goal === 'rwa_access' ? goalScores.rwa : 0
+  );
+  const goalMeta: Record<string, { icon: string; label: string; description: string; nextAction: string; bg: string; border: string; badge: string }> = {
+    inflation_protection: {
+      icon: '🛡️',
+      label: 'Hedge Inflation',
+      description: 'Reduce exposure to local currency devaluation',
+      nextAction: 'Swap into lower-inflation currencies',
+      bg: 'from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10',
+      border: 'border-blue-200 dark:border-blue-800',
+      badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+    },
+    geographic_diversification: {
+      icon: '🌍',
+      label: 'Diversify Regions',
+      description: 'Spread your wealth across multiple economies',
+      nextAction: 'Add exposure to a new region',
+      bg: 'from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10',
+      border: 'border-purple-200 dark:border-purple-800',
+      badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+    },
+    rwa_access: {
+      icon: '🥇',
+      label: 'Access Real-World Assets',
+      description: 'Hold tokenized gold and yield-bearing assets',
+      nextAction: 'Bridge to Arbitrum for USDY or PAXG',
+      bg: 'from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10',
+      border: 'border-amber-200 dark:border-amber-800',
+      badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    },
+  };
+
+  const meta = goalMeta[goal];
+  if (!meta) return null;
+
+  return (
+    <div className={`bg-gradient-to-br ${meta.bg} border ${meta.border} rounded-2xl p-4`}>
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">{meta.icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1">
+            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${meta.badge}`}>Your Goal</span>
+            <span className="text-xs font-black text-gray-900 dark:text-white">{meta.label}</span>
+            {riskTolerance && (
+              <span className="text-[10px] text-gray-500">• {riskTolerance} risk{timeHorizon ? ` • ${timeHorizon}` : ''}</span>
+            )}
+          </div>
+          <p className="text-[11px] text-gray-600 dark:text-gray-400">{meta.description}</p>
+          {/* Progress bar */}
+          <div className="mt-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Goal Progress</span>
+              <span className="text-[10px] font-black text-gray-700 dark:text-gray-300">{score}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                style={{ width: `${score}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+      <button
+        onClick={onAction}
+        className="mt-3 w-full py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-black uppercase tracking-widest text-gray-800 dark:text-gray-200 transition-colors flex items-center justify-center gap-2"
+      >
+        <span>{meta.nextAction}</span>
+        <span>→</span>
+      </button>
+    </div>
+  );
+}
 
 // Tooltip component explaining inflation data source
 function InflationTooltip() {
@@ -104,6 +197,7 @@ export default function OverviewTab({
 
   const { experienceMode, demoMode, disableDemoMode, enableDemoMode } = useAppState();
   const { canClaim, isWhitelisted, streak } = useStreakRewards();
+  const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
 
@@ -416,6 +510,17 @@ export default function OverviewTab({
         <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
       </Card>
 
+      {/* 1b. GOAL ALIGNMENT — shown when user has a complete protection profile */}
+      {profileComplete && profileConfig.userGoal && profileConfig.userGoal !== 'exploring' && (
+        <GoalAlignmentBanner
+          goal={profileConfig.userGoal}
+          riskTolerance={profileConfig.riskTolerance}
+          timeHorizon={profileConfig.timeHorizon}
+          goalScores={activePortfolio.goalScores}
+          onAction={() => setActiveTab('swap')}
+        />
+      )}
+
       {/* 2. REWARDS (Unified Insight Card) */}
       <div className="space-y-4">
         <StreakRewardsCard
@@ -603,29 +708,54 @@ export default function OverviewTab({
         )}
       </DashboardCard>
 
-      {/* 5. SMART RECOMMENDATIONS - Dashboard Card */}
-      {diversificationTips.length > 0 && (
-        <DashboardCard
-          title="Smart Recommendations"
-          icon={<span>💡</span>}
-          color="amber"
-          size="md"
-        >
-          <div className="space-y-2">
-            {diversificationTips.slice(0, 3).map((tip, idx) => (
-              <div
-                key={idx}
-                className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg"
-              >
-                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">•</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
-                  {tip}
-                </span>
-              </div>
-            ))}
-          </div>
-        </DashboardCard>
-      )}
+      {/* 5. SMART RECOMMENDATIONS - goal-aware tips */}
+      {(() => {
+        const gs = activePortfolio.goalScores;
+        const missing = activePortfolio.missingRegions;
+        const goal = profileConfig.userGoal;
+
+        // Build goal-specific tips when profile is complete
+        let tips: string[] = [];
+        if (profileComplete && goal && goal !== 'exploring') {
+          if (goal === 'inflation_protection') {
+            if (gs.hedge < 60) tips.push(`Your hedge score is ${Math.round(gs.hedge)}%. Swap high-inflation tokens to USDm or EURm to improve it.`);
+            else if (gs.hedge >= 80) tips.push(`Excellent inflation protection (${Math.round(gs.hedge)}%)! Consider adding PAXG on Arbitrum for long-term coverage.`);
+            else tips.push(`Good hedge score (${Math.round(gs.hedge)}%). Reducing your most concentrated region exposure would improve it further.`);
+            tips.push(...diversificationTips.filter(t => t.includes('PAXG') || t.includes('inflation')));
+          } else if (goal === 'geographic_diversification') {
+            if (gs.diversify < 60) tips.push(`Diversification score: ${Math.round(gs.diversify)}%. Add ${missing.slice(0, 2).join(' and ')} exposure to improve it.`);
+            else if (gs.diversify >= 80) tips.push(`Excellent diversification (${Math.round(gs.diversify)}%)! You're well-spread across regions.`);
+            else tips.push(`Good diversification (${Math.round(gs.diversify)}%). ${missing.length > 0 ? `Adding ${missing[0]} would push you above 80%.` : 'Keep rebalancing as markets move.'}`);
+            tips.push(...diversificationTips.filter(t => t.includes('region')));
+          } else if (goal === 'rwa_access') {
+            if (gs.rwa === 0) {
+              tips.push('No real-world assets detected. Add PAXG (gold) or USDY (~5% APY Treasuries) on Arbitrum.');
+              tips.push('Bridge USDm → Arbitrum to access tokenized US Treasuries and gold without KYC.');
+            } else if (gs.rwa < 80) {
+              tips.push(`RWA score: ${Math.round(gs.rwa)}%. Consider adding SYRUPUSDC for additional structured yield (~4.5% APY).`);
+            } else {
+              tips.push(`Strong RWA position (${Math.round(gs.rwa)}%). PAXG and yield tokens are providing solid inflation protection.`);
+            }
+          }
+        } else {
+          // Generic tips when no profile set
+          tips = diversificationTips;
+        }
+
+        if (tips.length === 0) return null;
+        return (
+          <DashboardCard title="Smart Recommendations" icon={<span>💡</span>} color="amber" size="md">
+            <div className="space-y-2">
+              {tips.slice(0, 3).map((tip, idx) => (
+                <div key={idx} className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">•</span>
+                  <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{tip}</span>
+                </div>
+              ))}
+            </div>
+          </DashboardCard>
+        );
+      })()}
 
       {/* 6. REGION SELECTOR - Dashboard Card (Advanced Only) */}
       {!isBeginner && (

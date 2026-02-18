@@ -42,7 +42,7 @@ const CHAIN_META: Record<number, {
     icon: '📈',
     color: 'bg-violet-50 dark:bg-violet-900/20',
     border: 'border-violet-200 dark:border-violet-800',
-    description: 'The RWA Market Maker is being deployed. Simulate stock swaps now to unlock the Stock Trader badge.',
+    description: 'Robinhood Chain is a preview of a future mainnet (built on Arbitrum Orbit, targeted 2026). Tokenized stocks are testnet-only for now — try simulated swaps to earn the Stock Trader badge. When Robinhood launches mainnet, graduates can trade real RWAs here.',
     faucetUrl: 'https://faucet.testnet.chain.robinhood.com',
     faucetLabel: 'Get ETH on Robinhood →',
   },

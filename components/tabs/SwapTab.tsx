@@ -28,10 +28,13 @@ import {
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
+import { useProtectionProfile } from "../../hooks/use-protection-profile";
+import type { UserGoal, RiskTolerance, TimeHorizon } from "../../hooks/use-protection-profile";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
 import { TestnetSimulationBanner } from "../swap/TestnetSimulationBanner";
 import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
+import NetworkSwitcher from "../swap/NetworkSwitcher";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -101,9 +104,10 @@ export default function SwapTab({
     ) => void;
   }>(null);
 
-  // Get multichain balances for the header
+  // Get multichain balances for the header (also provides goalScores for celebration modal)
   const {
     chains,
+    goalScores,
     isLoading: isMultichainLoading,
     refresh: refreshMultichain,
   } = useMultichainBalances(address);
@@ -185,6 +189,9 @@ export default function SwapTab({
   }, [tradeableTokens, searchQuery]);
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);
+
+  // Goal-aware swap defaults: read protection profile to personalise the experience
+  const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
 
   useEffect(() => {
     if (swapPrefill && swapInterfaceRef.current?.setTokens) {
@@ -380,13 +387,22 @@ export default function SwapTab({
           />
         )}
 
-        {/* Beginner: Simple title */}
+        {/* Beginner: Simple title + compact NetworkSwitcher (consistent with advanced mode) */}
         {isBeginner && (
-          <div className="mb-4">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Convert Your Money</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              Protect your savings by converting to more stable currencies
-            </p>
+          <div className="mb-4 flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Convert Your Money</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Protect your savings by converting to more stable currencies
+              </p>
+            </div>
+            {/* Compact chain selector — same control as advanced mode, incl. Test Drive networks */}
+            <NetworkSwitcher
+              currentChainId={walletChainId}
+              onNetworkChange={handleRefresh}
+              compact={true}
+              className="mt-1 flex-shrink-0"
+            />
           </div>
         )}
 
@@ -472,6 +488,26 @@ export default function SwapTab({
                 >
                   ×
                 </button>
+              </div>
+            )}
+
+            {/* Goal banner — shows which goal is active and what profile config is personalising */}
+            {profileComplete && profileConfig.userGoal && profileConfig.userGoal !== 'exploring' && !showAiRecommendation && (
+              <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                <span className="text-base">
+                  {profileConfig.userGoal === 'inflation_protection' ? '🛡️' : profileConfig.userGoal === 'geographic_diversification' ? '🌍' : '🥇'}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
+                    {profileConfig.userGoal === 'inflation_protection' ? 'Hedge Inflation' : profileConfig.userGoal === 'geographic_diversification' ? 'Diversify Regions' : 'Access RWA'} mode
+                  </span>
+                  {profileConfig.riskTolerance && (
+                    <span className="ml-2 text-[10px] text-blue-400 dark:text-blue-500">
+                      • {profileConfig.riskTolerance} risk • {profileConfig.timeHorizon || 'flexible'}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black shrink-0">✓ Personalised</span>
               </div>
             )}
 
@@ -684,12 +720,12 @@ export default function SwapTab({
               amount={1000}
               monthlyAmount={100}
             />
-            {getRecommendations(userRegion, inflationData, homeInflationRate)}
+            {getRecommendations(userRegion, inflationData, homeInflationRate, profileConfig.userGoal, profileConfig.riskTolerance, profileConfig.timeHorizon)}
           </DashboardCard>
         </div>
       )}
 
-      {/* Success Celebration Modal */}
+      {/* Success Celebration Modal — passes user goal and live goal score for personalised display */}
       {celebrationData && (
         <SwapSuccessCelebration
           isVisible={showCelebration}
@@ -702,37 +738,99 @@ export default function SwapTab({
           amount={celebrationData.amount}
           protectionScoreIncrease={5}
           annualSavings={parseFloat(celebrationData.amount) * ((celebrationData.fromTokenInflation - celebrationData.toTokenInflation) / 100)}
+          userGoal={profileComplete ? profileConfig.userGoal : null}
+          goalScore={goalScores ? Math.round(
+            profileConfig.userGoal === 'inflation_protection' ? goalScores.hedge :
+            profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
+            profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0
+          ) : undefined}
         />
       )}
     </div>
   );
 }
 
+/**
+ * getRecommendations — goal-aware swap suggestions.
+ * Uses the user's stated goal, risk tolerance, and time horizon (from useProtectionProfile)
+ * to return token pairs that actually serve their diversification objective.
+ */
 function getRecommendations(
   userRegion: Region,
   inflationData: Record<string, RegionalInflationData>,
   homeInflationRate: number,
+  userGoal?: UserGoal | null,
+  riskTolerance?: RiskTolerance | null,
+  timeHorizon?: TimeHorizon | null,
 ) {
-  const recommendations: Record<
-    string,
-    Array<{ from: string; to: string; reason: string }>
-  > = {
-    Africa: [
-      {
-        from: "KESm",
-        to: "EURm",
-        reason: `Hedge: ${(inflationData["Europe"]?.avgRate || 0).toFixed(1)}% vs ${homeInflationRate.toFixed(1)}% inflation`,
-      },
-    ],
-    LatAm: [{ from: "BRLm", to: "USDm", reason: "Stable reserve exposure" }],
-    Asia: [{ from: "PHPm", to: "EURm", reason: "Diversify into Eurozone" }],
+  const regionalFromToken: Record<string, string> = {
+    Africa: 'KESm', LatAm: 'BRLm', Asia: 'PHPm', USA: 'USDm', Europe: 'EURm', Global: 'USDm',
   };
-  const recs = recommendations[userRegion] || [];
+  const fromToken = regionalFromToken[userRegion] || 'USDm';
+
+  const isConservative = riskTolerance === 'Conservative';
+  const isLongTerm = timeHorizon === '1 year';
+  const isShortTerm = timeHorizon === '1 month';
+
+  let recs: Array<{ from: string; to: string; reason: string }> = [];
+
+  switch (userGoal) {
+    case 'inflation_protection':
+      if (fromToken !== 'USDm') {
+        recs.push({ from: fromToken, to: 'USDm', reason: `Cut inflation: ${homeInflationRate.toFixed(1)}% → ~3%` });
+      }
+      if (!isShortTerm) {
+        recs.push({ from: fromToken !== 'EURm' ? fromToken : 'USDm', to: 'EURm', reason: `Eurozone hedge (${(inflationData['Europe']?.avgRate || 2.5).toFixed(1)}%)` });
+      }
+      if (isLongTerm && !isConservative) {
+        recs.push({ from: 'USDm', to: 'PAXG', reason: 'Gold: long-term inflation store of value' });
+      }
+      break;
+
+    case 'geographic_diversification': {
+      const allPairs = [
+        { from: fromToken, to: 'EURm', reason: 'Add European economic exposure' },
+        { from: fromToken, to: 'BRLm', reason: 'Add LatAm market exposure' },
+        { from: fromToken, to: 'KESm', reason: 'Add African market exposure' },
+        { from: 'USDm', to: 'XOFm', reason: 'Add West African CFA exposure' },
+      ];
+      recs = allPairs.filter(p => p.from !== p.to && !p.to.startsWith(fromToken.slice(0, 3))).slice(0, 3);
+      break;
+    }
+
+    case 'rwa_access':
+      if (!isConservative) {
+        recs.push({ from: 'USDm', to: 'PAXG', reason: 'Gold-backed: inflation-resistant real asset' });
+      }
+      recs.push({ from: 'USDm', to: 'USDY', reason: `Tokenized Treasuries: ~5% APY${isLongTerm ? ' — ideal horizon' : ''}` });
+      if (!isConservative && isLongTerm) {
+        recs.push({ from: 'USDm', to: 'SYRUPUSDC', reason: 'Maple structured yield: ~4.5% APY' });
+      }
+      break;
+
+    default:
+      // Fallback: original regional defaults
+      ({
+        Africa: [{ from: 'KESm', to: 'EURm', reason: `Hedge local inflation (${homeInflationRate.toFixed(1)}%)` }],
+        LatAm: [{ from: 'BRLm', to: 'USDm', reason: 'Stable reserve exposure' }],
+        Asia: [{ from: 'PHPm', to: 'EURm', reason: 'Diversify into Eurozone' }],
+      } as Record<string, typeof recs>)[userRegion]?.forEach(r => recs.push(r));
+  }
+
   if (recs.length === 0) return null;
+
+  const goalLabel = userGoal && userGoal !== 'exploring'
+    ? {
+        inflation_protection: '🛡️ Inflation Protection',
+        geographic_diversification: '🌍 Geographic Diversification',
+        rwa_access: '🥇 Real-World Asset Access',
+      }[userGoal as string] ?? 'Recommended Actions'
+    : 'Recommended Actions';
+
   return (
     <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-        Recommended Actions
+        {goalLabel}
       </p>
       {recs.map((r, i) => (
         <div

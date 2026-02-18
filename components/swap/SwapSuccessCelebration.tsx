@@ -10,11 +10,15 @@ interface SwapSuccessCelebrationProps {
     amount: string;
     protectionScoreIncrease?: number;
     annualSavings?: number;
+    /** User's stated goal from protection profile (goal-specific progress display) */
+    userGoal?: string | null;
+    /** Current goal score 0-100 from portfolio analysis */
+    goalScore?: number;
 }
 
 /**
  * Celebration modal shown after successful swap
- * Shows protection score increase and annual savings
+ * Shows goal-specific progress and annual savings
  */
 export default function SwapSuccessCelebration({
     isVisible,
@@ -24,6 +28,8 @@ export default function SwapSuccessCelebration({
     amount,
     protectionScoreIncrease = 5,
     annualSavings = 0,
+    userGoal,
+    goalScore,
 }: SwapSuccessCelebrationProps) {
     const [confettiPieces, setConfettiPieces] = useState<Array<{ id: number; x: number; color: string; delay: number }>>([]);
 
@@ -121,22 +127,41 @@ export default function SwapSuccessCelebration({
                             </p>
                         </motion.div>
 
-                        {/* Stats Grid */}
+                        {/* Stats Grid — goal-aware when profile is set */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
-                            {/* Protection Score Increase */}
+                            {/* Goal Score (or generic protection score) */}
                             <motion.div
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.5 }}
                                 className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800"
                             >
-                                <div className="text-2xl mb-1">🛡️</div>
-                                <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mb-1">
-                                    +{protectionScoreIncrease}%
+                                <div className="text-2xl mb-1">
+                                    {userGoal === 'inflation_protection' ? '🛡️' : userGoal === 'geographic_diversification' ? '🌍' : userGoal === 'rwa_access' ? '🥇' : '🛡️'}
                                 </div>
-                                <div className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                                    Protection Score
-                                </div>
+                                {goalScore != null && userGoal && userGoal !== 'exploring' ? (
+                                    <>
+                                        <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mb-1">
+                                            {goalScore}%
+                                        </div>
+                                        <div className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                                            {userGoal === 'inflation_protection' ? 'Hedge Score' : userGoal === 'geographic_diversification' ? 'Diversify Score' : 'RWA Score'}
+                                        </div>
+                                        {/* Mini progress bar */}
+                                        <div className="mt-2 h-1 w-full bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                            <div className={`h-full rounded-full ${goalScore >= 80 ? 'bg-emerald-500' : goalScore >= 60 ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${goalScore}%` }} />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mb-1">
+                                            +{protectionScoreIncrease}%
+                                        </div>
+                                        <div className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                                            Protection Score
+                                        </div>
+                                    </>
+                                )}
                             </motion.div>
 
                             {/* Annual Savings */}

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { NETWORKS } from '../../../config';
+import { useWalletContext } from '../../wallet/WalletProvider';
 
 interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue: () => void;
@@ -10,6 +11,23 @@ interface WelcomeScreenProps extends OnboardingScreenProps {
 
 export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected, chainId }: WelcomeScreenProps) {
     const isTestnet = chainId && (chainId === NETWORKS.ALFAJORES.chainId || chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId);
+    const { switchNetwork, isConnected } = useWalletContext();
+    const [isSwitching, setIsSwitching] = useState(false);
+    const [switchDone, setSwitchDone] = useState(false);
+
+    const handleSwitchToTestnet = async () => {
+        if (isSwitching) return;
+        setIsSwitching(true);
+        try {
+            await switchNetwork(NETWORKS.ARC_TESTNET.chainId);
+            setSwitchDone(true);
+        } catch {
+            // user rejected or wallet not available — fall through
+        } finally {
+            setIsSwitching(false);
+        }
+    };
+
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 text-center relative overflow-y-auto custom-scrollbar">
             {/* Mesh Gradient Background */}
@@ -91,31 +109,83 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                     Get Started →
                 </motion.button>
 
-                {/* Test Drive entry point — visible to all users without a wallet */}
-                {!isWalletConnected && (
+                {/* Test Drive entry point — for connected wallets: one-tap network switch */}
+                {!isTestnet && (
                     <motion.div
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.55 }}
-                        className="w-full px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl flex items-center gap-3"
+                        className="w-full bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl overflow-hidden"
                     >
-                        <span className="text-xl flex-shrink-0">🧪</span>
-                        <div className="flex-1 min-w-0">
-                            <div className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wide mb-0.5">
-                                Not ready to commit?
+                        <div className="px-4 pt-3 pb-2">
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-base">🧪</span>
+                                <span className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wide">
+                                    Test Drive — No Real Money
+                                </span>
                             </div>
-                            <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-snug">
-                                Try all 3 testnets risk-free. Earn badges. Graduate when ready.
+                            <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-snug mb-3">
+                                Try Arc Testnet with free USDC. Earn badges. Graduate to mainnet when ready.
                             </p>
+                            {switchDone ? (
+                                /* Step 2: switched — now guide to faucet */
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        <span className="text-[10px] font-black">Switched to Arc Testnet!</span>
+                                    </div>
+                                    <a
+                                        href="https://faucet.circle.com"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-black rounded-xl transition-colors"
+                                    >
+                                        <span>Get Free USDC from Faucet</span>
+                                        <span>→</span>
+                                    </a>
+                                    <button
+                                        onClick={onContinue}
+                                        className="w-full py-1.5 text-[10px] font-bold text-violet-600 dark:text-violet-400 hover:text-violet-900 transition-colors"
+                                    >
+                                        Continue to App →
+                                    </button>
+                                </div>
+                            ) : isConnected ? (
+                                /* Step 1: wallet connected — one tap to switch */
+                                <button
+                                    onClick={handleSwitchToTestnet}
+                                    disabled={isSwitching}
+                                    className={`w-full py-2 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-2 ${
+                                        isSwitching
+                                            ? 'bg-violet-200 dark:bg-violet-900/40 text-violet-400 cursor-wait'
+                                            : 'bg-violet-600 hover:bg-violet-700 text-white active:scale-95'
+                                    }`}
+                                >
+                                    {isSwitching ? (
+                                        <>
+                                            <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                            <span>Switching…</span>
+                                        </>
+                                    ) : (
+                                        <>⚡ Switch to Arc Testnet</>
+                                    )}
+                                </button>
+                            ) : (
+                                /* No wallet — prompt to connect first */
+                                <div className="text-[10px] text-violet-500 dark:text-violet-400 text-center">
+                                    Connect your wallet above, then tap here to switch to testnet
+                                </div>
+                            )}
                         </div>
-                        <a
-                            href="https://faucet.circle.com"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[10px] font-black text-violet-600 dark:text-violet-400 hover:text-violet-900 dark:hover:text-violet-200 whitespace-nowrap transition-colors"
-                        >
-                            Get funds →
-                        </a>
+                        {/* Footer: faucet links always visible */}
+                        {!switchDone && (
+                            <div className="px-4 pb-3 flex gap-3 text-[9px] text-violet-400 dark:text-violet-500 font-medium">
+                                <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="hover:text-violet-700 dark:hover:text-violet-300 transition-colors">Arc faucet →</a>
+                                <a href="https://faucet.celo.org" target="_blank" rel="noopener noreferrer" className="hover:text-violet-700 dark:hover:text-violet-300 transition-colors">Celo faucet →</a>
+                            </div>
+                        )}
                     </motion.div>
                 )}
 

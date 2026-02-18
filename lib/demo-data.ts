@@ -84,12 +84,16 @@ export const DEMO_PORTFOLIO = {
         { region: "Global" as Region, value: 100, usdValue: 100, color: "#EAB308" },
     ],
 
+    // Match PortfolioAnalysis goalScores shape: { hedge, diversify, rwa }
     goalScores: {
-        inflation_protection: 75,
-        geographic_diversification: 80,
-        yield_optimization: 65,
-        rwa_access: 50,
+        hedge: 75,
+        diversify: 80,
+        rwa: 50,
     },
+
+    missingRegions: ['Asia', 'LatAm'],
+    overExposedRegions: ['USA'],
+    underExposedRegions: ['Africa'],
 
     diversificationTips: [
         "Consider adding exposure to Asian markets (PHP, SGD)",
