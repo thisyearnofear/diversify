@@ -42,6 +42,7 @@ export default function WalletButton({
 
   const { showToast } = useToast();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showChainSelector, setShowChainSelector] = useState(false);
   const prevAddressRef = React.useRef<string | null>(null);
 
   useEffect(() => {
@@ -101,12 +102,51 @@ export default function WalletButton({
   const handleToggleNetwork = async () => {
     try {
       const targetChain = getToggleNetwork();
+      const targetName = isTestnet ? 'Mainnet' : 'Testnet';
+      
+      showToast(`Requesting ${targetName}...`, "info");
       await switchNetwork(targetChain);
-      showToast(`Switched to ${isTestnet ? 'Mainnet' : 'Testnet'}`, "success");
+      
+      // Wait a moment and check if actually switched
+      setTimeout(() => {
+        if (chainId === targetChain) {
+          showToast(`Switched to ${targetName}`, "success");
+        } else {
+          showToast(`Please confirm the network switch in your wallet`, "info");
+        }
+      }, 1000);
+      
       setShowDropdown(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error switching network:", error);
-      showToast("Failed to switch network", "error");
+      if (error?.message?.includes('rejected') || error?.code === 4001) {
+        showToast("Network switch cancelled", "info");
+      } else {
+        showToast("Failed to switch network. Try manually in your wallet.", "error");
+      }
+    }
+  };
+
+  const handleSwitchToChain = async (targetChainId: number) => {
+    try {
+      const network = Object.values(NETWORKS).find(n => n.chainId === targetChainId);
+      showToast(`Switching to ${network?.name}...`, "info");
+      await switchNetwork(targetChainId);
+      setShowChainSelector(false);
+      setShowDropdown(false);
+      
+      setTimeout(() => {
+        if (chainId === targetChainId) {
+          showToast(`Connected to ${network?.name}`, "success");
+        }
+      }, 1000);
+    } catch (error: any) {
+      console.error("Error switching chain:", error);
+      if (error?.message?.includes('rejected') || error?.code === 4001) {
+        showToast("Network switch cancelled", "info");
+      } else {
+        showToast("Failed to switch network", "error");
+      }
     }
   };
 
@@ -163,25 +203,110 @@ export default function WalletButton({
         {showDropdown && (
           <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
             <div className="py-1">
-              {/* Network Status */}
+              {/* Network Status with Chain Selector */}
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex items-center justify-between mb-2">
-                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
-                    {isTestnet ? 'TESTNET' : 'MAINNET'}
-                  </span>
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
-                    {networkName}
-                  </span>
-                </div>
-                <button
-                  onClick={handleToggleNetwork}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                  </svg>
-                  Switch to {isTestnet ? 'Mainnet' : 'Testnet'}
-                </button>
+                {!showChainSelector ? (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <button
+                        onClick={() => setShowChainSelector(true)}
+                        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded hover:opacity-80 transition-opacity ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
+                      >
+                        {isTestnet ? 'TESTNET' : 'MAINNET'}
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setShowChainSelector(true)}
+                        className="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                      >
+                        {networkName}
+                      </button>
+                    </div>
+                    <button
+                      onClick={handleToggleNetwork}
+                      className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                      </svg>
+                      Switch to {isTestnet ? 'Mainnet' : 'Testnet'}
+                    </button>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Select Network</span>
+                      <button 
+                        onClick={() => setShowChainSelector(false)}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    {/* Mainnet Chains */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Mainnet</span>
+                      <button
+                        onClick={() => handleSwitchToChain(NETWORKS.CELO_MAINNET.chainId)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                          chainId === NETWORKS.CELO_MAINNET.chainId 
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <span>🌱</span>
+                        <span className="flex-1 text-left">Celo</span>
+                        {chainId === NETWORKS.CELO_MAINNET.chainId && <span>✓</span>}
+                      </button>
+                      <button
+                        onClick={() => handleSwitchToChain(NETWORKS.ARBITRUM_ONE.chainId)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                          chainId === NETWORKS.ARBITRUM_ONE.chainId 
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <span>🔷</span>
+                        <span className="flex-1 text-left">Arbitrum</span>
+                        {chainId === NETWORKS.ARBITRUM_ONE.chainId && <span>✓</span>}
+                      </button>
+                    </div>
+                    
+                    {/* Testnet Chains */}
+                    <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">Testnet</span>
+                      <button
+                        onClick={() => handleSwitchToChain(NETWORKS.ARC_TESTNET.chainId)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                          chainId === NETWORKS.ARC_TESTNET.chainId 
+                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' 
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <span>⚡</span>
+                        <span className="flex-1 text-left">Arc</span>
+                        {chainId === NETWORKS.ARC_TESTNET.chainId && <span>✓</span>}
+                      </button>
+                      <button
+                        onClick={() => handleSwitchToChain(NETWORKS.RH_TESTNET.chainId)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                          chainId === NETWORKS.RH_TESTNET.chainId 
+                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' 
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <span>📈</span>
+                        <span className="flex-1 text-left">Robinhood</span>
+                        {chainId === NETWORKS.RH_TESTNET.chainId && <span>✓</span>}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Fiat On/Off Ramp - Mt Pelerin */}
