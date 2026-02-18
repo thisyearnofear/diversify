@@ -130,8 +130,8 @@ if (process.env.NODE_ENV === 'development') {
 
 // Model mappings
 const VENICE_MODELS = {
-  flagship: "zai-org-glm-4.7", // 128k context, best reasoning
-  fast: "qwen3-4b", // 40k context, cost-efficient
+  flagship: "google-gemma-3-27b-it", // 198k context, best balance of price/speed/quality
+  fast: "google-gemma-3-27b-it", // Same as flagship - tested best option ($0.12/$0.20)
   vision: "mistral-31-24b", // 131k context, vision + tools
   uncensored: "venice-uncensored", // 32k context, research
 };
