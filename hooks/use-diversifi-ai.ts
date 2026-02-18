@@ -140,6 +140,11 @@ export interface AIMessage {
   content: string;
   timestamp: Date;
   type?: "text" | "recommendation" | "insight";
+  action?: {
+    type: "navigate";
+    tab: string;
+    delay?: number;
+  };
 }
 
 export interface AICapabilities {
@@ -570,14 +575,26 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         normalizedContent.includes("what's in my wallet") ||
         normalizedContent.includes("whats in my wallet")
       ) {
-        fastPathResponse = address
-          ? "I can see your wallet is connected! 📊 Check the **Overview** tab to see your full portfolio breakdown, including your balances across Celo and Arbitrum, inflation protection score, and diversification metrics. You can also ask me for specific advice on how to optimize your holdings!"
-          : "To see your portfolio, you'll need to connect your wallet first. Click the **Connect Wallet** button and choose your preferred option (email, existing wallet, or 'Buy Crypto'). Once connected, your holdings will appear in the **Overview** tab!";
+        if (address) {
+          fastPathResponse = "Taking you to your portfolio... 📊";
+        } else {
+          fastPathResponse = "To see your portfolio, you'll need to connect your wallet first. Click the **Connect Wallet** button and choose your preferred option (email, existing wallet, or 'Buy Crypto'). Once connected, your holdings will appear in the **Overview** tab!";
+        }
       }
 
       if (fastPathResponse) {
         setIsAnalyzing(true);
         setThinkingStep("Retrieving info...");
+
+        // Check if this is a portfolio navigation request
+        const isPortfolioNav = address && (
+          normalizedContent.includes("portfolio") ||
+          normalizedContent.includes("what do i have") ||
+          normalizedContent.includes("my balance") ||
+          normalizedContent.includes("my holdings") ||
+          normalizedContent.includes("what's in my wallet") ||
+          normalizedContent.includes("whats in my wallet")
+        );
 
         // Simulate a tiny delay for natural interaction feeling
         setTimeout(async () => {
@@ -586,6 +603,9 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
             content: fastPathResponse!,
             timestamp: new Date(),
             type: "text",
+            ...(isPortfolioNav && {
+              action: { type: "navigate", tab: "overview", delay: 1500 }
+            }),
           };
           addMessage(assistantMessage);
           setIsAnalyzing(false);

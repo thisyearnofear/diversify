@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAIConversation } from "../../context/AIConversationContext";
+import { useAppState } from "../../context/AppStateContext";
 import { useDiversifiAI } from "../../hooks/use-diversifi-ai";
 import VoiceButton from "../ui/VoiceButton";
 
@@ -24,6 +25,7 @@ export default function AIChat() {
     addUserMessage,
   } = useAIConversation();
   const { isAnalyzing, thinkingStep, sendChatMessage } = useDiversifiAI();
+  const { setActiveTab } = useAppState();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
@@ -57,6 +59,19 @@ export default function AIChat() {
       setDrawerOpen(true);
     }
   }, [currentUserMsgCount, setDrawerOpen]);
+
+  // Handle navigation actions from AI responses
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage?.role === "assistant" && lastMessage.action?.type === "navigate") {
+      const { tab, delay = 1500 } = lastMessage.action;
+      const timer = setTimeout(() => {
+        setActiveTab(tab);
+        setDrawerOpen(false);
+      }, delay);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, setActiveTab, setDrawerOpen]);
 
   if (!isDrawerOpen) return null;
 
