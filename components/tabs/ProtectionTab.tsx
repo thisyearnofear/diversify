@@ -18,8 +18,7 @@ import {
   useProtectionProfile,
   USER_GOALS,
 } from "@/hooks/use-protection-profile";
-import { useAIConversation } from "@/context/AIConversationContext";
-import { useDiversifiAI } from "@/hooks/use-diversifi-ai";
+import { useAIOracle } from "@/hooks/use-ai-oracle";
 
 import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
@@ -54,8 +53,7 @@ export default function ProtectionTab({
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
   const { navigateToSwap, demoMode, experienceMode, financialStrategy } = useAppState();
-  const { setDrawerOpen, addUserMessage } = useAIConversation();
-  const { sendChatMessage } = useDiversifiAI();
+  const { ask: askOracle } = useAIOracle();
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";
 
@@ -430,16 +428,13 @@ export default function ProtectionTab({
             action={{
               label: "Analyze My Portfolio",
               onClick: () => {
-                // Default goal to "diversification" when user hasn't set one yet
                 const effectiveGoal =
                   currentGoalLabel && currentGoalLabel !== "Not set"
                     ? currentGoalLabel
                     : "diversification";
-                const msg = `Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`;
-                // addUserMessage shows it in the chat; sendChatMessage triggers the AI
-                addUserMessage(msg);
-                sendChatMessage(msg);
-                // Drawer opens automatically via AIChat's effect when message count increases
+                askOracle(
+                  `Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`,
+                );
               },
             }}
           />
@@ -626,12 +621,9 @@ export default function ProtectionTab({
         {/* Streaming & Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <GStreamingWidget />
-          <GoodDollarInfoCard 
-            compact 
-            onLearnMore={() => {
-              addUserMessage("Tell me more about GoodDollar and how the UBI protocol works.");
-              setDrawerOpen(true);
-            }} 
+          <GoodDollarInfoCard
+            compact
+            onLearnMore={() => askOracle("Tell me more about GoodDollar and how the UBI protocol works.")}
           />
         </div>
       </div>

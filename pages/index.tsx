@@ -28,14 +28,16 @@ import GuidedTour from "../components/tour/GuidedTour";
 import TourTrigger from "../components/tour/TourTrigger";
 import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 
-import { IntentDiscoveryService } from "../services/ai/intent-discovery.service";
+import { useVoiceIntent } from "../hooks/use-voice-intent";
+import { useAIOracle } from "../hooks/use-ai-oracle";
 import { useStreakRewards } from "../hooks/use-streak-rewards";
 
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, setSwapPrefill, experienceMode, setExperienceMode, enableDemoMode } = useAppState();
+  const { activeTab, setActiveTab, experienceMode, setExperienceMode } = useAppState();
   const { showToast } = useToast();
-  const { unreadCount, markAsRead, setDrawerOpen, addUserMessage } = useAIConversation();
+  const { unreadCount } = useAIConversation();
+  const { openOracle } = useAIOracle();
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -53,6 +55,9 @@ export default function DiversiFiPage() {
     openTutorial: openWalletTutorial,
     closeTutorial,
   } = useWalletTutorial();
+
+  // Declared after useWalletTutorial so openWalletTutorial is in scope
+  const { handleTranscription } = useVoiceIntent({ onOpenWalletTutorial: openWalletTutorial });
 
   const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal, openModal: openStrategyModal } = useStrategyModal();
   const { isWhitelisted } = useStreakRewards();
@@ -266,35 +271,28 @@ export default function DiversiFiPage() {
               )}
             </div>
 
-            {/* Voice assistant */}
+            {/* Voice assistant — routing now handled by useVoiceIntent */}
             <VoiceButton
               size="sm"
               variant="default"
               externalSuggestionsOpen={activeHint === 'voice'}
               onSuggestionsChange={(open) => setActiveHint(open ? 'voice' : null)}
-              onTranscription={(text) => {
-                const intent = IntentDiscoveryService.discover(text);
-                switch (intent.type) {
-                  case "ONBOARDING":
-                    if (intent.topic === 'demo') { showToast("Enabling demo mode...", "info"); enableDemoMode(); }
-                    else if (intent.topic === 'wallet-help' && !address) { showToast("Opening wallet tutorial...", "info"); openWalletTutorial(); }
-                    else { addUserMessage(text); setDrawerOpen(true); }
-                    break;
-                  case "NAVIGATE":
-                    showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
-                    setActiveTab(intent.tab);
-                    break;
-                  case "SWAP_SHORTCUT":
-                    showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
-                    setSwapPrefill({ fromToken: intent.fromToken, toToken: intent.toToken, amount: intent.amount, reason: `Voice: "${text}"` });
-                    setActiveTab("swap");
-                    break;
-                  default:
-                    addUserMessage(text);
-                    setDrawerOpen(true);
-                }
-              }}
+              onTranscription={handleTranscription}
             />
+
+            {/* Oracle — persistent AI entry point with unread badge */}
+            <button
+              onClick={openOracle}
+              className="relative w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-sm"
+              aria-label="Open AI Oracle"
+            >
+              <span className="text-sm">🤖</span>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
 
             <ThemeToggle />
             {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
@@ -304,13 +302,8 @@ export default function DiversiFiPage() {
         <div className="sticky top-0 z-40 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
           <TabNavigation
             activeTab={activeTab}
-            setActiveTab={(tab) => {
-              // Mark conversation as read when switching to protect tab
-              if (tab === 'protect' && unreadCount > 0) {
-                markAsRead();
-              }
-              setActiveTab(tab);
-            }}
+            setActiveTab={setActiveTab}
+            badges={{ protect: unreadCount }}
           />
         </div>
 
