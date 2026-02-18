@@ -7,6 +7,25 @@ import { SmartBuyCryptoButton, SmartSellCryptoButton } from '../onramp';
 import { WALLET_FEATURES } from '../../config/features';
 import { NETWORKS, isTestnetChain } from '../../config';
 
+// FarCaster Mini App supported chains (as of 2025)
+// Source: https://github.com/farcasterxyz/miniapps/discussions/240
+const FARCASTER_SUPPORTED_CHAINS = [
+  NETWORKS.CELO_MAINNET.chainId,  // ✅ Supported
+  NETWORKS.ARBITRUM_ONE.chainId,  // ✅ Supported
+  NETWORKS.ALFAJORES.chainId,     // ✅ Supported (Celo testnet)
+  // Other chains not in this app: Base, Optimism, Ethereum, Polygon, Unichain, Zora
+  // Note: Arc Testnet & Robinhood Testnet are NOT supported in FarCaster
+];
+
+// Chain metadata for UI
+const CHAIN_METADATA: Record<number, { icon: string; color: string; farcasterSupported: boolean }> = {
+  [NETWORKS.CELO_MAINNET.chainId]: { icon: '🌱', color: 'green', farcasterSupported: true },
+  [NETWORKS.ARBITRUM_ONE.chainId]: { icon: '🔷', color: 'blue', farcasterSupported: true },
+  [NETWORKS.ARC_TESTNET.chainId]: { icon: '⚡', color: 'purple', farcasterSupported: false },
+  [NETWORKS.RH_TESTNET.chainId]: { icon: '📈', color: 'orange', farcasterSupported: false },
+  [NETWORKS.ALFAJORES.chainId]: { icon: '🧪', color: 'yellow', farcasterSupported: true },
+};
+
 type ButtonVariant = 'primary' | 'secondary' | 'inline' | 'minimal';
 
 interface WalletButtonProps {
@@ -26,6 +45,7 @@ export default function WalletButton({
     isConnecting,
     error: walletError,
     isMiniPay,
+    isFarcaster,
     chainId,
     connect,
     disconnect,
@@ -235,77 +255,12 @@ export default function WalletButton({
                     </button>
                   </>
                 ) : (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Select Network</span>
-                      <button 
-                        onClick={() => setShowChainSelector(false)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                    </div>
-                    
-                    {/* Mainnet Chains */}
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Mainnet</span>
-                      <button
-                        onClick={() => handleSwitchToChain(NETWORKS.CELO_MAINNET.chainId)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                          chainId === NETWORKS.CELO_MAINNET.chainId 
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <span>🌱</span>
-                        <span className="flex-1 text-left">Celo</span>
-                        {chainId === NETWORKS.CELO_MAINNET.chainId && <span>✓</span>}
-                      </button>
-                      <button
-                        onClick={() => handleSwitchToChain(NETWORKS.ARBITRUM_ONE.chainId)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                          chainId === NETWORKS.ARBITRUM_ONE.chainId 
-                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <span>🔷</span>
-                        <span className="flex-1 text-left">Arbitrum</span>
-                        {chainId === NETWORKS.ARBITRUM_ONE.chainId && <span>✓</span>}
-                      </button>
-                    </div>
-                    
-                    {/* Testnet Chains */}
-                    <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">Testnet</span>
-                      <button
-                        onClick={() => handleSwitchToChain(NETWORKS.ARC_TESTNET.chainId)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                          chainId === NETWORKS.ARC_TESTNET.chainId 
-                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' 
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <span>⚡</span>
-                        <span className="flex-1 text-left">Arc</span>
-                        {chainId === NETWORKS.ARC_TESTNET.chainId && <span>✓</span>}
-                      </button>
-                      <button
-                        onClick={() => handleSwitchToChain(NETWORKS.RH_TESTNET.chainId)}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                          chainId === NETWORKS.RH_TESTNET.chainId 
-                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' 
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                        }`}
-                      >
-                        <span>📈</span>
-                        <span className="flex-1 text-left">Robinhood</span>
-                        {chainId === NETWORKS.RH_TESTNET.chainId && <span>✓</span>}
-                      </button>
-                    </div>
-                  </div>
+                  <ChainSelector 
+                    chainId={chainId}
+                    isFarcaster={isFarcaster}
+                    onSelectChain={handleSwitchToChain}
+                    onClose={() => setShowChainSelector(false)}
+                  />
                 )}
               </div>
 
@@ -439,6 +394,180 @@ export default function WalletButton({
       {walletError && (
         <p className="text-red-500 text-[10px] mt-1 font-medium">{walletError}</p>
       )}
+    </div>
+  );
+}
+
+// ============================================================================
+// CHAIN SELECTOR SUB-COMPONENT
+// ============================================================================
+
+interface ChainSelectorProps {
+  chainId: number | null;
+  isFarcaster: boolean;
+  onSelectChain: (chainId: number) => void;
+  onClose: () => void;
+}
+
+function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSelectorProps) {
+  const [showChainlistHelp, setShowChainlistHelp] = useState<number | null>(null);
+  
+  const mainnetChains = [
+    { id: NETWORKS.CELO_MAINNET.chainId, name: 'Celo', icon: '🌱', desc: 'Low fees, mobile-first' },
+    { id: NETWORKS.ARBITRUM_ONE.chainId, name: 'Arbitrum', icon: '🔷', desc: 'Deep liquidity, RWAs' },
+  ];
+  
+  const testnetChains = [
+    { id: NETWORKS.ARC_TESTNET.chainId, name: 'Arc', icon: '⚡', desc: 'High performance L2' },
+    { id: NETWORKS.RH_TESTNET.chainId, name: 'Robinhood', icon: '📈', desc: 'Stock tokenization' },
+    { id: NETWORKS.ALFAJORES.chainId, name: 'Alfajores', icon: '🧪', desc: 'Celo testnet' },
+  ];
+
+  const handleChainClick = (chainId: number) => {
+    onSelectChain(chainId);
+  };
+
+  const openChainlist = (chainId: number) => {
+    const chainNames: Record<number, string> = {
+      [NETWORKS.ARC_TESTNET.chainId]: 'arc-testnet',
+      [NETWORKS.RH_TESTNET.chainId]: 'robinhood-testnet',
+      [NETWORKS.ALFAJORES.chainId]: 'celo-alfajores',
+    };
+    const chainName = chainNames[chainId];
+    if (chainName) {
+      window.open(`https://chainlist.org/?search=${chainName}`, '_blank');
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">Select Network</span>
+        <button 
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      
+      {/* FarCaster Warning */}
+      {isFarcaster && (
+        <div className="px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
+          <p className="text-[10px] text-blue-700 dark:text-blue-300">
+            <span className="font-bold">ℹ️ FarCaster Mode:</span> Only Celo, Arbitrum & Alfajores supported
+          </p>
+        </div>
+      )}
+      
+      {/* Mainnet Chains */}
+      <div className="space-y-1">
+        <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Mainnet</span>
+        {mainnetChains.map((chain) => (
+          <button
+            key={chain.id}
+            onClick={() => handleChainClick(chain.id)}
+            className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+              chainId === chain.id 
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' 
+                : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+            }`}
+          >
+            <span>{chain.icon}</span>
+            <div className="flex-1 text-left">
+              <div className="font-medium">{chain.name}</div>
+              <div className="text-[10px] opacity-70">{chain.desc}</div>
+            </div>
+            {chainId === chain.id && <span>✓</span>}
+          </button>
+        ))}
+      </div>
+      
+      {/* Testnet Chains */}
+      <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
+        <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">Testnet</span>
+        {testnetChains.map((chain) => {
+          const isSupported = CHAIN_METADATA[chain.id]?.farcasterSupported;
+          const isDisabled = isFarcaster && !isSupported;
+          
+          return (
+            <div key={chain.id} className="relative">
+              <button
+                onClick={() => isDisabled ? null : handleChainClick(chain.id)}
+                disabled={isDisabled}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+                  chainId === chain.id 
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' 
+                    : isDisabled
+                      ? 'opacity-50 cursor-not-allowed text-gray-400'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                <span>{chain.icon}</span>
+                <div className="flex-1 text-left">
+                  <div className="font-medium flex items-center gap-1">
+                    {chain.name}
+                    {isDisabled && (
+                      <span className="text-[9px] bg-gray-200 dark:bg-gray-700 px-1 rounded">FarCaster</span>
+                    )}
+                  </div>
+                  <div className="text-[10px] opacity-70">{chain.desc}</div>
+                </div>
+                {chainId === chain.id && <span>✓</span>}
+                {/* Help icon for adding network */}
+                {!isDisabled && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowChainlistHelp(showChainlistHelp === chain.id ? null : chain.id);
+                    }}
+                    className="ml-auto p-1 text-gray-400 hover:text-blue-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Network not in wallet?"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </button>
+                )}
+              </button>
+              
+              {/* Chainlist Help Tooltip */}
+              {showChainlistHelp === chain.id && (
+                <div className="absolute z-10 right-0 top-full mt-1 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
+                  <p className="mb-1">Network not in wallet?</p>
+                  <button
+                    onClick={() => openChainlist(chain.id)}
+                    className="text-blue-300 hover:text-blue-200 underline"
+                  >
+                    Add via Chainlist →
+                  </button>
+                  <button 
+                    onClick={() => setShowChainlistHelp(null)}
+                    className="absolute top-1 right-1 text-gray-400 hover:text-white"
+                  >
+                    ×
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      
+      {/* Chainlist Footer */}
+      <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+        <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center">
+          Missing a network?{' '}
+          <button 
+            onClick={() => window.open('https://chainlist.org', '_blank')}
+            className="text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Find it on Chainlist
+          </button>
+        </p>
+      </div>
     </div>
   );
 }
