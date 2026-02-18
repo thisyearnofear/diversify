@@ -22,7 +22,6 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTutorial";
 import ThemeToggle from "../components/ui/ThemeToggle";
 import VoiceButton from "../components/ui/VoiceButton";
-import HeaderMenu from "../components/ui/HeaderMenu";
 import { useToast } from "../components/ui/Toast";
 import { useAIConversation } from "../context/AIConversationContext";
 import GuidedTour from "../components/tour/GuidedTour";
@@ -203,143 +202,83 @@ export default function DiversiFiPage() {
             </div>
           </div>
 
-          {/* Right: Adaptive Controls */}
+          {/* Right: Consistent controls across ALL modes */}
           <div className="flex items-center gap-2">
-            {/* BEGINNER MODE: Menu + Wallet only */}
-            {experienceMode === "beginner" && (
-              <>
-                <HeaderMenu
-                  experienceMode={experienceMode}
-                  onModeChange={() => {
-                    if (experienceMode === "beginner") setExperienceMode("intermediate");
-                    else if (experienceMode === "intermediate") setExperienceMode("advanced");
-                    else setExperienceMode("beginner");
-                  }}
-                  onVoiceTranscription={(text) => {
-                    console.log("[Voice] Intent Discovery for:", text);
-                    const intent = IntentDiscoveryService.discover(text);
-
-                    switch (intent.type) {
-                      case "NAVIGATE":
-                        showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
-                        setActiveTab(intent.tab);
-                        break;
-
-                      case "SWAP_SHORTCUT":
-                        showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
-                        setSwapPrefill({
-                          fromToken: intent.fromToken,
-                          toToken: intent.toToken,
-                          amount: intent.amount,
-                          reason: `Voice shortcut: "${text}"`
-                        });
-                        setActiveTab("swap");
-                        break;
-
-                      case "QUERY":
-                      default:
-                        addUserMessage(text);
-                        setDrawerOpen(true);
-                        break;
-                    }
-                  }}
-                  showVoice={!!address}
-                  onOpenStrategyModal={openStrategyModal}
-                />
-                {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
-              </>
-            )}
-
-            {/* INTERMEDIATE/ADVANCED MODE: Show more controls */}
-            {experienceMode !== "beginner" && (
-              <>
-                {/* Mode toggle with tooltip — works on hover (desktop) and tap (mobile) */}
-                <div className="group relative">
-                  <button
-                    onClick={() => {
-                      if (experienceMode === "intermediate") setExperienceMode("advanced");
-                      else setExperienceMode("beginner");
-                    }}
-                    className="w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
-                    aria-label={
-                      experienceMode === "intermediate"
-                        ? "Switch to Advanced mode — power analytics & voice shortcuts"
-                        : "Switch to Simple mode — hide advanced panels"
-                    }
-                  >
-                    {experienceMode === "intermediate" ? "🚀" : "⚡"}
-                  </button>
-                  {/* Tooltip — visible on hover/focus on desktop; tap toggles on mobile via group-focus-within */}
-                  <div className="pointer-events-none invisible group-hover:visible group-focus-within:visible absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50 transition-opacity opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                      Currently: {experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
-                    </div>
-                    <div className="text-xs font-bold text-white mb-0.5">
-                      Tap → {experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
-                    </div>
-                    <div className="text-[10px] text-gray-300 leading-relaxed">
-                      {experienceMode === "intermediate"
-                        ? "Unlocks: power analytics, voice shortcuts, batch ops"
-                        : "Hides advanced panels — back to focused view"}
-                    </div>
-                    {/* Arrow */}
-                    <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
-                  </div>
+            {/* Mode toggle — same button in all modes, emoji reflects current state */}
+            <div className="group relative">
+              <button
+                onClick={() => {
+                  const next =
+                    experienceMode === "beginner" ? "intermediate" :
+                    experienceMode === "intermediate" ? "advanced" : "beginner";
+                  setExperienceMode(next);
+                  showToast(
+                    next === "beginner" ? "Simple mode 🌱 — focused view" :
+                    next === "intermediate" ? "Standard mode 🚀 — full features unlocked" :
+                    "Advanced mode ⚡ — power tools unlocked",
+                    "info"
+                  );
+                }}
+                className="w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
+                aria-label={
+                  experienceMode === "beginner"
+                    ? "Switch to Standard mode — unlock more features"
+                    : experienceMode === "intermediate"
+                    ? "Switch to Advanced mode — power analytics & voice shortcuts"
+                    : "Switch to Simple mode — hide advanced panels"
+                }
+              >
+                {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
+              </button>
+              {/* Tooltip — consistent across all modes */}
+              <div className="pointer-events-none invisible group-hover:visible group-focus-within:visible absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+                <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                  {experienceMode === "beginner" ? "Simple 🌱" : experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
                 </div>
+                <div className="text-xs font-bold text-white mb-0.5">
+                  Tap → {experienceMode === "beginner" ? "Standard 🚀" : experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
+                </div>
+                <div className="text-[10px] text-gray-300 leading-relaxed">
+                  {experienceMode === "beginner"
+                    ? "Unlocks: token search, inflation comparison, AI chat"
+                    : experienceMode === "intermediate"
+                    ? "Unlocks: power analytics, voice shortcuts, batch ops"
+                    : "Hides advanced panels — back to focused view"}
+                </div>
+                <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
+              </div>
+            </div>
 
-                {/* Voice assistant - always available for questions and commands */}
-                <VoiceButton
-                  size="sm"
-                  variant="default"
-                  onTranscription={(text) => {
-                    console.log("[Voice] Intent Discovery for:", text);
-                    const intent = IntentDiscoveryService.discover(text);
+            {/* Voice assistant */}
+            <VoiceButton
+              size="sm"
+              variant="default"
+              onTranscription={(text) => {
+                const intent = IntentDiscoveryService.discover(text);
+                switch (intent.type) {
+                  case "ONBOARDING":
+                    if (intent.topic === 'demo') { showToast("Enabling demo mode...", "info"); enableDemoMode(); }
+                    else if (intent.topic === 'wallet-help' && !address) { showToast("Opening wallet tutorial...", "info"); openWalletTutorial(); }
+                    else { addUserMessage(text); setDrawerOpen(true); }
+                    break;
+                  case "NAVIGATE":
+                    showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
+                    setActiveTab(intent.tab);
+                    break;
+                  case "SWAP_SHORTCUT":
+                    showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
+                    setSwapPrefill({ fromToken: intent.fromToken, toToken: intent.toToken, amount: intent.amount, reason: `Voice: "${text}"` });
+                    setActiveTab("swap");
+                    break;
+                  default:
+                    addUserMessage(text);
+                    setDrawerOpen(true);
+                }
+              }}
+            />
 
-                    switch (intent.type) {
-                      case "ONBOARDING":
-                        // Handle onboarding questions with contextual responses
-                        if (intent.topic === 'demo') {
-                          showToast("Enabling demo mode...", "info");
-                          enableDemoMode();
-                        } else if (intent.topic === 'wallet-help' && !address) {
-                          showToast("Opening wallet tutorial...", "info");
-                          openWalletTutorial();
-                        } else {
-                          // Send to AI for detailed explanation
-                          addUserMessage(text);
-                          setDrawerOpen(true);
-                        }
-                        break;
-
-                      case "NAVIGATE":
-                        showToast(`Switching to ${intent.tab.toUpperCase()}`, "info");
-                        setActiveTab(intent.tab);
-                        break;
-
-                      case "SWAP_SHORTCUT":
-                        showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, "success");
-                        setSwapPrefill({
-                          fromToken: intent.fromToken,
-                          toToken: intent.toToken,
-                          amount: intent.amount,
-                          reason: `Voice shortcut: "${text}"`
-                        });
-                        setActiveTab("swap");
-                        break;
-
-                      case "QUERY":
-                      default:
-                        addUserMessage(text);
-                        setDrawerOpen(true);
-                        break;
-                    }
-                  }}
-                />
-
-                <ThemeToggle />
-                {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
-              </>
-            )}
+            <ThemeToggle />
+            {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
           </div>
         </div>
 
