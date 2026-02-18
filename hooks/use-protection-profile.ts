@@ -286,7 +286,7 @@ export function useProtectionProfile() {
    * Get the label for current goal
    */
   const currentGoalLabel = useMemo(() => {
-    return USER_GOALS.find(g => g.value === config.userGoal)?.label || 'Not set';
+    return USER_GOALS.find(g => g.value === config.userGoal)?.label || 'diversification';
   }, [config.userGoal]);
 
   /**
@@ -311,8 +311,8 @@ export function useProtectionProfile() {
     // Display values
     currentGoalLabel,
     currentGoalIcon,
-    currentRiskLabel: config.riskTolerance || 'Not set',
-    currentTimeHorizonLabel: config.timeHorizon || 'Not set',
+    currentRiskLabel: config.riskTolerance || 'Balanced',
+    currentTimeHorizonLabel: config.timeHorizon || '3 months',
     
     // Actions
     startEditing,

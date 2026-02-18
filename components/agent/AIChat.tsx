@@ -160,45 +160,80 @@ export default function AIChat() {
 
           {isAnalyzing && (
             <div className="flex justify-start">
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl rounded-bl-md px-4 py-3 flex flex-col gap-2 border border-gray-100 dark:border-white/5 max-w-[85%]">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl rounded-bl-md px-5 py-4 flex flex-col gap-3 border border-blue-100 dark:border-blue-800/30 max-w-[90%] shadow-lg shadow-blue-500/10">
+                {/* Animated Oracle Icon */}
                 <div className="flex items-center gap-3">
-                  <div className="flex gap-1">
+                  <div className="relative">
                     <motion.div
-                      animate={{ scale: [1, 1.5, 1] }}
-                      transition={{ repeat: Infinity, duration: 0.6 }}
-                      className="w-1.5 h-1.5 bg-blue-500 rounded-full"
-                    />
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                      className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg shadow-lg"
+                    >
+                      🤖
+                    </motion.div>
+                    {/* Orbiting dots */}
                     <motion.div
-                      animate={{ scale: [1, 1.5, 1] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 0.6,
-                        delay: 0.2,
-                      }}
-                      className="w-1.5 h-1.5 bg-blue-500 rounded-full"
-                    />
+                      animate={{ rotate: -360 }}
+                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0"
+                    >
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full shadow-sm" />
+                    </motion.div>
                     <motion.div
-                      animate={{ scale: [1, 1.5, 1] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 0.6,
-                        delay: 0.4,
-                      }}
-                      className="w-1.5 h-1.5 bg-blue-500 rounded-full"
-                    />
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0"
+                    >
+                      <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-emerald-400 rounded-full shadow-sm" />
+                    </motion.div>
                   </div>
-                  <span className="text-xs font-bold text-blue-600 animate-pulse uppercase tracking-widest">
-                    {thinkingStep || "Oracle is analyzing..."}
-                  </span>
+                  <div className="flex-1">
+                    <span className="text-sm font-bold text-blue-700 dark:text-blue-300 uppercase tracking-wider">
+                      {thinkingStep || "Oracle is analyzing..."}
+                    </span>
+                    {/* Progress bar */}
+                    <div className="mt-2 h-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full overflow-hidden">
+                      <motion.div
+                        animate={{ 
+                          width: ["0%", "40%", "70%", "90%"],
+                        }}
+                        transition={{ 
+                          duration: 8, 
+                          repeat: Infinity,
+                          ease: "easeInOut"
+                        }}
+                        className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[10px] text-gray-400 font-medium leading-tight">
-                  Searching cross-chain data and checking real-time inflation
-                  protection strategies. This may take a moment.
-                </p>
-                <p className="text-[10px] text-blue-500/80 font-bold uppercase tracking-tight">
-                  Feel free to explore the app. Your response will be here when
-                  you return.
-                </p>
+                
+                {/* Animated data points */}
+                <div className="flex flex-wrap gap-2">
+                  {["Cross-chain data", "Inflation rates", "RWA yields", "Risk models"].map((item, i) => (
+                    <motion.span
+                      key={item}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.15, repeat: Infinity, repeatDelay: 2 }}
+                      className="text-[10px] px-2 py-1 bg-white/60 dark:bg-white/10 rounded-full text-blue-600 dark:text-blue-300 font-medium border border-blue-100 dark:border-blue-800/30"
+                    >
+                      <motion.span
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                      >
+                        ✓
+                      </motion.span>{" "}
+                      {item}
+                    </motion.span>
+                  ))}
+                </div>
+
+                <div className="pt-2 border-t border-blue-100 dark:border-blue-800/30">
+                  <p className="text-[11px] text-blue-600/80 dark:text-blue-300/80 font-medium leading-relaxed">
+                    🔍 Analyzing your portfolio across multiple chains and comparing against real-time inflation data...
+                  </p>
+                </div>
               </div>
             </div>
           )}

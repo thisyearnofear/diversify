@@ -520,7 +520,7 @@ export default function VoiceButton({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-10"
+                        className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 whitespace-nowrap z-50"
                     >
                         <div className={`text-white text-xs px-2 py-1 rounded-full font-bold ${recordingState === 'recording' ? 'bg-red-500' : 'bg-amber-500'
                             }`}>

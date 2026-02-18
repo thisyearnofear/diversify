@@ -18,10 +18,10 @@ export function useAIOracle() {
   const ask = useCallback(
     (message: string) => {
       addUserMessage(message);      // shows in chat UI immediately
+      setDrawerOpen(true);          // explicitly open the drawer
       sendChatMessage(message);     // triggers AI analysis
-      // Drawer opens automatically via AIChat's new user-message-count effect
     },
-    [addUserMessage, sendChatMessage],
+    [addUserMessage, sendChatMessage, setDrawerOpen],
   );
 
   /** Open the AI drawer and mark existing messages read */
