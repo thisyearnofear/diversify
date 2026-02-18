@@ -5,6 +5,7 @@ import { useWalletContext } from './WalletProvider';
 import { useToast } from '../ui/Toast';
 import { SmartBuyCryptoButton, SmartSellCryptoButton } from '../onramp';
 import { WALLET_FEATURES } from '../../config/features';
+import { NETWORKS, isTestnetChain } from '../../config';
 
 type ButtonVariant = 'primary' | 'secondary' | 'inline' | 'minimal';
 
@@ -25,9 +26,11 @@ export default function WalletButton({
     isConnecting,
     error: walletError,
     isMiniPay,
+    chainId,
     connect,
     disconnect,
     formatAddress,
+    switchNetwork,
   } = useWalletContext();
 
   // Privy integration (always call hooks, but check if enabled)
@@ -75,6 +78,35 @@ export default function WalletButton({
     } catch (error) {
       console.error("Error disconnecting wallet:", error);
       showToast("Failed to disconnect wallet", "error");
+    }
+  };
+
+  // Network helpers
+  const isTestnet = isTestnetChain(chainId);
+  const networkName = chainId ? 
+    Object.values(NETWORKS).find(n => n.chainId === chainId)?.name || 'Unknown' : 
+    'Not Connected';
+  
+  // Get the opposite network for toggling
+  const getToggleNetwork = () => {
+    if (isTestnet) {
+      // Switch to mainnet (Celo or Arbitrum)
+      return NETWORKS.CELO_MAINNET.chainId;
+    } else {
+      // Switch to testnet (Arc is the default testnet)
+      return NETWORKS.ARC_TESTNET.chainId;
+    }
+  };
+
+  const handleToggleNetwork = async () => {
+    try {
+      const targetChain = getToggleNetwork();
+      await switchNetwork(targetChain);
+      showToast(`Switched to ${isTestnet ? 'Mainnet' : 'Testnet'}`, "success");
+      setShowDropdown(false);
+    } catch (error) {
+      console.error("Error switching network:", error);
+      showToast("Failed to switch network", "error");
     }
   };
 
@@ -129,8 +161,29 @@ export default function WalletButton({
 
         {/* Dropdown Menu */}
         {showDropdown && (
-          <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+          <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
             <div className="py-1">
+              {/* Network Status */}
+              <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}>
+                    {isTestnet ? 'TESTNET' : 'MAINNET'}
+                  </span>
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
+                    {networkName}
+                  </span>
+                </div>
+                <button
+                  onClick={handleToggleNetwork}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                  </svg>
+                  Switch to {isTestnet ? 'Mainnet' : 'Testnet'}
+                </button>
+              </div>
+
               {/* Fiat On/Off Ramp - Mt Pelerin */}
               <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
                 <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Fiat Ramp</p>
