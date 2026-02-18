@@ -50,6 +50,27 @@ interface StreakState {
   isLoading: boolean;
   error: string | null;
   usingFallback: boolean;
+  // Cross-chain activity (consolidated from useCrossChainActivity)
+  crossChainActivity: {
+    testnet: {
+      totalSwaps: number;
+      totalClaims: number;
+      totalVolume: number;
+      chainsUsed: number[];
+    };
+    mainnet: {
+      totalSwaps: number;
+      totalClaims: number;
+      totalVolume: number;
+    };
+    graduation: {
+      isGraduated: boolean;
+      graduatedAt?: Date;
+      testnetActionsBeforeGraduation: number;
+    };
+  };
+  achievements: string[];
+  eligibleForGraduation: boolean;
 }
 
 interface StreakActions {
@@ -58,6 +79,14 @@ interface StreakActions {
   verifyIdentity: () => Promise<{ success: boolean; url?: string; error?: string }>;
   resetStreak: () => Promise<void>;
   refresh: () => Promise<void>;
+  // Cross-chain activity recording (consolidated)
+  recordActivity: (params: {
+    action: 'swap' | 'claim' | 'graduation';
+    chainId: number;
+    networkType: 'testnet' | 'mainnet';
+    usdValue?: number;
+    txHash?: string;
+  }) => Promise<boolean>;
 }
 
 // Helper: Calculate reward estimate
@@ -135,7 +164,7 @@ export function useStreakRewards(): StreakState & StreakActions {
     streak: null,
     canClaim: false,
     isEligible: false,
-    isWhitelisted: true, // Default to true until checked
+    isWhitelisted: true,
     entitlement: '0',
     alreadyClaimedOnChain: false,
     nextClaimTime: null,
@@ -143,6 +172,13 @@ export function useStreakRewards(): StreakState & StreakActions {
     isLoading: false,
     error: null,
     usingFallback: false,
+    crossChainActivity: {
+      testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+      mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
+      graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
+    },
+    achievements: [],
+    eligibleForGraduation: false,
   });
 
   // Fetch streak from API or fallback to localStorage
@@ -204,11 +240,18 @@ export function useStreakRewards(): StreakState & StreakActions {
 
         const streakState = calculateStreakState(streak);
 
+        // Calculate graduation eligibility
+        const testnetSwaps = data.crossChainActivity?.testnet?.totalSwaps || 0;
+        const isGraduated = data.crossChainActivity?.graduation?.isGraduated || false;
+        const eligibleForGraduation = !isGraduated && testnetSwaps >= 3;
+
         setState(prev => ({
           ...prev,
           ...streakState,
           ...onChainStatus,
-          // Final canClaim depends on both streak eligibility AND on-chain eligibility
+          crossChainActivity: data.crossChainActivity || prev.crossChainActivity,
+          achievements: data.achievements || [],
+          eligibleForGraduation,
           canClaim: (streakState.canClaim || false) && onChainStatus.canClaimOnChain,
           isLoading: false,
           error: null,
@@ -427,6 +470,52 @@ export function useStreakRewards(): StreakState & StreakActions {
     }));
   }, [address]);
 
+  // Record cross-chain activity (consolidated from useCrossChainActivity)
+  const recordActivity = useCallback(async (params: {
+    action: 'swap' | 'claim' | 'graduation';
+    chainId: number;
+    networkType: 'testnet' | 'mainnet';
+    usdValue?: number;
+    txHash?: string;
+  }): Promise<boolean> => {
+    if (!address) return false;
+
+    try {
+      const response = await fetch(`/api/streaks/${address}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Update local state with new activity data
+        const testnetSwaps = data.crossChainActivity?.testnet?.totalSwaps || 0;
+        const isGraduated = data.crossChainActivity?.graduation?.isGraduated || false;
+        const eligibleForGraduation = !isGraduated && testnetSwaps >= 3;
+
+        setState(prev => ({
+          ...prev,
+          crossChainActivity: data.crossChainActivity || prev.crossChainActivity,
+          achievements: data.achievements || prev.achievements,
+          eligibleForGraduation,
+        }));
+
+        // Show achievement notifications for newly earned badges
+        if (data.newAchievements?.length > 0) {
+          console.log('[StreakRewards] New achievements earned:', data.newAchievements);
+        }
+
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('[StreakRewards] Activity recording failed:', err);
+      return false;
+    }
+  }, [address]);
+
   // Initial load and polling (only when tab is visible)
   useEffect(() => {
     refresh();
@@ -451,6 +540,7 @@ export function useStreakRewards(): StreakState & StreakActions {
     verifyIdentity,
     resetStreak,
     refresh,
+    recordActivity,
   };
 }
 

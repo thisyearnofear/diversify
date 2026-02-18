@@ -9,14 +9,22 @@
  * - NEUTRAL: No judgment on swap strategy
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
+import { AchievementBadge, AchievementToast, ACHIEVEMENTS, type Badge } from './AchievementBadge';
 import dynamic from 'next/dynamic';
+
+const DISMISSED_KEY = 'diversifi_streak_dismissed';
 
 // Lazy load claim flow for better performance
 const GoodDollarClaimFlow = dynamic(() => import('../gooddollar/GoodDollarClaimFlow'), {
+  ssr: false,
+});
+
+// Lazy load graduation modal
+const GraduationModal = dynamic(() => import('./GraduationModal'), {
   ssr: false,
 });
 
@@ -26,7 +34,7 @@ interface StreakRewardsCardProps {
 }
 
 export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
-  const { isConnected } = useWalletContext();
+  const { isConnected, switchNetwork } = useWalletContext();
   const {
     streak,
     canClaim,
@@ -37,12 +45,53 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     nextClaimTime,
     verifyIdentity,
     isLoading,
+    crossChainActivity,
+    achievements,
+    eligibleForGraduation,
   } = useStreakRewards();
 
   const [showClaimFlow, setShowClaimFlow] = useState(false);
+  const [showGraduationModal, setShowGraduationModal] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
   const [isCompact, setIsCompact] = useState(false);
+  const [pendingToast, setPendingToast] = useState<Badge | null>(null);
+
+  // Persist isDismissed to localStorage so it survives page refresh
+  const [isDismissed, setIsDismissedState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(DISMISSED_KEY) === '1';
+  });
+
+  const setIsDismissed = (value: boolean) => {
+    setIsDismissedState(value);
+    if (typeof window !== 'undefined') {
+      if (value) {
+        localStorage.setItem(DISMISSED_KEY, '1');
+      } else {
+        localStorage.removeItem(DISMISSED_KEY);
+      }
+    }
+  };
+
+  // Watch for newly earned achievements and surface a toast notification.
+  // BUGFIX: initialise ref to the CURRENT achievements on first mount so we
+  // don't fire a toast for every achievement the user has already earned when
+  // the page first loads.
+  const prevAchievementsRef = useRef<string[] | null>(null);
+  useEffect(() => {
+    if (prevAchievementsRef.current === null) {
+      // First run — seed with current value so we only toast for future badges
+      prevAchievementsRef.current = achievements;
+      return;
+    }
+    const prev = prevAchievementsRef.current;
+    const newOnes = achievements.filter(id => !prev.includes(id));
+    if (newOnes.length > 0) {
+      const badge = ACHIEVEMENTS.find(b => b.id === newOnes[0]);
+      if (badge) setPendingToast(badge);
+    }
+    prevAchievementsRef.current = achievements;
+  }, [achievements]);
 
   // Calculate time until next claim
   const formatTimeUntil = (date: Date | null) => {
@@ -102,36 +151,131 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     );
   }
 
-  // No streak yet - prompt to swap with progress tracking
+  // No streak yet — show the full onboarding journey card
   if (!isEligible) {
-    // Check if user has made any swaps today (from localStorage)
-    const todaySwaps = typeof window !== 'undefined'
-      ? parseFloat(localStorage.getItem(`diversifi_today_swaps_${Date.now().toString().slice(0, 8)}`) || '0')
-      : 0;
-
-    const remaining = Math.max(0, 1 - todaySwaps);
-    const progress = Math.min(100, (todaySwaps / 1) * 100);
+    const noTestnetActivity =
+      !crossChainActivity ||
+      (crossChainActivity.testnet.totalSwaps === 0 &&
+        crossChainActivity.testnet.totalClaims === 0 &&
+        !crossChainActivity.graduation.isGraduated);
 
     return (
-      <InsightCard
-        icon="🔓"
-        title="Unlock Daily G$ Claim"
-        description={
-          todaySwaps > 0
-            ? `You've swapped ${todaySwaps.toFixed(2)} today. Swap ${remaining.toFixed(2)} more to unlock your free daily G$ claim!`
-            : "Swap $1+ today to unlock your free daily G$ claim from GoodDollar"
-        }
-        impact={todaySwaps > 0 ? `${progress.toFixed(0)}% to unlock` : "Free daily UBI"}
-        action={
-          onSaveClick
-            ? {
-              label: todaySwaps > 0 ? `Swap ${remaining.toFixed(2)} More` : 'Make a Swap',
-              onClick: onSaveClick,
-            }
-            : undefined
-        }
-        variant="default"
-      />
+      <div className="space-y-3">
+        {/* Journey card */}
+        <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 rounded-xl border border-emerald-200 dark:border-emerald-900/30">
+          <div className="flex items-start gap-3 mb-3">
+            <span className="text-2xl mt-0.5">🌱</span>
+            <div>
+              <h3 className="text-sm font-black text-emerald-800 dark:text-emerald-300 mb-0.5">
+                Your DiversiFi Journey
+              </h3>
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
+                3 steps to daily G$ UBI + achievements
+              </p>
+            </div>
+          </div>
+
+          {/* Step list */}
+          <div className="space-y-2">
+            {[
+              {
+                n: '1',
+                icon: '🔄',
+                label: 'Make your first swap ($1+)',
+                sublabel: 'Unlocks daily G$ claim + First Swap badge',
+                done: false,
+              },
+              {
+                n: '2',
+                icon: '🛡️',
+                label: 'Verify identity on GoodDollar',
+                sublabel: 'Required to receive real G$ tokens',
+                done: false,
+              },
+              {
+                n: '3',
+                icon: '💚',
+                label: 'Claim your daily G$',
+                sublabel: 'Free UBI, every 24 hours',
+                done: false,
+              },
+            ].map((step) => (
+              <div
+                key={step.n}
+                className="flex items-start gap-2.5 p-2 bg-white/60 dark:bg-black/20 rounded-lg"
+              >
+                <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400">{step.n}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm">{step.icon}</span>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200">{step.label}</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{step.sublabel}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          {onSaveClick && (
+            <button
+              onClick={onSaveClick}
+              className="mt-3 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-lg transition-colors"
+            >
+              Start with a Swap →
+            </button>
+          )}
+        </div>
+
+        {/* Test Drive teaser — show to all users, not just post-streak */}
+        {noTestnetActivity && (
+          <div className="p-3 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/10 dark:to-indigo-900/10 rounded-xl border border-violet-200 dark:border-violet-900/30">
+            <div className="flex items-start gap-3">
+              <span className="text-xl mt-0.5">🧪</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <span className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+                    Not ready to commit?
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 rounded font-bold uppercase">
+                    Free
+                  </span>
+                </div>
+                <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-relaxed mb-2">
+                  Try Test Drive on Alfajores — real swaps, no real money. Switch network in the chain selector above.
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    { label: '🧪 Alfajores', href: 'https://faucet.celo.org' },
+                    { label: '⚡ Arc', href: 'https://faucet.circle.com' },
+                    { label: '📈 Robinhood', href: 'https://faucet.testnet.chain.robinhood.com' },
+                  ].map(({ label, href }) => (
+                    <a
+                      key={label}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-[10px] font-bold rounded-full hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
+                    >
+                      {label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Achievement toast */}
+        {pendingToast && (
+          <AchievementToast
+            badge={pendingToast}
+            onClose={() => setPendingToast(null)}
+          />
+        )}
+      </div>
     );
   }
 
@@ -297,14 +441,118 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
         </div>
       )}
 
+      {/* Test Drive Teaser — shown when user has a streak but hasn't tried testnet yet */}
+      {isEligible && !isCompact && crossChainActivity &&
+        crossChainActivity.testnet.totalSwaps === 0 &&
+        crossChainActivity.testnet.totalClaims === 0 &&
+        !crossChainActivity.graduation.isGraduated && (
+        <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/10 dark:to-indigo-900/10 rounded-lg border border-violet-200 dark:border-violet-900/30">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl mt-0.5">🧪</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wider mb-1">
+                Test Drive Available
+              </div>
+              <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-relaxed mb-2">
+                Explore 3 testnets risk-free. Earn badges. Graduate to mainnet when ready.
+              </p>
+              <div className="flex flex-wrap gap-1 mb-2">
+                {[
+                  { label: 'Alfajores', color: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400' },
+                  { label: 'Arc', color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
+                  { label: 'Robinhood', color: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400' },
+                ].map(({ label, color }) => (
+                  <span key={label} className={`px-2 py-0.5 ${color} text-[10px] font-bold rounded-full`}>{label}</span>
+                ))}
+              </div>
+              <a
+                href="https://faucet.circle.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] font-black text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
+              >
+                Get free testnet funds → faucet.circle.com
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cross-Chain Activity & Achievements — shown once testnet activity exists */}
+      {crossChainActivity && (crossChainActivity.testnet.totalSwaps > 0 || crossChainActivity.testnet.totalClaims > 0) && !isCompact && (
+        <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/10 dark:to-purple-900/10 rounded-lg border border-violet-200 dark:border-violet-900/30">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wider">
+              Test Drive Progress
+            </span>
+            {achievements.length > 0 && (
+              <span className="text-xs font-bold text-violet-600 dark:text-violet-400">
+                {achievements.length} 🏆
+              </span>
+            )}
+          </div>
+          
+          {/* Chain badges */}
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {crossChainActivity.testnet.chainsUsed.includes(44787) && (
+              <span className="px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-[10px] font-bold rounded-full">Alfajores</span>
+            )}
+            {crossChainActivity.testnet.chainsUsed.includes(5042002) && (
+              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full">Arc</span>
+            )}
+            {crossChainActivity.testnet.chainsUsed.includes(46630) && (
+              <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-[10px] font-bold rounded-full">Robinhood</span>
+            )}
+            {crossChainActivity.graduation.isGraduated && (
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded-full">Mainnet 🚀</span>
+            )}
+          </div>
+
+          {/* Achievement badges */}
+          {achievements.length > 0 && (
+            <div className="mb-3">
+              <AchievementBadge achievementIds={achievements} compact />
+            </div>
+          )}
+
+          {/* Graduation CTA */}
+          {eligibleForGraduation && !crossChainActivity.graduation.isGraduated && (
+            <button
+              onClick={() => setShowGraduationModal(true)}
+              className="w-full py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-bold rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all"
+            >
+              🎓 Graduate to Mainnet
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Claim Flow Modal */}
       {showClaimFlow && (
         <GoodDollarClaimFlow
           onClose={() => setShowClaimFlow(false)}
           onClaimSuccess={() => {
-            // Could trigger confetti or other celebration
             console.log('[StreakRewards] Claim successful!');
           }}
+        />
+      )}
+
+      {/* Graduation Modal */}
+      {showGraduationModal && (
+        <GraduationModal
+          isOpen={showGraduationModal}
+          onClose={() => setShowGraduationModal(false)}
+          onGraduate={() => {
+            setShowGraduationModal(false);
+          }}
+        />
+      )}
+
+      {/* Achievement toast — portal-rendered so it overlays correctly */}
+      {pendingToast && (
+        <AchievementToast
+          badge={pendingToast}
+          onClose={() => setPendingToast(null)}
         />
       )}
     </>

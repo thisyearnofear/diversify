@@ -31,6 +31,13 @@ export const NETWORKS = {
         rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
         explorerUrl: 'https://arbiscan.io',
     },
+    RH_TESTNET: {
+        chainId: 46630,
+        name: 'Robinhood Chain',
+        rpcUrl: process.env.NEXT_PUBLIC_RH_RPC || 'https://rpc.testnet.chain.robinhood.com',
+        explorerUrl: 'https://explorer.testnet.chain.robinhood.com',
+        devOnly: true,
+    },
 } as const;
 
 // Arc Data Hub Configuration (X402 Economy)
@@ -189,6 +196,13 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
 
     // Inflation Hedges (store of value, no yield)
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
+
+    // Stock Tokens (Robinhood Chain Testnet RWAs)
+    TSLA: { name: 'Tesla', region: REGIONS.USA, decimals: 18, apy: 0 },
+    AMZN: { name: 'Amazon', region: REGIONS.USA, decimals: 18, apy: 0 },
+    PLTR: { name: 'Palantir', region: REGIONS.USA, decimals: 18, apy: 0 },
+    NFLX: { name: 'Netflix', region: REGIONS.USA, decimals: 18, apy: 0 },
+    AMD: { name: 'AMD', region: REGIONS.USA, decimals: 18, apy: 0 },
 };
 
 // Helper to get token yield (0 if none)
@@ -215,6 +229,7 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.ALFAJORES.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
+    [NETWORKS.RH_TESTNET.chainId]: ['TSLA', 'AMZN', 'PLTR', 'NFLX', 'AMD'],
 };
 
 // Helper: Get full asset list with metadata for a specific chain
@@ -253,6 +268,11 @@ export const EXCHANGE_RATES: Record<string, number> = {
     PAXG: 2650,
     USDY: 1,
     SYRUPUSDC: 1,
+    TSLA: 350,
+    AMZN: 230,
+    PLTR: 110,
+    NFLX: 1050,
+    AMD: 120,
 } as const;
 
 // Transaction Configuration
@@ -374,6 +394,14 @@ export const ARC_TOKENS = {
     EURC: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
 } as const;
 
+export const RH_TESTNET_TOKENS = {
+    TSLA: '0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E',
+    AMZN: '0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02',
+    PLTR: '0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0',
+    NFLX: '0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93',
+    AMD: '0x71178BAc73cBeb415514eB542a8995b82669778d',
+} as const;
+
 export const BROKER_ADDRESSES = {
     MAINNET: '0x777a8255ca72412f0d706dc03c9d1987306b4cad',
     ALFAJORES: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
@@ -382,6 +410,7 @@ export const BROKER_ADDRESSES = {
 
 // Helper: Get token addresses by chain
 export function getTokenAddresses(chainId: number): Record<string, string> {
+    if (chainId === NETWORKS.RH_TESTNET.chainId) return RH_TESTNET_TOKENS;
     if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
     return chainId === NETWORKS.ALFAJORES.chainId ? ALFAJORES_TOKENS : MAINNET_TOKENS;

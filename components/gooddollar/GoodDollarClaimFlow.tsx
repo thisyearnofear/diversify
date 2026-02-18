@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
 import DashboardCard from '../shared/DashboardCard';
+import { NETWORKS } from '../../config';
 
 interface ClaimFlowProps {
     onClose?: () => void;
@@ -20,8 +21,8 @@ interface ClaimFlowProps {
 }
 
 export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFlowProps) {
-    const { address } = useWalletContext();
-    const { streak, canClaim, isWhitelisted, alreadyClaimedOnChain, estimatedReward, claimG, verifyIdentity, isLoading } = useStreakRewards();
+    const { address, chainId } = useWalletContext();
+    const { streak, canClaim, isWhitelisted, alreadyClaimedOnChain, estimatedReward, claimG, verifyIdentity, isLoading, recordActivity } = useStreakRewards();
 
     const [claimStatus, setClaimStatus] = useState<'ready' | 'claiming' | 'verifying' | 'success' | 'error'>('ready');
     const [showCelebration, setShowCelebration] = useState(false);
@@ -36,6 +37,30 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
         setErrorMessage(null);
 
         try {
+            // SIMULATION MODE for Testnets (Arc, Robinhood)
+            const isTestnetSimulation = chainId && (chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId);
+
+            if (isTestnetSimulation) {
+                // Simulate network delay
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Record testnet claim activity
+                if (chainId) {
+                    const testnetIds = [44787, 5042002, 46630];
+                    await recordActivity({
+                        action: 'claim',
+                        chainId,
+                        networkType: testnetIds.includes(chainId) ? 'testnet' : 'mainnet',
+                        usdValue: parseFloat(estimatedReward.replace(/[^0-9.]/g, '')) || 0,
+                    });
+                }
+
+                setClaimStatus('success');
+                setShowCelebration(true);
+                onClaimSuccess?.();
+                return;
+            }
+
             // Call the enhanced claimG function
             const result = await claimG();
 
@@ -44,6 +69,19 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                 setTxHash(result.txHash);
                 setClaimStatus('success');
                 setShowCelebration(true);
+
+                // Record mainnet claim activity
+                if (chainId) {
+                    const testnetIds = [44787, 5042002, 46630];
+                    await recordActivity({
+                        action: 'claim',
+                        chainId,
+                        networkType: testnetIds.includes(chainId) ? 'testnet' : 'mainnet',
+                        txHash: result.txHash,
+                        usdValue: parseFloat(estimatedReward.replace(/[^0-9.]/g, '')) || 0,
+                    });
+                }
+
                 onClaimSuccess?.();
             } else if (result.success && !result.txHash) {
                 // Fallback to external page (no error, just different flow)
@@ -120,7 +158,7 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                     {/* Token Rain Effect */}
                     <div className="absolute inset-0 pointer-events-none">
                         {[...Array(12)].map((_, i) => (
-                            <div 
+                            <div
                                 key={i}
                                 className="absolute text-2xl animate-bounce"
                                 style={{
@@ -141,10 +179,12 @@ export default function GoodDollarClaimFlow({ onClose, onClaimSuccess }: ClaimFl
                             <span className="text-5xl animate-pulse">✨</span>
                         </div>
                         <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">
-                            Claim Successful!
+                            {chainId && (chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId) ? "Claim Simulated!" : "Claim Successful!"}
                         </h2>
                         <p className="text-base text-gray-600 dark:text-gray-400">
-                            Your G$ is being delivered
+                            {chainId && (chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId)
+                                ? "Testnet mode: G$ claim simulated for your streak."
+                                : "Your G$ is being delivered"}
                         </p>
                     </div>
 

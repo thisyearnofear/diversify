@@ -97,6 +97,68 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             riskLevel: 'low'
         }
     ],
+    'robinhood-testnet': [
+        {
+            address: '0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E',
+            symbol: 'TSLA',
+            name: 'Tesla Stock Token',
+            type: 'credit', // closest existing type for equities
+            apy: 0,
+            tvl: 0,
+            chain: 'robinhood-testnet',
+            description: 'Tokenized Tesla stock on Robinhood Chain testnet',
+            minInvestment: 0,
+            riskLevel: 'medium'
+        },
+        {
+            address: '0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02',
+            symbol: 'AMZN',
+            name: 'Amazon Stock Token',
+            type: 'credit',
+            apy: 0,
+            tvl: 0,
+            chain: 'robinhood-testnet',
+            description: 'Tokenized Amazon stock on Robinhood Chain testnet',
+            minInvestment: 0,
+            riskLevel: 'medium'
+        },
+        {
+            address: '0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0',
+            symbol: 'PLTR',
+            name: 'Palantir Stock Token',
+            type: 'credit',
+            apy: 0,
+            tvl: 0,
+            chain: 'robinhood-testnet',
+            description: 'Tokenized Palantir stock on Robinhood Chain testnet',
+            minInvestment: 0,
+            riskLevel: 'medium'
+        },
+        {
+            address: '0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93',
+            symbol: 'NFLX',
+            name: 'Netflix Stock Token',
+            type: 'credit',
+            apy: 0,
+            tvl: 0,
+            chain: 'robinhood-testnet',
+            description: 'Tokenized Netflix stock on Robinhood Chain testnet',
+            minInvestment: 0,
+            riskLevel: 'medium'
+        },
+        {
+            address: '0x71178BAc73cBeb415514eB542a8995b82669778d',
+            symbol: 'AMD',
+            name: 'AMD Stock Token',
+            type: 'credit',
+            apy: 0,
+            tvl: 0,
+            chain: 'robinhood-testnet',
+            description: 'Tokenized AMD stock on Robinhood Chain testnet',
+            minInvestment: 0,
+            riskLevel: 'medium'
+        },
+    ],
     polygon: [
         {
             address: '0x2F800Db0fdb5223b3C3f354886d907A671414A7F',
@@ -130,6 +192,14 @@ export const RWA_NETWORKS = {
         blockExplorer: 'https://etherscan.io',
         nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
         avgGasCost: 25.0 // USD
+    },
+    'robinhood-testnet': {
+        chainId: 46630,
+        name: 'Robinhood Chain Testnet',
+        rpcUrl: process.env.NEXT_PUBLIC_RH_RPC || 'https://rpc.testnet.chain.robinhood.com',
+        blockExplorer: 'https://explorer.testnet.chain.robinhood.com',
+        nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
+        avgGasCost: 0.01
     },
     polygon: {
         chainId: 137,

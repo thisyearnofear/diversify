@@ -30,6 +30,7 @@ import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
+import { TestnetSimulationBanner } from "../swap/TestnetSimulationBanner";
 import { StreakRewardsCard } from "../rewards/StreakRewardsCard";
 
 interface SwapTabProps {
@@ -49,7 +50,7 @@ export default function SwapTab({
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
   const { swapPrefill, clearSwapPrefill, recordSwap: recordExperienceSwap, experienceMode, demoMode } = useAppState();
-  const { recordSwap: recordStreakSwap } = useStreakRewards();
+  const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
 
@@ -228,6 +229,20 @@ export default function SwapTab({
         if (amountNum >= 1) {
           recordStreakSwap(amountNum);
         }
+      }
+
+      // Record cross-chain activity for testnet tracking
+      if (walletChainId && celebrationData) {
+        const testnetIds = [44787, 5042002, 46630];
+        const isTestnet = testnetIds.includes(walletChainId);
+        
+        recordActivity({
+          action: 'swap',
+          chainId: walletChainId,
+          networkType: isTestnet ? 'testnet' : 'mainnet',
+          usdValue: parseFloat(celebrationData.amount),
+          txHash: swapTxHash || undefined,
+        });
       }
       
       refreshWithRetries();
@@ -423,6 +438,23 @@ export default function SwapTab({
         ) : (
           <>
             <ExperienceModeNotification />
+
+            {/* Testnet simulation banner — shown on Arc/RH when contracts aren't deployed yet */}
+            <TestnetSimulationBanner
+              chainId={walletChainId}
+              onSimulated={() => {
+                // Trigger the same celebration modal as a real swap so Arc/RH users
+                // get the same dopamine hit. Use $10 USDC→EURC as the mock trade.
+                setCelebrationData({
+                  fromToken: 'USDC',
+                  toToken: 'EURC',
+                  amount: '10',
+                  fromTokenInflation: 3.1,
+                  toTokenInflation: 2.3,
+                });
+                setShowCelebration(true);
+              }}
+            />
 
             {/* GoodDollar UBI Streak Card - Persistent visibility */}
             <div className="mb-4">

@@ -20,7 +20,7 @@ export interface TokenDesign {
   bgColor: string;          // Tailwind bg color for light backgrounds
   borderColor: string;      // Tailwind border color
   shadowColor: string;      // Tailwind shadow color (e.g., 'shadow-amber-500/30')
-  category: 'stablecoin' | 'yield' | 'commodity' | 'regional' | 'default';
+  category: 'stablecoin' | 'yield' | 'commodity' | 'equity' | 'regional' | 'default';
   description: string;
   shortLabel: string;       // For compact displays
 }
@@ -231,6 +231,73 @@ export const TOKEN_DESIGN: Record<string, TokenDesign> = {
     shortLabel: 'G$',
   },
 
+  // Stock Tokens (Robinhood Chain Testnet)
+  'TSLA': {
+    symbol: 'TSLA',
+    name: 'Tesla',
+    gradient: 'from-red-500 via-red-600 to-rose-700',
+    icon: '🚗',
+    textColor: 'text-red-700',
+    bgColor: 'bg-red-100',
+    borderColor: 'border-red-300',
+    shadowColor: 'shadow-red-500/30',
+    category: 'equity',
+    description: 'Tokenized Tesla stock on Robinhood Chain',
+    shortLabel: 'Tesla',
+  },
+  'AMZN': {
+    symbol: 'AMZN',
+    name: 'Amazon',
+    gradient: 'from-orange-500 via-amber-500 to-yellow-600',
+    icon: '📦',
+    textColor: 'text-orange-700',
+    bgColor: 'bg-orange-100',
+    borderColor: 'border-orange-300',
+    shadowColor: 'shadow-orange-500/30',
+    category: 'equity',
+    description: 'Tokenized Amazon stock on Robinhood Chain',
+    shortLabel: 'Amazon',
+  },
+  'PLTR': {
+    symbol: 'PLTR',
+    name: 'Palantir',
+    gradient: 'from-slate-600 via-gray-700 to-zinc-800',
+    icon: '🔮',
+    textColor: 'text-slate-700',
+    bgColor: 'bg-slate-100',
+    borderColor: 'border-slate-300',
+    shadowColor: 'shadow-slate-500/30',
+    category: 'equity',
+    description: 'Tokenized Palantir stock on Robinhood Chain',
+    shortLabel: 'Palantir',
+  },
+  'NFLX': {
+    symbol: 'NFLX',
+    name: 'Netflix',
+    gradient: 'from-red-600 via-red-700 to-red-800',
+    icon: '🎬',
+    textColor: 'text-red-800',
+    bgColor: 'bg-red-100',
+    borderColor: 'border-red-400',
+    shadowColor: 'shadow-red-600/30',
+    category: 'equity',
+    description: 'Tokenized Netflix stock on Robinhood Chain',
+    shortLabel: 'Netflix',
+  },
+  'AMD': {
+    symbol: 'AMD',
+    name: 'AMD',
+    gradient: 'from-green-600 via-emerald-600 to-teal-700',
+    icon: '💻',
+    textColor: 'text-green-700',
+    bgColor: 'bg-green-100',
+    borderColor: 'border-green-300',
+    shadowColor: 'shadow-green-500/30',
+    category: 'equity',
+    description: 'Tokenized AMD stock on Robinhood Chain',
+    shortLabel: 'AMD',
+  },
+
   // Default fallback
   'default': {
     symbol: 'TOKEN',
@@ -367,6 +434,14 @@ export function isCommodityToken(symbol: string): boolean {
   return design.category === 'commodity';
 }
 
+/**
+ * Check if token is an equity (stock token)
+ */
+export function isEquityToken(symbol: string): boolean {
+  const design = getTokenDesign(symbol);
+  return design.category === 'equity';
+}
+
 // ============================================================================
 // EXPORTS
 // ============================================================================
@@ -380,6 +455,7 @@ export const TokenDesignSystem = {
   getTokenGradient,
   isYieldToken,
   isCommodityToken,
+  isEquityToken,
 };
 
 export default TokenDesignSystem;

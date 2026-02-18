@@ -19,8 +19,6 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
     const [error, setError] = useState<string | null>(null);
     const { switchNetwork: walletSwitchNetwork, isConnected } = useWalletContext();
 
-    const isDev = process.env.NODE_ENV === 'development';
-
     const allNetworks = [
         {
             ...NETWORKS.CELO_MAINNET,
@@ -50,16 +48,28 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             icon: '🔷',
             color: 'blue',
         },
+        {
+            ...NETWORKS.RH_TESTNET,
+            label: `${NETWORKS.RH_TESTNET.name} (Stocks)`,
+            description: 'Tokenized equities testnet',
+            icon: '🏦',
+            color: 'green',
+        },
     ];
 
-    // Filter out dev-only networks in production
-    const networks = allNetworks.filter(n => {
-        if (isDev) return true;
-        // In production, exclude dev-only networks
-        if (n.chainId === NETWORKS.ALFAJORES.chainId && NETWORKS.ALFAJORES.devOnly) return false;
-        if (n.chainId === NETWORKS.ARC_TESTNET.chainId && NETWORKS.ARC_TESTNET.devOnly) return false;
-        return true;
+    // Split into mainnet and testnet (Test Drive) groups.
+    // Testnet networks are ALWAYS shown in both dev and production so users
+    // can access the Test Drive experience without manually adding chains.
+    const mainnetNetworks = allNetworks.filter(n => {
+        const cfg = Object.values(NETWORKS).find(net => net.chainId === n.chainId);
+        return !(cfg && 'devOnly' in cfg && cfg.devOnly);
     });
+    const testnetNetworks = allNetworks.filter(n => {
+        const cfg = Object.values(NETWORKS).find(net => net.chainId === n.chainId);
+        return cfg && 'devOnly' in cfg && cfg.devOnly;
+    });
+    // For compact select, show everything
+    const networks = [...mainnetNetworks, ...testnetNetworks];
 
     const switchNetwork = async (chainId: number) => {
         if (!isConnected) {
@@ -115,8 +125,9 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
 
     return (
         <div className={className}>
+            {/* Mainnet group */}
             <div className="grid grid-cols-2 gap-2">
-                {networks.map((network) => {
+                {mainnetNetworks.map((network) => {
                     const isActive = network.chainId === currentChainId;
                     const colorClasses: Record<string, { bg: string; hover: string; text: string }> = {
                         green: {
@@ -171,6 +182,47 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                     );
                 })}
             </div>
+
+            {/* Test Drive group — always visible so users can enter without manual chain setup */}
+            {testnetNetworks.length > 0 && (
+                <>
+                    <div className="flex items-center gap-2 mt-3 mb-2">
+                        <span className="text-[9px] font-black text-violet-500 dark:text-violet-400 uppercase tracking-widest">🧪 Test Drive</span>
+                        <div className="flex-1 h-px bg-violet-200 dark:bg-violet-900/40" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        {testnetNetworks.map((network) => {
+                            const isActive = network.chainId === currentChainId;
+                            return (
+                                <button
+                                    key={network.chainId}
+                                    onClick={() => !isActive && switchNetwork(network.chainId)}
+                                    disabled={isActive || isSwitching}
+                                    className={`p-2 rounded-xl border-2 transition-all text-left flex items-center justify-between ${isActive
+                                        ? 'bg-violet-50/80 dark:bg-violet-900/20 border-violet-400/60 text-violet-900 dark:text-violet-100 cursor-default shadow-inner'
+                                        : 'bg-white/40 dark:bg-gray-800/40 border-violet-100 dark:border-violet-900/30 hover:bg-violet-50/50 dark:hover:bg-violet-900/10 text-gray-700 dark:text-gray-300 cursor-pointer'
+                                        } ${isSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xl leading-none">{network.icon}</span>
+                                        <div>
+                                            <div className="font-bold text-[10px] uppercase tracking-wider leading-none">
+                                                {network.label.split(' ')[0]}
+                                            </div>
+                                            <div className="text-[9px] opacity-60 leading-none mt-0.5 truncate max-w-[80px]">
+                                                {network.description}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {isActive && (
+                                        <div className="size-1.5 rounded-full bg-violet-500 animate-pulse shrink-0" />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
 
             {error && (
                 <div className="mt-2 text-[10px] text-red-600 dark:text-red-400 font-medium">

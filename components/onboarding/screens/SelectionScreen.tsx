@@ -199,8 +199,10 @@ export function SelectionScreen({
                 <div className="px-6 py-2 text-center">
                     <div className="flex items-center justify-center gap-2">
                         <div className="size-1 rounded-full bg-gray-300 animate-pulse" />
+                        {/* Touch devices: swipe hint / pointer devices: arrow key hint */}
                         <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
-                            Swipe to Explore
+                            <span className="md:hidden">Swipe to Explore</span>
+                            <span className="hidden md:inline">← → to Browse</span>
                         </p>
                         <div className="size-1 rounded-full bg-gray-300 animate-pulse" />
                     </div>

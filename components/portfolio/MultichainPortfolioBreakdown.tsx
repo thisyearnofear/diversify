@@ -46,6 +46,18 @@ const NETWORK_INFO: Record<number, {
             "Deep liquidity"
         ]
     },
+    [NETWORKS.RH_TESTNET.chainId]: {
+        color: "#22C55E",
+        icon: "🏦",
+        description: "Tokenized Stock RWAs (Testnet)",
+        regions: ["USA"],
+        features: [
+            "Stock tokens (TSLA, AMZN)",
+            "Arbitrum Orbit L2",
+            "Zero real-money risk",
+            "Equity diversification"
+        ]
+    },
 };
 
 export default function MultichainPortfolioBreakdown({
@@ -164,8 +176,10 @@ export default function MultichainPortfolioBreakdown({
                     if (!info) return null;
 
                     return (
-                        <div key={network} className={`p-4 rounded-xl border-2 bg-gradient-to-br ${network === 'Celo'
+                        <div key={network} className={`p-4 rounded-xl border-2 bg-gradient-to-br ${data.chainId === NETWORKS.CELO_MAINNET.chainId
                             ? 'from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800'
+                            : data.chainId === NETWORKS.RH_TESTNET.chainId
+                            ? 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800'
                             : 'from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800'
                             }`}>
                             <div className="flex items-center justify-between mb-2">
@@ -190,7 +204,11 @@ export default function MultichainPortfolioBreakdown({
                             {/* Progress bar with gradient */}
                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-3">
                                 <div
-                                    className={`h-2.5 rounded-full transition-all duration-500 bg-gradient-to-r ${network === 'Celo' ? 'from-green-500 to-emerald-500' : 'from-blue-500 to-cyan-500'
+                                    className={`h-2.5 rounded-full transition-all duration-500 bg-gradient-to-r ${data.chainId === NETWORKS.CELO_MAINNET.chainId
+                                        ? 'from-green-500 to-emerald-500'
+                                        : data.chainId === NETWORKS.RH_TESTNET.chainId
+                                        ? 'from-emerald-500 to-teal-500'
+                                        : 'from-blue-500 to-cyan-500'
                                         }`}
                                     style={{
                                         width: `${data.percentage}%`,
@@ -227,12 +245,18 @@ export default function MultichainPortfolioBreakdown({
                 <ul className="text-xs text-blue-700 space-y-1">
                     <li className="flex items-start gap-2">
                         <span>🌱</span>
-                        <span><strong>Celo:</strong> Best for regional stablecoins and everyday payments</span>
+                        <span><strong>Celo:</strong> Regional stablecoins and everyday payments</span>
                     </li>
                     <li className="flex items-start gap-2">
                         <span>🥇</span>
-                        <span><strong>Arbitrum:</strong> Best for yield-bearing assets and gold</span>
+                        <span><strong>Arbitrum:</strong> Yield-bearing assets and gold</span>
                     </li>
+                    {networkAllocations['Robinhood Chain'] && (
+                        <li className="flex items-start gap-2">
+                            <span>🏦</span>
+                            <span><strong>RH Chain:</strong> Tokenized equities (testnet)</span>
+                        </li>
+                    )}
                     <li className="flex items-start gap-2">
                         <span>🛡️</span>
                         <span><strong>Combined:</strong> Maximum protection through diversification</span>

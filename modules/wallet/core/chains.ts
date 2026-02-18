@@ -13,6 +13,7 @@ export const SUPPORTED_CHAIN_IDS = [
   NETWORKS.ALFAJORES.chainId,
   NETWORKS.ARBITRUM_ONE.chainId,
   NETWORKS.ARC_TESTNET.chainId,
+  NETWORKS.RH_TESTNET.chainId,
 ] as const;
 
 export const DEFAULT_CHAIN_ID = NETWORKS.CELO_MAINNET.chainId;
@@ -49,6 +50,16 @@ export function getAddChainParameter(targetChainId: number): AddEthereumChainPar
       nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
       rpcUrls: [NETWORKS.ARBITRUM_ONE.rpcUrl],
       blockExplorerUrls: [NETWORKS.ARBITRUM_ONE.explorerUrl],
+    };
+  }
+
+  if (targetChainId === NETWORKS.RH_TESTNET.chainId) {
+    return {
+      chainId: `0x${NETWORKS.RH_TESTNET.chainId.toString(16)}`,
+      chainName: 'Robinhood Chain Testnet',
+      nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+      rpcUrls: [NETWORKS.RH_TESTNET.rpcUrl],
+      blockExplorerUrls: [NETWORKS.RH_TESTNET.explorerUrl],
     };
   }
 

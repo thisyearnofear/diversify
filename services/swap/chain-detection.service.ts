@@ -8,7 +8,7 @@ import { NETWORKS } from '../../config';
 // Helper to check if we're in development mode
 const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'unknown';
+export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'robinhood' | 'unknown';
 export type SwapProtocol = 'mento' | 'lifi' | 'none';
 
 export class ChainDetectionService {
@@ -31,19 +31,25 @@ export class ChainDetectionService {
      * Check if chain is Arc testnet (only in development)
      */
     static isArc(chainId: number | null): boolean {
-        // Arc only exists in development
         if (!isDev) return false;
         return chainId === NETWORKS.ARC_TESTNET.chainId;
+    }
+
+    /**
+     * Check if chain is Robinhood Chain testnet (only in development)
+     */
+    static isRobinhood(chainId: number | null): boolean {
+        if (!isDev) return false;
+        return chainId === NETWORKS.RH_TESTNET.chainId;
     }
 
     /**
      * Check if chain is a testnet
      */
     static isTestnet(chainId: number | null): boolean {
-        // In production, only Alfajores is considered testnet (if visible)
-        // Arc is hidden in production
         if (chainId === NETWORKS.ALFAJORES.chainId) return true;
         if (isDev && chainId === NETWORKS.ARC_TESTNET.chainId) return true;
+        if (isDev && chainId === NETWORKS.RH_TESTNET.chainId) return true;
         return false;
     }
 
@@ -54,6 +60,7 @@ export class ChainDetectionService {
         if (this.isCelo(chainId)) return 'celo';
         if (this.isArbitrum(chainId)) return 'arbitrum';
         if (isDev && this.isArc(chainId)) return 'arc';
+        if (isDev && this.isRobinhood(chainId)) return 'robinhood';
         return 'unknown';
     }
 
@@ -79,11 +86,8 @@ export class ChainDetectionService {
      * Get network name for display
      */
     static getNetworkName(chainId: number | null): string {
-        if (chainId === NETWORKS.CELO_MAINNET.chainId) return NETWORKS.CELO_MAINNET.name;
-        if (chainId === NETWORKS.ALFAJORES.chainId) return NETWORKS.ALFAJORES.name;
-        if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return NETWORKS.ARBITRUM_ONE.name;
-        if (chainId === NETWORKS.ARC_TESTNET.chainId) return NETWORKS.ARC_TESTNET.name;
-        return 'Unknown Network';
+        const network = Object.values(NETWORKS).find(n => n.chainId === chainId);
+        return network?.name ?? 'Unknown Network';
     }
 
     /**
@@ -91,24 +95,21 @@ export class ChainDetectionService {
      */
     static isSupported(chainId: number | null): boolean {
         if (!chainId) return false;
-        const supported: number[] = [
-            NETWORKS.CELO_MAINNET.chainId,
-            NETWORKS.ALFAJORES.chainId,
-            NETWORKS.ARBITRUM_ONE.chainId,
-            ...(isDev ? [NETWORKS.ARC_TESTNET.chainId] : []),
-        ];
-        return supported.includes(chainId);
+        return this.getSupportedChainIds().includes(chainId);
     }
 
     /**
      * Get supported chain IDs
      */
     static getSupportedChainIds(): number[] {
+        const devChains = isDev
+            ? [NETWORKS.ARC_TESTNET.chainId, NETWORKS.RH_TESTNET.chainId]
+            : [];
         return [
             NETWORKS.CELO_MAINNET.chainId,
             NETWORKS.ALFAJORES.chainId,
             NETWORKS.ARBITRUM_ONE.chainId,
-            ...(isDev ? [NETWORKS.ARC_TESTNET.chainId] : []),
+            ...devChains,
         ];
     }
 }

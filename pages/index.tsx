@@ -8,6 +8,7 @@ import { useCurrencyPerformance } from "../hooks/use-currency-performance";
 import { useMultichainBalances } from "../hooks/use-multichain-balances";
 import {
   getChainAssets,
+  NETWORKS,
 } from "../config";
 import ErrorBoundary from "../components/ui/ErrorBoundary";
 import TabNavigation from "../components/ui/TabNavigation";
@@ -148,6 +149,35 @@ export default function DiversiFiPage() {
 
       <div className="max-w-md mx-auto">
         <TourTrigger />
+
+        {/* Testnet Warning Banner */}
+        {walletChainId && (walletChainId === NETWORKS.ALFAJORES.chainId || walletChainId === NETWORKS.ARC_TESTNET.chainId || walletChainId === NETWORKS.RH_TESTNET.chainId) && (
+          <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-2 mb-2 rounded-lg text-xs font-bold flex items-center justify-between border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-2">
+              <span>🧪</span>
+              <span>
+                Test Drive —&nbsp;
+                {walletChainId === NETWORKS.ALFAJORES.chainId ? 'Alfajores' :
+                  walletChainId === NETWORKS.ARC_TESTNET.chainId ? 'Arc Testnet' : 'Robinhood Testnet'}
+                &nbsp;(play money)
+              </span>
+            </div>
+            <a
+              href={
+                walletChainId === NETWORKS.ALFAJORES.chainId
+                  ? 'https://faucet.celo.org'
+                  : walletChainId === NETWORKS.ARC_TESTNET.chainId
+                    ? 'https://faucet.circle.com'
+                    : 'https://faucet.testnet.chain.robinhood.com'
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-700 dark:text-amber-300 underline hover:no-underline whitespace-nowrap"
+            >
+              Get funds →
+            </a>
+          </div>
+        )}
 
         {/* HEADER - Adaptive based on mode and connection */}
         <div className="flex items-center justify-between mb-2 py-1">
@@ -361,6 +391,7 @@ export default function DiversiFiPage() {
           onClose={closeStrategyModal}
           onConnectWallet={connectWallet}
           isWalletConnected={!!address}
+          chainId={walletChainId || undefined}
           onComplete={() => {
             // Wallet tutorial no longer auto-triggers - users can access it via voice command or help button
             // This reduces friction for wallet connection

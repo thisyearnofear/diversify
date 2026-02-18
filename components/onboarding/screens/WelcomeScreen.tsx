@@ -1,12 +1,15 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
+import { NETWORKS } from '../../../config';
 
 interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue: () => void;
+    chainId?: number;
 }
 
-export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected }: WelcomeScreenProps) {
+export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected, chainId }: WelcomeScreenProps) {
+    const isTestnet = chainId && (chainId === NETWORKS.ALFAJORES.chainId || chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId);
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 text-center relative overflow-y-auto custom-scrollbar">
             {/* Mesh Gradient Background */}
@@ -61,6 +64,18 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                 </p>
             </motion.div>
 
+            {/* Testnet Indicator — shown when already on a testnet */}
+            {isTestnet && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mb-6 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-2 rounded-xl text-sm font-bold border border-amber-200 dark:border-amber-800 flex items-center gap-2"
+                >
+                    <span>🧪</span>
+                    testnet mode active — play money only
+                </motion.div>
+            )}
+
             {/* Actions */}
             <motion.div
                 className="space-y-3 md:space-y-4 w-full max-w-xs pb-8 md:pb-0"
@@ -75,6 +90,35 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                 >
                     Get Started →
                 </motion.button>
+
+                {/* Test Drive entry point — visible to all users without a wallet */}
+                {!isWalletConnected && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.55 }}
+                        className="w-full px-4 py-3 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl flex items-center gap-3"
+                    >
+                        <span className="text-xl flex-shrink-0">🧪</span>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wide mb-0.5">
+                                Not ready to commit?
+                            </div>
+                            <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-snug">
+                                Try all 3 testnets risk-free. Earn badges. Graduate when ready.
+                            </p>
+                        </div>
+                        <a
+                            href="https://faucet.circle.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[10px] font-black text-violet-600 dark:text-violet-400 hover:text-violet-900 dark:hover:text-violet-200 whitespace-nowrap transition-colors"
+                        >
+                            Get funds →
+                        </a>
+                    </motion.div>
+                )}
+
                 {onConnectWallet && !isWalletConnected && (
                     <motion.button
                         onClick={onConnectWallet}
@@ -98,6 +142,6 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                     </button>
                 )}
             </motion.div>
-        </div>
+        </div >
     );
 }

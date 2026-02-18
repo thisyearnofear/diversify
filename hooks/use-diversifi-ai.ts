@@ -18,6 +18,7 @@ import {
   type PortfolioAnalysis,
 } from "../utils/portfolio-analysis";
 import { useAIConversationOptional } from "../context/AIConversationContext";
+import { useWalletContext } from "../components/wallet/WalletProvider";
 
 // ============================================================================
 // TYPES
@@ -25,13 +26,13 @@ import { useAIConversationOptional } from "../context/AIConversationContext";
 
 export interface AIAdvice {
   action:
-    | "SWAP"
-    | "HOLD"
-    | "REBALANCE"
-    | "BRIDGE"
-    | "BUY"
-    | "SELL"
-    | "GUIDED_TOUR";
+  | "SWAP"
+  | "HOLD"
+  | "REBALANCE"
+  | "BRIDGE"
+  | "BUY"
+  | "SELL"
+  | "GUIDED_TOUR";
   oneLiner: string; // Punchy, single-line summary for mobile/Farcaster
   targetToken?: string;
   token?: string; // Alias for targetToken (compatibility)
@@ -177,6 +178,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
   // Use global conversation context if available and requested
   const globalConversation = useAIConversationOptional();
+  const { chainId } = useWalletContext();
   const isUsingGlobal =
     useGlobalConversation && globalConversation !== undefined;
   const messages = isUsingGlobal ? globalConversation!.messages : localMessages;
@@ -452,16 +454,16 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           totalValue: userBalanceOrPortfolio,
           chains: networkInfo
             ? [
-                {
-                  chainId: networkInfo.chainId,
-                  chainName: networkInfo.name,
-                  balances: [], // Changed from Object.fromEntries to array
-                  totalValue: userBalanceOrPortfolio,
-                  tokenCount: currentHoldings?.length || 0,
-                  isLoading: false,
-                  error: null,
-                },
-              ]
+              {
+                chainId: networkInfo.chainId,
+                chainName: networkInfo.name,
+                balances: [], // Changed from Object.fromEntries to array
+                totalValue: userBalanceOrPortfolio,
+                tokenCount: currentHoldings?.length || 0,
+                isLoading: false,
+                error: null,
+              },
+            ]
             : [],
           allTokens: [],
           tokenMap: {},
@@ -614,7 +616,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         const response = await fetch("/api/agent/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, history: messages }),
+          body: JSON.stringify({ message: content, history: messages, chainId }),
         });
 
         if (response.ok) {

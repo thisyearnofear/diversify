@@ -27,6 +27,29 @@ export interface IStreak extends Document {
     days365: boolean;
   };
 
+  // Cross-chain activity tracking (merged from Activity model)
+  crossChainActivity: {
+    testnet: {
+      totalSwaps: number;
+      totalClaims: number;
+      totalVolume: number;
+      chainsUsed: number[]; // Chain IDs explored
+    };
+    mainnet: {
+      totalSwaps: number;
+      totalClaims: number;
+      totalVolume: number;
+    };
+    graduation: {
+      isGraduated: boolean;
+      graduatedAt?: Date;
+      testnetActionsBeforeGraduation: number;
+    };
+  };
+
+  // Achievements (derived from activity)
+  achievements: string[]; // Array of earned achievement IDs
+
   // Leaderboard (opt-in)
   displayName?: string;
   isPublic: boolean;
@@ -93,6 +116,48 @@ const StreakSchema: Schema = new Schema(
       days30: { type: Boolean, default: false },
       days100: { type: Boolean, default: false },
       days365: { type: Boolean, default: false },
+    },
+
+    // Cross-chain activity tracking (consolidated from Activity model)
+    crossChainActivity: {
+      type: {
+        testnet: {
+          type: {
+            totalSwaps: { type: Number, default: 0 },
+            totalClaims: { type: Number, default: 0 },
+            totalVolume: { type: Number, default: 0 },
+            chainsUsed: { type: [Number], default: [] },
+          },
+          default: () => ({ totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] }),
+        },
+        mainnet: {
+          type: {
+            totalSwaps: { type: Number, default: 0 },
+            totalClaims: { type: Number, default: 0 },
+            totalVolume: { type: Number, default: 0 },
+          },
+          default: () => ({ totalSwaps: 0, totalClaims: 0, totalVolume: 0 }),
+        },
+        graduation: {
+          type: {
+            isGraduated: { type: Boolean, default: false },
+            graduatedAt: { type: Date },
+            testnetActionsBeforeGraduation: { type: Number, default: 0 },
+          },
+          default: () => ({ isGraduated: false, testnetActionsBeforeGraduation: 0 }),
+        },
+      },
+      default: () => ({
+        testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+        mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
+        graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
+      }),
+    },
+
+    // Achievements (derived from activity)
+    achievements: {
+      type: [String],
+      default: [],
     },
 
     // Leaderboard opt-in

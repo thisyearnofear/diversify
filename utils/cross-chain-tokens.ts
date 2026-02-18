@@ -4,7 +4,7 @@
  * Uses centralized token addresses from config to maintain single source of truth
  */
 
-import { NETWORKS, MAINNET_TOKENS, ALFAJORES_TOKENS, ARBITRUM_TOKENS, ARC_TOKENS } from '../config';
+import { NETWORKS, MAINNET_TOKENS, ALFAJORES_TOKENS, ARBITRUM_TOKENS, ARC_TOKENS, RH_TESTNET_TOKENS } from '../config';
 
 export interface CrossChainToken {
     symbol: string;
@@ -349,6 +349,66 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
             {
                 chainId: NETWORKS.ARBITRUM_ONE.chainId,
                 address: ARBITRUM_TOKENS.SYRUPUSDC,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'TSLA',
+        name: 'Tesla',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.RH_TESTNET.chainId,
+                address: RH_TESTNET_TOKENS.TSLA,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'AMZN',
+        name: 'Amazon',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.RH_TESTNET.chainId,
+                address: RH_TESTNET_TOKENS.AMZN,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'PLTR',
+        name: 'Palantir',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.RH_TESTNET.chainId,
+                address: RH_TESTNET_TOKENS.PLTR,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'NFLX',
+        name: 'Netflix',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.RH_TESTNET.chainId,
+                address: RH_TESTNET_TOKENS.NFLX,
+                decimals: 18,
+            },
+        ],
+    },
+    {
+        symbol: 'AMD',
+        name: 'AMD',
+        region: 'USA',
+        chains: [
+            {
+                chainId: NETWORKS.RH_TESTNET.chainId,
+                address: RH_TESTNET_TOKENS.AMD,
                 decimals: 18,
             },
         ],

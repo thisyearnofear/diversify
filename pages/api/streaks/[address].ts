@@ -67,11 +67,14 @@ export default async function handler(
       case 'POST':
         return await handlePost(normalizedAddress, req, res);
 
+      case 'PATCH':
+        return await handlePatch(normalizedAddress, req, res);
+
       case 'DELETE':
         return await handleDelete(normalizedAddress, res);
 
       default:
-        res.setHeader('Allow', ['GET', 'POST', 'DELETE']);
+        res.setHeader('Allow', ['GET', 'POST', 'PATCH', 'DELETE']);
         return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
   } catch (error) {
@@ -80,7 +83,7 @@ export default async function handler(
   }
 }
 
-// GET - Retrieve streak data
+// GET - Retrieve streak data with cross-chain activity
 async function handleGet(address: string, res: NextApiResponse) {
   try {
     const streak = await Streak.findOne({ walletAddress: address });
@@ -96,12 +99,23 @@ async function handleGet(address: string, res: NextApiResponse) {
         totalSaved: 0,
         isStreakActive: false,
         canClaim: false,
+        crossChainActivity: {
+          testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+          mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
+          graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
+        },
+        achievements: [],
         exists: false,
       });
     }
 
     const state = calculateStreakState(streak);
-    return res.status(200).json({ ...state, exists: true });
+    return res.status(200).json({ 
+      ...state, 
+      crossChainActivity: streak.crossChainActivity,
+      achievements: streak.achievements,
+      exists: true 
+    });
   } catch (error) {
     console.error('[Streak API] GET error:', error);
     return res.status(500).json({ error: 'Failed to fetch streak' });
@@ -218,6 +232,151 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
   } catch (error) {
     console.error('[Streak API] POST error:', error);
     return res.status(500).json({ error: 'Failed to update streak' });
+  }
+}
+
+// PATCH - Update cross-chain activity
+async function handlePatch(address: string, req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const { action, chainId, networkType, usdValue, txHash, metadata } = req.body;
+
+    // Validate required fields
+    if (!action || !chainId || !networkType) {
+      return res.status(400).json({ error: 'Missing required fields: action, chainId, networkType' });
+    }
+
+    const testnetIds = [44787, 5042002, 46630]; // Alfajores, Arc, RH
+    const isTestnet = testnetIds.includes(chainId);
+    const isMainnet = !isTestnet;
+
+    // Find or create streak record
+    let streak = await Streak.findOne({ walletAddress: address });
+    if (!streak) {
+      streak = new Streak({
+        walletAddress: address,
+        startTime: Date.now(),
+        lastActivity: Date.now(),
+        daysActive: 0,
+        gracePeriodsUsed: 0,
+        totalSaved: 0,
+        longestStreak: 0,
+        totalStreaksCompleted: 0,
+        milestones: { days7: false, days30: false, days100: false, days365: false },
+        crossChainActivity: {
+          testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+          mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
+          graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
+        },
+        achievements: [],
+        isPublic: false,
+      });
+    }
+
+    // Update activity based on action and network type
+    const activityPath = isTestnet ? 'crossChainActivity.testnet' : 'crossChainActivity.mainnet';
+
+    if (action === 'swap') {
+      streak.crossChainActivity[isTestnet ? 'testnet' : 'mainnet'].totalSwaps += 1;
+      if (usdValue) {
+        streak.crossChainActivity[isTestnet ? 'testnet' : 'mainnet'].totalVolume += usdValue;
+      }
+    } else if (action === 'claim') {
+      streak.crossChainActivity[isTestnet ? 'testnet' : 'mainnet'].totalClaims += 1;
+    } else if (action === 'graduation') {
+      streak.crossChainActivity.graduation.isGraduated = true;
+      streak.crossChainActivity.graduation.graduatedAt = new Date();
+      streak.crossChainActivity.graduation.testnetActionsBeforeGraduation = 
+        streak.crossChainActivity.testnet.totalSwaps + streak.crossChainActivity.testnet.totalClaims;
+    }
+
+    // Track unique chains used (for testnet)
+    if (isTestnet && !streak.crossChainActivity.testnet.chainsUsed.includes(chainId)) {
+      streak.crossChainActivity.testnet.chainsUsed.push(chainId);
+    }
+
+    // Calculate and update achievements
+    const newAchievements: string[] = [];
+    const hasAchievement = (id: string) => streak.achievements.includes(id);
+
+    // First Swap achievement
+    const totalSwaps = streak.crossChainActivity.testnet.totalSwaps + streak.crossChainActivity.mainnet.totalSwaps;
+    if (totalSwaps >= 1 && !hasAchievement('first-swap')) {
+      streak.achievements.push('first-swap');
+      newAchievements.push('first-swap');
+    }
+
+    // Multi-Chain Explorer (2+ testnet chains)
+    if (streak.crossChainActivity.testnet.chainsUsed.length >= 2 && !hasAchievement('multi-chain-explorer')) {
+      streak.achievements.push('multi-chain-explorer');
+      newAchievements.push('multi-chain-explorer');
+    }
+
+    // Speed Demon (Arc testnet)
+    if (streak.crossChainActivity.testnet.chainsUsed.includes(5042002) && !hasAchievement('speed-demon')) {
+      streak.achievements.push('speed-demon');
+      newAchievements.push('speed-demon');
+    }
+
+    // Stock Trader (Robinhood)
+    if (streak.crossChainActivity.testnet.chainsUsed.includes(46630) && !hasAchievement('stock-trader')) {
+      streak.achievements.push('stock-trader');
+      newAchievements.push('stock-trader');
+    }
+
+    // Mento Master (Alfajores)
+    if (streak.crossChainActivity.testnet.chainsUsed.includes(44787) && !hasAchievement('mento-master')) {
+      streak.achievements.push('mento-master');
+      newAchievements.push('mento-master');
+    }
+
+    // Power Tester (5+ testnet actions)
+    const testnetActions = streak.crossChainActivity.testnet.totalSwaps + streak.crossChainActivity.testnet.totalClaims;
+    if (testnetActions >= 5 && !hasAchievement('power-tester')) {
+      streak.achievements.push('power-tester');
+      newAchievements.push('power-tester');
+    }
+
+    // Volume Trader ($100+ testnet volume)
+    if (streak.crossChainActivity.testnet.totalVolume >= 100 && !hasAchievement('volume-trader')) {
+      streak.achievements.push('volume-trader');
+      newAchievements.push('volume-trader');
+    }
+
+    // Daily Claimer (3+ claims)
+    const totalClaims = streak.crossChainActivity.testnet.totalClaims + streak.crossChainActivity.mainnet.totalClaims;
+    if (totalClaims >= 3 && !hasAchievement('daily-claimer')) {
+      streak.achievements.push('daily-claimer');
+      newAchievements.push('daily-claimer');
+    }
+
+    // Ready to Graduate (3+ testnet swaps, not yet graduated)
+    if (streak.crossChainActivity.testnet.totalSwaps >= 3 &&
+        !streak.crossChainActivity.graduation.isGraduated &&
+        !hasAchievement('ready-to-graduate')) {
+      streak.achievements.push('ready-to-graduate');
+      newAchievements.push('ready-to-graduate');
+    }
+
+    // Mainnet Pioneer (graduated)
+    if (streak.crossChainActivity.graduation.isGraduated && !hasAchievement('mainnet-pioneer')) {
+      streak.achievements.push('mainnet-pioneer');
+      newAchievements.push('mainnet-pioneer');
+    }
+
+    await streak.save();
+
+    const state = calculateStreakState(streak);
+    return res.status(200).json({
+      success: true,
+      ...state,
+      crossChainActivity: streak.crossChainActivity,
+      achievements: streak.achievements,
+      newAchievements,
+      message: `Activity recorded: ${action} on ${networkType}`,
+    });
+  } catch (error) {
+    console.error('[Streak API] PATCH error:', error);
+    return res.status(500).json({ error: 'Failed to update activity' });
   }
 }
 

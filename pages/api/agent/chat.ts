@@ -63,21 +63,51 @@ RESPONSE GUIDELINES:
 
 TONE: Friendly expert who welcomes newcomers and provides data-driven advice to experienced users.`;
 
+// Test Drive Context Generator
+function getTestDriveContext(chainId?: number): string {
+  if (!chainId) return "";
+
+  // Check for testnet IDs (Alfajores: 44787, Arc: 5042002, RH: 46630)
+  const isTestnet = [44787, 5042002, 46630].includes(chainId);
+  if (!isTestnet) return "";
+
+  let chainSpecifics = "";
+  if (chainId === 46630) { // Robinhood
+    chainSpecifics = "- ROBINHOOD TESTNET: You are running on the Robinhood Arbitrum Orbit chain. 'Stocks' (TSLA, AMZN) are currently simulated for the hackathon context. Encourage users to 'buy' them to test the flow.";
+  } else if (chainId === 5042002) { // Arc
+    chainSpecifics = "- ARC TESTNET: You are on Arc's high-performance testnet. Encourage users to test swap speeds vs Celo.";
+  } else if (chainId === 44787) { // Alfajores
+    chainSpecifics = "- CELO ALFAJORES: You are on Celo's testnet. Mento stablecoins (cUSD, cEUR) are fully functional here.";
+  }
+
+  return `
+TEST DRIVE MODE ACTIVE:
+The user is currently in 'Test Drive' mode on a testnet chain (Chain ID: ${chainId}).
+- Emphasize that assets are "play money" and valid for testing only.
+- G$ UBI is SIMULATED on non-Celo chains to demonstrate the reward loop without bridging headaches.
+${chainSpecifics}
+- Encouraging Tone: "Go ahead and break things! Try swapping max amounts to see what happens."
+`;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { message, history = [] } = req.body;
+    const { message, history = [], chainId } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' });
     }
 
+    // Dynamic system prompt based on context
+    const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId);
+
     // Build conversation messages
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: contextPrompt },
     ];
 
     // Add conversation history (limit to last 10 messages for context window)
