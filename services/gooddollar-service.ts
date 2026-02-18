@@ -14,8 +14,8 @@ import { ethers } from 'ethers';
 // All addresses are normalised via getAddress() so any capitalisation typo is caught at load-time.
 const _RAW_ADDRESSES = {
   G_TOKEN:      '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
-  UBI_SCHEME:   '0xD7aC544F8A570C4d8764c3AAbCF6870CBD960D0D',
-  IDENTITY:     '0xc361a6e660563027c6c92518e3810103c6021665', // lowercase — getAddress() applies correct EIP-55
+  UBI_SCHEME:   '0x43d72Ff17701B2DA814620735C39C620Ce0ea4A1',
+  IDENTITY:     '0xC361A6E67822a0EDc17D899227dd9FC50BD62F42',
   RESERVE:      '0xed8f69e24FE33481f7dFe0d9D0f89F5e4F4f3E3E',
   CFA_FORWARDER:'0xcfA132E353cB4E398080B9700609bb008eceB125',
 } as const;
