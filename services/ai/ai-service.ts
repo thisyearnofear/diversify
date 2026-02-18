@@ -118,6 +118,16 @@ const DEFAULT_CONFIG: AIProviderConfig = {
   openaiApiKey: process.env.OPENAI_API_KEY,
 };
 
+// Debug logging for environment variables (only in development)
+if (process.env.NODE_ENV === 'development') {
+  console.log('[AI Service] Configuration check:', {
+    hasVeniceKey: !!DEFAULT_CONFIG.veniceApiKey,
+    hasGeminiKey: !!DEFAULT_CONFIG.geminiApiKey,
+    hasElevenLabsKey: !!DEFAULT_CONFIG.elevenLabsApiKey,
+    hasOpenAIKey: !!DEFAULT_CONFIG.openaiApiKey,
+  });
+}
+
 // Model mappings
 const VENICE_MODELS = {
   flagship: "zai-org-glm-4.7", // 128k context, best reasoning

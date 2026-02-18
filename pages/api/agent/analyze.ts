@@ -503,7 +503,19 @@ TRANSPARENCY REQUIREMENTS:
 
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Gemini 3 Agent Error:', error);
-        return res.status(500).json({ error: errorMessage });
+        console.error('[Analyze API] Error:', error);
+        
+        // Check if it's an AI provider error
+        if (errorMessage.includes('All AI providers failed')) {
+            return res.status(503).json({ 
+                error: 'AI service temporarily unavailable. Please try again in a moment.',
+                details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+            });
+        }
+        
+        return res.status(500).json({ 
+            error: 'Analysis failed. Please try again.',
+            details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        });
     }
 }

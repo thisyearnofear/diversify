@@ -255,7 +255,10 @@ export default function AIChat() {
             <VoiceButton
               size="sm"
               variant="embedded"
-              onTranscription={(t) => sendChatMessage(t)}
+              onTranscription={(t) => {
+                addUserMessage(t);
+                sendChatMessage(t);
+              }}
             />
             {inputValue.trim() && (
               <button

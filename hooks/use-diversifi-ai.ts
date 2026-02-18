@@ -528,12 +528,9 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     async (content: string) => {
       if (!capabilities.chat) return;
 
-      const userMessage: AIMessage = {
-        role: "user",
-        content,
-        timestamp: new Date(),
-      };
-      addMessage(userMessage);
+      // NOTE: Callers (useAIOracle.ask, AIChat.handleSubmit) are responsible
+      // for adding the user message to the conversation via addUserMessage().
+      // Do NOT add it here to avoid duplicate user bubbles.
 
       // FAST PATH: Check for common onboarding questions to provide instant responses
       const normalizedContent = content.toLowerCase().trim();
@@ -642,9 +639,30 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
               console.warn("[DiversifiAI] Auto-speech failed:", speechError);
             }
           }
+        } else {
+          // Handle API error responses
+          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
+          console.error("[DiversifiAI] Chat API error:", response.status, errorData);
+          
+          const errorMessage: AIMessage = {
+            role: "assistant",
+            content: `⚠️ **Analysis Unavailable**\n\n${errorData.error || "The AI service is temporarily unavailable. Please try again in a moment."}`,
+            timestamp: new Date(),
+            type: "text",
+          };
+          addMessage(errorMessage);
         }
       } catch (error) {
         console.error("[DiversifiAI] Chat failed:", error);
+        
+        // Handle network errors
+        const errorMessage: AIMessage = {
+          role: "assistant",
+          content: "⚠️ **Connection Error**\n\nUnable to reach the AI service. Please check your connection and try again.",
+          timestamp: new Date(),
+          type: "text",
+        };
+        addMessage(errorMessage);
       } finally {
         clearInterval(interval);
         setIsAnalyzing(false);

@@ -401,6 +401,7 @@ export default function VoiceButton({
             </AnimatePresence>
 
             <motion.button
+                type="button"
                 ref={buttonRef}
                 onClick={handleToggle}
                 onContextMenu={handleContextMenu}

@@ -134,6 +134,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error: unknown) {
     console.error('[Chat API] Error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Chat failed';
-    return res.status(500).json({ error: errorMessage });
+    
+    // Check if it's an AI provider error
+    if (errorMessage.includes('All AI providers failed')) {
+        return res.status(503).json({ 
+            error: 'AI service temporarily unavailable. Please try again in a moment.',
+            details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+        });
+    }
+    
+    return res.status(500).json({ 
+        error: 'Unable to process your request. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+    });
   }
 }
