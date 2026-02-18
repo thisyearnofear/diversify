@@ -14,6 +14,7 @@ import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
 import { AchievementBadge, AchievementToast, ACHIEVEMENTS, type Badge } from './AchievementBadge';
+import { NETWORKS } from '../../config';
 import dynamic from 'next/dynamic';
 
 const DISMISSED_KEY = 'diversifi_streak_dismissed';
@@ -151,131 +152,39 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
     );
   }
 
-  // No streak yet — show the full onboarding journey card
+  // No streak yet — enhance the existing InsightCard with a secondary testnet link.
+  // Deliberately ONE card (PREVENT BLOAT / ENHANCEMENT FIRST).
   if (!isEligible) {
-    const noTestnetActivity =
-      !crossChainActivity ||
-      (crossChainActivity.testnet.totalSwaps === 0 &&
-        crossChainActivity.testnet.totalClaims === 0 &&
-        !crossChainActivity.graduation.isGraduated);
-
     return (
-      <div className="space-y-3">
-        {/* Journey card */}
-        <div className="p-4 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 rounded-xl border border-emerald-200 dark:border-emerald-900/30">
-          <div className="flex items-start gap-3 mb-3">
-            <span className="text-2xl mt-0.5">🌱</span>
-            <div>
-              <h3 className="text-sm font-black text-emerald-800 dark:text-emerald-300 mb-0.5">
-                Your DiversiFi Journey
-              </h3>
-              <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed">
-                3 steps to daily G$ UBI + achievements
-              </p>
-            </div>
-          </div>
-
-          {/* Step list */}
-          <div className="space-y-2">
-            {[
-              {
-                n: '1',
-                icon: '🔄',
-                label: 'Make your first swap ($1+)',
-                sublabel: 'Unlocks daily G$ claim + First Swap badge',
-                done: false,
-              },
-              {
-                n: '2',
-                icon: '🛡️',
-                label: 'Verify identity on GoodDollar',
-                sublabel: 'Required to receive real G$ tokens',
-                done: false,
-              },
-              {
-                n: '3',
-                icon: '💚',
-                label: 'Claim your daily G$',
-                sublabel: 'Free UBI, every 24 hours',
-                done: false,
-              },
-            ].map((step) => (
-              <div
-                key={step.n}
-                className="flex items-start gap-2.5 p-2 bg-white/60 dark:bg-black/20 rounded-lg"
-              >
-                <div className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-[9px] font-black text-emerald-600 dark:text-emerald-400">{step.n}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm">{step.icon}</span>
-                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200">{step.label}</span>
-                  </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{step.sublabel}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* CTA */}
-          {onSaveClick && (
+      <>
+        <InsightCard
+          icon="🌱"
+          title="Unlock Daily G$"
+          description="Swap $1+ to unlock your free daily G$ UBI claim and earn your First Swap badge."
+          impact="Free daily UBI"
+          action={
+            onSaveClick
+              ? { label: 'Make a Swap →', onClick: onSaveClick }
+              : undefined
+          }
+          variant="default"
+        >
+          {/* Secondary option — one line, no new card */}
+          <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between">
+            <span className="text-[10px] text-gray-400">Not ready to use real money?</span>
             <button
-              onClick={onSaveClick}
-              className="mt-3 w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-lg transition-colors"
+              onClick={() => switchNetwork?.(NETWORKS.ALFAJORES.chainId)}
+              className="text-[10px] font-black text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
             >
-              Start with a Swap →
+              🧪 Try Testnet →
             </button>
-          )}
-        </div>
-
-        {/* Test Drive teaser — show to all users, not just post-streak */}
-        {noTestnetActivity && (
-          <div className="p-3 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/10 dark:to-indigo-900/10 rounded-xl border border-violet-200 dark:border-violet-900/30">
-            <div className="flex items-start gap-3">
-              <span className="text-xl mt-0.5">🧪</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <span className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wider">
-                    Not ready to commit?
-                  </span>
-                  <span className="text-[9px] px-1.5 py-0.5 bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 rounded font-bold uppercase">
-                    Free
-                  </span>
-                </div>
-                <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-relaxed mb-2">
-                  Try Test Drive on Alfajores — real swaps, no real money. Switch network in the chain selector above.
-                </p>
-                <div className="flex flex-wrap gap-1">
-                  {[
-                    { label: '🧪 Alfajores', href: 'https://faucet.celo.org' },
-                    { label: '⚡ Arc', href: 'https://faucet.circle.com' },
-                    { label: '📈 Robinhood', href: 'https://faucet.testnet.chain.robinhood.com' },
-                  ].map(({ label, href }) => (
-                    <a
-                      key={label}
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-[10px] font-bold rounded-full hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors"
-                    >
-                      {label}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
           </div>
-        )}
+        </InsightCard>
 
-        {/* Achievement toast */}
         {pendingToast && (
-          <AchievementToast
-            badge={pendingToast}
-            onClose={() => setPendingToast(null)}
-          />
+          <AchievementToast badge={pendingToast} onClose={() => setPendingToast(null)} />
         )}
-      </div>
+      </>
     );
   }
 
@@ -456,23 +365,23 @@ export function StreakRewardsCard({ onSaveClick }: StreakRewardsCardProps) {
               <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-relaxed mb-2">
                 Explore 3 testnets risk-free. Earn badges. Graduate to mainnet when ready.
               </p>
-              <div className="flex flex-wrap gap-1 mb-2">
-                {[
-                  { label: 'Alfajores', color: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400' },
-                  { label: 'Arc', color: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400' },
-                  { label: 'Robinhood', color: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400' },
-                ].map(({ label, color }) => (
-                  <span key={label} className={`px-2 py-0.5 ${color} text-[10px] font-bold rounded-full`}>{label}</span>
-                ))}
+              {/* Direct network switch — one tap, no chain-selector hunting */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => switchNetwork?.(NETWORKS.ALFAJORES.chainId)}
+                  className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-lg transition-colors active:scale-95"
+                >
+                  🧪 Try Testnet →
+                </button>
+                <a
+                  href="https://faucet.celo.org"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] font-bold text-violet-500 dark:text-violet-400 hover:underline"
+                >
+                  Get free funds →
+                </a>
               </div>
-              <a
-                href="https://faucet.circle.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[10px] font-black text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
-              >
-                Get free testnet funds → faucet.circle.com
-              </a>
             </div>
           </div>
         </div>

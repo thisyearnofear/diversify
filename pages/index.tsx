@@ -253,16 +253,39 @@ export default function DiversiFiPage() {
             {/* INTERMEDIATE/ADVANCED MODE: Show more controls */}
             {experienceMode !== "beginner" && (
               <>
-                <button
-                  onClick={() => {
-                    if (experienceMode === "intermediate") setExperienceMode("advanced");
-                    else setExperienceMode("beginner");
-                  }}
-                  className="w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
-                  title={`Mode: ${experienceMode === "intermediate" ? "Standard" : "Advanced"}`}
-                >
-                  {experienceMode === "intermediate" ? "🚀" : "⚡"}
-                </button>
+                {/* Mode toggle with tooltip — works on hover (desktop) and tap (mobile) */}
+                <div className="group relative">
+                  <button
+                    onClick={() => {
+                      if (experienceMode === "intermediate") setExperienceMode("advanced");
+                      else setExperienceMode("beginner");
+                    }}
+                    className="w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
+                    aria-label={
+                      experienceMode === "intermediate"
+                        ? "Switch to Advanced mode — power analytics & voice shortcuts"
+                        : "Switch to Simple mode — hide advanced panels"
+                    }
+                  >
+                    {experienceMode === "intermediate" ? "🚀" : "⚡"}
+                  </button>
+                  {/* Tooltip — visible on hover/focus on desktop; tap toggles on mobile via group-focus-within */}
+                  <div className="pointer-events-none invisible group-hover:visible group-focus-within:visible absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50 transition-opacity opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                      Currently: {experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
+                    </div>
+                    <div className="text-xs font-bold text-white mb-0.5">
+                      Tap → {experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
+                    </div>
+                    <div className="text-[10px] text-gray-300 leading-relaxed">
+                      {experienceMode === "intermediate"
+                        ? "Unlocks: power analytics, voice shortcuts, batch ops"
+                        : "Hides advanced panels — back to focused view"}
+                    </div>
+                    {/* Arrow */}
+                    <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
+                  </div>
+                </div>
 
                 {/* Voice assistant - always available for questions and commands */}
                 <VoiceButton

@@ -27,9 +27,15 @@ export default function HeaderMenu({
     const { financialStrategy } = useAppState();
 
     const getModeInfo = () => {
-        if (experienceMode === "beginner") return { label: "Simple", summary: "Protected \u0026 Focused", emoji: "🌱" };
+        if (experienceMode === "beginner") return { label: "Simple", summary: "Protected & Focused", emoji: "🌱" };
         if (experienceMode === "intermediate") return { label: "Standard", summary: "Full Transparency", emoji: "🚀" };
         return { label: "Advanced", summary: "Power Portfolio Ops", emoji: "⚡" };
+    };
+
+    const getNextModeInfo = () => {
+        if (experienceMode === "beginner")   return { label: "Standard", summary: "Unlocks: token search, inflation comparison, AI chat", emoji: "🚀" };
+        if (experienceMode === "intermediate") return { label: "Advanced", summary: "Unlocks: power analytics, voice shortcuts, batch ops", emoji: "⚡" };
+        return { label: "Simple", summary: "Hides advanced panels — easier on mobile", emoji: "🌱" };
     };
 
 
@@ -128,6 +134,11 @@ export default function HeaderMenu({
                                         </div>
                                         <div className="text-[10px] text-blue-500 font-bold uppercase tracking-tight">
                                             {getModeInfo().summary}
+                                        </div>
+                                        <div className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+                                            <span>→</span>
+                                            <span className="font-bold">{getNextModeInfo().emoji} {getNextModeInfo().label}:</span>
+                                            <span>{getNextModeInfo().summary}</span>
                                         </div>
                                     </div>
                                 </div>
