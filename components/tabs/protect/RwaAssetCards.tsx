@@ -89,7 +89,7 @@ function RwaFlipCard({
 
     return (
         <div 
-            className="relative w-full aspect-[4/3] cursor-pointer" 
+            className="relative w-full aspect-[3/4] sm:aspect-[4/3] cursor-pointer" 
             onClick={(e) => {
                 console.log('Flip card clicked!');
                 onFlip();
@@ -106,9 +106,9 @@ function RwaFlipCard({
                     style={{ transformStyle: "preserve-3d" }}
                 >
                     {/* Card Face */}
-                    <div className={`absolute inset-0 bg-gradient-to-br ${asset.gradient} text-white p-5 rounded-2xl shadow-xl flex flex-col`}>
+                    <div className={`absolute inset-0 bg-gradient-to-br ${asset.gradient} text-white p-3 sm:p-5 rounded-2xl shadow-xl flex flex-col`}>
                         {/* Progress dots */}
-                        <div className="flex justify-center gap-1.5 mb-3">
+                        <div className="flex justify-center gap-1.5 mb-2 sm:mb-3">
                             {Array.from({ length: total }).map((_, i) => (
                                 <motion.div
                                     key={i}
@@ -134,49 +134,49 @@ function RwaFlipCard({
                         ) : null}
 
                         {/* Main content */}
-                        <div className="flex-1 flex flex-col justify-center">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl backdrop-blur-sm">
+                        <div className="flex-1 flex flex-col justify-center min-h-0">
+                            <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-4">
+                                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-xl sm:rounded-2xl flex items-center justify-center text-2xl sm:text-4xl backdrop-blur-sm flex-shrink-0">
                                     {asset.icon}
                                 </div>
-                                <div>
-                                    <h3 className="font-black text-xl">{asset.label}</h3>
-                                    <p className="text-xs text-white/70 mt-1">
+                                <div className="min-w-0">
+                                    <h3 className="font-black text-base sm:text-xl truncate">{asset.label}</h3>
+                                    <p className="text-xs text-white/70 mt-0.5 sm:mt-1">
                                         {asset.symbol} on Arbitrum
                                     </p>
                                 </div>
                             </div>
 
-                            <p className="text-sm text-white/80 mb-4 leading-relaxed">
+                            <p className="text-xs sm:text-sm text-white/80 mb-2 sm:mb-4 leading-relaxed line-clamp-2 sm:line-clamp-none">
                                 {asset.description}
                             </p>
 
                             {/* Benefits */}
-                            <div className="space-y-2 mb-4">
+                            <div className="space-y-1 sm:space-y-2 mb-2 sm:mb-4">
                                 {asset.benefits.map((benefit, idx) => (
                                     <motion.div
                                         key={idx}
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.1 + idx * 0.1 }}
-                                        className="flex items-center gap-2 text-xs text-white/90"
+                                        className="flex items-center gap-2 text-[10px] sm:text-xs text-white/90"
                                     >
-                                        <span className="text-emerald-300">✓</span>
-                                        <span>{benefit}</span>
+                                        <span className="text-emerald-300 flex-shrink-0">✓</span>
+                                        <span className="truncate">{benefit}</span>
                                     </motion.div>
                                 ))}
                             </div>
 
                             {asset.expectedSlippage && (
-                                <p className="text-xs text-white/50">
+                                <p className="text-[10px] sm:text-xs text-white/50">
                                     Expected slippage: ~{asset.expectedSlippage}
                                 </p>
                             )}
                         </div>
 
-                        {/* Manual flip hint */}
-                        <div className="text-center">
-                            <span className="text-[10px] text-white/40">Tap to see next →</span>
+                        {/* Manual flip hint - more compact on mobile */}
+                        <div className="text-center mt-1 sm:mt-0">
+                            <span className="text-[10px] text-white/40">Tap card to see next →</span>
                         </div>
                     </div>
                 </motion.div>

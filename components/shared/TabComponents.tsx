@@ -359,6 +359,10 @@ export const ProtectionDashboard = ({
   isLoading = false,
   isStale = false,
   children,
+  streak,
+  canClaim,
+  estimatedReward,
+  onClaim,
 }: {
   title?: string;
   subtitle?: string;
@@ -370,6 +374,10 @@ export const ProtectionDashboard = ({
   isLoading?: boolean;
   isStale?: boolean;
   children?: React.ReactNode;
+  streak?: { daysActive: number } | null;
+  canClaim?: boolean;
+  estimatedReward?: string;
+  onClaim?: () => void;
 }) => {
   const isGood = score >= 80;
   const isOk = score >= 60;
@@ -378,6 +386,7 @@ export const ProtectionDashboard = ({
   const statusText = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
 
   const filled = (score / 100) * RING_C;
+  const hasStreak = streak && streak.daysActive > 0;
 
   return (
     <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl overflow-hidden shadow-xl">
@@ -445,6 +454,32 @@ export const ProtectionDashboard = ({
             </div>
           </div>
         </div>
+
+        {/* GoodDollar Streak - Miniaturized and integrated */}
+        {hasStreak && (
+          <button
+            onClick={onClaim}
+            className="w-full mt-4 flex items-center justify-between p-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl border border-white/20 transition-all group"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-base">💚</span>
+              <div className="text-left">
+                <span className="text-[10px] font-black text-white/90">
+                  {canClaim ? "G$ Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
+                </span>
+                <p className="text-[9px] text-white/60">
+                  {canClaim ? (estimatedReward || "Claim now") : "Free UBI on Celo"}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5">
+              {canClaim && (
+                <span className="size-1.5 bg-emerald-400 rounded-full animate-pulse" />
+              )}
+              <span className="text-[10px] font-black text-white/70 group-hover:translate-x-0.5 transition-transform">→</span>
+            </div>
+          </button>
+        )}
 
         {isStale && (
           <p className="text-xs text-white/60 mt-4 text-center">

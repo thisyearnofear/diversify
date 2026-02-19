@@ -24,7 +24,6 @@ import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
-import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import dynamic from "next/dynamic";
 
@@ -371,6 +370,10 @@ export default function ProtectionTab({
           ]}
           isLoading={isMultichainLoading}
           isStale={isStale}
+          streak={streak}
+          canClaim={canClaim}
+          estimatedReward={estimatedReward}
+          onClaim={() => setShowClaimFlow(true)}
         >
           <div className="mt-2">
             <ProfileWizard
@@ -550,16 +553,7 @@ export default function ProtectionTab({
         onSwap={handleExecuteSwap}
       />
 
-      {/* GoodDollar — compact banner, full hub lives in Learn tab */}
-      <div className="pt-4 border-t border-gray-100 dark:border-gray-900">
-        <GoodDollarInfoCard
-          compact
-          streak={streak}
-          canClaim={canClaim}
-          estimatedReward={estimatedReward}
-          onClaim={() => setShowClaimFlow(true)}
-        />
-      </div>
+      {/* GoodDollar streak now integrated into ProtectionDashboard header */}
 
       {showClaimFlow && (
         <GoodDollarClaimFlow

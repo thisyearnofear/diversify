@@ -9,6 +9,11 @@ interface ProtectHeroCardProps {
     chainCount: number;
     isLoading: boolean;
     isStale: boolean;
+    /** GoodDollar streak data - optional */
+    streak?: { daysActive: number } | null;
+    canClaim?: boolean;
+    estimatedReward?: string;
+    onClaim?: () => void;
 }
 
 export default function ProtectHeroCard({
@@ -19,8 +24,13 @@ export default function ProtectHeroCard({
     chainCount,
     isLoading,
     isStale,
+    streak,
+    canClaim,
+    estimatedReward,
+    onClaim,
 }: ProtectHeroCardProps) {
     const protectionLevel = Math.round((diversificationScore + (100 - 0 * 5)) / 2);
+    const hasStreak = streak && streak.daysActive > 0;
 
     return (
         <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white">
@@ -58,6 +68,32 @@ export default function ProtectHeroCard({
                             : `Protected across ${chainCount} chain${chainCount !== 1 ? "s" : ""}`
                 }
             />
+
+            {/* GoodDollar Streak - Miniaturized and integrated */}
+            {hasStreak && (
+                <button
+                    onClick={onClaim}
+                    className="w-full mt-4 flex items-center justify-between p-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl border border-white/20 transition-all group"
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="text-base">💚</span>
+                        <div className="text-left">
+                            <span className="text-[10px] font-black text-white/90">
+                                {canClaim ? "G$ Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
+                            </span>
+                            <p className="text-[9px] text-white/60">
+                                {canClaim ? (estimatedReward || "Claim now") : "Free UBI on Celo"}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        {canClaim && (
+                            <span className="size-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                        )}
+                        <span className="text-[10px] font-black text-white/70 group-hover:translate-x-0.5 transition-transform">→</span>
+                    </div>
+                </button>
+            )}
 
             {isStale && (
                 <p className="text-xs text-white/60 mt-2">
