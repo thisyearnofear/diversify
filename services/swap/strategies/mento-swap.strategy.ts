@@ -81,6 +81,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
         const amountIn = this.parseAmount(params.amount, fromTokenMeta.decimals || 18);
 
         // Find exchange
+        let expectedOutput: ethers.BigNumber;
         const exchangeInfo = await ExchangeDiscoveryService.findDirectExchange(
             brokerAddress,
             fromTokenAddress,
@@ -88,19 +89,57 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
             provider
         );
 
-        if (!exchangeInfo) {
-            throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
-        }
+        if (exchangeInfo) {
+            // Get direct quote
+            expectedOutput = await ExchangeDiscoveryService.getQuote(
+                brokerAddress,
+                exchangeInfo,
+                fromTokenAddress,
+                toTokenAddress,
+                amountIn,
+                provider
+            );
+        } else {
+            // No direct exchange - try route through USDm
+            this.log('No direct exchange for estimate, trying USDm route');
+            const routingTokenAddress = tokens[ROUTING_TOKEN_SYMBOL as keyof typeof tokens];
 
-        // Get quote
-        const expectedOutput = await ExchangeDiscoveryService.getQuote(
-            brokerAddress,
-            exchangeInfo,
-            fromTokenAddress,
-            toTokenAddress,
-            amountIn,
-            provider
-        );
+            if (!routingTokenAddress || params.fromToken === ROUTING_TOKEN_SYMBOL || params.toToken === ROUTING_TOKEN_SYMBOL) {
+                throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
+            }
+
+            const twoStepExchange = await ExchangeDiscoveryService.findTwoStepExchange(
+                brokerAddress,
+                fromTokenAddress,
+                toTokenAddress,
+                routingTokenAddress,
+                provider
+            );
+
+            if (!twoStepExchange) {
+                throw new Error(`No exchange found for ${params.fromToken}/${params.toToken} (even via USDm)`);
+            }
+
+            // Step 1: Quote fromToken -> USDm
+            const routingTokenAmountOut = await ExchangeDiscoveryService.getQuote(
+                brokerAddress,
+                twoStepExchange.first,
+                fromTokenAddress,
+                routingTokenAddress,
+                amountIn,
+                provider
+            );
+
+            // Step 2: Quote USDm -> toToken
+            expectedOutput = await ExchangeDiscoveryService.getQuote(
+                brokerAddress,
+                twoStepExchange.second,
+                routingTokenAddress,
+                toTokenAddress,
+                routingTokenAmountOut,
+                provider
+            );
+        }
 
         const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
         const minimumOutput = this.calculateMinOutput(expectedOutput, slippage);

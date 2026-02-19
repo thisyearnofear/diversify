@@ -325,7 +325,7 @@ export const CACHE_CONFIG = {
 // Swap Strategy Configuration
 export const SWAP_CONFIG = {
     STRATEGY_SCORES: {
-        [NETWORKS.CELO_MAINNET.chainId]: { 'MentoSwapStrategy': 100, 'OneInchSwapStrategy': 20, 'UniswapV3Strategy': 15, 'LiFiSwapStrategy': 10 },
+        [NETWORKS.CELO_MAINNET.chainId]: { 'MentoSwapStrategy': 100, 'OneInchSwapStrategy': 20, 'UniswapV3Strategy': 15, 'LiFiSwapStrategy': 40 },
         [NETWORKS.ALFAJORES.chainId]: { 'MentoSwapStrategy': 100, 'LiFiSwapStrategy': 20 },
         [NETWORKS.ARC_TESTNET.chainId]: { 'CurveArcStrategy': 100, 'ArcTestnetStrategy': 90 },
         [NETWORKS.ARBITRUM_ONE.chainId]: { 'OneInchSwapStrategy': 90, 'UniswapV3Strategy': 80, 'LiFiSwapStrategy': 60, 'DirectRWAStrategy': 30 },
