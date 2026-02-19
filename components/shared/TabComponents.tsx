@@ -18,6 +18,7 @@ export const StepCard = ({
   children,
   onNext,
   onSkip,
+  onBack,
   canSkip = true,
   isLast = false,
   canProceed = true,
