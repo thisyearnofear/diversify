@@ -14,6 +14,8 @@ interface SwapSuccessCelebrationProps {
     userGoal?: string | null;
     /** Current goal score 0-100 from portfolio analysis */
     goalScore?: number;
+    /** Previous goal score before this swap (for projected impact) */
+    previousGoalScore?: number;
     /** Callback to open the in-app G$ claim flow */
     onClaimG?: () => void;
 }
@@ -32,6 +34,7 @@ export default function SwapSuccessCelebration({
     annualSavings = 0,
     userGoal,
     goalScore,
+    previousGoalScore,
     onClaimG,
 }: SwapSuccessCelebrationProps) {
     const [confettiPieces, setConfettiPieces] = useState<Array<{ id: number; x: number; color: string; delay: number }>>([]);
@@ -146,14 +149,29 @@ export default function SwapSuccessCelebration({
                                     <>
                                         <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mb-1">
                                             {goalScore}%
+                                            {previousGoalScore != null && goalScore > previousGoalScore && (
+                                                <span className="text-xs ml-1 text-emerald-500">
+                                                    (+{goalScore - previousGoalScore}%)
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="text-xs font-bold text-gray-500 dark:text-gray-400">
                                             {userGoal === 'inflation_protection' ? 'Hedge Score' : userGoal === 'geographic_diversification' ? 'Diversify Score' : 'RWA Score'}
                                         </div>
                                         {/* Mini progress bar */}
                                         <div className="mt-2 h-1 w-full bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                                            <div className={`h-full rounded-full ${goalScore >= 80 ? 'bg-emerald-500' : goalScore >= 60 ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${goalScore}%` }} />
+                                            <div className="flex h-full w-full bg-gray-200 dark:bg-gray-600">
+                                                <div 
+                                                    className={`h-full transition-all duration-1000 ${goalScore >= 80 ? 'bg-emerald-500' : goalScore >= 60 ? 'bg-blue-500' : 'bg-amber-500'}`} 
+                                                    style={{ width: `${goalScore}%` }} 
+                                                />
+                                            </div>
                                         </div>
+                                        {previousGoalScore != null && goalScore > previousGoalScore && (
+                                            <div className="mt-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 animate-pulse">
+                                                Projected Impact: +{goalScore - previousGoalScore}%
+                                            </div>
+                                        )}
                                     </>
                                 ) : (
                                     <>

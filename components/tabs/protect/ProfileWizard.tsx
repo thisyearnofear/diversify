@@ -23,6 +23,8 @@ interface ProfileWizardProps {
     onSkipToEnd: () => void;
     onCompleteEditing: () => void;
     onStartEditing: () => void;
+    onPrevStep?: () => void;
+    onBack?: () => void;
 }
 
 export default function ProfileWizard({
@@ -40,15 +42,19 @@ export default function ProfileWizard({
     onSkipToEnd,
     onCompleteEditing,
     onStartEditing,
+    onPrevStep,
+    onBack,
 }: ProfileWizardProps) {
     return (
         <>
             <AnimatePresence mode="wait">
                 {mode === "editing" && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                        key={currentStep}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
                         {currentStep === 0 && (
                             <StepCard
@@ -81,6 +87,7 @@ export default function ProfileWizard({
                                 title="What's your risk tolerance?"
                                 onNext={onNextStep}
                                 onSkip={onSkipToEnd}
+                                onBack={onBack || onPrevStep}
                                 canProceed={!!config.riskTolerance}
                             >
                                 <QuickSelect
@@ -107,6 +114,7 @@ export default function ProfileWizard({
                                 title="What's your time horizon?"
                                 onNext={onCompleteEditing}
                                 onSkip={onSkipToEnd}
+                                onBack={onPrevStep}
                                 isLast
                                 canProceed={!!config.timeHorizon}
                             >

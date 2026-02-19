@@ -309,7 +309,10 @@ async function fetchChainBalances(
 // MAIN HOOK
 // ============================================================================
 
-export function useMultichainBalances(address: string | undefined | null) {
+export function useMultichainBalances(
+  address: string | undefined | null,
+  userGoal?: string,
+) {
   const { inflationData } = useInflationData();
   const { macroData } = useMacroData(); // Fetch macro data for advanced analysis
 
@@ -366,7 +369,7 @@ export function useMultichainBalances(address: string | undefined | null) {
     const analysis = analyzePortfolio(
       { chains: Object.values(chainBalances), totalValue },
       inflationData || {},
-      "exploring",
+      userGoal || "exploring",
       macroData, // Pass real macro data for improved scoring
     );
 
@@ -489,6 +492,7 @@ export function useMultichainBalances(address: string | undefined | null) {
     getChainBalance,
     hasBalanceOnChain,
     fetchAllBalances,
+    userGoal: userGoal,
   };
 }
 

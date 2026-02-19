@@ -92,12 +92,13 @@ export default function SwapTab({
 
   // Success celebration state
   const [showCelebration, setShowCelebration] = useState(false);
+  const [previousGoalScore, setPreviousGoalScore] = useState<number | undefined>(undefined);
   const [celebrationData, setCelebrationData] = useState<{
-    fromToken: string;
-    toToken: string;
-    amount: string;
-    fromTokenInflation: number;
-    toTokenInflation: number;
+      fromToken: string;
+      toToken: string;
+      amount: string;
+      fromTokenInflation: number;
+      toTokenInflation: number;
   } | null>(null);
 
   const swapInterfaceRef = useRef<{
@@ -250,18 +251,27 @@ export default function SwapTab({
   }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordExperienceSwap, recordStreakSwap, celebrationData]);
 
   const handleSwap = async (
-    fromToken: string,
-    toToken: string,
-    amount: string,
-    fromChainId?: number,
-    toChainId?: number,
-    fromTokenInflation?: number,
-    toTokenInflation?: number,
-  ) => {
-    setSwapStatus("Initiating swap...");
-    setSwapStep("approving");
+        fromToken: string,
+        toToken: string,
+        amount: string,
+        fromChainId?: number,
+        toChainId?: number,
+        fromTokenInflation?: number,
+        toTokenInflation?: number,
+    ) => {
+        setSwapStatus("Initiating swap...");
+        setSwapStep("approving");
 
-    // Store swap data for celebration (including inflation rates for savings calculation)
+        // ENHANCEMENT: Store current goal score before swap for impact calculation
+        if (profileConfig.userGoal && goalScores) {
+            const currentScore = 
+                profileConfig.userGoal === 'inflation_protection' ? goalScores.hedge :
+                profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
+                profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0;
+            setPreviousGoalScore(Math.round(currentScore));
+        }
+
+        // Store swap data for celebration (including inflation rates for savings calculation)
     setCelebrationData({
       fromToken,
       toToken,
@@ -443,6 +453,13 @@ export default function SwapTab({
               onSimulated={() => {
                 // Trigger the same celebration modal as a real swap so Arc/RH users
                 // get the same dopamine hit. Use $10 USDC→EURC as the mock trade.
+                if (profileConfig.userGoal && goalScores) {
+                    const currentScore = 
+                        profileConfig.userGoal === 'inflation_protection' ? goalScores.hedge :
+                        profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
+                        profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0;
+                    setPreviousGoalScore(Math.round(currentScore));
+                }
                 setCelebrationData({
                   fromToken: 'USDC',
                   toToken: 'EURC',
@@ -624,6 +641,7 @@ export default function SwapTab({
           onClose={() => {
             setShowCelebration(false);
             setCelebrationData(null);
+            setPreviousGoalScore(undefined);
           }}
           fromToken={celebrationData.fromToken}
           toToken={celebrationData.toToken}
@@ -636,6 +654,7 @@ export default function SwapTab({
             profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
             profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0
           ) : undefined}
+          previousGoalScore={previousGoalScore}
           onClaimG={() => setShowClaimFlow(true)}
         />
       )}

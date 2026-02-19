@@ -28,6 +28,7 @@ export const StepCard = ({
   children: React.ReactNode;
   onNext?: () => void;
   onSkip?: () => void;
+  onBack?: () => void;
   canSkip?: boolean;
   isLast?: boolean;
   canProceed?: boolean;
@@ -35,6 +36,17 @@ export const StepCard = ({
   <div className="bg-gradient-to-br from-gray-50 to-blue-50/30 rounded-2xl p-4 border border-blue-100">
     <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-2">
+        {step > 1 && onBack && (
+          <button
+            onClick={onBack}
+            className="p-1 -ml-1 text-gray-400 hover:text-blue-600 transition-colors"
+            title="Back"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
         <span className="text-xs font-black uppercase text-blue-600 tracking-widest">
           Step {step} of {totalSteps}
         </span>

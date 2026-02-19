@@ -1,5 +1,5 @@
-import React from "react";
-import { Card } from "../../shared/TabComponents";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import type { UserGoal } from "@/hooks/use-protection-profile";
 
@@ -21,7 +21,7 @@ const RWA_ASSETS = [
         bgColor: "bg-green-100",
         expectedSlippage: "0.5%",
         yieldTooltip:
-            "Your USDY balance grows automatically at ~5% APY. Just hold it in your wallet—no claiming needed. The yield accrues continuously and compounds automatically.",
+            "Your USDY balance grows automatically at ~5% APY. Just hold it in your wallet—no claiming needed.",
     },
     {
         symbol: "PAXG",
@@ -39,7 +39,7 @@ const RWA_ASSETS = [
         textColor: "text-amber-700",
         bgColor: "bg-amber-100",
         yieldTooltip:
-            "PAXG tracks the price of physical gold. No yield—it's a store of value that protects against currency debasement and inflation over time.",
+            "PAXG tracks the price of physical gold. No yield—it's a store of value that protects against inflation.",
     },
     {
         symbol: "SYRUPUSDC",
@@ -54,7 +54,7 @@ const RWA_ASSETS = [
         bgColor: "bg-purple-100",
         expectedSlippage: "0.3%",
         yieldTooltip:
-            "Your SYRUPUSDC balance increases automatically at ~4.5% APY from Morpho lending markets. Just hold it—yield accrues automatically with no action needed.",
+            "Your SYRUPUSDC balance increases automatically at ~4.5% APY from Morpho lending markets.",
     },
 ];
 
@@ -66,6 +66,119 @@ interface RwaAssetCardsProps {
     onShowModal: (symbol: string) => void;
 }
 
+// Flip card component with auto-rotate and manual controls
+function RwaFlipCard({
+    asset,
+    index,
+    total,
+    isActive,
+    onFlip,
+    onSwap,
+    onLearnMore,
+}: {
+    asset: typeof RWA_ASSETS[0];
+    index: number;
+    total: number;
+    isActive: boolean;
+    onFlip: () => void;
+    onSwap: () => void;
+    onLearnMore: () => void;
+}) {
+    const apyBadge = asset.symbol === 'USDY' ? '5% APY' : 
+                     asset.symbol === 'SYRUPUSDC' ? '4.5% APY' : null;
+
+    return (
+        <div className="relative w-full aspect-[4/3] cursor-pointer" onClick={onFlip}>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={asset.symbol}
+                    initial={{ rotateX: -90, opacity: 0 }}
+                    animate={{ rotateX: 0, opacity: 1 }}
+                    exit={{ rotateX: 90, opacity: 0 }}
+                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    className="absolute inset-0"
+                    style={{ transformStyle: "preserve-3d" }}
+                >
+                    {/* Card Face */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${asset.gradient} text-white p-5 rounded-2xl shadow-xl flex flex-col`}>
+                        {/* Progress dots */}
+                        <div className="flex justify-center gap-1.5 mb-3">
+                            {Array.from({ length: total }).map((_, i) => (
+                                <motion.div
+                                    key={i}
+                                    className={`h-1.5 rounded-full transition-all ${
+                                        i === index ? "w-6 bg-white/80" : "w-1.5 bg-white/30"
+                                    }`}
+                                    animate={{ width: i === index ? 24 : 6 }}
+                                />
+                            ))}
+                        </div>
+
+                        {/* Badge */}
+                        {asset.symbol === 'PAXG' ? (
+                            <div className="absolute top-4 right-4 bg-amber-400 text-amber-900 px-3 py-1 rounded-full text-xs font-black flex items-center gap-1 shadow-lg">
+                                <span>🥇</span>
+                                <span>Gold-Backed</span>
+                            </div>
+                        ) : apyBadge ? (
+                            <div className="absolute top-4 right-4 bg-white text-emerald-700 px-3 py-1 rounded-full text-xs font-black flex items-center gap-1 shadow-lg">
+                                <span>💰</span>
+                                <span>{apyBadge}</span>
+                            </div>
+                        ) : null}
+
+                        {/* Main content */}
+                        <div className="flex-1 flex flex-col justify-center">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl backdrop-blur-sm">
+                                    {asset.icon}
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-xl">{asset.label}</h3>
+                                    <p className="text-xs text-white/70 mt-1">
+                                        {asset.symbol} on Arbitrum
+                                    </p>
+                                </div>
+                            </div>
+
+                            <p className="text-sm text-white/80 mb-4 leading-relaxed">
+                                {asset.description}
+                            </p>
+
+                            {/* Benefits */}
+                            <div className="space-y-2 mb-4">
+                                {asset.benefits.map((benefit, idx) => (
+                                    <motion.div
+                                        key={idx}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.1 + idx * 0.1 }}
+                                        className="flex items-center gap-2 text-xs text-white/90"
+                                    >
+                                        <span className="text-emerald-300">✓</span>
+                                        <span>{benefit}</span>
+                                    </motion.div>
+                                ))}
+                            </div>
+
+                            {asset.expectedSlippage && (
+                                <p className="text-xs text-white/50">
+                                    Expected slippage: ~{asset.expectedSlippage}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Manual flip hint */}
+                        <div className="text-center">
+                            <span className="text-[10px] text-white/40">Tap to see next →</span>
+                        </div>
+                    </div>
+                </motion.div>
+            </AnimatePresence>
+        </div>
+    );
+}
+
 export default function RwaAssetCards({
     chains,
     userGoal,
@@ -73,107 +186,101 @@ export default function RwaAssetCards({
     onSwap,
     onShowModal,
 }: RwaAssetCardsProps) {
+    const [activeIndex, setActiveIndex] = useState(0);
     const isCelo = ChainDetectionService.isCelo(chainId);
 
+    // Filter which assets to show
+    const visibleAssets = RWA_ASSETS.filter((asset) => {
+        const hasAsset = chains.some((chain) =>
+            chain.balances.some((b) => b.symbol === asset.symbol)
+        );
+        return !hasAsset || userGoal === "rwa_access";
+    });
+
+    // Auto-rotate every 5 seconds
+    useEffect(() => {
+        if (visibleAssets.length <= 1) return;
+        
+        const interval = setInterval(() => {
+            setActiveIndex((prev) => (prev + 1) % visibleAssets.length);
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, [visibleAssets.length]);
+
+    // Reset index if it exceeds visible assets
+    useEffect(() => {
+        if (activeIndex >= visibleAssets.length) {
+            setActiveIndex(0);
+        }
+    }, [visibleAssets.length, activeIndex]);
+
+    if (visibleAssets.length === 0) return null;
+
+    const activeAsset = visibleAssets[activeIndex];
+    const apyBadge = activeAsset.symbol === 'USDY' ? '5% APY' : 
+                     activeAsset.symbol === 'SYRUPUSDC' ? '4.5% APY' : null;
+
+    const handleFlip = () => {
+        setActiveIndex((prev) => (prev + 1) % visibleAssets.length);
+    };
+
     return (
-        <>
-            {RWA_ASSETS.map((asset) => {
-                const hasAsset = chains.some((chain) =>
-                    chain.balances.some((b) => b.symbol === asset.symbol)
-                );
-                const showCard = !hasAsset || userGoal === "rwa_access";
+        <div className="space-y-4">
+            {/* Flip Card */}
+            <RwaFlipCard
+                asset={activeAsset}
+                index={activeIndex}
+                total={visibleAssets.length}
+                isActive={true}
+                onFlip={handleFlip}
+                onSwap={() => onSwap(activeAsset.symbol)}
+                onLearnMore={() => onShowModal(activeAsset.symbol)}
+            />
 
-                if (!showCard) return null;
-
-                // Calculate APY badge
-                const apyBadge = asset.symbol === 'USDY' ? '5% APY' : 
-                                asset.symbol === 'SYRUPUSDC' ? '4.5% APY' : null;
-
-                return (
-                    <Card
-                        key={asset.symbol}
-                        className={`bg-gradient-to-br ${asset.gradient} text-white p-4 mb-4 cursor-pointer hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98] relative overflow-hidden`}
-                        onClick={() => onShowModal(asset.symbol)}
+            {/* Action Buttons */}
+            <div className="flex gap-2">
+                {isCelo ? (
+                    <button
+                        onClick={() => onSwap(activeAsset.symbol)}
+                        className={`flex-1 py-3 bg-gradient-to-r ${activeAsset.gradient} text-white rounded-xl text-xs font-black uppercase tracking-widest hover:shadow-lg transition-all flex items-center justify-center gap-2`}
                     >
-                        {/* ENHANCEMENT: Prominent APY badge for yield tokens */}
+                        <span>Get {activeAsset.symbol}</span>
                         {apyBadge && (
-                            <div className="absolute top-3 right-3 bg-white text-emerald-700 px-2.5 py-1 rounded-full text-xs font-black shadow-lg flex items-center gap-1">
-                                <span>💰</span>
-                                <span>{apyBadge}</span>
-                            </div>
+                            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">
+                                Earn {apyBadge}
+                            </span>
                         )}
+                    </button>
+                ) : null}
+                <button
+                    onClick={() => onShowModal(activeAsset.symbol)}
+                    className={`${isCelo ? 'flex-0' : 'flex-1'} py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-gray-700 transition-all`}
+                >
+                    Learn More
+                </button>
+            </div>
 
-                        {/* ENHANCEMENT: Gold badge for PAXG */}
-                        {asset.symbol === 'PAXG' && (
-                            <div className="absolute top-3 right-3 bg-amber-400 text-amber-900 px-2.5 py-1 rounded-full text-xs font-black shadow-lg flex items-center gap-1">
-                                <span>🥇</span>
-                                <span>Gold-Backed</span>
-                            </div>
-                        )}
-
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center text-2xl backdrop-blur-sm">
-                                    {asset.icon}
-                                </div>
-                                <div>
-                                    <h3 className="font-black text-sm">{asset.label}</h3>
-                                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                        <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
-                                            {asset.symbol} on Arbitrum
-                                        </span>
-                                        <span className="text-xs bg-blue-500/40 px-2 py-0.5 rounded-full backdrop-blur-sm flex items-center gap-1">
-                                            <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                                            </svg>
-                                            <span>Earn</span>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ENHANCEMENT: Benefits list with icons */}
-                        <div className="space-y-1.5 mb-3">
-                            {asset.benefits.slice(0, 3).map((benefit, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-xs text-white/90">
-                                    <span className="text-emerald-300">✓</span>
-                                    <span>{benefit}</span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {asset.expectedSlippage && (
-                            <p className="text-xs text-white/60 mb-3">
-                                Expected slippage: ~{asset.expectedSlippage}
-                            </p>
-                        )}
-
-                        {/* ENHANCEMENT: Clearer CTA with yield emphasis */}
-                        {isCelo && (
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSwap(asset.symbol);
-                                }}
-                                className={`w-full py-3 bg-white ${asset.textColor} rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/90 transition-all shadow-lg flex items-center justify-center gap-2`}
-                            >
-                                <span>Get {asset.symbol}</span>
-                                {apyBadge && <span className="bg-emerald-100 px-2 py-0.5 rounded-full">Earn {apyBadge}</span>}
-                                <span>→</span>
-                            </button>
-                        )}
-
-                        {/* ENHANCEMENT: Already on Arbitrum CTA */}
-                        {!isCelo && (
-                            <div className="w-full py-2 bg-white/10 rounded-xl text-xs text-center text-white/80 backdrop-blur-sm border border-white/20">
-                                Tap to learn more about {asset.symbol}
-                            </div>
-                        )}
-                    </Card>
-                );
-            })}
-        </>
+            {/* Asset selector dots (alternative to flip) */}
+            {visibleAssets.length > 1 && (
+                <div className="flex justify-center gap-1.5 pt-2">
+                    {visibleAssets.map((asset, idx) => (
+                        <button
+                            key={asset.symbol}
+                            onClick={() => setActiveIndex(idx)}
+                            className={`p-1.5 rounded-full transition-all ${
+                                idx === activeIndex
+                                    ? "bg-gray-800 dark:bg-white"
+                                    : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                            }`}
+                            title={`View ${asset.label}`}
+                        >
+                            <span className="text-xs">{asset.icon}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
     );
 }
 

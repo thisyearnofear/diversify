@@ -87,6 +87,7 @@ export default function ProtectionTab({
     currentTimeHorizonLabel,
     startEditing,
     nextStep,
+    prevStep,
     skipToEnd,
     completeEditing,
     setUserGoal,
@@ -328,6 +329,7 @@ export default function ProtectionTab({
               onSkipToEnd={skipToEnd}
               onCompleteEditing={completeEditing}
               onStartEditing={startEditing}
+              onBack={prevStep}
             />
           </div>
         </Card>

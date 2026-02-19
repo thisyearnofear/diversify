@@ -30,6 +30,7 @@ import StrategyModal, { useStrategyModal } from "../components/onboarding/Strate
 import { useVoiceIntent } from "../hooks/use-voice-intent";
 import { useAIOracle } from "../hooks/use-ai-oracle";
 import { useStreakRewards } from "../hooks/use-streak-rewards";
+import { useProtectionProfile } from "../hooks/use-protection-profile";
 
 
 export default function DiversiFiPage() {
@@ -68,7 +69,8 @@ export default function DiversiFiPage() {
   const [userRegion, setUserRegion] = useState<Region>("Africa");
 
   // NEW: Use unified multichain balances hook
-  const multichainPortfolio = useMultichainBalances(address);
+  const { config: profileConfig } = useProtectionProfile();
+  const multichainPortfolio = useMultichainBalances(address, profileConfig.userGoal || undefined);
   const {
     isLoading: isMultichainLoading,
     refresh,

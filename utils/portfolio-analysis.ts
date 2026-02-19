@@ -99,6 +99,12 @@ export interface PortfolioAnalysis {
   overExposedRegions: string[];
   underExposedRegions: string[];
   rebalancingOpportunities: RebalancingOpportunity[];
+  goalAnalysis: {
+    userGoal: string;
+    title: string;
+    description: string;
+    recommendations: RebalancingOpportunity[];
+  };
 
   // Recommendations
   targetAllocations: {
@@ -150,9 +156,15 @@ export function createEmptyAnalysis(): PortfolioAnalysis {
     netRate: 0,
     isNetPositive: true,
     missingRegions: [],
-    overExposedRegions: [],
     underExposedRegions: [],
+    overExposedRegions: [],
     rebalancingOpportunities: [],
+    goalAnalysis: {
+      userGoal: "exploring",
+      title: "Portfolio Analysis",
+      description: "Analyzing your holdings to find protection opportunities.",
+      recommendations: [],
+    },
     targetAllocations: {
       inflation_protection: [],
       geographic_diversification: [],
@@ -532,11 +544,11 @@ export function generateRebalancingOpportunities(
         (goal === "geographic_diversification" &&
           highToken.region !== targetToken.region) ||
         (goal === "rwa_access" && targetToken.region === "Global") ||
-        (goal === "inflation_protection" && targetToken.inflationRate <= 2);
+        (goal === "inflation_protection" && targetToken.inflationRate <= 3);
 
       if (
         (inflationDelta > 5 && suggestedAmount > 100) ||
-        (isGoalAligned && inflationDelta > 3)
+        (isGoalAligned && inflationDelta > 2)
       ) {
         priority = "HIGH";
       } else if (
@@ -822,6 +834,47 @@ export function analyzePortfolio(
     currentGoal,
   );
 
+  // Goal-aware Analysis Text
+  const goalAnalysis = {
+    userGoal: currentGoal,
+    title: "",
+    description: "",
+    recommendations: rebalancingOpportunities,
+  };
+
+  if (currentGoal === "geographic_diversification") {
+    goalAnalysis.title = "Regional Diversification";
+    if (rebalancingOpportunities.length > 0) {
+      const topOpp = rebalancingOpportunities[0];
+      goalAnalysis.description = `Spreading your ${topOpp.fromToken} into ${topOpp.toToken} improves your regional balance and reduces concentration risk.`;
+    } else {
+      goalAnalysis.description =
+        "Your portfolio is regionally balanced. Consider exploring new emerging markets.";
+    }
+  } else if (currentGoal === "rwa_access") {
+    goalAnalysis.title = "Real-World Assets";
+    const hasGold = tokens.some((t) => t.symbol === "PAXG");
+    if (hasGold) {
+      goalAnalysis.description =
+        "You have RWA exposure. Consider increasing your allocation to gold or yield-bearing treasuries.";
+    } else {
+      goalAnalysis.description =
+        "Add gold-backed PAXG or yield-bearing USDY to protect your purchasing power with hard assets.";
+    }
+  } else if (currentGoal === "inflation_protection") {
+    goalAnalysis.title = "Inflation Protection";
+    if (weightedInflationRisk > 5) {
+      goalAnalysis.description = `Your holdings face ${weightedInflationRisk.toFixed(1)}% inflation. Move into US/EU stablecoins or Gold to preserve value.`;
+    } else {
+      goalAnalysis.description =
+        "Your inflation risk is low. Continue monitoring global rates to stay protected.";
+    }
+  } else {
+    goalAnalysis.title = "Portfolio Opportunities";
+    goalAnalysis.description =
+      "Get personalized recommendations based on your holdings and market conditions.";
+  }
+
   // Calculate projections
   const optimizedInflationRisk = weightedInflationRisk * 0.6;
   const projections = calculateProjections(
@@ -917,6 +970,7 @@ export function analyzePortfolio(
     overExposedRegions,
     underExposedRegions,
     rebalancingOpportunities,
+    goalAnalysis,
     targetAllocations: {
       inflation_protection: generateTargetAllocations(
         "inflation_protection",
