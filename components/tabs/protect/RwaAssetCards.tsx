@@ -215,7 +215,7 @@ export default function RwaAssetCards({
         }
     }, [visibleAssets.length, activeIndex]);
 
-    if (visibleAssets.length === 0) return null;
+    if (visibleAssets.length === 0 || !visibleAssets[activeIndex]) return null;
 
     const activeAsset = visibleAssets[activeIndex];
     const apyBadge = activeAsset.symbol === 'USDY' ? '5% APY' : 
