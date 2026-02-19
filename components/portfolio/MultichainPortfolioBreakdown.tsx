@@ -14,16 +14,20 @@ interface MultichainPortfolioBreakdownProps {
     chainBreakdown?: ChainBreakdown[];
 }
 
-// Network metadata for display
-const NETWORK_INFO: Record<number, {
+interface NetworkMetadata {
     color: string;
+    darkColor?: string;
     icon: string;
     description: string;
     regions: string[];
     features: string[];
-}> = {
+}
+
+// Network metadata for display
+const NETWORK_INFO: Record<number, NetworkMetadata> = {
     [NETWORKS.CELO_MAINNET.chainId]: {
         color: "#FCFF52",
+        darkColor: "#E2E600",
         icon: "🌱",
         description: "Regional Stablecoins & Mobile Money",
         regions: ["Africa", "LatAm", "Asia", "Europe"],
@@ -36,6 +40,7 @@ const NETWORK_INFO: Record<number, {
     },
     [NETWORKS.ARBITRUM_ONE.chainId]: {
         color: "#D69E2E",
+        darkColor: "#F6AD55",
         icon: "🥇",
         description: "RWA & Yield-Bearing Assets",
         regions: ["Commodities", "USA", "Europe", "Global"],
@@ -48,6 +53,7 @@ const NETWORK_INFO: Record<number, {
     },
     [NETWORKS.RH_TESTNET.chainId]: {
         color: "#22C55E",
+        darkColor: "#4ADE80",
         icon: "🏦",
         description: "Tokenized Stock RWAs (Testnet)",
         regions: ["USA"],
@@ -142,16 +148,8 @@ export default function MultichainPortfolioBreakdown({
 
     return (
         <div className="space-y-4">
-            {/* Summary Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-sm font-bold text-gray-900">
-                        {activeChainCount} Chain{activeChainCount !== 1 ? 's' : ''} Active
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                        ${totalValue.toFixed(2)} total value
-                    </p>
-                </div>
+            {/* Summary Header - title and value already in DashboardCard */}
+            <div className="flex items-center justify-end">
                 <div className="flex -space-x-2">
                     {networkEntries.map(([name, data]) => {
                         const info = NETWORK_INFO[data.chainId];
@@ -188,16 +186,32 @@ export default function MultichainPortfolioBreakdown({
                                         className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
                                         style={{ backgroundColor: `${info.color}30` }}
                                     >
-                                        {info.icon}
+                                        <span className="dark:hidden">{info.icon}</span>
+                                        <span className="hidden dark:inline" style={{ filter: info.darkColor ? 'brightness(1.2)' : 'none' }}>{info.icon}</span>
                                     </span>
                                     <div>
-                                        <span className="font-semibold text-gray-900 text-sm">{network}</span>
-                                        <div className="text-xs text-gray-500">{info.description}</div>
+                                        <span 
+                                            className="font-semibold text-sm"
+                                            style={{ color: 'var(--network-title-color, inherit)' }}
+                                        >
+                                            {network}
+                                        </span>
+                                        <style jsx>{`
+                                            span {
+                                                --network-title-color: #111827;
+                                            }
+                                            @media (prefers-color-scheme: dark) {
+                                                span {
+                                                    --network-title-color: ${info.darkColor || '#ffffff'};
+                                                }
+                                            }
+                                        `}</style>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">{info.description}</div>
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="font-bold text-gray-900">{data.percentage.toFixed(1)}%</div>
-                                    <div className="text-xs text-gray-500">${data.usdValue.toFixed(2)}</div>
+                                    <div className="font-bold text-gray-900 dark:text-white">{data.percentage.toFixed(1)}%</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">${data.usdValue.toFixed(2)}</div>
                                 </div>
                             </div>
 
@@ -221,7 +235,7 @@ export default function MultichainPortfolioBreakdown({
                                 {info.features.map((feature, idx) => (
                                     <span
                                         key={idx}
-                                        className="text-[10px] px-2 py-0.5 bg-white rounded-full text-gray-600 border border-gray-100"
+                                        className="text-[10px] px-2 py-0.5 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700"
                                     >
                                         {feature}
                                     </span>
@@ -240,26 +254,26 @@ export default function MultichainPortfolioBreakdown({
             </div>
 
             {/* Why Multichain */}
-            <div className="p-3 bg-blue-50 rounded-xl border border-blue-100">
-                <h4 className="text-xs font-bold text-blue-800 mb-2">Why Multichain?</h4>
-                <ul className="text-xs text-blue-700 space-y-1">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100 dark:border-blue-800">
+                <h4 className="text-xs font-bold text-blue-800 dark:text-blue-300 mb-2">Why Multichain?</h4>
+                <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
                     <li className="flex items-start gap-2">
                         <span>🌱</span>
-                        <span><strong>Celo:</strong> Regional stablecoins and everyday payments</span>
+                        <span><strong className="text-blue-900 dark:text-blue-200">Celo:</strong> Regional stablecoins and everyday payments</span>
                     </li>
                     <li className="flex items-start gap-2">
                         <span>🥇</span>
-                        <span><strong>Arbitrum:</strong> Yield-bearing assets and gold</span>
+                        <span><strong className="text-blue-900 dark:text-blue-200">Arbitrum:</strong> Yield-bearing assets and gold</span>
                     </li>
                     {networkAllocations['Robinhood Chain'] && (
                         <li className="flex items-start gap-2">
                             <span>🏦</span>
-                            <span><strong>RH Chain:</strong> Tokenized equities (testnet)</span>
+                            <span><strong className="text-blue-900 dark:text-blue-200">RH Chain:</strong> Tokenized equities (testnet)</span>
                         </li>
                     )}
                     <li className="flex items-start gap-2">
                         <span>🛡️</span>
-                        <span><strong>Combined:</strong> Maximum protection through diversification</span>
+                        <span><strong className="text-blue-900 dark:text-blue-200">Combined:</strong> Maximum protection through diversification</span>
                     </li>
                 </ul>
             </div>

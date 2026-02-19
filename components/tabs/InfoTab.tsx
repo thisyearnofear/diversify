@@ -86,9 +86,7 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
       </div>
 
       {/* Practical Applications - Non-beginner only */}
-      {!isBeginner && (
-        <RealWorldUseCases focusRegion={userRegion} />
-      )}
+      {!isBeginner && <RealWorldUseCases />}
 
       {/* GoodDollar Hub — consolidated claim + education + streaming */}
       <div>

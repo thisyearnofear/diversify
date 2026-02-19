@@ -34,10 +34,7 @@ export default function StrategiesTab({
       />
 
       {/* Interactive Goal Selector (consolidated from GoalBasedStrategies) */}
-      <RealWorldUseCases
-        focusRegion={userRegion}
-        onSelectGoal={handleGoalSelect}
-      />
+      <RealWorldUseCases onSelectGoal={handleGoalSelect} />
 
       {/* Portfolio Strategies */}
       <PortfolioRecommendations

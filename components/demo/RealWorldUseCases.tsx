@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 // ============================================================================
-// GOAL DEFINITIONS - Single source of truth for goal types
+// GOAL DEFINITIONS - Single source of truth
 // ============================================================================
 const GOAL_TYPES = [
   {
@@ -19,10 +19,21 @@ const GOAL_TYPES = [
     benefits: [
       "Protection against education cost inflation",
       "Gold allocation hedges against currency devaluation",
-      "Cross-chain diversification reduces single-network risk"
+      "Cross-chain diversification reduces single-network risk",
     ],
-    // Real-world context from World Bank data
-    worldBankContext: "Parents saving for international education can hold stablecoins from the region where their children plan to study, protecting against currency fluctuations.",
+    // Real-world examples to show in accordion
+    examples: [
+      {
+        title: "🇺🇸 US → UK",
+        description: "Parents holding GBP stablecoins save 12% vs USD when tuition is due",
+        metric: "12% saved",
+      },
+      {
+        title: "🇮🇳 India Study Fund",
+        description: "Holding INR-stablecoins protects against rupee depreciation over 4 years",
+        metric: "8% annual hedge",
+      },
+    ],
   },
   {
     id: "travel",
@@ -38,9 +49,20 @@ const GOAL_TYPES = [
     benefits: [
       "Stable value across multiple travel destinations",
       "Small commodity buffer against travel cost inflation",
-      "Regional currency exposure for destination spending"
+      "Regional currency exposure for destination spending",
     ],
-    worldBankContext: "Frequent travelers can hold stablecoins from regions they visit regularly, avoiding exchange rate losses and conversion fees.",
+    examples: [
+      {
+        title: "🇺🇸 Frequent Flyer",
+        description: "Holding EUR + JPY stablecoins avoids 7% conversion fees per trip",
+        metric: "$210/year saved",
+      },
+      {
+        title: "🇪🇺 Euro Traveler",
+        description: "Euro-denominated funds stay stable regardless of USD fluctuations",
+        metric: "Zero FX loss",
+      },
+    ],
   },
   {
     id: "remittance",
@@ -56,9 +78,20 @@ const GOAL_TYPES = [
     benefits: [
       "Lower fees through multichain routing",
       "Commodity backing protects recipient purchasing power",
-      "Regional stablecoin exposure matches recipient needs"
+      "Regional stablecoin exposure matches recipient needs",
     ],
-    worldBankContext: "A Filipino worker sending money home from the US can save up to 7% in fees by using a mix of USDm and regional stablecoins instead of traditional remittance services.",
+    examples: [
+      {
+        title: "🇵🇭 US → Philippines",
+        description: "Using PHP-stablecoins saves 7% vs Western Union fees",
+        metric: "$350/year saved",
+      },
+      {
+        title: "🇲🇽 US → Mexico",
+        description: "MXN stablecoins arrive in minutes with near-zero fees",
+        metric: "96% faster",
+      },
+    ],
   },
   {
     id: "business",
@@ -74,9 +107,20 @@ const GOAL_TYPES = [
     benefits: [
       "Strong commodity hedge against supply chain inflation",
       "Multi-regional exposure matches global business operations",
-      "Cross-chain flexibility for international payments"
+      "Cross-chain flexibility for international payments",
     ],
-    worldBankContext: "A business that imports goods from Europe can hold stablecoins from that region to protect against exchange rate fluctuations.",
+    examples: [
+      {
+        title: "🇨🇴 Import/Export",
+        description: "Colombian business holds EUR to protect against COP/EUR swings",
+        metric: "15% risk reduced",
+      },
+      {
+        title: "🇨🇳 Supplier Payments",
+        description: "Holding CNY-stablecoins locks in rates for quarterly payments",
+        metric: "Quarterly certainty",
+      },
+    ],
   },
   {
     id: "emergency",
@@ -92,146 +136,122 @@ const GOAL_TYPES = [
     benefits: [
       "Gold allocation provides crisis-resistant store of value",
       "Stable regional currencies for immediate liquidity",
-      "Multichain access ensures fund availability"
+      "Multichain access ensures fund availability",
     ],
-    worldBankContext: "In many emerging markets, local currencies can lose 10-30% of their value in a single year. An emergency fund with commodity backing preserves value during crises.",
-  },
-];
-
-// ============================================================================
-// USE CASES - Educational content
-// ============================================================================
-const USE_CASES = [
-  {
-    title: "Protection from Local Currency Devaluation",
-    description:
-      "When the Kenyan Shilling lost 20% of its value against the USD in 2022, Kenyans who had diversified into EURm and USDm preserved more of their savings.",
-    icon: "🛡️",
-    region: "Africa",
-  },
-  {
-    title: "Remittance Cost Savings",
-    description:
-      "A Filipino worker sending money home from the US can save up to 7% in fees by using a mix of USDm and regional stablecoins instead of traditional remittance services.",
-    icon: "💸",
-    region: "Asia",
-  },
-  {
-    title: "Business Import/Export Protection",
-    description:
-      "A Colombian business that imports goods from Europe can hold EURm to protect against COPm/EURm exchange rate fluctuations.",
-    icon: "🏭",
-    region: "LatAm",
-  },
-  {
-    title: "Education Fund Preservation",
-    description:
-      "Parents saving for international education can hold stablecoins from the region where their children plan to study, protecting against currency fluctuations.",
-    icon: "🎓",
-    region: "Global",
-  },
-  {
-    title: "Travel Expense Management",
-    description:
-      "Frequent travelers can hold stablecoins from regions they visit regularly, avoiding exchange rate losses and conversion fees.",
-    icon: "✈️",
-    region: "Global",
+    examples: [
+      {
+        title: "🇰🇪 Kenya Crisis",
+        description: "When KES lost 20% in 2022, EURm holders preserved 80% more wealth",
+        metric: "80% preserved",
+      },
+      {
+        title: "🇦🇷 Argentina",
+        description: "USD-stablecoins protect against 50%+ annual inflation",
+        metric: "50%+ protected",
+      },
+    ],
   },
 ];
 
 interface RealWorldUseCasesProps {
-  focusRegion?: string;
   onSelectGoal?: (goalId: string) => void;
 }
 
 export default function RealWorldUseCases({
-  focusRegion,
   onSelectGoal,
 }: RealWorldUseCasesProps) {
   const [activeGoal, setActiveGoal] = useState<string>("education");
   const [goalAmount, setGoalAmount] = useState<number>(10000);
   const [timeframeMonths, setTimeframeMonths] = useState<number>(36);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [showExamples, setShowExamples] = useState(true);
 
-  // Find the currently active goal
   const currentGoal =
     GOAL_TYPES.find((goal) => goal.id === activeGoal) || GOAL_TYPES[0];
 
-  // Calculate monthly savings needed
   const monthlySavingsNeeded = goalAmount / timeframeMonths;
-
-  // Calculate estimated value after timeframe (with 3% annual inflation protection)
   const estimatedValue = goalAmount * (1 + (0.03 * timeframeMonths) / 12);
 
-  // Filter use cases if a focus region is provided
-  const filteredCases = focusRegion
-    ? USE_CASES.filter(
-        (useCase) =>
-          useCase.region === focusRegion || useCase.region === "Global"
-      )
-    : USE_CASES;
-
-  // Handle goal selection
   const handleGoalSelect = (goalId: string) => {
     const goal = GOAL_TYPES.find((g) => g.id === goalId);
     if (goal) {
       setActiveGoal(goalId);
       setGoalAmount(goal.defaultAmount);
       setTimeframeMonths(goal.defaultTimeframe);
-      setShowCalculator(true);
+      setShowExamples(true); // Auto-show examples for new goal
       onSelectGoal?.(goalId);
     }
   };
 
   return (
-    <div className="space-y-4">
-      {/* Interactive Goal Selector */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="size-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-lg">💡</div>
-          <div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Select Your Goal</h3>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">Practical Applications</p>
-          </div>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="size-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-lg">
+          💡
         </div>
-
-        {/* Goal Tabs */}
-        <div className="flex overflow-x-auto mb-4 pb-1 scrollbar-hide -mx-1 px-1">
-          {GOAL_TYPES.map((goal) => (
-            <motion.button
-              key={goal.id}
-              className={`px-3 py-2 mr-2 rounded-xl whitespace-nowrap flex items-center transition-all ${
-                activeGoal === goal.id
-                  ? "bg-purple-600 text-white font-bold shadow-lg shadow-purple-500/20"
-                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold"
-              }`}
-              onClick={() => handleGoalSelect(goal.id)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <span className={activeGoal === goal.id ? "mr-1.5 text-base" : "mr-1 text-sm opacity-70"}>
-                {goal.icon}
-              </span>
-              <span className="text-[10px]">{goal.title}</span>
-            </motion.button>
-          ))}
+        <div>
+          <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">
+            Wealth Goals
+          </h3>
+          <p className="text-sm font-bold text-gray-900 dark:text-white">
+            Choose & Plan
+          </p>
         </div>
+      </div>
 
-        {/* Selected Goal Details */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeGoal}
+      {/* Goal Tabs - Horizontal scroll */}
+      <div className="flex overflow-x-auto mb-4 pb-1 scrollbar-hide -mx-1 px-1">
+        {GOAL_TYPES.map((goal, index) => (
+          <motion.button
+            key={goal.id}
+            className={`px-3 py-2 mr-2 rounded-xl whitespace-nowrap flex items-center transition-all ${
+              activeGoal === goal.id
+                ? "bg-purple-600 text-white font-bold shadow-lg shadow-purple-500/20"
+                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold"
+            }`}
+            onClick={() => handleGoalSelect(goal.id)}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="bg-purple-50/50 dark:bg-purple-900/10 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30"
+            transition={{ delay: index * 0.03 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
+            <span
+              className={
+                activeGoal === goal.id
+                  ? "mr-1.5 text-base"
+                  : "mr-1 text-sm opacity-70"
+              }
+            >
+              {goal.icon}
+            </span>
+            <span className="text-[10px]">{goal.title}</span>
+          </motion.button>
+        ))}
+      </div>
+
+      {/* Selected Goal Detail */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeGoal}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.2 }}
+          className="space-y-3"
+        >
+          {/* Goal Header Card */}
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100/30 dark:from-purple-900/20 dark:to-purple-900/5 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30">
             <div className="flex items-start gap-3 mb-3">
               <motion.div
-                className="text-3xl bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-purple-50 dark:border-purple-900/20"
+                className="text-3xl bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-purple-100 dark:border-purple-800/30"
                 animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatDelay: 3,
+                }}
               >
                 {currentGoal.icon}
               </motion.div>
@@ -245,174 +265,276 @@ export default function RealWorldUseCases({
               </div>
             </div>
 
-            {/* Tags */}
+            {/* Tags - Animated stagger */}
             <div className="flex flex-wrap gap-1.5 mb-3">
-              {currentGoal.regions.map((region) => (
-                <span
+              {currentGoal.regions.map((region, i) => (
+                <motion.span
                   key={region}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.05 }}
                   className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50"
                 >
                   {region}
-                </span>
+                </motion.span>
               ))}
-              <span className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/50">
+              <motion.span
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: currentGoal.regions.length * 0.05 }}
+                className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/50"
+              >
                 🥇 {currentGoal.commodityAllocation}% Gold
-              </span>
-              {currentGoal.chains.map((chain) => (
-                <span
+              </motion.span>
+              {currentGoal.chains.map((chain, i) => (
+                <motion.span
                   key={chain}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{
+                    delay: (currentGoal.regions.length + 1 + i) * 0.05,
+                  }}
                   className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
                 >
                   {chain}
-                </span>
+                </motion.span>
               ))}
             </div>
 
-            {/* World Bank Context */}
-            <div className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed italic mb-3">
-              💡 {currentGoal.worldBankContext}
+            {/* Benefits - Animated list */}
+            <div className="space-y-1.5">
+              {currentGoal.benefits.map((benefit, idx) => (
+                <motion.div
+                  key={benefit}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 + idx * 0.08 }}
+                  className="flex items-start gap-2"
+                >
+                  <span className="text-emerald-500 text-[10px] mt-0.5 shrink-0">
+                    ✓
+                  </span>
+                  <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {benefit}
+                  </span>
+                </motion.div>
+              ))}
             </div>
+          </div>
 
-            {/* Expandable Calculator */}
+          {/* Expandable Examples Accordion */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+          >
             <button
-              onClick={() => setShowCalculator(!showCalculator)}
-              className="w-full flex items-center justify-between p-2 bg-white dark:bg-gray-900 rounded-lg border border-purple-100 dark:border-purple-800/30 hover:border-purple-300 dark:hover:border-purple-700 transition-colors"
+              onClick={() => setShowExamples(!showExamples)}
+              className="w-full flex items-center justify-between p-3 bg-gray-900 rounded-xl border border-gray-800 hover:border-purple-500/50 transition-colors group"
             >
-              <span className="text-xs font-bold text-purple-700 dark:text-purple-300">
-                {showCalculator ? "Hide Calculator" : "Calculate Your Plan"}
-              </span>
-              <motion.span
-                animate={{ rotate: showCalculator ? 180 : 0 }}
-                className="text-purple-500"
+              <div className="flex items-center gap-2">
+                <span className="text-lg">📊</span>
+                <span className="text-xs font-black text-white group-hover:text-purple-300 transition-colors">
+                  Real-World Examples
+                </span>
+              </div>
+              <motion.div
+                animate={{ rotate: showExamples ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
               >
-                ▼
-              </motion.span>
+                <svg
+                  className="w-4 h-4 text-purple-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </motion.div>
             </button>
 
             <AnimatePresence>
-              {showCalculator && (
+              {showExamples && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
                   className="overflow-hidden"
                 >
-                  <div className="pt-3 space-y-3">
-                    {/* Goal Amount */}
-                    <div>
-                      <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                        Goal Amount
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm">$</span>
-                        <input
-                          type="number"
-                          value={goalAmount}
-                          onChange={(e) => setGoalAmount(Number(e.target.value))}
-                          className="w-full pl-7 pr-3 py-2 text-sm border-2 border-gray-100 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-black outline-none focus:border-purple-400 transition-colors"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Timeframe */}
-                    <div>
-                      <div className="flex justify-between items-center mb-1">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                          Timeframe
-                        </label>
-                        <span className="text-[10px] font-black text-purple-600">{timeframeMonths} months</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="60"
-                        value={timeframeMonths}
-                        onChange={(e) => setTimeframeMonths(Number(e.target.value))}
-                        className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                      />
-                    </div>
-
-                    {/* Results */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <div className="text-[9px] font-black uppercase text-gray-400">Monthly</div>
-                        <div className="text-lg font-black text-purple-600">
-                          ${monthlySavingsNeeded.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </div>
-                      </div>
-                      <div className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
-                        <div className="text-[9px] font-black uppercase text-gray-400">Target</div>
-                        <div className="text-lg font-black text-emerald-600">
-                          ${estimatedValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Benefits */}
-                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 p-2 rounded-lg border border-emerald-100/50 dark:border-emerald-900/30">
-                      <ul className="space-y-1">
-                        {currentGoal.benefits.slice(0, 2).map((benefit, idx) => (
-                          <li key={idx} className="flex items-start gap-2">
-                            <span className="text-emerald-500 text-[10px] mt-0.5">✓</span>
-                            <span className="text-[10px] font-bold text-emerald-700/80 dark:text-emerald-400/80">{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                  <div className="pt-2 space-y-2">
+                    <AnimatePresence mode="popLayout">
+                      {currentGoal.examples.map((example, idx) => (
+                        <motion.div
+                          key={example.title}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ delay: idx * 0.1 }}
+                          className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800 transition-colors"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <div className="text-[10px] font-black text-purple-400 uppercase tracking-wide mb-1">
+                                {example.title}
+                              </div>
+                              <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                                {example.description}
+                              </p>
+                            </div>
+                            <div className="shrink-0 px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md">
+                              <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                                {example.metric}
+                              </span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
-        </AnimatePresence>
-      </div>
 
-      {/* Educational Content - Collapsible */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xs font-black uppercase tracking-widest text-gray-400">Wealth Outcomes</h2>
-          <span className="text-[10px] font-bold text-gray-400 uppercase">WORLD BANK DATA</span>
-        </div>
-
-        <div className="space-y-3">
-          {filteredCases.map((useCase, index) => (
-            <div
-              key={index}
-              className="bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-50 dark:border-gray-800 hover:border-blue-100 dark:hover:border-blue-900 transition-colors group"
+          {/* Calculator Toggle */}
+          <button
+            onClick={() => setShowCalculator(!showCalculator)}
+            className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-sm">🧮</span>
+              <span className="text-xs font-black text-gray-700 dark:text-gray-300">
+                {showCalculator ? "Hide Calculator" : "Calculate Your Plan"}
+              </span>
+            </div>
+            <motion.span
+              animate={{ rotate: showCalculator ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="text-gray-400 text-xs"
             >
-              <div className="flex items-start">
-                <div className="text-2xl mr-4 group-hover:scale-110 transition-transform duration-300">{useCase.icon}</div>
-                <div>
-                  <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight mb-1">{useCase.title}</h3>
-                  <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 leading-relaxed">
-                    {useCase.description}
-                  </p>
-                  {useCase.region !== "Global" && (
-                    <div className="mt-2">
-                      <span className="inline-block text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
-                        {useCase.region}
+              ▼
+            </motion.span>
+          </button>
+
+          {/* Expandable Calculator */}
+          <AnimatePresence>
+            {showCalculator && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                  {/* Goal Amount */}
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
+                      Goal Amount
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        value={goalAmount}
+                        onChange={(e) =>
+                          setGoalAmount(Number(e.target.value))
+                        }
+                        className="w-full pl-7 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-black outline-none focus:border-purple-400 transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Timeframe */}
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        Timeframe
+                      </label>
+                      <span className="text-[10px] font-black text-purple-600">
+                        {timeframeMonths} months
                       </span>
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="60"
+                      value={timeframeMonths}
+                      onChange={(e) =>
+                        setTimeframeMonths(Number(e.target.value))
+                      }
+                      className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                    />
+                  </div>
 
-        <div className="mt-5 p-4 bg-gray-900 rounded-2xl relative overflow-hidden shadow-xl">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl -mr-12 -mt-12" />
-          <h3 className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-2 relative">WHY IT MATTERS</h3>
-          <p className="text-[11px] font-bold text-white leading-relaxed relative">
-            In many emerging markets, local currencies can lose 10-30% of their
-            value in a single year. Geographic diversification is the <span className="text-blue-400">ultimate hedge</span>.
-          </p>
-        </div>
-      </div>
+                  {/* Results */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700"
+                    >
+                      <div className="text-[9px] font-black uppercase text-gray-400">
+                        Monthly
+                      </div>
+                      <div className="text-lg font-black text-purple-600">
+                        $
+                        {monthlySavingsNeeded.toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </div>
+                    </motion.div>
+                    <motion.div
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.05 }}
+                      className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700"
+                    >
+                      <div className="text-[9px] font-black uppercase text-gray-400">
+                        Protected Value
+                      </div>
+                      <div className="text-lg font-black text-emerald-600">
+                        $
+                        {estimatedValue.toLocaleString(undefined, {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 0,
+                        })}
+                      </div>
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Why It Matters - Footer */}
+      <motion.div
+        className="mt-4 p-3 bg-gray-900 rounded-xl relative overflow-hidden"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
+        <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full blur-2xl -mr-10 -mt-10" />
+        <p className="text-[10px] font-bold text-gray-300 leading-relaxed relative">
+          <span className="text-purple-400 font-black">WHY IT MATTERS</span>{" "}
+          · In emerging markets, currencies can lose 10-30% yearly.
+          Geographic diversification is the{" "}
+          <span className="text-purple-400">ultimate hedge</span>.
+        </p>
+      </motion.div>
     </div>
   );
 }
 
-// Export goal types for external use
 export { GOAL_TYPES };

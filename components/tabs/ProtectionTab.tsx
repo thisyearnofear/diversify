@@ -6,8 +6,7 @@ import {
   Card,
   ConnectWalletPrompt,
   InsightCard,
-  ProtectionScore,
-  HeroValue,
+  ProtectionDashboard,
 } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
@@ -272,6 +271,12 @@ export default function ProtectionTab({
     );
   }
 
+  // Calculate protection score
+  const protectionScore = liveAnalysis ? Math.round(
+    (liveAnalysis.diversificationScore +
+      (100 - liveAnalysis.weightedInflationRisk * 5)) / 2
+  ) : 0;
+
   // ============================================================================
   // RENDER: Connected
   // ============================================================================
@@ -279,213 +284,171 @@ export default function ProtectionTab({
   return (
     <div className="space-y-4">
       {/* =====================================================================
-          HERO: Primary Value + Status
+          CONSOLIDATED PROTECTION DASHBOARD
           ===================================================================== */}
-      <Card padding="p-0" className="overflow-hidden shadow-xl">
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <h3 className="text-xl font-black uppercase tracking-tight">
-                {isBeginner ? "Shield Engine" : "Protection Engine"}
-              </h3>
-              <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-                {isComplete
-                  ? (isBeginner ? "Your Shield is Active" : "Personalized protection active")
-                  : (isBeginner ? "Set up your shield" : "Set your protection profile")}
-              </p>
+      {isBeginner ? (
+        // Beginner: Simple hero with protection level
+        <Card padding="p-0" className="overflow-hidden shadow-xl">
+          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-black uppercase tracking-tight">
+                  Shield Engine
+                </h3>
+                <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
+                  {isComplete ? "Your Shield is Active" : "Set up your shield"}
+                </p>
+              </div>
+              <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">
+                <span className="text-2xl">🤖</span>
+              </div>
             </div>
-            <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">
-              <span className="text-2xl">🤖</span>
+            <div className="text-center">
+              <div className="text-3xl font-black">
+                {Math.round((liveAnalysis?.diversificationScore + (100 - (liveAnalysis?.weightedInflationRisk || 0) * 5)) / 2)}%
+              </div>
+              <div className="text-xs text-indigo-200 font-medium mt-1">
+                Protection Level
+              </div>
             </div>
           </div>
-
-          <HeroValue
-            value={isBeginner ? `${Math.round((liveAnalysis.diversificationScore + (100 - liveAnalysis.weightedInflationRisk * 5)) / 2)}%` : `$${displayTotalValue.toFixed(0)}`}
-            label={
-              isBeginner
-                ? "Protection Level"
-                : (isMultichainLoading
-                  ? "Loading multichain data..."
-                  : `Protected across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`)
-            }
-          />
-
-          {isStale && (
-            <p className="text-xs text-white/60 mt-2">
-              Data may be stale. Pull down to refresh.
-            </p>
-          )}
-        </div>
-
-        <div className="p-4 space-y-4">
-          <ProfileWizard
-            mode={profileMode}
-            currentStep={currentStep}
-            config={config}
-            currentGoalIcon={currentGoalIcon}
-            currentGoalLabel={currentGoalLabel}
-            currentRiskLabel={currentRiskLabel}
-            currentTimeHorizonLabel={currentTimeHorizonLabel}
-            onSetUserGoal={setUserGoal}
-            onSetRiskTolerance={setRiskTolerance}
-            onSetTimeHorizon={setTimeHorizon}
-            onNextStep={nextStep}
-            onSkipToEnd={skipToEnd}
-            onCompleteEditing={completeEditing}
-            onStartEditing={startEditing}
-          />
-
-          {/* =================================================================
-              PRIMARY INSIGHT CARD
-              ================================================================= */}
-          {liveAnalysis && topOpportunity && (
-            <InsightCard
-              icon="⚡"
-              title={`Reduce ${topOpportunity.fromRegion} Inflation Exposure`}
-              description={`Your ${topOpportunity.fromToken} holdings face ${topOpportunity.fromInflation}% inflation. Swapping to ${topOpportunity.toToken} (${topOpportunity.toInflation}% inflation) preserves purchasing power.`}
-              impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
-              variant={
-                topOpportunity.priority === "HIGH" ? "urgent" : "default"
-              }
-              action={{
-                label: `Swap ${topOpportunity.fromToken} → ${topOpportunity.toToken}`,
-                onClick: () =>
-                  handleExecuteSwap(
-                    topOpportunity.toToken,
-                    topOpportunity.fromToken,
-                    topOpportunity.suggestedAmount.toFixed(2),
-                  ),
-              }}
-            >
-              {liveAnalysis.rebalancingOpportunities.length > 1 && (
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                    {config.userGoal === "geographic_diversification"
-                      ? "More Diversification Options"
-                      : "More Opportunities"}
-                  </p>
-                  <div className="space-y-2">
-                    {liveAnalysis.rebalancingOpportunities
-                      .filter((opp) => {
-                        // Skip the one already shown in the primary card
-                        if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
-                        if (config.userGoal !== "geographic_diversification") return true;
-                        return (opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion);
-                      })
-                      .slice(0, 3)
-                      .map((opp, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-50 dark:border-gray-700/50"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">
-                              {opp.fromToken}
-                            </span>
-                            <span className="text-gray-300">→</span>
-                            <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
-                              {opp.toToken}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] text-green-600 dark:text-green-400 font-bold">
-                              +${opp.annualSavings.toFixed(2)}
-                            </span>
-                            <button
-                              onClick={() =>
-                                handleExecuteSwap(
-                                  opp.toToken,
-                                  opp.fromToken,
-                                  opp.suggestedAmount.toFixed(2),
-                                )
-                              }
-                              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase rounded-lg transition-colors"
-                            >
-                              Swap
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    {liveAnalysis.rebalancingOpportunities.length > 4 && (
-                      <p className="text-[10px] text-gray-400 text-center mt-2 font-medium">
-                        +{liveAnalysis.rebalancingOpportunities.length - 4} more ways to optimize
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
-            </InsightCard>
-          )}
-
-          {/* =================================================================
-              AI ANALYSIS CTA — opens global AI drawer
-              ================================================================= */}
-          <InsightCard
-            icon="🤖"
-            title="AI Portfolio Analysis"
-            description="Get personalized recommendations based on your holdings, inflation data, and market conditions."
-            variant="default"
-            action={{
-              label: "Analyze My Portfolio",
-              onClick: () => {
-                const effectiveGoal =
-                  currentGoalLabel && currentGoalLabel !== "Not set"
-                    ? currentGoalLabel
-                    : "diversification";
-                askOracle(
-                  `Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`,
-                );
-              },
-            }}
-          />
-
-          {/* =================================================================
-              PROTECTION SCORE - Non-beginner only
-              ================================================================= */}
-          {liveAnalysis && !isBeginner && (
-            <ProtectionScore
-              score={Math.round(
-                (liveAnalysis.diversificationScore +
-                  (100 - liveAnalysis.weightedInflationRisk * 5)) /
-                2,
-              )}
-              factors={[
-                {
-                  label: "Portfolio Coverage",
-                  value: liveAnalysis.tokenCount > 0 ? 95 : 50,
-                  status:
-                    liveAnalysis.tokenCount > 0
-                      ? `${liveAnalysis.tokenCount} tokens`
-                      : "No data",
-                  icon: "💰",
-                },
-                {
-                  label: "Chain Diversification",
-                  value: displayChainCount > 1 ? 90 : 60,
-                  status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`,
-                  icon: "🔗",
-                },
-                {
-                  label: "Regional Diversification",
-                  value: currentRegions.length > 2 ? 90 : 70,
-                  status: `${currentRegions.length} regions`,
-                  icon: "🌍",
-                },
-                {
-                  label: "Inflation Risk",
-                  value: Math.max(
-                    0,
-                    100 - liveAnalysis.weightedInflationRisk * 10,
-                  ),
-                  status: `${liveAnalysis.weightedInflationRisk.toFixed(1)}% weighted`,
-                  icon: "🛡️",
-                },
-              ]}
-              className="mt-4"
+          <div className="p-4">
+            <ProfileWizard
+              mode={profileMode}
+              currentStep={currentStep}
+              config={config}
+              currentGoalIcon={currentGoalIcon}
+              currentGoalLabel={currentGoalLabel}
+              currentRiskLabel={currentRiskLabel}
+              currentTimeHorizonLabel={currentTimeHorizonLabel}
+              onSetUserGoal={setUserGoal}
+              onSetRiskTolerance={setRiskTolerance}
+              onSetTimeHorizon={setTimeHorizon}
+              onNextStep={nextStep}
+              onSkipToEnd={skipToEnd}
+              onCompleteEditing={completeEditing}
+              onStartEditing={startEditing}
             />
+          </div>
+        </Card>
+      ) : (
+        // Non-beginner: Full ProtectionDashboard
+        <ProtectionDashboard
+          title="Protection Engine"
+          subtitle={isComplete ? "Personalized protection active" : "Set your protection profile"}
+          icon={<span>🤖</span>}
+          totalValue={`$${displayTotalValue.toFixed(0)}`}
+          chainCount={displayChainCount}
+          score={protectionScore}
+          factors={[
+            {
+              label: "Portfolio Coverage",
+              value: liveAnalysis?.tokenCount > 0 ? 95 : 50,
+              status: liveAnalysis?.tokenCount > 0 ? `${liveAnalysis?.tokenCount} tokens` : "No data",
+              icon: "💰",
+            },
+            {
+              label: "Chain Diversification",
+              value: displayChainCount > 1 ? 90 : 60,
+              status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`,
+              icon: "🔗",
+            },
+            {
+              label: "Regional Diversification",
+              value: currentRegions.length > 2 ? 90 : 70,
+              status: `${currentRegions.length} regions`,
+              icon: "🌍",
+            },
+            {
+              label: "Inflation Risk",
+              value: Math.max(0, 100 - (liveAnalysis?.weightedInflationRisk || 0) * 10),
+              status: `${(liveAnalysis?.weightedInflationRisk || 0).toFixed(1)}% weighted`,
+              icon: "🛡️",
+            },
+          ]}
+          isLoading={isMultichainLoading}
+          isStale={isStale}
+        />
+      )}
+
+      {/* =================================================================
+          PRIMARY INSIGHT CARD
+          ================================================================= */}
+      {liveAnalysis && topOpportunity && (
+        <InsightCard
+          icon="⚡"
+          title={`Reduce ${topOpportunity.fromRegion} Inflation Exposure`}
+          description={`Your ${topOpportunity.fromToken} holdings face ${topOpportunity.fromInflation}% inflation. Swapping to ${topOpportunity.toToken} (${topOpportunity.toInflation}% inflation) preserves purchasing power.`}
+          impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
+          variant={topOpportunity.priority === "HIGH" ? "urgent" : "default"}
+          action={{
+            label: `Swap ${topOpportunity.fromToken} → ${topOpportunity.toToken}`,
+            onClick: () =>
+              handleExecuteSwap(
+                topOpportunity.toToken,
+                topOpportunity.fromToken,
+                topOpportunity.suggestedAmount.toFixed(2),
+              ),
+          }}
+        >
+          {liveAnalysis.rebalancingOpportunities.length > 1 && (
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
+                {config.userGoal === "geographic_diversification"
+                  ? "More Diversification Options"
+                  : "More Opportunities"}
+              </p>
+              <div className="space-y-2">
+                {liveAnalysis.rebalancingOpportunities
+                  .filter((opp) => {
+                    if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
+                    if (config.userGoal !== "geographic_diversification") return true;
+                    return opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion;
+                  })
+                  .slice(0, 3)
+                  .map((opp, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-50 dark:border-gray-700/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{opp.fromToken}</span>
+                        <span className="text-gray-300">→</span>
+                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{opp.toToken}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] text-green-600 dark:text-green-400 font-bold">+${opp.annualSavings.toFixed(2)}</span>
+                        <button
+                          onClick={() => handleExecuteSwap(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))}
+                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase rounded-lg transition-colors"
+                        >
+                          Swap
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
           )}
-        </div>
-      </Card>
+        </InsightCard>
+      )}
+
+      {/* =================================================================
+          AI ANALYSIS CTA
+          ================================================================= */}
+      <InsightCard
+        icon="🤖"
+        title="AI Portfolio Analysis"
+        description="Get personalized recommendations based on your holdings, inflation data, and market conditions."
+        variant="default"
+        action={{
+          label: "Analyze My Portfolio",
+          onClick: () => {
+            const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
+            askOracle(`Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
+          },
+        }}
+      />
 
       {/* RWA Assets - Non-beginner only */}
       {!isBeginner && (

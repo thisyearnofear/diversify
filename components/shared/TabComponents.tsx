@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "framer-motion";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 
@@ -313,6 +314,167 @@ export const ProtectionScore = ({
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+/**
+ * ProtectionDashboard - Consolidated hero + score + factors
+ * Combines: HeroValue + ProtectionScore into one dynamic card
+ * 
+ * Features:
+ * - Score ring integrated into hero row
+ * - Animated progress bars for each factor
+ * - Staggered entrance animations
+ * - Gradient backgrounds
+ */
+export interface DashboardFactor {
+  label: string;
+  value: number; // 0-100
+  status: string;
+  icon: string;
+}
+
+export const ProtectionDashboard = ({
+  title,
+  subtitle,
+  icon,
+  totalValue,
+  chainCount,
+  score,
+  factors,
+  isLoading = false,
+  isStale = false,
+}: {
+  title?: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  totalValue?: string;
+  chainCount?: number;
+  score: number;
+  factors: DashboardFactor[];
+  isLoading?: boolean;
+  isStale?: boolean;
+}) => {
+  const isGood = score >= 80;
+  const isOk = score >= 60;
+
+  const ringColor = isGood ? '#10b981' : isOk ? '#f59e0b' : '#ef4444';
+  const statusText = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
+
+  const filled = (score / 100) * RING_C;
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl overflow-hidden shadow-xl">
+      {/* Hero Section */}
+      <div className="p-6 text-white">
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            {title && (
+              <h3 className="text-xl font-black uppercase tracking-tight">
+                {title}
+              </h3>
+            )}
+            {subtitle && (
+              <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {icon && (
+            <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">
+              <span className="text-2xl">{icon}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Value + Score Row */}
+        <div className="flex items-center justify-center gap-8">
+          {/* Total Value */}
+          <div className="text-center">
+            {isLoading ? (
+              <div className="h-9 w-24 bg-white/30 rounded-xl animate-pulse mx-auto" />
+            ) : (
+              <div className="text-3xl font-black tracking-tight">
+                {totalValue || '$0'}
+              </div>
+            )}
+            <div className="text-xs text-indigo-200 font-medium mt-1">
+              {isLoading ? 'Loading...' : (chainCount ? `Protected across ${chainCount} chain${chainCount !== 1 ? 's' : ''}` : 'Total Value')}
+            </div>
+          </div>
+
+          {/* Score Ring */}
+          <div className="shrink-0 relative w-20 h-20">
+            <svg viewBox="0 0 44 44" className="w-full h-full -rotate-90">
+              {/* Track */}
+              <circle cx="22" cy="22" r="18" fill="none" stroke="white" strokeWidth="4" className="opacity-20" />
+              {/* Progress */}
+              <circle
+                cx="22" cy="22" r="18"
+                fill="none"
+                stroke={ringColor}
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={`${filled.toFixed(1)} ${RING_C.toFixed(1)}`}
+              />
+            </svg>
+            {/* Score label */}
+            <div className="absolute inset-0 flex items-center justify-center flex-col">
+              <span className="text-lg font-black leading-none" style={{ color: ringColor }}>
+                {score}%
+              </span>
+              <span className="text-[8px] font-bold opacity-80" style={{ color: ringColor }}>
+                {statusText}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {isStale && (
+          <p className="text-xs text-white/60 mt-4 text-center">
+            Data may be stale. Pull down to refresh.
+          </p>
+        )}
+      </div>
+
+      {/* Factors Section */}
+      <div className="bg-white dark:bg-gray-800 p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-[10px] font-black uppercase text-gray-400">Protection Factors</span>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          {factors.map((factor, idx) => (
+            <motion.div
+              key={factor.label}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.08 }}
+              className="flex items-center gap-2"
+            >
+              <span className="text-sm">{factor.icon}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{factor.label}</span>
+                  <span className="text-[9px] text-gray-500">{factor.status}</span>
+                </div>
+                <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${factor.value}%` }}
+                    transition={{ duration: 0.5, delay: 0.2 + idx * 0.1 }}
+                    className={`h-full rounded-full ${
+                      factor.value >= 80 ? 'bg-emerald-500' :
+                      factor.value >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                    }`}
+                  />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
