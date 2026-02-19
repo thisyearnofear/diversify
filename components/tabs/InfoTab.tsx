@@ -8,6 +8,7 @@ import RealWorldUseCases from "../demo/RealWorldUseCases";
 import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
 import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 import { DepositHub } from "../onramp/DepositHub";
+import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import type { Region } from "@/hooks/use-user-region";
 
 interface InfoTabProps {
@@ -22,6 +23,7 @@ interface InfoTabProps {
 export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
   const { address, chainId, formatAddress } = useWalletContext();
   const { experienceMode } = useAppState();
+  const { streak, canClaim, isWhitelisted, estimatedReward, verifyIdentity } = useStreakRewards();
   const [showNetworkInfo, setShowNetworkInfo] = useState(false);
 
   const isBeginner = experienceMode === "beginner";
@@ -88,7 +90,7 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
         <RealWorldUseCases focusRegion={userRegion} />
       )}
 
-      {/* GoodDollar Education */}
+      {/* GoodDollar Hub — consolidated claim + education + streaming */}
       <div>
         <div className="flex items-center gap-2 mb-4 px-1">
           <div className="size-8 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center text-lg">💚</div>
@@ -98,6 +100,11 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
           </div>
         </div>
         <GoodDollarInfoCard
+          streak={streak}
+          canClaim={canClaim}
+          isWhitelisted={isWhitelisted}
+          estimatedReward={estimatedReward}
+          onVerify={() => verifyIdentity()}
           onLearnMore={() => window.open('https://docs.gooddollar.org', '_blank')}
           onStake={() => window.open('https://gooddollar.org/stake', '_blank')}
         />
