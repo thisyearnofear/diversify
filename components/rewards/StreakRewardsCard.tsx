@@ -131,17 +131,21 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
   useEffect(() => {
     if (prevAchievementsRef.current === null) {
       // First run — seed with current value so we only toast for future badges
-      prevAchievementsRef.current = achievements;
+      if (achievements.length > 0 || isConnected) {
+        console.log('[StreakRewardsCard] Initializing achievements ref:', achievements);
+        prevAchievementsRef.current = achievements;
+      }
       return;
     }
     const prev = prevAchievementsRef.current;
     const newOnes = achievements.filter(id => !prev.includes(id));
     if (newOnes.length > 0) {
+      console.log('[StreakRewardsCard] New achievements detected:', newOnes);
       const badge = ACHIEVEMENTS.find(b => b.id === newOnes[0]);
       if (badge) setPendingToast(badge);
     }
     prevAchievementsRef.current = achievements;
-  }, [achievements]);
+  }, [achievements, isConnected]);
 
   // Calculate time until next claim
   const formatTimeUntil = (date: Date | null) => {
