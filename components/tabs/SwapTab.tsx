@@ -442,6 +442,10 @@ export default function SwapTab({
           <ConnectWalletPrompt
             message={isDemo ? "Connect your wallet to execute real swaps with live prices." : "Connect your wallet to swap tokens."}
             WalletButtonComponent={<WalletButton variant="inline" />}
+            userRegion={userRegion}
+            inflationData={inflationData}
+            availableTokens={filteredTokens}
+            experienceMode={experienceMode}
           />
         ) : (
           <>

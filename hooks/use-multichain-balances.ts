@@ -80,17 +80,10 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
 // CONFIGURATION - Production Chains Only
 // ============================================================================
 
-const isDev = process.env.NODE_ENV === "development";
-const DEV_CHAINS = isDev
-  ? [
-    { chainId: NETWORKS.ARC_TESTNET.chainId, name: NETWORKS.ARC_TESTNET.name, rpcUrl: NETWORKS.ARC_TESTNET.rpcUrl },
-    { chainId: NETWORKS.RH_TESTNET.chainId, name: NETWORKS.RH_TESTNET.name, rpcUrl: NETWORKS.RH_TESTNET.rpcUrl },
-  ]
-  : [];
+// Testnets are only shown via NetworkSwitcher, not in automatic multichain tracking
 const PRODUCTION_CHAINS = [
   { chainId: NETWORKS.CELO_MAINNET.chainId, name: NETWORKS.CELO_MAINNET.name, rpcUrl: NETWORKS.CELO_MAINNET.rpcUrl },
   { chainId: NETWORKS.ARBITRUM_ONE.chainId, name: NETWORKS.ARBITRUM_ONE.name, rpcUrl: NETWORKS.ARBITRUM_ONE.rpcUrl },
-  ...DEV_CHAINS,
 ] as const;
 
 // Helper function to normalize region names

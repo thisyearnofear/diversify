@@ -246,6 +246,7 @@ export default function ProtectionTab({
           <ConnectWalletPrompt
             message="Connect your wallet to analyze your portfolio across Arbitrum and Celo against real-time global inflation data."
             WalletButtonComponent={<WalletButton variant="inline" />}
+            experienceMode={experienceMode}
           />
         </Card>
 
@@ -370,17 +371,51 @@ export default function ProtectionTab({
           ]}
           isLoading={isMultichainLoading}
           isStale={isStale}
-        />
+        >
+          <div className="mt-2">
+            <ProfileWizard
+              mode={profileMode}
+              currentStep={currentStep}
+              config={config}
+              currentGoalIcon={currentGoalIcon}
+              currentGoalLabel={currentGoalLabel}
+              currentRiskLabel={currentRiskLabel}
+              currentTimeHorizonLabel={currentTimeHorizonLabel}
+              onSetUserGoal={setUserGoal}
+              onSetRiskTolerance={setRiskTolerance}
+              onSetTimeHorizon={setTimeHorizon}
+              onNextStep={nextStep}
+              onSkipToEnd={skipToEnd}
+              onCompleteEditing={completeEditing}
+              onStartEditing={startEditing}
+              onBack={prevStep}
+            />
+          </div>
+        </ProtectionDashboard>
       )}
 
       {/* =================================================================
-          PRIMARY INSIGHT CARD
+          PRIMARY INSIGHT CARD - Dynamic based on selected goal
           ================================================================= */}
       {liveAnalysis && topOpportunity && (
         <InsightCard
-          icon="⚡"
-          title={`Reduce ${topOpportunity.fromRegion} Inflation Exposure`}
-          description={`Your ${topOpportunity.fromToken} holdings face ${topOpportunity.fromInflation}% inflation. Swapping to ${topOpportunity.toToken} (${topOpportunity.toInflation}% inflation) preserves purchasing power.`}
+          icon={config.userGoal === 'geographic_diversification' ? '🌍' : config.userGoal === 'rwa_access' ? '🥇' : config.userGoal === 'inflation_protection' ? '🛡️' : '⚡'}
+          title={
+            config.userGoal === 'geographic_diversification'
+              ? `Expand ${topOpportunity.toRegion} Presence`
+              : config.userGoal === 'rwa_access'
+              ? `Add ${topOpportunity.toToken} to Portfolio`
+              : config.userGoal === 'inflation_protection'
+              ? `Reduce ${topOpportunity.fromRegion} Inflation Exposure`
+              : `Optimize Your Portfolio`
+          }
+          description={
+            config.userGoal === 'geographic_diversification'
+              ? `Adding ${topOpportunity.toToken} gives you exposure to ${topOpportunity.toRegion} economy. Your current ${topOpportunity.fromToken} is mainly ${topOpportunity.fromRegion}-focused.`
+              : config.userGoal === 'rwa_access'
+              ? `${topOpportunity.toToken} provides ${topOpportunity.toToken === 'PAXG' ? 'gold-backed' : 'yield-bearing'} exposure that ${topOpportunity.fromToken} can't match.`
+              : `Your ${topOpportunity.fromToken} holdings face ${topOpportunity.fromInflation.toFixed(1)}% inflation. Swapping to ${topOpportunity.toToken} (${topOpportunity.toInflation.toFixed(1)}% inflation) preserves purchasing power.`
+          }
           impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
           variant={topOpportunity.priority === "HIGH" ? "urgent" : "default"}
           action={{
@@ -397,15 +432,23 @@ export default function ProtectionTab({
             <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
                 {config.userGoal === "geographic_diversification"
-                  ? "More Diversification Options"
-                  : "More Opportunities"}
+                  ? "More Regional Options"
+                  : config.userGoal === "rwa_access"
+                  ? "More RWA Options"
+                  : "More Inflation Options"}
               </p>
               <div className="space-y-2">
                 {liveAnalysis.rebalancingOpportunities
                   .filter((opp) => {
                     if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
-                    if (config.userGoal !== "geographic_diversification") return true;
-                    return opp.toRegion !== "Global" || opp.fromRegion === opp.toRegion;
+                    // Filter by goal
+                    if (config.userGoal === 'geographic_diversification') {
+                      return opp.toRegion !== 'Global' && opp.fromRegion !== opp.toRegion;
+                    }
+                    if (config.userGoal === 'rwa_access') {
+                      return ['PAXG', 'USDY', 'SYRUPUSDC'].includes(opp.toToken);
+                    }
+                    return true;
                   })
                   .slice(0, 3)
                   .map((opp, idx) => (
@@ -417,6 +460,9 @@ export default function ProtectionTab({
                         <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{opp.fromToken}</span>
                         <span className="text-gray-300">→</span>
                         <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{opp.toToken}</span>
+                        {config.userGoal === 'geographic_diversification' && (
+                          <span className="text-[9px] text-gray-400">({opp.toRegion})</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-[10px] text-green-600 dark:text-green-400 font-bold">+${opp.annualSavings.toFixed(2)}</span>

@@ -88,7 +88,13 @@ function RwaFlipCard({
                      asset.symbol === 'SYRUPUSDC' ? '4.5% APY' : null;
 
     return (
-        <div className="relative w-full aspect-[4/3] cursor-pointer" onClick={onFlip}>
+        <div 
+            className="relative w-full aspect-[4/3] cursor-pointer" 
+            onClick={(e) => {
+                console.log('Flip card clicked!');
+                onFlip();
+            }}
+        >
             <AnimatePresence mode="wait">
                 <motion.div
                     key={asset.symbol}
@@ -189,10 +195,13 @@ export default function RwaAssetCards({
     const [activeIndex, setActiveIndex] = useState(0);
     const isCelo = ChainDetectionService.isCelo(chainId);
 
+    // Guard against undefined chains
+    const safeChains = chains || [];
+    
     // Filter which assets to show
     const visibleAssets = RWA_ASSETS.filter((asset) => {
-        const hasAsset = chains.some((chain) =>
-            chain.balances.some((b) => b.symbol === asset.symbol)
+        const hasAsset = safeChains.some((chain) =>
+            (chain.balances || []).some((b) => b.symbol === asset.symbol)
         );
         return !hasAsset || userGoal === "rwa_access";
     });

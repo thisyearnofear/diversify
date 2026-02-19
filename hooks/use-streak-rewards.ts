@@ -97,6 +97,17 @@ function calculateReward(streakDays: number): string {
   return `~$${estimated.toFixed(2)}`;
 }
 
+// Helper: Safely parse JSON responses (handles empty bodies)
+async function safeParseJson(response: Response) {
+  try {
+    const text = await response.text();
+    if (!text) return null;
+    return JSON.parse(text);
+  } catch (e) {
+    return null;
+  }
+}
+
 // Helper: Calculate streak state
 function calculateStreakState(streak: StreakData | null): Partial<StreakState> {
   if (!streak) {
@@ -226,7 +237,7 @@ export function useStreakRewards(): StreakState & StreakActions {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await safeParseJson(response)) || {};
 
         // Convert API response to StreakData format
         const streak: StreakData | null = data.exists ? {
@@ -296,7 +307,7 @@ export function useStreakRewards(): StreakState & StreakActions {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await safeParseJson(response)) || {};
 
         const streak: StreakData = {
           walletAddress: address,
@@ -496,7 +507,7 @@ export function useStreakRewards(): StreakState & StreakActions {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = (await safeParseJson(response)) || {};
         
         // Update local state with new activity data
         const testnetSwaps = data.crossChainActivity?.testnet?.totalSwaps || 0;

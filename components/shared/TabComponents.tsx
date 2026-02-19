@@ -358,6 +358,7 @@ export const ProtectionDashboard = ({
   factors,
   isLoading = false,
   isStale = false,
+  children,
 }: {
   title?: string;
   subtitle?: string;
@@ -368,6 +369,7 @@ export const ProtectionDashboard = ({
   factors: DashboardFactor[];
   isLoading?: boolean;
   isStale?: boolean;
+  children?: React.ReactNode;
 }) => {
   const isGood = score >= 80;
   const isOk = score >= 60;
@@ -488,6 +490,14 @@ export const ProtectionDashboard = ({
           ))}
         </div>
       </div>
+
+      {children && (
+        <div className="bg-white dark:bg-gray-800 px-4 pb-4">
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+            {children}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -805,20 +815,176 @@ export const LoadingSpinner = ({ size = "md" }: { size?: "sm" | "md" | "lg" }) =
   );
 };
 
-// ENHANCEMENT: Connect wallet prompt (standardized across tabs)
+// ENHANCEMENT: Connect wallet prompt with swap preview (standardized across tabs)
 // Note: Buy crypto CTA handled in OverviewTab's empty wallet detection
 export const ConnectWalletPrompt = ({
   message = "Connect your wallet to continue.",
   WalletButtonComponent,
+  // Swap preview props
+  userRegion,
+  inflationData,
+  availableTokens,
+  experienceMode = "advanced",
 }: {
   message?: string;
   WalletButtonComponent: React.ReactNode;
-}) => (
-  <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
-    <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-3">{message}</p>
-    {WalletButtonComponent}
-  </div>
-);
+  userRegion?: string;
+  inflationData?: Record<string, { avgRate: number }>;
+  availableTokens?: Array<{ symbol: string; name: string; region: string }>;
+  experienceMode?: "beginner" | "intermediate" | "advanced";
+}) => {
+  const isBeginner = experienceMode === "beginner";
+  const homeInflation = inflationData?.[userRegion || "Global"]?.avgRate || 15.4;
+  
+  // Popular stablecoins and their typical inflation rates
+  const STABLECOIN_RATES: Record<string, number> = {
+    "USDm": 3.1,
+    "USDC": 3.1,
+    "USDT": 3.1,
+    "EURm": 2.3,
+    "EURC": 2.3,
+    "PAXG": 0.5, // Gold-backed
+  };
+
+  // Calculate potential savings for top 3 recommendations
+  const recommendations = [
+    { symbol: "USDm", region: "Global", savings: homeInflation - 3.1 },
+    { symbol: "EURm", region: "Europe", savings: homeInflation - 2.3 },
+    { symbol: "PAXG", region: "Commodities", savings: homeInflation - 0.5 },
+  ].filter(r => r.savings > 0).slice(0, 3);
+
+  return (
+    <div className="space-y-4">
+      {/* Main prompt */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-5 rounded-2xl border-2 border-blue-200 dark:border-blue-800">
+        <div className="flex items-start gap-3 mb-4">
+          <span className="text-2xl">🔓</span>
+          <div className="flex-1">
+            <h3 className="text-sm font-black text-blue-900 dark:text-blue-100 mb-1">
+              Connect Wallet to Start Protecting
+            </h3>
+            <p className="text-xs text-blue-700 dark:text-blue-300 font-medium leading-relaxed">
+              {isBeginner 
+                ? `Your money in ${userRegion} is losing ${(homeInflation).toFixed(1)}% value per year. Let's fix that!`
+                : message
+              }
+            </p>
+          </div>
+        </div>
+        {WalletButtonComponent}
+        <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-3 text-center">
+          🔒 Secure connection • No signup required • Free to use
+        </p>
+      </div>
+
+      {/* Beginner: Simple savings calculator */}
+      {isBeginner && recommendations.length > 0 && (
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-4 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">💰</span>
+            <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-100">
+              Potential Savings
+            </h4>
+          </div>
+          <div className="space-y-2">
+            {recommendations.map((rec) => (
+              <div key={rec.symbol} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded-xl border border-emerald-100 dark:border-emerald-900">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-xs font-black text-emerald-700 dark:text-emerald-300">
+                    {rec.symbol.slice(0, 2)}
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-gray-900 dark:text-white">{rec.symbol}</div>
+                    <div className="text-[9px] text-gray-500">{rec.region} • {(STABLECOIN_RATES[rec.symbol] || 0).toFixed(1)}% inflation</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">+{rec.savings.toFixed(1)}%/yr</div>
+                  <div className="text-[9px] text-gray-500">on $100</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-emerald-700 dark:text-emerald-400 mt-3 text-center font-medium italic">
+            💡 Connect wallet to start saving — takes 2 minutes
+          </p>
+        </div>
+      )}
+
+      {/* Advanced: Available tokens preview */}
+      {!isBeginner && availableTokens && availableTokens.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest">Available Assets</h4>
+            <span className="text-[10px] text-gray-500 font-bold">{availableTokens.length} tokens</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {availableTokens.slice(0, 6).map((token) => {
+              const tokenRate = STABLECOIN_RATES[token.symbol] || homeInflation * 0.2;
+              const savings = homeInflation - tokenRate;
+              return (
+                <div key={token.symbol} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-[10px] font-black text-blue-700 dark:text-blue-300">
+                      {token.symbol.slice(0, 2)}
+                    </div>
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">{token.symbol}</span>
+                  </div>
+                  <div className="text-[9px] text-gray-500 truncate">{token.region}</div>
+                  {savings > 0 && (
+                    <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                      +{savings.toFixed(1)}% vs {userRegion}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {availableTokens.length > 6 && (
+            <p className="text-[9px] text-gray-400 mt-2 text-center font-medium">
+              +{availableTokens.length - 6} more tokens available after connecting
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Inflation comparison (both modes) */}
+      {inflationData && userRegion && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-4 rounded-2xl border-2 border-amber-200 dark:border-amber-800">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">📊</span>
+            <h4 className="text-sm font-black text-amber-900 dark:text-amber-100">
+              {isBeginner ? "Why Diversify?" : "Inflation Comparison"}
+            </h4>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <div className="text-[9px] font-black uppercase text-gray-400 mb-1">Your Region</div>
+              <div className="text-2xl font-black text-gray-900 dark:text-white">{homeInflation.toFixed(1)}%</div>
+              <div className="text-[9px] text-gray-500 mt-1">{userRegion}</div>
+            </div>
+            <div className="flex items-center px-4">
+              <div className="text-gray-300 text-2xl">→</div>
+              <div className="ml-2 text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
+                Save up to {(homeInflation - 0.5).toFixed(1)}%
+              </div>
+            </div>
+            <div className="text-center flex-1">
+              <div className="text-[9px] font-black uppercase text-gray-400 mb-1">Stablecoins</div>
+              <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300">0.5-3.1%</div>
+              <div className="text-[9px] text-gray-500 mt-1">Global avg</div>
+            </div>
+          </div>
+          {isBeginner && (
+            <p className="text-[9px] text-amber-700 dark:text-amber-400 mt-3 text-center font-medium leading-relaxed">
+              💡 <strong>Quick tip:</strong> Converting just $100 to stablecoins can save you <strong>${(100 * (homeInflation - 3.1) / 100).toFixed(2)}</strong> per year
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // ============================================================================
 // Layout Utilities

@@ -521,50 +521,7 @@ export default function OverviewTab({
         />
       )}
 
-      {/* 2. REWARDS (Unified Insight Card) */}
-      <div className="space-y-4">
-        <StreakRewardsCard
-          onSaveClick={() => setActiveTab("swap")}
-        />
-
-        {/* Community Stats - Social Proof */}
-        <RewardsStats />
-      </div>
-
-      {/* ENHANCEMENT: Arbitrum Yield Opportunity Card */}
-      {hasHoldings && (
-        <div 
-          onClick={() => setActiveTab("protect")}
-          className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-4 text-white cursor-pointer hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">💰</span>
-                <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
-                  Earn Yield
-                </span>
-              </div>
-              <h3 className="text-lg font-black mt-2">Up to 5% APY</h3>
-              <p className="text-sm text-blue-100 mt-1">
-                Tokenized treasuries on Arbitrum
-              </p>
-            </div>
-            <div className="bg-white/10 p-2 rounded-xl">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-              </svg>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-3 text-xs text-blue-200">
-            <span className="bg-green-500/30 px-2 py-0.5 rounded-full">USDY 5%</span>
-            <span className="bg-purple-500/30 px-2 py-0.5 rounded-full">SYRUP 4.5%</span>
-            <span>→</span>
-          </div>
-        </div>
-      )}
-
-      {/* 3. ASSET BREAKDOWN (Simplified for Beginners) */}
+      {/* 2. PROTECTION ANALYSIS - Moved to top for priority visibility */}
       {hasHoldings && (
         isBeginner ? (
           <Card>
@@ -618,6 +575,51 @@ export default function OverviewTab({
             yieldSummary={portfolio}
           />
         )
+      )}
+
+      {/* 3. REWARDS (Unified Insight Card) */}
+      {hasHoldings && (
+        <div className="space-y-4">
+          <StreakRewardsCard
+            onSaveClick={() => setActiveTab("swap")}
+          />
+
+          {/* Community Stats - Social Proof */}
+          <RewardsStats />
+        </div>
+      )}
+
+      {/* ENHANCEMENT: Arbitrum Yield Opportunity Card */}
+      {hasHoldings && (
+        <div
+          onClick={() => setActiveTab("protect")}
+          className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-4 text-white cursor-pointer hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-2xl">💰</span>
+                <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+                  Earn Yield
+                </span>
+              </div>
+              <h3 className="text-lg font-black mt-2">Up to 5% APY</h3>
+              <p className="text-sm text-blue-100 mt-1">
+                Tokenized treasuries on Arbitrum
+              </p>
+            </div>
+            <div className="bg-white/10 p-2 rounded-xl">
+              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-3 text-xs text-blue-200">
+            <span className="bg-green-500/30 px-2 py-0.5 rounded-full">USDY 5%</span>
+            <span className="bg-purple-500/30 px-2 py-0.5 rounded-full">SYRUP 4.5%</span>
+            <span>→</span>
+          </div>
+        </div>
       )}
 
       {/* ENHANCEMENT: Multichain Identity Banner - Celebrates both ecosystems */}

@@ -2,16 +2,26 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // Skip ESLint during build - run separately in CI
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // Skip type checking during build - run separately in CI  
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   transpilePackages: [
     "@stable-station/mento-utils",
-    "@privy-io/react-auth",
-    "@privy-io/wagmi",
   ],
 
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals = config.externals || [];
       config.externals.push("pino-pretty", "lokijs", "encoding");
+    } else {
+      // Exclude server-only packages from client bundle
+      config.externals = config.externals || [];
+      config.externals.push("mongoose", "openai", "@google/generative-ai");
     }
     return config;
   },
