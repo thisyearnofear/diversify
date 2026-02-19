@@ -389,17 +389,21 @@ export function useStreakRewards(): StreakState & StreakActions {
     }
 
     try {
-      // Dynamic import to avoid loading service on every render
-      const { GoodDollarService } = await import('../services/gooddollar-service');
+      // Dynamic imports to avoid loading on every render
+      const [{ GoodDollarService }, { getWalletProvider }] = await Promise.all([
+        import('../services/gooddollar-service'),
+        import('../modules/wallet/core/provider-registry'),
+      ]);
 
-      // Get wallet provider
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
+      // Use the provider registry (supports Farcaster, MiniPay, injected wallets)
+      const walletProvider = await getWalletProvider();
+      if (!walletProvider) {
         // Fallback to external URL if no provider
         window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
         return { success: true, error: 'Opened external claim page' };
       }
 
-      const service = await GoodDollarService.fromWeb3Provider((window as any).ethereum);
+      const service = await GoodDollarService.fromWeb3Provider(walletProvider);
       const result = await service.claimUBI();
 
       if (result.success) {
@@ -424,14 +428,18 @@ export function useStreakRewards(): StreakState & StreakActions {
     if (!address) return { success: false, error: 'Wallet not connected' };
 
     try {
-      const { GoodDollarService } = await import('../services/gooddollar-service');
-      
-      // Get wallet provider
-      if (typeof window === 'undefined' || !(window as any).ethereum) {
-        return { success: false, error: 'No wallet provider found' };
+      const [{ GoodDollarService }, { getWalletProvider }] = await Promise.all([
+        import('../services/gooddollar-service'),
+        import('../modules/wallet/core/provider-registry'),
+      ]);
+
+      // Use the provider registry (supports Farcaster, MiniPay, injected wallets)
+      const walletProvider = await getWalletProvider();
+      if (!walletProvider) {
+        return { success: false, error: 'No wallet provider found. Please connect your wallet.' };
       }
 
-      const service = await GoodDollarService.fromWeb3Provider((window as any).ethereum);
+      const service = await GoodDollarService.fromWeb3Provider(walletProvider);
       
       // Generate link (redirect to current page)
       const callbackUrl = window.location.href;

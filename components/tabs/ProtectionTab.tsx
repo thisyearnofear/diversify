@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from "react";
-import GoalBasedStrategies from "../strategies/GoalBasedStrategies";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
@@ -25,8 +24,6 @@ import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
-import StrategyMetrics from "../portfolio/StrategyMetrics";
-import ZakatCalculator from "../portfolio/ZakatCalculator";
 
 import GoodDollarClaimFlow from "../gooddollar/GoodDollarClaimFlow";
 import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
@@ -52,7 +49,7 @@ export default function ProtectionTab({
   onSelectStrategy,
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
-  const { navigateToSwap, demoMode, experienceMode, financialStrategy } = useAppState();
+  const { navigateToSwap, demoMode, experienceMode } = useAppState();
   const { ask: askOracle } = useAIOracle();
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";
@@ -502,40 +499,7 @@ export default function ProtectionTab({
           DASHBOARD CARDS (Replaced Collapsible Sections)
           ===================================================================== */}
 
-      {/* Strategy Metrics - Show if user has selected a strategy (non-beginner only) */}
-      {!isBeginner && displayTotalValue > 0 && (
-        <DashboardCard
-          title="Your Strategy"
-          icon={<span>🎯</span>}
-          subtitle="Cultural wealth philosophy"
-          color="purple"
-          size="lg"
-        >
-          <StrategyMetrics
-            portfolioData={{
-              regions: displayRegionData.reduce((acc, r) => {
-                acc[r.region] = (r.value / displayTotalValue) * 100;
-                return acc;
-              }, {} as Record<string, number>),
-              chains: chains.map(c => c.chainName),
-              tokens: chains.flatMap(c => c.balances as TokenBalance[]),
-            }}
-          />
-        </DashboardCard>
-      )}
-
-      {/* Zakat Calculator - Only show for Islamic strategy */}
-      {financialStrategy === 'islamic' && displayTotalValue > 0 && (
-        <DashboardCard
-          title="Zakat Calculator"
-          icon={<span>🕌</span>}
-          subtitle="Islamic charitable giving"
-          color="green"
-          size="lg"
-        >
-          <ZakatCalculator totalPortfolioValue={displayTotalValue} />
-        </DashboardCard>
-      )}
+      {/* REMOVED: Strategy Metrics and Zakat Calculator - tied to financial strategy which didn't add value */}
 
       {/* Chain Distribution - Non-beginner only */}
       {!isBeginner && displayTotalValue > 0 && (
@@ -564,20 +528,7 @@ export default function ProtectionTab({
       )}
 
 
-      {/* Strategies - Dashboard Card (Advanced Only) */}
-      {!isBeginner && (
-        <DashboardCard
-          title="Goal-Based Strategies"
-          icon={<span>🎯</span>}
-          color="purple"
-          size="md"
-        >
-          <GoalBasedStrategies
-            userRegion={userRegion}
-            onSelectStrategy={onSelectStrategy || (() => { })}
-          />
-        </DashboardCard>
-      )}
+      {/* REMOVED: Goal-Based Strategies - consolidated to Learn tab with interactive RealWorldUseCases */}
 
       <AssetModal
         assetSymbol={showAssetModal}

@@ -14,6 +14,8 @@ interface SwapSuccessCelebrationProps {
     userGoal?: string | null;
     /** Current goal score 0-100 from portfolio analysis */
     goalScore?: number;
+    /** Callback to open the in-app G$ claim flow */
+    onClaimG?: () => void;
 }
 
 /**
@@ -30,6 +32,7 @@ export default function SwapSuccessCelebration({
     annualSavings = 0,
     userGoal,
     goalScore,
+    onClaimG,
 }: SwapSuccessCelebrationProps) {
     const [confettiPieces, setConfettiPieces] = useState<Array<{ id: number; x: number; color: string; delay: number }>>([]);
 
@@ -219,14 +222,15 @@ export default function SwapSuccessCelebration({
                                                     : 'You can now claim free G$ tokens daily from GoodDollar'}
                                         </p>
                                         {canClaim ? (
-                                            <a
-                                                href={STREAK_CONFIG.G_CLAIM_URL}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                onClick={() => {
+                                                    onClose();
+                                                    onClaimG?.();
+                                                }}
                                                 className="inline-block text-sm font-black px-4 py-2 bg-white hover:bg-emerald-50 text-emerald-700 rounded-lg transition-all shadow-md hover:shadow-lg"
                                             >
                                                 Claim G$ Now →
-                                            </a>
+                                            </button>
                                         ) : (
                                             <div className="text-xs font-bold text-emerald-100">
                                                 ✓ Check Swap tab to track your streak

@@ -38,6 +38,11 @@ import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import SwapRecommendations from "../swap/SwapRecommendations";
 import YieldBridgePrompt from "../swap/YieldBridgePrompt";
+import dynamic from "next/dynamic";
+
+const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
+  ssr: false,
+});
 
 interface SwapTabProps {
   userRegion: Region;
@@ -81,6 +86,9 @@ export default function SwapTab({
   const [aiRecommendationReason, setAiRecommendationReason] = useState<
     string | null
   >(null);
+
+  // G$ claim flow state (triggered from swap success celebration)
+  const [showClaimFlow, setShowClaimFlow] = useState(false);
 
   // Success celebration state
   const [showCelebration, setShowCelebration] = useState(false);
@@ -628,6 +636,14 @@ export default function SwapTab({
             profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
             profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0
           ) : undefined}
+          onClaimG={() => setShowClaimFlow(true)}
+        />
+      )}
+
+      {showClaimFlow && (
+        <GoodDollarClaimFlow
+          onClose={() => setShowClaimFlow(false)}
+          onClaimSuccess={() => setShowClaimFlow(false)}
         />
       )}
     </div>
