@@ -58,8 +58,8 @@ export default function Layout({
         <div className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
           {/* Mobile: Two-row layout, Desktop: Single row */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
-            {/* Logo row - hidden on small screens to reduce clutter */}
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300 hidden md:block">
+            {/* Logo row - hidden on small screens to give wallet more space */}
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300 hidden lg:block">
               {isBeginner ? "💰 Protect Your Money" : "DiversiFi"}
               {isInMiniPay && (
                 <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded ml-2">
