@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import type { UserGoal } from "@/hooks/use-protection-profile";
+import { useAppState } from "@/context/AppStateContext";
 
 const RWA_ASSETS = [
     {
@@ -64,6 +65,7 @@ interface RwaAssetCardsProps {
     chainId: number | null;
     onSwap: (symbol: string) => void;
     onShowModal: (symbol: string) => void;
+    experienceMode?: 'beginner' | 'intermediate' | 'advanced';
 }
 
 // Flip card component with auto-rotate and manual controls
@@ -72,6 +74,7 @@ function RwaFlipCard({
     index,
     total,
     isActive,
+    isInitialMount,
     onFlip,
     onSwap,
     onLearnMore,
@@ -80,6 +83,7 @@ function RwaFlipCard({
     index: number;
     total: number;
     isActive: boolean;
+    isInitialMount?: boolean;
     onFlip: () => void;
     onSwap: () => void;
     onLearnMore: () => void;
@@ -88,8 +92,8 @@ function RwaFlipCard({
                      asset.symbol === 'SYRUPUSDC' ? '4.5% APY' : null;
 
     return (
-        <div 
-            className="relative w-full aspect-[3/4] sm:aspect-[4/3] cursor-pointer" 
+        <div
+            className="relative w-full aspect-[3/4] sm:aspect-[4/3] cursor-pointer"
             onClick={(e) => {
                 console.log('Flip card clicked!');
                 onFlip();
@@ -98,10 +102,10 @@ function RwaFlipCard({
             <AnimatePresence mode="wait">
                 <motion.div
                     key={asset.symbol}
-                    initial={{ rotateX: -90, opacity: 0 }}
+                    initial={{ rotateX: isInitialMount ? -90 : 0, opacity: isInitialMount ? 0 : 1 }}
                     animate={{ rotateX: 0, opacity: 1 }}
                     exit={{ rotateX: 90, opacity: 0 }}
-                    transition={{ duration: 0.4, ease: "easeOut" }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
                     className="absolute inset-0"
                     style={{ transformStyle: "preserve-3d" }}
                 >
@@ -191,8 +195,10 @@ export default function RwaAssetCards({
     chainId,
     onSwap,
     onShowModal,
+    experienceMode,
 }: RwaAssetCardsProps) {
     const [activeIndex, setActiveIndex] = useState(0);
+    const [hasJustSwitched, setHasJustSwitched] = useState(false);
     const isCelo = ChainDetectionService.isCelo(chainId);
 
     // Guard against undefined chains
@@ -209,13 +215,25 @@ export default function RwaAssetCards({
     // Auto-rotate every 5 seconds
     useEffect(() => {
         if (visibleAssets.length <= 1) return;
-        
+
         const interval = setInterval(() => {
             setActiveIndex((prev) => (prev + 1) % visibleAssets.length);
         }, 5000);
 
         return () => clearInterval(interval);
     }, [visibleAssets.length]);
+
+    // Reset index and trigger animation when experience mode changes
+    useEffect(() => {
+        if (experienceMode && experienceMode !== 'beginner') {
+            setHasJustSwitched(true);
+            // Reset to first card for a fresh animation
+            setActiveIndex(0);
+            // Clear the switch flag after animation completes
+            const timeout = setTimeout(() => setHasJustSwitched(false), 600);
+            return () => clearTimeout(timeout);
+        }
+    }, [experienceMode]);
 
     // Reset index if it exceeds visible assets
     useEffect(() => {
@@ -242,6 +260,7 @@ export default function RwaAssetCards({
                 index={activeIndex}
                 total={visibleAssets.length}
                 isActive={true}
+                isInitialMount={hasJustSwitched}
                 onFlip={handleFlip}
                 onSwap={() => onSwap(activeAsset.symbol)}
                 onLearnMore={() => onShowModal(activeAsset.symbol)}

@@ -509,6 +509,7 @@ export default function ProtectionTab({
           chainId={chainId}
           onSwap={handleExecuteSwap}
           onShowModal={setShowAssetModal}
+          experienceMode={experienceMode}
         />
       )}
 
