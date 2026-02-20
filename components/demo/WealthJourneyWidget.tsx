@@ -44,7 +44,9 @@ export default function WealthJourneyWidget({
       title = 'Step 3: Wealth Management';
       description = 'Your funds are on Arbitrum (RWAs). Monitor your Real-World Assets performance here.';
       cta = 'View Performance';
-      action = () => setActiveTab('analytics');
+      // NOTE: Analytics tab is no longer part of the main navigation.
+      // Route to Overview which contains portfolio/performance surface area.
+      action = () => setActiveTab('overview');
       icon = '📈';
       progress = 100;
     }

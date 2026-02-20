@@ -381,13 +381,29 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
   // Initialize from storage
   const initializeFromStorage = useCallback(() => {
     const savedTab = localStorage.getItem("activeTab");
-    const deprecatedTabs = ["analytics", "strategies", "protect"]; // protection renamed to oracle but ID kept, but for others
-    if (savedTab) {
-      if (deprecatedTabs.includes(savedTab)) {
-        setState((prev) => ({ ...prev, activeTab: "overview" }));
-      } else {
-        setState((prev) => ({ ...prev, activeTab: savedTab }));
-      }
+
+    // Only these tab IDs are currently rendered in pages/index.tsx
+    const allowedTabs = ["overview", "protect", "swap", "info"] as const;
+    type AllowedTab = (typeof allowedTabs)[number];
+
+    // Back-compat: migrate old/experimental tab IDs to current ones
+    const legacyTabMap: Record<string, AllowedTab> = {
+      analytics: "overview",
+      strategies: "overview",
+      rewards: "overview",
+      oracle: "protect",
+    };
+
+    if (!savedTab) return;
+
+    const migrated = legacyTabMap[savedTab];
+    const nextTab = (migrated || savedTab) as string;
+
+    if ((allowedTabs as readonly string[]).includes(nextTab)) {
+      setState((prev) => ({ ...prev, activeTab: nextTab }));
+    } else {
+      // If localStorage contains an unknown tab id, fall back safely.
+      setState((prev) => ({ ...prev, activeTab: "overview" }));
     }
   }, []);
 

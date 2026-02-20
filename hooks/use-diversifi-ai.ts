@@ -629,7 +629,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         normalizedContent.includes("free money") ||
         normalizedContent.includes("claim")
       ) {
-        fastPathResponse = "Taking you to your daily UBI claim... 💰";
+        fastPathResponse = "Taking you to your daily UBI claim (Protect tab)... 💰";
       } else if (
         normalizedContent.includes("learn") ||
         normalizedContent.includes("how to use") ||
@@ -696,7 +696,8 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           normalizedContent.includes("free money") ||
           normalizedContent.includes("claim")
         ) {
-          navAction = { type: "navigate", tab: "rewards", delay: 1500 };
+          // Rewards tab was removed from main navigation; claim flow lives in Protect.
+          navAction = { type: "navigate", tab: "protect", delay: 1500 };
         } else if (
           normalizedContent.includes("learn") ||
           normalizedContent.includes("how to use") ||
