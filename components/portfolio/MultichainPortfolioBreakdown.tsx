@@ -186,26 +186,12 @@ export default function MultichainPortfolioBreakdown({
                                         className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
                                         style={{ backgroundColor: `${info.color}30` }}
                                     >
-                                        <span className="dark:hidden">{info.icon}</span>
-                                        <span className="hidden dark:inline" style={{ filter: info.darkColor ? 'brightness(1.2)' : 'none' }}>{info.icon}</span>
+                                        {info.icon}
                                     </span>
                                     <div>
-                                        <span 
-                                            className="font-semibold text-sm"
-                                            style={{ color: 'var(--network-title-color, inherit)' }}
-                                        >
+                                        <div className="font-semibold text-sm text-gray-900 dark:text-white">
                                             {network}
-                                        </span>
-                                        <style jsx>{`
-                                            span {
-                                                --network-title-color: #111827;
-                                            }
-                                            @media (prefers-color-scheme: dark) {
-                                                span {
-                                                    --network-title-color: ${info.darkColor || '#ffffff'};
-                                                }
-                                            }
-                                        `}</style>
+                                        </div>
                                         <div className="text-xs text-gray-500 dark:text-gray-400">{info.description}</div>
                                     </div>
                                 </div>
