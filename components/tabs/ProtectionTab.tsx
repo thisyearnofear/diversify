@@ -22,6 +22,7 @@ import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
+import OptimizationInsight from "./protect/OptimizationInsight";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
@@ -401,7 +402,7 @@ export default function ProtectionTab({
           PRIMARY INSIGHT CARD - Dynamic based on selected goal
           ================================================================= */}
       {liveAnalysis && topOpportunity && (
-        <InsightCard
+        <OptimizationInsight
           icon={config.userGoal === 'geographic_diversification' ? '🌍' : config.userGoal === 'rwa_access' ? '🥇' : config.userGoal === 'inflation_protection' ? '🛡️' : '⚡'}
           title={
             config.userGoal === 'geographic_diversification'
@@ -417,8 +418,12 @@ export default function ProtectionTab({
               ? `Adding ${topOpportunity.toToken} gives you exposure to ${topOpportunity.toRegion} economy. Your current ${topOpportunity.fromToken} is mainly ${topOpportunity.fromRegion}-focused.`
               : config.userGoal === 'rwa_access'
               ? `${topOpportunity.toToken} provides ${topOpportunity.toToken === 'PAXG' ? 'gold-backed' : 'yield-bearing'} exposure that ${topOpportunity.fromToken} can't match.`
-              : `Your ${topOpportunity.fromToken} holdings face ${topOpportunity.fromInflation.toFixed(1)}% inflation. Swapping to ${topOpportunity.toToken} (${topOpportunity.toInflation.toFixed(1)}% inflation) preserves purchasing power.`
+              : `Your ${topOpportunity.fromToken} holdings face ${topOpportunity.fromInflation.toFixed(1)}% inflation. Swapping to ${topOpportunity.toToken} preserves purchasing power.`
           }
+          fromToken={topOpportunity.fromToken}
+          toToken={topOpportunity.toToken}
+          fromInflation={topOpportunity.fromInflation}
+          toInflation={topOpportunity.toInflation}
           impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
           variant={topOpportunity.priority === "HIGH" ? "urgent" : "default"}
           action={{
@@ -430,58 +435,28 @@ export default function ProtectionTab({
                 topOpportunity.suggestedAmount.toFixed(2),
               ),
           }}
-        >
-          {liveAnalysis.rebalancingOpportunities.length > 1 && (
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">
-                {config.userGoal === "geographic_diversification"
-                  ? "More Regional Options"
-                  : config.userGoal === "rwa_access"
-                  ? "More RWA Options"
-                  : "More Inflation Options"}
-              </p>
-              <div className="space-y-2">
-                {liveAnalysis.rebalancingOpportunities
-                  .filter((opp) => {
-                    if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
-                    // Filter by goal
-                    if (config.userGoal === 'geographic_diversification') {
-                      return opp.toRegion !== 'Global' && opp.fromRegion !== opp.toRegion;
-                    }
-                    if (config.userGoal === 'rwa_access') {
-                      return ['PAXG', 'USDY', 'SYRUPUSDC'].includes(opp.toToken);
-                    }
-                    return true;
-                  })
-                  .slice(0, 3)
-                  .map((opp, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-50 dark:border-gray-700/50"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400">{opp.fromToken}</span>
-                        <span className="text-gray-300">→</span>
-                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">{opp.toToken}</span>
-                        {config.userGoal === 'geographic_diversification' && (
-                          <span className="text-[9px] text-gray-400">({opp.toRegion})</span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] text-green-600 dark:text-green-400 font-bold">+${opp.annualSavings.toFixed(2)}</span>
-                        <button
-                          onClick={() => handleExecuteSwap(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))}
-                          className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black uppercase rounded-lg transition-colors"
-                        >
-                          Swap
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-        </InsightCard>
+          secondaryOptions={
+            liveAnalysis.rebalancingOpportunities
+              .filter((opp) => {
+                if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
+                // Filter by goal
+                if (config.userGoal === 'geographic_diversification') {
+                  return opp.toRegion !== 'Global' && opp.fromRegion !== opp.toRegion;
+                }
+                if (config.userGoal === 'rwa_access') {
+                  return ['PAXG', 'USDY', 'SYRUPUSDC'].includes(opp.toToken);
+                }
+                return true;
+              })
+              .slice(0, 3)
+              .map(opp => ({
+                fromToken: opp.fromToken,
+                toToken: opp.toToken,
+                annualSavings: opp.annualSavings,
+                onClick: () => handleExecuteSwap(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))
+              }))
+          }
+        />
       )}
 
       {/* =================================================================

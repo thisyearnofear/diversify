@@ -630,6 +630,14 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         normalizedContent.includes("claim")
       ) {
         fastPathResponse = "Taking you to your daily UBI claim... 💰";
+      } else if (
+        normalizedContent.includes("learn") ||
+        normalizedContent.includes("how to use") ||
+        normalizedContent.includes("tutorial") ||
+        normalizedContent.includes("what is paxg") ||
+        normalizedContent.includes("what is usdy")
+      ) {
+        fastPathResponse = "Taking you to the Learn section... 📚";
       }
 
       if (fastPathResponse) {
@@ -671,7 +679,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           normalizedContent.includes("interest") ||
           normalizedContent.includes("passive income")
         ) {
-          navAction = { type: "navigate", tab: "strategies", delay: 1500 };
+          navAction = { type: "navigate", tab: "protect", delay: 1500 };
         } else if (
           normalizedContent.includes("strategy") ||
           normalizedContent.includes("philosophy") ||
@@ -680,7 +688,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           normalizedContent.includes("islamic finance") ||
           normalizedContent.includes("confucian")
         ) {
-          navAction = { type: "navigate", tab: "strategies", delay: 1500 };
+          navAction = { type: "navigate", tab: "protect", delay: 1500 };
         } else if (
           normalizedContent.includes("ubi") ||
           normalizedContent.includes("gooddollar") ||
@@ -689,6 +697,14 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           normalizedContent.includes("claim")
         ) {
           navAction = { type: "navigate", tab: "rewards", delay: 1500 };
+        } else if (
+          normalizedContent.includes("learn") ||
+          normalizedContent.includes("how to use") ||
+          normalizedContent.includes("tutorial") ||
+          normalizedContent.includes("what is paxg") ||
+          normalizedContent.includes("what is usdy")
+        ) {
+          navAction = { type: "navigate", tab: "info", delay: 1500 };
         }
 
         // Simulate a tiny delay for natural interaction feeling

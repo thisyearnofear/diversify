@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState, useEffect } from "react";
+import { motion, AnimatePresence, useAnimation } from "framer-motion";
 
 // ============================================================================
 // GOAL DEFINITIONS - Single source of truth
@@ -8,8 +8,10 @@ const GOAL_TYPES = [
   {
     id: "education",
     title: "Education Fund",
+    shortTitle: "Education",
     description: "Save for international education expenses with inflation protection",
     icon: "🎓",
+    color: "blue",
     defaultAmount: 10000,
     defaultTimeframe: 36,
     recommendedStrategy: "balanced",
@@ -21,7 +23,6 @@ const GOAL_TYPES = [
       "Gold allocation hedges against currency devaluation",
       "Cross-chain diversification reduces single-network risk",
     ],
-    // Real-world examples to show in accordion
     examples: [
       {
         title: "🇺🇸 US → UK",
@@ -38,8 +39,10 @@ const GOAL_TYPES = [
   {
     id: "travel",
     title: "Travel Fund",
+    shortTitle: "Travel",
     description: "Save for international travel with stable purchasing power",
     icon: "✈️",
+    color: "cyan",
     defaultAmount: 3000,
     defaultTimeframe: 12,
     recommendedStrategy: "conservative",
@@ -67,8 +70,10 @@ const GOAL_TYPES = [
   {
     id: "remittance",
     title: "Remittance Fund",
+    shortTitle: "Remittance",
     description: "Optimize cross-border transfers with multichain efficiency",
     icon: "💸",
+    color: "emerald",
     defaultAmount: 5000,
     defaultTimeframe: 24,
     recommendedStrategy: "balanced",
@@ -96,8 +101,10 @@ const GOAL_TYPES = [
   {
     id: "business",
     title: "Business Protection",
+    shortTitle: "Business",
     description: "Hedge operational costs and supply chain inflation",
     icon: "🏭",
+    color: "amber",
     defaultAmount: 20000,
     defaultTimeframe: 18,
     recommendedStrategy: "inflationHedge",
@@ -125,8 +132,10 @@ const GOAL_TYPES = [
   {
     id: "emergency",
     title: "Emergency Fund",
+    shortTitle: "Emergency",
     description: "Build a crisis-resistant safety net with real asset backing",
     icon: "🛡️",
+    color: "rose",
     defaultAmount: 5000,
     defaultTimeframe: 6,
     recommendedStrategy: "conservative",
@@ -157,6 +166,24 @@ interface RealWorldUseCasesProps {
   onSelectGoal?: (goalId: string) => void;
 }
 
+const colorMap: Record<string, string> = {
+  blue: "from-blue-500 to-indigo-600 shadow-blue-500/20 text-blue-600",
+  cyan: "from-cyan-500 to-blue-600 shadow-cyan-500/20 text-cyan-600",
+  emerald: "from-emerald-500 to-teal-600 shadow-emerald-500/20 text-emerald-600",
+  amber: "from-amber-500 to-orange-600 shadow-amber-500/20 text-amber-600",
+  rose: "from-rose-500 to-red-600 shadow-rose-500/20 text-rose-600",
+  purple: "from-purple-500 to-violet-600 shadow-purple-500/20 text-purple-600",
+};
+
+const bgLightMap: Record<string, string> = {
+  blue: "bg-blue-50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-800/30",
+  cyan: "bg-cyan-50 dark:bg-cyan-900/10 border-cyan-100 dark:border-cyan-800/30",
+  emerald: "bg-emerald-50 dark:bg-emerald-900/10 border-emerald-100 dark:border-emerald-800/30",
+  amber: "bg-amber-50 dark:bg-amber-900/10 border-amber-100 dark:border-amber-800/30",
+  rose: "bg-rose-50 dark:bg-rose-900/10 border-rose-100 dark:border-rose-800/30",
+  purple: "bg-purple-50 dark:bg-purple-900/10 border-purple-100 dark:border-purple-800/30",
+};
+
 export default function RealWorldUseCases({
   onSelectGoal,
 }: RealWorldUseCasesProps) {
@@ -164,7 +191,7 @@ export default function RealWorldUseCases({
   const [goalAmount, setGoalAmount] = useState<number>(10000);
   const [timeframeMonths, setTimeframeMonths] = useState<number>(36);
   const [showCalculator, setShowCalculator] = useState(false);
-  const [showExamples, setShowExamples] = useState(true);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const currentGoal =
     GOAL_TYPES.find((goal) => goal.id === activeGoal) || GOAL_TYPES[0];
@@ -173,366 +200,280 @@ export default function RealWorldUseCases({
   const estimatedValue = goalAmount * (1 + (0.03 * timeframeMonths) / 12);
 
   const handleGoalSelect = (goalId: string) => {
+    if (goalId === activeGoal) return;
+    
+    setIsAnimating(true);
     const goal = GOAL_TYPES.find((g) => g.id === goalId);
     if (goal) {
-      setActiveGoal(goalId);
-      setGoalAmount(goal.defaultAmount);
-      setTimeframeMonths(goal.defaultTimeframe);
-      setShowExamples(true); // Auto-show examples for new goal
-      onSelectGoal?.(goalId);
+      setTimeout(() => {
+        setActiveGoal(goalId);
+        setGoalAmount(goal.defaultAmount);
+        setTimeframeMonths(goal.defaultTimeframe);
+        onSelectGoal?.(goalId);
+        setIsAnimating(false);
+      }, 200);
     }
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="size-8 bg-purple-100 dark:bg-purple-900/30 rounded-lg flex items-center justify-center text-lg">
-          💡
-        </div>
-        <div>
-          <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">
-            Wealth Goals
-          </h3>
-          <p className="text-sm font-bold text-gray-900 dark:text-white">
-            Choose & Plan
-          </p>
-        </div>
-      </div>
-
-      {/* Goal Tabs - Horizontal scroll with enhanced press feedback */}
-      <div className="flex overflow-x-auto mb-4 pb-1 scrollbar-hide -mx-1 px-1">
-        {GOAL_TYPES.map((goal, index) => (
-          <motion.button
-            key={goal.id}
-            className={`px-3 py-2 mr-2 rounded-xl whitespace-nowrap flex items-center transition-all ${
-              activeGoal === goal.id
-                ? "bg-purple-600 text-white font-bold shadow-lg shadow-purple-500/20"
-                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 font-bold"
-            }`}
-            onClick={() => handleGoalSelect(goal.id)}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.03 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.95 }}
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-purple-500/5 border border-gray-100 dark:border-gray-700 overflow-hidden">
+      {/* Visual Header Banner */}
+      <div className="relative h-24 bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-800 px-6 flex items-center overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-400/10 rounded-full blur-2xl -ml-10 -mb-10" />
+        
+        <div className="relative flex items-center gap-4">
+          <motion.div 
+            className="size-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center text-2xl shadow-inner border border-white/30"
+            whileHover={{ rotate: [0, -10, 10, 0] }}
           >
-            <span
-              className={
-                activeGoal === goal.id
-                  ? "mr-1.5 text-base"
-                  : "mr-1 text-sm opacity-70"
-              }
-            >
-              {goal.icon}
-            </span>
-            <span className="text-[10px]">{goal.title}</span>
-          </motion.button>
-        ))}
-      </div>
-
-      {/* Selected Goal Detail */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeGoal}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.2 }}
-          className="space-y-3"
-        >
-          {/* Goal Header Card */}
-          <div className="bg-gradient-to-br from-purple-50 to-purple-100/30 dark:from-purple-900/20 dark:to-purple-900/5 p-4 rounded-xl border border-purple-100 dark:border-purple-900/30">
-            <div className="flex items-start gap-3 mb-3">
-              <motion.div
-                className="text-3xl bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm border border-purple-100 dark:border-purple-800/30"
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{
-                  duration: 2,
-                  repeat: Infinity,
-                  repeatDelay: 3,
-                }}
-              >
-                {currentGoal.icon}
-              </motion.div>
-              <div className="flex-1">
-                <h4 className="text-sm font-black text-purple-900 dark:text-purple-100 uppercase tracking-tight">
-                  {currentGoal.title}
-                </h4>
-                <p className="text-xs text-purple-700/80 dark:text-purple-300/80 mt-1 font-medium leading-relaxed">
-                  {currentGoal.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Tags - Animated stagger */}
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {currentGoal.regions.map((region, i) => (
-                <motion.span
-                  key={region}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50"
-                >
-                  {region}
-                </motion.span>
-              ))}
-              <motion.span
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: currentGoal.regions.length * 0.05 }}
-                className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200/50 dark:border-amber-800/50"
-              >
-                🥇 {currentGoal.commodityAllocation}% Gold
-              </motion.span>
-              {currentGoal.chains.map((chain, i) => (
-                <motion.span
-                  key={chain}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{
-                    delay: (currentGoal.regions.length + 1 + i) * 0.05,
-                  }}
-                  className="inline-block text-[10px] font-black uppercase px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
-                >
-                  {chain}
-                </motion.span>
-              ))}
-            </div>
-
-            {/* Benefits - Animated list */}
-            <div className="space-y-1.5">
-              {currentGoal.benefits.map((benefit, idx) => (
-                <motion.div
-                  key={benefit}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 + idx * 0.08 }}
-                  className="flex items-start gap-2"
-                >
-                  <span className="text-emerald-500 text-[10px] mt-0.5 shrink-0">
-                    ✓
-                  </span>
-                  <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400 leading-relaxed">
-                    {benefit}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
+            💡
+          </motion.div>
+          <div>
+            <h3 className="text-white font-black text-lg tracking-tight leading-tight">
+              Wealth Goals
+            </h3>
+            <p className="text-purple-100/70 text-xs font-bold uppercase tracking-widest">
+              Protect your purchasing power
+            </p>
           </div>
+        </div>
+      </div>
 
-          {/* Expandable Examples Accordion */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-          >
-            <button
-              onClick={() => setShowExamples(!showExamples)}
-              className="w-full flex items-center justify-between p-3 bg-gray-900 rounded-xl border border-gray-800 hover:border-purple-500/50 transition-colors group"
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-lg">📊</span>
-                <span className="text-xs font-black text-white group-hover:text-purple-300 transition-colors">
-                  Real-World Examples
-                </span>
-              </div>
-              <motion.div
-                animate={{ rotate: showExamples ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
+      <div className="p-5 space-y-6">
+        {/* Interactive Goal Grid */}
+        <div className="grid grid-cols-5 gap-2">
+          {GOAL_TYPES.map((goal, index) => {
+            const isActive = activeGoal === goal.id;
+            return (
+              <motion.button
+                key={goal.id}
+                onClick={() => handleGoalSelect(goal.id)}
+                className="relative group"
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.95 }}
               >
-                <svg
-                  className="w-4 h-4 text-purple-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
+                <div 
+                  className={`flex flex-col items-center p-2 rounded-2xl transition-all duration-300 border ${
+                    isActive 
+                      ? `bg-white dark:bg-gray-700 border-purple-200 dark:border-purple-500 shadow-lg shadow-purple-500/10 scale-105 z-10` 
+                      : `bg-gray-50/50 dark:bg-gray-800/50 border-transparent hover:bg-white dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600`
+                  }`}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
-              </motion.div>
-            </button>
+                  <span className={`text-xl mb-1 transition-transform duration-500 ${isActive ? 'scale-110 rotate-12' : 'group-hover:scale-110'}`}>
+                    {goal.icon}
+                  </span>
+                  <span className={`text-[9px] font-black uppercase tracking-tighter ${isActive ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                    {goal.shortTitle}
+                  </span>
+                  
+                  {isActive && (
+                    <motion.div 
+                      layoutId="activeIndicator"
+                      className="absolute -bottom-1 w-6 h-1 bg-purple-600 dark:bg-purple-400 rounded-full"
+                    />
+                  )}
+                </div>
+              </motion.button>
+            );
+          })}
+        </div>
 
-            <AnimatePresence>
-              {showExamples && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                  className="overflow-hidden"
-                >
-                  <div className="pt-2 space-y-2">
-                    <AnimatePresence mode="popLayout">
-                      {currentGoal.examples.map((example, idx) => (
+        {/* Dynamic Content Area */}
+        <div className="min-h-[320px] flex flex-col">
+          <AnimatePresence mode="wait">
+            {!isAnimating && (
+              <motion.div
+                key={activeGoal}
+                initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 1.02, y: -10 }}
+                transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+                className="flex-1 flex flex-col"
+              >
+                {/* Visual Strategy Card */}
+                <div className={`p-4 rounded-2xl border ${bgLightMap[currentGoal.color]} transition-colors duration-500 mb-4 overflow-hidden relative group`}>
+                   <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                     <span className="text-6xl">{currentGoal.icon}</span>
+                   </div>
+
+                  <div className="relative flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`size-2 rounded-full animate-ping bg-${currentGoal.color}-500`} />
+                      <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
+                        {currentGoal.title}
+                      </h4>
+                    </div>
+                    
+                    <p className="text-xs text-gray-600 dark:text-gray-400 font-medium leading-relaxed mb-4 max-w-[90%]">
+                      {currentGoal.description}
+                    </p>
+
+                    {/* Stats Pill Row */}
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {currentGoal.regions.map((region) => (
+                        <div key={region} className="px-2 py-1 bg-white dark:bg-gray-800 rounded-lg text-[9px] font-black text-gray-500 border border-gray-100 dark:border-gray-700 shadow-sm">
+                          🌍 {region}
+                        </div>
+                      ))}
+                      <div className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-[9px] font-black text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 shadow-sm">
+                        🥇 {currentGoal.commodityAllocation}% GOLD
+                      </div>
+                    </div>
+
+                    {/* Smart Logic List */}
+                    <div className="grid gap-2">
+                      {currentGoal.benefits.map((benefit, idx) => (
                         <motion.div
-                          key={example.title}
-                          initial={{ opacity: 0, x: -20 }}
+                          key={benefit}
+                          initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: 20 }}
-                          transition={{ delay: idx * 0.1 }}
-                          className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800 transition-colors"
+                          transition={{ delay: 0.2 + idx * 0.1 }}
+                          className="flex items-center gap-2"
                         >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <div className="text-[10px] font-black text-purple-400 uppercase tracking-wide mb-1">
-                                {example.title}
-                              </div>
-                              <p className="text-[10px] text-gray-600 dark:text-gray-400 leading-relaxed">
-                                {example.description}
-                              </p>
-                            </div>
-                            <div className="shrink-0 px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 rounded-md">
-                              <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400">
-                                {example.metric}
-                              </span>
-                            </div>
+                          <div className={`size-4 rounded-full flex items-center justify-center bg-white dark:bg-gray-800 text-[8px] border border-gray-100 dark:border-gray-700 text-emerald-500 shadow-sm`}>
+                            ✓
                           </div>
+                          <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                            {benefit}
+                          </span>
                         </motion.div>
                       ))}
-                    </AnimatePresence>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* Calculator Toggle */}
-          <button
-            onClick={() => setShowCalculator(!showCalculator)}
-            className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-sm">🧮</span>
-              <span className="text-xs font-black text-gray-700 dark:text-gray-300">
-                {showCalculator ? "Hide Calculator" : "Calculate Your Plan"}
-              </span>
-            </div>
-            <motion.span
-              animate={{ rotate: showCalculator ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="text-gray-400 text-xs"
-            >
-              ▼
-            </motion.span>
-          </button>
-
-          {/* Expandable Calculator */}
-          <AnimatePresence>
-            {showCalculator && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
-                  {/* Goal Amount */}
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">
-                      Goal Amount
-                    </label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm">
-                        $
-                      </span>
-                      <input
-                        type="number"
-                        value={goalAmount}
-                        onChange={(e) =>
-                          setGoalAmount(Number(e.target.value))
-                        }
-                        className="w-full pl-7 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-black outline-none focus:border-purple-400 transition-colors"
-                      />
                     </div>
                   </div>
+                </div>
 
-                  {/* Timeframe */}
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                        Timeframe
-                      </label>
-                      <span className="text-[10px] font-black text-purple-600">
-                        {timeframeMonths} months
+                {/* Micro-examples Carousel/Grid */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  {currentGoal.examples.map((example, idx) => (
+                    <motion.div
+                      key={example.title}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 + idx * 0.1 }}
+                      className="bg-gray-900 rounded-2xl p-3 border border-gray-800 flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-1.5 flex justify-between">
+                          <span>{example.title}</span>
+                          <span className="text-emerald-400">●</span>
+                        </div>
+                        <p className="text-[9px] text-gray-400 font-medium leading-snug">
+                          {example.description}
+                        </p>
+                      </div>
+                      <div className="mt-3 pt-2 border-t border-gray-800 flex items-center justify-between">
+                        <span className="text-[10px] font-black text-white">{example.metric}</span>
+                        <div className="size-4 rounded-full bg-purple-500/20 flex items-center justify-center">
+                          <svg className="size-2 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Action Section */}
+                <div className="mt-auto space-y-3">
+                  <motion.button
+                    onClick={() => setShowCalculator(!showCalculator)}
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all duration-300 ${
+                      showCalculator 
+                        ? 'bg-purple-600 border-purple-500 shadow-lg shadow-purple-600/20' 
+                        : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-purple-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm ${showCalculator ? 'opacity-100' : 'opacity-70'}`}>🧮</span>
+                      <span className={`text-xs font-black uppercase tracking-tight ${showCalculator ? 'text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                        {showCalculator ? "Closing Calculator" : "Interactive Planner"}
                       </span>
                     </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="60"
-                      value={timeframeMonths}
-                      onChange={(e) =>
-                        setTimeframeMonths(Number(e.target.value))
-                      }
-                      className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                    />
-                  </div>
+                    <motion.div
+                      animate={{ rotate: showCalculator ? 180 : 0, color: showCalculator ? "#ffffff" : "#9ca3af" }}
+                      className="text-xs"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </motion.div>
+                  </motion.button>
 
-                  {/* Results */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <motion.div
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700"
-                    >
-                      <div className="text-[9px] font-black uppercase text-gray-400">
-                        Monthly
-                      </div>
-                      <div className="text-lg font-black text-purple-600">
-                        $
-                        {monthlySavingsNeeded.toLocaleString(undefined, {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        })}
-                      </div>
-                    </motion.div>
-                    <motion.div
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.05 }}
-                      className="bg-white dark:bg-gray-900 p-3 rounded-lg border border-gray-100 dark:border-gray-700"
-                    >
-                      <div className="text-[9px] font-black uppercase text-gray-400">
-                        Protected Value
-                      </div>
-                      <div className="text-lg font-black text-emerald-600">
-                        $
-                        {estimatedValue.toLocaleString(undefined, {
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        })}
-                      </div>
-                    </motion.div>
-                  </div>
+                  <AnimatePresence>
+                    {showCalculator && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, height: "auto", scale: 1 }}
+                        exit={{ opacity: 0, height: 0, scale: 0.95 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Goal (USD)</label>
+                              <div className="relative group">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs">$</span>
+                                <input
+                                  type="number"
+                                  value={goalAmount}
+                                  onChange={(e) => setGoalAmount(Number(e.target.value))}
+                                  className="w-full pl-6 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-black outline-none focus:border-purple-400 transition-all"
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Months</label>
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="range"
+                                  min="1"
+                                  max="60"
+                                  value={timeframeMonths}
+                                  onChange={(e) => setTimeframeMonths(Number(e.target.value))}
+                                  className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-600"
+                                />
+                                <span className="text-[10px] font-black text-purple-600 w-6">{timeframeMonths}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                              <div className="text-[8px] font-black uppercase text-gray-400 mb-1">Monthly Goal</div>
+                              <div className="text-base font-black text-purple-600">${monthlySavingsNeeded.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                            </div>
+                            <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                              <div className="text-[8px] font-black uppercase text-gray-400 mb-1">Protected Value</div>
+                              <div className="text-base font-black text-emerald-600">${estimatedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.div>
-      </AnimatePresence>
+        </div>
+      </div>
 
-      {/* Why It Matters - Footer */}
-      <motion.div
-        className="mt-4 p-3 bg-gray-900 rounded-xl relative overflow-hidden"
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <div className="absolute top-0 right-0 w-20 h-20 bg-purple-500/10 rounded-full blur-2xl -mr-10 -mt-10" />
-        <p className="text-[10px] font-bold text-gray-300 leading-relaxed relative">
-          <span className="text-purple-400 font-black">WHY IT MATTERS</span>{" "}
-          · In emerging markets, currencies can lose 10-30% yearly.
-          Geographic diversification is the{" "}
-          <span className="text-purple-400">ultimate hedge</span>.
-        </p>
-      </motion.div>
+      {/* Footer Insight Banner */}
+      <div className="p-4 bg-gray-50 dark:bg-gray-900/80 border-t border-gray-100 dark:border-gray-800">
+        <div className="flex items-start gap-3">
+          <div className="shrink-0 size-8 bg-purple-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-purple-500/20">
+             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+             </svg>
+          </div>
+          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 leading-normal">
+            <span className="text-gray-900 dark:text-white font-black uppercase tracking-tighter mr-1">Insider Insight:</span>
+            In emerging markets, local currencies lose <span className="text-purple-600 dark:text-purple-400">10-30% yearly</span>. 
+            Diversification isn't just a strategy; it's the ultimate hedge.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

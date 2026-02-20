@@ -390,136 +390,178 @@ export const ProtectionDashboard = ({
   const hasStreak = streak && streak.daysActive > 0;
 
   return (
-    <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl overflow-hidden shadow-xl">
-      {/* Hero Section */}
-      <div className="p-6 text-white">
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            {title && (
-              <h3 className="text-xl font-black uppercase tracking-tight">
-                {title}
-              </h3>
+    <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-xl border border-gray-100 dark:border-gray-700">
+      {/* Hero Section - Visual Header Banner Style */}
+      <div className="relative p-6 text-white bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/10 rounded-full blur-2xl -ml-10 -mb-10" />
+
+        <div className="relative z-10 flex justify-between items-start mb-6">
+          <div className="flex items-center gap-4">
+            {icon && (
+              <motion.div
+                className="bg-white/20 backdrop-blur-md p-2.5 rounded-2xl border border-white/30 shadow-inner"
+                whileHover={{ rotate: [0, -10, 10, 0] }}
+              >
+                <span className="text-2xl">{icon}</span>
+              </motion.div>
             )}
-            {subtitle && (
-              <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-                {subtitle}
-              </p>
-            )}
-          </div>
-          {icon && (
-            <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">
-              <span className="text-2xl">{icon}</span>
+            <div>
+              {title && (
+                <h3 className="text-xl font-black uppercase tracking-tight leading-tight">
+                  {title}
+                </h3>
+              )}
+              {subtitle && (
+                <p className="text-indigo-100/70 text-xs font-bold uppercase tracking-widest mt-1">
+                  {subtitle}
+                </p>
+              )}
             </div>
-          )}
+          </div>
         </div>
 
         {/* Value + Score Row */}
-        <div className="flex items-center justify-center gap-8">
+        <div className="relative z-10 flex items-center justify-around gap-4 py-2">
           {/* Total Value */}
-          <div className="text-center">
+          <div className="text-center group">
             {isLoading ? (
-              <div className="h-9 w-24 bg-white/30 rounded-xl animate-pulse mx-auto" />
+              <div className="h-9 w-24 bg-white/20 rounded-xl animate-pulse mx-auto" />
             ) : (
-              <div className="text-3xl font-black tracking-tight">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-3xl font-black tracking-tight"
+              >
                 {totalValue || '$0'}
-              </div>
+              </motion.div>
             )}
-            <div className="text-xs text-indigo-200 font-medium mt-1">
-              {isLoading ? 'Loading...' : (chainCount ? `Protected across ${chainCount} chain${chainCount !== 1 ? 's' : ''}` : 'Total Value')}
+            <div className="text-[10px] text-indigo-200 font-bold uppercase tracking-widest mt-1 opacity-80 group-hover:opacity-100 transition-opacity">
+              {isLoading ? 'Loading...' : (chainCount ? `Across ${chainCount} chain${chainCount !== 1 ? 's' : ''}` : 'Total Value')}
             </div>
           </div>
 
           {/* Score Ring */}
-          <div className="shrink-0 relative w-20 h-20">
-            <svg viewBox="0 0 44 44" className="w-full h-full -rotate-90">
+          <motion.div
+            className="shrink-0 relative w-24 h-24"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+          >
+            {/* Pulsing Outer Glow */}
+            <div
+              className="absolute inset-0 rounded-full blur-lg opacity-40 animate-pulse"
+              style={{ backgroundColor: ringColor }}
+            />
+
+            <svg viewBox="0 0 44 44" className="w-full h-full -rotate-90 relative z-10">
               {/* Track */}
-              <circle cx="22" cy="22" r="18" fill="none" stroke="white" strokeWidth="4" className="opacity-20" />
+              <circle cx="22" cy="22" r="18" fill="none" stroke="white" strokeWidth="3.5" className="opacity-10" />
               {/* Progress */}
-              <circle
+              <motion.circle
                 cx="22" cy="22" r="18"
                 fill="none"
                 stroke={ringColor}
-                strokeWidth="4"
+                strokeWidth="3.5"
                 strokeLinecap="round"
-                strokeDasharray={`${filled.toFixed(1)} ${RING_C.toFixed(1)}`}
+                initial={{ strokeDasharray: `0 ${RING_C.toFixed(1)}` }}
+                animate={{ strokeDasharray: `${filled.toFixed(1)} ${RING_C.toFixed(1)}` }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
               />
             </svg>
             {/* Score label */}
-            <div className="absolute inset-0 flex items-center justify-center flex-col">
-              <span className="text-lg font-black leading-none" style={{ color: ringColor }}>
+            <div className="absolute inset-0 flex items-center justify-center flex-col z-20">
+              <span className="text-xl font-black leading-none drop-shadow-md" style={{ color: ringColor }}>
                 {score}%
               </span>
-              <span className="text-[8px] font-bold opacity-80" style={{ color: ringColor }}>
+              <span className="text-[9px] font-black uppercase tracking-tighter opacity-90 drop-shadow-sm mt-0.5" style={{ color: ringColor }}>
                 {statusText}
               </span>
             </div>
-          </div>
+          </motion.div>
         </div>
 
-        {/* GoodDollar Streak - Miniaturized and integrated */}
+        {/* GoodDollar Streak - Miniaturized and integrated with more pop */}
         {hasStreak && (
-          <button
+          <motion.button
             onClick={onClaim}
-            className="w-full mt-4 flex items-center justify-between p-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-xl border border-white/20 transition-all group"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            whileHover={{ y: -2, scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            className="relative z-10 w-full mt-6 flex items-center justify-between p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg transition-all group overflow-hidden"
           >
-            <div className="flex items-center gap-2">
-              <span className="text-base">💚</span>
+            {/* Button Interior Glow */}
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+
+            <div className="flex items-center gap-3 relative z-10">
+              <div className="size-8 bg-white/20 rounded-xl flex items-center justify-center text-lg shadow-inner">
+                💚
+              </div>
               <div className="text-left">
-                <span className="text-[10px] font-black text-white/90">
-                  {canClaim ? "G$ Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
+                <span className="text-xs font-black text-white tracking-tight block">
+                  {canClaim ? "G$ Reward Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
                 </span>
-                <p className="text-[9px] text-white/60">
-                  {canClaim ? (estimatedReward || "Claim now") : "Free UBI on Celo"}
+                <p className="text-[10px] text-white/60 font-medium">
+                  {canClaim ? (estimatedReward || "Claim now") : "Free UBI on Celo Network"}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2 relative z-10">
               {canClaim && (
-                <span className="size-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                <span className="size-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
               )}
-              <span className="text-[10px] font-black text-white/70 group-hover:translate-x-0.5 transition-transform">→</span>
+              <span className="size-6 bg-white/10 rounded-lg flex items-center justify-center text-[10px] font-black text-white group-hover:bg-white/30 transition-colors">→</span>
             </div>
-          </button>
+          </motion.button>
         )}
 
         {isStale && (
-          <p className="text-xs text-white/60 mt-4 text-center">
+          <p className="text-[10px] text-white/40 mt-4 text-center font-bold uppercase tracking-widest">
             Data may be stale. Pull down to refresh.
           </p>
         )}
       </div>
 
       {/* Factors Section */}
-      <div className="bg-white dark:bg-gray-800 p-4 space-y-3">
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] font-black uppercase text-gray-400">Protection Factors</span>
+      <div className="bg-white dark:bg-gray-800 p-5 space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Protection Factors</span>
+          <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">Live Scan</span>
         </div>
-        
-        <div className="grid grid-cols-2 gap-3">
+
+        <div className="grid grid-cols-2 gap-4">
           {factors.map((factor, idx) => (
             <motion.div
               key={factor.label}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.08 }}
-              className="flex items-center gap-2"
+              transition={{ delay: idx * 0.1 }}
+              className="group"
             >
-              <span className="text-sm">{factor.icon}</span>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{factor.label}</span>
-                  <span className="text-[9px] text-gray-500">{factor.status}</span>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="size-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                  {factor.icon}
                 </div>
-                <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${factor.value}%` }}
-                    transition={{ duration: 0.5, delay: 0.2 + idx * 0.1 }}
-                    className={`h-full rounded-full ${
-                      factor.value >= 80 ? 'bg-emerald-500' :
-                      factor.value >= 60 ? 'bg-amber-500' : 'bg-red-500'
-                    }`}
-                  />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 truncate uppercase tracking-tight">{factor.label}</span>
+                    <span className={`text-[9px] font-bold ${
+                      factor.value >= 80 ? 'text-emerald-500' :
+                      factor.value >= 60 ? 'text-amber-500' : 'text-red-500'
+                    }`}>{factor.value}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${factor.value}%` }}
+                      transition={{ duration: 1, delay: 0.5 + idx * 0.1, ease: "easeOut" }}
+                      className={`h-full rounded-full ${
+                        factor.value >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
+                        factor.value >= 60 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-red-400 to-red-500'
+                      }`}
+                    />
+                  </div>
                 </div>
               </div>
             </motion.div>
