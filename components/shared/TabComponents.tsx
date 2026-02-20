@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { useAnimatedNumber } from "../../hooks/use-animation";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 
@@ -725,7 +726,7 @@ export const StatBadge = ({
   );
 };
 
-// Primary action button
+// Primary action button with enhanced press feedback
 export const PrimaryButton = ({
   children,
   onClick,
@@ -749,9 +750,12 @@ export const PrimaryButton = ({
     lg: "px-6 py-3 text-base",
   };
   return (
-    <button
+    <motion.button
       onClick={onClick}
       disabled={disabled || loading}
+      whileTap={!disabled && !loading ? { scale: 0.97 } : undefined}
+      whileHover={!disabled && !loading ? { scale: 1.02 } : undefined}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={`
         ${sizes[size]}
         ${fullWidth ? "w-full" : ""}
@@ -767,11 +771,11 @@ export const PrimaryButton = ({
         </svg>
       ) : icon}
       {children}
-    </button>
+    </motion.button>
   );
 };
 
-// Secondary action button
+// Secondary action button with press feedback
 export const SecondaryButton = ({
   children,
   onClick,
@@ -793,9 +797,12 @@ export const SecondaryButton = ({
     lg: "px-6 py-3 text-base",
   };
   return (
-    <button
+    <motion.button
       onClick={onClick}
       disabled={disabled}
+      whileTap={!disabled ? { scale: 0.97 } : undefined}
+      whileHover={!disabled ? { scale: 1.02 } : undefined}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
       className={`
         ${sizes[size]}
         ${fullWidth ? "w-full" : ""}
@@ -806,7 +813,7 @@ export const SecondaryButton = ({
     >
       {icon}
       {children}
-    </button>
+    </motion.button>
   );
 };
 
@@ -1043,41 +1050,81 @@ export const Section = ({
 );
 
 /**
- * HeroValue - Large value display for primary metrics
+ * HeroValue - Large value display for primary metrics with count-up animation
  * isLoading renders a skeleton so "$0 loading" ≠ "$0 empty"
+ * 
+ * ENHANCEMENT: Now includes smooth count-up animation for numeric values
  */
 export const HeroValue = ({
   value,
   label,
   isLoading = false,
   trend,
+  animateValue = true,
+  animationDuration = 0.8,
 }: {
   value: string;
   label: string;
   isLoading?: boolean;
   trend?: { value: string; positive: boolean };
-}) => (
-  <div className="text-center">
-    {isLoading ? (
-      <div className="h-9 w-28 bg-white/30 dark:bg-white/10 rounded-xl animate-pulse mx-auto" />
-    ) : (
-      <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-        {value}
-      </div>
-    )}
-    <div className="flex items-center justify-center gap-2 mt-1">
+  animateValue?: boolean;
+  animationDuration?: number;
+}) => {
+  // Extract numeric value for animation (handles "$1,234" format)
+  const numericValue = parseFloat(value.replace(/[^0-9.-]/g, "")) || 0;
+  const prefix = value.match(/^[^0-9]*/)?.[0] || "";
+  const suffix = value.match(/[^0-9]*$/)?.[0] || "";
+  
+  const animatedValue = useAnimatedNumber(numericValue, {
+    duration: animationDuration,
+    decimals: value.includes(".") ? 2 : 0,
+    startOnMount: animateValue,
+  });
+
+  const displayValue = animateValue && numericValue > 0
+    ? `${prefix}${animatedValue.toLocaleString()}${suffix}`
+    : value;
+
+  return (
+    <div className="text-center">
       {isLoading ? (
-        <div className="h-3 w-36 bg-white/20 dark:bg-white/10 rounded-full animate-pulse" />
+        <div className="h-9 w-28 bg-white/30 dark:bg-white/10 rounded-xl animate-pulse mx-auto" />
       ) : (
-        <>
-          <span className="text-xs text-gray-500 font-medium">{label}</span>
-          {trend && (
-            <span className={`text-[10px] font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}>
-              {trend.positive ? '↑' : '↓'} {trend.value}
-            </span>
-          )}
-        </>
+        <motion.div 
+          className="text-3xl font-black text-gray-900 dark:text-white tracking-tight"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+        >
+          {displayValue}
+        </motion.div>
       )}
+      <div className="flex items-center justify-center gap-2 mt-1">
+        {isLoading ? (
+          <div className="h-3 w-36 bg-white/20 dark:bg-white/10 rounded-full animate-pulse" />
+        ) : (
+          <>
+            <motion.span 
+              className="text-xs text-gray-500 font-medium"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              {label}
+            </motion.span>
+            {trend && (
+              <motion.span 
+                className={`text-[10px] font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}
+                initial={{ opacity: 0, x: -5 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                {trend.positive ? '↑' : '↓'} {trend.value}
+              </motion.span>
+            )}
+          </>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};

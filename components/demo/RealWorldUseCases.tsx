@@ -200,7 +200,7 @@ export default function RealWorldUseCases({
         </div>
       </div>
 
-      {/* Goal Tabs - Horizontal scroll */}
+      {/* Goal Tabs - Horizontal scroll with enhanced press feedback */}
       <div className="flex overflow-x-auto mb-4 pb-1 scrollbar-hide -mx-1 px-1">
         {GOAL_TYPES.map((goal, index) => (
           <motion.button
@@ -215,7 +215,7 @@ export default function RealWorldUseCases({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.03 }}
             whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: 0.95 }}
           >
             <span
               className={

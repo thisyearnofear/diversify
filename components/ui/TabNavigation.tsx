@@ -1,4 +1,5 @@
 import React from "react";
+import { motion } from "framer-motion";
 
 interface TabItem {
   id: string;
@@ -62,9 +63,10 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
           const isActive = activeTab === tab.id;
 
           return (
-            <button
+            <motion.button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              whileTap={{ scale: 0.95 }}
               className={`flex-1 py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg relative ${
                 isActive
                   ? "text-blue-600 dark:text-blue-400"
@@ -73,20 +75,31 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
             >
               {/* Active indicator — bottom line */}
               {isActive && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                <motion.span 
+                  layoutId="activeTabIndicator"
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"
+                />
               )}
-              <div className={`transition-transform duration-200 ${isActive ? "scale-110" : ""} relative`}>
+              <motion.div 
+                className={`transition-transform duration-200 ${isActive ? "scale-110" : ""} relative`}
+                animate={hasBadge ? { scale: [1, 1.05, 1] } : {}}
+                transition={hasBadge ? { repeat: Infinity, duration: 2, ease: "easeInOut" } : {}}
+              >
                 {tab.icon}
                 {hasBadge && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
+                  >
                     {badgeCount > 99 ? "99+" : badgeCount}
-                  </span>
+                  </motion.span>
                 )}
-              </div>
+              </motion.div>
               <span className={`text-xs font-bold uppercase tracking-wider mt-0.5 ${isActive ? "opacity-100" : "opacity-60"}`}>
                 {tab.label}
               </span>
-            </button>
+            </motion.button>
           );
         })}
       </div>

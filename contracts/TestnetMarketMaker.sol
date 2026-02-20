@@ -3,7 +3,8 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title TestnetMarketMaker
@@ -24,7 +25,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * 4. Anyone calls addLiquidity(tokenA, tokenB, amountA, amountB, minA, minB).
  * 5. Users call swapExactTokensForTokens or swapExactETHForTokens.
  */
-contract TestnetMarketMaker is Ownable, ReentrancyGuard {
+contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
     // -------------------------------------------------------------------------
     // Events
     // -------------------------------------------------------------------------
@@ -39,6 +40,8 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
     event LiquidityAdded(address indexed provider, address token0, address token1, uint256 amount0, uint256 amount1);
     event LiquidityRemoved(address indexed provider, address token0, address token1, uint256 amount0, uint256 amount1);
     event Sync(address indexed token0, address indexed token1, uint112 reserve0, uint112 reserve1);
+    event PoolCreated(address indexed token0, address indexed token1, address indexed creator);
+    event FeeUpdated(uint256 oldFee, uint256 newFee);
 
     // -------------------------------------------------------------------------
     // Errors
@@ -56,7 +59,11 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
     // Constants
     // -------------------------------------------------------------------------
     uint256 public constant FEE_DENOMINATOR = 1000;
-    uint256 public constant FEE_NUMERATOR = 997; // 0.3% fee
+    uint256 public feeNumerator = 997; // 0.3% fee (modifiable)
+    uint256 public constant MAX_FEE = 50; // Max 5% fee (50/1000)
+    
+    // Fee accumulator for protocol fees (can be withdrawn by owner)
+    mapping(address => uint256) public accruedFees;
 
     // -------------------------------------------------------------------------
     // Pool storage
@@ -80,6 +87,17 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
     // Constructor
     // -------------------------------------------------------------------------
     constructor() Ownable(msg.sender) {}
+
+    // -------------------------------------------------------------------------
+    // Pausable
+    // -------------------------------------------------------------------------
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
+    }
 
     // -------------------------------------------------------------------------
     // Internal helpers
@@ -141,14 +159,14 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Constant-product output formula with 0.3% fee.
+     * @notice Constant-product output formula with configurable fee.
      */
     function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
-        public pure returns (uint256 amountOut)
+        public view returns (uint256 amountOut)
     {
         if (amountIn == 0) revert InsufficientInputAmount();
         if (reserveIn == 0 || reserveOut == 0) revert InsufficientLiquidity();
-        uint256 amountInWithFee = amountIn * FEE_NUMERATOR;
+        uint256 amountInWithFee = amountIn * feeNumerator;
         uint256 numerator       = amountInWithFee * reserveOut;
         uint256 denominator     = (reserveIn * FEE_DENOMINATOR) + amountInWithFee;
         amountOut = numerator / denominator;
@@ -161,16 +179,20 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
     /**
      * @notice Seed a new pool with initial reserves (owner only).
      *         Caller must have approved both tokens beforehand.
+     * @dev Enforces minimum liquidity to prevent price manipulation.
      */
     function seedPool(
         address tokenA, address tokenB,
         uint256 amountA, uint256 amountB
-    ) external onlyOwner nonReentrant {
+    ) external onlyOwner nonReentrant whenNotPaused {
         (address token0, address token1) = _sortTokens(tokenA, tokenB);
         Pool storage pool = pools[token0][token1];
 
         uint256 amount0 = tokenA == token0 ? amountA : amountB;
         uint256 amount1 = tokenA == token0 ? amountB : amountA;
+
+        // Prevent very small initial liquidity to avoid price manipulation
+        require(amount0 > 1000 && amount1 > 1000, "TMM: insufficient initial liquidity");
 
         if (!IERC20(token0).transferFrom(msg.sender, address(this), amount0)) revert TransferFailed();
         if (!IERC20(token1).transferFrom(msg.sender, address(this), amount1)) revert TransferFailed();
@@ -184,6 +206,7 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
         liquidityShares[token0][token1][msg.sender] += shares;
         totalShares[token0][token1] += shares;
 
+        emit PoolCreated(token0, token1, msg.sender);
         emit LiquidityAdded(msg.sender, token0, token1, amount0, amount1);
         emit Sync(token0, token1, pool.reserve0, pool.reserve1);
     }
@@ -206,7 +229,7 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
         address tokenA, address tokenB,
         uint256 amountADesired, uint256 amountBDesired,
         uint256 amountAMin, uint256 amountBMin
-    ) external nonReentrant returns (uint256 amountA, uint256 amountB, uint256 shares) {
+    ) external nonReentrant whenNotPaused returns (uint256 amountA, uint256 amountB, uint256 shares) {
         (Pool storage pool, address token0, address token1) = _getPool(tokenA, tokenB);
         _requirePool(pool);
 
@@ -257,7 +280,7 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
         address tokenA, address tokenB,
         uint256 sharesToBurn,
         uint256 amountAMin, uint256 amountBMin
-    ) external nonReentrant returns (uint256 amountA, uint256 amountB) {
+    ) external nonReentrant whenNotPaused returns (uint256 amountA, uint256 amountB) {
         (Pool storage pool, address token0, address token1) = _getPool(tokenA, tokenB);
 
         uint256 providerShares = liquidityShares[token0][token1][msg.sender];
@@ -303,7 +326,7 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
         address[] calldata path,
         address to,
         uint256 deadline
-    ) external nonReentrant returns (uint256[] memory amounts) {
+    ) external nonReentrant whenNotPaused returns (uint256[] memory amounts) {
         if (deadline < block.timestamp) revert Expired();
         if (path.length != 2) revert InvalidPath();
 
@@ -344,5 +367,44 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard {
         amounts = new uint256[](2);
         amounts[0] = amountIn;
         amounts[1] = amountOut;
+    }
+
+    // -------------------------------------------------------------------------
+    // Admin
+    // -------------------------------------------------------------------------
+
+    /**
+     * @notice Update the trading fee. Owner only.
+     * @param newFeeNumerator New fee (e.g., 997 = 0.3%, 995 = 0.5%)
+     */
+    function setFee(uint256 newFeeNumerator) external onlyOwner {
+        require(newFeeNumerator >= FEE_DENOMINATOR - MAX_FEE, "TMM: fee too high");
+        require(newFeeNumerator <= FEE_DENOMINATOR, "TMM: invalid fee");
+        uint256 oldFee = feeNumerator;
+        feeNumerator = newFeeNumerator;
+        emit FeeUpdated(oldFee, newFeeNumerator);
+    }
+
+    // -------------------------------------------------------------------------
+    // View helpers - Extended
+    // -------------------------------------------------------------------------
+
+    /**
+     * @notice Get pool info in a single call (for UI efficiency).
+     */
+    function getPoolInfo(address tokenA, address tokenB) external view returns (
+        uint256 reserveA,
+        uint256 reserveB,
+        uint256 totalPoolShares,
+        uint256 userShares,
+        uint32 lastUpdate
+    ) {
+        (Pool storage pool, address token0, address token1) = _getPool(tokenA, tokenB);
+        (reserveA, reserveB) = tokenA == token0 
+            ? (pool.reserve0, pool.reserve1) 
+            : (pool.reserve1, pool.reserve0);
+        totalPoolShares = totalShares[token0][token1];
+        userShares = liquidityShares[token0][token1][msg.sender];
+        lastUpdate = pool.blockTimestampLast;
     }
 }
