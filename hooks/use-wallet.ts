@@ -10,7 +10,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { getAddChainParameter, isSupportedChainId, DEFAULT_CHAIN_ID, toHexChainId } from '../modules/wallet/core/chains';
+import { getAddChainParameter, getDefaultChainId, isSupportedChainId, DEFAULT_CHAIN_ID, toHexChainId } from '../modules/wallet/core/chains';
 import {
   getWalletEnvironment,
   getWalletProvider,
@@ -125,10 +125,12 @@ export function useWallet() {
 
         const detectedChainId = await detectChainId(provider, environment.isMiniPay, environment.isFarcaster);
 
+        const defaultChainId = getDefaultChainId({ isFarcaster: environment.isFarcaster });
+
         if (!isSupportedChainId(detectedChainId) && shouldAutoConnect) {
-          await switchToDefaultChain(provider);
-          setChainId(DEFAULT_CHAIN_ID);
-          cacheChainId(DEFAULT_CHAIN_ID);
+          await switchToDefaultChain(provider, defaultChainId);
+          setChainId(defaultChainId);
+          cacheChainId(defaultChainId);
         } else {
           setChainId(detectedChainId);
           cacheChainId(detectedChainId);
@@ -442,7 +444,8 @@ async function detectChainId(provider: any, isMiniPay: boolean, isFarcaster: boo
   }
 
   if (isMiniPay || isFarcaster) {
-    return DEFAULT_CHAIN_ID;
+    // In embedded environments, default chain is environment-specific.
+    return getDefaultChainId({ isFarcaster });
   }
 
   const cachedChainId = getCachedChainId();
@@ -453,11 +456,11 @@ async function detectChainId(provider: any, isMiniPay: boolean, isFarcaster: boo
   return DEFAULT_CHAIN_ID;
 }
 
-async function switchToDefaultChain(provider: any): Promise<void> {
+async function switchToDefaultChain(provider: any, defaultChainId: number): Promise<void> {
   try {
     await provider.request({
       method: 'wallet_switchEthereumChain',
-      params: [{ chainId: toHexChainId(DEFAULT_CHAIN_ID) }],
+      params: [{ chainId: toHexChainId(defaultChainId) }],
     });
   } catch {
     // Keep local fallback when switch is rejected/unavailable.

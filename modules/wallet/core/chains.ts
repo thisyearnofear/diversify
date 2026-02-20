@@ -16,6 +16,17 @@ export const SUPPORTED_CHAIN_IDS = [
   NETWORKS.RH_TESTNET.chainId,
 ] as const;
 
+// Default chain selection is environment-sensitive for onboarding/test-drive.
+// - Farcaster Mini App: prefer Celo Alfajores (stable + faucet + Mento UX)
+// - Otherwise: prefer Robinhood Chain testnet (Arbitrum Orbit)
+// Falls back to Celo mainnet as a safe base.
+export function getDefaultChainId(opts?: { isFarcaster?: boolean }): number {
+  if (opts?.isFarcaster) return NETWORKS.ALFAJORES.chainId;
+  return NETWORKS.RH_TESTNET.chainId;
+}
+
+// Back-compat: keep a constant export, but DO NOT use it for onboarding defaults.
+// (Some non-onboarding flows may still import it.)
 export const DEFAULT_CHAIN_ID = NETWORKS.CELO_MAINNET.chainId;
 
 export function isSupportedChainId(chainId: number): boolean {

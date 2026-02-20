@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useAppState } from "../../context/AppStateContext";
+import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
 import { useDiversifiAI } from "../../hooks/use-diversifi-ai";
 import VoiceButton from "../ui/VoiceButton";
 
@@ -66,7 +67,11 @@ export default function AIChat() {
     if (lastMessage?.role === "assistant" && lastMessage.action?.type === "navigate") {
       const { tab, delay = 1500 } = lastMessage.action;
       const timer = setTimeout(() => {
-        setActiveTab(tab);
+        const migrated = LEGACY_TAB_MAP[tab];
+        const candidate = migrated || tab;
+        if (isTabId(candidate)) {
+          setActiveTab(candidate);
+        }
         setDrawerOpen(false);
       }, delay);
       return () => clearTimeout(timer);

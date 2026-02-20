@@ -6,6 +6,7 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
+import { isTabId, LEGACY_TAB_MAP, type TabId } from "@/constants/tabs";
 
 // Swap pre-fill configuration from AI recommendations
 interface SwapPrefill {
@@ -59,14 +60,14 @@ export type ThemeMode = 'auto' | 'light' | 'dark';
 
 // Define the application state interface
 interface AppState {
-  activeTab: string;
+  activeTab: TabId;
   chainId: number | null;
   swapPrefill: SwapPrefill | null;
   darkMode: boolean;
   themeMode: ThemeMode; // ENHANCEMENT: auto time-based switching
   themeLoaded: boolean;
   guidedTour: GuidedTourState | null;
-  visitedTabs: string[];
+  visitedTabs: TabId[];
   experienceMode: UserExperienceMode;
   userActivity: UserActivity;
   demoMode: DemoModeState;
@@ -75,7 +76,7 @@ interface AppState {
 
 // Define the context type
 interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
-  setActiveTab: (tab: string) => void;
+  setActiveTab: (tab: TabId) => void;
   setChainId: (chainId: number | null) => void;
   setSwapPrefill: (prefill: SwapPrefill | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
@@ -89,11 +90,11 @@ interface AppStateContextType extends Omit<AppState, "themeLoaded"> {
   startTour: (
     tourId: string,
     totalSteps: number,
-    initialTab: string,
+    initialTab: TabId,
     section?: string,
   ) => void;
   nextTourStep: (
-    nextTab: string,
+    nextTab: TabId,
     section?: string,
     prefill?: SwapPrefill,
   ) => void;
@@ -183,7 +184,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [state, setState] = useState<AppState>({
-    activeTab: "overview",
+    activeTab: "overview" satisfies TabId,
     chainId: null,
     swapPrefill: null,
     darkMode: false,
@@ -259,7 +260,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
 
     setState((prev) => ({
       ...prev,
-      activeTab: savedTab || "overview",
+      activeTab: savedTab && isTabId(savedTab) ? savedTab : ("overview" satisfies TabId),
       darkMode: initialDarkMode,
       themeMode,
       themeLoaded: true,
@@ -325,7 +326,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   // Set active tab (ENHANCEMENT: tracks visited tabs for tour detection)
-  const setActiveTab = useCallback((tab: string) => {
+  const setActiveTab = useCallback((tab: TabId) => {
     setState((prev) => ({
       ...prev,
       activeTab: tab,
@@ -381,30 +382,15 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
   // Initialize from storage
   const initializeFromStorage = useCallback(() => {
     const savedTab = localStorage.getItem("activeTab");
-
-    // Only these tab IDs are currently rendered in pages/index.tsx
-    const allowedTabs = ["overview", "protect", "swap", "info"] as const;
-    type AllowedTab = (typeof allowedTabs)[number];
-
-    // Back-compat: migrate old/experimental tab IDs to current ones
-    const legacyTabMap: Record<string, AllowedTab> = {
-      analytics: "overview",
-      strategies: "overview",
-      rewards: "overview",
-      oracle: "protect",
-    };
-
     if (!savedTab) return;
 
-    const migrated = legacyTabMap[savedTab];
-    const nextTab = (migrated || savedTab) as string;
+    const migrated = LEGACY_TAB_MAP[savedTab];
+    const candidate = migrated || savedTab;
 
-    if ((allowedTabs as readonly string[]).includes(nextTab)) {
-      setState((prev) => ({ ...prev, activeTab: nextTab }));
-    } else {
-      // If localStorage contains an unknown tab id, fall back safely.
-      setState((prev) => ({ ...prev, activeTab: "overview" }));
-    }
+    setState((prev) => ({
+      ...prev,
+      activeTab: isTabId(candidate) ? candidate : "overview",
+    }));
   }, []);
 
   // Guided tour methods (ENHANCEMENT: minimal tour orchestration)
@@ -412,7 +398,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
     (
       tourId: string,
       totalSteps: number,
-      initialTab: string,
+      initialTab: TabId,
       section?: string,
     ) => {
       setState((prev) => ({
@@ -430,7 +416,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const nextTourStep = useCallback(
-    (nextTab: string, section?: string, prefill?: SwapPrefill) => {
+    (nextTab: TabId, section?: string, prefill?: SwapPrefill) => {
       setState((prev) => {
         if (!prev.guidedTour) return prev;
         const nextStep = prev.guidedTour.currentStep + 1;

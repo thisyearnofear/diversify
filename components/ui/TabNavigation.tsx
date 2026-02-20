@@ -1,17 +1,18 @@
 import React from "react";
 import { motion } from "framer-motion";
+import type { TabId } from "@/constants/tabs";
 
 interface TabItem {
-  id: string;
+  id: TabId;
   label: string;
   icon: React.ReactNode;
 }
 
 interface TabNavigationProps {
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
+  activeTab: TabId;
+  setActiveTab: (tab: TabId) => void;
   /** Optional badge counts keyed by tab id */
-  badges?: Record<string, number>;
+  badges?: Partial<Record<TabId, number>>;
 }
 
 const TABS: TabItem[] = [

@@ -25,7 +25,7 @@ interface OverviewTabProps {
   userRegion: Region;
   setUserRegion: (region: Region) => void;
   REGIONS: readonly Region[];
-  setActiveTab: (tab: string) => void;
+  setActiveTab: (tab: import("@/constants/tabs").TabId) => void;
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
   currencyPerformanceData?: {

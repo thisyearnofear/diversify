@@ -4,7 +4,7 @@ import { ChainDetectionService } from '../../services/swap/chain-detection.servi
 
 interface WealthJourneyWidgetProps {
   totalValue: number;
-  setActiveTab: (tab: string) => void;
+  setActiveTab: (tab: import("@/constants/tabs").TabId) => void;
   userRegion: string; // Kept for API compatibility
 }
 

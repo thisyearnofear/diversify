@@ -40,7 +40,7 @@ interface ProtectionTabProps {
   userRegion: Region;
   portfolio: MultichainPortfolio;
   onSelectStrategy?: (strategy: string) => void;
-  setActiveTab?: (tab: string) => void;
+  setActiveTab?: (tab: import("@/constants/tabs").TabId) => void;
 }
 
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";

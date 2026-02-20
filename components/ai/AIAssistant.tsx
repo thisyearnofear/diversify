@@ -4,6 +4,7 @@ import { useDiversifiAI, type AIAdvice } from "../../hooks/use-diversifi-ai";
 import { createEmptyAnalysis } from "../../utils/portfolio-analysis";
 import { useAnimatedCounter } from "../../hooks/use-animated-counter";
 import { useToast } from "../ui/Toast";
+import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
 import { useInflationData } from "../../hooks/use-inflation-data";
 import { useNetworkActivity } from "../../hooks/use-network-activity";
@@ -540,13 +541,19 @@ export default function AIAssistant({
                             onClick={() => {
                               const tour = advice.guidedTour!;
                               const firstStep = tour.steps[0];
-                              startTour(
-                                tour.tourId,
-                                tour.steps.length,
-                                firstStep.tab,
-                                firstStep.section,
-                              );
-                              showToast(`Starting ${tour.title}`, "info");
+                              const migrated = LEGACY_TAB_MAP[firstStep.tab];
+                              const candidate = migrated || firstStep.tab;
+                              if (isTabId(candidate)) {
+                                startTour(
+                                  tour.tourId,
+                                  tour.steps.length,
+                                  candidate,
+                                  firstStep.section,
+                                );
+                                showToast(`Starting ${tour.title}`, "info");
+                              } else {
+                                showToast("Tour has an invalid starting tab.", "error");
+                              }
                             }}
                             className="flex-1 py-2 bg-indigo-600 text-white rounded-lg text-xs font-bold"
                           >

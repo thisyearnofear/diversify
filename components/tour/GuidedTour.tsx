@@ -1,12 +1,13 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAppState } from "@/context/AppStateContext";
+import type { TabId } from "@/constants/tabs";
 
 interface TourStep {
     id: string;
     title: string;
     description: string;
-    tab: string;
+    tab: TabId;
     action?: {
         label: string;
         onClick: () => void;
@@ -47,7 +48,7 @@ export default function GuidedTour() {
         if (!guidedTour) return;
 
         const currentStep = TOUR_STEPS[guidedTour.currentStep];
-        if (currentStep && currentStep.tab !== guidedTour.highlightSection) {
+        if (currentStep) {
             setActiveTab(currentStep.tab);
         }
     }, [guidedTour, setActiveTab]);
