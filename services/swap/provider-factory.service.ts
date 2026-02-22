@@ -91,6 +91,8 @@ export class ProviderFactoryService {
                 return NETWORKS.ARBITRUM_ONE.rpcUrl;
             case NETWORKS.ARC_TESTNET.chainId:
                 return NETWORKS.ARC_TESTNET.rpcUrl;
+            case NETWORKS.RH_TESTNET.chainId:
+                return NETWORKS.RH_TESTNET.rpcUrl;
             default:
                 throw new Error(`No RPC URL configured for chain ID ${chainId}`);
         }
