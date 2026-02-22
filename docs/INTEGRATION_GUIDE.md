@@ -61,23 +61,9 @@ export const WALLET_FEATURES = {
 
 #### Network Configuration
 ```typescript
-// config/chains.ts
-export const SUPPORTED_CHAINS = {
-  CELO: {
-    id: 42220,
-    name: 'Celo',
-    rpc: 'https://forno.celo.org',
-    nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-    blockExplorer: 'https://explorer.celo.org'
-  },
-  ARBITRUM: {
-    id: 42161,
-    name: 'Arbitrum',
-    rpc: 'https://arb1.arbitrum.io/rpc',
-    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-    blockExplorer: 'https://arbiscan.io'
-  }
-};
+// config/index.ts — NETWORKS object is the single source of truth
+// Celo Mainnet (42220), Alfajores (44787), Arbitrum (42161),
+// Arc Testnet (5042002), Robinhood Chain (46630)
 ```
 
 #### Token Lists
@@ -117,6 +103,18 @@ export class LiFiService {
   }
 }
 ```
+
+#### Robinhood AMM Integration (RH Testnet)
+Custom constant-product AMM for fictional stock tokens on Robinhood Chain (ID: `46630`).
+
+```typescript
+// services/swap/strategies/robinhood-amm.strategy.ts
+// AMM: 0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3
+// Pairs: ACME/ETH, SPACELY/ETH, WAYNE/ETH, OSCORP/ETH, STARK/ETH
+// Fee: 0.3% | Slippage: 3% default
+```
+
+Dedicated UI at `pages/trade.tsx` — not routed through the main SwapTab.
 
 ## Data Provider Integrations
 

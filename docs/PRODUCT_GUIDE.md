@@ -8,6 +8,7 @@ DiversiFi is an AI-powered wealth protection platform helping users hedge agains
 - **Celo**: Swap cUSD, cEUR, cREAL via Mento protocol
 - **Arbitrum**: Swap USDC, USDY via 1inch aggregation
 - **Cross-chain**: Bridge between chains via LiFi SDK
+- **Robinhood Chain**: Trade fictional stocks (ACME, SPACELY, WAYNE, OSCORP, STARK) via custom AMM at `/trade`
 
 ### Cultural Financial Strategies
 Choose from 7 authentic philosophies that shape AI recommendations:
@@ -40,10 +41,11 @@ Choose from 7 authentic philosophies that shape AI recommendations:
 ## Supported Assets
 
 **Global**: USDC, USDT, USDY, PAXG
-**Celo**: cUSD, cEUR, cREAL, G$
-**Africa**: KESm, GHSm, ZARm, NGNm
-**LatAm**: BRLm, COPm, MXNm, ARSm
-**Asia**: PHPm, IDRm, THBm, VNDm
+**Celo**: USDm, EURm, BRLm, KESm, GHSm, ZARm, G$
+**Africa**: KESm, GHSm, ZARm, NGNm, XOFm
+**LatAm**: BRLm, COPm
+**Asia**: PHPm, JPYm, AUDm
+**Robinhood Chain (Testnet)**: ACME, SPACELY, WAYNE, OSCORP, STARK
 
 ## Quick Start
 

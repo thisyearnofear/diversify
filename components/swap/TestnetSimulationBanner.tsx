@@ -42,7 +42,7 @@ const CHAIN_META: Record<number, {
     icon: '📈',
     color: 'bg-violet-50 dark:bg-violet-900/20',
     border: 'border-violet-200 dark:border-violet-800',
-    description: 'Robinhood Chain is a preview of a future mainnet (built on Arbitrum Orbit, targeted 2026). Tokenized stocks are testnet-only for now — try simulated swaps to earn the Stock Trader badge. When Robinhood launches mainnet, graduates can trade real RWAs here.',
+    description: 'Robinhood Chain AMM contracts are live! Trade fictional stock tokens (ACME, SPACELY, WAYNE, OSCORP, STARK) with testnet ETH. Visit the Stock Trading page for the full experience, or simulate a swap here to earn achievements.',
     faucetUrl: 'https://faucet.testnet.chain.robinhood.com',
     faucetLabel: 'Get ETH on Robinhood →',
   },
@@ -93,10 +93,14 @@ export function TestnetSimulationBanner({ chainId, onSimulated }: Props) {
           {/* Header */}
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
-              {meta.name} — Simulation Mode
+              {meta.name}{chainId === RH_CHAIN_ID ? '' : ' — Simulation Mode'}
             </span>
-            <span className="px-1.5 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 text-[9px] font-black uppercase rounded">
-              Contracts Pending
+            <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded ${
+              chainId === RH_CHAIN_ID
+                ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+            }`}>
+              {chainId === RH_CHAIN_ID ? 'Contracts Live' : 'Contracts Pending'}
             </span>
           </div>
 

@@ -8,13 +8,13 @@ The "Test Drive" mode allows users to experience the DiversiFi app features (Swa
 We use a **Hybrid Approach**:
 1.  **Celo Alfajores**: Real Mento contracts (fully functional).
 2.  **Arc Testnet**: Native USDC and Circle contracts (fully functional speed tests).
-3.  **Robinhood Chain**: A custom deployed **Testnet Market Maker (AMM)** to enable real token swaps (TSLA, AMZN) on their Arbitrum Orbit chain.
+3.  **Robinhood Chain**: A custom deployed **Testnet Market Maker (AMM)** to enable real token swaps (ACME, SPACELY) on their Arbitrum Orbit chain.
 
 ---
 
 ## 1. AI Assistant Awareness
 The AI Assistant (`AIChat.tsx`) is now aware of the user's connected chain.
-- **Robinhood Testnet**: It guides users to try "buying" stocks (TSLA, AMZN) to test the speed and low fees.
+- **Robinhood Testnet**: It guides users to try buying stocks (ACME, SPACELY) to test the speed and low fees.
 - **Arc Testnet**: It encourages high-frequency transaction testing.
 
 ---
@@ -24,7 +24,7 @@ The AI Assistant (`AIChat.tsx`) is now aware of the user's connected chain.
 To provide a seamless, realistic experience on the Robinhood Chain, we deploy a lightweight **Decentralized Exchange (DEX)** infrastructure. This allows users to swap tokens using standard `ERC20` transfers and `x * y = k` pricing, rather than just hitting a "mint" button.
 
 ### Architecture
-1.  **`TestnetStock.sol`**: Real ERC20 tokens with a `mint` function (for creating TSLA, AMZN supply).
+1.  **`TestnetStock.sol`**: Real ERC20 tokens with a `mint` function (for creating ACME, SPACELY supply).
 2.  **`TestnetMarketMaker.sol`**: A single-contract AMM (Automated Market Maker) that holds liquidity and facilitates swaps.
 
 ### Deployment Guide (via Remix IDE)
@@ -34,11 +34,11 @@ To provide a seamless, realistic experience on the Robinhood Chain, we deploy a 
 - MetaMask connected to **Robinhood Chain Testnet** (RPC: `https://rpc.testnet.chain.robinhood.com`, Chain ID: `46630`).
 
 #### Step A: Deploy the Assets
-For each stock you want to support (TSLA, AMZN, PLTR, NFLX, AMD) AND a stablecoin (USDC):
+For each stock you want to support (ACME, SPACELY, WAYNE, OSCORP, STARK) AND a quote token (ETH):
 1.  Open `contracts/TestnetStock.sol` in Remix.
 2.  Deploy with arguments:
-    *   Name: e.g., "Tesla (Testnet)"
-    *   Symbol: "TSLA"
+    *   Name: e.g., "Acme Corporation (Testnet)"
+    *   Symbol: "ACME"
     *   Decimals: 18
 3.  **Save the Contract Addresses**.
 
@@ -50,45 +50,45 @@ For each stock you want to support (TSLA, AMZN, PLTR, NFLX, AMD) AND a stablecoi
 #### Step C: Initialize Liquidity Pools
 Now fund the AMM so users have a counterparty.
 
-**For each stock (e.g., TSLA):**
-1.  **Approve**: In `TestnetStock` (at TSLA address), call `approve(MARKET_MAKER_ADDRESS, 1000000000000000000000000)`.
+**For each stock (e.g., ACME):**
+1.  **Approve**: In `TestnetStock` (at ACME address), call `approve(MARKET_MAKER_ADDRESS, 1000000000000000000000000)`.
 2.  **Create Pool**: In `TestnetMarketMaker`, call `createPool`:
-    *   `tokenA`: TSLA Address
-    *   `tokenB`: USDC Address
-    *   `amountA`: 1000 * 10^18 (1000 TSLA)
-    *   `amountB`: 200000 * 10^18 ($200,000 USDC - implies $200 price)
+    *   `tokenA`: ACME Address
+    *   `tokenB`: ETH Address
+    *   `amountA`: 1000 * 10^18 (1000 ACME)
+    *   `amountB`: 200000 * 10^18 ($200,000 ETH - implies $200 price)
 3.  **Transact**.
 
 ---
 
-## 3. Frontend Integration
+## 3. Frontend Integration — ✅ Complete
 
-Once deployed, update `config/index.ts` to point the app to your new infrastructure:
+All contracts are deployed and wired into the app. Config lives in `config/index.ts`:
 
 ```typescript
 export const RH_TESTNET_TOKENS = {
-    TSLA: '0x...', // Your new TSLA address
-    AMZN: '0x...', // Your new AMZN address
-    // ...
-    USDC: '0x...', // Your new Testnet USDC address
-} as const;
+    ACME: '0x4390d881751a190C9B3539b052BA1FC7a0f517dc',
+    SPACELY: '0xe28F0fBc0777373fd80E932072033949ef73Fa5f',
+    WAYNE: '0xD91C15F9017c4Caa56825487ede1A701a94cE2a4',
+    OSCORP: '0xeacC2abf8C05bAc6870C16bEa5c4E3db7d8EA41d',
+    STARK: '0x1d3264F941Dc8d9b038245987078D249Df748c8D',
+    WETH: '0x95fa0c32181d073FA9b07F0eC3961C845d00bE21',
+};
 
 export const BROKER_ADDRESSES = {
-    // ...
-    RH_TESTNET: '0x...', // Your TestnetMarketMaker address
-} as const;
+    RH_TESTNET: '0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3', // TestnetMarketMaker AMM
+};
 ```
+
+**Key files:**
+- `pages/trade.tsx` — Dedicated stock trading UI (buy/sell, live quotes, portfolio)
+- `services/swap/strategies/robinhood-amm.strategy.ts` — AMM swap strategy (registered in SwapOrchestratorService)
+- `constants/tokens.ts` — Token design system (gradients, icons for each stock)
 
 ---
 
 ## 4. Simulation Fallbacks
 
-If you strictly cannot deploy the contracts (e.g., during a demo where RPC is down):
-- **G$ Claim**: The app simulates success via `setTimeout` in `GoodDollarClaimFlow.tsx`.
-- **Swaps**: Will fail unless the Mock DEX is online.
-
-## Recommendation
-For the Hackathon, this **"Real DEX"** deployment is the gold standard. It proves:
-1.  You built on their chain.
-2.  You understand DeFi primitives (AMMs).
-3.  Your UI handles real contract interactions (Approvals, Swaps, Receipts).
+If contracts are unreachable (e.g., RPC down):
+- **G$ Claim**: Simulates success via `setTimeout` in `GoodDollarClaimFlow.tsx`.
+- **Swaps**: `TestnetSimulationBanner` offers simulated swap recording for achievements.

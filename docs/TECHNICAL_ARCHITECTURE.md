@@ -43,9 +43,9 @@ See [**Hetzner Deployment Guide**](HETZNER_DEPLOYMENT.md) for setup details.
 - **Data Fetching**: SWR for server state management
 
 ### Blockchain Integration
-- **Multi-Chain**: Support for Celo, Arbitrum, and cross-chain operations
+- **Multi-Chain**: Support for Celo, Arbitrum, Robinhood Chain, and cross-chain operations
 - **Token Management**: Dynamic token lists per network
-- **Swap Execution**: Integration with 1inch, Mento, and LiFi protocols
+- **Swap Execution**: Integration with 1inch, Mento, LiFi, and Robinhood AMM protocols
 - **Wallet Operations**: Secure transaction signing and broadcasting
 
 ## Key Components
@@ -58,15 +58,32 @@ See [**Hetzner Deployment Guide**](HETZNER_DEPLOYMENT.md) for setup details.
 
 ### Multi-Chain Architecture
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Celo Network  │    │  Arbitrum       │
-│ - cUSD, cEUR    │    │ - USDC, USDY    │
-│ - Mento swaps   │    │ - 1inch swaps   │
-└─────────────────┘    └─────────────────┘
-         │                       │
-         └───────────────────────┘
-              Cross-chain bridges
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Celo Network  │    │  Arbitrum       │    │  RH Testnet     │
+│ - cUSD, cEUR    │    │ - USDC, USDY    │    │ - ACME, WAYNE   │
+│ - Mento swaps   │    │ - 1inch swaps   │    │ - AMM (x*y=k)   │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                      │
+         └───────────────────────┘                      │
+              Cross-chain bridges          Dedicated /trade page
 ```
+
+### Robinhood Chain Testnet (Chain ID: 46630)
+Arbitrum Orbit L2 with a custom-deployed TestnetMarketMaker AMM for fictional stock tokens.
+
+**Deployed Contracts:**
+| Contract | Address |
+|----------|---------|
+| TestnetMarketMaker (AMM) | `0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3` |
+| ACME | `0x4390d881751a190C9B3539b052BA1FC7a0f517dc` |
+| SPACELY | `0xe28F0fBc0777373fd80E932072033949ef73Fa5f` |
+| WAYNE | `0xD91C15F9017c4Caa56825487ede1A701a94cE2a4` |
+| OSCORP | `0xeacC2abf8C05bAc6870C16bEa5c4E3db7d8EA41d` |
+| STARK | `0x1d3264F941Dc8d9b038245987078D249Df748c8D` |
+| WETH | `0x95fa0c32181d073FA9b07F0eC3961C845d00bE21` |
+
+**Swap Strategy:** `RobinhoodAMMStrategy` in `services/swap/strategies/robinhood-amm.strategy.ts` — routes ETH↔stock swaps through the AMM.
+**UI:** Dedicated trading page at `/trade` with buy/sell toggle, live AMM rates, and portfolio view.
 
 ### Cultural Strategy Framework
 - 7 authentic financial philosophies integration
