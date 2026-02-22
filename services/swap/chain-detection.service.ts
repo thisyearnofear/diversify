@@ -9,7 +9,7 @@ import { NETWORKS } from '../../config';
 const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
 export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'robinhood' | 'unknown';
-export type SwapProtocol = 'mento' | 'lifi' | 'none';
+export type SwapProtocol = 'mento' | 'lifi' | 'robinhood-amm' | 'none';
 
 export class ChainDetectionService {
     /**
@@ -71,6 +71,7 @@ export class ChainDetectionService {
         if (this.isCelo(chainId)) return 'mento';
         if (this.isArbitrum(chainId)) return 'lifi';
         if (isDev && this.isArc(chainId)) return 'lifi';
+        if (isDev && this.isRobinhood(chainId)) return 'robinhood-amm';
         return 'none';
     }
 

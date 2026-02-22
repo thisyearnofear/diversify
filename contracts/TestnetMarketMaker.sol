@@ -3,27 +3,35 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
+interface IWETH {
+    function deposit() external payable;
+    function withdraw(uint256) external;
+    function transfer(address, uint256) external returns (bool);
+    function approve(address, uint256) external returns (bool);
+    function balanceOf(address) external view returns (uint256);
+}
 
 /**
  * @title TestnetMarketMaker
- * @notice A streamlined constant-product AMM (x*y=k) for testnets.
+ * @notice A streamlined constant-product AMM (x*y=k) for testnets with native
+ *         ETH support via WETH wrapping.
  *
  * Features:
  * - Single-contract pool registry (no separate Pair contracts)
  * - Uniswap V2-compatible 0.3% fee
  * - Flash-loan resistant (ReentrancyGuard)
- * - Public liquidity provision (not owner-only)
- * - View helpers: getReserves, quoteSwap — used by UI for price preview
- * - Easy Remix deployment
+ * - Native ETH convenience functions (swapExactETHForTokens, etc.)
+ * - View helpers: getReserves, quoteSwap, quoteSwapETH — gas-free price preview
  *
  * Deployment steps:
- * 1. Deploy TestnetStock for each ticker (TSLA, AMZN, etc.)
- * 2. Deploy this contract.
- * 3. Owner calls seedPool(tokenA, tokenB, amountA, amountB) to bootstrap.
- * 4. Anyone calls addLiquidity(tokenA, tokenB, amountA, amountB, minA, minB).
- * 5. Users call swapExactTokensForTokens or swapExactETHForTokens.
+ * 1. Deploy WETH9.
+ * 2. Deploy TestnetStock for each ticker (TSLA, AMZN, etc.)
+ * 3. Deploy this contract with WETH address.
+ * 4. Owner calls seedPoolETH{value: X}(stockToken, amountStock) to bootstrap.
+ * 5. Users call swapExactETHForTokens / swapExactTokensForETH.
  */
 contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
     // -------------------------------------------------------------------------
@@ -56,18 +64,16 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
     error PoolNotFound();
 
     // -------------------------------------------------------------------------
-    // Constants
+    // Constants & immutables
     // -------------------------------------------------------------------------
     uint256 public constant FEE_DENOMINATOR = 1000;
-    uint256 public feeNumerator = 997; // 0.3% fee (modifiable)
-    uint256 public constant MAX_FEE = 50; // Max 5% fee (50/1000)
-    
-    // Fee accumulator for protocol fees (can be withdrawn by owner)
-    mapping(address => uint256) public accruedFees;
+    uint256 public feeNumerator = 997; // 0.3% fee
+    uint256 public constant MAX_FEE = 50; // Max 5% fee
+
+    address public immutable WETH;
 
     // -------------------------------------------------------------------------
-    // Pool storage
-    // Tokens are always sorted: address(token0) < address(token1)
+    // Pool storage (tokens always sorted: token0 < token1)
     // -------------------------------------------------------------------------
     struct Pool {
         uint112 reserve0;
@@ -75,34 +81,30 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
         uint32  blockTimestampLast;
     }
 
-    // token0 => token1 => Pool (tokens sorted, token0 < token1)
     mapping(address => mapping(address => Pool)) public pools;
-
-    // Per-address liquidity shares (token0 => token1 => provider => shares)
-    // Simple share accounting — 1 share = 1 unit of (reserve0 + reserve1) contributed
     mapping(address => mapping(address => mapping(address => uint256))) public liquidityShares;
     mapping(address => mapping(address => uint256)) public totalShares;
 
     // -------------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------------
-    constructor() Ownable(msg.sender) {}
+    constructor(address _weth) Ownable(msg.sender) {
+        require(_weth != address(0), "TMM: zero WETH");
+        WETH = _weth;
+    }
+
+    // Allow receiving ETH from WETH withdrawals
+    receive() external payable {}
 
     // -------------------------------------------------------------------------
     // Pausable
     // -------------------------------------------------------------------------
-    function pause() external onlyOwner {
-        _pause();
-    }
-
-    function unpause() external onlyOwner {
-        _unpause();
-    }
+    function pause() external onlyOwner { _pause(); }
+    function unpause() external onlyOwner { _unpause(); }
 
     // -------------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------------
-
     function _sortTokens(address tokenA, address tokenB)
         internal pure returns (address token0, address token1)
     {
@@ -123,14 +125,9 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
     }
 
     // -------------------------------------------------------------------------
-    // View helpers (used by UI for price preview — no state changes)
+    // View helpers (gas-free price preview for UI)
     // -------------------------------------------------------------------------
 
-    /**
-     * @notice Return the current reserves for a pool.
-     * @return reserveA Reserve of tokenA (in tokenA's native decimals)
-     * @return reserveB Reserve of tokenB
-     */
     function getReserves(address tokenA, address tokenB)
         external view returns (uint256 reserveA, uint256 reserveB)
     {
@@ -140,13 +137,6 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
             : (pool.reserve1, pool.reserve0);
     }
 
-    /**
-     * @notice Compute the output amount for a given input — gas-free preview.
-     * @param amountIn  Exact input amount
-     * @param tokenIn   Input token address
-     * @param tokenOut  Output token address
-     * @return amountOut Expected output (before slippage)
-     */
     function quoteSwap(uint256 amountIn, address tokenIn, address tokenOut)
         external view returns (uint256 amountOut)
     {
@@ -158,9 +148,30 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
         amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
     }
 
-    /**
-     * @notice Constant-product output formula with configurable fee.
-     */
+    /// @notice Quote how many tokens you get for a given ETH amount.
+    function quoteSwapETH(uint256 ethAmountIn, address tokenOut)
+        external view returns (uint256 amountOut)
+    {
+        (Pool storage pool, address token0,) = _getPool(WETH, tokenOut);
+        _requirePool(pool);
+        (uint256 reserveIn, uint256 reserveOut) = WETH == token0
+            ? (pool.reserve0, pool.reserve1)
+            : (pool.reserve1, pool.reserve0);
+        amountOut = getAmountOut(ethAmountIn, reserveIn, reserveOut);
+    }
+
+    /// @notice Quote how much ETH you get for selling tokens.
+    function quoteSwapTokenForETH(uint256 amountIn, address tokenIn)
+        external view returns (uint256 ethOut)
+    {
+        (Pool storage pool, address token0,) = _getPool(tokenIn, WETH);
+        _requirePool(pool);
+        (uint256 reserveIn, uint256 reserveOut) = tokenIn == token0
+            ? (pool.reserve0, pool.reserve1)
+            : (pool.reserve1, pool.reserve0);
+        ethOut = getAmountOut(amountIn, reserveIn, reserveOut);
+    }
+
     function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
         public view returns (uint256 amountOut)
     {
@@ -172,15 +183,23 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
         amountOut = numerator / denominator;
     }
 
+    function getPoolInfo(address tokenA, address tokenB) external view returns (
+        uint256 reserveA, uint256 reserveB,
+        uint256 totalPoolShares, uint256 userShares, uint32 lastUpdate
+    ) {
+        (Pool storage pool, address token0, address token1) = _getPool(tokenA, tokenB);
+        (reserveA, reserveB) = tokenA == token0
+            ? (pool.reserve0, pool.reserve1)
+            : (pool.reserve1, pool.reserve0);
+        totalPoolShares = totalShares[token0][token1];
+        userShares = liquidityShares[token0][token1][msg.sender];
+        lastUpdate = pool.blockTimestampLast;
+    }
+
     // -------------------------------------------------------------------------
-    // Liquidity — Owner bootstrap
+    // Liquidity — Owner bootstrap (ERC20-only, legacy)
     // -------------------------------------------------------------------------
 
-    /**
-     * @notice Seed a new pool with initial reserves (owner only).
-     *         Caller must have approved both tokens beforehand.
-     * @dev Enforces minimum liquidity to prevent price manipulation.
-     */
     function seedPool(
         address tokenA, address tokenB,
         uint256 amountA, uint256 amountB
@@ -190,8 +209,6 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
 
         uint256 amount0 = tokenA == token0 ? amountA : amountB;
         uint256 amount1 = tokenA == token0 ? amountB : amountA;
-
-        // Prevent very small initial liquidity to avoid price manipulation
         require(amount0 > 1000 && amount1 > 1000, "TMM: insufficient initial liquidity");
 
         if (!IERC20(token0).transferFrom(msg.sender, address(this), amount0)) revert TransferFailed();
@@ -201,7 +218,6 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
         pool.reserve1 += uint112(amount1);
         pool.blockTimestampLast = uint32(block.timestamp);
 
-        // Mint shares to owner
         uint256 shares = amount0 + amount1;
         liquidityShares[token0][token1][msg.sender] += shares;
         totalShares[token0][token1] += shares;
@@ -212,19 +228,46 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
     }
 
     // -------------------------------------------------------------------------
-    // Liquidity — Public
+    // Liquidity — ETH bootstrap (owner sends ETH + approves token)
     // -------------------------------------------------------------------------
 
-    /**
-     * @notice Add liquidity to an existing pool.
-     *         Ratios are enforced — excess is refunded.
-     * @param tokenA    First token address
-     * @param tokenB    Second token address
-     * @param amountADesired  Amount of tokenA the caller wants to add
-     * @param amountBDesired  Amount of tokenB the caller wants to add
-     * @param amountAMin      Minimum tokenA accepted (slippage guard)
-     * @param amountBMin      Minimum tokenB accepted (slippage guard)
-     */
+    /// @notice Seed a new WETH/token pool. Owner sends ETH (auto-wrapped) and
+    ///         must have approved `amountToken` of `token` to this contract.
+    function seedPoolETH(
+        address token, uint256 amountToken
+    ) external payable onlyOwner nonReentrant whenNotPaused {
+        require(msg.value > 1000 && amountToken > 1000, "TMM: insufficient initial liquidity");
+
+        // Wrap ETH → WETH (held by this contract)
+        IWETH(WETH).deposit{value: msg.value}();
+
+        (address token0, address token1) = _sortTokens(token, WETH);
+        Pool storage pool = pools[token0][token1];
+
+        uint256 amount0 = token == token0 ? amountToken : msg.value;
+        uint256 amount1 = token == token0 ? msg.value   : amountToken;
+
+        // Pull the ERC20 token from owner
+        if (!IERC20(token).transferFrom(msg.sender, address(this), amountToken)) revert TransferFailed();
+        // WETH is already in this contract from the deposit above
+
+        pool.reserve0 += uint112(amount0);
+        pool.reserve1 += uint112(amount1);
+        pool.blockTimestampLast = uint32(block.timestamp);
+
+        uint256 shares = amount0 + amount1;
+        liquidityShares[token0][token1][msg.sender] += shares;
+        totalShares[token0][token1] += shares;
+
+        emit PoolCreated(token0, token1, msg.sender);
+        emit LiquidityAdded(msg.sender, token0, token1, amount0, amount1);
+        emit Sync(token0, token1, pool.reserve0, pool.reserve1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Liquidity — Public (ERC20-only)
+    // -------------------------------------------------------------------------
+
     function addLiquidity(
         address tokenA, address tokenB,
         uint256 amountADesired, uint256 amountBDesired,
@@ -235,10 +278,8 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
 
         (uint256 reserve0, uint256 reserve1) = (pool.reserve0, pool.reserve1);
         (uint256 reserveA, uint256 reserveB) = tokenA == token0
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
+            ? (reserve0, reserve1) : (reserve1, reserve0);
 
-        // Calculate optimal amounts preserving current ratio
         uint256 amountBOptimal = (amountADesired * reserveB) / reserveA;
         if (amountBOptimal <= amountBDesired) {
             if (amountBOptimal < amountBMin) revert SlippageExceeded();
@@ -259,7 +300,6 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
         pool.reserve1 += uint112(amount1);
         pool.blockTimestampLast = uint32(block.timestamp);
 
-        // Simple proportional share minting
         shares = (amount0 * totalShares[token0][token1]) / reserve0;
         liquidityShares[token0][token1][msg.sender] += shares;
         totalShares[token0][token1] += shares;
@@ -268,14 +308,6 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
         emit Sync(token0, token1, pool.reserve0, pool.reserve1);
     }
 
-    /**
-     * @notice Remove liquidity proportional to held shares.
-     * @param tokenA     First token address
-     * @param tokenB     Second token address
-     * @param sharesToBurn Number of shares to redeem
-     * @param amountAMin   Minimum tokenA to receive
-     * @param amountBMin   Minimum tokenB to receive
-     */
     function removeLiquidity(
         address tokenA, address tokenB,
         uint256 sharesToBurn,
@@ -308,24 +340,12 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
     }
 
     // -------------------------------------------------------------------------
-    // Swap
+    // Swap — ERC20 ↔ ERC20
     // -------------------------------------------------------------------------
 
-    /**
-     * @notice Swap an exact amount of input tokens for output tokens.
-     * @param amountIn     Exact input amount
-     * @param amountOutMin Minimum output (slippage protection)
-     * @param path         [tokenIn, tokenOut] — single-hop only for now
-     * @param to           Recipient of output tokens
-     * @param deadline     Unix timestamp after which the tx reverts
-     * @return amounts     [amountIn, amountOut]
-     */
     function swapExactTokensForTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
+        uint256 amountIn, uint256 amountOutMin,
+        address[] calldata path, address to, uint256 deadline
     ) external nonReentrant whenNotPaused returns (uint256[] memory amounts) {
         if (deadline < block.timestamp) revert Expired();
         if (path.length != 2) revert InvalidPath();
@@ -337,16 +357,13 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
         _requirePool(pool);
 
         (uint256 reserveIn, uint256 reserveOut) = tokenIn == token0
-            ? (pool.reserve0, pool.reserve1)
-            : (pool.reserve1, pool.reserve0);
+            ? (pool.reserve0, pool.reserve1) : (pool.reserve1, pool.reserve0);
 
         uint256 amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
         if (amountOut < amountOutMin) revert InsufficientOutputAmount();
 
-        // Pull input tokens from sender
         if (!IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn)) revert TransferFailed();
 
-        // Update reserves
         if (tokenIn == token0) {
             pool.reserve0 = uint112(pool.reserve0 + amountIn);
             pool.reserve1 = uint112(pool.reserve1 - amountOut);
@@ -356,12 +373,9 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
             pool.reserve0 = uint112(pool.reserve0 - amountOut);
             emit Swap(msg.sender, 0, amountIn, amountOut, 0, to);
         }
-
         pool.blockTimestampLast = uint32(block.timestamp);
 
-        // Send output tokens to recipient
         if (!IERC20(tokenOut).transfer(to, amountOut)) revert TransferFailed();
-
         emit Sync(token0, token1, pool.reserve0, pool.reserve1);
 
         amounts = new uint256[](2);
@@ -370,41 +384,102 @@ contract TestnetMarketMaker is Ownable, ReentrancyGuard, Pausable {
     }
 
     // -------------------------------------------------------------------------
+    // Swap — ETH → Token (user sends ETH, receives ERC20)
+    // -------------------------------------------------------------------------
+
+    /// @notice Swap exact ETH for tokens. ETH is auto-wrapped to WETH internally.
+    /// @param amountOutMin Minimum tokens to receive (slippage protection)
+    /// @param tokenOut     The stock token to buy
+    /// @param to           Recipient
+    /// @param deadline     Unix timestamp expiry
+    function swapExactETHForTokens(
+        uint256 amountOutMin, address tokenOut, address to, uint256 deadline
+    ) external payable nonReentrant whenNotPaused returns (uint256 amountOut) {
+        if (deadline < block.timestamp) revert Expired();
+        require(msg.value > 0, "TMM: zero ETH");
+
+        // Wrap ETH → WETH (held by this contract)
+        IWETH(WETH).deposit{value: msg.value}();
+
+        (Pool storage pool, address token0, address token1) = _getPool(WETH, tokenOut);
+        _requirePool(pool);
+
+        (uint256 reserveIn, uint256 reserveOut) = WETH == token0
+            ? (pool.reserve0, pool.reserve1) : (pool.reserve1, pool.reserve0);
+
+        amountOut = getAmountOut(msg.value, reserveIn, reserveOut);
+        if (amountOut < amountOutMin) revert InsufficientOutputAmount();
+
+        if (WETH == token0) {
+            pool.reserve0 = uint112(pool.reserve0 + msg.value);
+            pool.reserve1 = uint112(pool.reserve1 - amountOut);
+            emit Swap(msg.sender, msg.value, 0, 0, amountOut, to);
+        } else {
+            pool.reserve1 = uint112(pool.reserve1 + msg.value);
+            pool.reserve0 = uint112(pool.reserve0 - amountOut);
+            emit Swap(msg.sender, 0, msg.value, amountOut, 0, to);
+        }
+        pool.blockTimestampLast = uint32(block.timestamp);
+
+        if (!IERC20(tokenOut).transfer(to, amountOut)) revert TransferFailed();
+        emit Sync(token0, token1, pool.reserve0, pool.reserve1);
+    }
+
+    // -------------------------------------------------------------------------
+    // Swap — Token → ETH (user sends ERC20, receives ETH)
+    // -------------------------------------------------------------------------
+
+    /// @notice Swap exact tokens for ETH. WETH is auto-unwrapped.
+    /// @param amountIn     Exact amount of tokens to sell
+    /// @param amountOutMin Minimum ETH to receive
+    /// @param tokenIn      The stock token to sell
+    /// @param to           Recipient of ETH
+    /// @param deadline     Unix timestamp expiry
+    function swapExactTokensForETH(
+        uint256 amountIn, uint256 amountOutMin,
+        address tokenIn, address to, uint256 deadline
+    ) external nonReentrant whenNotPaused returns (uint256 amountOut) {
+        if (deadline < block.timestamp) revert Expired();
+
+        (Pool storage pool, address token0, address token1) = _getPool(tokenIn, WETH);
+        _requirePool(pool);
+
+        (uint256 reserveIn, uint256 reserveOut) = tokenIn == token0
+            ? (pool.reserve0, pool.reserve1) : (pool.reserve1, pool.reserve0);
+
+        amountOut = getAmountOut(amountIn, reserveIn, reserveOut);
+        if (amountOut < amountOutMin) revert InsufficientOutputAmount();
+
+        if (!IERC20(tokenIn).transferFrom(msg.sender, address(this), amountIn)) revert TransferFailed();
+
+        if (tokenIn == token0) {
+            pool.reserve0 = uint112(pool.reserve0 + amountIn);
+            pool.reserve1 = uint112(pool.reserve1 - amountOut);
+            emit Swap(msg.sender, amountIn, 0, 0, amountOut, to);
+        } else {
+            pool.reserve1 = uint112(pool.reserve1 + amountIn);
+            pool.reserve0 = uint112(pool.reserve0 - amountOut);
+            emit Swap(msg.sender, 0, amountIn, amountOut, 0, to);
+        }
+        pool.blockTimestampLast = uint32(block.timestamp);
+
+        // Unwrap WETH → ETH and send to recipient
+        IWETH(WETH).withdraw(amountOut);
+        (bool success,) = to.call{value: amountOut}("");
+        require(success, "TMM: ETH transfer failed");
+
+        emit Sync(token0, token1, pool.reserve0, pool.reserve1);
+    }
+
+    // -------------------------------------------------------------------------
     // Admin
     // -------------------------------------------------------------------------
 
-    /**
-     * @notice Update the trading fee. Owner only.
-     * @param newFeeNumerator New fee (e.g., 997 = 0.3%, 995 = 0.5%)
-     */
     function setFee(uint256 newFeeNumerator) external onlyOwner {
         require(newFeeNumerator >= FEE_DENOMINATOR - MAX_FEE, "TMM: fee too high");
         require(newFeeNumerator <= FEE_DENOMINATOR, "TMM: invalid fee");
         uint256 oldFee = feeNumerator;
         feeNumerator = newFeeNumerator;
         emit FeeUpdated(oldFee, newFeeNumerator);
-    }
-
-    // -------------------------------------------------------------------------
-    // View helpers - Extended
-    // -------------------------------------------------------------------------
-
-    /**
-     * @notice Get pool info in a single call (for UI efficiency).
-     */
-    function getPoolInfo(address tokenA, address tokenB) external view returns (
-        uint256 reserveA,
-        uint256 reserveB,
-        uint256 totalPoolShares,
-        uint256 userShares,
-        uint32 lastUpdate
-    ) {
-        (Pool storage pool, address token0, address token1) = _getPool(tokenA, tokenB);
-        (reserveA, reserveB) = tokenA == token0 
-            ? (pool.reserve0, pool.reserve1) 
-            : (pool.reserve1, pool.reserve0);
-        totalPoolShares = totalShares[token0][token1];
-        userShares = liquidityShares[token0][token1][msg.sender];
-        lastUpdate = pool.blockTimestampLast;
     }
 }

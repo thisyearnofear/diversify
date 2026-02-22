@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title MockStockVendor
@@ -77,7 +77,7 @@ contract MockStockVendor is Ownable, Pausable {
     function withdraw() external onlyOwner {
         uint256 balance = address(this).balance;
         require(balance > 0, "MockStockVendor: nothing to withdraw");
-        payable(owner).transfer(balance);
+        payable(owner()).transfer(balance);
     }
 
     // -------------------------------------------------------------------------

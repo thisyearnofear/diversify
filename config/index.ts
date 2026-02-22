@@ -197,12 +197,15 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     // Inflation Hedges (store of value, no yield)
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
 
-    // Stock Tokens (Robinhood Chain Testnet RWAs)
-    TSLA: { name: 'Tesla', region: REGIONS.USA, decimals: 18, apy: 0 },
-    AMZN: { name: 'Amazon', region: REGIONS.USA, decimals: 18, apy: 0 },
-    PLTR: { name: 'Palantir', region: REGIONS.USA, decimals: 18, apy: 0 },
-    NFLX: { name: 'Netflix', region: REGIONS.USA, decimals: 18, apy: 0 },
-    AMD: { name: 'AMD', region: REGIONS.USA, decimals: 18, apy: 0 },
+    // Native ETH (used as quote token on Robinhood Chain)
+    ETH: { name: 'Ether', region: REGIONS.GLOBAL, decimals: 18, apy: 0 },
+
+    // Fictional Stock Tokens (Robinhood Chain Testnet)
+    ACME: { name: 'Acme Corporation', region: REGIONS.USA, decimals: 18, apy: 0 },
+    SPACELY: { name: 'Spacely Sprockets', region: REGIONS.USA, decimals: 18, apy: 0 },
+    WAYNE: { name: 'Wayne Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
+    OSCORP: { name: 'Oscorp Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
+    STARK: { name: 'Stark Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
 };
 
 // Helper to get token yield (0 if none)
@@ -229,7 +232,7 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.ALFAJORES.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
-    [NETWORKS.RH_TESTNET.chainId]: ['TSLA', 'AMZN', 'PLTR', 'NFLX', 'AMD'],
+    [NETWORKS.RH_TESTNET.chainId]: ['ETH', 'ACME', 'SPACELY', 'WAYNE', 'OSCORP', 'STARK'],
 };
 
 // Helper: Get full asset list with metadata for a specific chain
@@ -268,11 +271,12 @@ export const EXCHANGE_RATES: Record<string, number> = {
     PAXG: 2650,
     USDY: 1,
     SYRUPUSDC: 1,
-    TSLA: 350,
-    AMZN: 230,
-    PLTR: 110,
-    NFLX: 1050,
-    AMD: 120,
+    ETH: 3500,
+    ACME: 42,
+    SPACELY: 18,
+    WAYNE: 95,
+    OSCORP: 35,
+    STARK: 120,
 } as const;
 
 // Transaction Configuration
@@ -395,17 +399,19 @@ export const ARC_TOKENS = {
 } as const;
 
 export const RH_TESTNET_TOKENS = {
-    TSLA: '0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E',
-    AMZN: '0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02',
-    PLTR: '0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0',
-    NFLX: '0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93',
-    AMD: '0x71178BAc73cBeb415514eB542a8995b82669778d',
+    ACME: '0x4390d881751a190C9B3539b052BA1FC7a0f517dc',
+    SPACELY: '0xe28F0fBc0777373fd80E932072033949ef73Fa5f',
+    WAYNE: '0xD91C15F9017c4Caa56825487ede1A701a94cE2a4',
+    OSCORP: '0xeacC2abf8C05bAc6870C16bEa5c4E3db7d8EA41d',
+    STARK: '0x1d3264F941Dc8d9b038245987078D249Df748c8D',
+    WETH: '0x95fa0c32181d073FA9b07F0eC3961C845d00bE21',
 } as const;
 
 export const BROKER_ADDRESSES = {
     MAINNET: '0x777a8255ca72412f0d706dc03c9d1987306b4cad',
     ALFAJORES: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
     ARC_TESTNET: '0x0000000000000000000000000000000000000000',
+    RH_TESTNET: '0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3',
 } as const;
 
 // Helper: Get token addresses by chain

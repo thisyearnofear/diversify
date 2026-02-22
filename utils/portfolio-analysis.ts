@@ -251,11 +251,11 @@ const TOKEN_REGION_MAP: Record<string, string> = {
   JPYM: "Asia",
   PAXG: "Global",
   SYRUPUSDC: "Global",
-  TSLA: "USA",
-  AMZN: "USA",
-  PLTR: "USA",
-  NFLX: "USA",
-  AMD: "USA",
+  ACME: "USA",
+  SPACELY: "USA",
+  WAYNE: "USA",
+  OSCORP: "USA",
+  STARK: "USA",
 };
 
 // ============================================================================

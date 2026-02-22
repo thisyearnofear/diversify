@@ -58,7 +58,7 @@ const NETWORK_INFO: Record<number, NetworkMetadata> = {
         description: "Tokenized Stock RWAs (Testnet)",
         regions: ["USA"],
         features: [
-            "Stock tokens (TSLA, AMZN)",
+            "Fictional stocks (ACME, WAYNE, STARK)",
             "Arbitrum Orbit L2",
             "Zero real-money risk",
             "Equity diversification"
