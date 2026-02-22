@@ -13,6 +13,8 @@ import { ProviderFactoryService } from "../services/swap/provider-factory.servic
 import StockChart from "../components/trade/StockChart";
 import StockTicker from "../components/trade/StockTicker";
 import TradeWidget from "../components/trade/TradeWidget";
+import LiquidityWidget from "../components/trade/LiquidityWidget";
+import { useStockStats } from "../hooks/use-stock-stats";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
@@ -43,6 +45,7 @@ export default function TradePage() {
     useWalletContext();
 
   // --- State ---
+  const [activeTab, setActiveTab] = useState<"trade" | "earn">("trade");
   const [selected, setSelected] = useState<Stock>("ACME");
   const [mode, setMode] = useState<TradeMode>("buy");
   const [inputAmount, setInputAmount] = useState("");
@@ -80,6 +83,11 @@ export default function TradePage() {
   const isOnRH = chainId === RH_CHAIN_ID;
   const design = getTokenDesign(selected);
   const stockAddress = RH_TESTNET_TOKENS[selected];
+
+  const { stats: stockStats, isLoading: isStatsLoading } = useStockStats(
+    selected,
+    liveRates[selected],
+  );
 
   // --- Data Fetching ---
 
@@ -493,33 +501,42 @@ export default function TradePage() {
                         Key Statistics
                       </h3>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                        {[
-                          {
-                            label: "Market Cap",
-                            value: `$${(Math.random() * 500 + 100).toFixed(2)}B`,
-                          },
-                          {
-                            label: "P/E Ratio",
-                            value: (Math.random() * 20 + 15).toFixed(2),
-                          },
-                          {
-                            label: "Div Yield",
-                            value: `${(Math.random() * 3 + 1).toFixed(2)}%`,
-                          },
-                          {
-                            label: "Avg Volume",
-                            value: `${(Math.random() * 10 + 5).toFixed(1)}M`,
-                          },
-                        ].map((stat, i) => (
-                          <div key={i} className="space-y-1">
-                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
-                              {stat.label}
-                            </div>
-                            <div className="text-sm font-black text-gray-900 dark:text-white">
-                              {stat.value}
-                            </div>
+                        {isStatsLoading || !stockStats ? (
+                          <div className="col-span-4 flex justify-center py-4">
+                            <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
                           </div>
-                        ))}
+                        ) : (
+                          [
+                            {
+                              label: "Market Cap",
+                              value: `${stockStats.marketCapETH.toFixed(2)} ETH`,
+                            },
+                            {
+                              label: "P/E Ratio",
+                              value: stockStats.peRatioMock.toFixed(2),
+                            },
+                            {
+                              label: "Div Yield",
+                              value:
+                                stockStats.divYieldMock > 0
+                                  ? `${stockStats.divYieldMock.toFixed(2)}%`
+                                  : "—",
+                            },
+                            {
+                              label: "24h Volume",
+                              value: `${stockStats.volume24hETH.toFixed(2)} ETH`,
+                            },
+                          ].map((stat, i) => (
+                            <div key={i} className="space-y-1">
+                              <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
+                                {stat.label}
+                              </div>
+                              <div className="text-sm font-black text-gray-900 dark:text-white">
+                                {stat.value}
+                              </div>
+                            </div>
+                          ))
+                        )}
                       </div>
                     </div>
 
@@ -574,29 +591,79 @@ export default function TradePage() {
                     </div>
                   </div>
 
-                  {/* Right: Modular Trade Widget */}
+                  {/* Right: Modular Trade/Earn Widget */}
                   <div className="md:col-span-5 lg:col-span-4 space-y-4 md:sticky md:top-24">
-                    <TradeWidget
-                      selected={selected}
-                      design={design}
-                      mode={mode}
-                      setMode={setMode}
-                      inputAmount={inputAmount}
-                      setInputAmount={setInputAmount}
-                      quote={quote}
-                      priceImpact={priceImpact}
-                      isQuoting={isQuoting}
-                      isSwapping={isSwapping}
-                      hasBalance={hasBalance}
-                      ethBalance={ethBalance}
-                      stockBalance={stockBalances[selected]}
-                      handleMax={handleMax}
-                      handleSwap={handleSwap}
-                      txHash={txHash}
-                      error={error}
-                      slippagePercent={SLIPPAGE_PERCENT}
-                      explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
-                    />
+                    <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-2xl p-1 mb-2">
+                      <button
+                        onClick={() => setActiveTab("trade")}
+                        className={`flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition ${
+                          activeTab === "trade"
+                            ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white"
+                            : "text-gray-400 hover:text-gray-600"
+                        }`}
+                      >
+                        Trade
+                      </button>
+                      <button
+                        onClick={() => setActiveTab("earn")}
+                        className={`flex-1 py-3 rounded-xl text-sm font-black uppercase tracking-wider transition ${
+                          activeTab === "earn"
+                            ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white"
+                            : "text-gray-400 hover:text-gray-600"
+                        }`}
+                      >
+                        Earn
+                      </button>
+                    </div>
+
+                    <AnimatePresence mode="wait">
+                      {activeTab === "trade" ? (
+                        <motion.div
+                          key="trade-widget"
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                        >
+                          <TradeWidget
+                            selected={selected}
+                            design={design}
+                            mode={mode}
+                            setMode={setMode}
+                            inputAmount={inputAmount}
+                            setInputAmount={setInputAmount}
+                            quote={quote}
+                            priceImpact={priceImpact}
+                            isQuoting={isQuoting}
+                            isSwapping={isSwapping}
+                            hasBalance={hasBalance}
+                            ethBalance={ethBalance}
+                            stockBalance={stockBalances[selected]}
+                            handleMax={handleMax}
+                            handleSwap={handleSwap}
+                            txHash={txHash}
+                            error={error}
+                            slippagePercent={SLIPPAGE_PERCENT}
+                            explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                          />
+                        </motion.div>
+                      ) : (
+                        <motion.div
+                          key="earn-widget"
+                          initial={{ opacity: 0, x: 20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                        >
+                          <LiquidityWidget
+                            selected={selected}
+                            address={address}
+                            ethBalance={ethBalance}
+                            stockBalance={stockBalances[selected]}
+                            onSuccess={fetchBalances}
+                            explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                          />
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     {/* Mobile Assets (Hidden on Desktop) */}
                     <div className="md:hidden">

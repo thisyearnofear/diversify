@@ -106,6 +106,7 @@ export default function SwapTab({
     amount: string;
     fromTokenInflation: number;
     toTokenInflation: number;
+    chainId: number;
   } | null>(null);
 
   const swapInterfaceRef = useRef<{
@@ -300,6 +301,7 @@ export default function SwapTab({
       amount,
       fromTokenInflation: fromTokenInflation || 0,
       toTokenInflation: toTokenInflation || 0,
+      chainId: toChainId || walletChainId || 0,
     });
 
     try {
@@ -506,6 +508,7 @@ export default function SwapTab({
                   amount: "10",
                   fromTokenInflation: 3.1,
                   toTokenInflation: 2.3,
+                  chainId: walletChainId || 42161, // Default to Arbitrum if unknown
                 });
                 setShowCelebration(true);
               }}
@@ -690,6 +693,7 @@ export default function SwapTab({
           fromToken={celebrationData.fromToken}
           toToken={celebrationData.toToken}
           amount={celebrationData.amount}
+          chainId={celebrationData.chainId}
           protectionScoreIncrease={5}
           annualSavings={
             parseFloat(celebrationData.amount) *

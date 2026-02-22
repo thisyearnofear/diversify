@@ -66,37 +66,54 @@ function GoalAlignmentBanner({
 }) {
   // Pick the score that actually reflects the user's stated goal
   const score = Math.round(
-    goal === 'inflation_protection' ? goalScores.hedge :
-    goal === 'geographic_diversification' ? goalScores.diversify :
-    goal === 'rwa_access' ? goalScores.rwa : 0
+    goal === "inflation_protection"
+      ? goalScores.hedge
+      : goal === "geographic_diversification"
+        ? goalScores.diversify
+        : goal === "rwa_access"
+          ? goalScores.rwa
+          : 0,
   );
-  const goalMeta: Record<string, { icon: string; label: string; description: string; nextAction: string; bg: string; border: string; badge: string }> = {
+  const goalMeta: Record<
+    string,
+    {
+      icon: string;
+      label: string;
+      description: string;
+      nextAction: string;
+      bg: string;
+      border: string;
+      badge: string;
+    }
+  > = {
     inflation_protection: {
-      icon: '🛡️',
-      label: 'Hedge Inflation',
-      description: 'Reduce exposure to local currency devaluation',
-      nextAction: 'Swap into lower-inflation currencies',
-      bg: 'from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10',
-      border: 'border-blue-200 dark:border-blue-800',
-      badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+      icon: "🛡️",
+      label: "Hedge Inflation",
+      description: "Reduce exposure to local currency devaluation",
+      nextAction: "Swap into lower-inflation currencies",
+      bg: "from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10",
+      border: "border-blue-200 dark:border-blue-800",
+      badge: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
     },
     geographic_diversification: {
-      icon: '🌍',
-      label: 'Diversify Regions',
-      description: 'Spread your wealth across multiple economies',
-      nextAction: 'Add exposure to a new region',
-      bg: 'from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10',
-      border: 'border-purple-200 dark:border-purple-800',
-      badge: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+      icon: "🌍",
+      label: "Diversify Regions",
+      description: "Spread your wealth across multiple economies",
+      nextAction: "Add exposure to a new region",
+      bg: "from-purple-50 to-violet-50 dark:from-purple-900/10 dark:to-violet-900/10",
+      border: "border-purple-200 dark:border-purple-800",
+      badge:
+        "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
     },
     rwa_access: {
-      icon: '🥇',
-      label: 'Access Real-World Assets',
-      description: 'Hold tokenized gold and yield-bearing assets',
-      nextAction: 'Bridge to Arbitrum for USDY or PAXG',
-      bg: 'from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10',
-      border: 'border-amber-200 dark:border-amber-800',
-      badge: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+      icon: "🥇",
+      label: "Access Real-World Assets",
+      description: "Hold tokenized gold and yield-bearing assets",
+      nextAction: "Bridge to Arbitrum for USDY or PAXG",
+      bg: "from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10",
+      border: "border-amber-200 dark:border-amber-800",
+      badge:
+        "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
     },
   };
 
@@ -104,27 +121,43 @@ function GoalAlignmentBanner({
   if (!meta) return null;
 
   return (
-    <div className={`bg-gradient-to-br ${meta.bg} border ${meta.border} rounded-2xl p-4`}>
+    <div
+      className={`bg-gradient-to-br ${meta.bg} border ${meta.border} rounded-2xl p-4`}
+    >
       <div className="flex items-start gap-3">
         <span className="text-2xl">{meta.icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${meta.badge}`}>Your Goal</span>
-            <span className="text-xs font-black text-gray-900 dark:text-white">{meta.label}</span>
+            <span
+              className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${meta.badge}`}
+            >
+              Your Goal
+            </span>
+            <span className="text-xs font-black text-gray-900 dark:text-white">
+              {meta.label}
+            </span>
             {riskTolerance && (
-              <span className="text-[10px] text-gray-500">• {riskTolerance} risk{timeHorizon ? ` • ${timeHorizon}` : ''}</span>
+              <span className="text-[10px] text-gray-500">
+                • {riskTolerance} risk{timeHorizon ? ` • ${timeHorizon}` : ""}
+              </span>
             )}
           </div>
-          <p className="text-[11px] text-gray-600 dark:text-gray-400">{meta.description}</p>
+          <p className="text-[11px] text-gray-600 dark:text-gray-400">
+            {meta.description}
+          </p>
           {/* Progress bar */}
           <div className="mt-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Goal Progress</span>
-              <span className="text-[10px] font-black text-gray-700 dark:text-gray-300">{score}%</span>
+              <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                Goal Progress
+              </span>
+              <span className="text-[10px] font-black text-gray-700 dark:text-gray-300">
+                {score}%
+              </span>
             </div>
             <div className="h-1.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? 'bg-emerald-500' : score >= 60 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-blue-500" : "bg-amber-500"}`}
                 style={{ width: `${score}%` }}
               />
             </div>
@@ -172,7 +205,9 @@ function InflationTooltip() {
       {showTooltip && (
         <div className="absolute z-50 left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg shadow-xl">
           <p className="font-bold mb-1">📊 Data Source</p>
-          <p className="opacity-80">Based on IMF & World Bank CPI data. Updated periodically.</p>
+          <p className="opacity-80">
+            Based on IMF & World Bank CPI data. Updated periodically.
+          </p>
           <div className="absolute top-full left-2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-gray-800" />
         </div>
       )}
@@ -195,9 +230,11 @@ export default function OverviewTab({
   const [selectedMarket, setSelectedMarket] = useState<Region>(userRegion);
   const [showAssetDetails, setShowAssetDetails] = useState(false);
 
-  const { experienceMode, demoMode, disableDemoMode, enableDemoMode } = useAppState();
+  const { experienceMode, demoMode, disableDemoMode, enableDemoMode } =
+    useAppState();
   const { canClaim, isWhitelisted, streak } = useStreakRewards();
-  const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
+  const { config: profileConfig, isComplete: profileComplete } =
+    useProtectionProfile();
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
 
@@ -213,8 +250,6 @@ export default function OverviewTab({
     diversificationTips,
   } = activePortfolio;
 
-
-
   const handleRefresh = async () => {
     if (refreshChainId) await refreshChainId();
     if (refreshBalances) await refreshBalances();
@@ -222,19 +257,24 @@ export default function OverviewTab({
 
   const hasHoldings = totalValue > 0;
 
-  const selectedMarketData = EMERGING_MARKETS[selectedMarket as keyof typeof EMERGING_MARKETS] || EMERGING_MARKETS.Africa;
+  const selectedMarketData =
+    EMERGING_MARKETS[selectedMarket as keyof typeof EMERGING_MARKETS] ||
+    EMERGING_MARKETS.Africa;
   const selectedMarketInflation = inflationData[selectedMarket]?.avgRate || 0;
 
   // Not connected state - ENHANCED: Show the problem viscerally + Demo Mode option
   if (!address && !isConnecting && !isDemo) {
     const regionalInflation = inflationData[userRegion]?.avgRate || 15.4;
-    const monthlyLoss = (1000 * (regionalInflation / 100) / 12).toFixed(2);
+    const monthlyLoss = ((1000 * (regionalInflation / 100)) / 12).toFixed(2);
     const yearlyLoss = (1000 * (regionalInflation / 100)).toFixed(0);
 
     return (
       <div className="space-y-4">
         {/* ENHANCEMENT: Hope-first approach - show value before fear */}
-        <Card padding="p-0" className="overflow-hidden border-2 border-emerald-200 dark:border-emerald-900">
+        <Card
+          padding="p-0"
+          className="overflow-hidden border-2 border-emerald-200 dark:border-emerald-900"
+        >
           <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
@@ -245,7 +285,8 @@ export default function OverviewTab({
                   </h3>
                 </div>
                 <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-                  Smart diversification for {userRegion} ({regionalInflation.toFixed(1)}% inflation)
+                  Smart diversification for {userRegion} (
+                  {regionalInflation.toFixed(1)}% inflation)
                 </p>
               </div>
               <RegionalIconography region={userRegion} size="md" />
@@ -254,17 +295,29 @@ export default function OverviewTab({
             {/* THE OPPORTUNITY (reframed from threat) */}
             <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-emerald-100 dark:border-emerald-900">
               <div className="text-center mb-3">
-                <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold">Protect $1,000 →</div>
-                <div className="text-3xl font-black text-emerald-900 dark:text-emerald-100">Save ${yearlyLoss}/year</div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold">
+                  Protect $1,000 →
+                </div>
+                <div className="text-3xl font-black text-emerald-900 dark:text-emerald-100">
+                  Save ${yearlyLoss}/year
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
-                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">Per month</div>
-                  <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">+${monthlyLoss}</div>
+                  <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">
+                    Per month
+                  </div>
+                  <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">
+                    +${monthlyLoss}
+                  </div>
                 </div>
                 <div className="bg-emerald-100 dark:bg-emerald-900/30 p-3 rounded-lg border border-emerald-200 dark:border-emerald-700">
-                  <div className="text-xs text-emerald-700 dark:text-emerald-300 font-bold mb-1">Per year</div>
-                  <div className="text-xl font-black text-emerald-800 dark:text-emerald-200">+${yearlyLoss}</div>
+                  <div className="text-xs text-emerald-700 dark:text-emerald-300 font-bold mb-1">
+                    Per year
+                  </div>
+                  <div className="text-xl font-black text-emerald-800 dark:text-emerald-200">
+                    +${yearlyLoss}
+                  </div>
                 </div>
               </div>
             </div>
@@ -272,7 +325,9 @@ export default function OverviewTab({
             <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <span className="text-lg">✨</span>
               <p className="text-xs text-blue-900 dark:text-blue-100 leading-relaxed">
-                <strong>How it works:</strong> Spread your savings across stable currencies to reduce inflation risk. Free to try, takes 2 minutes.
+                <strong>How it works:</strong> Spread your savings across stable
+                currencies to reduce inflation risk. Free to try, takes 2
+                minutes.
               </p>
             </div>
           </div>
@@ -285,12 +340,16 @@ export default function OverviewTab({
             >
               <span className="text-lg">🎮</span>
               <span>Try Demo First</span>
-              <span className="text-xs opacity-80 ml-1">(No wallet needed)</span>
+              <span className="text-xs opacity-80 ml-1">
+                (No wallet needed)
+              </span>
             </button>
 
             {/* Primary CTA: Buy Crypto */}
             <div className="space-y-2">
-              <p className="text-xs font-bold text-blue-800 dark:text-blue-200 uppercase tracking-wide">Start Here</p>
+              <p className="text-xs font-bold text-blue-800 dark:text-blue-200 uppercase tracking-wide">
+                Start Here
+              </p>
               <NetworkOptimizedOnramp
                 variant="default"
                 defaultAmount="100"
@@ -313,7 +372,10 @@ export default function OverviewTab({
             </div>
 
             {/* Secondary CTA: Connect existing wallet */}
-            <WalletButton variant="inline" className="w-full !bg-gray-100 dark:!bg-gray-700 !text-gray-700 dark:!text-gray-200 hover:!bg-gray-200 dark:hover:!bg-gray-600" />
+            <WalletButton
+              variant="inline"
+              className="w-full !bg-gray-100 dark:!bg-gray-700 !text-gray-700 dark:!text-gray-200 hover:!bg-gray-200 dark:hover:!bg-gray-600"
+            />
 
             <p className="text-xs text-center text-gray-500 dark:text-gray-400">
               🔒 Secure • 🇨🇭 Swiss regulated • 💯 Free to try
@@ -323,16 +385,26 @@ export default function OverviewTab({
 
         {/* Quick preview of what they'll get */}
         <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
-          <h4 className="text-xs font-black uppercase text-gray-400 mb-3 tracking-widest">What You&apos;ll Get</h4>
+          <h4 className="text-xs font-black uppercase text-gray-400 mb-3 tracking-widest">
+            What You&apos;ll Get
+          </h4>
           <div className="space-y-2">
             {[
-              { icon: "📊", text: "Real-time protection score across multiple currencies" },
+              {
+                icon: "📊",
+                text: "Real-time protection score across multiple currencies",
+              },
               { icon: "🤖", text: "AI recommendations based on your region" },
               { icon: "🔄", text: "One-click swaps to safer currencies" },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg">
+              <div
+                key={i}
+                className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg"
+              >
                 <span className="text-xl">{item.icon}</span>
-                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{item.text}</span>
+                <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  {item.text}
+                </span>
               </div>
             ))}
           </div>
@@ -348,9 +420,24 @@ export default function OverviewTab({
         <Card className="text-center py-8">
           <div className="animate-pulse flex flex-col items-center">
             <div className="w-12 h-12 bg-blue-100 rounded-full mb-4 flex items-center justify-center">
-              <svg className="animate-spin w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              <svg
+                className="animate-spin w-6 h-6 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
               </svg>
             </div>
             <p className="text-gray-600">Connecting wallet...</p>
@@ -364,14 +451,22 @@ export default function OverviewTab({
     <div className="space-y-6">
       {/* DEMO MODE BANNER */}
       {isDemo && (
-        <Card padding="p-0" className="overflow-hidden border-2 border-blue-500 dark:border-blue-600">
+        <Card
+          padding="p-0"
+          className="overflow-hidden border-2 border-blue-500 dark:border-blue-600"
+        >
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🎮</span>
                 <div>
-                  <h3 className="text-sm font-black text-white">Demo Mode Active</h3>
-                  <p className="text-xs text-blue-100">Exploring with sample data • Connect wallet for real portfolio</p>
+                  <h3 className="text-sm font-black text-white">
+                    Demo Mode Active
+                  </h3>
+                  <p className="text-xs text-blue-100">
+                    Exploring with sample data • Connect wallet for real
+                    portfolio
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -390,7 +485,10 @@ export default function OverviewTab({
 
       {/* ENHANCEMENT: Empty wallet detection - guide users to add funds */}
       {!isDemo && address && !hasHoldings && (
-        <Card padding="p-0" className="overflow-hidden border-2 border-amber-200 dark:border-amber-900">
+        <Card
+          padding="p-0"
+          className="overflow-hidden border-2 border-amber-200 dark:border-amber-900"
+        >
           <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-6">
             <div className="flex items-start gap-3 mb-4">
               <span className="text-2xl">👋</span>
@@ -399,14 +497,17 @@ export default function OverviewTab({
                   Welcome! Let&apos;s Add Some Funds
                 </h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mt-1">
-                  Your wallet is connected but empty. Add crypto to start protecting your savings.
+                  Your wallet is connected but empty. Add crypto to start
+                  protecting your savings.
                 </p>
               </div>
             </div>
 
             <div className="space-y-4 mt-2">
               <div className="space-y-2">
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">Recommended</p>
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">
+                  Recommended
+                </p>
                 <NetworkOptimizedOnramp
                   variant="white"
                   defaultAmount="100"
@@ -429,9 +530,13 @@ export default function OverviewTab({
               </div>
 
               <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
-                <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">Transfer from exchange</p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">
+                  Transfer from exchange
+                </p>
                 <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                  <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">{address}</code>
+                  <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
+                    {address}
+                  </code>
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(address);
@@ -475,9 +580,14 @@ export default function OverviewTab({
           <div className="flex items-center gap-3">
             <span className="text-2xl animate-bounce">🎁</span>
             <div className="text-left">
-              <div className="text-xs font-black uppercase tracking-widest">Daily G$ Reward Ready!</div>
+              <div className="text-xs font-black uppercase tracking-widest">
+                Daily G$ Reward Ready!
+              </div>
               <div className="text-[10px] text-emerald-100 font-medium">
-                {streak?.daysActive ? `${streak.daysActive} day streak` : "Start your streak"} — tap to claim →
+                {streak?.daysActive
+                  ? `${streak.daysActive} day streak`
+                  : "Start your streak"}{" "}
+                — tap to claim →
               </div>
             </div>
           </div>
@@ -488,21 +598,35 @@ export default function OverviewTab({
       )}
 
       {/* 1. PRIMARY HEALTH SCORE / HERO (Dynamic by Mode) */}
-      <Card padding="p-6" className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10">
+      <Card
+        padding="p-6"
+        className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10"
+      >
         <div className="relative z-10">
           <HeroValue
-            value={isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+            value={
+              isBeginner
+                ? `${diversificationScore}%`
+                : `$${totalValue.toFixed(0)}`
+            }
             label={isBeginner ? "Health Score" : "Total Value"}
           />
-          <div className={`mt-2 text-sm font-bold px-4 py-1.5 rounded-full inline-block ${diversificationScore >= 80 ? 'bg-green-100 text-green-800' :
-            diversificationScore >= 60 ? 'bg-blue-100 text-blue-800' :
-              'bg-red-100 text-red-800'
-            }`}>
+          <div
+            className={`mt-2 text-sm font-bold px-4 py-1.5 rounded-full inline-block ${
+              diversificationScore >= 80
+                ? "bg-green-100 text-green-800"
+                : diversificationScore >= 60
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-red-100 text-red-800"
+            }`}
+          >
             {diversificationRating}
           </div>
           {isBeginner && (
             <p className="text-xs text-gray-500 mt-3 max-w-[200px] mx-auto leading-relaxed">
-              Your money is currently <strong>{diversificationScore}% protected</strong> from local inflation.
+              Your money is currently{" "}
+              <strong>{diversificationScore}% protected</strong> from local
+              inflation.
             </p>
           )}
         </div>
@@ -511,32 +635,44 @@ export default function OverviewTab({
       </Card>
 
       {/* 1b. GOAL ALIGNMENT — shown when user has a complete protection profile */}
-      {profileComplete && profileConfig.userGoal && profileConfig.userGoal !== 'exploring' && (
-        <GoalAlignmentBanner
-          goal={profileConfig.userGoal}
-          riskTolerance={profileConfig.riskTolerance}
-          timeHorizon={profileConfig.timeHorizon}
-          goalScores={activePortfolio.goalScores}
-          onAction={() => setActiveTab('swap')}
-        />
-      )}
+      {profileComplete &&
+        profileConfig.userGoal &&
+        profileConfig.userGoal !== "exploring" && (
+          <GoalAlignmentBanner
+            goal={profileConfig.userGoal}
+            riskTolerance={profileConfig.riskTolerance}
+            timeHorizon={profileConfig.timeHorizon}
+            goalScores={activePortfolio.goalScores}
+            onAction={() => setActiveTab("swap")}
+          />
+        )}
 
       {/* 2. PROTECTION ANALYSIS - Moved to top for priority visibility */}
-      {hasHoldings && (
-        isBeginner ? (
+      {hasHoldings &&
+        (isBeginner ? (
           <Card>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest">Global Spread</h3>
-              <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
+              <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest">
+                Global Spread
+              </h3>
+              <span className="text-xs font-bold text-blue-600">
+                {regionData.length} Regions
+              </span>
             </div>
-            <SimplePieChart
-              data={regionData}
-            />
+            <SimplePieChart data={regionData} />
             <div className="mt-4 flex flex-wrap justify-center gap-2 mb-6">
-              {regionData.map(r => (
-                <div key={r.region} className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-800">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: r.color }} />
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{r.region}</span>
+              {regionData.map((r) => (
+                <div
+                  key={r.region}
+                  className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-800"
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: r.color }}
+                  />
+                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
+                    {r.region}
+                  </span>
                 </div>
               ))}
             </div>
@@ -546,7 +682,9 @@ export default function OverviewTab({
                 onClick={() => setShowAssetDetails(!showAssetDetails)}
                 className="w-full flex items-center justify-between py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
               >
-                <span>{showAssetDetails ? "Hide" : "View"} Asset Inventory</span>
+                <span>
+                  {showAssetDetails ? "Hide" : "View"} Asset Inventory
+                </span>
                 <span>{showAssetDetails ? "↑" : "↓"}</span>
               </button>
 
@@ -554,7 +692,9 @@ export default function OverviewTab({
                 <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <AssetInventory tokens={activePortfolio.allTokens || []} />
                   <p className="mt-4 text-[9px] text-gray-400 font-bold text-center uppercase tracking-tighter">
-                    Tired of toggling? Switch to <span className="text-blue-500">Standard Mode</span> in the header to unlock full details.
+                    Tired of toggling? Switch to{" "}
+                    <span className="text-blue-500">Standard Mode</span> in the
+                    header to unlock full details.
                   </p>
                 </div>
               )}
@@ -574,15 +714,12 @@ export default function OverviewTab({
             refreshBalances={refreshBalances}
             yieldSummary={portfolio}
           />
-        )
-      )}
+        ))}
 
       {/* 3. REWARDS (Unified Insight Card) */}
       {hasHoldings && (
         <div className="space-y-4">
-          <StreakRewardsCard
-            onSaveClick={() => setActiveTab("swap")}
-          />
+          <StreakRewardsCard onSaveClick={() => setActiveTab("swap")} />
 
           {/* Community Stats - Social Proof */}
           <RewardsStats />
@@ -610,13 +747,17 @@ export default function OverviewTab({
             </div>
             <div className="bg-white/10 p-2 rounded-xl">
               <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
               </svg>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-3 text-xs text-blue-200">
-            <span className="bg-green-500/30 px-2 py-0.5 rounded-full">USDY 5%</span>
-            <span className="bg-purple-500/30 px-2 py-0.5 rounded-full">SYRUP 4.5%</span>
+            <span className="bg-green-500/30 px-2 py-0.5 rounded-full">
+              USDY 5%
+            </span>
+            <span className="bg-purple-500/30 px-2 py-0.5 rounded-full">
+              SYRUP 4.5%
+            </span>
             <span>→</span>
           </div>
         </div>
@@ -663,10 +804,11 @@ export default function OverviewTab({
             <button
               key={region}
               onClick={() => setSelectedMarket(region)}
-              className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-all ${region === selectedMarket
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-                }`}
+              className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-all ${
+                region === selectedMarket
+                  ? "bg-blue-600 text-white shadow-lg"
+                  : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
             >
               {region}
             </button>
@@ -704,7 +846,9 @@ export default function OverviewTab({
         {/* Advanced: Performance Chart */}
         {isAdvanced && currencyPerformanceData && (
           <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-xs font-black text-gray-400 uppercase mb-3">Currency Velocity (30D)</div>
+            <div className="text-xs font-black text-gray-400 uppercase mb-3">
+              Currency Velocity (30D)
+            </div>
             <CurrencyPerformanceChart data={currencyPerformanceData} title="" />
           </div>
         )}
@@ -718,25 +862,57 @@ export default function OverviewTab({
 
         // Build goal-specific tips when profile is complete
         let tips: string[] = [];
-        if (profileComplete && goal && goal !== 'exploring') {
-          if (goal === 'inflation_protection') {
-            if (gs.hedge < 60) tips.push(`Your hedge score is ${Math.round(gs.hedge)}%. Swap high-inflation tokens to USDm or EURm to improve it.`);
-            else if (gs.hedge >= 80) tips.push(`Excellent inflation protection (${Math.round(gs.hedge)}%)! Consider adding PAXG on Arbitrum for long-term coverage.`);
-            else tips.push(`Good hedge score (${Math.round(gs.hedge)}%). Reducing your most concentrated region exposure would improve it further.`);
-            tips.push(...diversificationTips.filter(t => t.includes('PAXG') || t.includes('inflation')));
-          } else if (goal === 'geographic_diversification') {
-            if (gs.diversify < 60) tips.push(`Diversification score: ${Math.round(gs.diversify)}%. Add ${missing.slice(0, 2).join(' and ')} exposure to improve it.`);
-            else if (gs.diversify >= 80) tips.push(`Excellent diversification (${Math.round(gs.diversify)}%)! You're well-spread across regions.`);
-            else tips.push(`Good diversification (${Math.round(gs.diversify)}%). ${missing.length > 0 ? `Adding ${missing[0]} would push you above 80%.` : 'Keep rebalancing as markets move.'}`);
-            tips.push(...diversificationTips.filter(t => t.includes('region')));
-          } else if (goal === 'rwa_access') {
+        if (profileComplete && goal && goal !== "exploring") {
+          if (goal === "inflation_protection") {
+            if (gs.hedge < 60)
+              tips.push(
+                `Your hedge score is ${Math.round(gs.hedge)}%. Swap high-inflation tokens to USDm or EURm to improve it.`,
+              );
+            else if (gs.hedge >= 80)
+              tips.push(
+                `Excellent inflation protection (${Math.round(gs.hedge)}%)! Consider adding PAXG on Arbitrum for long-term coverage.`,
+              );
+            else
+              tips.push(
+                `Good hedge score (${Math.round(gs.hedge)}%). Reducing your most concentrated region exposure would improve it further.`,
+              );
+            tips.push(
+              ...diversificationTips.filter(
+                (t) => t.includes("PAXG") || t.includes("inflation"),
+              ),
+            );
+          } else if (goal === "geographic_diversification") {
+            if (gs.diversify < 60)
+              tips.push(
+                `Diversification score: ${Math.round(gs.diversify)}%. Add ${missing.slice(0, 2).join(" and ")} exposure to improve it.`,
+              );
+            else if (gs.diversify >= 80)
+              tips.push(
+                `Excellent diversification (${Math.round(gs.diversify)}%)! You're well-spread across regions.`,
+              );
+            else
+              tips.push(
+                `Good diversification (${Math.round(gs.diversify)}%). ${missing.length > 0 ? `Adding ${missing[0]} would push you above 80%.` : "Keep rebalancing as markets move."}`,
+              );
+            tips.push(
+              ...diversificationTips.filter((t) => t.includes("region")),
+            );
+          } else if (goal === "rwa_access") {
             if (gs.rwa === 0) {
-              tips.push('No real-world assets detected. Add PAXG (gold) or USDY (~5% APY Treasuries) on Arbitrum.');
-              tips.push('Bridge USDm → Arbitrum to access tokenized US Treasuries and gold without KYC.');
+              tips.push(
+                "No real-world assets detected. Add PAXG (gold) or USDY (~5% APY Treasuries) on Arbitrum.",
+              );
+              tips.push(
+                "Bridge USDm → Arbitrum to access tokenized US Treasuries and gold without KYC.",
+              );
             } else if (gs.rwa < 80) {
-              tips.push(`RWA score: ${Math.round(gs.rwa)}%. Consider adding SYRUPUSDC for additional structured yield (~4.5% APY).`);
+              tips.push(
+                `RWA score: ${Math.round(gs.rwa)}%. Consider adding SYRUPUSDC for additional structured yield (~4.5% APY).`,
+              );
             } else {
-              tips.push(`Strong RWA position (${Math.round(gs.rwa)}%). PAXG and yield tokens are providing solid inflation protection.`);
+              tips.push(
+                `Strong RWA position (${Math.round(gs.rwa)}%). PAXG and yield tokens are providing solid inflation protection.`,
+              );
             }
           }
         } else {
@@ -744,14 +920,33 @@ export default function OverviewTab({
           tips = diversificationTips;
         }
 
+        // Add a subtle nudge for the Robinhood Testnet experience
+        if (!tips.some((t) => t.includes("Robinhood"))) {
+          tips.push(
+            "🎮 Explore: Practice your trading strategies risk-free on the Robinhood Stock Testnet. Visit /trade to get started.",
+          );
+        }
+
         if (tips.length === 0) return null;
         return (
-          <DashboardCard title="Smart Recommendations" icon={<span>💡</span>} color="amber" size="md">
+          <DashboardCard
+            title="Smart Recommendations"
+            icon={<span>💡</span>}
+            color="amber"
+            size="md"
+          >
             <div className="space-y-2">
               {tips.slice(0, 3).map((tip, idx) => (
-                <div key={idx} className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg">
-                  <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">•</span>
-                  <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">{tip}</span>
+                <div
+                  key={idx}
+                  className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg"
+                >
+                  <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">
+                    •
+                  </span>
+                  <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                    {tip}
+                  </span>
                 </div>
               ))}
             </div>
@@ -772,10 +967,11 @@ export default function OverviewTab({
               <button
                 key={region}
                 onClick={() => setUserRegion(region)}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all font-bold ${userRegion === region
-                  ? "bg-purple-600 text-white shadow-md"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
-                  }`}
+                className={`px-3 py-1.5 text-xs rounded-full transition-all font-bold ${
+                  userRegion === region
+                    ? "bg-purple-600 text-white shadow-md"
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
+                }`}
               >
                 {region}
               </button>
@@ -786,13 +982,21 @@ export default function OverviewTab({
 
       {/* 7. EMPTY STATE WITH CLEAR FUNNEL */}
       {!hasHoldings && (
-        <Card padding="p-6" className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-2 border-blue-200 dark:border-blue-800">
+        <Card
+          padding="p-6"
+          className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-2 border-blue-200 dark:border-blue-800"
+        >
           <EmptyState
             icon="🛡️"
-            title={isBeginner ? "Ready to Protect Your Money?" : "Start Building Protection"}
-            description={isBeginner
-              ? "Your money loses value every day due to inflation. Let&apos;s fix that by converting it to more stable currencies."
-              : "Convert your local currency into diversified stablecoins to protect against inflation and currency debasement."
+            title={
+              isBeginner
+                ? "Ready to Protect Your Money?"
+                : "Start Building Protection"
+            }
+            description={
+              isBeginner
+                ? "Your money loses value every day due to inflation. Let&apos;s fix that by converting it to more stable currencies."
+                : "Convert your local currency into diversified stablecoins to protect against inflation and currency debasement."
             }
             action={{
               label: isBeginner ? "Convert Money Now" : "Start Swapping",
@@ -805,7 +1009,11 @@ export default function OverviewTab({
               <div className="flex items-start gap-2">
                 <span className="text-lg">💡</span>
                 <div className="text-xs text-gray-600 dark:text-gray-400">
-                  <strong className="text-gray-900 dark:text-white">Quick tip:</strong> Start small! Convert just $10-20 to see how it works. You can always do more later.
+                  <strong className="text-gray-900 dark:text-white">
+                    Quick tip:
+                  </strong>{" "}
+                  Start small! Convert just $10-20 to see how it works. You can
+                  always do more later.
                 </div>
               </div>
             </div>
