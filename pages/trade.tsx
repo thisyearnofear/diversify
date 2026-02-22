@@ -8,7 +8,11 @@ import WalletButton from "../components/wallet/WalletButton";
 import { NETWORKS, RH_TESTNET_TOKENS, BROKER_ADDRESSES } from "../config";
 import { getTokenDesign } from "../constants/tokens";
 import { ProviderFactoryService } from "../services/swap/provider-factory.service";
-import { StaggerContainer, staggerItemVariants } from "../hooks/use-animation";
+
+// Modular Components
+import StockChart from "../components/trade/StockChart";
+import StockTicker from "../components/trade/StockTicker";
+import TradeWidget from "../components/trade/TradeWidget";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
@@ -19,7 +23,7 @@ type Stock = (typeof STOCKS)[number];
 
 const AMM_ABI = [
   "function quoteSwapETH(uint256 ethAmountIn, address tokenOut) view returns (uint256)",
-  "function quoteSwapTokenForETH(uint256 amountIn, address tokenIn) view returns (uint256)",
+  "function quoteSwapTokenForETH(uint256 tokenAmountIn, address tokenIn) view returns (uint256)",
   "function swapExactETHForTokens(uint256 amountOutMin, address tokenOut, address to, uint256 deadline) payable returns (uint256)",
   "function swapExactTokensForETH(uint256 amountIn, uint256 amountOutMin, address tokenIn, address to, uint256 deadline) returns (uint256)",
   "function getReserves(address tokenA, address tokenB) view returns (uint256, uint256)",
@@ -27,16 +31,18 @@ const AMM_ABI = [
 
 const ERC20_ABI = [
   "function balanceOf(address) view returns (uint256)",
-  "function approve(address spender, uint256 amount) returns (bool)",
-  "function allowance(address owner, address spender) view returns (uint256)",
+  "function allowance(address, address) view returns (uint256)",
+  "function approve(address, uint256) returns (bool)",
 ];
 
-const SLIPPAGE_PERCENT = 3;
+const SLIPPAGE_PERCENT = 0.5;
 type TradeMode = "buy" | "sell";
 
 export default function TradePage() {
-  const { address, chainId, switchNetwork, isConnected, connect } = useWalletContext();
+  const { address, chainId, switchNetwork, isConnected, connect } =
+    useWalletContext();
 
+  // --- State ---
   const [selected, setSelected] = useState<Stock>("ACME");
   const [mode, setMode] = useState<TradeMode>("buy");
   const [inputAmount, setInputAmount] = useState("");
@@ -48,30 +54,55 @@ export default function TradePage() {
   const [error, setError] = useState<string | null>(null);
   const [ethBalance, setEthBalance] = useState<string | null>(null);
   const [stockBalances, setStockBalances] = useState<Record<Stock, string>>({
-    ACME: "0", SPACELY: "0", WAYNE: "0", OSCORP: "0", STARK: "0",
+    ACME: "0",
+    SPACELY: "0",
+    WAYNE: "0",
+    OSCORP: "0",
+    STARK: "0",
   });
   const [liveRates, setLiveRates] = useState<Record<Stock, string | null>>({
-    ACME: null, SPACELY: null, WAYNE: null, OSCORP: null, STARK: null,
+    ACME: null,
+    SPACELY: null,
+    WAYNE: null,
+    OSCORP: null,
+    STARK: null,
+  });
+  const [reserves, setReserves] = useState<
+    Record<Stock, { eth: string; stock: string } | null>
+  >({
+    ACME: null,
+    SPACELY: null,
+    WAYNE: null,
+    OSCORP: null,
+    STARK: null,
   });
 
   const isOnRH = chainId === RH_CHAIN_ID;
-  const stockAddress = RH_TESTNET_TOKENS[selected];
   const design = getTokenDesign(selected);
+  const stockAddress = RH_TESTNET_TOKENS[selected];
 
-  // Fetch balances
+  // --- Data Fetching ---
+
   const fetchBalances = useCallback(async () => {
-    if (!address || !isOnRH) return;
+    if (!address) return;
     try {
-      const provider = ProviderFactoryService.getProvider(RH_CHAIN_ID);
+      const provider = isOnRH
+        ? await ProviderFactoryService.getWeb3Provider()
+        : ProviderFactoryService.getProvider(RH_CHAIN_ID);
+
       const bal = await provider.getBalance(address);
       setEthBalance(ethers.utils.formatEther(bal));
 
       const entries = await Promise.all(
         STOCKS.map(async (s) => {
-          const token = new ethers.Contract(RH_TESTNET_TOKENS[s], ERC20_ABI, provider);
+          const token = new ethers.Contract(
+            RH_TESTNET_TOKENS[s],
+            ERC20_ABI,
+            provider,
+          );
           const b = await token.balanceOf(address);
           return [s, ethers.utils.formatEther(b)] as const;
-        })
+        }),
       );
       setStockBalances(Object.fromEntries(entries) as Record<Stock, string>);
     } catch (e) {
@@ -79,30 +110,82 @@ export default function TradePage() {
     }
   }, [address, isOnRH]);
 
-  useEffect(() => { fetchBalances(); }, [fetchBalances]);
-
-  // Fetch live AMM rates (tokens per 1 ETH)
-  useEffect(() => {
+  const fetchRates = useCallback(async () => {
     if (!isOnRH) return;
-    const provider = ProviderFactoryService.getProvider(RH_CHAIN_ID);
-    const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
-    const refETH = ethers.utils.parseEther("0.001");
+    try {
+      const provider = await ProviderFactoryService.getWeb3Provider();
+      const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
+      const refETH = ethers.utils.parseEther("0.001");
 
-    Promise.all(
-      STOCKS.map(async (s) => {
-        try {
-          const out = await amm.quoteSwapETH(refETH, RH_TESTNET_TOKENS[s]);
-          const perMilliETH = parseFloat(ethers.utils.formatEther(out));
-          const perETH = perMilliETH * 1000;
-          return [s, perETH.toLocaleString("en-US", { maximumFractionDigits: 0 })] as const;
-        } catch { return [s, null] as const; }
-      })
-    ).then((res) =>
-      setLiveRates(Object.fromEntries(res) as Record<Stock, string | null>)
-    );
+      const res = await Promise.all(
+        STOCKS.map(async (s) => {
+          try {
+            const stockAddr = RH_TESTNET_TOKENS[s];
+            const [out, [rETH, rStock]] = await Promise.all([
+              amm.quoteSwapETH(refETH, stockAddr),
+              amm.getReserves(WETH_ADDRESS, stockAddr),
+            ]);
+
+            const perMilliETH = parseFloat(ethers.utils.formatEther(out));
+            const rate = (perMilliETH * 1000).toLocaleString("en-US", {
+              maximumFractionDigits: 0,
+            });
+
+            return {
+              symbol: s,
+              rate,
+              reserves: {
+                eth: ethers.utils.formatEther(rETH),
+                stock: ethers.utils.formatEther(rStock),
+              },
+            };
+          } catch {
+            return { symbol: s, rate: null, reserves: null };
+          }
+        }),
+      );
+
+      const rates: Record<Stock, string | null> = {
+        ACME: null,
+        SPACELY: null,
+        WAYNE: null,
+        OSCORP: null,
+        STARK: null,
+      };
+      const resMap: Record<Stock, { eth: string; stock: string } | null> = {
+        ACME: null,
+        SPACELY: null,
+        WAYNE: null,
+        OSCORP: null,
+        STARK: null,
+      };
+
+      res.forEach((item) => {
+        rates[item.symbol as Stock] = item.rate;
+        resMap[item.symbol as Stock] = item.reserves;
+      });
+
+      setLiveRates(rates);
+      setReserves(resMap);
+    } catch (e) {
+      console.error("[Trade] Rate fetch error:", e);
+    }
   }, [isOnRH]);
 
-  // Get quote + price impact when input changes
+  useEffect(() => {
+    fetchBalances();
+    const interval = setInterval(fetchBalances, 10000);
+    return () => clearInterval(interval);
+  }, [fetchBalances]);
+
+  useEffect(() => {
+    fetchRates();
+    const interval = setInterval(fetchRates, 30000);
+    return () => clearInterval(interval);
+  }, [fetchRates]);
+
+  // --- Quoting ---
+
   useEffect(() => {
     if (!inputAmount || !isOnRH || parseFloat(inputAmount) <= 0) {
       setQuote(null);
@@ -112,32 +195,35 @@ export default function TradePage() {
     const timeout = setTimeout(async () => {
       setIsQuoting(true);
       try {
-        const provider = ProviderFactoryService.getProvider(RH_CHAIN_ID);
+        const provider = await ProviderFactoryService.getWeb3Provider();
         const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
         const parsed = ethers.utils.parseEther(inputAmount);
 
-        const out = mode === "buy"
-          ? await amm.quoteSwapETH(parsed, stockAddress)
-          : await amm.quoteSwapTokenForETH(parsed, stockAddress);
+        const out =
+          mode === "buy"
+            ? await amm.quoteSwapETH(parsed, stockAddress)
+            : await amm.quoteSwapTokenForETH(parsed, stockAddress);
+
         setQuote(parseFloat(ethers.utils.formatEther(out)).toFixed(6));
         setError(null);
 
-        // Compute price impact from reserves
         try {
-          const [reserveA, reserveB] = await amm.getReserves(WETH_ADDRESS, stockAddress);
+          const [reserveA, reserveB] = await amm.getReserves(
+            WETH_ADDRESS,
+            stockAddress,
+          );
           const relevantReserve = mode === "buy" ? reserveA : reserveB;
           if (!relevantReserve.isZero()) {
-            const impact = parseFloat(parsed.mul(10000).div(relevantReserve).toString()) / 100;
-            setPriceImpact(impact);
-          } else {
-            setPriceImpact(null);
+            setPriceImpact(
+              parseFloat(parsed.mul(10000).div(relevantReserve).toString()) /
+                100,
+            );
           }
         } catch {
           setPriceImpact(null);
         }
-      } catch (e: any) {
+      } catch {
         setQuote(null);
-        setPriceImpact(null);
         setError("Could not get quote");
       } finally {
         setIsQuoting(false);
@@ -146,7 +232,8 @@ export default function TradePage() {
     return () => clearTimeout(timeout);
   }, [inputAmount, selected, mode, isOnRH, stockAddress]);
 
-  // Execute swap
+  // --- Handlers ---
+
   const handleSwap = async () => {
     if (!inputAmount || !address) return;
     setIsSwapping(true);
@@ -164,31 +251,42 @@ export default function TradePage() {
         const amountIn = ethers.utils.parseEther(inputAmount);
         const minOut = quote
           ? ethers.utils.parseEther((parseFloat(quote) * slippage).toFixed(18))
-          : ethers.BigNumber.from(0);
-        tx = await amm.swapExactETHForTokens(minOut, stockAddress, address, deadline, { value: amountIn });
+          : 0;
+        tx = await amm.swapExactETHForTokens(
+          minOut,
+          stockAddress,
+          address,
+          deadline,
+          { value: amountIn },
+        );
       } else {
         const amountIn = ethers.utils.parseEther(inputAmount);
         const token = new ethers.Contract(stockAddress, ERC20_ABI, signer);
         const allowance = await token.allowance(address, AMM_ADDRESS);
         if (allowance.lt(amountIn)) {
-          const approveTx = await token.approve(AMM_ADDRESS, ethers.constants.MaxUint256);
+          const approveTx = await token.approve(
+            AMM_ADDRESS,
+            ethers.constants.MaxUint256,
+          );
           await approveTx.wait();
         }
         const minOut = quote
           ? ethers.utils.parseEther((parseFloat(quote) * slippage).toFixed(18))
-          : ethers.BigNumber.from(0);
-        tx = await amm.swapExactTokensForETH(amountIn, minOut, stockAddress, address, deadline);
+          : 0;
+        tx = await amm.swapExactTokensForETH(
+          amountIn,
+          minOut,
+          stockAddress,
+          address,
+          deadline,
+        );
       }
-
       setTxHash(tx.hash);
       await tx.wait();
-      setInputAmount("");
-      setQuote(null);
-      setPriceImpact(null);
       fetchBalances();
-    } catch (e: any) {
-      console.error("[Trade] Swap error:", e);
-      setError(e?.reason || e?.message || "Swap failed");
+    } catch (e: unknown) {
+      const err = e as { reason?: string; message?: string };
+      setError(err.reason || err.message || "Swap failed");
     } finally {
       setIsSwapping(false);
     }
@@ -199,384 +297,371 @@ export default function TradePage() {
       const max = Math.max(0, parseFloat(ethBalance) - 0.001);
       setInputAmount(max > 0 ? max.toFixed(6) : "");
     } else if (mode === "sell") {
-      const bal = stockBalances[selected];
-      if (parseFloat(bal) > 0) setInputAmount(bal);
+      setInputAmount(stockBalances[selected]);
     }
   };
 
-  const inputLabel = mode === "buy" ? "ETH" : selected;
-  const outputLabel = mode === "buy" ? selected : "ETH";
-  const hasBalance = mode === "buy"
-    ? ethBalance && parseFloat(ethBalance) > 0.001
-    : parseFloat(stockBalances[selected]) > 0;
-  const minimumOutput = quote
-    ? (parseFloat(quote) * (100 - SLIPPAGE_PERCENT) / 100).toFixed(6)
-    : null;
+  const hasBalance =
+    mode === "buy"
+      ? Boolean(ethBalance && parseFloat(ethBalance) > 0.001)
+      : parseFloat(stockBalances[selected]) > 0;
 
   return (
     <>
       <Head>
-        <title>Trade Stocks | DiversiFi</title>
-        <meta name="robots" content="noindex, nofollow" />
+        <title>Stock Trading | DiversiFi</title>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"
+        />
       </Head>
 
-      <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
+      <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white font-sans selection:bg-green-100 dark:selection:bg-green-900/30">
         {/* Header */}
         <header className="border-b border-gray-200 dark:border-gray-800/50 backdrop-blur-sm sticky top-0 z-50 bg-white/80 dark:bg-gray-950/80">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/" className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm">
+              <Link
+                href="/"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 text-sm"
+              >
                 ← DiversiFi
               </Link>
               <h1 className="text-lg font-black bg-gradient-to-r from-green-500 to-emerald-500 bg-clip-text text-transparent">
                 📈 Stock Trading
               </h1>
-              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-500/10 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400 font-black uppercase tracking-wider border border-violet-500/20 dark:border-violet-500/30">
+              <div className="hidden sm:block px-2 py-0.5 rounded bg-violet-100 dark:bg-violet-900/30 text-[10px] font-black text-violet-600 dark:text-violet-400 uppercase tracking-tighter">
                 Testnet
-              </span>
+              </div>
             </div>
             <WalletButton />
           </div>
         </header>
 
-        <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+        <main className="max-w-5xl mx-auto px-4 py-8">
           <AnimatePresence mode="wait">
             {!isConnected ? (
               <motion.div
                 key="connect"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
                 className="text-center py-20 space-y-4"
               >
                 <p className="text-5xl">📈</p>
                 <h2 className="text-2xl font-black">Fictional Stock Trading</h2>
                 <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  Swap testnet ETH for fictional company stocks on Robinhood Chain.
-                  Connect your wallet to get started.
+                  Swap testnet ETH for fictional company stocks on Robinhood
+                  Chain. Connect your wallet to get started.
                 </p>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
+                <button
                   onClick={connect}
-                  className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black transition"
+                  className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-black transition transform active:scale-95"
                 >
                   Connect Wallet
-                </motion.button>
+                </button>
               </motion.div>
             ) : !isOnRH ? (
               <motion.div
                 key="switch"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
                 className="text-center py-16 space-y-4"
               >
                 <p className="text-4xl">🔗</p>
-                <h2 className="text-xl font-black">Switch to Robinhood Chain</h2>
-                <p className="text-gray-500 dark:text-gray-400">You need to be on Robinhood Chain Testnet to trade stocks.</p>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.97 }}
+                <h2 className="text-xl font-black">
+                  Switch to Robinhood Chain
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400">
+                  You need to be on Robinhood Chain Testnet to trade stocks.
+                </p>
+                <button
                   onClick={() => switchNetwork(RH_CHAIN_ID)}
-                  className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-black transition"
+                  className="px-6 py-3 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-black transition transform active:scale-95"
                 >
                   Switch Network
-                </motion.button>
+                </button>
               </motion.div>
             ) : (
               <motion.div
                 key="trade"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6 }}
                 className="space-y-6"
               >
-                {/* Faucet banner */}
+                {/* Low Balance Alert */}
                 {ethBalance && parseFloat(ethBalance) < 0.001 && (
                   <motion.div
                     initial={{ opacity: 0, y: -8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl px-4 py-3 flex items-center justify-between"
+                    className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-2xl px-4 py-3 flex items-center justify-between"
                   >
-                    <span className="text-amber-700 dark:text-amber-300 text-sm font-medium">💧 You need testnet ETH to trade.</span>
+                    <span className="text-amber-700 dark:text-amber-300 text-sm font-medium">
+                      💧 You need testnet ETH to trade.
+                    </span>
                     <a
                       href="https://faucet.testnet.chain.robinhood.com"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-sm font-black text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300"
+                      className="text-sm font-black text-amber-600 dark:text-amber-400 hover:underline"
                     >
                       Get ETH →
                     </a>
                   </motion.div>
                 )}
 
-                {/* Stock ticker strip */}
-                <StaggerContainer className="flex gap-2 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide sm:grid sm:grid-cols-5 sm:overflow-visible sm:pb-0">
-                  {STOCKS.map((s) => {
-                    const d = getTokenDesign(s);
-                    const isSelected = s === selected;
-                    const rate = liveRates[s];
-                    const bal = stockBalances[s];
-                    return (
-                      <motion.button
-                        key={s}
-                        variants={staggerItemVariants}
-                        whileHover={{ y: -2 }}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => { setSelected(s); setInputAmount(""); setQuote(null); setPriceImpact(null); setTxHash(null); setError(null); }}
-                        className={`snap-start shrink-0 w-[6.5rem] sm:w-auto relative rounded-xl p-3 text-left transition-all border overflow-hidden ${
-                          isSelected
-                            ? "border-green-500/60 bg-green-50 dark:bg-green-500/10 ring-1 ring-green-500/30"
-                            : "border-gray-200 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-800/40 hover:border-gray-300 dark:hover:border-gray-600"
-                        }`}
-                      >
-                        <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${d.gradient}`} />
-                        <div className="text-xl mb-1 mt-1">{d.icon}</div>
-                        <div className="font-black text-sm">{s}</div>
-                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{d.name}</div>
-                        {rate && (
-                          <div className="text-[10px] text-green-600 dark:text-green-400 mt-1 font-bold">
-                            {rate}/ETH
-                          </div>
-                        )}
-                        {parseFloat(bal) > 0 && (
-                          <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 font-medium">
-                            Own: {parseFloat(bal).toFixed(1)}
-                          </div>
-                        )}
-                      </motion.button>
-                    );
-                  })}
-                </StaggerContainer>
+                {/* Modular Ticker */}
+                <StockTicker
+                  stocks={STOCKS}
+                  selected={selected}
+                  onSelect={(s) => {
+                    setSelected(s as Stock);
+                    setInputAmount("");
+                    setQuote(null);
+                    setPriceImpact(null);
+                    setTxHash(null);
+                    setError(null);
+                  }}
+                  liveRates={liveRates}
+                  stockBalances={stockBalances}
+                />
 
-                {/* Trade widget */}
-                <div className="max-w-md mx-auto space-y-4">
-                  {/* Buy / Sell toggle */}
-                  <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => { setMode("buy"); setInputAmount(""); setQuote(null); setPriceImpact(null); }}
-                      className={`flex-1 py-2.5 rounded-lg text-sm font-black uppercase tracking-wider transition ${
-                        mode === "buy" ? "bg-green-600 text-white shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                      }`}
-                    >
-                      Buy {selected}
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => { setMode("sell"); setInputAmount(""); setQuote(null); setPriceImpact(null); }}
-                      className={`flex-1 py-2.5 rounded-lg text-sm font-black uppercase tracking-wider transition ${
-                        mode === "sell" ? "bg-red-600 text-white shadow-sm" : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
-                      }`}
-                    >
-                      Sell {selected}
-                    </motion.button>
-                  </div>
-
-                  {/* Input */}
-                  <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 border border-gray-200 dark:border-gray-700/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">You pay</span>
-                      <button onClick={handleMax} className="text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 font-black uppercase">
-                        Max
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="number"
-                        placeholder="0.0"
-                        value={inputAmount}
-                        onChange={(e) => setInputAmount(e.target.value)}
-                        className="flex-1 bg-transparent text-2xl font-black outline-none placeholder-gray-300 dark:placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                      />
-                      <span className="text-gray-500 dark:text-gray-400 font-black">{inputLabel}</span>
-                    </div>
-                    <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-                      {mode === "buy"
-                        ? `Balance: ${ethBalance ? parseFloat(ethBalance).toFixed(6) : "—"} ETH`
-                        : `Balance: ${parseFloat(stockBalances[selected]).toFixed(2)} ${selected}`}
-                    </div>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="flex justify-center -my-1">
-                    <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-1.5">
-                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  {/* Output preview */}
-                  <div className="bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/30">
-                    <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">You receive</span>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-2xl font-black">
-                        {isQuoting ? (
-                          <span className="inline-block w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-green-500 rounded-full animate-spin" />
-                        ) : quote || "0.0"}
-                      </span>
-                      <span className="text-gray-500 dark:text-gray-400 font-black">{outputLabel}</span>
-                    </div>
-                  </div>
-
-                  {/* Price impact & slippage */}
-                  <AnimatePresence>
-                    {quote && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="bg-gray-50 dark:bg-gray-800/30 rounded-xl px-4 py-3 border border-gray-200/50 dark:border-gray-700/20 space-y-1.5 overflow-hidden"
-                      >
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-gray-500 dark:text-gray-400">Slippage tolerance</span>
-                          <span className="font-bold text-gray-700 dark:text-gray-300">{SLIPPAGE_PERCENT}%</span>
-                        </div>
-                        {priceImpact !== null && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500 dark:text-gray-400">Price impact</span>
-                            <span className={`font-bold ${
-                              priceImpact < 1 ? "text-green-600 dark:text-green-400" :
-                              priceImpact < 5 ? "text-amber-600 dark:text-amber-400" :
-                              "text-red-600 dark:text-red-400"
-                            }`}>
-                              {priceImpact < 0.01 ? "<0.01" : priceImpact.toFixed(2)}%
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                  {/* Left: Chart & Info */}
+                  <div className="md:col-span-7 lg:col-span-8 space-y-6">
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm overflow-hidden">
+                      <div className="flex items-start justify-between mb-8">
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <span className="text-3xl">{design.icon}</span>
+                            <h2 className="text-2xl font-black">
+                              {design.name}
+                            </h2>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase tracking-tighter">
+                              {selected}
                             </span>
                           </div>
+                          <p className="text-gray-500 dark:text-gray-400 text-sm max-w-sm leading-relaxed">
+                            {design.description}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-black">
+                            {liveRates[selected]
+                              ? `${liveRates[selected]} ${selected}`
+                              : "---"}
+                          </div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                            Price per 1.00 ETH
+                          </div>
+                          {reserves[selected] && (
+                            <div className="mt-1 flex items-center justify-end gap-1.5">
+                              <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                                Liquidity:
+                              </span>
+                              <span className="text-[10px] font-black text-green-500">
+                                {parseFloat(reserves[selected]!.eth).toFixed(2)}{" "}
+                                ETH
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="h-[280px] w-full mb-4">
+                        <StockChart
+                          symbol={selected}
+                          height={280}
+                          currentPrice={liveRates[selected]}
+                        />
+                      </div>
+
+                      <div className="flex gap-2 border-t border-gray-100 dark:border-gray-800 pt-4 mt-6">
+                        {["1D", "1W", "1M", "3M", "1Y", "ALL"].map((p) => (
+                          <button
+                            key={p}
+                            className={`text-[10px] font-black px-3 py-1.5 rounded-lg transition ${p === "1D" ? "bg-green-500 text-white shadow-sm" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Market Stats */}
+                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
+                      <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-4 ml-1">
+                        Key Statistics
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
+                        {[
+                          {
+                            label: "Market Cap",
+                            value: `$${(Math.random() * 500 + 100).toFixed(2)}B`,
+                          },
+                          {
+                            label: "P/E Ratio",
+                            value: (Math.random() * 20 + 15).toFixed(2),
+                          },
+                          {
+                            label: "Div Yield",
+                            value: `${(Math.random() * 3 + 1).toFixed(2)}%`,
+                          },
+                          {
+                            label: "Avg Volume",
+                            value: `${(Math.random() * 10 + 5).toFixed(1)}M`,
+                          },
+                        ].map((stat, i) => (
+                          <div key={i} className="space-y-1">
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">
+                              {stat.label}
+                            </div>
+                            <div className="text-sm font-black text-gray-900 dark:text-white">
+                              {stat.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Desktop Assets List */}
+                    <div className="hidden md:block">
+                      <AnimatePresence>
+                        {Object.values(stockBalances).some(
+                          (b) => parseFloat(b) > 0,
+                        ) && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="w-full"
+                          >
+                            <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 ml-1">
+                              Your Positions
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              {STOCKS.filter(
+                                (s) => parseFloat(stockBalances[s]) > 0,
+                              ).map((s) => {
+                                const d = getTokenDesign(s);
+                                return (
+                                  <div
+                                    key={s}
+                                    className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-2xl px-4 py-3 border border-gray-200 dark:border-gray-800 overflow-hidden relative shadow-sm"
+                                  >
+                                    <div
+                                      className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${d.gradient}`}
+                                    />
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xl">{d.icon}</span>
+                                      <div>
+                                        <div className="font-black text-sm">
+                                          {s}
+                                        </div>
+                                        <div className="text-[10px] text-gray-400 dark:text-gray-500">
+                                          {d.name}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <span className="font-black text-gray-900 dark:text-white">
+                                      {parseFloat(stockBalances[s]).toFixed(2)}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </motion.div>
                         )}
-                        {minimumOutput && (
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-gray-500 dark:text-gray-400">Minimum received</span>
-                            <span className="font-bold text-gray-700 dark:text-gray-300">
-                              {parseFloat(minimumOutput).toFixed(4)} {outputLabel}
-                            </span>
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Right: Modular Trade Widget */}
+                  <div className="md:col-span-5 lg:col-span-4 space-y-4 md:sticky md:top-24">
+                    <TradeWidget
+                      selected={selected}
+                      design={design}
+                      mode={mode}
+                      setMode={setMode}
+                      inputAmount={inputAmount}
+                      setInputAmount={setInputAmount}
+                      quote={quote}
+                      priceImpact={priceImpact}
+                      isQuoting={isQuoting}
+                      isSwapping={isSwapping}
+                      hasBalance={hasBalance}
+                      ethBalance={ethBalance}
+                      stockBalance={stockBalances[selected]}
+                      handleMax={handleMax}
+                      handleSwap={handleSwap}
+                      txHash={txHash}
+                      error={error}
+                      slippagePercent={SLIPPAGE_PERCENT}
+                      explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                    />
+
+                    {/* Mobile Assets (Hidden on Desktop) */}
+                    <div className="md:hidden">
+                      <AnimatePresence>
+                        {Object.values(stockBalances).some(
+                          (b) => parseFloat(b) > 0,
+                        ) && (
+                          <div className="space-y-3 pt-4">
+                            <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 ml-1">
+                              Your Positions
+                            </h3>
+                            {STOCKS.filter(
+                              (s) => parseFloat(stockBalances[s]) > 0,
+                            ).map((s) => {
+                              const d = getTokenDesign(s);
+                              return (
+                                <div
+                                  key={s}
+                                  className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-2xl px-4 py-3 border border-gray-200 dark:border-gray-800 overflow-hidden relative"
+                                >
+                                  <div
+                                    className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${d.gradient}`}
+                                  />
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xl">{d.icon}</span>
+                                    <span className="font-black text-sm">
+                                      {s}
+                                    </span>
+                                  </div>
+                                  <span className="font-black">
+                                    {parseFloat(stockBalances[s]).toFixed(2)}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         )}
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-gray-500 dark:text-gray-400">Swap fee</span>
-                          <span className="font-bold text-gray-700 dark:text-gray-300">0.3%</span>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Swap button */}
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleSwap}
-                    disabled={!inputAmount || !quote || isSwapping || !hasBalance}
-                    className={`w-full py-4 rounded-xl font-black text-lg transition ${
-                      isSwapping
-                        ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-wait"
-                        : !inputAmount || !quote || !hasBalance
-                          ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                          : mode === "buy"
-                            ? "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-600/20"
-                            : "bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20"
-                    }`}
-                  >
-                    {isSwapping ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Swapping…
-                      </span>
-                    ) : !hasBalance
-                      ? mode === "buy" ? "Need ETH — Use Faucet" : `No ${selected} to sell`
-                      : `${mode === "buy" ? "Buy" : "Sell"} ${selected}`}
-                  </motion.button>
-
-                  {/* Success */}
-                  <AnimatePresence>
-                    {txHash && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-xl p-4 text-center space-y-2"
-                      >
-                        <p className="text-green-700 dark:text-green-400 font-black">✅ Swap successful!</p>
-                        <a
-                          href={`${NETWORKS.RH_TESTNET.explorerUrl}/tx/${txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-green-600 dark:text-green-300 hover:underline font-bold"
-                        >
-                          View on Explorer →
-                        </a>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Error */}
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 text-center"
-                      >
-                        <p className="text-red-700 dark:text-red-400 text-sm font-bold">{error}</p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                      </AnimatePresence>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Portfolio */}
-                <AnimatePresence>
-                  {Object.values(stockBalances).some((b) => parseFloat(b) > 0) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -6 }}
-                      className="max-w-md mx-auto"
-                    >
-                      <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3">Your Portfolio</h3>
-                      <div className="space-y-2">
-                        {STOCKS.filter((s) => parseFloat(stockBalances[s]) > 0).map((s) => {
-                          const d = getTokenDesign(s);
-                          const bal = parseFloat(stockBalances[s]);
-                          return (
-                            <motion.div
-                              key={s}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              className="flex items-center justify-between bg-gray-50 dark:bg-gray-800/40 rounded-lg px-4 py-3 border border-gray-200/50 dark:border-gray-700/30 overflow-hidden relative"
-                            >
-                              <div className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${d.gradient}`} />
-                              <div className="flex items-center gap-3 ml-2">
-                                <span className="text-xl">{d.icon}</span>
-                                <div>
-                                  <span className="font-black text-sm">{s}</span>
-                                  <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">{d.name}</span>
-                                </div>
-                              </div>
-                              <span className="font-black">{bal.toFixed(2)}</span>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Info footer */}
-                <div className="max-w-md mx-auto text-center space-y-2 pt-4">
-                  <p className="text-xs text-gray-400 dark:text-gray-600">
-                    Trading fictional stock tokens on Robinhood Chain Testnet (Arbitrum Orbit).
-                    <br />0.3% swap fee • Constant-product AMM • All tokens are fictional.
+                {/* Footer Info */}
+                <div className="max-w-md mx-auto text-center space-y-3 pt-8 pb-4">
+                  <p className="text-[10px] text-gray-400 dark:text-gray-600 leading-relaxed uppercase tracking-widest font-bold">
+                    Robinhood Chain Testnet (Arbitrum Orbit)
+                    <br />
+                    0.3% Fee • Constant-Product AMM • Fictional Assets
                   </p>
                   <div className="flex justify-center gap-4 text-xs">
-                    <a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noopener noreferrer" className="text-violet-500 dark:text-violet-400 hover:text-violet-400 dark:hover:text-violet-300 font-bold">
+                    <a
+                      href="https://faucet.testnet.chain.robinhood.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-500 hover:text-green-400 font-black uppercase tracking-tighter"
+                    >
                       Faucet
                     </a>
-                    <a href={`${NETWORKS.RH_TESTNET.explorerUrl}/address/${AMM_ADDRESS}`} target="_blank" rel="noopener noreferrer" className="text-violet-500 dark:text-violet-400 hover:text-violet-400 dark:hover:text-violet-300 font-bold">
-                      AMM Contract
+                    <a
+                      href={`${NETWORKS.RH_TESTNET.explorerUrl}/address/${AMM_ADDRESS}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-green-500 hover:text-green-400 font-black uppercase tracking-tighter"
+                    >
+                      Contract
                     </a>
                   </div>
                 </div>

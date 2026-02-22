@@ -1,22 +1,29 @@
 /**
  * Consolidated wallet hook
  * Single source of truth for connection state and provider operations.
- * 
+ *
  * Priority order:
  * 1. Farcaster/MiniPay (auto-connect)
  * 2. Injected wallet (MetaMask/Coinbase)
  * 3. Privy (social login fallback)
  */
 
-import { useEffect, useRef, useState } from 'react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
-import { getAddChainParameter, getDefaultChainId, isSupportedChainId, DEFAULT_CHAIN_ID, toHexChainId } from '../modules/wallet/core/chains';
+import { useEffect, useRef, useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import {
+  getAddChainParameter,
+  getDefaultChainId,
+  isSupportedChainId,
+  DEFAULT_CHAIN_ID,
+  toHexChainId,
+} from "../modules/wallet/core/chains";
 import {
   getWalletEnvironment,
   getWalletProvider,
   setupWalletEventListenersForProvider,
-} from '../utils/wallet-provider';
-import { WALLET_FEATURES } from '../config/features';
+} from "../utils/wallet-provider";
+import { WalletProviderType } from "../modules/wallet/core/provider-registry";
+import { WALLET_FEATURES } from "../config/features";
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
@@ -26,85 +33,103 @@ export function useWallet() {
   const [chainId, setChainId] = useState<number | null>(null);
   const [isMiniPay, setIsMiniPay] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
-  const [farcasterContext, setFarcasterContext] = useState<any | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [farcasterContext, setFarcasterContext] = useState<any>(null);
 
-  const providerRef = useRef<any | null>(null);
+  const providerRef = useRef<WalletProviderType | null>(null);
 
   // Privy hooks (always call hooks, check enabled status separately)
   const privy = usePrivy();
   const { wallets: privyWallets } = useWallets();
-  const privyEnabled = WALLET_FEATURES.PRIVY_ENABLED && WALLET_FEATURES.PRIVY_APP_ID;
+  const privyEnabled =
+    WALLET_FEATURES.PRIVY_ENABLED && WALLET_FEATURES.PRIVY_APP_ID;
 
   // Sync Privy wallet state with our wallet state
   useEffect(() => {
-    console.log('[Wallet] Privy sync check:', {
+    console.log("[Wallet] Privy sync check:", {
       privyEnabled,
       ready: privy.ready,
       authenticated: privy.authenticated,
       walletsCount: privyWallets.length,
       currentAddress: address,
-      user: privy.user ? 'exists' : 'null'
+      user: privy.user ? "exists" : "null",
     });
 
     if (!privyEnabled) {
-      console.log('[Wallet] Privy not enabled');
+      console.log("[Wallet] Privy not enabled");
       return;
     }
 
     if (!privy.ready) {
-      console.log('[Wallet] Privy not ready yet');
+      console.log("[Wallet] Privy not ready yet");
       return;
     }
 
     if (!privy.authenticated) {
-      console.log('[Wallet] Privy not authenticated');
+      console.log("[Wallet] Privy not authenticated");
       return;
     }
 
     const syncPrivyWallet = async () => {
-      console.log('[Wallet] Privy is ready and authenticated, checking wallets...');
+      console.log(
+        "[Wallet] Privy is ready and authenticated, checking wallets...",
+      );
 
       if (privyWallets.length > 0) {
         const embeddedWallet = privyWallets[0];
         const walletAddress = embeddedWallet.address;
 
-        console.log('[Wallet] Found Privy wallet:', walletAddress);
+        console.log("[Wallet] Found Privy wallet:", walletAddress);
 
         if (walletAddress) {
-          console.log('[Wallet] Syncing Privy wallet to app state');
+          console.log("[Wallet] Syncing Privy wallet to app state");
           setAddress(walletAddress);
           setIsConnected(true);
           setIsConnecting(false); // Stop the connecting state
-          cacheWalletPreference('privy', walletAddress);
+          cacheWalletPreference("privy", walletAddress);
 
           // Try to get chain ID from Privy wallet
           try {
             const provider = await embeddedWallet.getEthereumProvider();
             if (provider) {
               providerRef.current = provider;
-              const chainIdHex = await provider.request({ method: 'eth_chainId' });
+              const chainIdHex = await provider.request({
+                method: "eth_chainId",
+              });
               const parsedChainId = parseInt(chainIdHex as string, 16);
               setChainId(parsedChainId);
               cacheChainId(parsedChainId);
-              console.log('[Wallet] Privy wallet synced successfully, chainId:', parsedChainId);
+              console.log(
+                "[Wallet] Privy wallet synced successfully, chainId:",
+                parsedChainId,
+              );
             }
           } catch (err) {
-            console.warn('[Wallet] Could not get Privy chain ID:', err);
+            console.warn("[Wallet] Could not get Privy chain ID:", err);
           }
         }
       } else {
-        console.log('[Wallet] Privy authenticated but no wallets found yet, waiting...');
+        console.log(
+          "[Wallet] Privy authenticated but no wallets found yet, waiting...",
+        );
       }
     };
 
     syncPrivyWallet();
-  }, [privyEnabled, privy.ready, privy.authenticated, privyWallets, privy.user]);
+  }, [
+    privyEnabled,
+    privy.ready,
+    privy.authenticated,
+    privyWallets,
+    privy.user,
+    address,
+  ]);
 
   useEffect(() => {
     let cleanup: (() => void) | undefined;
 
     const initWallet = async () => {
-      if (typeof window === 'undefined') return;
+      if (typeof window === "undefined") return;
 
       try {
         const environment = await getWalletEnvironment();
@@ -112,9 +137,10 @@ export function useWallet() {
         setIsFarcaster(environment.isFarcaster);
         setFarcasterContext(environment.farcasterContext);
 
-        const shouldAutoConnect = environment.isFarcaster || environment.isMiniPay;
+        const shouldAutoConnect =
+          environment.isFarcaster || environment.isMiniPay;
         const provider = await getWalletProvider({
-          prefer: environment.isFarcaster ? 'farcaster' : 'auto',
+          prefer: environment.isFarcaster ? "farcaster" : "auto",
         });
 
         if (!provider) {
@@ -123,9 +149,15 @@ export function useWallet() {
 
         providerRef.current = provider;
 
-        const detectedChainId = await detectChainId(provider, environment.isMiniPay, environment.isFarcaster);
+        const detectedChainId = await detectChainId(
+          provider,
+          environment.isMiniPay,
+          environment.isFarcaster,
+        );
 
-        const defaultChainId = getDefaultChainId({ isFarcaster: environment.isFarcaster });
+        const defaultChainId = getDefaultChainId({
+          isFarcaster: environment.isFarcaster,
+        });
 
         if (!isSupportedChainId(detectedChainId) && shouldAutoConnect) {
           await switchToDefaultChain(provider, defaultChainId);
@@ -137,14 +169,16 @@ export function useWallet() {
         }
 
         try {
-          const method = shouldAutoConnect ? 'eth_requestAccounts' : 'eth_accounts';
-          const accounts = await provider.request({ method }) as string[];
+          const method = shouldAutoConnect
+            ? "eth_requestAccounts"
+            : "eth_accounts";
+          const accounts = (await provider.request({ method })) as string[];
           if (accounts.length > 0) {
             setAddress(accounts[0]);
             setIsConnected(true);
           }
         } catch (connectError) {
-          console.warn('[Wallet] Auto-connect skipped:', connectError);
+          console.warn("[Wallet] Auto-connect skipped:", connectError);
         }
 
         cleanup = setupWalletEventListenersForProvider(
@@ -163,26 +197,28 @@ export function useWallet() {
 
             setAddress(accounts[0]);
             setIsConnected(true);
-          }
+          },
         );
       } catch (initError) {
-        console.warn('[Wallet] Wallet initialization skipped:', initError);
+        console.warn("[Wallet] Wallet initialization skipped:", initError);
       }
     };
 
     initWallet();
 
     return () => {
-      cleanup?.();
+      if (cleanup) cleanup();
     };
-  }, []);
+  }, [address]);
 
   const getActiveProvider = async () => {
     if (providerRef.current) {
       return providerRef.current;
     }
 
-    const provider = await getWalletProvider({ prefer: isFarcaster ? 'farcaster' : 'auto' });
+    const provider = await getWalletProvider({
+      prefer: isFarcaster ? "farcaster" : "auto",
+    });
     if (provider) {
       providerRef.current = provider;
     }
@@ -197,27 +233,36 @@ export function useWallet() {
       // PRIORITY 1: Check for injected wallet FIRST (MetaMask, Coinbase, etc)
       const provider = await getActiveProvider();
 
-      if (provider && typeof window !== 'undefined' && (window as any).ethereum) {
+      if (
+        provider &&
+        typeof window !== "undefined" &&
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).ethereum
+      ) {
         // Injected wallet detected - use it directly (no Privy modal)
-        console.log('[Wallet] Using detected injected wallet');
+        console.log("[Wallet] Using detected injected wallet");
         try {
-          const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+          const accounts = (await provider.request({
+            method: "eth_requestAccounts",
+          })) as string[];
 
           if (accounts.length > 0) {
             setAddress(accounts[0]);
             setIsConnected(true);
 
-            const chainIdHex = await provider.request({ method: 'eth_chainId' });
+            const chainIdHex = await provider.request({
+              method: "eth_chainId",
+            });
             const parsedChainId = parseInt(chainIdHex as string, 16);
             setChainId(parsedChainId);
             cacheChainId(parsedChainId);
 
             // Cache wallet preference
-            cacheWalletPreference('injected', accounts[0]);
+            cacheWalletPreference("injected", accounts[0]);
             return;
           }
         } catch (injectedError) {
-          console.warn('[Wallet] Injected wallet rejected:', injectedError);
+          console.warn("[Wallet] Injected wallet rejected:", injectedError);
           // Fall through to Privy if user rejects
         }
       }
@@ -226,60 +271,71 @@ export function useWallet() {
       if (privyEnabled && privy.ready) {
         // Check if already authenticated
         if (privy.authenticated) {
-          console.log('[Wallet] Already authenticated with Privy');
+          console.log("[Wallet] Already authenticated with Privy");
 
           // Check if wallet exists
           if (privyWallets.length > 0) {
-            console.log('[Wallet] Privy wallet exists, syncing');
+            console.log("[Wallet] Privy wallet exists, syncing");
             const embeddedWallet = privyWallets[0];
             if (embeddedWallet.address) {
               setAddress(embeddedWallet.address);
               setIsConnected(true);
-              cacheWalletPreference('privy', embeddedWallet.address);
+              cacheWalletPreference("privy", embeddedWallet.address);
             }
             return;
           } else {
-            console.log('[Wallet] No Privy wallet found, creating one...');
+            console.log("[Wallet] No Privy wallet found, creating one...");
             // Wallet doesn't exist yet - create it
             try {
               await privy.createWallet();
-              console.log('[Wallet] Privy wallet created, waiting for sync...');
+              console.log("[Wallet] Privy wallet created, waiting for sync...");
               // The useEffect will pick it up once created
               return;
             } catch (createError) {
-              console.error('[Wallet] Failed to create Privy wallet:', createError);
-              setError('Failed to create wallet. Please try again.');
+              console.error(
+                "[Wallet] Failed to create Privy wallet:",
+                createError,
+              );
+              setError("Failed to create wallet. Please try again.");
               return;
             }
           }
         }
 
-        console.log('[Wallet] Opening Privy modal (social login)');
+        console.log("[Wallet] Opening Privy modal (social login)");
 
         try {
           await privy.login();
           // After login, check if wallet needs to be created
           // The useEffect will handle syncing
           return;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (privyError: any) {
           // Handle user cancellation
-          if (privyError?.message?.includes('User closed modal') ||
-            privyError?.message?.includes('cancelled')) {
-            console.log('[Wallet] Privy login cancelled by user');
+          if (
+            privyError?.message?.includes("User closed modal") ||
+            privyError?.message?.includes("cancelled")
+          ) {
+            console.log("[Wallet] Privy login cancelled by user");
             return;
           }
 
-          console.warn('[Wallet] Privy login error:', privyError);
-          setError('Social login failed. Please try again.');
+          console.warn("[Wallet] Privy login error:", privyError);
+          setError("Social login failed. Please try again.");
           return;
         }
       }
 
       // No wallet available
-      setError('No wallet found. Please install a wallet extension or enable social login.');
-    } catch (connectError: any) {
-      console.error('[Wallet] Connect error:', connectError);
-      setError(connectError?.message || 'Failed to connect wallet');
+      setError(
+        "No wallet found. Please install a wallet extension or enable social login.",
+      );
+    } catch (connectError: unknown) {
+      console.error("[Wallet] Connect error:", connectError);
+      const message =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (connectError as any)?.message || "Failed to connect wallet";
+      setError(message);
     } finally {
       setIsConnecting(false);
     }
@@ -289,22 +345,24 @@ export function useWallet() {
     try {
       const provider = await getActiveProvider();
       if (!provider) {
-        setError('No wallet connected');
+        setError("No wallet connected");
         return;
       }
       await provider.request({
-        method: 'wallet_switchEthereumChain',
+        method: "wallet_switchEthereumChain",
         params: [{ chainId: toHexChainId(targetChainId) }],
       });
 
       setChainId(targetChainId);
       cacheChainId(targetChainId);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (switchError: any) {
-      if (switchError?.code === 4902) {
+      // This error code indicates that the chain has not been added to MetaMask.
+      if (switchError.code === 4902) {
         try {
           const provider = await getActiveProvider();
           await provider.request({
-            method: 'wallet_addEthereumChain',
+            method: "wallet_addEthereumChain",
             params: [getAddChainParameter(targetChainId)],
           });
 
@@ -312,18 +370,19 @@ export function useWallet() {
           cacheChainId(targetChainId);
           return;
         } catch (addError) {
-          console.error('[Wallet] Failed adding chain:', addError);
-          setError('Failed to add network');
+          console.error("[Wallet] Failed adding chain:", addError);
+          setError("Failed to add network");
           return;
         }
       }
 
-      console.error('[Wallet] Failed switching network:', switchError);
-      setError('Failed to switch network');
+      console.error("[Wallet] Failed switching network:", switchError);
+      setError("Failed to switch network");
     }
   };
 
-  const formatAddress = (addr: string) => `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
+  const formatAddress = (addr: string) =>
+    `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
   const disconnect = async () => {
     setAddress(null);
@@ -338,18 +397,18 @@ export function useWallet() {
     if (privyEnabled && privy.authenticated) {
       try {
         await privy.logout();
-        console.log('[Wallet] Logged out from Privy');
+        console.log("[Wallet] Logged out from Privy");
       } catch (err) {
-        console.warn('[Wallet] Error logging out from Privy:', err);
+        console.warn("[Wallet] Error logging out from Privy:", err);
       }
     }
 
-    console.log('[Wallet] Disconnected and cleared preferences');
+    console.log("[Wallet] Disconnected and cleared preferences");
   };
 
   const connectFarcasterWallet = async () => {
     if (!isFarcaster) {
-      setError('Farcaster wallet connection is not available');
+      setError("Farcaster wallet connection is not available");
       return;
     }
 
@@ -363,15 +422,17 @@ export function useWallet() {
         return;
       }
 
-      const provider = await getWalletProvider({ prefer: 'farcaster' });
+      const provider = await getWalletProvider({ prefer: "farcaster" });
       if (!provider) {
-        setError('Farcaster wallet provider not found');
+        setError("Farcaster wallet provider not found");
         return;
       }
 
-      const accounts = await provider.request({ method: 'eth_requestAccounts' }) as string[];
+      const accounts = (await provider.request({
+        method: "eth_requestAccounts",
+      })) as string[];
       if (!accounts || accounts.length === 0) {
-        setError('No Farcaster accounts found');
+        setError("No Farcaster accounts found");
         return;
       }
 
@@ -379,29 +440,36 @@ export function useWallet() {
       setAddress(accounts[0]);
       setIsConnected(true);
 
-      const chainIdHex = await provider.request({ method: 'eth_chainId' });
+      const chainIdHex = await provider.request({ method: "eth_chainId" });
       setChainId(parseInt(chainIdHex as string, 16));
-    } catch (farcasterError) {
-      console.error('[Farcaster] Connect error:', farcasterError);
-      setError(farcasterError instanceof Error ? farcasterError.message : 'Failed to connect Farcaster wallet');
+    } catch (farcasterError: unknown) {
+      console.error("[Farcaster] Connect error:", farcasterError);
+      setError(
+        farcasterError instanceof Error
+          ? farcasterError.message
+          : "Failed to connect Farcaster wallet",
+      );
     } finally {
       setIsConnecting(false);
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getFarcasterErrorMessage = (farcasterError: any) => {
     if (!isFarcaster) return null;
 
-    if (farcasterError?.message?.includes('Farcaster')) {
-      return `Farcaster: ${farcasterError.message}`;
+    const error = farcasterError as { message?: string; code?: string };
+
+    if (error?.message?.includes("Farcaster")) {
+      return `Farcaster: ${error.message}`;
     }
 
-    if (farcasterError?.code === 'FARCASTER_NOT_AVAILABLE') {
-      return 'Farcaster wallet is not available in this context';
+    if (error?.code === "FARCASTER_NOT_AVAILABLE") {
+      return "Farcaster wallet is not available in this context";
     }
 
-    if (farcasterError?.code === 'FARCASTER_CONNECTION_FAILED') {
-      return 'Failed to connect Farcaster wallet. Please try again.';
+    if (error?.code === "FARCASTER_CONNECTION_FAILED") {
+      return "Failed to connect Farcaster wallet. Please try again.";
     }
 
     return null;
@@ -425,18 +493,23 @@ export function useWallet() {
   };
 }
 
-async function detectChainId(provider: any, isMiniPay: boolean, isFarcaster: boolean): Promise<number> {
+async function detectChainId(
+  provider: WalletProviderType,
+  isMiniPay: boolean,
+  isFarcaster: boolean,
+): Promise<number> {
   try {
-    const chainIdHex = await provider.request({ method: 'eth_chainId' });
+    const chainIdHex = await provider.request({ method: "eth_chainId" });
     return parseInt(chainIdHex as string, 16);
   } catch {
     // Continue to fallback checks.
   }
 
   if (provider?.chainId) {
-    const chainId = typeof provider.chainId === 'string'
-      ? parseInt(provider.chainId, 16)
-      : Number(provider.chainId);
+    const chainId =
+      typeof provider.chainId === "string"
+        ? parseInt(provider.chainId, 16)
+        : Number(provider.chainId);
 
     if (!Number.isNaN(chainId)) {
       return chainId;
@@ -456,10 +529,13 @@ async function detectChainId(provider: any, isMiniPay: boolean, isFarcaster: boo
   return DEFAULT_CHAIN_ID;
 }
 
-async function switchToDefaultChain(provider: any, defaultChainId: number): Promise<void> {
+async function switchToDefaultChain(
+  provider: WalletProviderType,
+  defaultChainId: number,
+): Promise<void> {
   try {
     await provider.request({
-      method: 'wallet_switchEthereumChain',
+      method: "wallet_switchEthereumChain",
       params: [{ chainId: toHexChainId(defaultChainId) }],
     });
   } catch {
@@ -468,10 +544,10 @@ async function switchToDefaultChain(provider: any, defaultChainId: number): Prom
 }
 
 function getCachedChainId(): number | null {
-  if (typeof localStorage === 'undefined') return null;
+  if (typeof localStorage === "undefined") return null;
 
   try {
-    const value = localStorage.getItem('diversifi-last-chain-id');
+    const value = localStorage.getItem("diversifi-last-chain-id");
     if (!value) return null;
 
     const parsed = parseInt(value, 10);
@@ -482,17 +558,20 @@ function getCachedChainId(): number | null {
 }
 
 function cacheChainId(chainId: number): void {
-  if (typeof localStorage === 'undefined') return;
+  if (typeof localStorage === "undefined") return;
 
   try {
-    localStorage.setItem('diversifi-last-chain-id', chainId.toString());
+    localStorage.setItem("diversifi-last-chain-id", chainId.toString());
   } catch {
     // Optional cache only.
   }
 }
 
-function cacheWalletPreference(type: 'injected' | 'privy', address: string): void {
-  if (typeof localStorage === 'undefined') return;
+function cacheWalletPreference(
+  type: "injected" | "privy",
+  address: string,
+): void {
+  if (typeof localStorage === "undefined") return;
 
   try {
     const preference = {
@@ -500,18 +579,27 @@ function cacheWalletPreference(type: 'injected' | 'privy', address: string): voi
       address,
       timestamp: Date.now(),
     };
-    localStorage.setItem('diversifi-wallet-preference', JSON.stringify(preference));
-    console.log(`[Wallet] Cached preference: ${type} wallet (${address.substring(0, 6)}...${address.substring(address.length - 4)})`);
+    localStorage.setItem(
+      "diversifi-wallet-preference",
+      JSON.stringify(preference),
+    );
+    console.log(
+      `[Wallet] Cached preference: ${type} wallet (${address.substring(0, 6)}...${address.substring(address.length - 4)})`,
+    );
   } catch {
     // Optional cache only.
   }
 }
 
-function getWalletPreference(): { type: 'injected' | 'privy'; address: string; timestamp: number } | null {
-  if (typeof localStorage === 'undefined') return null;
+export function getWalletPreference(): {
+  type: "injected" | "privy";
+  address: string;
+  timestamp: number;
+} | null {
+  if (typeof localStorage === "undefined") return null;
 
   try {
-    const stored = localStorage.getItem('diversifi-wallet-preference');
+    const stored = localStorage.getItem("diversifi-wallet-preference");
     if (!stored) return null;
 
     const preference = JSON.parse(stored);
@@ -530,10 +618,10 @@ function getWalletPreference(): { type: 'injected' | 'privy'; address: string; t
 }
 
 function clearWalletPreference(): void {
-  if (typeof localStorage === 'undefined') return;
+  if (typeof localStorage === "undefined") return;
 
   try {
-    localStorage.removeItem('diversifi-wallet-preference');
+    localStorage.removeItem("diversifi-wallet-preference");
   } catch {
     // Optional cache only.
   }

@@ -13,6 +13,7 @@
     "build": "pnpm -r build && next build",
     "start": "next start",
     "lint": "next lint",
+    "clean": "rm -rf .next out node_modules cache .cache",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "setup-arc-agent": "node scripts/setup-arc-agent.js",
     "create-wallet": "npx tsx --env-file=.env.local scripts/create-circle-wallet.ts",

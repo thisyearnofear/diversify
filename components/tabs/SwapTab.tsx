@@ -11,11 +11,7 @@ import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RealLifeScenario from "../demo/RealLifeScenario";
 import { getChainAssets, NETWORKS, isTestnetChain } from "../../config";
 import { ChainDetectionService } from "../../services/swap/chain-detection.service";
-import {
-  TabHeader,
-  Card,
-  ConnectWalletPrompt,
-} from "../shared/TabComponents";
+import { TabHeader, Card, ConnectWalletPrompt } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
@@ -40,9 +36,12 @@ import SwapRecommendations from "../swap/SwapRecommendations";
 import YieldBridgePrompt from "../swap/YieldBridgePrompt";
 import dynamic from "next/dynamic";
 
-const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
-  ssr: false,
-});
+const GoodDollarClaimFlow = dynamic(
+  () => import("../gooddollar/GoodDollarClaimFlow"),
+  {
+    ssr: false,
+  },
+);
 
 interface SwapTabProps {
   userRegion: Region;
@@ -60,7 +59,13 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill, recordSwap: recordExperienceSwap, experienceMode, demoMode } = useAppState();
+  const {
+    swapPrefill,
+    clearSwapPrefill,
+    recordSwap: recordExperienceSwap,
+    experienceMode,
+    demoMode,
+  } = useAppState();
   const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");
@@ -92,13 +97,15 @@ export default function SwapTab({
 
   // Success celebration state
   const [showCelebration, setShowCelebration] = useState(false);
-  const [previousGoalScore, setPreviousGoalScore] = useState<number | undefined>(undefined);
+  const [previousGoalScore, setPreviousGoalScore] = useState<
+    number | undefined
+  >(undefined);
   const [celebrationData, setCelebrationData] = useState<{
-      fromToken: string;
-      toToken: string;
-      amount: string;
-      fromTokenInflation: number;
-      toTokenInflation: number;
+    fromToken: string;
+    toToken: string;
+    amount: string;
+    fromTokenInflation: number;
+    toTokenInflation: number;
   } | null>(null);
 
   const swapInterfaceRef = useRef<{
@@ -177,7 +184,8 @@ export default function SwapTab({
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);
 
   // Goal-aware swap defaults: read protection profile to personalise the experience
-  const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
+  const { config: profileConfig, isComplete: profileComplete } =
+    useProtectionProfile();
 
   useEffect(() => {
     if (swapPrefill && swapInterfaceRef.current?.setTokens) {
@@ -212,10 +220,10 @@ export default function SwapTab({
       // Transaction submitted successfully
       setSwapStatus("Swap completed successfully!");
       setSwapStep("completed");
-      
+
       // Record swap completion for experience progression
       recordExperienceSwap();
-      
+
       // Record streak activity for GoodDollar UBI if amount >= $1
       if (celebrationData?.amount) {
         const amountNum = parseFloat(celebrationData.amount);
@@ -227,14 +235,14 @@ export default function SwapTab({
       // Record cross-chain activity for testnet tracking
       if (walletChainId && celebrationData) {
         recordActivity({
-          action: 'swap',
+          action: "swap",
           chainId: walletChainId,
-          networkType: isTestnetChain(walletChainId) ? 'testnet' : 'mainnet',
+          networkType: isTestnetChain(walletChainId) ? "testnet" : "mainnet",
           usdValue: parseFloat(celebrationData.amount),
           txHash: swapTxHash || undefined,
         });
       }
-      
+
       refreshWithRetries();
 
       // Show celebration if we have swap data
@@ -248,30 +256,44 @@ export default function SwapTab({
     if (swapTxHash && !swapError && hookSwapStep === "swapping") {
       setSwapStatus("Transaction submitted...");
     }
-  }, [swapError, hookSwapStep, swapTxHash, refreshWithRetries, recordExperienceSwap, recordStreakSwap, celebrationData]);
+  }, [
+    swapError,
+    hookSwapStep,
+    swapTxHash,
+    refreshWithRetries,
+    recordExperienceSwap,
+    recordStreakSwap,
+    celebrationData,
+    recordActivity,
+    walletChainId,
+  ]);
 
   const handleSwap = async (
-        fromToken: string,
-        toToken: string,
-        amount: string,
-        fromChainId?: number,
-        toChainId?: number,
-        fromTokenInflation?: number,
-        toTokenInflation?: number,
-    ) => {
-        setSwapStatus("Initiating swap...");
-        setSwapStep("approving");
+    fromToken: string,
+    toToken: string,
+    amount: string,
+    fromChainId?: number,
+    toChainId?: number,
+    fromTokenInflation?: number,
+    toTokenInflation?: number,
+  ) => {
+    setSwapStatus("Initiating swap...");
+    setSwapStep("approving");
 
-        // ENHANCEMENT: Store current goal score before swap for impact calculation
-        if (profileConfig.userGoal && goalScores) {
-            const currentScore = 
-                profileConfig.userGoal === 'inflation_protection' ? goalScores.hedge :
-                profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
-                profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0;
-            setPreviousGoalScore(Math.round(currentScore));
-        }
+    // ENHANCEMENT: Store current goal score before swap for impact calculation
+    if (profileConfig.userGoal && goalScores) {
+      const currentScore =
+        profileConfig.userGoal === "inflation_protection"
+          ? goalScores.hedge
+          : profileConfig.userGoal === "geographic_diversification"
+            ? goalScores.diversify
+            : profileConfig.userGoal === "rwa_access"
+              ? goalScores.rwa
+              : 0;
+      setPreviousGoalScore(Math.round(currentScore));
+    }
 
-        // Store swap data for celebration (including inflation rates for savings calculation)
+    // Store swap data for celebration (including inflation rates for savings calculation)
     setCelebrationData({
       fromToken,
       toToken,
@@ -359,8 +381,12 @@ export default function SwapTab({
               <div className="flex items-center gap-2">
                 <span className="text-lg">🎮</span>
                 <div>
-                  <p className="text-xs font-bold text-blue-900 dark:text-blue-100">Demo Mode</p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300">Connect wallet to execute real swaps</p>
+                  <p className="text-xs font-bold text-blue-900 dark:text-blue-100">
+                    Demo Mode
+                  </p>
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    Connect wallet to execute real swaps
+                  </p>
                 </div>
               </div>
               <WalletButton variant="inline" />
@@ -383,7 +409,9 @@ export default function SwapTab({
         {isBeginner && (
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Convert Your Money</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Convert Your Money
+              </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Protect your savings by converting to more stable currencies
               </p>
@@ -440,7 +468,11 @@ export default function SwapTab({
 
         {!address ? (
           <ConnectWalletPrompt
-            message={isDemo ? "Connect your wallet to execute real swaps with live prices." : "Connect your wallet to swap tokens."}
+            message={
+              isDemo
+                ? "Connect your wallet to execute real swaps with live prices."
+                : "Connect your wallet to swap tokens."
+            }
             WalletButtonComponent={<WalletButton variant="inline" />}
             userRegion={userRegion}
             inflationData={inflationData}
@@ -458,16 +490,20 @@ export default function SwapTab({
                 // Trigger the same celebration modal as a real swap so Arc/RH users
                 // get the same dopamine hit. Use $10 USDC→EURC as the mock trade.
                 if (profileConfig.userGoal && goalScores) {
-                    const currentScore = 
-                        profileConfig.userGoal === 'inflation_protection' ? goalScores.hedge :
-                        profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
-                        profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0;
-                    setPreviousGoalScore(Math.round(currentScore));
+                  const currentScore =
+                    profileConfig.userGoal === "inflation_protection"
+                      ? goalScores.hedge
+                      : profileConfig.userGoal === "geographic_diversification"
+                        ? goalScores.diversify
+                        : profileConfig.userGoal === "rwa_access"
+                          ? goalScores.rwa
+                          : 0;
+                  setPreviousGoalScore(Math.round(currentScore));
                 }
                 setCelebrationData({
-                  fromToken: 'USDC',
-                  toToken: 'EURC',
-                  amount: '10',
+                  fromToken: "USDC",
+                  toToken: "EURC",
+                  amount: "10",
                   fromTokenInflation: 3.1,
                   toTokenInflation: 2.3,
                 });
@@ -526,7 +562,7 @@ export default function SwapTab({
 
             {/* Transaction status + explorer link — delegated to SwapStatusPanel */}
             <SwapStatusPanel
-              status={swapStatus ?? ''}
+              status={swapStatus ?? ""}
               txHash={swapTxHash}
               chainId={walletChainId}
               isCompleted={hookSwapStep === "completed"}
@@ -541,11 +577,11 @@ export default function SwapTab({
           onBridgeCTA={() => {
             if (swapInterfaceRef.current?.setTokens) {
               swapInterfaceRef.current.setTokens(
-                'USDm',
-                'USDY',
-                '',
+                "USDm",
+                "USDY",
+                "",
                 NETWORKS.CELO_MAINNET.chainId,
-                NETWORKS.ARBITRUM_ONE.chainId
+                NETWORKS.ARBITRUM_ONE.chainId,
               );
             }
           }}
@@ -566,19 +602,19 @@ export default function SwapTab({
               Compare your local inflation against other regions
             </div>
             <div className="flex flex-wrap gap-2 mb-4">
-              {Object.keys(inflationData)
-                .map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => setTargetRegion(r as Region)}
-                    className={`px-3 py-1 rounded-full text-xs font-black uppercase transition-colors ${targetRegion === r
+              {Object.keys(inflationData).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setTargetRegion(r as Region)}
+                  className={`px-3 py-1 rounded-full text-xs font-black uppercase transition-colors ${
+                    targetRegion === r
                       ? "bg-amber-600 text-white shadow-sm"
                       : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700"
-                      }`}
-                  >
-                    {r}
-                  </button>
-                ))}
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
             </div>
             <div className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl flex justify-between items-center border border-amber-100/50 dark:border-amber-900/20">
               <div className="text-center">
@@ -592,11 +628,15 @@ export default function SwapTab({
               <div className="flex flex-col items-center px-2">
                 <div className="text-gray-300 text-xl">→</div>
                 {inflationDifference !== 0 && (
-                  <div className={`mt-1 text-[10px] font-black px-1.5 py-0.5 rounded ${inflationDifference > 0
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                    }`}>
-                    {inflationDifference > 0 ? "+" : ""}{inflationDifference.toFixed(1)}%
+                  <div
+                    className={`mt-1 text-[10px] font-black px-1.5 py-0.5 rounded ${
+                      inflationDifference > 0
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                    }`}
+                  >
+                    {inflationDifference > 0 ? "+" : ""}
+                    {inflationDifference.toFixed(1)}%
                   </div>
                 )}
               </div>
@@ -651,13 +691,26 @@ export default function SwapTab({
           toToken={celebrationData.toToken}
           amount={celebrationData.amount}
           protectionScoreIncrease={5}
-          annualSavings={parseFloat(celebrationData.amount) * ((celebrationData.fromTokenInflation - celebrationData.toTokenInflation) / 100)}
+          annualSavings={
+            parseFloat(celebrationData.amount) *
+            ((celebrationData.fromTokenInflation -
+              celebrationData.toTokenInflation) /
+              100)
+          }
           userGoal={profileComplete ? profileConfig.userGoal : null}
-          goalScore={goalScores ? Math.round(
-            profileConfig.userGoal === 'inflation_protection' ? goalScores.hedge :
-            profileConfig.userGoal === 'geographic_diversification' ? goalScores.diversify :
-            profileConfig.userGoal === 'rwa_access' ? goalScores.rwa : 0
-          ) : undefined}
+          goalScore={
+            goalScores
+              ? Math.round(
+                  profileConfig.userGoal === "inflation_protection"
+                    ? goalScores.hedge
+                    : profileConfig.userGoal === "geographic_diversification"
+                      ? goalScores.diversify
+                      : profileConfig.userGoal === "rwa_access"
+                        ? goalScores.rwa
+                        : 0,
+                )
+              : undefined
+          }
           previousGoalScore={previousGoalScore}
           onClaimG={() => setShowClaimFlow(true)}
         />
@@ -672,4 +725,3 @@ export default function SwapTab({
     </div>
   );
 }
-

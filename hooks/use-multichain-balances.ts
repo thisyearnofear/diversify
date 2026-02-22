@@ -62,14 +62,17 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
     color: string;
     usdValue: number;
   }>;
-  macroData?: Record<string, {
-    gdpGrowth: number | null;
-    corruptionControl: number | null;
-    politicalStability: number | null;
-    ruleOfLaw: number | null;
-    governmentEffectiveness: number | null;
-    year: number;
-  }>;
+  macroData?: Record<
+    string,
+    {
+      gdpGrowth: number | null;
+      corruptionControl: number | null;
+      politicalStability: number | null;
+      ruleOfLaw: number | null;
+      governmentEffectiveness: number | null;
+      year: number;
+    }
+  >;
   isLoading: boolean;
   isStale: boolean;
   errors: string[];
@@ -82,8 +85,16 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
 
 // Testnets are only shown via NetworkSwitcher, not in automatic multichain tracking
 const PRODUCTION_CHAINS = [
-  { chainId: NETWORKS.CELO_MAINNET.chainId, name: NETWORKS.CELO_MAINNET.name, rpcUrl: NETWORKS.CELO_MAINNET.rpcUrl },
-  { chainId: NETWORKS.ARBITRUM_ONE.chainId, name: NETWORKS.ARBITRUM_ONE.name, rpcUrl: NETWORKS.ARBITRUM_ONE.rpcUrl },
+  {
+    chainId: NETWORKS.CELO_MAINNET.chainId,
+    name: NETWORKS.CELO_MAINNET.name,
+    rpcUrl: NETWORKS.CELO_MAINNET.rpcUrl,
+  },
+  {
+    chainId: NETWORKS.ARBITRUM_ONE.chainId,
+    name: NETWORKS.ARBITRUM_ONE.name,
+    rpcUrl: NETWORKS.ARBITRUM_ONE.rpcUrl,
+  },
 ] as const;
 
 // Helper function to normalize region names
@@ -207,9 +218,9 @@ async function fetchChainBalances(
     const metadata = TOKEN_METADATA[symbol] ||
       TOKEN_METADATA[symbol.toUpperCase()] ||
       TOKEN_METADATA[symbol.toLowerCase()] || {
-      name: symbol,
-      region: "Global" as AssetRegion,
-    };
+        name: symbol,
+        region: "Global" as AssetRegion,
+      };
 
     tokenInfoList.push({ symbol, metadata, tokenAddress });
   }
@@ -221,30 +232,38 @@ async function fetchChainBalances(
     let totalValue = 0;
 
     // Fetch live prices for all tokens in parallel
-    const pricePromises = tokenInfoList.map(async ({ symbol, tokenAddress }) => {
-      try {
-        const { TokenPriceService } = await import('../utils/api-services');
-        const livePrice = await TokenPriceService.getTokenUsdPrice({
-          chainId: chain.chainId,
-          address: tokenAddress,
-          symbol: symbol,
-        });
+    const pricePromises = tokenInfoList.map(
+      async ({ symbol, tokenAddress }) => {
+        try {
+          const { TokenPriceService } = await import("../utils/api-services");
+          const livePrice = await TokenPriceService.getTokenUsdPrice({
+            chainId: chain.chainId,
+            address: tokenAddress,
+            symbol: symbol,
+          });
 
-        // Fallback to hardcoded rate if live price unavailable
-        const fallbackRate = EXCHANGE_RATES[symbol] ||
-          EXCHANGE_RATES[symbol.toUpperCase()] ||
-          EXCHANGE_RATES[symbol.toLowerCase()] ||
-          1;
+          // Fallback to hardcoded rate if live price unavailable
+          const fallbackRate =
+            EXCHANGE_RATES[symbol] ||
+            EXCHANGE_RATES[symbol.toUpperCase()] ||
+            EXCHANGE_RATES[symbol.toLowerCase()] ||
+            1;
 
-        return livePrice ?? fallbackRate;
-      } catch (error) {
-        console.warn(`[Multichain] Failed to fetch price for ${symbol}:`, error);
-        return EXCHANGE_RATES[symbol] ||
-          EXCHANGE_RATES[symbol.toUpperCase()] ||
-          EXCHANGE_RATES[symbol.toLowerCase()] ||
-          1;
-      }
-    });
+          return livePrice ?? fallbackRate;
+        } catch (error) {
+          console.warn(
+            `[Multichain] Failed to fetch price for ${symbol}:`,
+            error,
+          );
+          return (
+            EXCHANGE_RATES[symbol] ||
+            EXCHANGE_RATES[symbol.toUpperCase()] ||
+            EXCHANGE_RATES[symbol.toLowerCase()] ||
+            1
+          );
+        }
+      },
+    );
 
     const exchangeRates = await Promise.all(pricePromises);
 
@@ -352,7 +371,7 @@ export function useMultichainBalances(
       if (
         !tokenMap[t.symbol] ||
         parseFloat(t.formattedBalance) >
-        parseFloat(tokenMap[t.symbol].formattedBalance)
+          parseFloat(tokenMap[t.symbol].formattedBalance)
       ) {
         tokenMap[t.symbol] = t;
       }
@@ -383,7 +402,14 @@ export function useMultichainBalances(
       errors,
       lastUpdated,
     };
-  }, [chainBalances, isLoading, lastUpdated, inflationData, macroData]);
+  }, [
+    chainBalances,
+    isLoading,
+    lastUpdated,
+    inflationData,
+    macroData,
+    userGoal,
+  ]);
 
   // Main fetch function
   const fetchAllBalances = useCallback(
