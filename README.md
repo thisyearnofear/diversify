@@ -41,11 +41,10 @@ pnpm dev
 ## 🏗️ Architecture
 
 ### Deployment
-- **Frontend**: Netlify (static hosting, client-side rendering)
-- **AI API**: Hetzner Cloud (90s timeouts for AI operations)
-- **Domain**: `api.diversifi.famile.xyz` (SSL via Let's Encrypt)
+- **Frontend**: Static hosting (e.g., Netlify)
+- **AI API**: Separate API service for long-running AI operations (extended timeouts)
 
-See [**Hetzner Deployment Guide**](docs/HETZNER_DEPLOYMENT.md) for deployment details.
+Deployment/runbook details are intentionally kept out of the public repo. If you’re a maintainer, see `docs/internal/DEPLOYMENT_RUNBOOK.md` (not committed) or your team’s internal documentation.
 
 ### Financial Strategies (New!)
 Choose from 7 cultural approaches to wealth:
@@ -79,7 +78,7 @@ Each strategy shapes:
 
 ## 📂 Documentation
 
-- [**Hetzner Deployment**](docs/HETZNER_DEPLOYMENT.md) - API server deployment guide
+- Deployment runbooks: internal-only (not included in this repo)
 - [**Product Guide**](docs/PRODUCT_GUIDE.md) - Core features and supported assets
 - [**Technical Architecture**](docs/TECHNICAL_ARCHITECTURE.md) - System design and technology stack
 - [**User Guide**](docs/USER_GUIDE.md) - Getting started and platform usage

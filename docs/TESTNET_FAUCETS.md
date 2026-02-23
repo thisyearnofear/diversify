@@ -33,16 +33,11 @@ The Robinhood Chain is an Arbitrum Orbit L2 (Chain ID: `46630`). All contracts a
 ### Step B: Trade Fictional Stocks
 Navigate to `/trade` in the DiversiFi app to buy/sell fictional stocks with testnet ETH.
 
-**Deployed Contracts:**
-| Contract | Address |
-|----------|---------|
-| AMM (TestnetMarketMaker) | `0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3` |
-| ACME | `0x4390d881751a190C9B3539b052BA1FC7a0f517dc` |
-| SPACELY | `0xe28F0fBc0777373fd80E932072033949ef73Fa5f` |
-| WAYNE | `0xD91C15F9017c4Caa56825487ede1A701a94cE2a4` |
-| OSCORP | `0xeacC2abf8C05bAc6870C16bEa5c4E3db7d8EA41d` |
-| STARK | `0x1d3264F941Dc8d9b038245987078D249Df748c8D` |
-| WETH | `0x95fa0c32181d073FA9b07F0eC3961C845d00bE21` |
+**Deployed Contracts (Testnet-only):**
+Addresses can change between deployments. The app’s **source of truth** is `config/index.ts`.
+
+For convenience, current addresses are documented in:
+- `docs/TEST_DRIVE_GUIDE.md`
 
 **Available pairs:** ACME/ETH, SPACELY/ETH, WAYNE/ETH, OSCORP/ETH, STARK/ETH — all with 0.3% swap fee, constant-product AMM.
 

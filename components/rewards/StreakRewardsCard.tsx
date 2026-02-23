@@ -9,7 +9,10 @@
  * - NEUTRAL: No judgment on swap strategy
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { CompactStreakBanner } from './streak/CompactStreakBanner';
+import { MilestoneProgress } from './streak/MilestoneProgress';
+import { StreakProgressVisualizer } from './streak/StreakProgressVisualizer';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
@@ -94,6 +97,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     isLoading,
     crossChainActivity,
     achievements,
+    newlyEarnedAchievements,
     eligibleForGraduation,
   } = useStreakRewards();
 
@@ -123,29 +127,12 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     }
   };
 
-  // Watch for newly earned achievements and surface a toast notification.
-  // BUGFIX: initialise ref to the CURRENT achievements on first mount so we
-  // don't fire a toast for every achievement the user has already earned when
-  // the page first loads.
-  const prevAchievementsRef = useRef<string[] | null>(null);
+  // Toast for newly earned achievements (computed in hook/module).
   useEffect(() => {
-    if (prevAchievementsRef.current === null) {
-      // First run — seed with current value so we only toast for future badges
-      if (achievements.length > 0 || isConnected) {
-        console.log('[StreakRewardsCard] Initializing achievements ref:', achievements);
-        prevAchievementsRef.current = achievements;
-      }
-      return;
-    }
-    const prev = prevAchievementsRef.current;
-    const newOnes = achievements.filter(id => !prev.includes(id));
-    if (newOnes.length > 0) {
-      console.log('[StreakRewardsCard] New achievements detected:', newOnes);
-      const badge = ACHIEVEMENTS.find(b => b.id === newOnes[0]);
-      if (badge) setPendingToast(badge);
-    }
-    prevAchievementsRef.current = achievements;
-  }, [achievements, isConnected]);
+    if (newlyEarnedAchievements.length === 0) return;
+    const badge = ACHIEVEMENTS.find(b => b.id === newlyEarnedAchievements[0]);
+    if (badge) setPendingToast(badge);
+  }, [newlyEarnedAchievements]);
 
   // Calculate time until next claim
   const formatTimeUntil = (date: Date | null) => {
@@ -244,30 +231,13 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
   // Compact mode - after claiming, show minimal state
   if (isCompact && !canClaim && isEligible) {
     return (
-      <div className="relative">
-        <button
-          onClick={() => setIsCompact(false)}
-          className="w-full p-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 hover:from-amber-100 hover:to-yellow-100 dark:hover:from-amber-900/20 dark:hover:to-yellow-900/20 rounded-lg border border-amber-200 dark:border-amber-900/30 transition-all flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">🔥</span>
-            <div className="text-left">
-              <div className="text-sm font-black text-amber-700 dark:text-amber-400">
-                {streak?.daysActive || 0}-Day Streak
-              </div>
-              <div className="text-xs text-amber-600 dark:text-amber-500">
-                {nextClaimTime ? `Next claim in ${formatTimeUntil(nextClaimTime)}` : 'Keep it alive!'}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-amber-500 opacity-0 group-hover:opacity-100 transition-opacity">Expand</span>
-            <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
-        </button>
-      </div>
+      <CompactStreakBanner
+        daysActive={streak?.daysActive || 0}
+        nextClaimLabel={
+          nextClaimTime ? `Next claim in ${formatTimeUntil(nextClaimTime)}` : 'Keep it alive!'
+        }
+        onExpand={() => setIsCompact(false)}
+      />
     );
   }
 
@@ -311,40 +281,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
         >
           {/* Enhanced Streak Visualizer */}
           {isEligible && streak && isWhitelisted && (
-            <div className="mt-2 py-3 px-4 bg-white/40 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-black/5">
-              <div className="flex justify-between items-end mb-2">
-                <div className="text-[10px] font-black uppercase text-gray-500 tracking-wider">
-                  Streak Progress
-                </div>
-                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                  {streak.daysActive} Days
-                </div>
-              </div>
-              
-              <div className="flex gap-1.5 h-2">
-                {[...Array(7)].map((_, i) => {
-                  const dayIndex = (streak.daysActive - 1) % 7;
-                  const isActive = i <= dayIndex;
-                  const isCurrent = i === dayIndex;
-                  
-                  return (
-                    <div 
-                      key={i} 
-                      className={`flex-1 rounded-full transition-all duration-500 ${
-                        isActive 
-                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' 
-                          : 'bg-gray-200 dark:bg-gray-800'
-                      } ${isCurrent ? 'animate-pulse scale-y-125' : ''}`}
-                    />
-                  );
-                })}
-              </div>
-              
-              <div className="flex justify-between mt-2">
-                <span className="text-[9px] text-gray-400 font-bold">DAY 1</span>
-                <span className="text-[9px] text-gray-400 font-bold">GOAL: 7 DAYS</span>
-              </div>
-            </div>
+            <StreakProgressVisualizer daysActive={streak.daysActive} />
           )}
         </InsightCard>
         
@@ -375,32 +312,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
 
       {/* Milestone Progress - Show next achievement */}
       {isEligible && streak && streak.daysActive > 0 && !isCompact && (
-        <div className="mt-3 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-900/10 dark:to-yellow-900/10 rounded-lg border border-amber-200 dark:border-amber-900/30">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <div className="text-xs font-black text-amber-700 dark:text-amber-400 mb-1">
-                {streak.daysActive < 7 ? '🔥 Next: 7-Day Badge' :
-                  streak.daysActive < 30 ? '🏆 Next: 30-Day Badge' :
-                    streak.daysActive < 100 ? '💎 Next: 100-Day Badge' :
-                      streak.daysActive < 365 ? '👑 Next: 365-Day Badge' :
-                        '👑 Legend Status!'}
-              </div>
-              <div className="text-xs text-amber-600 dark:text-amber-500">
-                {streak.daysActive < 7 ? `${7 - streak.daysActive} days to go` :
-                  streak.daysActive < 30 ? `${30 - streak.daysActive} days to go` :
-                    streak.daysActive < 100 ? `${100 - streak.daysActive} days to go` :
-                      streak.daysActive < 365 ? `${365 - streak.daysActive} days to go` :
-                        'All milestones achieved!'}
-              </div>
-            </div>
-            <div className="text-2xl">
-              {streak.daysActive < 7 ? '🔥' :
-                streak.daysActive < 30 ? '🏆' :
-                  streak.daysActive < 100 ? '💎' :
-                    streak.daysActive < 365 ? '👑' : '✨'}
-            </div>
-          </div>
-        </div>
+        <MilestoneProgress daysActive={streak.daysActive} />
       )}
 
       {/* Test Drive Teaser — shown when user has a streak but hasn't tried testnet yet */}

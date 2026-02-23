@@ -109,7 +109,7 @@ Custom constant-product AMM for fictional stock tokens on Robinhood Chain (ID: `
 
 ```typescript
 // services/swap/strategies/robinhood-amm.strategy.ts
-// AMM: 0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3
+// Addresses + token list are defined in config/index.ts (source of truth)
 // Pairs: ACME/ETH, SPACELY/ETH, WAYNE/ETH, OSCORP/ETH, STARK/ETH
 // Fee: 0.3% | Slippage: 3% default
 ```

@@ -18,157 +18,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 
-// Configuration
-const STREAK_CONFIG = {
-  MIN_SWAP_USD: 1.00, // Any $1+ swap unlocks G$ claim
-  GRACE_PERIODS_PER_WEEK: 1,
-  G_CLAIM_URL: 'http://goodwallet.xyz?inviteCode=4AJXLg3ynL',
-  G_TOKEN_ADDRESS: '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A', // Celo (checksummed)
-} as const;
-
-// LocalStorage fallback key
-const STORAGE_KEY = 'diversifi_streak_v1';
-
-interface StreakData {
-  walletAddress: string;
-  startTime: number;
-  lastActivity: number;
-  daysActive: number;
-  gracePeriodsUsed: number;
-  totalSaved: number;
-}
-
-interface StreakState {
-  streak: StreakData | null;
-  canClaim: boolean;
-  isEligible: boolean;
-  isWhitelisted: boolean;
-  entitlement: string;
-  alreadyClaimedOnChain: boolean;
-  nextClaimTime: Date | null;
-  estimatedReward: string;
-  isLoading: boolean;
-  error: string | null;
-  usingFallback: boolean;
-  // Cross-chain activity (consolidated from useCrossChainActivity)
-  crossChainActivity: {
-    testnet: {
-      totalSwaps: number;
-      totalClaims: number;
-      totalVolume: number;
-      chainsUsed: number[];
-    };
-    mainnet: {
-      totalSwaps: number;
-      totalClaims: number;
-      totalVolume: number;
-    };
-    graduation: {
-      isGraduated: boolean;
-      graduatedAt?: Date;
-      testnetActionsBeforeGraduation: number;
-    };
-  };
-  achievements: string[];
-  eligibleForGraduation: boolean;
-}
-
-interface StreakActions {
-  recordSwap: (amountUSD: number) => Promise<void>;
-  claimG: () => Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }>;
-  verifyIdentity: () => Promise<{ success: boolean; url?: string; error?: string }>;
-  resetStreak: () => Promise<void>;
-  refresh: () => Promise<void>;
-  // Cross-chain activity recording (consolidated)
-  recordActivity: (params: {
-    action: 'swap' | 'claim' | 'graduation';
-    chainId: number;
-    networkType: 'testnet' | 'mainnet';
-    usdValue?: number;
-    txHash?: string;
-  }) => Promise<boolean>;
-}
-
-// Helper: Calculate reward estimate
-function calculateReward(streakDays: number): string {
-  const baseReward = 0.25;
-  const multiplier = Math.min(1 + (streakDays * 0.02), 1.5);
-  const estimated = baseReward * multiplier;
-  return `~$${estimated.toFixed(2)}`;
-}
-
-// Helper: Safely parse JSON responses (handles empty bodies)
-async function safeParseJson(response: Response) {
-  try {
-    const text = await response.text();
-    if (!text) return null;
-    return JSON.parse(text);
-  } catch (e) {
-    return null;
-  }
-}
-
-// Helper: Calculate streak state
-function calculateStreakState(streak: StreakData | null): Partial<StreakState> {
-  if (!streak) {
-    return {
-      streak: null,
-      canClaim: false,
-      isEligible: false,
-      nextClaimTime: null,
-      estimatedReward: '~$0.25',
-    };
-  }
-
-  const today = Math.floor(Date.now() / 86400000);
-  const lastActivityDay = Math.floor(streak.lastActivity / 86400000);
-  const daysSinceActivity = today - lastActivityDay;
-
-  const isStreakActive = daysSinceActivity <= 1;
-  // User is eligible to claim if they have an active streak AND have performed qualifying activity
-  const isEligible = isStreakActive && streak.daysActive > 0;
-
-  // We'll determine actual claimability dynamically via GoodDollar service
-  const canClaim = isEligible; // Will be updated based on actual GoodDollar eligibility
-
-  const nextClaimTime = isEligible
-    ? null
-    : new Date((lastActivityDay + 1) * 86400000 + 86400000); // Next day after last activity
-
-  return {
-    streak,
-    canClaim,
-    isEligible,
-    nextClaimTime,
-    estimatedReward: calculateReward(streak.daysActive),
-  };
-}
-
-// LocalStorage fallback functions
-function getLocalStreak(address: string): StreakData | null {
-  if (typeof window === 'undefined') return null;
-  const key = `${STORAGE_KEY}_${address.toLowerCase()}`;
-  const data = localStorage.getItem(key);
-  if (!data) return null;
-  try {
-    return JSON.parse(data);
-  } catch {
-    return null;
-  }
-}
-
-function saveLocalStreak(address: string, data: StreakData): void {
-  if (typeof window === 'undefined') return;
-  const key = `${STORAGE_KEY}_${address.toLowerCase()}`;
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
-function clearLocalStreak(address: string): void {
-  if (typeof window === 'undefined') return;
-  const key = `${STORAGE_KEY}_${address.toLowerCase()}`;
-  localStorage.removeItem(key);
-}
-
+import type { StreakActions, StreakData, StreakState } from '../modules/rewards/streak/types';
+import { STREAK_CONFIG } from '../modules/rewards/streak/types';
+import {
+  calculateStreakState,
+  clearLocalStreak,
+  getLocalStreak,
+  safeParseJson,
+  saveLocalStreak,
+} from '../modules/rewards/streak/utils';
+import { diffAchievements } from '../modules/rewards/streak/achievements';
+import { fetchStreakFromApi } from '../modules/rewards/streak/internal/api';
+import { fetchOnChainStatus } from '../modules/rewards/streak/internal/onchain';
+import {
+  computeEligibleForGraduation,
+  patchActivity,
+  type RecordActivityParams,
+} from '../modules/rewards/streak/internal/activity';
+import { computeNextLocalStreak } from '../modules/rewards/streak/internal/local-fallback';
 export function useStreakRewards(): StreakState & StreakActions {
   const { address, isConnected } = useWalletContext();
   const [state, setState] = useState<StreakState>({
@@ -189,6 +56,7 @@ export function useStreakRewards(): StreakState & StreakActions {
       graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
     },
     achievements: [],
+    newlyEarnedAchievements: [],
     eligibleForGraduation: false,
   });
 
@@ -208,73 +76,39 @@ export function useStreakRewards(): StreakState & StreakActions {
 
     try {
       // 1. Check On-chain GoodDollar status
-      let onChainStatus = { 
-        isWhitelisted: true, 
-        entitlement: '0', 
-        alreadyClaimedOnChain: false,
-        canClaimOnChain: false 
-      };
-      try {
-        const { GoodDollarService } = await import('../services/gooddollar-service');
-        // Use read-only provider for quick check
-        const service = GoodDollarService.createReadOnly();
-        const eligibility = await service.checkClaimEligibility(address);
-        
-        onChainStatus = {
-          isWhitelisted: eligibility.isWhitelisted,
-          entitlement: eligibility.claimAmount,
-          alreadyClaimedOnChain: eligibility.alreadyClaimed,
-          canClaimOnChain: eligibility.canClaim
-        };
-      } catch (e) {
-        console.warn('[StreakRewards] On-chain check failed:', e);
-      }
-
+      const onChainStatus = await fetchOnChainStatus(address);
       // 2. Try API for streak data
-      const response = await fetch(`/api/streaks/${address}`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      });
+      const { streak, raw } = await fetchStreakFromApi(address);
 
-      if (response.ok) {
-        const data = (await safeParseJson(response)) || {};
+      const streakState = calculateStreakState(streak);
 
-        // Convert API response to StreakData format
-        const streak: StreakData | null = data.exists ? {
-          walletAddress: data.walletAddress,
-          startTime: data.startTime,
-          lastActivity: data.lastActivity,
-          daysActive: data.daysActive,
-          gracePeriodsUsed: data.gracePeriodsUsed,
-          totalSaved: data.totalSaved,
-        } : null;
+      // Calculate graduation eligibility
+      const testnetSwaps = raw.crossChainActivity?.testnet?.totalSwaps || 0;
+      const isGraduated = raw.crossChainActivity?.graduation?.isGraduated || false;
+      const eligibleForGraduation = !isGraduated && testnetSwaps >= 3;
 
-        const streakState = calculateStreakState(streak);
+      setState(prev => {
+        const nextAchievements = raw.achievements || [];
+        const { newlyEarned } = diffAchievements(prev.achievements, nextAchievements);
 
-        // Calculate graduation eligibility
-        const testnetSwaps = data.crossChainActivity?.testnet?.totalSwaps || 0;
-        const isGraduated = data.crossChainActivity?.graduation?.isGraduated || false;
-        const eligibleForGraduation = !isGraduated && testnetSwaps >= 3;
-
-        setState(prev => ({
+        return {
           ...prev,
           ...streakState,
           ...onChainStatus,
-          crossChainActivity: data.crossChainActivity || prev.crossChainActivity,
-          achievements: data.achievements || [],
+          crossChainActivity: raw.crossChainActivity || prev.crossChainActivity,
+          achievements: nextAchievements,
+          newlyEarnedAchievements: newlyEarned,
           eligibleForGraduation,
           canClaim: (streakState.canClaim || false) && onChainStatus.canClaimOnChain,
           isLoading: false,
           error: null,
           usingFallback: false,
-        }));
+        };
+      });
 
-        // Sync to localStorage as backup
-        if (streak) {
-          saveLocalStreak(address, streak);
-        }
-      } else {
-        throw new Error('API request failed');
+      // Sync to localStorage as backup
+      if (streak) {
+        saveLocalStreak(address, streak);
       }
     } catch (err) {
       console.warn('[StreakRewards] API failed, using localStorage fallback:', err);
@@ -335,51 +169,13 @@ export function useStreakRewards(): StreakState & StreakActions {
       console.warn('[StreakRewards] API save failed, using localStorage:', err);
 
       // Fallback: Calculate and save locally
-      const today = Math.floor(Date.now() / 86400000);
       const current = getLocalStreak(address);
-
-      let newStreak: StreakData;
-
-      if (!current) {
-        newStreak = {
-          walletAddress: address,
-          startTime: Date.now(),
-          lastActivity: Date.now(),
-          daysActive: 1,
-          gracePeriodsUsed: 0,
-          totalSaved: amountUSD,
-        };
-      } else {
-        const lastDay = Math.floor(current.lastActivity / 86400000);
-
-        if (today === lastDay) {
-          newStreak = { ...current, totalSaved: current.totalSaved + amountUSD };
-        } else if (today === lastDay + 1) {
-          newStreak = {
-            ...current,
-            daysActive: current.daysActive + 1,
-            lastActivity: Date.now(),
-            totalSaved: current.totalSaved + amountUSD,
-          };
-        } else if (today <= lastDay + 2 && current.gracePeriodsUsed < 1) {
-          newStreak = {
-            ...current,
-            daysActive: current.daysActive + 1,
-            gracePeriodsUsed: current.gracePeriodsUsed + 1,
-            lastActivity: Date.now(),
-            totalSaved: current.totalSaved + amountUSD,
-          };
-        } else {
-          newStreak = {
-            walletAddress: address,
-            startTime: Date.now(),
-            lastActivity: Date.now(),
-            daysActive: 1,
-            gracePeriodsUsed: 0,
-            totalSaved: amountUSD,
-          };
-        }
-      }
+      const newStreak = computeNextLocalStreak({
+        address,
+        amountUSD,
+        current,
+        gracePeriodsPerWeek: STREAK_CONFIG.GRACE_PERIODS_PER_WEEK,
+      });
 
       saveLocalStreak(address, newStreak);
 
@@ -500,35 +296,24 @@ export function useStreakRewards(): StreakState & StreakActions {
     if (!address) return false;
 
     try {
-      const response = await fetch(`/api/streaks/${address}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
+      const data = await patchActivity(address, params as RecordActivityParams);
 
-      if (response.ok) {
-        const data = (await safeParseJson(response)) || {};
-        
-        // Update local state with new activity data
-        const testnetSwaps = data.crossChainActivity?.testnet?.totalSwaps || 0;
-        const isGraduated = data.crossChainActivity?.graduation?.isGraduated || false;
-        const eligibleForGraduation = !isGraduated && testnetSwaps >= 3;
+      const eligibleForGraduation = computeEligibleForGraduation(data.crossChainActivity);
 
-        setState(prev => ({
+      setState(prev => {
+        const nextAchievements = data.achievements || prev.achievements;
+        const { newlyEarned } = diffAchievements(prev.achievements, nextAchievements);
+
+        return {
           ...prev,
           crossChainActivity: data.crossChainActivity || prev.crossChainActivity,
-          achievements: data.achievements || prev.achievements,
+          achievements: nextAchievements,
+          newlyEarnedAchievements: newlyEarned,
           eligibleForGraduation,
-        }));
+        };
+      });
 
-        // Show achievement notifications for newly earned badges
-        if (data.newAchievements?.length > 0) {
-          console.log('[StreakRewards] New achievements earned:', data.newAchievements);
-        }
-
-        return true;
-      }
-      return false;
+      return true;
     } catch (err) {
       console.warn('[StreakRewards] Activity recording failed:', err);
       return false;
@@ -563,6 +348,6 @@ export function useStreakRewards(): StreakState & StreakActions {
   };
 }
 
-// Export config for use in other components
-export { STREAK_CONFIG };
-export type { StreakData };
+// Re-export for backwards compatibility
+export { STREAK_CONFIG } from '../modules/rewards/streak/types';
+export type { StreakData } from '../modules/rewards/streak/types';

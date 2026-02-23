@@ -6,26 +6,20 @@ DiversiFi is built as a Next.js application with multi-chain wallet integration 
 
 ## Deployment Architecture
 
-### Hybrid Cloud Setup
+### Hybrid Deployment Model
 
 ```
-┌─────────────────┐         ┌─────────────────┐
-│   Netlify       │         │   Hetzner       │
-│   (Frontend)    │ ──────► │   (AI API)      │
-│   - Static      │         │   - Port 6174   │
-│   - Client SSR  │         │   - 90s timeout │
-└─────────────────┘         └─────────────────┘
+┌─────────────────────────┐         ┌─────────────────────────┐
+│ Static Web Frontend     │         │ Long-running API Service │
+│ (CDN-hosted)            │ ──────► │ (extended timeouts)      │
+└─────────────────────────┘         └─────────────────────────┘
 ```
 
-**Why Hybrid?**
-- Netlify: Fast static hosting, CDN, instant cache invalidation
-- Hetzner: 90s AI timeouts (vs Netlify's 10s limit), cost-effective (~€5/mo)
+**Why hybrid?**
+- Static hosting provides fast global delivery and simple scaling.
+- A separate API service handles long-running AI operations beyond typical serverless time limits.
 
-**Domains:**
-- Frontend: `diversifi.app` (Netlify)
-- API: `api.diversifi.famile.xyz` (Hetzner + SSL)
-
-See [**Hetzner Deployment Guide**](HETZNER_DEPLOYMENT.md) for setup details.
+Provider-specific details (domains, ports, reverse-proxy config, log paths, etc.) are intentionally omitted from this public doc. Maintainers should reference internal runbooks (not committed).
 
 ## Technology Stack
 

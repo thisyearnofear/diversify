@@ -31,7 +31,7 @@ To provide a seamless, realistic experience on the Robinhood Chain, we deploy a 
 
 **Prerequisites:**
 - [Remix IDE](https://remix.ethereum.org/).
-- MetaMask connected to **Robinhood Chain Testnet** (RPC: `https://rpc.testnet.chain.robinhood.com`, Chain ID: `46630`).
+- MetaMask connected to **Robinhood Chain Testnet** (use the official RPC from the chain provider; Chain ID: `46630`).
 
 #### Step A: Deploy the Assets
 For each stock you want to support (ACME, SPACELY, WAYNE, OSCORP, STARK) AND a quote token (ETH):
@@ -63,7 +63,13 @@ Now fund the AMM so users have a counterparty.
 
 ## 3. Frontend Integration — ✅ Complete
 
-All contracts are deployed and wired into the app. Config lives in `config/index.ts`:
+All contracts are deployed and wired into the app.
+
+**Source of truth:** `config/index.ts`
+
+> Note: Testnet addresses may change if contracts are re-deployed. If this doc and the code disagree, trust `config/index.ts`.
+
+Config currently looks like:
 
 ```typescript
 export const RH_TESTNET_TOKENS = {
