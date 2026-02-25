@@ -51,6 +51,7 @@ RESPONSE GUIDELINES:
 - For "What is this?" → Explain we protect savings from inflation via diversified stablecoins + RWAs
 - For "How do I start?" → Guide to wallet options or demo mode
 - For "Is this safe?" → Explain non-custodial security (we never hold keys)
+- For STOCKS/ TRADING on Robinhood: Direct users to /stocks to trade fictional stocks (ACME, STARK, WAYNE, etc.)
 - Mention the $G GoodDollar UBI as a unique benefit
 - Be concise (2-3 sentences) unless detail requested
 - Use specific numbers (yields, percentages) when available
@@ -66,7 +67,10 @@ function getTestDriveContext(chainId?: number): string {
 
   let chainSpecifics = "";
   if (chainId === NETWORKS.RH_TESTNET.chainId) {
-    chainSpecifics = "- ROBINHOOD TESTNET: You are running on the Robinhood Arbitrum Orbit chain. Fictional stocks (ACME, WAYNE, STARK) are available via our DEX. Encourage users to swap ETH for fictional stocks at /trade.";
+    chainSpecifics = `- ROBINHOOD TESTNET: You are running on the Robinhood Arbitrum Orbit chain.
+- FICTIONAL STOCKS: We have a dedicated stock trading page with tokenized fictional stocks (ACME, SPACELY, WAYNE, OSCORP, STARK). These are NOT real stocks—just for fun trading!
+- To trade stocks: When users ask about stocks or express interest, navigate them to the Stock Market page at /stocks. They can swap testnet ETH for these fictional stock tokens.
+- Important: Do NOT mention TSLA, AMZN, or real stock names—only our fictional ones (ACME, STARK, WAYNE, OSCORP, SPACELY).`;
   } else if (chainId === NETWORKS.ARC_TESTNET.chainId) {
     chainSpecifics = "- ARC TESTNET: You are on Arc's high-performance testnet. Encourage users to test swap speeds vs Celo.";
   } else if (chainId === NETWORKS.ALFAJORES.chainId) {
@@ -83,6 +87,39 @@ ${chainSpecifics}
 `;
 }
 
+// Mainnet Chain Context Generator
+function getMainnetChainContext(chainId?: number): string {
+  if (!chainId || isTestnetChain(chainId)) return "";
+
+  if (chainId === NETWORKS.CELO_MAINNET.chainId) {
+    return `
+CURRENT CHAIN: Celo Mainnet
+- User is connected to Celo, a mobile-friendly blockchain with ultra-low fees
+- Available assets: Regional stablecoins (USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm) + USDC
+- Key features: Near-instant settlements, phone number addresses, carbon-offsetting
+- Use cases: Daily payments, cross-border remittances, emerging market access
+- Emphasize: Low fees make it perfect for small transfers, regional currency exposure
+`;
+  }
+
+  if (chainId === NETWORKS.ARBITRUM_ONE.chainId) {
+    return `
+CURRENT CHAIN: Arbitrum Mainnet
+- User is connected to Arbitrum, an Ethereum L2 rollup
+- Available assets: RWAs (USDY ~5% yield, PAXG gold-backed, SYRUPUSDC ~4.5%), USDC, EURC
+- Key features: High yields, real-world asset tokenization, Ethereum security
+- Use cases: Yield generation, gold exposure, DeFi strategies
+- Emphasize: Higher yields than Celo, access to tokenized treasuries and gold
+`;
+  }
+
+  return `
+CURRENT CHAIN: Chain ID ${chainId}
+- User is on an unsupported mainnet chain
+- Recommend switching to Celo (for low fees/regional stables) or Arbitrum (for yields/RWAs)
+`;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -96,7 +133,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Dynamic system prompt based on context
-    const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId);
+    const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId) + getMainnetChainContext(chainId);
 
     // Build conversation messages
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [

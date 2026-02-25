@@ -134,14 +134,14 @@ export default function ChainBalancesHeader({
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
+                  <p className="text-[10px] text-gray-500 dark:text-gray-300 truncate">
                     {config.description}
                   </p>
                 </div>
               </div>
 
               <div className="mt-2 flex items-center justify-between">
-                <span className={`text-sm font-bold ${hasBalance ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-500'
+                <span className={`text-sm font-bold ${hasBalance ? 'text-gray-900 dark:text-gray-100' : 'text-gray-400 dark:text-gray-400'
                   }`}>
                   {hasBalance ? `$${chain.totalValue.toFixed(0)}` : '$0'}
                 </span>
