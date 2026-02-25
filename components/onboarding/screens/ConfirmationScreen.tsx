@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAppState } from '@/context/AppStateContext';
+import { useExperience } from '@/context/app/ExperienceContext';
 import { STRATEGIES, FinancialStrategy } from '@/hooks/useFinancialStrategies';
 import { OnboardingScreenProps } from './types';
 import { getStrategyImplications } from './utils';
@@ -16,7 +16,7 @@ export function ConfirmationScreen({
     onBack,
     onSkip,
 }: ConfirmationScreenProps) {
-    const { experienceMode } = useAppState();
+    const { experienceMode } = useExperience();
     const strategyData = STRATEGIES.find(s => s.id === strategy);
     if (!strategyData) return null;
 

@@ -1,11 +1,13 @@
 import { useEffect } from "react";
-import { useAppState } from "@/context/AppStateContext";
+import { useTour } from "@/context/app/TourContext";
+import { useExperience } from "@/context/app/ExperienceContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 
 const TOUR_ID = "first-time-user-tour";
 
 export default function TourTrigger() {
-    const { startTour, isTourDismissed, userActivity } = useAppState();
+    const { startTour, isTourDismissed } = useTour();
+    const { userActivity } = useExperience();
     const { address } = useWalletContext();
 
     useEffect(() => {

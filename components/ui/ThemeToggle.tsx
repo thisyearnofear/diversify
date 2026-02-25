@@ -1,8 +1,8 @@
 import React from 'react';
-import { useAppState } from '../../context/AppStateContext';
+import { useTheme } from '../../context/app/ThemeContext';
 
 const ThemeToggle: React.FC = () => {
-  const { darkMode, themeMode, toggleDarkMode, themeLoaded } = useAppState();
+  const { darkMode, themeMode, toggleDarkMode, themeLoaded } = useTheme();
 
   // Prevent flash by not rendering until theme is loaded
   if (!themeLoaded) {

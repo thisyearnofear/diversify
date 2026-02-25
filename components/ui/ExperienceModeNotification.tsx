@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useAppState } from "../../context/AppStateContext";
+import { useExperience } from "../../context/app/ExperienceContext";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
  * This notification appears after some activity to suggest simplification.
  */
 export default function ExperienceModeNotification() {
-    const { experienceMode, userActivity, setExperienceMode } = useAppState();
+    const { experienceMode, userActivity, setExperienceMode } = useExperience();
     const [showNotification, setShowNotification] = useState(false);
     const [dismissed, setDismissed] = useState(false);
 

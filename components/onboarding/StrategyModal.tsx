@@ -10,8 +10,9 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAppState } from '@/context/AppStateContext';
-import { STRATEGIES, FinancialStrategy } from '@/hooks/useFinancialStrategies';
+import { useStrategy } from '@/context/app/StrategyContext';
+import { STRATEGIES } from '@/hooks/useFinancialStrategies';
+import type { FinancialStrategy } from '@/context/app/types';
 
 // Sub-components
 import { WelcomeScreen } from './screens/WelcomeScreen';
@@ -29,7 +30,7 @@ interface StrategyModalProps {
 }
 
 export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWallet, isWalletConnected, chainId }: StrategyModalProps) {
-    const { financialStrategy, setFinancialStrategy } = useAppState();
+    const { financialStrategy, setFinancialStrategy } = useStrategy();
     const [step, setStep] = useState<'welcome' | 'select' | 'interface' | 'confirm'>('welcome');
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selected, setSelected] = useState<FinancialStrategy | null>(financialStrategy || null);
@@ -160,7 +161,7 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
  * Hook to manage strategy modal state
  */
 export function useStrategyModal() {
-    const { financialStrategy } = useAppState();
+    const { financialStrategy } = useStrategy();
     const [isOpen, setIsOpen] = useState(false);
     const [hasShown, setHasShown] = useState(false);
 

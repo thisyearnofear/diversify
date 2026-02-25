@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Head from "next/head";
-import { useAppState } from "../context/AppStateContext";
+import { useNavigation } from "../context/app/NavigationContext";
+import { useExperience } from "../context/app/ExperienceContext";
 import { useUserRegion, type Region, REGIONS } from "../hooks/use-user-region";
 import { useInflationData, type RegionalInflationData } from "../hooks/use-inflation-data";
 import { useCurrencyPerformance } from "../hooks/use-currency-performance";
@@ -34,7 +35,8 @@ import { useProtectionProfile } from "../hooks/use-protection-profile";
 
 
 export default function DiversiFiPage() {
-  const { activeTab, setActiveTab, experienceMode, setExperienceMode } = useAppState();
+  const { activeTab, setActiveTab } = useNavigation();
+  const { experienceMode, setExperienceMode } = useExperience();
   const { showToast } = useToast();
   const { openOracle, unreadCount } = useAIOracle();
 

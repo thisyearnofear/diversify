@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import type { UserGoal } from "@/hooks/use-protection-profile";
-import { useAppState } from "@/context/AppStateContext";
+import { useExperience } from "@/context/app/ExperienceContext";
 
 const RWA_ASSETS = [
     {

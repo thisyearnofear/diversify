@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAppState } from '@/context/AppStateContext';
+import { useExperience } from '@/context/app/ExperienceContext';
 import { OnboardingScreenProps } from './types';
 
 interface InterfaceSelectionScreenProps extends OnboardingScreenProps {
@@ -8,7 +8,7 @@ interface InterfaceSelectionScreenProps extends OnboardingScreenProps {
 }
 
 export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: InterfaceSelectionScreenProps) {
-    const { experienceMode, setExperienceMode } = useAppState();
+    const { experienceMode, setExperienceMode } = useExperience();
 
     return (
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">

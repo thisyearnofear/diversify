@@ -10,7 +10,8 @@ import SwapStatus from "./SwapStatus";
 import SwapActionButton from "./SwapActionButton";
 import { RegionalPattern } from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
-import { useAppState } from "@/context/AppStateContext";
+import { useExperience } from "@/context/app/ExperienceContext";
+import { useStrategy } from "@/context/app/StrategyContext";
 
 interface Token {
   symbol: string;
@@ -63,7 +64,8 @@ const SwapInterface = forwardRef<
   },
   ref,
 ) {
-  const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures, financialStrategy } = useAppState();
+  const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useExperience();
+  const { financialStrategy } = useStrategy();
   const isBeginner = experienceMode === "beginner";
 
   const {

@@ -5,8 +5,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAppState } from '@/context/AppStateContext';
-import type { FinancialStrategy } from '@/context/AppStateContext';
+import { useStrategy } from '@/context/app/StrategyContext';
+import type { FinancialStrategy } from '@/context/app/types';
 
 interface StrategyMetric {
     label: string;
@@ -25,7 +25,7 @@ interface StrategyMetricsProps {
 }
 
 export default function StrategyMetrics({ portfolioData }: StrategyMetricsProps) {
-    const { financialStrategy } = useAppState();
+    const { financialStrategy } = useStrategy();
 
     if (!financialStrategy) {
         return (

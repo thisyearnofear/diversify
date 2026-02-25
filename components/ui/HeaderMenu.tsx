@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 import VoiceButton from "./VoiceButton";
-import { useAppState } from "@/context/AppStateContext";
+import { useStrategy } from "@/context/app/StrategyContext";
 import { useWalletContext } from "@/components/wallet/WalletProvider";
 import { isTestnetChain } from "@/config";
 import NetworkSwitcher from "@/components/swap/NetworkSwitcher";
@@ -27,7 +27,7 @@ export default function HeaderMenu({
     onOpenStrategyModal,
 }: HeaderMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const { financialStrategy } = useAppState();
+    const { financialStrategy } = useStrategy();
     const { isConnected, chainId: walletChainId } = useWalletContext();
     const isOnTestnet = isTestnetChain(walletChainId ?? 0);
 

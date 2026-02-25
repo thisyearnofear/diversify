@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { motion } from "framer-motion";
-import { useAppState } from "@/context/AppStateContext";
+import { useTour } from "@/context/app/TourContext";
+import { useNavigation } from "@/context/app/NavigationContext";
 import type { TabId } from "@/constants/tabs";
 
 interface TourStep {
@@ -42,7 +43,8 @@ const TOUR_STEPS: TourStep[] = [
 ];
 
 export default function GuidedTour() {
-    const { guidedTour, nextTourStep, dismissTour, setActiveTab } = useAppState();
+    const { guidedTour, nextTourStep, dismissTour } = useTour();
+    const { setActiveTab } = useNavigation();
 
     useEffect(() => {
         if (!guidedTour) return;

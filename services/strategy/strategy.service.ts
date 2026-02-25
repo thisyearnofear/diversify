@@ -8,7 +8,7 @@
  * - Asset filtering
  */
 
-import type { FinancialStrategy } from '@/context/AppStateContext';
+import type { FinancialStrategy } from '@/context/app/types';
 import type { AssetRegion } from '@/config';
 
 export interface StrategyConfig {

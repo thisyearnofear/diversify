@@ -15,7 +15,9 @@ import { TabHeader, Card, ConnectWalletPrompt } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { useAppState } from "../../context/AppStateContext";
+import { useNavigation } from "../../context/app/NavigationContext";
+import { useExperience } from "../../context/app/ExperienceContext";
+import { useDemoMode } from "../../context/app/DemoModeContext";
 import WalletButton from "../wallet/WalletButton";
 import {
   useTradeableTokens,
@@ -59,13 +61,9 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const {
-    swapPrefill,
-    clearSwapPrefill,
-    recordSwap: recordExperienceSwap,
-    experienceMode,
-    demoMode,
-  } = useAppState();
+  const { swapPrefill, clearSwapPrefill } = useNavigation();
+  const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
+  const { demoMode } = useDemoMode();
   const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
   const [searchQuery, setSearchQuery] = useState("");
   const [targetRegion, setTargetRegion] = useState<Region>("Africa");

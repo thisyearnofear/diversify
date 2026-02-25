@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { useWallet } from "../../hooks/use-wallet";
-import { useAppState } from "../../context/AppStateContext";
+import { useNavigation } from "../../context/app/NavigationContext";
 
 // Define the context type (Standard 2026)
 interface FarcasterContext {
@@ -57,7 +57,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const wallet = useWallet();
 
   // Integrate with app state context to sync chainId
-  const { setChainId } = useAppState();
+  const { setChainId } = useNavigation();
 
   // Update app state when wallet chainId changes
   useEffect(() => {

@@ -11,7 +11,9 @@ import {
 import DashboardCard from "../shared/DashboardCard";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import WalletButton from "../wallet/WalletButton";
-import { useAppState } from "@/context/AppStateContext";
+import { useNavigation } from "@/context/app/NavigationContext";
+import { useDemoMode } from "@/context/app/DemoModeContext";
+import { useExperience } from "@/context/app/ExperienceContext";
 import {
   useProtectionProfile,
   USER_GOALS,
@@ -51,7 +53,9 @@ export default function ProtectionTab({
   onSelectStrategy,
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
-  const { navigateToSwap, demoMode, experienceMode } = useAppState();
+  const { navigateToSwap } = useNavigation();
+  const { demoMode } = useDemoMode();
+  const { experienceMode } = useExperience();
   const { ask: askOracle } = useAIOracle();
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";

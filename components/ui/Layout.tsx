@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Head from "next/head";
 import WalletButton from "../wallet/WalletButton";
 import ThemeToggle from "./ThemeToggle";
-import { useAppState } from "../../context/AppStateContext";
+import { useExperience } from "../../context/app/ExperienceContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { NetworkOptimizedOnramp } from "../onramp";
 
@@ -17,7 +17,7 @@ export default function Layout({
   title = "DiversiFi - Stablecoin Portfolio Diversification",
   isInMiniPay = false,
 }: LayoutProps) {
-  const { experienceMode, setExperienceMode } = useAppState();
+  const { experienceMode, setExperienceMode } = useExperience();
   const { isConnected } = useWalletContext();
 
   const getModeLabel = () => {

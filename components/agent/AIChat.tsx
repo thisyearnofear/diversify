@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useAIConversation } from "../../context/AIConversationContext";
-import { useAppState } from "../../context/AppStateContext";
+import { useNavigation } from "../../context/app/NavigationContext";
 import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
 import { useDiversifiAI } from "../../hooks/use-diversifi-ai";
 import VoiceButton from "../ui/VoiceButton";
@@ -26,7 +26,7 @@ export default function AIChat() {
     addUserMessage,
   } = useAIConversation();
   const { isAnalyzing, thinkingStep, sendChatMessage } = useDiversifiAI();
-  const { setActiveTab } = useAppState();
+  const { setActiveTab } = useNavigation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);

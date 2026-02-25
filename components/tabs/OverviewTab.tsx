@@ -9,7 +9,8 @@ import CurrencyPerformanceChart from "../portfolio/CurrencyPerformanceChart";
 import ProtectionAnalysis from "../portfolio/ProtectionAnalysis";
 import { StreakRewardsCard, RewardsStats } from "../rewards/StreakRewardsCard";
 import SimplePieChart from "../portfolio/SimplePieChart";
-import { useAppState } from "../../context/AppStateContext";
+import { useExperience } from "../../context/app/ExperienceContext";
+import { useDemoMode } from "../../context/app/DemoModeContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 import { NetworkOptimizedOnramp } from "../onramp";
 import { AssetInventory } from "../portfolio/AssetInventory";
@@ -230,8 +231,8 @@ export default function OverviewTab({
   const [selectedMarket, setSelectedMarket] = useState<Region>(userRegion);
   const [showAssetDetails, setShowAssetDetails] = useState(false);
 
-  const { experienceMode, demoMode, disableDemoMode, enableDemoMode } =
-    useAppState();
+  const { experienceMode } = useExperience();
+  const { demoMode, disableDemoMode, enableDemoMode } = useDemoMode();
   const { canClaim, isWhitelisted, streak } = useStreakRewards();
   const { config: profileConfig, isComplete: profileComplete } =
     useProtectionProfile();

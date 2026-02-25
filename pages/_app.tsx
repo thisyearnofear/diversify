@@ -6,7 +6,7 @@ import Head from "next/head";
 import ErrorBoundary from "../components/ui/ErrorBoundary";
 import { WalletProvider } from "../components/wallet/WalletProvider";
 import { ToastProvider } from "../components/ui/Toast";
-import { AppStateProvider } from "../context/AppStateContext";
+import { AppProviders } from "../context/app/AppProviders";
 import { AIConversationProvider } from "../context/AIConversationContext";
 import { PrivyProvider } from "../context/PrivyProvider";
 import AIChat from "../components/agent/AIChat";
@@ -91,7 +91,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
         {/* Wrap with PrivyProvider and other providers */}
         <PrivyProvider>
-          <AppStateProvider>
+          <AppProviders>
             <AIConversationProvider>
               <ToastProvider>
                 <WalletProvider>
@@ -100,7 +100,7 @@ export default function App({ Component, pageProps }: AppProps) {
                 </WalletProvider>
               </ToastProvider>
             </AIConversationProvider>
-          </AppStateProvider>
+          </AppProviders>
         </PrivyProvider>
       </ErrorBoundary>
     </>

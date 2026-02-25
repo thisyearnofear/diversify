@@ -11,7 +11,8 @@
  * callback that the caller gates on address availability.
  */
 import { useCallback } from 'react';
-import { useAppState } from '../context/AppStateContext';
+import { useNavigation } from '../context/app/NavigationContext';
+import { useDemoMode } from '../context/app/DemoModeContext';
 import { useAIOracle } from './use-ai-oracle';
 import { useToast } from '../components/ui/Toast';
 import { IntentDiscoveryService } from '../services/ai/intent-discovery.service';
@@ -22,7 +23,8 @@ interface VoiceIntentOptions {
 }
 
 export function useVoiceIntent(options: VoiceIntentOptions = {}) {
-  const { setActiveTab, setSwapPrefill, enableDemoMode } = useAppState();
+  const { setActiveTab, setSwapPrefill } = useNavigation();
+  const { enableDemoMode } = useDemoMode();
   const { ask, openOracle } = useAIOracle();
   const { showToast } = useToast();
 

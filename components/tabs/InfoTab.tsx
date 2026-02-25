@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { useAppState } from "../../context/AppStateContext";
+import { useExperience } from "../../context/app/ExperienceContext";
 import { ChainDetectionService } from "@/services/swap/chain-detection.service";
 import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
@@ -22,7 +22,7 @@ interface InfoTabProps {
 
 export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
   const { address, chainId, formatAddress } = useWalletContext();
-  const { experienceMode } = useAppState();
+  const { experienceMode } = useExperience();
   const { streak, canClaim, isWhitelisted, estimatedReward, verifyIdentity } = useStreakRewards();
   const [showNetworkInfo, setShowNetworkInfo] = useState(false);
 

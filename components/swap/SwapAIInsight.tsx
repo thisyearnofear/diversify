@@ -1,5 +1,5 @@
 import React from "react";
-import { useAppState } from "../../context/AppStateContext";
+import { useExperience } from "../../context/app/ExperienceContext";
 
 interface SwapAIInsightProps {
     toToken: string;
@@ -12,7 +12,7 @@ const SwapAIInsight: React.FC<SwapAIInsightProps> = ({
     inflationDifference,
     onAskAI
 }) => {
-    const { experienceMode } = useAppState();
+    const { experienceMode } = useExperience();
     const isBeginner = experienceMode === "beginner";
 
     if (inflationDifference <= 0) return null;

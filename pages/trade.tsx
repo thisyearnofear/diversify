@@ -15,6 +15,8 @@ import StockTicker from "../components/trade/StockTicker";
 import TradeWidget from "../components/trade/TradeWidget";
 import LiquidityWidget from "../components/trade/LiquidityWidget";
 import { useStockStats } from "../hooks/use-stock-stats";
+import { useTokenHolders } from "../hooks/use-token-holders";
+import HoldersWidget from "../components/trade/HoldersWidget";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
@@ -88,6 +90,8 @@ export default function TradePage() {
     selected,
     liveRates[selected],
   );
+
+  const { holderData, isHoldersLoading } = useTokenHolders(selected);
 
   // --- Data Fetching ---
 
@@ -512,8 +516,10 @@ export default function TradePage() {
                               value: `${stockStats.marketCapETH.toFixed(2)} ETH`,
                             },
                             {
-                              label: "P/E Ratio",
-                              value: stockStats.peRatioMock.toFixed(2),
+                              label: "Holders",
+                              value: holderData
+                                ? holderData.holdersCount.toLocaleString()
+                                : "—",
                             },
                             {
                               label: "Div Yield",
@@ -539,6 +545,14 @@ export default function TradePage() {
                         )}
                       </div>
                     </div>
+
+                    {/* Holders Distribution */}
+                    <HoldersWidget
+                      holderData={holderData}
+                      isLoading={isHoldersLoading}
+                      selectedStock={selected}
+                      explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                    />
 
                     {/* Desktop Assets List */}
                     <div className="hidden md:block">
