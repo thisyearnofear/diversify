@@ -390,7 +390,7 @@ export const ProtectionDashboard = ({
   const hasStreak = streak && streak.daysActive > 0;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-xl border border-gray-100 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
       {/* Hero Section - Visual Header Banner Style */}
       <div className="relative p-6 text-white bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 overflow-hidden">
         {/* Animated Background Elements */}
@@ -601,7 +601,7 @@ export const CollapsibleSection = ({
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
-    <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden shadow-sm">
+    <div className="rounded-xl overflow-hidden shadow-lg">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -692,19 +692,29 @@ export const Card = ({
   children,
   className = "",
   padding = "p-4",
+  variant = "default",
   ...props
 }: {
   children: React.ReactNode;
   className?: string;
   padding?: string;
-} & React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={`bg-white dark:bg-gray-800 rounded-2xl shadow-md border border-gray-200 dark:border-gray-700 ${padding} ${className}`}
-    {...props}
-  >
-    {children}
-  </div>
-);
+  variant?: "default" | "bordered" | "flat";
+} & React.HTMLAttributes<HTMLDivElement>) => {
+  const variants = {
+    default: "bg-white dark:bg-gray-800 rounded-2xl shadow-lg",
+    bordered: "bg-white dark:bg-gray-800 rounded-2xl shadow-xl",
+    flat: "bg-gray-50 dark:bg-gray-900 rounded-2xl",
+  };
+  
+  return (
+    <div
+      className={`${variants[variant]} ${padding} ${className}`}
+      {...props}
+    >
+      {children}
+    </div>
+  );
+};
 
 // Empty state component
 export const EmptyState = ({

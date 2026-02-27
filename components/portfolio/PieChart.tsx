@@ -55,7 +55,7 @@ export default function PieChart({ data, title = 'Portfolio Distribution' }: Pie
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg">
       <h3 className="text-lg font-semibold mb-4">{title}</h3>
       <div className="chart-container">
         <Pie data={chartData} options={options} />

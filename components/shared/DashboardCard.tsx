@@ -18,11 +18,11 @@ interface DashboardCardProps {
 }
 
 const colorClasses = {
-    blue: "from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800",
-    green: "from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800",
-    red: "from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800",
-    amber: "from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 border-amber-200 dark:border-amber-800",
-    purple: "from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-purple-200 dark:border-purple-800",
+    blue: "from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20",
+    green: "from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20",
+    red: "from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20",
+    amber: "from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20",
+    purple: "from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20",
 };
 
 /**
@@ -54,13 +54,14 @@ export default function DashboardCard({
     return (
         <Component
             onClick={onClick}
-            whileHover={isInteractive ? { scale: 1.02 } : undefined}
-            whileTap={isInteractive ? { scale: 0.98 } : undefined}
+            whileHover={isInteractive ? { scale: 1.01 } : undefined}
+            whileTap={isInteractive ? { scale: 0.99 } : undefined}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
             className={`
         bg-gradient-to-br ${colorClasses[color]}
-        rounded-2xl border-2 shadow-sm
+        rounded-2xl shadow-lg backdrop-blur-sm
         ${sizeClasses[size]}
-        ${isInteractive ? "cursor-pointer hover:shadow-md transition-shadow" : ""}
+        ${isInteractive ? "cursor-pointer hover:shadow-xl transition-shadow" : ""}
         ${className}
       `}
         >

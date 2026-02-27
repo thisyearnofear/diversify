@@ -116,7 +116,7 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
       <div className="pt-2">
         <button
           onClick={() => setShowNetworkInfo(!showNetworkInfo)}
-          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors"
+          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors shadow-sm"
         >
           <div className="flex items-center gap-2">
             <span>🌐</span>
@@ -126,7 +126,7 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
         </button>
 
         {showNetworkInfo && (
-          <div className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg">
             {address ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">

@@ -200,7 +200,7 @@ export default function RegionalRecommendations({
   const difference = currentAllocations ? calculateDifference() : null;
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
       {/* Header */}
       <div className={`bg-gradient-to-r ${regionDesign.gradient} p-4`}>
         <div className="flex items-center justify-between">
@@ -247,7 +247,7 @@ export default function RegionalRecommendations({
         </div>
 
         {/* Description Card */}
-        <div className={`bg-gradient-to-br ${regionDesign.gradient} bg-opacity-10 rounded-xl p-4 border border-gray-200 dark:border-gray-700`}>
+        <div className={`bg-gradient-to-br ${regionDesign.gradient} bg-opacity-10 rounded-xl p-4 shadow-inner`}>
           <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
             {regionData.description}
           </p>
@@ -272,7 +272,7 @@ export default function RegionalRecommendations({
         </div>
 
         {/* Typical Allocation Visualization */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 shadow-inner">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
             <span>📊</span> Typical Allocation Pattern
           </h3>
@@ -322,7 +322,7 @@ export default function RegionalRecommendations({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
                 onClick={() => onSelectToken?.(token.symbol)}
-                className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all cursor-pointer"
+                className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg hover:shadow-xl transition-all cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -405,7 +405,7 @@ export default function RegionalRecommendations({
         {/* Considerations Accordion */}
         <motion.button
           onClick={() => setShowConsiderations(!showConsiderations)}
-          className="w-full p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all"
+          className="w-full p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-md hover:shadow-lg transition-all"
         >
           <div className="flex items-center justify-between">
             <span className="font-bold text-gray-900 dark:text-white text-sm">

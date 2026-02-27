@@ -610,7 +610,7 @@ export default function SwapTab({
                   className={`px-3 py-1 rounded-full text-xs font-black uppercase transition-colors ${
                     targetRegion === r
                       ? "bg-amber-600 text-white shadow-sm"
-                      : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 border border-gray-100 dark:border-gray-700"
+                      : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm"
                   }`}
                 >
                   {r}

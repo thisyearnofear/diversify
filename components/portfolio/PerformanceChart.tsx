@@ -161,7 +161,7 @@ export default function PerformanceChart({
   }, [data]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm p-4 mb-4">
+    <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
       <div className="flex justify-between items-center mb-4">
         <div className="flex items-center">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>

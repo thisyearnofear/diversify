@@ -203,7 +203,7 @@ export default function GStreamingWidget() {
                 type="number"
                 value={newStreamAmount}
                 onChange={(e) => setNewStreamAmount(e.target.value)}
-                className="w-full p-3 bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                className="w-full p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-inner"
                 placeholder="50"
               />
             </div>

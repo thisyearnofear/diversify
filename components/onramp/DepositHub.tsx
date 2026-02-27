@@ -53,7 +53,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
             )}
 
             {/* Instant Buy - Integrated */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 overflow-hidden shadow-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-lg">
                 <div className="p-4 border-b border-gray-50 dark:border-gray-800 flex items-center justify-between">
                     <div>
                         <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Instant Access</h3>

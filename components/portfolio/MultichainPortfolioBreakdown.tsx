@@ -137,7 +137,7 @@ export default function MultichainPortfolioBreakdown({
 
     if (activeChainCount === 0) {
         return (
-            <div className="bg-gray-50 rounded-lg p-4 text-center">
+            <div className="bg-gray-50 rounded-2xl p-4 text-center shadow-inner">
                 <p className="text-sm text-gray-500">No multichain data available</p>
                 <p className="text-xs text-gray-400 mt-1">
                     Deposit assets on Celo or Arbitrum to see your distribution
@@ -183,7 +183,7 @@ export default function MultichainPortfolioBreakdown({
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <span
-                                        className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
+                                        className="w-8 h-8 rounded-xl flex items-center justify-center text-sm shadow-md"
                                         style={{ backgroundColor: `${info.color}30` }}
                                     >
                                         {info.icon}

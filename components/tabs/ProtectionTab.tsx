@@ -263,7 +263,7 @@ export default function ProtectionTab({
             {USER_GOALS.map((goal) => (
               <div
                 key={goal.value}
-                className="p-3 bg-white border border-gray-200 rounded-xl text-center"
+                className="p-3 bg-white rounded-xl text-center shadow-md"
               >
                 <div className="text-xl mb-1">{goal.icon}</div>
                 <div className="text-xs font-black uppercase text-gray-900">

@@ -167,7 +167,7 @@ function GoalAlignmentBanner({
       </div>
       <button
         onClick={onAction}
-        className="mt-3 w-full py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-black uppercase tracking-widest text-gray-800 dark:text-gray-200 transition-colors flex items-center justify-center gap-2"
+        className="mt-3 w-full py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-black uppercase tracking-widest text-gray-800 dark:text-gray-200 transition-colors flex items-center justify-center gap-2 shadow-md"
       >
         <span>{meta.nextAction}</span>
         <span>→</span>
@@ -534,7 +534,7 @@ export default function OverviewTab({
                 <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">
                   Transfer from exchange
                 </p>
-                <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-inner">
                   <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
                     {address}
                   </code>
@@ -665,7 +665,7 @@ export default function OverviewTab({
               {regionData.map((r) => (
                 <div
                   key={r.region}
-                  className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full border border-gray-100 dark:border-gray-800"
+                  className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full shadow-sm"
                 >
                   <span
                     className="w-1.5 h-1.5 rounded-full"

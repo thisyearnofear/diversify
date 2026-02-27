@@ -263,7 +263,7 @@ export default function SimplePieChart({
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-3 mb-3 border border-gray-200 dark:border-gray-700">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-3 mb-3">
       {title && <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-3">{title}</h3>}
 
       {data.length > 0 ? (
@@ -290,7 +290,7 @@ export default function SimplePieChart({
               >
                 <div className="flex items-center">
                   <div
-                    className="w-3 h-3 rounded-full mr-1.5 border border-gray-200"
+                    className="w-3 h-3 rounded-full mr-1.5 shadow-sm"
                     style={{ backgroundColor: item.color }}
                   />
                   <span className="font-medium text-gray-900 dark:text-gray-100">

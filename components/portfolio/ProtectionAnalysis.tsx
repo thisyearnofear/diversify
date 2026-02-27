@@ -171,7 +171,7 @@ export default function ProtectionAnalysis({
     };
 
     return (
-        <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
             {/* Header */}
             <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4">
                 <div className="flex items-center justify-between">
@@ -252,7 +252,7 @@ export default function ProtectionAnalysis({
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: 0.2 }}
-                                        className="relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+                                        className="relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-xl p-4 shadow-lg"
                                         onMouseEnter={() => setExpandedGrade(goal)}
                                         onMouseLeave={() => setExpandedGrade(null)}
                                     >
@@ -293,12 +293,12 @@ export default function ProtectionAnalysis({
                 </AnimatePresence>
 
                 {/* Region Distribution */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 shadow-inner">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="font-black text-gray-900 dark:text-white text-sm">Regional Distribution</h3>
                         <button
                             onClick={() => setShowAmounts(!showAmounts)}
-                            className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600"
+                            className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-lg shadow-sm"
                         >
                             {showAmounts ? 'Hide Amounts' : 'Show Amounts'}
                         </button>
@@ -358,7 +358,7 @@ export default function ProtectionAnalysis({
                 )}
 
                 {/* Asset Inventory - Essential Balance Visibility */}
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl shadow-inner overflow-hidden">
                     <button
                         onClick={() => setShowAssetInventory(!showAssetInventory)}
                         className="w-full p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
@@ -391,7 +391,7 @@ export default function ProtectionAnalysis({
                             <h3 className="font-black text-gray-900 dark:text-white text-sm">Yield Summary</h3>
                             <button
                                 onClick={() => setShowYieldBreakdown(!showYieldBreakdown)}
-                                className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600"
+                                className="text-xs bg-white dark:bg-gray-700 px-2 py-1 rounded-lg shadow-sm"
                             >
                                 {showYieldBreakdown ? 'Hide' : 'Show'} Breakdown
                             </button>

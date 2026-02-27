@@ -78,7 +78,7 @@ export default function AssetModal({
                     {asset.benefits.map((benefit, i) => (
                         <div
                             key={i}
-                            className="flex items-center gap-3 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-100 dark:border-white/5 font-bold"
+                            className="flex items-center gap-3 text-sm text-gray-900 dark:text-gray-100 bg-gray-50 dark:bg-white/5 p-3 rounded-xl font-bold shadow-sm"
                         >
                             <span className="text-green-500 text-lg">✓</span>
                             <span>{benefit}</span>

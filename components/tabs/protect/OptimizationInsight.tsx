@@ -75,13 +75,13 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
 
       {/* Visual Comparison Section */}
       <div className="p-5">
-        <div className="relative flex items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 border border-gray-100 dark:border-gray-800 overflow-hidden group">
+        <div className="relative flex items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/50 overflow-hidden group shadow-inner">
           {/* Animated background pulse */}
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
           
           {/* From Token */}
           <div className="flex flex-col items-center gap-1 z-10">
-            <div className="size-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold text-xs shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="size-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold text-xs shadow-lg">
               {fromToken}
             </div>
             <span className="text-[10px] font-black text-red-500">{fromInflation.toFixed(1)}% Inflation</span>

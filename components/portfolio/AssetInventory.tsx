@@ -18,9 +18,9 @@ export const AssetInventory: React.FC<AssetInventoryProps> = ({ tokens, classNam
 
             <div className="space-y-1.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
                 {tokens.map((token, index) => (
-                    <div key={`${token.symbol}-${index}`} className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-xl shadow-sm hover:border-blue-200 dark:hover:border-blue-900 transition-colors">
+                    <div key={`${token.symbol}-${index}`} className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl shadow-md hover:shadow-lg transition-all">
                         <div className="flex items-center gap-3">
-                            <div className="size-8 bg-white dark:bg-gray-900 rounded-lg flex items-center justify-center text-sm shadow-sm border border-gray-100 dark:border-gray-800">
+                            <div className="size-8 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center text-sm shadow-md">
                                 {token.symbol.slice(0, 1)}
                             </div>
                             <div>

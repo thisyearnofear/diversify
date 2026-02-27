@@ -62,7 +62,7 @@ export function ConfirmationScreen({
                     <h3 className="text-[10px] md:text-xs font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-3 md:mb-4">
                         Projected Path
                     </h3>
-                    <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm leading-relaxed">
+                    <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg leading-relaxed">
                         <p className="text-xs md:text-sm font-bold text-gray-700 dark:text-gray-200">
                             {implications.description}
                         </p>
@@ -74,7 +74,7 @@ export function ConfirmationScreen({
                     <h3 className="text-[10px] md:text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 md:mb-4">
                         Your Personal AI Coach
                     </h3>
-                    <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg">
                         <div className="size-10 md:size-14 rounded-xl md:rounded-2xl bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center text-2xl md:text-3xl shadow-inner">
                             {strategy === 'islamic' ? '🕋' : strategy === 'africapitalism' ? '🌍' : '🤖'}
                         </div>
@@ -131,15 +131,15 @@ export function ConfirmationScreen({
                         DiversiFi Superpowers
                     </h3>
                     <div className="grid grid-cols-1 gap-2 md:gap-3">
-                        <div className="p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl border border-gray-100 dark:border-gray-700 flex items-center gap-3 md:gap-4">
-                            <div className="size-8 md:size-10 bg-purple-100 dark:bg-purple-900/30 rounded-lg md:rounded-xl flex items-center justify-center text-lg md:text-xl">🎙️</div>
+                        <div className="p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-md flex items-center gap-3 md:gap-4">
+                            <div className="size-8 md:size-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-lg md:text-xl">🎙️</div>
                             <div>
                                 <h4 className="text-[10px] md:text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Voice Insights</h4>
                                 <p className="text-[8px] md:text-[10px] text-gray-500 font-bold">Ask &quot;How am I protected today?&quot;</p>
                             </div>
                         </div>
-                        <div className="p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl border border-gray-100 dark:border-gray-700 flex items-center gap-3 md:gap-4">
-                            <div className="size-8 md:size-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg md:rounded-xl flex items-center justify-center text-lg md:text-xl">🎯</div>
+                        <div className="p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-md flex items-center gap-3 md:gap-4">
+                            <div className="size-8 md:size-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-lg md:text-xl">🎯</div>
                             <div>
                                 <h4 className="text-[10px] md:text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Rewards & Missions</h4>
                                 <p className="text-[8px] md:text-[10px] text-gray-500 font-bold">Earn points for every smart swap.</p>

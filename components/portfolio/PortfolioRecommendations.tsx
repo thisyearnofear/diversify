@@ -273,7 +273,7 @@ export default function PortfolioRecommendations({
   const currentStrategy = PORTFOLIO_STRATEGIES[selectedStrategy];
 
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-xl overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
       {/* Header */}
       <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4">
         <div className="flex items-center justify-between">
@@ -288,7 +288,7 @@ export default function PortfolioRecommendations({
               <p className="text-gray-400 text-xs">AI-Powered Allocation</p>
             </div>
           </div>
-          <span className="text-[10px] text-gray-500 bg-gray-800 px-2 py-1 rounded-full border border-gray-700">
+          <span className="text-[10px] text-gray-500 bg-gray-800 px-2 py-1 rounded-full shadow-inner">
             World Bank • Alpha Vantage
           </span>
         </div>
@@ -342,7 +342,7 @@ export default function PortfolioRecommendations({
         </div>
 
         {/* Allocation Visualization */}
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 shadow-inner">
           <h3 className="font-bold text-gray-900 dark:text-white text-sm mb-3 flex items-center gap-2">
             <span>📊</span> Strategy Allocation
           </h3>
@@ -393,7 +393,7 @@ export default function PortfolioRecommendations({
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    className="bg-white dark:bg-gray-800 rounded-xl p-3 border border-gray-200 dark:border-gray-700 shadow-sm"
+                    className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

@@ -161,7 +161,7 @@ export default function DiversiFiPage() {
 
         {/* Testnet Warning Banner */}
         {walletChainId && (walletChainId === NETWORKS.ALFAJORES.chainId || walletChainId === NETWORKS.ARC_TESTNET.chainId || walletChainId === NETWORKS.RH_TESTNET.chainId) && (
-          <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-2 mb-2 rounded-lg text-xs font-bold flex items-center justify-between border border-amber-200 dark:border-amber-800">
+          <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-2 mb-2 rounded-xl text-xs font-bold flex items-center justify-between shadow-md">
             <div className="flex items-center gap-2">
               <span>🧪</span>
               <span>
@@ -192,7 +192,7 @@ export default function DiversiFiPage() {
         <div className="flex items-center justify-between mb-2 py-1">
           {/* Left: Logo - hidden on mobile when in Farcaster to save space */}
           <div className={`flex items-center gap-2 ${isFarcaster ? 'hidden sm:flex' : 'flex'}`}>
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/20">
+            <div className="w-7 h-7 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
               <span className="text-white text-sm font-black">D</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -234,7 +234,7 @@ export default function DiversiFiPage() {
                     "info"
                   );
                 }}
-                className="w-8 h-8 text-sm rounded-lg transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-sm"
+                className="w-8 h-8 text-sm rounded-xl transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg"
                 aria-label={
                   experienceMode === "beginner"
                     ? "Switch to Standard mode — unlock more features"
@@ -285,7 +285,7 @@ export default function DiversiFiPage() {
             {/* Oracle — persistent AI entry point with unread badge */}
             <button
               onClick={openOracle}
-              className="relative w-8 h-8 rounded-lg flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-sm"
+              className="relative w-8 h-8 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-md"
               aria-label="Open AI Oracle"
             >
               <span className="text-sm">🤖</span>

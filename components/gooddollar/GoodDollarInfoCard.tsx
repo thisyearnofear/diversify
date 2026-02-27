@@ -30,7 +30,7 @@ function AccordionSection({
 }) {
     const isOpen = openId === id;
     return (
-        <div className="border border-gray-100 dark:border-gray-800 rounded-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-md">
             <button
                 onClick={() => onToggle(id)}
                 className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"

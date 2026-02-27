@@ -129,7 +129,7 @@ export default function InflationVisualizerEnhanced({
                 </div>
 
                 {/* INTERACTIVE TIMELINE */}
-                <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-gray-200 dark:border-gray-700">
+                <div className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-2xl p-4 mb-6 shadow-lg">
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <span className="text-xs font-black text-gray-400 uppercase">Year {displayYear}</span>
