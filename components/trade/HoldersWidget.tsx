@@ -21,16 +21,16 @@ function truncateAddress(addr: string): string {
 }
 
 const BAR_COLORS = [
-  "bg-green-500",
-  "bg-green-400",
-  "bg-green-600",
-  "bg-green-300",
-  "bg-green-500/80",
-  "bg-green-400/80",
-  "bg-green-600/70",
-  "bg-green-300/80",
-  "bg-green-500/60",
-  "bg-green-400/60",
+  "bg-blue-600",
+  "bg-blue-500",
+  "bg-blue-400",
+  "bg-blue-300",
+  "bg-blue-600/80",
+  "bg-blue-500/80",
+  "bg-blue-400/80",
+  "bg-blue-300/80",
+  "bg-blue-600/60",
+  "bg-blue-500/60",
 ];
 
 export default function HoldersWidget({
@@ -41,9 +41,9 @@ export default function HoldersWidget({
 }: HoldersWidgetProps) {
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
-        <div className="flex items-center justify-center py-12">
-          <div className="w-5 h-5 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
+      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center justify-center py-8">
+          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -55,22 +55,22 @@ export default function HoldersWidget({
   const top10Total = topHolders.reduce((sum, h) => sum + h.percentage, 0);
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
+    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
-        <h3 className="text-xs font-black uppercase tracking-wider text-gray-400">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
           Holders
         </h3>
-        <div className="bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
-          <span className="text-[10px] font-black text-green-600">
+        <div className="bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">
+          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
             👥 {holdersCount.toLocaleString()}
           </span>
         </div>
       </div>
 
       {/* Distribution Bar */}
-      <div className="mb-4">
-        <div className="flex h-3 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+      <div className="mb-3">
+        <div className="flex h-2 rounded-full overflow-hidden bg-gray-100 dark:bg-gray-800">
           {topHolders.map((holder, i) => (
             <div
               key={holder.address}
@@ -80,7 +80,7 @@ export default function HoldersWidget({
             />
           ))}
         </div>
-        <p className="text-[10px] font-black text-gray-400 mt-1.5">
+        <p className="text-[9px] font-bold text-gray-400 mt-1">
           Top 10 hold {top10Total.toFixed(2)}%
         </p>
       </div>
@@ -90,16 +90,16 @@ export default function HoldersWidget({
         {topHolders.map((holder, i) => (
           <div
             key={holder.address}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] ${
+            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] ${
               i === 0
-                ? "bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30"
+                ? "bg-amber-50 dark:bg-amber-900/10 border border-amber-100/50 dark:border-amber-800/30"
                 : i % 2 === 1
                   ? "bg-gray-50 dark:bg-gray-800/30"
                   : ""
             }`}
           >
             <span
-              className={`font-black w-5 text-right ${
+              className={`font-bold w-4 text-right ${
                 i === 0
                   ? "text-amber-500"
                   : "text-gray-400"
@@ -111,15 +111,15 @@ export default function HoldersWidget({
               href={`${explorerUrl}/address/${holder.address}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-[10px] text-gray-500 hover:text-green-500 transition"
+              className="font-mono text-[9px] text-gray-500 hover:text-blue-600 transition"
             >
               {truncateAddress(holder.address)}
             </a>
-            <span className="ml-auto font-black text-gray-700 dark:text-gray-300">
-              {formatBalance(holder.value)} {selectedStock}
+            <span className="ml-auto font-bold text-gray-700 dark:text-gray-300">
+              {formatBalance(holder.value)}
             </span>
-            <span className="font-black text-green-500 w-14 text-right">
-              {holder.percentage.toFixed(2)}%
+            <span className="font-bold text-blue-600 dark:text-blue-400 w-12 text-right">
+              {holder.percentage.toFixed(1)}%
             </span>
           </div>
         ))}

@@ -35,6 +35,15 @@ const TABS: TabItem[] = [
     ),
   },
   {
+    id: "trade",
+    label: "Trade",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0l-4-4m4 4l-4 4m-5 10H4m0 0l4 4m-4-4l4-4M9 17h6" />
+      </svg>
+    ),
+  },
+  {
     id: "protect",
     label: "Protect",
     icon: (

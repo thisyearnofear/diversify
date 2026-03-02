@@ -70,40 +70,39 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
         : "idle";
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-lg shadow-gray-200/20 dark:shadow-none relative overflow-hidden">
+    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm relative overflow-hidden">
       {/* Background Mascot for personality */}
-      <div className="absolute -top-4 -right-4 opacity-10 pointer-events-none grayscale">
-        <RobinMascot action={mascotAction} className="scale-150" />
+      <div className="absolute -top-4 -right-4 opacity-5 pointer-events-none grayscale">
+        <RobinMascot action={mascotAction} className="scale-125" />
       </div>
 
       <div className="space-y-4 relative z-10">
-        {/* Buy / Sell toggle */}
         <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => {
               setMode("buy");
               setInputAmount("");
             }}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-black uppercase tracking-wider transition ${
+            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
               mode === "buy"
-                ? "bg-green-600 text-white shadow-sm"
+                ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm"
                 : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
             }`}
           >
             Buy {selected}
           </motion.button>
           <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => {
               setMode("sell");
               setInputAmount("");
             }}
-            className={`flex-1 py-2.5 rounded-lg text-sm font-black uppercase tracking-wider transition ${
+            className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
               mode === "sell"
-                ? "bg-red-600 text-white shadow-sm"
+                ? "bg-white dark:bg-gray-700 text-red-600 dark:text-red-400 shadow-sm"
                 : "text-gray-400 hover:text-gray-600 dark:hover:text-white"
             }`}
           >
@@ -112,14 +111,14 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
         </div>
 
         {/* Input Field */}
-        <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-4 border border-gray-200 dark:border-gray-700/50">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-700/50">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               You pay
             </span>
             <button
               onClick={handleMax}
-              className="text-[10px] text-green-600 dark:text-green-400 hover:text-green-500 dark:hover:text-green-300 font-black uppercase"
+              className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 font-bold uppercase"
             >
               Max
             </button>
@@ -130,15 +129,15 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
               placeholder="0.0"
               value={inputAmount}
               onChange={(e) => setInputAmount(e.target.value)}
-              className="flex-1 bg-transparent text-2xl font-black outline-none placeholder-gray-300 dark:placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              className="flex-1 bg-transparent text-xl font-bold outline-none placeholder-gray-300 dark:placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             />
-            <span className="text-gray-500 dark:text-gray-400 font-black">
+            <span className="text-gray-500 dark:text-gray-400 font-bold">
               {inputLabel}
             </span>
           </div>
-          <div className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+          <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium">
             {mode === "buy"
-              ? `Balance: ${ethBalance ? parseFloat(ethBalance).toFixed(6) : "—"} ETH`
+              ? `Balance: ${ethBalance ? parseFloat(ethBalance).toFixed(4) : "—"} ETH`
               : `Balance: ${parseFloat(stockBalance).toFixed(2)} ${selected}`}
           </div>
         </div>
@@ -163,19 +162,19 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
         </div>
 
         {/* Output Preview */}
-        <div className="bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-4 border border-gray-200/50 dark:border-gray-700/30">
-          <span className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+        <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl p-3 border border-gray-100 dark:border-gray-700/30">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             You receive
           </span>
-          <div className="flex items-center gap-3 mt-2">
-            <span className="text-2xl font-black">
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-xl font-bold">
               {isQuoting ? (
-                <span className="inline-block w-5 h-5 border-2 border-gray-300 dark:border-gray-600 border-t-green-500 rounded-full animate-spin" />
+                <span className="inline-block w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
               ) : (
                 quote || "0.0"
               )}
             </span>
-            <span className="text-gray-500 dark:text-gray-400 font-black">
+            <span className="text-gray-500 dark:text-gray-400 font-bold">
               {outputLabel}
             </span>
           </div>
@@ -232,30 +231,30 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
 
         {/* Swap Button */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.98 }}
           onClick={handleSwap}
           disabled={!inputAmount || !quote || isSwapping || !hasBalance}
-          className={`w-full py-4 rounded-xl font-black text-lg transition ${
+          className={`w-full py-4 rounded-xl font-bold text-base transition-all uppercase tracking-widest shadow-lg ${
             isSwapping
-              ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-wait"
+              ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-wait shadow-none"
               : !inputAmount || !quote || !hasBalance
-                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none"
                 : mode === "buy"
-                  ? "bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-600/20"
-                  : "bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-600/20"
+                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"
+                  : "bg-red-600 hover:bg-red-500 text-white shadow-red-500/20"
           }`}
         >
           {isSwapping ? (
             <span className="flex items-center justify-center gap-2">
-              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               Swapping…
             </span>
           ) : !hasBalance ? (
             mode === "buy" ? (
-              "Need ETH — Use Faucet"
+              "Need ETH"
             ) : (
-              `No ${selected} to sell`
+              `No ${selected}`
             )
           ) : (
             `${mode === "buy" ? "Buy" : "Sell"} ${selected}`
@@ -270,9 +269,9 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/30 rounded-xl p-4 text-center space-y-2"
+              className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 rounded-xl p-3 text-center space-y-1"
             >
-              <p className="text-green-700 dark:text-green-400 font-black">
+              <p className="text-emerald-700 dark:text-emerald-400 font-bold text-sm">
                 ✅ Swap successful!
               </p>
               {explorerUrl && (

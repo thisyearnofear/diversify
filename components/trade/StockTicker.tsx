@@ -39,31 +39,31 @@ export const StockTicker: React.FC<StockTickerProps> = ({
           <motion.button
             key={s}
             variants={staggerItemVariants}
-            whileHover={{ y: -4 }}
-            whileTap={{ scale: 0.97 }}
+            whileHover={{ y: -2 }}
+            whileTap={{ scale: 0.96, opacity: 0.9 }}
             onClick={() => onSelect(s)}
-            className={`snap-start shrink-0 w-[7rem] sm:w-auto relative rounded-2xl p-4 text-left transition-all border overflow-hidden ${
+            className={`snap-start shrink-0 w-[6.5rem] sm:w-auto relative rounded-xl p-3 text-left transition-all border overflow-hidden ${
               isSelected
-                ? "border-green-500 bg-white dark:bg-gray-900 shadow-lg shadow-green-500/10 ring-1 ring-green-500/20"
-                : "border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-900"
+                ? "border-blue-600 bg-white dark:bg-gray-900 shadow-md ring-1 ring-blue-600/20"
+                : "border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 hover:bg-white dark:hover:bg-gray-900"
             }`}
           >
             <div
-              className={`absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r ${d.gradient}`}
+              className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${d.gradient}`}
             />
-            <div className="text-2xl mb-2 mt-1">{d.icon}</div>
-            <div className="font-black text-base">{s}</div>
-            <div className="text-[11px] text-gray-500 dark:text-gray-400 truncate mb-2">
+            <div className="text-xl mb-1 mt-1">{d.icon}</div>
+            <div className="font-bold text-sm tracking-tight">{s}</div>
+            <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mb-1 font-medium">
               {d.name}
             </div>
             {rate && (
-              <div className="text-[11px] text-green-600 dark:text-green-400 font-black">
+              <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
                 {rate}/ETH
               </div>
             )}
             {parseFloat(bal) > 0 && (
-              <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded inline-block">
-                Own: {parseFloat(bal).toFixed(1)}
+              <div className="text-[9px] text-gray-400 dark:text-gray-500 mt-1 font-bold bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded inline-block">
+                {parseFloat(bal).toFixed(1)}
               </div>
             )}
           </motion.button>

@@ -16,6 +16,7 @@ import TabNavigation from "../components/ui/TabNavigation";
 import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
 import SwapTab from "../components/tabs/SwapTab";
+import TradeTab from "../components/tabs/TradeTab";
 import InfoTab from "../components/tabs/InfoTab";
 import WalletButton from "../components/wallet/WalletButton";
 import FarcasterWalletButton from "../components/wallet/FarcasterWalletButton";
@@ -362,6 +363,15 @@ export default function DiversiFiPage() {
                     refreshChainId={async () => walletChainId}
                     isBalancesLoading={isMultichainLoading}
                   />
+                </motion.div>
+              )}
+
+              {activeTab === "trade" && (
+                <motion.div key="trade"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <TradeTab />
                 </motion.div>
               )}
 

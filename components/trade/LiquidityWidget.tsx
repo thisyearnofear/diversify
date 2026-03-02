@@ -220,25 +220,25 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
     parseFloat(stockBalance) >= parseFloat(matchingAmount);
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-black">Earn Yield</h3>
-          <p className="text-xs text-gray-500 uppercase tracking-tighter font-bold">
+          <h3 className="text-base font-bold">Earn Yield</h3>
+          <p className="text-[10px] text-gray-400 uppercase tracking-tighter font-bold">
             Liquidity Provider Rewards
           </p>
         </div>
-        <div className="bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
-          <span className="text-xs font-black text-green-600">~12.4% APY</span>
+        <div className="bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800">
+          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">~12.4% APY</span>
         </div>
       </div>
 
-      <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1 mb-6">
+      <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1 mb-4">
         <button
           onClick={() => setTab("add")}
-          className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition ${
+          className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition ${
             tab === "add"
-              ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white"
+              ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
               : "text-gray-400"
           }`}
         >
@@ -246,9 +246,9 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
         </button>
         <button
           onClick={() => setTab("remove")}
-          className={`flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition ${
+          className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition ${
             tab === "remove"
-              ? "bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white"
+              ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
               : "text-gray-400"
           }`}
         >
@@ -260,18 +260,18 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
         {tab === "add" ? (
           <motion.div
             key="add"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="space-y-3"
           >
-            <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-              <div className="flex justify-between mb-2">
-                <span className="text-[10px] font-black text-gray-400 uppercase">
+            <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800">
+              <div className="flex justify-between mb-1">
+                <span className="text-[9px] font-bold text-gray-400 uppercase">
                   Input ETH
                 </span>
-                <span className="text-[10px] font-black text-gray-400">
-                  Balance: {parseFloat(ethBalance || "0").toFixed(4)}
+                <span className="text-[9px] font-bold text-gray-400">
+                  {parseFloat(ethBalance || "0").toFixed(4)} ETH
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -280,32 +280,32 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
                   placeholder="0.0"
                   value={inputAmount}
                   onChange={(e) => setInputAmount(e.target.value)}
-                  className="bg-transparent text-xl font-black outline-none w-full"
+                  className="bg-transparent text-lg font-bold outline-none w-full"
                 />
-                <span className="font-black text-gray-400">ETH</span>
+                <span className="font-bold text-sm text-gray-400">ETH</span>
               </div>
             </div>
 
-            <div className="flex justify-center -my-2 relative z-10">
+            <div className="flex justify-center -my-1.5 relative z-10">
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-full p-1 shadow-sm">
-                <span className="text-lg">➕</span>
+                <span className="text-sm">➕</span>
               </div>
             </div>
 
-            <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-4 border border-gray-100 dark:border-gray-800">
-              <div className="flex justify-between mb-2">
-                <span className="text-[10px] font-black text-gray-400 uppercase">
+            <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-800">
+              <div className="flex justify-between mb-1">
+                <span className="text-[9px] font-bold text-gray-400 uppercase">
                   Input {selected}
                 </span>
-                <span className="text-[10px] font-black text-gray-400">
-                  Balance: {parseFloat(stockBalance).toFixed(2)}
+                <span className="text-[9px] font-bold text-gray-400">
+                  {parseFloat(stockBalance).toFixed(2)} {selected}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="text-xl font-black text-gray-900 dark:text-white w-full">
+                <div className="text-lg font-bold text-gray-900 dark:text-white w-full">
                   {matchingAmount}
                 </div>
-                <span className="font-black text-gray-400">{selected}</span>
+                <span className="font-bold text-sm text-gray-400">{selected}</span>
               </div>
             </div>
 
@@ -314,7 +314,7 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
                 isLoading || !inputAmount || parseFloat(inputAmount) <= 0
               }
               onClick={handleAddLiquidity}
-              className="w-full py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-black text-sm uppercase tracking-widest transition shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none"
+              className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:shadow-none"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -331,19 +331,19 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
         ) : (
           <motion.div
             key="remove"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98 }}
             className="space-y-4"
           >
-            <div className="bg-gray-50 dark:bg-gray-800/40 rounded-2xl p-6 border border-gray-100 dark:border-gray-800 text-center">
-              <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">
+            <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-4 border border-gray-100 dark:border-gray-800 text-center">
+              <div className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">
                 Your Pool Shares
               </div>
-              <div className="text-4xl font-black mb-1">
+              <div className="text-3xl font-bold mb-1">
                 {parseFloat(poolInfo?.userShares || "0").toFixed(4)}
               </div>
-              <div className="text-[10px] font-black text-green-500 uppercase">
+              <div className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">
                 {poolInfo && parseFloat(poolInfo.totalShares) > 0
                   ? `${((parseFloat(poolInfo.userShares) / parseFloat(poolInfo.totalShares)) * 100).toFixed(2)}% of Pool`
                   : "0% of Pool"}
@@ -355,7 +355,7 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
                 isLoading || !poolInfo || parseFloat(poolInfo.userShares) <= 0
               }
               onClick={handleRemoveLiquidity}
-              className="w-full py-4 rounded-2xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-black text-sm uppercase tracking-widest transition disabled:opacity-50"
+              className="w-full py-3.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-sm transition disabled:opacity-50"
             >
               {isLoading ? "Processing..." : "Withdraw All Assets"}
             </button>

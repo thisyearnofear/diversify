@@ -51,7 +51,7 @@ export default function StockChart({
   }, [symbol, currentPrice]);
 
   const isUp = data[data.length - 1] >= data[0];
-  const chartColor = isUp ? "#22c55e" : "#ef4444"; // Green-500 or Red-500
+  const chartColor = isUp ? "#2563eb" : "#ef4444"; // Blue-600 or Red-500
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -121,10 +121,10 @@ export default function StockChart({
     // Draw gradient fill
     const gradient = ctx.createLinearGradient(0, padding.top, 0, height);
     if (isUp) {
-      gradient.addColorStop(0, "rgba(34, 197, 94, 0.15)");
-      gradient.addColorStop(1, "rgba(34, 197, 94, 0)");
+      gradient.addColorStop(0, "rgba(37, 99, 235, 0.1)");
+      gradient.addColorStop(1, "rgba(37, 99, 235, 0)");
     } else {
-      gradient.addColorStop(0, "rgba(239, 68, 68, 0.15)");
+      gradient.addColorStop(0, "rgba(239, 68, 68, 0.1)");
       gradient.addColorStop(1, "rgba(239, 68, 68, 0)");
     }
 
@@ -156,9 +156,9 @@ export default function StockChart({
       {/* Price Overlay */}
       <div className="absolute top-0 right-0 text-right">
         <div
-          className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${
+          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
             isUp
-              ? "bg-green-500/5 text-green-500 border-green-500/20"
+              ? "bg-blue-600/5 text-blue-600 border-blue-600/20"
               : "bg-red-500/5 text-red-500 border-red-500/20"
           }`}
         >
