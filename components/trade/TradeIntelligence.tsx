@@ -39,11 +39,17 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
           </span>
           Market Intelligence
         </h3>
-        {isAdvanced && (
+        <div className="flex items-center gap-2">
+          {isAdvanced && (
+            <div className="flex items-center gap-1 bg-blue-600 dark:bg-blue-500 px-1.5 py-0.5 rounded shadow-sm animate-pulse">
+              <span className="w-1 h-1 rounded-full bg-white"></span>
+              <span className="text-[7px] font-black text-white uppercase tracking-tighter">SN50 Active</span>
+            </div>
+          )}
           <span className="text-[8px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded uppercase tracking-tighter border border-blue-100 dark:border-blue-800">
-            Live Pulse
+            {isAdvanced ? "SN50 Predictive" : "Live Pulse"}
           </span>
-        )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -54,6 +60,13 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
             animate={{ opacity: 1, x: 0 }}
             className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3 shadow-sm relative overflow-hidden group hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
           >
+            {item.id.startsWith("synth-") && (
+              <div className="absolute top-0 right-0">
+                <div className="bg-blue-600 text-white text-[7px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-widest shadow-sm">
+                  Synth
+                </div>
+              </div>
+            )}
             <div className="flex items-start gap-3">
               <div className="mt-0.5">
                 {item.type === "impact" ? (
@@ -87,18 +100,28 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
                 </p>
 
                 {isAdvanced && item.impact && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${
-                      item.impact === "positive"
-                        ? "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30"
-                        : "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30"
-                    }`}>
-                      {item.impact} Impact
-                    </span>
-                    {item.impactAsset && (
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
-                        Target: {item.impactAsset}
+                  <div className="mt-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${
+                        item.impact === "positive"
+                          ? "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30"
+                          : "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30"
+                      }`}>
+                        {item.impact} Impact
                       </span>
+                      {item.impactAsset && (
+                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
+                          Target: {item.impactAsset}
+                        </span>
+                      )}
+                    </div>
+                    {item.id.startsWith("synth-") && (
+                      <div className="text-[8px] font-bold text-blue-500 flex items-center gap-1 group/link">
+                        <span>Details</span>
+                        <svg className="w-2 h-2 group-hover/link:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     )}
                   </div>
                 )}
@@ -106,6 +129,19 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
             </div>
           </motion.div>
         ))}
+      </div>
+      <div className="pt-1 flex justify-center">
+        <a 
+          href="https://synthdata.co" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-[8px] font-bold text-gray-400 hover:text-blue-500 transition-colors uppercase tracking-[0.2em] flex items-center gap-1"
+        >
+          Intelligence by <span className="text-blue-500 dark:text-blue-400">SynthData.co</span>
+          <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+          </svg>
+        </a>
       </div>
     </div>
   );

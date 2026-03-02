@@ -79,6 +79,7 @@ export default function TradeTab() {
   });
 
   const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
+  const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
 
   const isOnRH = chainId === RH_CHAIN_ID;
   const design = getTokenDesign(selected);
@@ -88,6 +89,9 @@ export default function TradeTab() {
     selected,
     liveRates[selected],
   );
+
+  const forecastVolatility = stockStats.find(s => s.label === "Forecast Volatility")?.value;
+  const volatilityValue = forecastVolatility ? parseFloat(forecastVolatility.replace("%", "")) / 100 : 0.3;
 
   const { holderData, isHoldersLoading } = useTokenHolders(selected);
 
@@ -213,6 +217,14 @@ export default function TradeTab() {
           impactAsset: selected,
           timestamp: "Live",
         };
+
+        // Extract percentiles for the chart
+        const price = data.price;
+        setSynthForecast({
+          p10: price * (1 + data.forecast_future.percentiles.p10),
+          p50: price * (1 + data.forecast_future.percentiles.p50),
+          p90: price * (1 + data.forecast_future.percentiles.p90),
+        });
 
         setIntelligenceItems(prev => {
           // Replace previous synth item for this specific asset to avoid duplicates
@@ -455,6 +467,7 @@ export default function TradeTab() {
           setPriceImpact(null);
           setTxHash(null);
           setError(null);
+          setSynthForecast(null);
         }}
         liveRates={liveRates}
         stockBalances={stockBalances}
@@ -498,6 +511,8 @@ export default function TradeTab() {
               symbol={selected}
               height={200}
               currentPrice={liveRates[selected]}
+              volatility={volatilityValue}
+              forecastPercentiles={synthForecast}
             />
           </div>
 
@@ -635,22 +650,30 @@ export default function TradeTab() {
                       label: "Forecast Vol",
                       value: stockStats.forecastVol ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—",
                       isSynth: true,
+                      description: "Predicted annualized price volatility powered by SynthData's SN50 machine learning models.",
                     },
                     {
                       label: "Realized Vol",
                       value: stockStats.realizedVol ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—",
                       isSynth: true,
+                      description: "Historical volatility observed in the actual market price over the recent period.",
                     },
                   ].map((stat: any, i) => (
-                    <div key={i} className={`bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30 ${stat.isSynth ? 'ring-1 ring-blue-500/10' : ''}`}>
+                    <div 
+                      key={i} 
+                      className={`group bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30 transition-all hover:shadow-sm ${stat.isSynth ? 'ring-1 ring-blue-500/10 hover:ring-blue-500/30' : ''}`}
+                      title={stat.description}
+                    >
                       <div className="flex items-center justify-between mb-0.5">
                         <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
                           {stat.label}
                         </div>
                         {stat.isSynth && (
-                          <span className="text-[7px] font-black text-blue-500 uppercase tracking-tighter bg-blue-50 dark:bg-blue-900/30 px-1 rounded-sm">
-                            SN50
-                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[7px] font-black text-blue-500 uppercase tracking-tighter bg-blue-50 dark:bg-blue-900/30 px-1 rounded-sm">
+                              SN50
+                            </span>
+                          </div>
                         )}
                       </div>
                       <div className="text-sm font-bold text-gray-900 dark:text-white">

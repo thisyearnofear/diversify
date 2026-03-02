@@ -5,6 +5,12 @@ interface StockChartProps {
   symbol: string;
   height?: number;
   currentPrice?: string | null;
+  volatility?: number; // Annualized volatility percentage (e.g. 0.45 for 45%)
+  forecastPercentiles?: {
+    p10: number;
+    p50: number;
+    p90: number;
+  } | null;
 }
 
 /**
@@ -17,8 +23,19 @@ export default function StockChart({
   symbol,
   height = 200,
   currentPrice,
+  volatility = 0.3, // Default to 30% if not provided
+  forecastPercentiles = null,
 }: StockChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [jitter, setJitter] = React.useState(0);
+
+  // Live Jitter effect to make the chart feel "active"
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setJitter((Math.random() - 0.5) * (volatility * 2));
+    }, 150);
+    return () => clearInterval(interval);
+  }, [volatility]);
 
   // Generate mock price data based on the symbol to keep it consistent for each stock
   const data = useMemo(() => {
@@ -42,15 +59,25 @@ export default function StockChart({
 
     for (let i = 0; i < points - 1; i++) {
       const drift = (finalPrice - price) / (points - i);
-      const volatility = finalPrice * 0.005;
-      price += drift + (rng() - 0.5) * volatility;
+      const stepVolatility = finalPrice * (volatility / 50); // Scale volatility to chart steps
+      price += drift + (rng() - 0.5) * stepVolatility;
       values.push(price);
     }
     values.push(finalPrice);
     return values;
-  }, [symbol, currentPrice]);
+  }, [symbol, currentPrice, volatility]);
 
-  const isUp = data[data.length - 1] >= data[0];
+  // Apply real-time jitter to the last point
+  const displayData = useMemo(() => {
+    const newData = [...data];
+    if (newData.length > 0) {
+      const lastVal = newData[newData.length - 1];
+      newData[newData.length - 1] = lastVal + (lastVal * (jitter / 500));
+    }
+    return newData;
+  }, [data, jitter]);
+
+  const isUp = displayData[displayData.length - 1] >= displayData[0];
   const chartColor = isUp ? "#2563eb" : "#ef4444"; // Blue-600 or Red-500
 
   useEffect(() => {
@@ -79,14 +106,65 @@ export default function StockChart({
     const chartHeight = height - padding.top - padding.bottom;
 
     // Scale values
-    const min = Math.min(...data);
-    const max = Math.max(...data);
-    const range = max - min;
+    const min = Math.min(...displayData);
+    const max = Math.max(...displayData);
+    const range = Math.max(0.0001, max - min);
 
     const getX = (i: number) =>
-      padding.left + (i / (data.length - 1)) * chartWidth;
+      padding.left + (i / (displayData.length - 1)) * chartWidth;
     const getY = (val: number) =>
       padding.top + chartHeight - ((val - min) / range) * chartHeight;
+
+    // Draw Forecast Zone (Synth SN50)
+    if (forecastPercentiles) {
+      const lastX = getX(displayData.length - 1);
+      const forecastWidth = 40; // Pixels to extend the forecast zone
+      const p10Y = getY(forecastPercentiles.p10);
+      const p50Y = getY(forecastPercentiles.p50);
+      const p90Y = getY(forecastPercentiles.p90);
+
+      // Draw shaded area between p10 and p90
+      ctx.beginPath();
+      ctx.fillStyle = isUp ? "rgba(37, 99, 235, 0.05)" : "rgba(239, 68, 68, 0.05)";
+      ctx.moveTo(lastX, getY(displayData[displayData.length - 1]));
+      ctx.lineTo(lastX + forecastWidth, p10Y);
+      ctx.lineTo(lastX + forecastWidth, p90Y);
+      ctx.closePath();
+      ctx.fill();
+
+      // Draw dashed forecast lines
+      ctx.beginPath();
+      ctx.setLineDash([2, 2]);
+      ctx.strokeStyle = isUp ? "rgba(37, 99, 235, 0.3)" : "rgba(239, 68, 68, 0.3)";
+      ctx.lineWidth = 1;
+
+      // P90 Line
+      ctx.moveTo(lastX, getY(displayData[displayData.length - 1]));
+      ctx.lineTo(lastX + forecastWidth, p90Y);
+      ctx.stroke();
+
+      // P10 Line
+      ctx.beginPath();
+      ctx.moveTo(lastX, getY(displayData[displayData.length - 1]));
+      ctx.lineTo(lastX + forecastWidth, p10Y);
+      ctx.stroke();
+
+      // P50 Line (Expected)
+      ctx.beginPath();
+      ctx.setLineDash([4, 2]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isUp ? "rgba(37, 99, 235, 0.5)" : "rgba(239, 68, 68, 0.5)";
+      ctx.moveTo(lastX, getY(displayData[displayData.length - 1]));
+      ctx.lineTo(lastX + forecastWidth, p50Y);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      
+      // Label the forecast
+      ctx.font = "black 7px Inter, system-ui, sans-serif";
+      ctx.fillStyle = isUp ? "rgba(37, 99, 235, 0.8)" : "rgba(239, 68, 68, 0.8)";
+      ctx.fillText("SN50 FORECAST", lastX + 5, p50Y - 5);
+    }
 
     // Draw grid lines (minimalist)
     ctx.beginPath();
@@ -110,7 +188,7 @@ export default function StockChart({
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    data.forEach((val, i) => {
+    displayData.forEach((val, i) => {
       const x = getX(i);
       const y = getY(val);
       if (i === 0) ctx.moveTo(x, y);
@@ -129,7 +207,7 @@ export default function StockChart({
     }
 
     ctx.fillStyle = gradient;
-    ctx.lineTo(getX(data.length - 1), height);
+    ctx.lineTo(getX(displayData.length - 1), height);
     ctx.lineTo(getX(0), height);
     ctx.closePath();
     ctx.fill();
@@ -138,7 +216,7 @@ export default function StockChart({
     ctx.font = "bold 10px Inter, system-ui, sans-serif";
     ctx.fillStyle = "rgba(156, 163, 175, 0.5)";
     ctx.fillText("LIVE AMM PRICE FEED", padding.left, padding.top - 8);
-  }, [data, chartColor, isUp]);
+  }, [displayData, chartColor, isUp]);
 
   return (
     <motion.div
@@ -163,7 +241,7 @@ export default function StockChart({
           }`}
         >
           {isUp ? "↑" : "↓"}{" "}
-          {((data[data.length - 1] / data[0] - 1) * 100).toFixed(2)}%
+          {((displayData[displayData.length - 1] / displayData[0] - 1) * 100).toFixed(2)}%
         </div>
       </div>
 
@@ -172,11 +250,11 @@ export default function StockChart({
         className="absolute pointer-events-none"
         style={{
           right: "5px",
-          bottom:
-            data.length > 0
-              ? `${((data[data.length - 1] - Math.min(...data)) / Math.max(0.00001, Math.max(...data) - Math.min(...data))) * 70 + 15}%`
+          top:
+            displayData.length > 0
+              ? `${padding.top + chartHeight - ((displayData[displayData.length - 1] - Math.min(...displayData)) / Math.max(0.00001, Math.max(...displayData) - Math.min(...displayData))) * chartHeight}px`
               : "50%",
-          transform: "translate(50%, 50%)",
+          transform: "translate(50%, -50%)",
         }}
       >
         <motion.div
