@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import Head from "next/head";
 import { useNavigation } from "../context/app/NavigationContext";
@@ -16,7 +17,16 @@ import TabNavigation from "../components/ui/TabNavigation";
 import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
 import SwapTab from "../components/tabs/SwapTab";
-import TradeTab from "../components/tabs/TradeTab";
+const TradeTab = dynamic(() => import("../components/tabs/TradeTab"), {
+  ssr: false,
+  loading: () => (
+    <div className="animate-pulse space-y-4 pt-4">
+      <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl w-3/4" />
+      <div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
+      <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
+    </div>
+  ),
+});
 import InfoTab from "../components/tabs/InfoTab";
 import WalletButton from "../components/wallet/WalletButton";
 import FarcasterWalletButton from "../components/wallet/FarcasterWalletButton";
@@ -225,13 +235,13 @@ export default function DiversiFiPage() {
                 onClick={() => {
                   const next =
                     experienceMode === "beginner" ? "intermediate" :
-                    experienceMode === "intermediate" ? "advanced" : "beginner";
+                      experienceMode === "intermediate" ? "advanced" : "beginner";
                   setExperienceMode(next);
                   setActiveHint(null);
                   showToast(
                     next === "beginner" ? "Simple mode 🌱 — focused view" :
-                    next === "intermediate" ? "Standard mode 🚀 — full features unlocked" :
-                    "Advanced mode ⚡ — power tools unlocked",
+                      next === "intermediate" ? "Standard mode 🚀 — full features unlocked" :
+                        "Advanced mode ⚡ — power tools unlocked",
                     "info"
                   );
                 }}
@@ -240,8 +250,8 @@ export default function DiversiFiPage() {
                   experienceMode === "beginner"
                     ? "Switch to Standard mode — unlock more features"
                     : experienceMode === "intermediate"
-                    ? "Switch to Advanced mode — power analytics & voice shortcuts"
-                    : "Switch to Simple mode — hide advanced panels"
+                      ? "Switch to Advanced mode — power analytics & voice shortcuts"
+                      : "Switch to Simple mode — hide advanced panels"
                 }
               >
                 {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
@@ -266,8 +276,8 @@ export default function DiversiFiPage() {
                     {experienceMode === "beginner"
                       ? "Unlocks: token search, inflation comparison, AI chat"
                       : experienceMode === "intermediate"
-                      ? "Unlocks: power analytics, voice shortcuts, batch ops"
-                      : "Hides advanced panels — back to focused view"}
+                        ? "Unlocks: power analytics, voice shortcuts, batch ops"
+                        : "Hides advanced panels — back to focused view"}
                   </div>
                   <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
                 </div>
