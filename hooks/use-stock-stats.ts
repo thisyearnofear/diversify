@@ -3,6 +3,8 @@ import { ethers } from "ethers";
 import { ProviderFactoryService } from "../services/swap/provider-factory.service";
 import { NETWORKS, BROKER_ADDRESSES, RH_TESTNET_TOKENS } from "../config";
 
+import { SynthDataService } from "../services/synth-data-service";
+
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
 const WETH_ADDRESS = RH_TESTNET_TOKENS.WETH;
@@ -20,6 +22,8 @@ export interface StockStats {
   volume24hETH: number;
   peRatioMock: number; // Deterministic mock
   divYieldMock: number; // Deterministic mock
+  forecastVol?: number; // From Synth API
+  realizedVol?: number; // From Synth API
 }
 
 /**
@@ -111,12 +115,29 @@ export function useStockStats(
       const peRatioMock = 10 + (seed % 30) + (seed % 100) / 100;
       const divYieldMock = (seed % 5) + (seed % 10) / 10;
 
+      // 5. Fetch Synth Volatility Data
+      let forecastVol: number | undefined;
+      let realizedVol: number | undefined;
+      try {
+        const synthAsset = SynthDataService.mapStockToSynthAsset(selectedStock);
+        // Using getPredictions which is cached in SynthDataService
+        const synthData = await SynthDataService.getPredictions(synthAsset);
+        if (synthData) {
+          forecastVol = synthData.forecast_future?.average_volatility;
+          realizedVol = synthData.realized?.average_volatility;
+        }
+      } catch (e) {
+        console.warn("[Stats] Could not fetch Synth data:", e);
+      }
+
       setStats({
         marketCapETH,
         poolTVLETH,
         volume24hETH,
         peRatioMock,
         divYieldMock: divYieldMock === 0 ? 0 : divYieldMock,
+        forecastVol,
+        realizedVol,
       });
     } catch (error) {
       console.error("[Stats] Failed to fetch on-chain stats:", error);

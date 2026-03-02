@@ -17,6 +17,8 @@ import { useTokenHolders } from "../../hooks/use-token-holders";
 import HoldersWidget from "../trade/HoldersWidget";
 import TradeIntelligence, { type IntelligenceItem } from "../trade/TradeIntelligence";
 
+import { SynthDataService } from "../../services/synth-data-service";
+
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
 const WETH_ADDRESS = RH_TESTNET_TOKENS.WETH;
@@ -69,15 +71,6 @@ export default function TradeTab() {
     STARK: "0",
   });
   const [liveRates, setLiveRates] = useState<Record<Stock, string | null>>({
-    ACME: null,
-    SPACELY: null,
-    WAYNE: null,
-    OSCORP: null,
-    STARK: null,
-  });
-  const [reserves, setReserves] = useState<
-    Record<Stock, { eth: string; stock: string } | null>
-  >({
     ACME: null,
     SPACELY: null,
     WAYNE: null,
@@ -183,7 +176,6 @@ export default function TradeTab() {
       });
 
       setLiveRates(rates);
-      setReserves(resMap);
     } catch (e) {
       console.error("[Trade] Rate fetch error:", e);
     }
@@ -200,6 +192,40 @@ export default function TradeTab() {
     const interval = setInterval(fetchRates, 30000);
     return () => clearInterval(interval);
   }, [fetchRates]);
+
+  // Fetch Synth Data for intelligence feed
+  useEffect(() => {
+    const fetchSynthIntelligence = async () => {
+      const asset = SynthDataService.mapStockToSynthAsset(selected);
+      // This call is cached in SynthDataService, so it won't hit the network if useStockStats recently fetched it
+      const data = await SynthDataService.getPredictions(asset);
+      if (data) {
+        // Convert Synth prediction to an intelligence item
+        const forecastVol = (data.forecast_future?.average_volatility * 100 || 0).toFixed(2);
+        const realizedVol = (data.realized?.average_volatility * 100 || 0).toFixed(2);
+        
+        const synthItem: IntelligenceItem = {
+          id: `synth-${selected}`,
+          type: "impact",
+          title: `Synth Probabilistic Forecast: ${selected}`,
+          description: `SN50 models predict ${forecastVol}% annualized volatility. Realized volatility is currently ${realizedVol}%.`,
+          impact: parseFloat(forecastVol) > parseFloat(realizedVol) ? "negative" : "positive",
+          impactAsset: selected,
+          timestamp: "Live",
+        };
+
+        setIntelligenceItems(prev => {
+          // Replace previous synth item for this specific asset to avoid duplicates
+          const filtered = prev.filter(item => item.id !== `synth-${selected}`);
+          return [synthItem, ...filtered];
+        });
+      }
+    };
+
+    fetchSynthIntelligence();
+    const interval = setInterval(fetchSynthIntelligence, 60000);
+    return () => clearInterval(interval);
+  }, [selected]);
 
   // Mock intelligence feed
   useEffect(() => {
@@ -605,10 +631,27 @@ export default function TradeTab() {
                       label: "24h Volume",
                       value: `${stockStats.volume24hETH.toFixed(2)} ETH`,
                     },
-                  ].map((stat, i) => (
-                    <div key={i} className="bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30">
-                      <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tight mb-0.5">
-                        {stat.label}
+                    {
+                      label: "Forecast Vol",
+                      value: stockStats.forecastVol ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—",
+                      isSynth: true,
+                    },
+                    {
+                      label: "Realized Vol",
+                      value: stockStats.realizedVol ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—",
+                      isSynth: true,
+                    },
+                  ].map((stat: any, i) => (
+                    <div key={i} className={`bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30 ${stat.isSynth ? 'ring-1 ring-blue-500/10' : ''}`}>
+                      <div className="flex items-center justify-between mb-0.5">
+                        <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
+                          {stat.label}
+                        </div>
+                        {stat.isSynth && (
+                          <span className="text-[7px] font-black text-blue-500 uppercase tracking-tighter bg-blue-50 dark:bg-blue-900/30 px-1 rounded-sm">
+                            SN50
+                          </span>
+                        )}
                       </div>
                       <div className="text-sm font-bold text-gray-900 dark:text-white">
                         {stat.value}
@@ -622,7 +665,6 @@ export default function TradeTab() {
             <HoldersWidget
               holderData={holderData}
               isLoading={isHoldersLoading}
-              selectedStock={selected}
               explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
             />
           </div>

@@ -1,10 +1,9 @@
 import React from "react";
-import { TokenHolder, TokenHolderData } from "../../hooks/use-token-holders";
+import { TokenHolderData } from "../../hooks/use-token-holders";
 
 interface HoldersWidgetProps {
   holderData: TokenHolderData | null;
   isLoading: boolean;
-  selectedStock: string;
   explorerUrl: string;
 }
 
@@ -36,7 +35,6 @@ const BAR_COLORS = [
 export default function HoldersWidget({
   holderData,
   isLoading,
-  selectedStock,
   explorerUrl,
 }: HoldersWidgetProps) {
   if (isLoading) {
