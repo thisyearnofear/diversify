@@ -18,6 +18,7 @@ import HoldersWidget from "../trade/HoldersWidget";
 import TradeIntelligence, { type IntelligenceItem } from "../trade/TradeIntelligence";
 
 import { SynthDataService } from "../../services/synth-data-service";
+import { marketPulseService } from "../../utils/market-pulse-service";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
@@ -270,46 +271,42 @@ export default function TradeTab() {
     return () => clearInterval(interval);
   }, [selected]);
 
-  // Mock intelligence feed
+  // Market Intelligence feed - driven by real-world stimuli
   useEffect(() => {
-    const mockItems: IntelligenceItem[] = [
-      {
-        id: "1",
-        type: "impact",
-        title: "Federal Reserve Interest Rate Decision",
-        description: "Expected rate hike could increase volatility in tech stocks and stablecoin yields.",
-        impact: "negative",
-        impactAsset: "ACME",
-        timestamp: "2m ago",
-      },
-      {
-        id: "2",
-        type: "news",
-        title: "DiversiFi Expands to Latin America",
-        description: "New regional integration expected to drive volume for emerging market assets.",
-        impact: "positive",
-        timestamp: "15m ago",
-      },
-      {
-        id: "3",
-        type: "alert",
-        title: "Unusual Trading Volume",
-        description: "Significant increase in WAYNE token accumulation detected on-chain.",
-        impact: "neutral",
-        impactAsset: "WAYNE",
-        timestamp: "45m ago",
-      },
-      {
-        id: "4",
-        type: "impact",
-        title: "Major Infrastructure Upgrade",
-        description: "Spacely Sprockets announces new carbon-neutral manufacturing process.",
-        impact: "positive",
-        impactAsset: "SPACELY",
-        timestamp: "1h ago",
-      },
-    ];
-    setIntelligenceItems(mockItems);
+    const fetchMarketIntelligence = async () => {
+      try {
+        const pulseItems = await marketPulseService.generateIntelligenceItems();
+        
+        const staticItems: IntelligenceItem[] = [
+          {
+            id: "static-1",
+            type: "news",
+            title: "DiversiFi Expands to Latin America",
+            description: "New regional integration expected to drive volume for emerging market assets.",
+            impact: "positive",
+            timestamp: "15m ago",
+          },
+        ];
+        
+        setIntelligenceItems([...pulseItems, ...staticItems]);
+      } catch (error) {
+        console.warn("[Trade] Failed to fetch market pulse:", error);
+        setIntelligenceItems([
+          {
+            id: "static-1",
+            type: "news",
+            title: "DiversiFi Expands to Latin America",
+            description: "New regional integration expected to drive volume for emerging market assets.",
+            impact: "positive",
+            timestamp: "15m ago",
+          },
+        ]);
+      }
+    };
+
+    fetchMarketIntelligence();
+    const interval = setInterval(fetchMarketIntelligence, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   // --- Quoting ---
