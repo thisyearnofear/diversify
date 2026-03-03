@@ -112,24 +112,24 @@ export const EMERGING_MARKETS_CONFIG = {
   rpcUrl: "https://forno.celo-sepolia.celo-testnet.org",
   explorerUrl: "https://celo-sepolia.blockscout.com",
   
-  // Contracts (update after deployment)
-  ammAddress: "", // TestnetMarketMaker address
-  wethAddress: "", // WETH9 (Wrapped CELO) address
+  // Contracts (deployed)
+  ammAddress: "0x983b3a94C8266310192135d60D77B871549B9CfF", // TestnetMarketMaker address
+  wethAddress: "0x95fa0c32181d073FA9b07F0eC3961C845d00bE21", // WETH9 (Wrapped CELO) address
   
-  // Token addresses (update after deployment)
+  // Token addresses (deployed)
   tokens: {
     // Africa
-    SAFCOM: "",
-    DANGOTE: "",
-    SHOPRITE: "",
+    SAFCOM: "0xe968d89E47c4e4Cd111dcde8d2E984703E7FeA8b",
+    DANGOTE: "0x47A55970913f3e67Da4A3066caD3266339126404",
+    SHOPRITE: "0x32BEfC5B2834ccD19aFA81cC9762Aa3ec305B674",
     // Latin America
-    PETROBRAS: "",
-    MELI: "",
-    CEMEX: "",
+    PETROBRAS: "0x05334A4CCB4599755D6a7b84F0beF8C4C6380EBF",
+    MELI: "0x1D939e6F21ef32f704e3ddBE7deC411F86b75D13",
+    CEMEX: "0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3",
     // Asia
-    RELIANCE: "",
-    GRAB: "",
-    JOLLIBEE: "",
+    RELIANCE: "0x020c58eCcc5372C3B02301F9cEAbB35557A3869B",
+    GRAB: "0xB1Dc9Bf314BA0c525FF48dA319872f9Ffc1d9291",
+    JOLLIBEE: "0x303B0964B9AbB4AAb60F55a3FB2905BAfB6d30AC",
   },
   
   // Trading configuration
