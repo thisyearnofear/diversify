@@ -29,6 +29,7 @@ import {
   type FictionalCompany,
 } from "../../config/emerging-markets";
 import { SwapOrchestratorService } from "../../services/swap/swap-orchestrator.service";
+import { useWatchlist } from "../../hooks/use-watchlist";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
@@ -114,6 +115,10 @@ export default function TradeTab() {
 
   const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
   const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
+  const [showAllRobinhood, setShowAllRobinhood] = useState(false);
+  
+  // Watchlist for Robinhood stocks
+  const { watchlist: robinhoodWatchlist, toggleWatchlist: toggleRobinhoodWatchlist, isInWatchlist: isInRobinhoodWatchlist } = useWatchlist();
 
   const isOnRH = chainId === RH_CHAIN_ID;
   const design = getTokenDesign(selected);
@@ -627,22 +632,162 @@ export default function TradeTab() {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
-            {/* Stock Selection Ticker */}
-            <StockTicker
-        stocks={STOCKS}
-        selected={selected}
-        onSelect={(s) => {
-          setSelected(s as Stock);
-          setInputAmount("");
-          setQuote(null);
-          setPriceImpact(null);
-          setTxHash(null);
-          setError(null);
-          setSynthForecast(null);
-        }}
-        liveRates={liveRates}
-        stockBalances={stockBalances}
-      />
+            {/* Quick Access Bar for Robinhood Watchlist */}
+            {robinhoodWatchlist.length > 0 && (
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                    ⭐ Quick Access
+                  </h4>
+                  <span className="text-[10px] text-gray-400">{robinhoodWatchlist.length} starred</span>
+                </div>
+                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                  {robinhoodWatchlist.map((symbol) => {
+                    const d = getTokenDesign(symbol);
+                    const rate = liveRates[symbol as Stock];
+                    return (
+                      <button
+                        key={symbol}
+                        onClick={() => {
+                          setSelected(symbol as Stock);
+                          setInputAmount("");
+                          setQuote(null);
+                          setPriceImpact(null);
+                          setTxHash(null);
+                          setError(null);
+                          setSynthForecast(null);
+                        }}
+                        className={`flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border transition min-w-[120px] ${
+                          selected === symbol
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+                            : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        <span className="text-lg">{d.icon}</span>
+                        <div className="text-left">
+                          <div className="font-bold text-sm">{symbol}</div>
+                          {rate && (
+                            <div className="text-[10px] text-gray-500">
+                              {parseFloat(rate).toLocaleString()}/ETH
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Compact Stock List with Progressive Disclosure */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  📈 All Stocks
+                </h4>
+                <span className="text-[10px] text-gray-400">
+                  {showAllRobinhood ? STOCKS.length : Math.min(3, STOCKS.length)} of {STOCKS.length}
+                </span>
+              </div>
+              
+              <div className="space-y-2">
+                {(showAllRobinhood ? STOCKS : STOCKS.slice(0, 3)).map((stock) => {
+                  const d = getTokenDesign(stock);
+                  const rate = liveRates[stock];
+                  const isWatched = isInRobinhoodWatchlist(stock);
+                  const isSelected = selected === stock;
+                  
+                  return (
+                    <div
+                      key={stock}
+                      onClick={() => {
+                        setSelected(stock);
+                        setInputAmount("");
+                        setQuote(null);
+                        setPriceImpact(null);
+                        setTxHash(null);
+                        setError(null);
+                        setSynthForecast(null);
+                      }}
+                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${
+                        isSelected
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
+                          : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">{d.icon}</span>
+                        <div>
+                          <div className="font-bold text-sm">{stock}</div>
+                          <div className="text-[10px] text-gray-500">{d.name}</div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        {rate ? (
+                          <div className="text-right">
+                            <div className="text-sm font-bold">
+                              ${(parseFloat(rate) * 3000).toFixed(0)}
+                            </div>
+                            <div className="text-[10px] text-gray-400">
+                              {parseFloat(rate).toLocaleString()}/ETH
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-400">---</div>
+                        )}
+                        
+                        {/* Star button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleRobinhoodWatchlist(stock);
+                          }}
+                          className={`p-1.5 rounded-full transition ${
+                            isWatched
+                              ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30'
+                              : 'text-gray-300 hover:text-gray-400'
+                          }`}
+                        >
+                          <svg className="w-4 h-4" fill={isWatched ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Show All Button */}
+              {!showAllRobinhood && STOCKS.length > 3 && (
+                <button
+                  onClick={() => setShowAllRobinhood(true)}
+                  className="w-full mt-3 py-3 text-sm font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
+                >
+                  Show All {STOCKS.length} Stocks
+                </button>
+              )}
+            </div>
+
+            {/* Legacy Stock Ticker - Hidden but kept for compatibility */}
+            <div className="hidden">
+              <StockTicker
+                stocks={STOCKS}
+                selected={selected}
+                onSelect={(s) => {
+                  setSelected(s as Stock);
+                  setInputAmount("");
+                  setQuote(null);
+                  setPriceImpact(null);
+                  setTxHash(null);
+                  setError(null);
+                  setSynthForecast(null);
+                }}
+                liveRates={liveRates}
+                stockBalances={stockBalances}
+              />
+            </div>
 
       {/* Main Content Area */}
       <div className="grid grid-cols-1 gap-4">
