@@ -13,6 +13,8 @@ export interface SwapParams {
     toChainId: number;
     userAddress: string;
     slippageTolerance?: number;
+    recipientAddress?: string; // For SocialConnect / Send to friend
+    phoneNumber?: string; // For SocialConnect tracking
 }
 
 export interface SwapResult {

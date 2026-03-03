@@ -30,6 +30,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 // ============================================================================
 
 export interface AIAdvice {
+  // Level-based classification
+  level: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN';
+  
   action:
   | "SWAP"
   | "HOLD"
@@ -37,28 +40,15 @@ export interface AIAdvice {
   | "BRIDGE"
   | "BUY"
   | "SELL"
-  | "GUIDED_TOUR";
+  | "GUIDED_TOUR"
+  | "SEND_TO_FRIEND"; // SocialConnect Integration
+
   oneLiner: string; // Punchy, single-line summary for mobile/Farcaster
   targetToken?: string;
   token?: string; // Alias for targetToken (compatibility)
-  targetAllocation?: Array<{
-    symbol: string;
-    percentage: number;
-    reason: string;
-  }>;
-  targetNetwork?: "Celo" | "Arbitrum" | "Ethereum";
+  
+  // High-fidelity reasoning for humans
   reasoning: string;
-  confidence: number;
-  suggestedAmount?: number;
-  expectedSavings?: number;
-  timeHorizon?: string;
-  riskLevel?: "LOW" | "MEDIUM" | "HIGH";
-  dataSources?: string[];
-  // For alternative recommendations
-  alternatives?: AIAdvice[];
-  urgencyLevel?: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-  executionMode?: "ADVISORY" | "TESTNET_DEMO" | "MAINNET_READY";
-  // Expandable reasoning sections
   expandableReasoning?: {
     whyThis: string;
     risks: string[];
@@ -66,53 +56,31 @@ export interface AIAdvice {
     timing: string;
     technicalDetails?: string;
   };
-  // For compatibility with InteractiveAdviceCard
-  pros?: string[];
-  cons?: string[];
-  apy?: number;
-  liquidityScore?: number;
-  inflationProtection?: number;
-  comparisonVsPrimary?: {
-    savingsDiff: number;
-    riskDiff: "LOWER" | "SAME" | "HIGHER";
-    liquidityDiff: "BETTER" | "SAME" | "WORSE";
-  };
-  comparisonProjection?: {
-    currentPathValue: number;
-    recommendedPathValue: number;
-    oraclePathValue?: number;
-    difference: number;
-    timeframe: string;
-  };
-  // Guided tour recommendation
-  guidedTour?: {
-    tourId: string;
-    title: string;
-    description: string;
-    steps: TourStep[];
-    estimatedBenefit?: string;
+  
+  // Intent details for assistant actions
+  intent?: {
+    type: string;
+    targetAddress?: string;
+    phoneNumber?: string;
+    amount?: string;
+    token?: string;
   };
 
-  // Onramp recommendation for BUY/SELL actions
-  onrampRecommendation?: OnrampRecommendation;
-  // Portfolio analysis snapshot (for embedded display)
-  portfolioAnalysis?: {
-    weightedInflationRisk: number;
-    diversificationScore: number;
-    dataSource?: string;
-    regionCount?: number;
-    topOpportunity?: {
-      token: string;
-      potentialSavings: number;
-      fromToken?: string;
-      toToken?: string;
-      fromRegion?: string;
-      toRegion?: string;
-      fromInflation?: number;
-      toInflation?: number;
-      annualSavings?: number;
-    };
+  // Autonomous details for Guardian/ArcAgent mode
+  autonomous?: {
+    strategyId: string;
+    lastExecuted?: number;
+    nextCheck?: number;
+    savingsGenerated?: number;
+    x402Evidence?: string; // Link to ArcScan/Payment hash
+    isNanopaymentEnabled: boolean;
   };
+
+  confidence: number;
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH";
+  dataSources?: string[];
+  expectedSavings?: number;
+  timeHorizon?: string;
 }
 
 // Tour step definition

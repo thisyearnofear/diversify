@@ -132,9 +132,11 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
             // Validate
             await this.validate(params);
 
-            // Get signer
-            const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
-
+            // Get signer - handle both UI (ProviderFactory) and Agent (Autonomous)
+            // Use fallback logic: if a signer is passed in params, use it (for agents)
+            // Otherwise use ProviderFactory (for UI)
+            const signer = (params as any).signer || await ProviderFactoryService.getSignerForChain(params.fromChainId);
+            
             // Get configuration
             const fromTokens = getTokenAddresses(params.fromChainId);
             const toTokens = getTokenAddresses(params.toChainId);

@@ -22,6 +22,15 @@ const nextConfig = {
       // Exclude server-only packages from client bundle
       config.externals = config.externals || [];
       config.externals.push("mongoose", "openai", "@google/generative-ai");
+      
+      // Polyfill Node.js modules for browser compatibility with @celo/identity
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+      };
     }
     return config;
   },

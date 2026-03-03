@@ -67,6 +67,8 @@ export function useSwapController({
   const [toToken, setToToken] = useState<string>(defaultToToken);
   const [amount, setAmount] = useState<string>("10");
   const [slippageTolerance, setSlippageTolerance] = useState<number>(0.5);
+  const [recipientAddress, setRecipientAddress] = useState<string | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
 
   const [fromChainId, setFromChainId] = useState<number>(
     chainId || NETWORKS.CELO_MAINNET.chainId,
@@ -264,6 +266,8 @@ export function useSwapController({
             fromChainId: enableCrossChain ? fromChainId : undefined,
             toChainId: enableCrossChain ? toChainId : undefined,
             slippageTolerance,
+            recipientAddress: recipientAddress || undefined,
+            phoneNumber: phoneNumber || undefined,
           });
           // Note: Hook state will be handled via useEffect tracking swapStep
         }
@@ -286,6 +290,8 @@ export function useSwapController({
       performSwap,
       refreshWithRetries,
       getInflationRateForStablecoin,
+      recipientAddress,
+      phoneNumber,
     ],
   );
 

@@ -21,6 +21,9 @@ import { SelectionScreen } from './screens/SelectionScreen';
 import { InterfaceSelectionScreen } from './screens/InterfaceSelectionScreen';
 import { PaperTradingScreen } from './screens/PaperTradingScreen';
 import { ConfirmationScreen } from './screens/ConfirmationScreen';
+import { OnboardingSelectionScreen, Option } from './screens/OnboardingSelectionScreen';
+import { useProtectionProfile } from '@/hooks/use-protection-profile';
+import { REGIONS } from '@/hooks/use-user-region';
 
 interface StrategyModalProps {
     isOpen: boolean;
@@ -33,9 +36,28 @@ interface StrategyModalProps {
 
 export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWallet, isWalletConnected, chainId }: StrategyModalProps) {
     const { financialStrategy, setFinancialStrategy } = useStrategy();
-    const [step, setStep] = useState<'welcome' | 'select' | 'interface' | 'paper-trading' | 'confirm'>('welcome');
+    const { config: profileConfig, updateProfile } = useProtectionProfile();
+    const [step, setStep] = useState<'welcome' | 'region' | 'goal' | 'select' | 'interface' | 'paper-trading' | 'confirm'>('welcome');
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selected, setSelected] = useState<FinancialStrategy | null>(financialStrategy || null);
+    
+    // Selection state for new steps
+    const [selectedRegion, setSelectedRegion] = useState<string | null>(profileConfig.userRegion || null);
+    const [selectedGoal, setSelectedGoal] = useState<string | null>(profileConfig.userGoal || null);
+
+    const REGION_OPTIONS: Option[] = (REGIONS as any as string[]).map(r => ({
+        id: r,
+        title: r,
+        description: `Protect your savings against ${r === 'Africa' ? '15%+' : r === 'LatAm' ? '10%+' : 'local'} inflation.`,
+        icon: r === 'Africa' ? '🌍' : r === 'LatAm' ? '🌋' : r === 'Asia' ? '⛩️' : r === 'Europe' ? '🏰' : '🗽',
+    }));
+
+    const GOAL_OPTIONS: Option[] = [
+        { id: 'inflation_protection', title: 'Protect Savings', description: 'Hedge against local currency devaluation.', icon: '🛡️' },
+        { id: 'geographic_diversification', title: 'Global Diversity', description: 'Spread wealth across multiple world economies.', icon: '🌍' },
+        { id: 'rwa_access', title: 'Real-World Assets', description: 'Access tokenized gold and treasury yields.', icon: '🥇' },
+        { id: 'exploring', title: 'Just Exploring', description: 'See what DiversiFi can do for you.', icon: '🔍' },
+    ];
 
     const handleSelect = (strategy: FinancialStrategy) => {
         setSelected(strategy);
@@ -51,6 +73,10 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
         } else if (selected === 'custom') {
             // Custom strategy goes straight to app
             setFinancialStrategy(selected);
+            updateProfile({
+                userRegion: selectedRegion as any,
+                userGoal: selectedGoal as any,
+            });
             if (typeof document !== 'undefined') {
                 document.documentElement.removeAttribute('data-pending-onboarding');
             }
@@ -63,6 +89,13 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
         if (selected) {
             setFinancialStrategy(selected);
         }
+        
+        // Save profile choices
+        updateProfile({
+            userRegion: selectedRegion as any,
+            userGoal: selectedGoal as any,
+        });
+
         if (typeof document !== 'undefined') {
             document.documentElement.removeAttribute('data-pending-onboarding');
         }
@@ -74,7 +107,9 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
         if (step === 'confirm') setStep('paper-trading');
         else if (step === 'paper-trading') setStep('interface');
         else if (step === 'interface') setStep('select');
-        else if (step === 'select') setStep('welcome');
+        else if (step === 'select') setStep('goal');
+        else if (step === 'goal') setStep('region');
+        else if (step === 'region') setStep('welcome');
     };
 
     const handleSkip = () => {
@@ -119,11 +154,35 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
                     >
                         {step === 'welcome' && (
                             <WelcomeScreen
-                                onContinue={() => setStep('select')}
+                                onContinue={() => setStep('region')}
                                 onSkip={handleSkip}
                                 onConnectWallet={onConnectWallet}
                                 isWalletConnected={isWalletConnected}
                                 chainId={chainId}
+                            />
+                        )}
+                        {step === 'region' && (
+                            <OnboardingSelectionScreen
+                                title="Where are you based?"
+                                subtitle="This helps our AI understand your local inflation risk."
+                                options={REGION_OPTIONS}
+                                selectedId={selectedRegion}
+                                onSelect={setSelectedRegion}
+                                onContinue={() => setStep('goal')}
+                                onBack={handleBack}
+                                onSkip={handleSkip}
+                            />
+                        )}
+                        {step === 'goal' && (
+                            <OnboardingSelectionScreen
+                                title="What's your wealth goal?"
+                                subtitle="DiversiFi will tailor its strategy to your primary objective."
+                                options={GOAL_OPTIONS}
+                                selectedId={selectedGoal}
+                                onSelect={setSelectedGoal}
+                                onContinue={() => setStep('select')}
+                                onBack={handleBack}
+                                onSkip={handleSkip}
                             />
                         )}
                         {step === 'select' && (

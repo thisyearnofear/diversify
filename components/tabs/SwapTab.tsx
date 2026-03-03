@@ -194,15 +194,16 @@ export default function SwapTab({
         swapPrefill.amount,
         swapPrefill.fromChainId,
         swapPrefill.toChainId,
+        swapPrefill.phoneNumber,
+        swapPrefill.recipientAddress
       );
       if (swapPrefill.reason) {
         setAiRecommendationReason(swapPrefill.reason);
         setShowAiRecommendation(true);
       }
-      clearSwapPrefill();
+      setSwapPrefill(null);
     }
-  }, [swapPrefill, clearSwapPrefill]);
-
+  }, [swapPrefill, setSwapPrefill, setAiRecommendationReason, setShowAiRecommendation]);
   // BUGFIX: Handle swap state changes with proper error prioritization
   useEffect(() => {
     // CRITICAL: Check error first and return early to prevent simultaneous success/error display

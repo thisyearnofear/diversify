@@ -20,6 +20,21 @@ import { StrategyService } from "../../services/strategy/strategy.service";
 
 import sdk from "@farcaster/miniapp-sdk";
 
+const TierBadge = ({ level }: { level: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN' }) => {
+  const configs = {
+    ORACLE: { icon: '🔮', label: 'Oracle', bg: 'bg-blue-100 text-blue-700', border: 'border-blue-200' },
+    ASSISTANT: { icon: '🎙️', label: 'Assistant', bg: 'bg-green-100 text-green-700', border: 'border-green-200' },
+    GUARDIAN: { icon: '🛡️', label: 'Guardian', bg: 'bg-purple-100 text-purple-700', border: 'border-purple-200' },
+  };
+  const config = configs[level];
+  return (
+    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${config.bg} ${config.border} text-[10px] font-black uppercase tracking-tight shadow-sm`}>
+      <span>{config.icon}</span>
+      <span>{config.label}</span>
+    </div>
+  );
+};
+
 const KineticSavings = ({ value }: { value: number }) => {
   const { formattedValue } = useAnimatedCounter({
     target: value,
@@ -593,11 +608,37 @@ export default function AIAssistant({
 
                   {/* Hold State */}
                   {advice.action === "HOLD" && (
-                    <div className="flex items-center gap-2 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                      <span className="text-lg">🛡️</span>
+                    <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                      <TierBadge level="GUARDIAN" />
                       <span className="text-sm font-bold text-emerald-800">
-                        Portfolio well-protected
+                        Portfolio well-protected by Guardian
                       </span>
+                    </div>
+                  )}
+
+                  {/* Autonomous Evidence (ArcAgent / Guardian mode) */}
+                  {advice.autonomous && (
+                    <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <TierBadge level="GUARDIAN" />
+                        {advice.autonomous.isNanopaymentEnabled && (
+                            <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-black uppercase tracking-widest">
+                                Circle Nanopayment Active
+                            </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-purple-800 dark:text-purple-200 font-medium">
+                        Autonomous checking enabled. Strategy: <span className="font-bold">{advice.autonomous.strategyId}</span>
+                      </p>
+                      {advice.autonomous.x402Evidence && (
+                        <a 
+                          href={advice.autonomous.x402Evidence}
+                          target="_blank"
+                          className="mt-2 block text-[10px] text-purple-600 underline truncate"
+                        >
+                          View Nanopayment Evidence: {advice.autonomous.x402Evidence}
+                        </a>
+                      )}
                     </div>
                   )}
                 </>
@@ -1045,15 +1086,20 @@ export default function AIAssistant({
                     <span className="text-xl">
                       {advice.action === "HOLD" ? "🛡️" : "⚡"}
                     </span>
-                    <h3
-                      className={`font-black uppercase tracking-tight text-sm ${advice.action === "HOLD" ? "text-emerald-800" : "text-amber-800"}`}
-                    >
-                      {amount > 0
-                        ? advice.action === "HOLD"
-                          ? "Portfolio Protected"
-                          : "Action Required"
-                        : "Simulation Advice"}
-                    </h3>
+                    <div className="flex flex-col">
+                        <h3
+                        className={`font-black uppercase tracking-tight text-sm leading-none ${advice.action === "HOLD" ? "text-emerald-800" : "text-amber-800"}`}
+                        >
+                        {amount > 0
+                            ? advice.action === "HOLD"
+                            ? "Portfolio Protected"
+                            : "Action Required"
+                            : "Simulation Advice"}
+                        </h3>
+                        <div className="mt-1">
+                            <TierBadge level={advice.level || 'ORACLE'} />
+                        </div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     {amount === 0 && (

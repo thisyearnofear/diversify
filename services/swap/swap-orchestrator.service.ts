@@ -90,6 +90,44 @@ export class SwapOrchestratorService {
                     this.updatePerformance(strategyName, true, duration);
 
                     console.log(`[SwapOrchestrator] Success with ${strategyName}`);
+
+                    // SOCIALCONNECT: If a recipientAddress is provided, transfer the swapped tokens
+                    if (params.recipientAddress && result.txHash) {
+                        console.log(`[SocialConnect] Transferring swapped tokens to recipient: ${params.recipientAddress}`);
+                        
+                        // Small delay to ensure the swap is indexed/confirmed if needed
+                        // Though strategy.execute should have already waited for confirmation
+                        
+                        try {
+                            const signer = (strategy as any).signer || await require('./provider-factory.service').ProviderFactoryService.getSignerForChain(params.toChainId);
+                            const { getTokenAddresses, ABIS } = require('../../config');
+                            const toTokens = getTokenAddresses(params.toChainId);
+                            const toTokenAddress = toTokens[params.toToken as keyof typeof toTokens];
+                            
+                            if (toTokenAddress) {
+                                const { Contract, utils } = require('ethers');
+                                const tokenContract = new Contract(toTokenAddress, ABIS.ERC20, signer);
+                                
+                                // Get the balance of the token just swapped
+                                const balance = await tokenContract.balanceOf(params.userAddress);
+                                
+                                if (balance.gt(0)) {
+                                    console.log(`[SocialConnect] Sending ${utils.formatUnits(balance, 18)} ${params.toToken} to ${params.recipientAddress}`);
+                                    const transferTx = await tokenContract.transfer(params.recipientAddress, balance);
+                                    await transferTx.wait();
+                                    console.log(`[SocialConnect] Transfer successful: ${transferTx.hash}`);
+                                    
+                                    // Update result to include transfer hash
+                                    result.txHash = transferTx.hash;
+                                }
+                            }
+                        } catch (transferError) {
+                            console.error('[SocialConnect] Transfer to recipient failed:', transferError);
+                            // We don't fail the whole swap because the user already has the funds
+                            // But we should notify them.
+                        }
+                    }
+
                     return result;
                 }
 

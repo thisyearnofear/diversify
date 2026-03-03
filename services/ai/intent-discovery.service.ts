@@ -8,6 +8,7 @@
 export type AppIntent =
     | { type: 'NAVIGATE'; tab: 'overview' | 'protect' | 'swap' | 'info' }
     | { type: 'SWAP_SHORTCUT'; fromToken?: string; toToken?: string; amount?: string }
+    | { type: 'SEND_TO_PHONE'; phoneNumber: string; amount?: string; token?: string }
     | { type: 'ANALYZE_REQUEST'; goal?: string }
     | { type: 'ONBOARDING'; topic: 'what-is-this' | 'how-to-start' | 'is-safe' | 'wallet-help' | 'demo' }
     | { type: 'QUERY'; context: 'market' | 'portfolio' | 'general' }
@@ -19,6 +20,22 @@ export class IntentDiscoveryService {
      */
     static discover(text: string): AppIntent {
         const r = text.toLowerCase();
+
+        // 0. SocialConnect / Send to Phone (Real-World Utility)
+        // Matches: "Send 10 USDm to +254...", "Pay 5.5 to 0712...", "Transfer 100 to +44..."
+        if (r.includes("send") || r.includes("pay") || r.includes("transfer")) {
+            const phoneMatch = text.match(/\+?\d{9,15}/); // Simple phone number regex
+            if (phoneMatch) {
+                const amountMatch = text.match(/\d+(\.\d+)?/);
+                const tokens = this.extractTokens(r);
+                return {
+                    type: 'SEND_TO_PHONE',
+                    phoneNumber: phoneMatch[0],
+                    amount: amountMatch?.[0],
+                    token: tokens[0] || 'USDC' // Default to USDC if not specified
+                };
+            }
+        }
 
         // 0. Onboarding & Discovery Questions (highest priority for new users)
         if (r.includes("what is") || r.includes("what's this") || r.includes("what does") || r.includes("explain")) {

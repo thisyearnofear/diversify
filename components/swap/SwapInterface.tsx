@@ -100,6 +100,8 @@ const SwapInterface = forwardRef<
     handleSwitchTokens,
     executeSwap,
     refreshBalances,
+    phoneNumber,
+    recipientAddress,
   } = useSwapController({
     address,
     chainId,
@@ -119,15 +121,17 @@ const SwapInterface = forwardRef<
       from: string,
       to: string,
       inputAmount?: string,
-      fromChain?: number,
-      toChain?: number,
+      fromChainId?: number,
+      toChainId?: number,
+      phoneNumber?: string,
+      recipientAddress?: string,
     ) => {
       console.log(
-        `[SwapInterface] Setting tokens: ${from} → ${to}, amount: ${inputAmount}, chains: ${fromChain}→${toChain}`,
+        `[SwapInterface] Setting tokens: ${from} → ${to}, amount: ${inputAmount}, chains: ${fromChainId}→${toChainId}, phone: ${phoneNumber}`,
       );
 
-      if (fromChain) setFromChainId(fromChain);
-      if (toChain) setToChainId(toChain);
+      if (fromChainId) setFromChainId(fromChainId);
+      if (toChainId) setToChainId(toChainId);
 
       // Directly set tokens to support cross-chain prefilling where tokens might
       // not be in the current chain's availableTokens list.
@@ -136,8 +140,10 @@ const SwapInterface = forwardRef<
       setToToken(to.toUpperCase());
 
       if (inputAmount) setAmount(inputAmount);
+      if (phoneNumber) setPhoneNumber(phoneNumber);
+      if (recipientAddress) setRecipientAddress(recipientAddress);
     },
-  }));
+    }));
 
   return (
     <div className="relative bg-white dark:bg-gray-900 p-4 rounded-lg shadow-md overflow-hidden SwapInterface border border-gray-200 dark:border-gray-700">
@@ -206,6 +212,34 @@ const SwapInterface = forwardRef<
             inflationDifference={inflationDifference}
             onAskAI={() => console.log("AI insight requested")}
           />
+        )}
+
+        {phoneNumber && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center gap-3">
+            <span className="text-xl">📱</span>
+            <div className="flex-1">
+              <p className="text-xs font-bold text-green-800 dark:text-green-200 uppercase">
+                SocialConnect Recipient
+              </p>
+              <p className="text-sm text-green-700 dark:text-green-300">
+                Sending to <span className="font-bold">{phoneNumber}</span>
+                {recipientAddress && (
+                  <span className="text-[10px] block opacity-70 truncate max-w-[200px]">
+                    {recipientAddress}
+                  </span>
+                )}
+              </p>
+            </div>
+            <button 
+              onClick={() => {
+                // Clear recipient (would need a clearRecipient method in controller)
+                console.log("Clearing SocialConnect recipient");
+              }}
+              className="text-green-800 dark:text-green-200 opacity-50 hover:opacity-100"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
         )}
 
         <div className="space-y-3">

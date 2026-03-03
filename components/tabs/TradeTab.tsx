@@ -23,12 +23,8 @@ import { marketPulseService } from "../../utils/market-pulse-service";
 import {
   EMERGING_MARKETS_CONFIG,
   FICTIONAL_EMERGING_MARKET_COMPANIES,
-  REAL_EMERGING_MARKET_STOCKS,
-  REGION_METADATA,
-  getFictionalCompany,
   type FictionalCompany,
 } from "../../config/emerging-markets";
-import { SwapOrchestratorService } from "../../services/swap/swap-orchestrator.service";
 import { useWatchlist } from "../../hooks/use-watchlist";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
@@ -166,9 +162,12 @@ export default function TradeTab() {
   }, [address, isOnRH]);
 
   const fetchRates = useCallback(async () => {
-    if (!isOnRH) return;
+    // If connected but on wrong chain, OR if disconnected, we fetch from public provider for preview
     try {
-      const provider = await ProviderFactoryService.getWeb3Provider();
+      const provider = (isConnected && isOnRH)
+        ? await ProviderFactoryService.getWeb3Provider()
+        : ProviderFactoryService.getProvider(RH_CHAIN_ID);
+
       const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
       const refETH = ethers.utils.parseEther("0.001");
 
@@ -236,7 +235,7 @@ export default function TradeTab() {
     } catch (e) {
       console.error("[Trade] Rate fetch error:", e);
     }
-  }, [isOnRH]);
+  }, [isConnected, isOnRH]);
 
   useEffect(() => {
     fetchBalances();
@@ -451,53 +450,6 @@ export default function TradeTab() {
       ? Boolean(ethBalance && parseFloat(ethBalance) > 0.001)
       : parseFloat(stockBalances[selected]) > 0;
 
-  if (!isConnected) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center py-20 space-y-4"
-      >
-        <p className="text-5xl">📈</p>
-        <h2 className="text-2xl font-bold">Fictional Stock Trading</h2>
-        <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-          Swap testnet ETH for fictional company stocks on Robinhood
-          Chain. Connect your wallet to get started.
-        </p>
-        <button
-          onClick={connect}
-          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition transform active:scale-95 shadow-lg shadow-blue-500/20"
-        >
-          Connect Wallet
-        </button>
-      </motion.div>
-    );
-  }
-
-  if (!isOnRH) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-center py-16 space-y-4"
-      >
-        <p className="text-4xl">🔗</p>
-        <h2 className="text-xl font-bold">
-          Switch to Robinhood Chain
-        </h2>
-        <p className="text-gray-500 dark:text-gray-400">
-          You need to be on Robinhood Chain Testnet to trade stocks.
-        </p>
-        <button
-          onClick={() => switchNetwork(RH_CHAIN_ID)}
-          className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition transform active:scale-95 shadow-lg shadow-blue-500/20"
-        >
-          Switch Network
-        </button>
-      </motion.div>
-    );
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -506,9 +458,15 @@ export default function TradeTab() {
     >
       {/* Paper Trading Badge */}
       <div className="flex items-center justify-center gap-2">
-        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
-          🎮 Paper Trading
-        </span>
+        {!isConnected ? (
+           <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold animate-pulse">
+            👁️ Preview Mode
+          </span>
+        ) : (
+          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
+            🎮 Paper Trading
+          </span>
+        )}
         <span className="text-[10px] text-gray-400">Practice with fictional tokens • No real money</span>
       </div>
 
@@ -526,8 +484,13 @@ export default function TradeTab() {
           }`}
         >
           <span>⚡</span>
-          <span className="hidden sm:inline">Robinhood Testnet</span>
-          <span className="sm:hidden">Robinhood</span>
+          <div className="flex flex-col items-center leading-tight">
+            <span className="hidden sm:inline">Robinhood Testnet</span>
+            <span className="sm:hidden">Robinhood</span>
+            {!isConnected && (
+              <span className="text-[8px] uppercase tracking-tighter text-blue-400 font-black">Preview</span>
+            )}
+          </div>
         </button>
         <button
           onClick={() => {
@@ -541,8 +504,13 @@ export default function TradeTab() {
           }`}
         >
           <span>🌍</span>
-          <span className="hidden sm:inline">Emerging Markets</span>
-          <span className="sm:hidden">Emerging</span>
+          <div className="flex flex-col items-center leading-tight">
+            <span className="hidden sm:inline">Emerging Markets</span>
+            <span className="sm:hidden">Emerging</span>
+            {!isConnected && (
+              <span className="text-[8px] uppercase tracking-tighter text-green-400 font-black">Live Track</span>
+            )}
+          </div>
         </button>
       </div>
 
@@ -597,24 +565,54 @@ export default function TradeTab() {
                 }}
               />
             ) : (
-              <div className="text-center py-12">
-                <p className="text-4xl mb-4">🌍</p>
-                <h3 className="text-lg font-bold mb-2">Trade Fictional Companies</h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-4">
-                  Trade fictional emerging market companies on Celo Sepolia testnet.
-                  Switch to Celo Sepolia network to begin trading.
-                </p>
-                {chainId !== EMERGING_MARKETS_CONFIG.chainId ? (
-                  <button
-                    onClick={() => switchNetwork(EMERGING_MARKETS_CONFIG.chainId)}
-                    className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold transition"
-                  >
-                    Switch to Celo Sepolia
-                  </button>
-                ) : (
-                  <p className="text-sm text-green-600">
-                    ✓ Connected to Celo Sepolia
+              <div className="space-y-4">
+                <div className="text-center py-6">
+                  <p className="text-4xl mb-4">🌍</p>
+                  <h3 className="text-lg font-bold mb-2">Trade Fictional Companies</h3>
+                  <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-4">
+                    Trade fictional emerging market companies on Celo Sepolia testnet.
+                    Practice risk-free!
                   </p>
+                </div>
+
+                {!isConnected ? (
+                  <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-center shadow-lg shadow-green-500/20 text-white">
+                    <div className="text-3xl mb-3">👛</div>
+                    <h3 className="text-xl font-bold mb-2">Connect Wallet to Trade</h3>
+                    <p className="text-green-100 text-sm mb-6">
+                      Join the fictional emerging markets and start trading with testnet assets.
+                    </p>
+                    <button
+                      onClick={connect}
+                      className="w-full py-3 bg-white text-green-600 font-bold rounded-xl hover:bg-green-50 transition transform active:scale-95 shadow-md"
+                    >
+                      Connect Wallet
+                    </button>
+                  </div>
+                ) : chainId !== EMERGING_MARKETS_CONFIG.chainId ? (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+                    <div className="text-3xl mb-3">🔗</div>
+                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Switch Network</h3>
+                    <p className="text-amber-800 dark:text-amber-300 text-sm mb-6">
+                      To trade fictional companies, you need to be on the Celo Sepolia network.
+                    </p>
+                    <button
+                      onClick={() => switchNetwork(EMERGING_MARKETS_CONFIG.chainId)}
+                      className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition transform active:scale-95 shadow-md shadow-amber-500/20"
+                    >
+                      Switch to Celo Sepolia
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-green-600 font-bold flex items-center justify-center gap-2">
+                      <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                      Connected to Celo Sepolia
+                    </p>
+                    <p className="text-xs text-gray-400 mt-2 italic">
+                      Coming soon: Full trading widget for Celo fictional companies.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -895,7 +893,35 @@ export default function TradeTab() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
               >
-                {isRealStock ? (
+                {!isConnected ? (
+                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-center shadow-lg shadow-blue-500/20 text-white">
+                    <div className="text-3xl mb-3">📈</div>
+                    <h3 className="text-xl font-bold mb-2">Connect Wallet to Trade</h3>
+                    <p className="text-blue-100 text-sm mb-6">
+                      Connect your wallet to start trading fictional stocks and earn rewards on the Robinhood Testnet.
+                    </p>
+                    <button
+                      onClick={connect}
+                      className="w-full py-3 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition transform active:scale-95 shadow-md"
+                    >
+                      Connect Wallet
+                    </button>
+                  </div>
+                ) : !isOnRH ? (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+                    <div className="text-3xl mb-3">🔗</div>
+                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Switch Network</h3>
+                    <p className="text-amber-800 dark:text-amber-300 text-sm mb-6">
+                      To trade {selected}, you need to be on the Robinhood Chain Testnet.
+                    </p>
+                    <button
+                      onClick={() => switchNetwork(RH_CHAIN_ID)}
+                      className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition transform active:scale-95 shadow-md shadow-amber-500/20"
+                    >
+                      Switch to Robinhood
+                    </button>
+                  </div>
+                ) : isRealStock ? (
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-6 text-center">
                     <div className="text-3xl mb-3">{design.icon}</div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
@@ -954,7 +980,35 @@ export default function TradeTab() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
               >
-                {isRealStock ? (
+                {!isConnected ? (
+                  <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-center shadow-lg shadow-purple-500/20 text-white">
+                    <div className="text-3xl mb-3">💎</div>
+                    <h3 className="text-xl font-bold mb-2">Connect to Earn</h3>
+                    <p className="text-purple-100 text-sm mb-6">
+                      Provide liquidity for fictional stocks and earn high yield on Robinhood Testnet.
+                    </p>
+                    <button
+                      onClick={connect}
+                      className="w-full py-3 bg-white text-purple-600 font-bold rounded-xl hover:bg-purple-50 transition transform active:scale-95 shadow-md"
+                    >
+                      Connect Wallet
+                    </button>
+                  </div>
+                ) : !isOnRH ? (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+                    <div className="text-3xl mb-3">🔗</div>
+                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Switch Network</h3>
+                    <p className="text-amber-800 dark:text-amber-300 text-sm mb-6">
+                      To provide liquidity, you need to be on the Robinhood Chain Testnet.
+                    </p>
+                    <button
+                      onClick={() => switchNetwork(RH_CHAIN_ID)}
+                      className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition transform active:scale-95 shadow-md shadow-amber-500/20"
+                    >
+                      Switch to Robinhood
+                    </button>
+                  </div>
+                ) : isRealStock ? (
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl p-6 text-center">
                     <div className="text-3xl mb-3">📈</div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">

@@ -19,6 +19,7 @@ import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import { Card, EmptyState, HeroValue } from "../shared/TabComponents";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 import DashboardCard from "../shared/DashboardCard";
+import { AgentTierStatus } from "../agent/AgentTierStatus";
 
 interface OverviewTabProps {
   portfolio: MultichainPortfolio;
@@ -450,6 +451,9 @@ export default function OverviewTab({
 
   return (
     <div className="space-y-6">
+      {/* AGENTIC TIERS: Command Center */}
+      <AgentTierStatus />
+
       {/* DEMO MODE BANNER */}
       {isDemo && (
         <Card

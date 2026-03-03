@@ -24,6 +24,8 @@
     "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\""
   },
   "dependencies": {
+    "@celo/blind-threshold-bls": "1.0.0-beta",
+    "@celo/identity": "5.1.2",
     "@circle-fin/developer-controlled-wallets": "10.0.1",
     "@farcaster/miniapp-sdk": "0.2.1",
     "@google/generative-ai": "0.24.1",
