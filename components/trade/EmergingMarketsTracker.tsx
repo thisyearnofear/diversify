@@ -1,139 +1,184 @@
 /**
- * Emerging Markets Tracker
- * Displays real emerging market stock prices with educational context
- * Allows users to track and learn about real companies before trading fictional ones
+ * Emerging Markets Tracker (Mobile-Optimized)
+ * Displays real emerging market stock prices with quick access and compact cards
+ * ENHANCEMENT FIRST: Mobile-optimized version with progressive disclosure
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  EMERGING_MARKET_STOCKS, 
   REAL_EMERGING_MARKET_STOCKS,
   FICTIONAL_EMERGING_MARKET_COMPANIES,
   REGION_METADATA,
   getAssetBySymbol,
-  type MarketAsset,
+  type EmergingMarketStock,
 } from "../../config/emerging-markets";
 import { useEmergingMarketsPrices } from "../../hooks/use-emerging-markets-prices";
+import { useWatchlist } from "../../hooks/use-watchlist";
 
-interface StockPriceCardProps {
+// ============================================
+// Mobile-Optimized Stock Card (Compact)
+// ============================================
+interface CompactStockCardProps {
   symbol: string;
   price: {
     price: number;
     currency: string;
     usdEquivalent: number;
-    change24h: number | null;
     changePercent24h: number | null;
-    lastUpdated: number;
-    source: string;
   } | undefined;
   isLoading: boolean;
-  onSelect?: (symbol: string) => void;
-  isSelected?: boolean;
+  onToggleWatchlist: (symbol: string) => void;
+  isWatched: boolean;
 }
 
-const StockPriceCard: React.FC<StockPriceCardProps> = ({
+const CompactStockCard: React.FC<CompactStockCardProps> = ({
   symbol,
   price,
   isLoading,
-  onSelect,
-  isSelected,
+  onToggleWatchlist,
+  isWatched,
 }) => {
-  const stock = getAssetBySymbol(symbol);
+  const stock = getAssetBySymbol(symbol) as EmergingMarketStock | undefined;
   if (!stock) return null;
 
-  const regionMeta = REGION_METADATA[stock.region];
-  const isPositive = price && price.changePercent24h ? price.changePercent24h >= 0 : null;
+  const isPositive = price?.changePercent24h ? price.changePercent24h >= 0 : null;
 
   return (
     <motion.div
       layout
-      onClick={() => onSelect?.(symbol)}
-      className={`
-        relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200
-        ${isSelected 
-          ? `border-${stock.region === 'africa' ? 'green' : stock.region === 'latam' ? 'blue' : 'orange'}-500 shadow-lg` 
-          : 'border-transparent hover:border-gray-200 dark:hover:border-gray-700'
-        }
-        bg-gradient-to-br ${regionMeta.darkBgGradient} bg-opacity-50
-      `}
-      whileHover={{ scale: 1.02 }}
+      className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm"
       whileTap={{ scale: 0.98 }}
     >
-      {/* Region indicator */}
-      <div className={`absolute top-2 right-2 text-xs`}>
-        <span className="opacity-50">{regionMeta.icon}</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-start gap-3 mb-3">
-        <span className="text-2xl">{stock.icon}</span>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-sm truncate">{stock.name}</h3>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            {stock.market} • {symbol}
-          </p>
+      {/* Left: Icon + Name */}
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <span className="text-xl">{stock.icon}</span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1">
+            <span className="font-bold text-sm truncate">{symbol}</span>
+            <span className="text-[10px] text-gray-400">{stock.market}</span>
+          </div>
+          <p className="text-[10px] text-gray-500 truncate">{stock.name}</p>
         </div>
       </div>
 
-      {/* Price */}
-      <div className="space-y-1">
+      {/* Right: Price + Star */}
+      <div className="flex items-center gap-3">
         {isLoading || !price ? (
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+          <div className="w-16 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
         ) : (
-          <>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold">
-                {price.currency} {price.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-              </span>
-              {price.changePercent24h !== null && (
-                <span className={`text-xs font-medium ${
-                  isPositive ? 'text-green-500' : 'text-red-500'
-                }`}>
-                  {isPositive ? '+' : ''}{price.changePercent24h.toFixed(2)}%
-                </span>
-              )}
+          <div className="text-right">
+            <div className="font-bold text-sm">
+              ${price.usdEquivalent.toFixed(price.usdEquivalent < 1 ? 4 : 2)}
             </div>
-            <p className="text-xs text-gray-500">
-              ≈ ${price.usdEquivalent.toLocaleString(undefined, { maximumFractionDigits: 4 })} USD
-            </p>
-          </>
+            {price.changePercent24h !== null && (
+              <div className={`text-[10px] font-medium ${
+                isPositive ? 'text-green-500' : 'text-red-500'
+              }`}>
+                {isPositive ? '+' : ''}{price.changePercent24h.toFixed(1)}%
+              </div>
+            )}
+          </div>
         )}
+        
+        {/* Watchlist Star */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleWatchlist(symbol);
+          }}
+          className={`p-1.5 rounded-full transition ${
+            isWatched 
+              ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30' 
+              : 'text-gray-300 hover:text-gray-400'
+          }`}
+        >
+          <svg className="w-4 h-4" fill={isWatched ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
+        </button>
       </div>
-
-      {/* Description */}
-      <p className="mt-3 text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
-        {stock.description}
-      </p>
-
-      {/* Real ticker badge - only for real stocks */}
-      {'realTicker' in stock && (
-        <div className="mt-3 flex items-center gap-1">
-          <span className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full text-gray-500">
-            📈 {stock.realTicker}
-          </span>
-          {price && (
-            <span className="text-[10px] text-gray-400">
-              via {price.source}
-            </span>
-          )}
-        </div>
-      )}
     </motion.div>
   );
 };
 
-interface RegionTabsProps {
-  activeRegion: "all" | "africa" | "latam" | "asia";
-  onRegionChange: (region: "all" | "africa" | "latam" | "asia") => void;
+// ============================================
+// Quick Access Bar (Watchlist)
+// ============================================
+interface QuickAccessBarProps {
+  watchlist: string[];
+  prices: Record<string, { usdEquivalent: number; changePercent24h: number | null }>;
+  onSelect: (symbol: string) => void;
+  isLoading: boolean;
 }
 
-const RegionTabs: React.FC<RegionTabsProps> = ({ activeRegion, onRegionChange }) => {
+const QuickAccessBar: React.FC<QuickAccessBarProps> = ({ 
+  watchlist, 
+  prices, 
+  onSelect,
+  isLoading 
+}) => {
+  if (watchlist.length === 0) return null;
+
+  return (
+    <div className="mb-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+          ⭐ Quick Access
+        </h4>
+        <span className="text-[10px] text-gray-400">{watchlist.length} starred</span>
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {watchlist.map((symbol) => {
+          const stock = getAssetBySymbol(symbol) as EmergingMarketStock | undefined;
+          const price = prices[symbol];
+          const isPositive = price?.changePercent24h ? price.changePercent24h >= 0 : null;
+          
+          return (
+            <button
+              key={symbol}
+              onClick={() => onSelect(symbol)}
+              className="flex-shrink-0 flex items-center gap-2 px-3 py-2 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 min-w-[140px]"
+            >
+              <span className="text-lg">{stock?.icon}</span>
+              <div className="text-left">
+                <div className="font-bold text-sm">{symbol}</div>
+                {isLoading || !price ? (
+                  <div className="w-12 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                ) : (
+                  <div className={`text-[10px] font-medium ${
+                    isPositive ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    ${price.usdEquivalent.toFixed(price.usdEquivalent < 1 ? 4 : 2)}
+                    {' '}
+                    {isPositive ? '▲' : '▼'}
+                    {Math.abs(price.changePercent24h || 0).toFixed(1)}%
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================
+// Region Filter Tabs
+// ============================================
+interface RegionFilterProps {
+  activeRegion: "all" | "africa" | "latam" | "asia";
+  onRegionChange: (region: "all" | "africa" | "latam" | "asia") => void;
+  counts: Record<string, number>;
+}
+
+const RegionFilter: React.FC<RegionFilterProps> = ({ activeRegion, onRegionChange, counts }) => {
   const regions = [
-    { key: "all", label: "All Markets", icon: "🌍" },
-    { key: "africa", label: "Africa", icon: "🌍" },
-    { key: "latam", label: "Latin America", icon: "🌎" },
-    { key: "asia", label: "Asia Pacific", icon: "🌏" },
+    { key: "all", label: "All", icon: "🌍", count: counts.all },
+    { key: "africa", label: "Africa", icon: "🌍", count: counts.africa },
+    { key: "latam", label: "LatAm", icon: "🌎", count: counts.latam },
+    { key: "asia", label: "Asia", icon: "🌏", count: counts.asia },
   ] as const;
 
   return (
@@ -141,7 +186,7 @@ const RegionTabs: React.FC<RegionTabsProps> = ({ activeRegion, onRegionChange })
       {regions.map((region) => (
         <button
           key={region.key}
-          onClick={() => onRegionChange(region.key)}
+          onClick={() => onRegionChange(region.key as any)}
           className={`
             flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all
             ${activeRegion === region.key
@@ -151,13 +196,17 @@ const RegionTabs: React.FC<RegionTabsProps> = ({ activeRegion, onRegionChange })
           `}
         >
           <span>{region.icon}</span>
-          {region.label}
+          <span>{region.label}</span>
+          <span className="text-[10px] text-gray-400">({region.count})</span>
         </button>
       ))}
     </div>
   );
 };
 
+// ============================================
+// Main Component
+// ============================================
 interface EmergingMarketsTrackerProps {
   onSelectStock?: (symbol: string) => void;
   selectedStock?: string | null;
@@ -171,16 +220,34 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
 }) => {
   const [activeRegion, setActiveRegion] = useState<"all" | "africa" | "latam" | "asia">("all");
   const { prices, isLoading, error, refresh } = useEmergingMarketsPrices();
+  const { watchlist, toggleWatchlist, isInWatchlist } = useWatchlist();
+  const [showAll, setShowAll] = useState(false);
 
   // Filter stocks by region
-  const filteredStocks = REAL_EMERGING_MARKET_STOCKS.filter(
-    stock => activeRegion === "all" || stock.region === activeRegion
-  );
+  const filteredStocks = useMemo(() => {
+    return REAL_EMERGING_MARKET_STOCKS.filter(
+      stock => activeRegion === "all" || stock.region === activeRegion
+    );
+  }, [activeRegion]);
 
-  // Get fictional companies for the same region
-  const fictionalCompanies = FICTIONAL_EMERGING_MARKET_COMPANIES.filter(
-    company => activeRegion === "all" || company.region === activeRegion
-  );
+  // Count by region
+  const regionCounts = useMemo(() => ({
+    all: REAL_EMERGING_MARKET_STOCKS.length,
+    africa: REAL_EMERGING_MARKET_STOCKS.filter(s => s.region === 'africa').length,
+    latam: REAL_EMERGING_MARKET_STOCKS.filter(s => s.region === 'latam').length,
+    asia: REAL_EMERGING_MARKET_STOCKS.filter(s => s.region === 'asia').length,
+  }), []);
+
+  // Show watchlist first, then 3 stocks, then "Show All" button
+  const displayStocks = useMemo(() => {
+    const watched = filteredStocks.filter(s => watchlist.includes(s.symbol));
+    const unwatched = filteredStocks.filter(s => !watchlist.includes(s.symbol));
+    
+    if (showAll) return [...watched, ...unwatched];
+    return [...watched, ...unwatched.slice(0, 3)];
+  }, [filteredStocks, watchlist, showAll]);
+
+  const hasMore = filteredStocks.length > displayStocks.length;
 
   if (error) {
     return (
@@ -204,10 +271,10 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
         <div>
           <h2 className="text-lg font-bold flex items-center gap-2">
             <span>🌍</span>
-            Emerging Markets Tracker
+            Emerging Markets
           </h2>
-          <p className="text-sm text-gray-500">
-            Track real stocks from Africa, Latin America, and Asia
+          <p className="text-xs text-gray-500">
+            Track real stocks • Star favorites for quick access
           </p>
         </div>
         <button
@@ -227,76 +294,88 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
         </button>
       </div>
 
-      {/* Region Tabs */}
-      <RegionTabs activeRegion={activeRegion} onRegionChange={setActiveRegion} />
+      {/* Quick Access (Watchlist) - Compact horizontal scroll */}
+      <QuickAccessBar 
+        watchlist={watchlist} 
+        prices={prices} 
+        onSelect={onSelectStock || (() => {})}
+        isLoading={isLoading}
+      />
 
-      {/* Real Stocks Grid */}
+      {/* Region Filter */}
+      <RegionFilter 
+        activeRegion={activeRegion} 
+        onRegionChange={setActiveRegion}
+        counts={regionCounts}
+      />
+
+      {/* Stock List (Compact Cards) */}
       <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
-          Real Companies • Track & Learn
-        </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filteredStocks.map((stock) => (
-            <StockPriceCard
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+            {activeRegion === 'all' ? 'All Stocks' : `${REGION_METADATA[activeRegion].label} Stocks`}
+          </h3>
+          <span className="text-[10px] text-gray-400">
+            {displayStocks.length} of {filteredStocks.length}
+          </span>
+        </div>
+        
+        <div className="space-y-2">
+          {displayStocks.map((stock) => (
+            <CompactStockCard
               key={stock.symbol}
               symbol={stock.symbol}
               price={prices[stock.symbol]}
               isLoading={isLoading}
-              onSelect={onSelectStock}
-              isSelected={selectedStock === stock.symbol}
+              onToggleWatchlist={toggleWatchlist}
+              isWatched={isInWatchlist(stock.symbol)}
             />
           ))}
         </div>
+
+        {/* Show All Button */}
+        {hasMore && (
+          <button
+            onClick={() => setShowAll(true)}
+            className="w-full mt-3 py-3 text-sm font-bold text-blue-600 bg-blue-50 dark:bg-blue-900/20 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition"
+          >
+            Show All {filteredStocks.length} Stocks
+          </button>
+        )}
       </div>
 
-      {/* Fictional Companies CTA */}
-      {showFictionalCTA && fictionalCompanies.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+      {/* Fictional Companies Preview */}
+      {showFictionalCTA && (
+        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
-              Practice Trading • Fictional Companies
+            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+              🎮 Practice Trading
             </h3>
             <span className="text-[10px] px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
-              Tradeable on Celo Sepolia
+              Fictional
             </span>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {fictionalCompanies.map((company) => (
-              <motion.div
+          <div className="grid grid-cols-3 gap-2">
+            {FICTIONAL_EMERGING_MARKET_COMPANIES.slice(0, 3).map((company) => (
+              <div
                 key={company.symbol}
-                className="p-4 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30"
-                whileHover={{ scale: 1.02 }}
+                className="p-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 text-center"
               >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl">{company.icon}</span>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-sm">{company.name}</h4>
-                    <p className="text-xs text-gray-500">{company.market}</p>
-                    <p className="text-[10px] text-gray-400 mt-1 italic">
-                      Inspired by: {company.inspiration}
-                    </p>
-                  </div>
-                  <span className="text-xs font-mono text-gray-400">{company.symbol}</span>
-                </div>
-              </motion.div>
+                <span className="text-xl">{company.icon}</span>
+                <div className="text-xs font-bold mt-1">{company.symbol}</div>
+              </div>
             ))}
           </div>
-
-          <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
-              💡 <strong>How it works:</strong> Track real emerging market stocks above to learn about the companies. 
-              When you're ready to practice trading, switch to the fictional companies that mirror these regions 
-              on the Celo Sepolia testnet.
-            </p>
-          </div>
+          <p className="text-[10px] text-gray-400 mt-2 text-center">
+            Tap "Trade Fictional" tab to practice with {FICTIONAL_EMERGING_MARKET_COMPANIES.length} companies
+          </p>
         </div>
       )}
 
-      {/* Data attribution */}
-      <div className="text-center text-[10px] text-gray-400">
-        Price data provided by Yahoo Finance, Alpha Vantage, and Finnhub • 
-        Updates every 15 minutes
+      {/* Footer */}
+      <div className="text-center text-[10px] text-gray-400 pt-2">
+        Prices via Yahoo Finance, Alpha Vantage • Updated every 15 min
       </div>
     </div>
   );

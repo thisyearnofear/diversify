@@ -666,13 +666,23 @@ export default function TradeTab() {
               )}
             </div>
             <div className="text-right">
-              <div className="text-xl font-bold">
-                {liveRates[selected]
-                  ? `${liveRates[selected]} ${selected}`
-                  : "---"}
+              {/* Price Display with Toggle */}
+              <div className="flex items-center justify-end gap-2 mb-1">
+                <div className="text-xl font-bold">
+                  {(() => {
+                    const rate = liveRates[selected];
+                    if (!rate) return "---";
+                    // Convert ETH price to USDC (assuming ETH = $3000)
+                    const ethPrice = parseFloat(rate);
+                    const usdcPrice = ethPrice * 3000;
+                    return `$${usdcPrice.toFixed(2)} USDC`;
+                  })()}
+                </div>
               </div>
-              <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
-                Price per 1.00 ETH
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-[9px] text-gray-400">
+                  ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/ETH` : "---"}
+                </span>
               </div>
             </div>
           </div>
