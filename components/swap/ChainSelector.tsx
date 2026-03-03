@@ -32,8 +32,8 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
             isTestnet: false,
         },
         {
-            ...NETWORKS.ALFAJORES,
-            label: NETWORKS.ALFAJORES.name,
+            ...NETWORKS.CELO_SEPOLIA,
+            label: NETWORKS.CELO_SEPOLIA.name,
             icon: '🧪',
             color: 'amber',
             isTestnet: true,
@@ -57,7 +57,7 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
     // Filter out dev-only networks in production
     const networks = allNetworks.filter(n => {
         if (isDev) return true;
-        if (n.chainId === NETWORKS.ALFAJORES.chainId && NETWORKS.ALFAJORES.devOnly) return false;
+        if (n.chainId === NETWORKS.CELO_SEPOLIA.chainId && NETWORKS.CELO_SEPOLIA.devOnly) return false;
         if (n.chainId === NETWORKS.ARC_TESTNET.chainId && NETWORKS.ARC_TESTNET.devOnly) return false;
         return true;
     });

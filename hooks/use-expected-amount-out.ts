@@ -182,8 +182,8 @@ export function useExpectedAmountOut({
         setCachedResult(fromToken, toToken, amount, chainId, arbResult);
         return arbResult;
       }
-      // Determine if we're on Alfajores testnet or Arbitrum
-      const isAlfajores = ChainDetectionService.isTestnet(chainId) && ChainDetectionService.isCelo(chainId);
+      // Determine if we're on Celo Sepolia testnet or Arbitrum
+      const isCeloSepolia = ChainDetectionService.isTestnet(chainId) && ChainDetectionService.isCelo(chainId);
 
       // Get configuration
       const tokenList = getTokenAddresses(chainId || 42220) as Record<string, string>;
@@ -211,7 +211,7 @@ export function useExpectedAmountOut({
         });
         let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
         let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
-        if (isAlfajores) {
+        if (isCeloSepolia) {
           if (fromToken === 'USDm') fromRate = 1;
           else if (fromToken === 'EURm') fromRate = 1.08;
           else if (fromToken === 'BRLm') fromRate = 0.2;
@@ -313,7 +313,7 @@ export function useExpectedAmountOut({
           (fromToken === 'BRLm' && toToken === 'USDm')
         );
 
-        // Try two-step calculation on both mainnet and Alfajores
+        // Try two-step calculation on both mainnet and Celo Sepolia
         if (canUseViaSwap) {
           try {
             // Step 1: Find exchange for fromToken to CELO
@@ -444,8 +444,8 @@ export function useExpectedAmountOut({
         let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
         let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
 
-        // For Alfajores testnet, use hardcoded rates for common tokens
-        if (isAlfajores) {
+        // For Celo Sepolia testnet, use hardcoded rates for common tokens
+        if (isCeloSepolia) {
           if (fromToken === 'USDm') fromRate = 1;
           else if (fromToken === 'EURm') fromRate = 1.08;
           else if (fromToken === 'BRLm') fromRate = 0.2;
@@ -519,8 +519,8 @@ export function useExpectedAmountOut({
         let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
         let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
 
-        // For Alfajores testnet, use hardcoded rates for common tokens
-        if (isAlfajores) {
+        // For Celo Sepolia testnet, use hardcoded rates for common tokens
+        if (isCeloSepolia) {
           if (fromToken === 'USDm') fromRate = 1;
           else if (fromToken === 'EURm') fromRate = 1.08;
           else if (fromToken === 'BRLm') fromRate = 0.2;

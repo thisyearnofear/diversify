@@ -386,7 +386,7 @@ export const TokenPriceService = {
       10: 'optimism',
       43114: 'avalanche',
       42220: 'celo',
-      44787: 'celo', // DefiLlama may not have prices for testnets
+      11142220: 'celo', // Celo Sepolia
     };
     return map[chainId] || null;
   }

@@ -49,8 +49,8 @@ export class SwapErrorHandler {
 
         // No exchange found
         if (errorMsg.includes('No exchange found')) {
-            if (errorMsg.includes('Alfajores') || errorMsg.includes('44787')) {
-                return 'This token pair is not available on Alfajores testnet. Try using USDm as an intermediary.';
+            if (errorMsg.includes('Sepolia') || errorMsg.includes('11142220')) {
+                return 'This token pair is not available on Celo Sepolia testnet. Try using USDm as an intermediary.';
             }
             return 'No exchange found for this token pair. Try a different pair or use an intermediary token.';
         }
@@ -66,8 +66,8 @@ export class SwapErrorHandler {
         }
 
         // Generic testnet error
-        if (errorMsg.toLowerCase().includes('alfajores') || errorMsg.includes('44787')) {
-            return 'Testnet transaction error. Alfajores may have limited liquidity. Some swaps will be simulated.';
+        if (errorMsg.toLowerCase().includes('sepolia') || errorMsg.includes('11142220')) {
+            return 'Testnet transaction error. Celo Sepolia may have limited liquidity. Some swaps will be simulated.';
         }
 
         // Default error
@@ -77,8 +77,8 @@ export class SwapErrorHandler {
     static isTestnetError(error: unknown): boolean {
         const errorMsg = error instanceof Error ? error.message : String(error);
         return (
-            errorMsg.toLowerCase().includes('alfajores') ||
-            errorMsg.includes('44787') ||
+            errorMsg.toLowerCase().includes('sepolia') ||
+            errorMsg.includes('11142220') ||
             errorMsg.includes('testnet')
         );
     }

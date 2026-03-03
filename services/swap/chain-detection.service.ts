@@ -24,7 +24,7 @@ export class ChainDetectionService {
      */
     static isCelo(chainId: number | null): boolean {
         return chainId === NETWORKS.CELO_MAINNET.chainId ||
-            chainId === NETWORKS.ALFAJORES.chainId;
+            chainId === NETWORKS.CELO_SEPOLIA.chainId;
     }
 
     /**
@@ -47,7 +47,7 @@ export class ChainDetectionService {
      * Check if chain is a testnet
      */
     static isTestnet(chainId: number | null): boolean {
-        if (chainId === NETWORKS.ALFAJORES.chainId) return true;
+        if (chainId === NETWORKS.CELO_SEPOLIA.chainId) return true;
         if (isDev && chainId === NETWORKS.ARC_TESTNET.chainId) return true;
         if (isDev && chainId === NETWORKS.RH_TESTNET.chainId) return true;
         return false;
@@ -108,7 +108,7 @@ export class ChainDetectionService {
             : [];
         return [
             NETWORKS.CELO_MAINNET.chainId,
-            NETWORKS.ALFAJORES.chainId,
+            NETWORKS.CELO_SEPOLIA.chainId,
             NETWORKS.ARBITRUM_ONE.chainId,
             ...devChains,
         ];

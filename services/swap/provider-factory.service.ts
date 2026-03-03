@@ -85,8 +85,8 @@ export class ProviderFactoryService {
         switch (chainId) {
             case NETWORKS.CELO_MAINNET.chainId:
                 return NETWORKS.CELO_MAINNET.rpcUrl;
-            case NETWORKS.ALFAJORES.chainId:
-                return NETWORKS.ALFAJORES.rpcUrl;
+            case NETWORKS.CELO_SEPOLIA.chainId:
+                return NETWORKS.CELO_SEPOLIA.rpcUrl;
             case NETWORKS.ARBITRUM_ONE.chainId:
                 return NETWORKS.ARBITRUM_ONE.rpcUrl;
             case NETWORKS.ARC_TESTNET.chainId:

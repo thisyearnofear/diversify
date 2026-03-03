@@ -1,7 +1,7 @@
 /**
  * Emerging Markets Paper Trading Configuration
  * 
- * Proxy tokens deployed on Celo Alfajores for educational paper trading
+ * Proxy tokens deployed on Celo Sepolia for educational paper trading
  * Tracks real emerging market stocks with daily price updates
  */
 
@@ -13,7 +13,7 @@ export interface EmergingMarketStock {
   region: "africa" | "latam" | "asia";
   realTicker: string; // Real stock ticker for price tracking
   description: string;
-  tokenAddress?: string; // Deployed on Celo Alfajores
+  tokenAddress?: string; // Deployed on Celo Sepolia
 }
 
 export const EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
@@ -106,11 +106,11 @@ export const EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
 ];
 
 export const EMERGING_MARKETS_CONFIG = {
-  // Celo Alfajores Testnet
-  chainId: 44787,
-  network: "Celo Alfajores",
-  rpcUrl: "https://alfajores-forno.celo-testnet.org",
-  explorerUrl: "https://alfajores.celoscan.io",
+  // Celo Sepolia Testnet (New Developer Testnet)
+  chainId: 11142220,
+  network: "Celo Sepolia",
+  rpcUrl: "https://forno.celo-sepolia.celo-testnet.org",
+  explorerUrl: "https://celo-sepolia.blockscout.com",
   
   // Contracts (update after deployment)
   ammAddress: "", // TestnetMarketMaker address

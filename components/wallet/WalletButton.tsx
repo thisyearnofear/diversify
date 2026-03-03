@@ -12,7 +12,7 @@ import { NETWORKS, isTestnetChain } from '../../config';
 const FARCASTER_SUPPORTED_CHAINS = [
   NETWORKS.CELO_MAINNET.chainId,  // ✅ Supported
   NETWORKS.ARBITRUM_ONE.chainId,  // ✅ Supported
-  NETWORKS.ALFAJORES.chainId,     // ✅ Supported (Celo testnet)
+  NETWORKS.CELO_SEPOLIA.chainId,  // ✅ Supported (Celo testnet)
   // Other chains not in this app: Base, Optimism, Ethereum, Polygon, Unichain, Zora
   // Note: Arc Testnet & Robinhood Testnet are NOT supported in FarCaster
 ];
@@ -23,7 +23,7 @@ const CHAIN_METADATA: Record<number, { icon: string; color: string; farcasterSup
   [NETWORKS.ARBITRUM_ONE.chainId]: { icon: '🔷', color: 'blue', farcasterSupported: true },
   [NETWORKS.ARC_TESTNET.chainId]: { icon: '⚡', color: 'purple', farcasterSupported: false },
   [NETWORKS.RH_TESTNET.chainId]: { icon: '📈', color: 'orange', farcasterSupported: false },
-  [NETWORKS.ALFAJORES.chainId]: { icon: '🧪', color: 'yellow', farcasterSupported: true },
+  [NETWORKS.CELO_SEPOLIA.chainId]: { icon: '🧪', color: 'yellow', farcasterSupported: true },
 };
 
 type ButtonVariant = 'primary' | 'secondary' | 'inline' | 'minimal';
@@ -420,7 +420,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
   const testnetChains = [
     { id: NETWORKS.ARC_TESTNET.chainId, name: 'Arc', icon: '⚡', desc: 'High performance L2' },
     { id: NETWORKS.RH_TESTNET.chainId, name: 'Robinhood', icon: '📈', desc: 'Stock tokenization' },
-    { id: NETWORKS.ALFAJORES.chainId, name: 'Alfajores', icon: '🧪', desc: 'Celo testnet' },
+    { id: NETWORKS.CELO_SEPOLIA.chainId, name: 'Celo Sepolia', icon: '🧪', desc: 'Celo testnet' },
   ];
 
   const handleChainClick = (chainId: number) => {
@@ -431,7 +431,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
     const chainNames: Record<number, string> = {
       [NETWORKS.ARC_TESTNET.chainId]: 'arc-testnet',
       [NETWORKS.RH_TESTNET.chainId]: 'robinhood-testnet',
-      [NETWORKS.ALFAJORES.chainId]: 'celo-alfajores',
+      [NETWORKS.CELO_SEPOLIA.chainId]: 'celo-sepolia',
     };
     const chainName = chainNames[chainId];
     if (chainName) {
@@ -457,7 +457,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
       {isFarcaster && (
         <div className="px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
           <p className="text-[10px] text-blue-700 dark:text-blue-300">
-            <span className="font-bold">ℹ️ FarCaster Mode:</span> Only Celo, Arbitrum & Alfajores supported
+            <span className="font-bold">ℹ️ FarCaster Mode:</span> Only Celo, Arbitrum & Sepolia supported
           </p>
         </div>
       )}

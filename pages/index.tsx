@@ -171,21 +171,21 @@ export default function DiversiFiPage() {
         <TourTrigger />
 
         {/* Testnet Warning Banner */}
-        {walletChainId && (walletChainId === NETWORKS.ALFAJORES.chainId || walletChainId === NETWORKS.ARC_TESTNET.chainId || walletChainId === NETWORKS.RH_TESTNET.chainId) && (
+        {walletChainId && (walletChainId === NETWORKS.CELO_SEPOLIA.chainId || walletChainId === NETWORKS.ARC_TESTNET.chainId || walletChainId === NETWORKS.RH_TESTNET.chainId) && (
           <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-2 mb-2 rounded-xl text-xs font-bold flex items-center justify-between shadow-md">
             <div className="flex items-center gap-2">
               <span>🧪</span>
               <span>
                 Test Drive —&nbsp;
-                {walletChainId === NETWORKS.ALFAJORES.chainId ? 'Alfajores' :
+                {walletChainId === NETWORKS.CELO_SEPOLIA.chainId ? 'Celo Sepolia' :
                   walletChainId === NETWORKS.ARC_TESTNET.chainId ? 'Arc Testnet' : 'Robinhood Testnet'}
                 &nbsp;(play money)
               </span>
             </div>
             <a
               href={
-                walletChainId === NETWORKS.ALFAJORES.chainId
-                  ? 'https://faucet.celo.org'
+                walletChainId === NETWORKS.CELO_SEPOLIA.chainId
+                  ? 'https://faucet.celo.org/sepolia'
                   : walletChainId === NETWORKS.ARC_TESTNET.chainId
                     ? 'https://faucet.circle.com'
                     : 'https://faucet.testnet.chain.robinhood.com'

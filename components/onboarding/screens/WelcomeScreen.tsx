@@ -10,7 +10,7 @@ interface WelcomeScreenProps extends OnboardingScreenProps {
 }
 
 export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected, chainId }: WelcomeScreenProps) {
-    const isTestnet = chainId && (chainId === NETWORKS.ALFAJORES.chainId || chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId);
+    const isTestnet = chainId && (chainId === NETWORKS.CELO_SEPOLIA.chainId || chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId);
     const { switchNetwork, isConnected } = useWalletContext();
     const [isSwitching, setIsSwitching] = useState(false);
     const [switchDone, setSwitchDone] = useState(false);

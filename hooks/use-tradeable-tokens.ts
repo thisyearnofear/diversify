@@ -88,7 +88,7 @@ const FALLBACK_TRADEABLE_SYMBOLS: Record<number, string[]> = {
     "USDT",
     "G$", // GoodDollar UBI token (not Mento, but swappable on Celo)
   ], // Celo Mainnet
-  44787: ["USDm", "EURm", "BRLm", "KESm", "CELO", "USDT", "G$"], // Alfajores (approximate)
+  11142220: ["USDm", "EURm", "BRLm", "KESm", "CELO", "USDT", "G$"], // Celo Sepolia
 };
 
 export function useTradeableTokens(
@@ -128,7 +128,7 @@ export function useTradeableTokens(
 
     try {
       const rpcUrl = ChainDetectionService.isTestnet(effectiveChainId)
-        ? NETWORKS.ALFAJORES.rpcUrl
+        ? NETWORKS.CELO_SEPOLIA.rpcUrl
         : NETWORKS.CELO_MAINNET.rpcUrl;
 
       const mentoSymbols = await getTradeableTokenSymbols(rpcUrl);

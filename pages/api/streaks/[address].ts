@@ -321,8 +321,8 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
       newAchievements.push('stock-trader');
     }
 
-    // Mento Master (Alfajores)
-    if (streak.crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ALFAJORES.chainId) && !hasAchievement('mento-master')) {
+    // Mento Master (Celo Sepolia)
+    if (streak.crossChainActivity.testnet.chainsUsed.includes(NETWORKS.CELO_SEPOLIA.chainId) && !hasAchievement('mento-master')) {
       streak.achievements.push('mento-master');
       newAchievements.push('mento-master');
     }

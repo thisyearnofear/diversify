@@ -9,7 +9,7 @@ function testCrossChainUI() {
     
     // Test 1: Available tokens per chain
     console.log('--- Test 1: Tokens Available Per Chain ---');
-    const chains = [42220, 44787, 42161, 5042002]; // Celo, Alfajores, Arbitrum, Arc
+    const chains = [42220, 11142220, 42161, 5042002]; // Celo, Celo Sepolia, Arbitrum, Arc
     
     chains.forEach(chainId => {
         const tokens = getTokensForChain(chainId);

@@ -9,7 +9,7 @@ function testUSDTDropdown() {
     // Test 1: Check USDT in FALLBACK_TRADEABLE_SYMBOLS
     console.log('1. Checking USDT in fallback tradeable symbols...');
     const celoMainnetFallback = ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'CELO', 'USDC', 'EURC', 'USDT'];
-    const alfajoresFallback = ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'USDT'];
+    const celoSepoliaFallback = ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'USDT'];
     
     if (celoMainnetFallback.includes('USDT')) {
         console.log('✅ USDT found in Celo Mainnet fallback tokens');
@@ -18,10 +18,10 @@ function testUSDTDropdown() {
         return false;
     }
 
-    if (alfajoresFallback.includes('USDT')) {
-        console.log('✅ USDT found in Alfajores fallback tokens');
+    if (celoSepoliaFallback.includes('USDT')) {
+        console.log('✅ USDT found in Celo Sepolia fallback tokens');
     } else {
-        console.log('❌ USDT missing from Alfajores fallback tokens');
+        console.log('❌ USDT missing from Celo Sepolia fallback tokens');
         return false;
     }
 
@@ -67,7 +67,7 @@ function testUSDTDropdown() {
 
     console.log('\n🎉 All USDT dropdown tests passed!');
     console.log('\nUSDT should now:');
-    console.log('- Appear in token dropdowns on Celo Mainnet and Alfajores');
+    console.log('- Appear in token dropdowns on Celo Mainnet and Celo Sepolia');
     console.log('- Show as "USDT - USA" in the dropdown');
     console.log('- Be selectable for swaps and bridges');
     console.log('- Display with USA region styling (blue colors)');

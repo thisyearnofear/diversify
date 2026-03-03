@@ -5,7 +5,7 @@
 ### 1. **Cross-Chain Token Configuration** (`utils/cross-chain-tokens.ts`)
 - Defines tokens available on each chain
 - USDC: Arbitrum + Arc
-- USDm/EURm: Celo Mainnet + Alfajores  
+- USDm/EURm: Celo Mainnet + Celo Sepolia  
 - PAXG: Arbitrum only
 - Helper functions for token/chain validation
 

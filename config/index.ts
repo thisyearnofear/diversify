@@ -11,11 +11,11 @@ export const NETWORKS = {
         rpcUrl: process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org',
         explorerUrl: 'https://celo.blockscout.com',
     },
-    ALFAJORES: {
-        chainId: 44787,
-        name: 'Alfajores',
-        rpcUrl: 'https://alfajores-forno.celo-testnet.org',
-        explorerUrl: 'https://alfajores.celoscan.io',
+    CELO_SEPOLIA: {
+        chainId: 11142220,
+        name: 'Celo Sepolia',
+        rpcUrl: 'https://forno.celo-sepolia.celo-testnet.org',
+        explorerUrl: 'https://celo-sepolia.blockscout.com',
         devOnly: true, // Only show in development
     },
     ARC_TESTNET: {
@@ -229,7 +229,7 @@ export function getTokenRegion(symbol: string): RegionValue {
 // Single Source of Truth for Network Assets
 export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.CELO_MAINNET.chainId]: ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'G$', 'USDT'],
-    [NETWORKS.ALFAJORES.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT'],
+    [NETWORKS.CELO_SEPOLIA.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH', 'ACME', 'SPACELY', 'WAYNE', 'OSCORP', 'STARK'],
@@ -330,7 +330,7 @@ export const CACHE_CONFIG = {
 export const SWAP_CONFIG = {
     STRATEGY_SCORES: {
         [NETWORKS.CELO_MAINNET.chainId]: { 'MentoSwapStrategy': 100, 'OneInchSwapStrategy': 20, 'UniswapV3Strategy': 15, 'LiFiSwapStrategy': 40 },
-        [NETWORKS.ALFAJORES.chainId]: { 'MentoSwapStrategy': 100, 'LiFiSwapStrategy': 20 },
+        [NETWORKS.CELO_SEPOLIA.chainId]: { 'MentoSwapStrategy': 100, 'LiFiSwapStrategy': 20 },
         [NETWORKS.ARC_TESTNET.chainId]: { 'CurveArcStrategy': 100, 'ArcTestnetStrategy': 90 },
         [NETWORKS.ARBITRUM_ONE.chainId]: { 'OneInchSwapStrategy': 90, 'UniswapV3Strategy': 80, 'LiFiSwapStrategy': 60, 'DirectRWAStrategy': 30 },
     },
@@ -367,7 +367,7 @@ export const MAINNET_TOKENS = {
     USDT: '0x48065fbbe25f71c9282ddf5e1cd6d6a887483d5e',
 } as const;
 
-export const ALFAJORES_TOKENS = {
+export const CELO_SEPOLIA_TOKENS = {
     CELO: '0xF194afDf50B03e69Bd7D057c1Aa9e10c9954E4C9',
     USDm: '0x874069fa1eb16d44d622f2e0ca25eea172369bc1',
     EURm: '0x10c892a6ec43a53e45d0b916b4b7d383b1b78c0f',
@@ -409,7 +409,7 @@ export const RH_TESTNET_TOKENS = {
 
 export const BROKER_ADDRESSES = {
     MAINNET: '0x777a8255ca72412f0d706dc03c9d1987306b4cad',
-    ALFAJORES: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
+    CELO_SEPOLIA: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
     ARC_TESTNET: '0x0000000000000000000000000000000000000000',
     RH_TESTNET: '0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3',
 } as const;
@@ -419,12 +419,12 @@ export function getTokenAddresses(chainId: number): Record<string, string> {
     if (chainId === NETWORKS.RH_TESTNET.chainId) return RH_TESTNET_TOKENS;
     if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
-    return chainId === NETWORKS.ALFAJORES.chainId ? ALFAJORES_TOKENS : MAINNET_TOKENS;
+    return chainId === NETWORKS.CELO_SEPOLIA.chainId ? CELO_SEPOLIA_TOKENS : MAINNET_TOKENS;
 }
 
 export function getBrokerAddress(chainId: number) {
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return '0x0000000000000000000000000000000000000000';
-    return chainId === NETWORKS.ALFAJORES.chainId ? '0xD3Dff18E465bCa6241A244144765b4421Ac14D09' : '0x777a8255ca72412f0d706dc03c9d1987306b4cad';
+    return chainId === NETWORKS.CELO_SEPOLIA.chainId ? '0xD3Dff18E465bCa6241A244144765b4421Ac14D09' : '0x777a8255ca72412f0d706dc03c9d1987306b4cad';
 }
 
 export function getNetworkConfig(chainId: number) {
@@ -435,7 +435,7 @@ export function getNetworkConfig(chainId: number) {
 // TESTNET HELPERS — Single Source of Truth
 // =============================================================================
 // Derived from NETWORKS entries that carry `devOnly: true`.
-// Use these instead of inline arrays like [44787, 5042002, 46630].
+// Use these instead of inline arrays like [11142220, 5042002, 46630].
 
 /** All chain IDs that are dev/testnet-only, derived from NETWORKS config. */
 export const TESTNET_CHAIN_IDS: readonly number[] = Object.values(NETWORKS)

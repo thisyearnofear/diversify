@@ -4,7 +4,7 @@
  * Uses centralized token addresses from config to maintain single source of truth
  */
 
-import { NETWORKS, MAINNET_TOKENS, ALFAJORES_TOKENS, ARBITRUM_TOKENS, ARC_TOKENS, RH_TESTNET_TOKENS } from '../config';
+import { NETWORKS, MAINNET_TOKENS, CELO_SEPOLIA_TOKENS, ARBITRUM_TOKENS, ARC_TOKENS, RH_TESTNET_TOKENS } from '../config';
 
 export interface CrossChainToken {
     symbol: string;
@@ -59,8 +59,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.USDm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.USDm,
                 decimals: 18,
             },
         ],
@@ -76,8 +76,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.EURm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.EURm,
                 decimals: 18,
             },
         ],
@@ -93,8 +93,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.BRLm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.BRLm,
                 decimals: 18,
             },
         ],
@@ -110,8 +110,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.KESm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.KESm,
                 decimals: 18,
             },
         ],
@@ -127,8 +127,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.COPm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.COPm,
                 decimals: 18,
             },
         ],
@@ -144,8 +144,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.PHPm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.PHPm,
                 decimals: 18,
             },
         ],
@@ -161,8 +161,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.GHSm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.GHSm,
                 decimals: 18,
             },
         ],
@@ -178,8 +178,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.GBPm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.GBPm,
                 decimals: 18,
             },
         ],
@@ -195,8 +195,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.ZARm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.ZARm,
                 decimals: 18,
             },
         ],
@@ -212,8 +212,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.CADm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.CADm,
                 decimals: 18,
             },
         ],
@@ -229,8 +229,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.AUDm,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.AUDm,
                 decimals: 18,
             },
         ],
@@ -294,8 +294,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 6,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS.USDT,
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS.USDT,
                 decimals: 6,
             },
         ],
@@ -311,8 +311,8 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
                 decimals: 18,
             },
             {
-                chainId: NETWORKS.ALFAJORES.chainId,
-                address: ALFAJORES_TOKENS['G$'],
+                chainId: NETWORKS.CELO_SEPOLIA.chainId,
+                address: CELO_SEPOLIA_TOKENS['G$'],
                 decimals: 18,
             },
         ],

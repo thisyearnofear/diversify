@@ -79,11 +79,10 @@ Each strategy shapes:
 
 ## 📂 Documentation
 
-- Deployment runbooks: internal-only (not included in this repo)
-- [**Product Guide**](docs/PRODUCT_GUIDE.md) - Core features and supported assets
-- [**Technical Architecture**](docs/TECHNICAL_ARCHITECTURE.md) - System design and technology stack
-- [**User Guide**](docs/USER_GUIDE.md) - Getting started and platform usage
-- [**Integration Guide**](docs/INTEGRATION_GUIDE.md) - API and third-party service integrations
+- [**Getting Started**](docs/GETTING_STARTED.md) - Quick start, user guide, test drive
+- [**Architecture**](docs/ARCHITECTURE.md) - System design, tech stack, contracts
+- [**Integration**](docs/INTEGRATION.md) - APIs, third-party services, adding chains
+- [**Deployment**](docs/DEPLOYMENT.md) - Contract deployment, faucets, production
 
 ## 🛠️ Tech Stack
 

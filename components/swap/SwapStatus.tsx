@@ -123,8 +123,8 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                     <div className="mt-2">
                         <a
                             href={
-                                fromChainId === NETWORKS.ALFAJORES.chainId
-                                    ? `${NETWORKS.ALFAJORES.explorerUrl}/tx/${txHash}`
+                                fromChainId === NETWORKS.CELO_SEPOLIA.chainId
+                                    ? `${NETWORKS.CELO_SEPOLIA.explorerUrl}/tx/${txHash}`
                                     : fromChainId === NETWORKS.ARC_TESTNET.chainId
                                         ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${txHash}`
                                         : fromChainId === NETWORKS.ARBITRUM_ONE.chainId

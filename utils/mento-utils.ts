@@ -6,7 +6,7 @@
 import { ethers } from 'ethers';
 import {
   MAINNET_TOKENS as CELO_TOKENS,
-  ALFAJORES_TOKENS,
+  CELO_SEPOLIA_TOKENS,
   BROKER_ADDRESSES,
   ABIS,
   EXCHANGE_RATES as DEFAULT_EXCHANGE_RATES,
@@ -15,7 +15,7 @@ import {
 } from '../config';
 
 // Re-export for backward compatibility
-export { CELO_TOKENS, ALFAJORES_TOKENS };
+export { CELO_TOKENS, CELO_SEPOLIA_TOKENS };
 
 // Legacy ABI exports - map to new structure
 export const MENTO_ABIS = {
@@ -32,7 +32,7 @@ export const MENTO_ABIS = {
 export { DEFAULT_EXCHANGE_RATES };
 
 export const MENTO_BROKER_ADDRESS = BROKER_ADDRESSES.MAINNET;
-export const ALFAJORES_BROKER_ADDRESS = BROKER_ADDRESSES.ALFAJORES;
+export const CELO_SEPOLIA_BROKER_ADDRESS = BROKER_ADDRESSES.CELO_SEPOLIA;
 
 // Cache keys
 export const CACHE_KEYS = {
@@ -239,18 +239,18 @@ export const handleMentoError = (error: unknown, context: string): string => {
   } else if (errorMsg.includes('no valid median')) {
     return 'No valid price data available for this token pair. This is common on testnets. Please try a different token pair.';
   } else if (errorMsg.includes('No exchange found')) {
-    // Special handling for common token pairs on Alfajores
-    if (errorMsg.toLowerCase().includes('alfajores') || errorMsg.includes('44787')) {
-      if (errorMsg.includes('Two-step swap on Alfajores failed')) {
+    // Special handling for common token pairs on Celo Sepolia
+    if (errorMsg.toLowerCase().includes('sepolia') || errorMsg.includes('11142220')) {
+      if (errorMsg.includes('Two-step swap on Celo Sepolia failed')) {
         return 'Attempting a two-step swap via CELO failed. Falling back to simulated swap for demonstration purposes.';
-      } else if (errorMsg.includes('USDm/CELO on Alfajores') || errorMsg.includes('CELO/EURm on Alfajores')) {
+      } else if (errorMsg.includes('USDm/CELO on Celo Sepolia') || errorMsg.includes('CELO/EURm on Celo Sepolia')) {
         return 'Attempting a two-step swap via CELO. If this fails, the swap will be simulated for demonstration purposes.';
       } else if (errorMsg.includes('USDm/EURm') || errorMsg.includes('EURm/USDm')) {
-        return 'Attempting to swap USDm/EURm on Alfajores using a two-step process via CELO. If this fails, the swap will be simulated.';
+        return 'Attempting to swap USDm/EURm on Celo Sepolia using a two-step process via CELO. If this fails, the swap will be simulated.';
       } else if (errorMsg.includes('USDm/BRLm') || errorMsg.includes('BRLm/USDm')) {
-        return 'Attempting to swap USDm/BRLm on Alfajores using a two-step process via CELO. If this fails, the swap will be simulated.';
+        return 'Attempting to swap USDm/BRLm on Celo Sepolia using a two-step process via CELO. If this fails, the swap will be simulated.';
       } else {
-        return 'No exchange found for this token pair on Alfajores. Some token pairs are not directly swappable on the testnet. The swap will be simulated for demonstration purposes.';
+        return 'No exchange found for this token pair on Celo Sepolia. Some token pairs are not directly swappable on the testnet. The swap will be simulated for demonstration purposes.';
       }
     } else if (errorMsg.includes('Two-step swap failed')) {
       return 'The two-step swap process failed. This could be due to insufficient liquidity or contract restrictions. Please try again with a different amount or token pair.';
@@ -269,9 +269,9 @@ export const handleMentoError = (error: unknown, context: string): string => {
     return 'Transaction would fail. This could be due to contract restrictions or insufficient liquidity.';
   }
 
-  // Check if we're on Alfajores testnet
-  if (errorMsg.toLowerCase().includes('alfajores') || errorMsg.includes('44787')) {
-    return 'Testnet transaction error. Alfajores testnet may have limited liquidity or temporary issues. For demonstration purposes, some swaps will be simulated.';
+  // Check if we're on Celo Sepolia testnet
+  if (errorMsg.toLowerCase().includes('sepolia') || errorMsg.includes('11142220')) {
+    return 'Testnet transaction error. Celo Sepolia testnet may have limited liquidity or temporary issues. For demonstration purposes, some swaps will be simulated.';
   }
 
   return `Failed to ${context}. Please try again.`;

@@ -14,7 +14,7 @@
  * - ENHANCEMENT FIRST: Adds to SwapTab without touching its core logic.
  * - CLEAN: Presentation layer only; all side-effects via the hook.
  * - MODULAR: Drop-in, zero dependencies beyond the streak hook.
- * - PERFORMANT: Renders nothing on mainnet / Alfajores.
+ * - PERFORMANT: Renders nothing on mainnet / Celo Sepolia.
  */
 
 import React, { useState } from 'react';

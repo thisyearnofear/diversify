@@ -6,7 +6,7 @@
 
 import { createConfig, EVM } from '@lifi/sdk';
 import { createWalletClient, custom } from 'viem';
-import { arbitrum, celo, celoAlfajores } from 'viem/chains';
+import { arbitrum, celo, celoSepolia } from 'viem/chains';
 import { getWalletProvider } from '../../utils/wallet-provider';
 
 let isConfigured = false;
@@ -22,7 +22,7 @@ export function initializeLiFiConfig(): void {
 
     try {
         // Define supported chains
-        const supportedChains = [arbitrum, celo, celoAlfajores];
+        const supportedChains = [arbitrum, celo, celoSepolia];
 
         createConfig({
             integrator: 'diversifi-minipay',

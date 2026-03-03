@@ -10,7 +10,7 @@ export interface AddEthereumChainParameter {
 
 export const SUPPORTED_CHAIN_IDS = [
   NETWORKS.CELO_MAINNET.chainId,
-  NETWORKS.ALFAJORES.chainId,
+  NETWORKS.CELO_SEPOLIA.chainId,
   NETWORKS.ARBITRUM_ONE.chainId,
   NETWORKS.ARC_TESTNET.chainId,
   NETWORKS.RH_TESTNET.chainId,
@@ -33,13 +33,13 @@ export function isSupportedChainId(chainId: number): boolean {
 }
 
 export function getAddChainParameter(targetChainId: number): AddEthereumChainParameter {
-  if (targetChainId === NETWORKS.ALFAJORES.chainId) {
+  if (targetChainId === NETWORKS.CELO_SEPOLIA.chainId) {
     return {
-      chainId: '0xaf13',
-      chainName: 'Alfajores',
+      chainId: toHexChainId(NETWORKS.CELO_SEPOLIA.chainId),
+      chainName: NETWORKS.CELO_SEPOLIA.name,
       nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-      rpcUrls: [NETWORKS.ALFAJORES.rpcUrl],
-      blockExplorerUrls: [NETWORKS.ALFAJORES.explorerUrl],
+      rpcUrls: [NETWORKS.CELO_SEPOLIA.rpcUrl],
+      blockExplorerUrls: [NETWORKS.CELO_SEPOLIA.explorerUrl],
     };
   }
 

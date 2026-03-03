@@ -213,7 +213,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
           <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between">
             <span className="text-[10px] text-gray-400">Not ready to use real money?</span>
             <button
-              onClick={() => switchNetwork?.(NETWORKS.ALFAJORES.chainId)}
+              onClick={() => switchNetwork?.(NETWORKS.CELO_SEPOLIA.chainId)}
               className="text-[10px] font-black text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
             >
               🧪 Try Testnet →
@@ -333,7 +333,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
               {/* Direct network switch — one tap, no chain-selector hunting */}
               <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => switchNetwork?.(NETWORKS.ALFAJORES.chainId)}
+                  onClick={() => switchNetwork?.(NETWORKS.CELO_SEPOLIA.chainId)}
                   className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-lg transition-colors active:scale-95"
                 >
                   🧪 Try Testnet →
@@ -368,8 +368,8 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
           
           {/* Chain badges */}
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ALFAJORES.chainId) && (
-              <span className="px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-[10px] font-bold rounded-full">Alfajores</span>
+            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.CELO_SEPOLIA.chainId) && (
+              <span className="px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-[10px] font-bold rounded-full">Celo Sepolia</span>
             )}
             {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ARC_TESTNET.chainId) && (
               <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full">Arc</span>

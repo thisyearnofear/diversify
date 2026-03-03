@@ -4,7 +4,7 @@ import { PrivyProvider as BasePrivyProvider } from '@privy-io/react-auth'
 import { WagmiProvider } from '@privy-io/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode } from 'react'
-import { celo, celoAlfajores, arbitrum } from 'viem/chains'
+import { celo, celoSepolia, arbitrum } from 'viem/chains'
 import { createConfig, http } from 'wagmi'
 import { WALLET_FEATURES } from '../config/features'
 
@@ -33,10 +33,10 @@ const arcTestnet = {
 } as const
 
 const wagmiConfig = createConfig({
-    chains: [celo, celoAlfajores, arbitrum, arcTestnet],
+    chains: [celo, celoSepolia, arbitrum, arcTestnet],
     transports: {
         [celo.id]: http(),
-        [celoAlfajores.id]: http(),
+        [celoSepolia.id]: http(),
         [arbitrum.id]: http(),
         [arcTestnet.id]: http(),
     },

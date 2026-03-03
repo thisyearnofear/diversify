@@ -73,8 +73,8 @@ function getTestDriveContext(chainId?: number): string {
 - Important: Do NOT mention TSLA, AMZN, or real stock names—only our fictional ones (ACME, STARK, WAYNE, OSCORP, SPACELY).`;
   } else if (chainId === NETWORKS.ARC_TESTNET.chainId) {
     chainSpecifics = "- ARC TESTNET: You are on Arc's high-performance testnet. Encourage users to test swap speeds vs Celo.";
-  } else if (chainId === NETWORKS.ALFAJORES.chainId) {
-    chainSpecifics = "- CELO ALFAJORES: You are on Celo's testnet. Mento stablecoins (cUSD, cEUR) are fully functional here.";
+  } else if (chainId === NETWORKS.CELO_SEPOLIA.chainId) {
+    chainSpecifics = "- CELO SEPOLIA: You are on Celo's new developer testnet. Mento stablecoins (USDm, EURm) are fully functional here.";
   }
 
   return `

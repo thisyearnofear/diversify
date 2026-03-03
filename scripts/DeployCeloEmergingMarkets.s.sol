@@ -8,12 +8,12 @@ import "../contracts/TestnetMarketMaker.sol";
 
 /**
  * @title DeployCeloEmergingMarkets
- * @notice Deploy emerging markets paper trading to Celo Alfajores
+ * @notice Deploy emerging markets paper trading to Celo Sepolia
  * @dev Uses proven v1 contracts (TestnetMarketMaker + TestnetStock)
  * 
  * Usage:
  *   forge script scripts/DeployCeloEmergingMarkets.s.sol:DeployCeloEmergingMarkets \
- *     --rpc-url https://alfajores-forno.celo-testnet.org \
+ *     --rpc-url https://forno.celo-sepolia.celo-testnet.org \
  *     --broadcast \
  *     --verify
  */
@@ -27,7 +27,7 @@ contract DeployCeloEmergingMarkets is Script {
         vm.startBroadcast(deployerKey);
 
         console.log("========================================");
-        console.log("Deploying Emerging Markets to Celo Alfajores");
+        console.log("Deploying Emerging Markets to Celo Sepolia");
         console.log("========================================");
         console.log("");
 
@@ -136,8 +136,8 @@ contract DeployCeloEmergingMarkets is Script {
         console.log("");
         console.log("Next Steps:");
         console.log("1. Update config/emerging-markets.ts with addresses");
-        console.log("2. Verify contracts on Celoscan");
-        console.log("3. Test trading on https://alfajores.celoscan.io");
+        console.log("2. Verify contracts on Blockscout");
+        console.log("3. Test trading on https://celo-sepolia.blockscout.com");
         console.log("4. Integrate with TradeTab UI");
         console.log("");
         console.log("Features Available:");

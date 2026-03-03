@@ -28,8 +28,8 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             color: 'green',
         },
         {
-            ...NETWORKS.ALFAJORES,
-            label: NETWORKS.ALFAJORES.name,
+            ...NETWORKS.CELO_SEPOLIA,
+            label: NETWORKS.CELO_SEPOLIA.name,
             description: 'Testnet',
             icon: '🧪',
             color: 'amber',

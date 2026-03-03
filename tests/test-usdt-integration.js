@@ -12,13 +12,13 @@ function testUSDTIntegration() {
     const expectedTestnetAddress = '0xd077A400968890Eacc75cdc901F0356c943e4fDb';
     
     console.log('✅ USDT Mainnet address configured:', expectedMainnetAddress);
-    console.log('✅ USDT Alfajores address configured:', expectedTestnetAddress);
+    console.log('✅ USDT Celo Sepolia address configured:', expectedTestnetAddress);
     console.log('✅ USDT metadata: { name: "Tether USD", region: "Global", decimals: 6 }');
     console.log('✅ USDT exchange rate: 1 (USD equivalent)');
     
     console.log('\n🎉 USDT integration configured successfully!');
     console.log('\nUsers can now:');
-    console.log('- View USDT balances on Celo Mainnet and Alfajores');
+    console.log('- View USDT balances on Celo Mainnet and Celo Sepolia');
     console.log('- Access stuck USDT funds from failed bridge transactions');
     console.log('- Swap USDT with other Celo stablecoins via Mento');
     console.log('- Bridge USDT to other chains via LiFi');
