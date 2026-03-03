@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
 # =============================================================================
-# DiversiFi AI API — Hetzner Deployment Script
+# DiversiFi AI API — Server Deployment Script (EXAMPLE)
 #
-# Deploys the Next.js app to Hetzner as a standalone AI API server.
-# Frontend stays on Netlify; all /api/agent/* routes are served from here.
+# Copy this file to deploy-hetzner.sh and customize with your server details.
+# DO NOT commit the customized version to git!
 #
 # Usage:
+#   cp scripts/deploy-hetzner.sh.example scripts/deploy-hetzner.sh
+#   # Edit deploy-hetzner.sh with your server details
 #   chmod +x scripts/deploy-hetzner.sh
 #   ./scripts/deploy-hetzner.sh
 # =============================================================================
 set -euo pipefail
 
-DEPLOY_DIR="/opt/diversifi-api"
-APP_NAME="diversifi-api"
-PORT=6174
-REPO="https://github.com/thisyearnofear/diversify.git"
+# CUSTOMIZE THESE VALUES
+DEPLOY_DIR="/opt/your-app-name"
+APP_NAME="your-app-name"
+PORT=3000
+REPO="https://github.com/your-username/your-repo.git"
 BRANCH="main"
 
 echo "🚀 DiversiFi Hetzner Deploy — $(date)"
@@ -43,6 +46,7 @@ if [ ! -f "$DEPLOY_DIR/.env" ]; then
   echo "   Copy .env.example and fill in at minimum:"
   echo "     VENICE_API_KEY=..."
   echo "     GEMINI_API_KEY=..."
+  echo "     SYNTH_API_KEY=..."
   echo "   Then re-run this script."
   exit 1
 fi
@@ -63,7 +67,7 @@ sleep 2
 
 # Start Next.js directly with proper env variables
 cd "$DEPLOY_DIR"
-nohup sh -c "PORT=$PORT HOSTNAME=127.0.0.1 NODE_ENV=production node_modules/.bin/next start > /var/log/diversifi-api.log 2>&1" &
+nohup sh -c "PORT=$PORT HOSTNAME=127.0.0.1 NODE_ENV=production node_modules/.bin/next start > /var/log/$APP_NAME.log 2>&1" &
 
 # Wait for server to start
 echo "⏳ Waiting for server to start..."
@@ -73,10 +77,10 @@ sleep 12
 if ss -tlnp | grep -q ":$PORT "; then
   echo "✅ Server running on port $PORT"
 else
-  echo "⚠️  Server may not have started correctly. Check /var/log/diversifi-api.log"
+  echo "⚠️  Server may not have started correctly. Check /var/log/$APP_NAME.log"
 fi
 
 echo ""
 echo "✅ Deploy complete!"
 echo "   API running on http://127.0.0.1:$PORT"
-echo "   Nginx proxies https://api.diversifi.famile.xyz → port $PORT"
+echo "   Configure nginx to proxy your domain → port $PORT"
