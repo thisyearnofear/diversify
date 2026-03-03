@@ -159,6 +159,44 @@ export class CoinGeckoService {
 }
 ```
 
+### Synth API Integration
+For probabilistic price forecasts and volatility predictions powered by Bittensor SN50.
+
+#### Setup
+1. Obtain API key from [Synth Data](https://docs.synthdata.co)
+2. Add to environment variables as `SYNTH_API_KEY`
+3. Service automatically falls back to synthetic data if API is unavailable
+
+#### Usage
+```typescript
+// services/synth-data-service.ts
+import { SynthDataService } from '../services/synth-data-service';
+
+// Get price predictions with percentiles
+const forecast = await SynthDataService.getPredictions('BTC');
+// Returns: { current_price, 1H, 24H, forecast_future, realized }
+
+// Get volatility metrics
+const volatility = await SynthDataService.getVolatility('ETH');
+// Returns: { asset, realized_vol, forecast_vol }
+```
+
+#### Supported Assets
+- Crypto: BTC, ETH
+- Equity Proxies: NVDAX (Nvidia), TSLAX (Tesla), SPYX (S&P 500), AAPLX (Apple)
+
+#### Fallback Strategy
+The service implements a circuit breaker pattern:
+- Automatic retry with exponential backoff (2 retries)
+- Falls back to realistic synthetic data after repeated failures
+- Continues working even when API is unavailable
+- Logs warnings when using fallback data
+
+#### Rate Limits
+- Caching implemented (30-second TTL)
+- Respects API rate limits
+- Graceful degradation on quota exhaustion
+
 ## Third-Party Service Integrations
 
 ### Circle Integration

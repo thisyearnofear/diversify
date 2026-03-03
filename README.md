@@ -32,6 +32,7 @@ cp .env.example .env.local
 # Add your API keys to .env.local:
 # - GOOGLE_AI_API_KEY (get from https://aistudio.google.com/)
 # - VENICE_API_KEY (optional, from https://venice.ai/api)
+# - SYNTH_API_KEY (for market predictions, from https://docs.synthdata.co)
 # - NEXT_PUBLIC_REOWN_PROJECT_ID (or NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID, from https://cloud.walletconnect.com/)
 
 # Run dev server

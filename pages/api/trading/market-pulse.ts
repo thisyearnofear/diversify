@@ -13,9 +13,11 @@ export interface MarketPulseResponse {
     aiMomentum: number;
     defenseSpending: number;
     lastUpdated: number;
+    source: string;
   };
   triggers?: StockTrigger[];
   error?: string;
+  warnings?: string[];
 }
 
 export default async function handler(
@@ -23,7 +25,11 @@ export default async function handler(
   res: NextApiResponse<MarketPulseResponse>
 ) {
   if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
+    return res.status(405).json({ 
+      success: false, 
+      error: 'Method not allowed',
+      warnings: ['Only GET and POST methods are supported']
+    });
   }
 
   try {
@@ -31,9 +37,19 @@ export default async function handler(
     
     const pulse = await marketPulseService.getMarketPulse();
     
+    const warnings: string[] = [];
+    
+    // Add warnings based on data source
+    if (pulse.source === 'fallback') {
+      warnings.push('Using synthetic fallback data due to API unavailability');
+    } else if (pulse.source === 'mixed') {
+      warnings.push('Some data sources are unavailable, using mixed data sources');
+    }
+
     const response: MarketPulseResponse = {
       success: true,
       pulse,
+      ...(warnings.length > 0 && { warnings }),
     };
 
     if (includeTriggers === 'true') {
@@ -46,6 +62,7 @@ export default async function handler(
     res.status(500).json({
       success: false,
       error: error.message || 'Failed to fetch market pulse',
+      warnings: ['Service temporarily unavailable, please try again later']
     });
   }
 }

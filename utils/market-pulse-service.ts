@@ -14,6 +14,7 @@ export interface MarketPulse {
   aiMomentum: number;
   defenseSpending: number;
   lastUpdated: number;
+  source: string; // "api" | "fallback" | "mixed"
 }
 
 export interface StockTrigger {
@@ -59,27 +60,67 @@ const FICTIONAL_TO_REAL: Record<string, {
 export class MarketPulseService {
   private static cache: { data: MarketPulse; timestamp: number } | null = null;
   private static readonly CACHE_TTL = 60000;
+  private static serviceStatus = {
+    synthWorking: true,
+    macroWorking: true,
+    lastSynthError: 0,
+    lastMacroError: 0
+  };
 
   static async getMarketPulse(): Promise<MarketPulse> {
     if (this.cache && Date.now() - this.cache.timestamp < this.CACHE_TTL) {
       return this.cache.data;
     }
 
-    const [synthBTC, synthVol, macroData] = await Promise.all([
+    // Fetch data with error handling
+    const [synthBTC, synthVol, macroData] = await Promise.allSettled([
       SynthDataService.getPredictions("BTC"),
       SynthDataService.getVolatility("BTC"),
       macroService.getMacroData(),
     ]);
 
-    const btcPrice = synthBTC?.current_price || 67500;
-    const btcChange24h = synthBTC?.["24H"]?.percentiles?.p50 || 0;
-    const sentiment = synthVol?.forecast_vol ? 50 + (synthVol.forecast_vol * 100) : 50;
+    // Determine data sources
+    const synthSuccess = synthBTC.status === 'fulfilled' && synthBTC.value !== null;
+    const volSuccess = synthVol.status === 'fulfilled' && synthVol.value !== null;
+    const macroSuccess = macroData.status === 'fulfilled' && macroData.value.data && Object.keys(macroData.value.data).length > 0;
 
-    const warRisk = this.calculateWarRisk(macroData.data);
-    const aiMomentum = this.calculateAIMomentum(synthBTC, synthVol);
+    // Update service status
+    if (!synthSuccess) {
+      this.serviceStatus.synthWorking = false;
+      this.serviceStatus.lastSynthError = Date.now();
+      console.warn("[Market Pulse] Synth API failed, using fallback data");
+    }
+    if (!macroSuccess) {
+      this.serviceStatus.macroWorking = false;
+      this.serviceStatus.lastMacroError = Date.now();
+      console.warn("[Market Pulse] Macro API failed, using fallback data");
+    }
+
+    // Extract data with fallbacks
+    const btcData = synthSuccess ? synthBTC.value : null;
+    const volData = volSuccess ? synthVol.value : null;
+    const macroResult = macroSuccess ? macroData.value : { data: {}, source: "fallback" };
+
+    // Calculate metrics with fallback logic
+    const btcPrice = btcData?.current_price || this.generateFallbackPrice();
+    const btcChange24h = btcData?.["24H"]?.percentiles?.p50 || this.generateFallbackChange();
+    const sentiment = volData?.forecast_vol ? 50 + (volData.forecast_vol * 100) : this.generateFallbackSentiment();
+    
+    const warRisk = this.calculateWarRisk(macroResult.data);
+    const aiMomentum = this.calculateAIMomentum(btcData, volData);
     const defenseSpending = this.calculateDefenseSpending(warRisk);
     const goldPrice = 2650;
     const goldChange24h = 0.3;
+
+    // Determine source
+    let source: string;
+    if (synthSuccess && macroSuccess) {
+      source = "api";
+    } else if (!synthSuccess && !macroSuccess) {
+      source = "fallback";
+    } else {
+      source = "mixed";
+    }
 
     const pulse: MarketPulse = {
       sentiment: Math.min(100, Math.max(0, sentiment)),
@@ -91,10 +132,36 @@ export class MarketPulseService {
       aiMomentum,
       defenseSpending,
       lastUpdated: Date.now(),
+      source,
     };
 
     this.cache = { data: pulse, timestamp: Date.now() };
     return pulse;
+  }
+
+  /**
+   * Generate fallback BTC price with some randomness
+   */
+  private static generateFallbackPrice(): number {
+    const basePrice = 67500;
+    const randomFactor = 0.95 + Math.random() * 0.1;
+    return Math.round(basePrice * randomFactor);
+  }
+
+  /**
+   * Generate fallback 24h change with some randomness
+   */
+  private static generateFallbackChange(): number {
+    // Random change between -5% and +5%
+    return (Math.random() - 0.5) * 10;
+  }
+
+  /**
+   * Generate fallback sentiment score
+   */
+  private static generateFallbackSentiment(): number {
+    // Random sentiment between 40 and 60 (neutral range)
+    return 40 + Math.random() * 20;
   }
 
   private static calculateWarRisk(data: Record<string, any>): number {
