@@ -166,7 +166,7 @@ export default function StrategySelector({ onSelect, currentStrategy, onSkip }: 
                     whileHover={selected ? { scale: 1.05 } : {}}
                     whileTap={selected ? { scale: 0.95 } : {}}
                 >
-                    Continue with {selected ? STRATEGIES.find(s => s.id === selected)?.name : 'Strategy'}
+                    Continue with {selected ? STRATEGIES?.find(s => s.id === selected)?.name : 'Strategy'}
                 </motion.button>
             </div>
 

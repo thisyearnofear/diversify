@@ -15,7 +15,7 @@ import { NETWORKS } from '../../config';
 
 // Human-readable network name for error messages
 function getNetworkName(chainId: number): string {
-  return Object.values(NETWORKS).find(n => n.chainId === chainId)?.name ?? `Chain ${chainId}`;
+  return Object.values(NETWORKS || {}).find(n => n.chainId === chainId)?.name ?? `Chain ${chainId}`;
 }
 
 interface GraduationModalProps {

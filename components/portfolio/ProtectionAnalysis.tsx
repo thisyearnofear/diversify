@@ -115,7 +115,7 @@ export default function ProtectionAnalysis({
 
     const shareToSocial = async (platform: 'twitter' | 'farcaster') => {
         const activeRegions = regionData.filter(r => r.value > 0).length;
-        const rwaAllocation = regionData.find(r => r.region === 'Commodities')?.value || 0;
+        const rwaAllocation = regionData?.find(r => r.region === 'Commodities')?.value || 0;
         const rwaPercent = totalValue > 0 ? (rwaAllocation / totalValue) * 100 : 0;
 
         const baseUrl = 'https://diversifiapp.vercel.app';

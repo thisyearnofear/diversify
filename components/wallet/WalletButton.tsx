@@ -105,7 +105,7 @@ export default function WalletButton({
   // Network helpers
   const isTestnet = isTestnetChain(chainId);
   const networkName = chainId ? 
-    Object.values(NETWORKS).find(n => n.chainId === chainId)?.name || 'Unknown' : 
+    Object.values(NETWORKS || {}).find(n => n.chainId === chainId)?.name || 'Unknown' : 
     'Not Connected';
   
   // Get the opposite network for toggling

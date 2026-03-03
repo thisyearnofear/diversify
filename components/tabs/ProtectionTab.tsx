@@ -280,7 +280,7 @@ export default function ProtectionTab({
   // Calculate protection score
   const protectionScore = liveAnalysis ? Math.round(
     (liveAnalysis.diversificationScore +
-      (100 - liveAnalysis.weightedInflationRisk * 5)) / 2
+      (100 - (liveAnalysis.weightedInflationRisk || 0) * 5)) / 2
   ) : 0;
 
   // ============================================================================

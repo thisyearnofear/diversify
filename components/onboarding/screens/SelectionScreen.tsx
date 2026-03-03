@@ -221,7 +221,7 @@ export function SelectionScreen({
                     whileHover={selected ? { scale: 1.02 } : {}}
                     whileTap={selected ? { scale: 0.98 } : {}}
                 >
-                    {selected ? `Continue with ${STRATEGIES.find(s => s.id === selected)?.name}` : 'Select a philosophy'}
+                    {selected ? `Continue with ${STRATEGIES?.find(s => s.id === selected)?.name}` : 'Select a philosophy'}
                 </motion.button>
                 <div className="flex gap-2 md:gap-3">
                     <button

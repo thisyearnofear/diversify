@@ -90,7 +90,7 @@ export default function TradeTab() {
     liveRates[selected],
   );
 
-  const forecastVolatility = stockStats.find(s => s.label === "Forecast Volatility")?.value;
+  const forecastVolatility = stockStats?.find(s => s.label === "Forecast Volatility")?.value;
   const volatilityValue = forecastVolatility ? parseFloat(forecastVolatility.replace("%", "")) / 100 : 0.3;
 
   const { holderData, isHoldersLoading } = useTokenHolders(selected);
