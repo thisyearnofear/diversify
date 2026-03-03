@@ -3,8 +3,6 @@ import { ethers } from "ethers";
 import { ProviderFactoryService } from "../services/swap/provider-factory.service";
 import { NETWORKS, BROKER_ADDRESSES, RH_TESTNET_TOKENS } from "../config";
 
-import { SynthDataService } from "../services/synth-data-service";
-
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
 const WETH_ADDRESS = RH_TESTNET_TOKENS.WETH;
@@ -115,19 +113,20 @@ export function useStockStats(
       const peRatioMock = 10 + (seed % 30) + (seed % 100) / 100;
       const divYieldMock = (seed % 5) + (seed % 10) / 10;
 
-      // 5. Fetch Synth Volatility Data
+      // 5. Fetch Synth Volatility Data via API route (server-side only)
       let forecastVol: number | undefined;
       let realizedVol: number | undefined;
       try {
-        const synthAsset = SynthDataService.mapStockToSynthAsset(selectedStock);
-        // Using getPredictions which is cached in SynthDataService
-        const synthData = await SynthDataService.getPredictions(synthAsset);
-        if (synthData) {
-          forecastVol = synthData.forecast_future?.average_volatility;
-          realizedVol = synthData.realized?.average_volatility;
+        const response = await fetch(`/api/trading/stock-stats?stock=${selectedStock}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            forecastVol = data.volatility?.forecast;
+            realizedVol = data.volatility?.realized;
+          }
         }
       } catch (e) {
-        console.warn("[Stats] Could not fetch Synth data:", e);
+        console.warn("[Stats] Could not fetch volatility data:", e);
       }
 
       setStats({

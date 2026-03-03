@@ -997,34 +997,34 @@ export default function TradeTab() {
                   [
                     {
                       label: "Market Cap",
-                      value: `${stockStats.marketCapETH.toFixed(2)} ETH`,
+                      value: stockStats?.marketCapETH != null ? `${stockStats.marketCapETH.toFixed(2)} ETH` : "—",
                     },
                     {
                       label: "Holders",
-                      value: holderData
+                      value: holderData?.holdersCount != null
                         ? holderData.holdersCount.toLocaleString()
                         : "—",
                     },
                     {
                       label: "Div Yield",
                       value:
-                        stockStats.divYieldMock > 0
+                        stockStats?.divYieldMock != null && stockStats.divYieldMock > 0
                           ? `${stockStats.divYieldMock.toFixed(2)}%`
                           : "—",
                     },
                     {
                       label: "24h Volume",
-                      value: `${stockStats.volume24hETH.toFixed(2)} ETH`,
+                      value: stockStats?.volume24hETH != null ? `${stockStats.volume24hETH.toFixed(2)} ETH` : "—",
                     },
                     {
                       label: "Forecast Vol",
-                      value: stockStats.forecastVol ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—",
+                      value: stockStats?.forecastVol != null ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—",
                       isSynth: true,
                       description: "Predicted annualized price volatility powered by SynthData's SN50 machine learning models.",
                     },
                     {
                       label: "Realized Vol",
-                      value: stockStats.realizedVol ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—",
+                      value: stockStats?.realizedVol != null ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—",
                       isSynth: true,
                       description: "Historical volatility observed in the actual market price over the recent period.",
                     },

@@ -64,14 +64,14 @@ const CompactStockCard: React.FC<CompactStockCardProps> = ({
 
       {/* Right: Price + Star */}
       <div className="flex items-center gap-3">
-        {isLoading || !price ? (
+        {isLoading || !price || price.usdEquivalent == null ? (
           <div className="w-16 h-6 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
         ) : (
           <div className="text-right">
             <div className="font-bold text-sm">
               ${price.usdEquivalent.toFixed(price.usdEquivalent < 1 ? 4 : 2)}
             </div>
-            {price.changePercent24h !== null && (
+            {price.changePercent24h !== null && price.changePercent24h !== undefined && (
               <div className={`text-[10px] font-medium ${
                 isPositive ? 'text-green-500' : 'text-red-500'
               }`}>
@@ -143,7 +143,7 @@ const QuickAccessBar: React.FC<QuickAccessBarProps> = ({
               <span className="text-lg">{stock?.icon}</span>
               <div className="text-left">
                 <div className="font-bold text-sm">{symbol}</div>
-                {isLoading || !price ? (
+                {isLoading || !price || price.usdEquivalent == null ? (
                   <div className="w-12 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 ) : (
                   <div className={`text-[10px] font-medium ${
@@ -151,8 +151,12 @@ const QuickAccessBar: React.FC<QuickAccessBarProps> = ({
                   }`}>
                     ${price.usdEquivalent.toFixed(price.usdEquivalent < 1 ? 4 : 2)}
                     {' '}
-                    {isPositive ? '▲' : '▼'}
-                    {Math.abs(price.changePercent24h || 0).toFixed(1)}%
+                    {price.changePercent24h !== null && price.changePercent24h !== undefined && (
+                      <>
+                        {isPositive ? '▲' : '▼'}
+                        {Math.abs(price.changePercent24h).toFixed(1)}%
+                      </>
+                    )}
                   </div>
                 )}
               </div>
