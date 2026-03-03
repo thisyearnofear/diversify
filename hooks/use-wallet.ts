@@ -35,6 +35,7 @@ export function useWallet() {
   const [isFarcaster, setIsFarcaster] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [farcasterContext, setFarcasterContext] = useState<any>(null);
+  const [userDisconnected, setUserDisconnected] = useState(false);
 
   const providerRef = useRef<WalletProviderType | null>(null);
 
@@ -126,6 +127,12 @@ export function useWallet() {
   ]);
 
   useEffect(() => {
+    // Skip auto-connect if user manually disconnected
+    if (userDisconnected) {
+      console.log("[Wallet] Skipping auto-connect due to manual disconnect");
+      return;
+    }
+
     let cleanup: (() => void) | undefined;
 
     const initWallet = async () => {
@@ -209,7 +216,7 @@ export function useWallet() {
     return () => {
       if (cleanup) cleanup();
     };
-  }, [address]);
+  }, [userDisconnected]);
 
   const getActiveProvider = async () => {
     if (providerRef.current) {
@@ -227,6 +234,7 @@ export function useWallet() {
 
   const connect = async () => {
     try {
+      setUserDisconnected(false);
       setIsConnecting(true);
       setError(null);
 
@@ -385,6 +393,7 @@ export function useWallet() {
     `${addr.substring(0, 6)}...${addr.substring(addr.length - 4)}`;
 
   const disconnect = async () => {
+    setUserDisconnected(true);
     setAddress(null);
     setIsConnected(false);
     setChainId(null);
@@ -413,6 +422,7 @@ export function useWallet() {
     }
 
     try {
+      setUserDisconnected(false);
       setIsConnecting(true);
       setError(null);
 

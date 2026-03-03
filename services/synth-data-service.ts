@@ -1,4 +1,5 @@
 import axios from "axios";
+import { unifiedCache } from "../utils/unified-cache-service";
 
 export interface SynthForecast {
   current_price: number;
@@ -26,13 +27,7 @@ export interface SynthVolatility {
 }
 
 const BASE_URL = "https://api.synthdata.co";
-const CACHE_TTL = 30000; // 30 seconds
 const API_KEY = process.env.SYNTH_API_KEY;
-
-interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-}
 
 // Fallback data for when Synth API is unavailable
 const FALLBACK_DATA: Record<string, { forecast: SynthForecast; volatility: SynthVolatility }> = {
@@ -191,96 +186,72 @@ const FALLBACK_DATA: Record<string, { forecast: SynthForecast; volatility: Synth
 /**
  * Service for interacting with Synth API (docs.synthdata.co)
  * Provides probabilistic price forecasts and volatility metrics.
+ * 
+ * Uses unified-cache-service for:
+ * - Request coalescing (deduplicates concurrent requests)
+ * - Stale-while-revalidate fallback on errors
+ * - Smart TTL management (30min for price data)
  */
 export class SynthDataService {
-  private static predictionsCache: Record<string, CacheEntry<SynthForecast>> = {};
-  private static volatilityCache: Record<string, CacheEntry<SynthVolatility>> = {};
-  private static apiCallCount = 0;
-  private static lastApiError = 0;
-
   /**
-   * Fetches prediction data for a specific asset with retry logic and fallbacks.
+   * Fetches prediction data for a specific asset with unified caching and fallbacks.
    * @param asset The asset symbol (e.g., BTC, ETH, NVDAX)
    */
   static async getPredictions(asset: string): Promise<SynthForecast | null> {
-    const cached = this.predictionsCache[asset];
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return cached.data;
-    }
-
-    // Check if we should use fallback due to recent API failures
-    if (this.shouldUseFallback()) {
-      console.warn(`[Synth API] Using fallback data for ${asset} due to recent API failures`);
-      return this.getFallbackForecast(asset);
-    }
-
     try {
-      const result = await this.makeApiRequest<SynthForecast>(
-        `${BASE_URL}/insights/prediction-percentiles`,
-        { asset }
+      const result = await unifiedCache.getOrFetch<SynthForecast>(
+        `synth:predictions:${asset}`,
+        async () => {
+          const data = await this.makeApiRequest<SynthForecast>(
+            `${BASE_URL}/insights/prediction-percentiles`,
+            { asset }
+          );
+          if (!data) throw new Error('No data from API');
+          return { data, source: 'synth-api' };
+        },
+        'volatile', // 30min TTL for price forecasts
+        false
       );
-
-      if (result) {
-        this.predictionsCache[asset] = {
-          data: result,
-          timestamp: Date.now(),
-        };
-        this.apiCallCount++;
-        return result;
-      }
+      return result.data;
     } catch (error) {
       console.error(`[Synth API] Failed to fetch predictions for ${asset}:`, error);
-      this.lastApiError = Date.now();
+      // Return fallback on any error (unified cache already tried stale data)
+      return this.getFallbackForecast(asset);
     }
-
-    // Return fallback data if API failed
-    return this.getFallbackForecast(asset);
   }
 
   /**
-   * Fetches volatility insights for a specific asset with retry logic and fallbacks.
+   * Fetches volatility insights for a specific asset with unified caching and fallbacks.
    * @param asset The asset symbol
    */
   static async getVolatility(asset: string): Promise<SynthVolatility | null> {
-    const cached = this.volatilityCache[asset];
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      return cached.data;
-    }
-
-    // Check if we should use fallback due to recent API failures
-    if (this.shouldUseFallback()) {
-      console.warn(`[Synth API] Using fallback volatility data for ${asset} due to recent API failures`);
-      return this.getFallbackVolatility(asset);
-    }
-
     try {
-      const result = await this.makeApiRequest<any>(
-        `${BASE_URL}/insights/volatility`,
-        { asset }
+      const result = await unifiedCache.getOrFetch<SynthVolatility>(
+        `synth:volatility:${asset}`,
+        async () => {
+          const data = await this.makeApiRequest<any>(
+            `${BASE_URL}/insights/volatility`,
+            { asset }
+          );
+          if (!data) throw new Error('No data from API');
+
+          const mappedData: SynthVolatility = {
+            asset: data.asset || asset,
+            realized_vol: data.realized?.average_volatility || 0,
+            forecast_vol: data.forecast_future?.average_volatility || 0,
+          };
+
+          return { data: mappedData, source: 'synth-api' };
+        },
+        'volatile', // 30min TTL for volatility data
+        false
       );
-
-      if (result) {
-        const mappedData: SynthVolatility = {
-          asset: result.asset || asset,
-          realized_vol: result.realized?.average_volatility || 0,
-          forecast_vol: result.forecast_future?.average_volatility || 0,
-        };
-
-        this.volatilityCache[asset] = {
-          data: mappedData,
-          timestamp: Date.now(),
-        };
-
-        this.apiCallCount++;
-        return mappedData;
-      }
+      return result.data;
     } catch (error) {
       console.error(`[Synth API] Failed to fetch volatility for ${asset}:`, error);
-      this.lastApiError = Date.now();
+      // Return fallback on any error (unified cache already tried stale data)
+      return this.getFallbackVolatility(asset);
     }
-
-    // Return fallback data if API failed
-    return this.getFallbackVolatility(asset);
   }
 
   /**
@@ -326,15 +297,6 @@ export class SynthDataService {
     }
 
     return null;
-  }
-
-  /**
-   * Determines if we should use fallback data based on recent API failures.
-   */
-  private static shouldUseFallback(): boolean {
-    // Use fallback if we had an error in the last 5 minutes
-    const fiveMinutes = 5 * 60 * 1000;
-    return Date.now() - this.lastApiError < fiveMinutes && this.apiCallCount > 0;
   }
 
   /**
