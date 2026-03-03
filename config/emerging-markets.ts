@@ -112,20 +112,33 @@ export const EMERGING_MARKETS_CONFIG = {
   rpcUrl: "https://alfajores-forno.celo-testnet.org",
   explorerUrl: "https://alfajores.celoscan.io",
   
-  // Contracts (to be deployed)
-  ammAddress: "", // Simple AMM for paper trading
-  oracleAddress: "", // Price oracle
+  // Contracts (update after deployment)
+  ammAddress: "", // TestnetMarketMaker address
+  wethAddress: "", // WETH9 (Wrapped CELO) address
   
-  // Trading pairs (all paired with cUSD)
-  baseCurrency: "cUSD",
-  baseCurrencyAddress: "0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1",
+  // Token addresses (update after deployment)
+  tokens: {
+    // Africa
+    SAFCOM: "",
+    DANGOTE: "",
+    SHOPRITE: "",
+    // Latin America
+    PETROBRAS: "",
+    MELI: "",
+    CEMEX: "",
+    // Asia
+    RELIANCE: "",
+    GRAB: "",
+    JOLLIBEE: "",
+  },
   
-  // Price update frequency
-  priceUpdateInterval: 86400, // 24 hours
+  // Trading configuration
+  baseToken: "CELO",
+  feePercent: 0.3, // Same as Robinhood (0.3%)
   
-  // Paper trading limits
-  maxTradeSize: 1000, // 1000 cUSD max per trade
-  minTradeSize: 1, // 1 cUSD min per trade
+  // Paper trading limits (optional, can be enforced in UI)
+  maxTradeSize: 1000, // 1000 CELO max per trade
+  minTradeSize: 0.01, // 0.01 CELO min per trade
 };
 
 /**
