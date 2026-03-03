@@ -39,6 +39,9 @@ Technical system design and technology stack for DiversiFi.
 - FRED - US economic data
 - CoinGecko - Crypto pricing
 - DeFiLlama - Yield data
+- Yahoo Finance - Emerging market stock prices (unofficial)
+- Alpha Vantage - Stock price fallback
+- Finnhub - Real-time stock prices
 
 ## Multi-Chain Architecture
 
@@ -51,7 +54,26 @@ Technical system design and technology stack for DiversiFi.
          │                       │                      │
          └───────────────────────┘                      │
               Cross-chain bridges          Dedicated /trade page
+
+┌─────────────────────────────────────────────────────────────────┐
+│                    Celo Sepolia Testnet                         │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Emerging Markets Exchange                               │   │
+│  │  - Real stocks: SAFCOM, DANGOTE, PETROBRAS (track)      │   │
+│  │  - Fictional: WAKANDA, ARASAKA, MISHIMA (trade)         │   │
+│  │  - Price feeds: Yahoo Finance, Alpha Vantage            │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
 ```
+
+### Paper Trading Strategy
+
+Both Robinhood and Celo Sepolia use a **two-tier system**:
+
+1. **Real Assets** → Track-only with live price feeds
+2. **Fictional Companies** → Tradeable tokens on AMM
+
+This allows users to learn about real emerging market stocks while practicing trades with fictional, culturally-relevant companies.
 
 ## Key Contracts
 
@@ -67,6 +89,21 @@ Technical system design and technology stack for DiversiFi.
 |----------|---------|
 | Broker | `0xD3Dff18E465bCa6241A244144765b4421Ac14D09` |
 | USDm | `0x874069fa1eb16d44d622f2e0ca25eea172369bc1` |
+| TestnetMarketMaker | `0x983b3a94C8266310192135d60D77B871549B9CfF` |
+| WETH9 | `0x95fa0c32181d073FA9b07F0eC3961C845d00bE21` |
+
+**Emerging Markets Tokens** (mapped to fictional names in UI):
+| Symbol | Address | Fictional Name | Region |
+|--------|---------|----------------|--------|
+| SAFCOM | `0xe968d89E...` | WAKANDA | Africa |
+| DANGOTE | `0x47A55970...` | DAKAR | Africa |
+| SHOPRITE | `0x32BEfC5B...` | SHADOW | Africa |
+| PETROBRAS | `0x05334A4C...` | KUBERA | Asia |
+| MELI | `0x1D939e6F...` | SANTA | LatAm |
+| CEMEX | `0xBD6a279E...` | SHADALOO | Asia |
+| RELIANCE | `0x020c58Ec...` | MISHIMA | Asia |
+| GRAB | `0xB1Dc9Bf3...` | ARASAKA | Asia |
+| JOLLIBEE | `0x303B0964...` | SURA | Asia |
 
 ### Robinhood Chain (Chain ID: 46630)
 | Contract | Address |
@@ -81,9 +118,18 @@ Technical system design and technology stack for DiversiFi.
 |-------|----------|----------|
 | Celo Mainnet | MentoSwapStrategy | 100 |
 | Celo Sepolia | MentoSwapStrategy | 100 |
+| Celo Sepolia | EmergingMarketsStrategy | 95 |
 | Arbitrum | OneInchSwapStrategy | 90 |
 | Arbitrum | UniswapV3Strategy | 80 |
 | Arc Testnet | CurveArcStrategy | 100 |
+| RH Testnet | RobinhoodAMMStrategy | 100 |
+
+### Emerging Markets Strategy
+
+Handles CELO↔fictional company token swaps on Celo Sepolia:
+- `WAKANDA`, `DAKAR`, `SHADOW` (Africa)
+- `KUBERA`, `SANTA`, `SHADALOO` (LatAm/Asia)
+- `MISHIMA`, `ARASAKA`, `SURA` (Asia)
 
 ## Configuration Source of Truth
 

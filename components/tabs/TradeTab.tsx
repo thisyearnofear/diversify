@@ -16,9 +16,19 @@ import { useStockStats } from "../../hooks/use-stock-stats";
 import { useTokenHolders } from "../../hooks/use-token-holders";
 import HoldersWidget from "../trade/HoldersWidget";
 import TradeIntelligence, { type IntelligenceItem } from "../trade/TradeIntelligence";
+import EmergingMarketsTracker from "../trade/EmergingMarketsTracker";
 
 import { SynthDataService } from "../../services/synth-data-service";
 import { marketPulseService } from "../../utils/market-pulse-service";
+import {
+  EMERGING_MARKETS_CONFIG,
+  FICTIONAL_EMERGING_MARKET_COMPANIES,
+  REAL_EMERGING_MARKET_STOCKS,
+  REGION_METADATA,
+  getFictionalCompany,
+  type FictionalCompany,
+} from "../../config/emerging-markets";
+import { SwapOrchestratorService } from "../../services/swap/swap-orchestrator.service";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
@@ -32,6 +42,9 @@ type Stock = (typeof STOCKS)[number];
 const isFictionalStock = (stock: Stock): stock is typeof FICTIONAL_STOCKS[number] => {
   return FICTIONAL_STOCKS.includes(stock as typeof FICTIONAL_STOCKS[number]);
 };
+
+// Market type for switching between Robinhood and Emerging Markets
+type MarketType = "robinhood" | "emerging-markets";
 
 const AMM_ABI = [
   "function quoteSwapETH(uint256 ethAmountIn, address tokenOut) view returns (uint256)",
@@ -59,8 +72,10 @@ export default function TradeTab() {
   const isAdvanced = experienceMode === "advanced";
 
   // --- State ---
-  const [activeTab, setActiveTab] = useState<"trade" | "earn">("trade");
+  const [activeMarket, setActiveMarket] = useState<MarketType>("robinhood");
+  const [activeTab, setActiveTab] = useState<"trade" | "earn" | "track">("trade");
   const [selected, setSelected] = useState<Stock>("ACME");
+  const [selectedEmergingCompany, setSelectedEmergingCompany] = useState<FictionalCompany>(FICTIONAL_EMERGING_MARKET_COMPANIES[0]);
   const [mode, setMode] = useState<TradeMode>("buy");
   const [inputAmount, setInputAmount] = useState("");
   const [quote, setQuote] = useState<string | null>(null);
@@ -484,8 +499,136 @@ export default function TradeTab() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
-      {/* Stock Selection Ticker */}
-      <StockTicker
+      {/* Paper Trading Badge */}
+      <div className="flex items-center justify-center gap-2">
+        <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
+          🎮 Paper Trading
+        </span>
+        <span className="text-[10px] text-gray-400">Practice with fictional tokens • No real money</span>
+      </div>
+
+      {/* Market Selector */}
+      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
+        <button
+          onClick={() => {
+            setActiveMarket("robinhood");
+            setActiveTab("trade");
+          }}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${
+            activeMarket === "robinhood"
+              ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600"
+              : "text-gray-500 hover:text-gray-600"
+          }`}
+        >
+          <span>⚡</span>
+          <span className="hidden sm:inline">Robinhood Testnet</span>
+          <span className="sm:hidden">Robinhood</span>
+        </button>
+        <button
+          onClick={() => {
+            setActiveMarket("emerging-markets");
+            setActiveTab("track");
+          }}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${
+            activeMarket === "emerging-markets"
+              ? "bg-white dark:bg-gray-700 shadow-sm text-green-600"
+              : "text-gray-500 hover:text-gray-600"
+          }`}
+        >
+          <span>🌍</span>
+          <span className="hidden sm:inline">Emerging Markets</span>
+          <span className="sm:hidden">Emerging</span>
+        </button>
+      </div>
+
+      {/* Emerging Markets View */}
+      {activeMarket === "emerging-markets" && (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="emerging-markets"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-4"
+          >
+            {/* Track/Trade Tabs for Emerging Markets */}
+            <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
+              <button
+                onClick={() => setActiveTab("track")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
+                  activeTab === "track"
+                    ? "bg-white dark:bg-gray-700 shadow-sm text-green-600 dark:text-green-400"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                📈 Track Real Stocks
+              </button>
+              <button
+                onClick={() => setActiveTab("trade")}
+                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
+                  activeTab === "trade"
+                    ? "bg-white dark:bg-gray-700 shadow-sm text-green-600 dark:text-green-400"
+                    : "text-gray-400 hover:text-gray-600"
+                }`}
+              >
+                🎮 Trade Fictional
+              </button>
+            </div>
+
+            {/* Tab Explanation */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-200 dark:border-amber-800">
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                {activeTab === "track"
+                  ? "📊 View real emerging market stocks with live prices. Track only - cannot trade these directly."
+                  : "🎮 Trade fictional companies inspired by emerging market fiction & mythology. Practice risk-free!"
+                }
+              </p>
+            </div>
+
+            {activeTab === "track" ? (
+              <EmergingMarketsTracker
+                onSelectStock={(symbol) => {
+                  console.log("Selected stock:", symbol);
+                }}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-4xl mb-4">🌍</p>
+                <h3 className="text-lg font-bold mb-2">Trade Fictional Companies</h3>
+                <p className="text-gray-500 dark:text-gray-400 max-w-sm mx-auto mb-4">
+                  Trade fictional emerging market companies on Celo Sepolia testnet.
+                  Switch to Celo Sepolia network to begin trading.
+                </p>
+                {chainId !== EMERGING_MARKETS_CONFIG.chainId ? (
+                  <button
+                    onClick={() => switchNetwork(EMERGING_MARKETS_CONFIG.chainId)}
+                    className="px-6 py-3 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold transition"
+                  >
+                    Switch to Celo Sepolia
+                  </button>
+                ) : (
+                  <p className="text-sm text-green-600">
+                    ✓ Connected to Celo Sepolia
+                  </p>
+                )}
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {/* Robinhood Market View */}
+      {activeMarket === "robinhood" && (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="robinhood"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-4"
+          >
+            {/* Stock Selection Ticker */}
+            <StockTicker
         stocks={STOCKS}
         selected={selected}
         onSelect={(s) => {
@@ -681,8 +824,9 @@ export default function TradeTab() {
             )}
           </AnimatePresence>
         </div>
+      </div>
 
-        {/* Detailed Stats & Holders - Only for Advanced */}
+      {/* Detailed Stats & Holders - Only for Advanced */}
         {isAdvanced && (
           <div className="space-y-4">
             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
@@ -801,7 +945,9 @@ export default function TradeTab() {
             </div>
           </div>
         )}
-      </div>
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       {/* Faucet Link */}
       <div className="text-center pt-4 pb-2">

@@ -1,11 +1,12 @@
 /**
  * StrategyModal - Welcoming onboarding with actionable strategy selection
- * 
- * Modular 4-step flow:
+ *
+ * Modular 5-step flow:
  * 1. WelcomeScreen - Initial greeting and value proposition
  * 2. SelectionScreen - Philosophy selection gallery
- * 3. InterfaceSelectionScreen - Choice of Simplity or Full Transparency
- * 4. ConfirmationScreen - Final summary and capability awareness
+ * 3. InterfaceSelectionScreen - Choice of Simplicity or Full Transparency
+ * 4. PaperTradingScreen - Introduction to paper trading
+ * 5. ConfirmationScreen - Final summary and capability awareness
  */
 
 import React, { useEffect, useState } from 'react';
@@ -18,6 +19,7 @@ import type { FinancialStrategy } from '@/context/app/types';
 import { WelcomeScreen } from './screens/WelcomeScreen';
 import { SelectionScreen } from './screens/SelectionScreen';
 import { InterfaceSelectionScreen } from './screens/InterfaceSelectionScreen';
+import { PaperTradingScreen } from './screens/PaperTradingScreen';
 import { ConfirmationScreen } from './screens/ConfirmationScreen';
 
 interface StrategyModalProps {
@@ -31,7 +33,7 @@ interface StrategyModalProps {
 
 export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWallet, isWalletConnected, chainId }: StrategyModalProps) {
     const { financialStrategy, setFinancialStrategy } = useStrategy();
-    const [step, setStep] = useState<'welcome' | 'select' | 'interface' | 'confirm'>('welcome');
+    const [step, setStep] = useState<'welcome' | 'select' | 'interface' | 'paper-trading' | 'confirm'>('welcome');
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selected, setSelected] = useState<FinancialStrategy | null>(financialStrategy || null);
 
@@ -69,7 +71,8 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
     };
 
     const handleBack = () => {
-        if (step === 'confirm') setStep('interface');
+        if (step === 'confirm') setStep('paper-trading');
+        else if (step === 'paper-trading') setStep('interface');
         else if (step === 'interface') setStep('select');
         else if (step === 'select') setStep('welcome');
     };
@@ -137,6 +140,13 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
                         )}
                         {step === 'interface' && (
                             <InterfaceSelectionScreen
+                                onContinue={() => setStep('paper-trading')}
+                                onBack={handleBack}
+                                onSkip={handleSkip}
+                            />
+                        )}
+                        {step === 'paper-trading' && (
+                            <PaperTradingScreen
                                 onContinue={() => setStep('confirm')}
                                 onBack={handleBack}
                                 onSkip={handleSkip}

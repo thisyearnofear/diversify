@@ -206,6 +206,20 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     WAYNE: { name: 'Wayne Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
     OSCORP: { name: 'Oscorp Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
     STARK: { name: 'Stark Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
+
+    // Fictional Emerging Market Companies (Celo Sepolia Testnet)
+    // Africa
+    WAKANDA: { name: 'Wakanda Design Group', region: REGIONS.AFRICA, decimals: 18, apy: 0 },
+    DAKAR: { name: 'Dakar Nexus Energy', region: REGIONS.AFRICA, decimals: 18, apy: 0 },
+    SHADOW: { name: 'Shadow Market Syndicates', region: REGIONS.AFRICA, decimals: 18, apy: 0 },
+    // Latin America / Asia
+    KUBERA: { name: "Kubera's Treasury Guilds", region: REGIONS.ASIA, decimals: 18, apy: 0 },
+    SANTA: { name: 'Santa Prisca Silver Mining', region: REGIONS.LATAM, decimals: 18, apy: 0 },
+    SHADALOO: { name: 'Shadaloo Corporation', region: REGIONS.ASIA, decimals: 18, apy: 0 },
+    // Asia Pacific
+    MISHIMA: { name: 'Mishima Zaibatsu', region: REGIONS.ASIA, decimals: 18, apy: 0 },
+    ARASAKA: { name: 'Arasaka Corporation', region: REGIONS.ASIA, decimals: 18, apy: 0 },
+    SURA: { name: 'Sura Corporation', region: REGIONS.ASIA, decimals: 18, apy: 0 },
 };
 
 // Helper to get token yield (0 if none)
@@ -229,7 +243,7 @@ export function getTokenRegion(symbol: string): RegionValue {
 // Single Source of Truth for Network Assets
 export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.CELO_MAINNET.chainId]: ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'G$', 'USDT'],
-    [NETWORKS.CELO_SEPOLIA.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT'],
+    [NETWORKS.CELO_SEPOLIA.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT', 'CELO', 'WAKANDA', 'DAKAR', 'SHADOW', 'KUBERA', 'SANTA', 'SHADALOO', 'MISHIMA', 'ARASAKA', 'SURA'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH', 'ACME', 'SPACELY', 'WAYNE', 'OSCORP', 'STARK'],

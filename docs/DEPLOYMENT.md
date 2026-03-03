@@ -62,14 +62,33 @@ export const EMERGING_MARKETS_CONFIG = {
   wethAddress: "0x...",   // WETH9
   
   tokens: {
-    SAFCOM: "0x...",
-    DANGOTE: "0x...",
-    // ... other tokens
+    // Tokens keep original names on-chain but display as fictional in UI
+    SAFCOM: "0x...",    // UI: WAKANDA
+    DANGOTE: "0x...",   // UI: DAKAR
+    SHOPRITE: "0x...",  // UI: SHADOW
+    // ... etc
   },
 };
 ```
 
 3. Verify on explorer: https://celo-sepolia.blockscout.com/
+
+### Price API Setup
+
+To fetch real emerging market stock prices, add API keys to `.env.local`:
+
+```bash
+# Optional - improves price reliability
+NEXT_PUBLIC_ALPHA_VANTAGE_KEY=your_key_here
+NEXT_PUBLIC_FINNHUB_KEY=your_key_here
+```
+
+**Free tier limits:**
+- Alpha Vantage: 25 calls/day (sufficient for 9 stocks)
+- Finnhub: 60 calls/minute
+- Yahoo Finance: No key required (unofficial API)
+
+Prices are cached for 15 minutes (5 minutes during market hours).
 
 ### Verify Contracts
 

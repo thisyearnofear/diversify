@@ -20,6 +20,7 @@ import { UniswapV3Strategy } from './strategies/uniswap-v3.strategy';
 import { DirectRWAStrategy } from './strategies/direct-rwa.strategy';
 import { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
 import { RobinhoodAMMStrategy } from './strategies/robinhood-amm.strategy';
+import { EmergingMarketsStrategy } from './strategies/emerging-markets.strategy';
 import { CurveArcStrategy } from './strategies/curve-arc.strategy';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
@@ -32,15 +33,16 @@ interface StrategyPerformance {
 
 export class SwapOrchestratorService {
     private static strategies: BaseSwapStrategy[] = [
-        new MentoSwapStrategy(),      // Celo same-chain (specialized)
-        new CurveArcStrategy(),       // Curve Finance on Arc Testnet (direct integration)
-        new ArcTestnetStrategy(),     // Arc Testnet fallback (guidance)
-        new RobinhoodAMMStrategy(),   // Robinhood Chain testnet (stock tokens)
-        new OneInchSwapStrategy(),    // Multi-chain same-chain (best rates)
-        new UniswapV3Strategy(),      // Direct Uniswap V3 (reliable fallback)
-        new LiFiSwapStrategy(),       // LiFi same-chain (fallback)
-        new LiFiBridgeStrategy(),     // Cross-chain bridging
-        new DirectRWAStrategy(),      // Direct RWA swaps (final fallback)
+        new MentoSwapStrategy(),          // Celo same-chain (specialized)
+        new EmergingMarketsStrategy(),    // Celo Sepolia fictional companies
+        new CurveArcStrategy(),           // Curve Finance on Arc Testnet (direct integration)
+        new ArcTestnetStrategy(),         // Arc Testnet fallback (guidance)
+        new RobinhoodAMMStrategy(),       // Robinhood Chain testnet (stock tokens)
+        new OneInchSwapStrategy(),        // Multi-chain same-chain (best rates)
+        new UniswapV3Strategy(),          // Direct Uniswap V3 (reliable fallback)
+        new LiFiSwapStrategy(),           // LiFi same-chain (fallback)
+        new LiFiBridgeStrategy(),         // Cross-chain bridging
+        new DirectRWAStrategy(),          // Direct RWA swaps (final fallback)
     ];
 
     private static performanceData = new Map<string, StrategyPerformance>();
