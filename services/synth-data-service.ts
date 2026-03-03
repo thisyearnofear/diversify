@@ -120,11 +120,20 @@ export class SynthDataService {
    */
   static mapStockToSynthAsset(stock: string): string {
     const mapping: Record<string, string> = {
+      // Fictional stocks → real asset proxies
       ACME: "SPYX", // ACME as S&P 500 proxy
       SPACELY: "TSLAX", // Spacely as Tech/Tesla proxy
       WAYNE: "NVDAX", // Wayne as AI/Nvidia proxy
       OSCORP: "AAPL", // Oscorp as Apple proxy
       STARK: "BTC", // Stark as Crypto/High-Beta proxy
+      // Real stocks → direct Synth API assets
+      NVDA: "NVDAX",
+      GOOGL: "GOOGLX",
+      TSLA: "TSLAX",
+      AAPL: "AAPLX",
+      // Crypto
+      BTC: "BTC",
+      ETH: "ETH",
     };
     return mapping[stock] || "BTC";
   }

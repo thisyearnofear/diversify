@@ -252,7 +252,7 @@ export default function StockChart({
           right: "5px",
           top:
             displayData.length > 0
-              ? `${padding.top + chartHeight - ((displayData[displayData.length - 1] - Math.min(...displayData)) / Math.max(0.00001, Math.max(...displayData) - Math.min(...displayData))) * chartHeight}px`
+              ? `calc(20px + ${height - 40}px - ((${displayData[displayData.length - 1]} - ${Math.min(...(displayData.length > 0 ? displayData : [0]))}) / ${Math.max(0.00001, Math.max(...(displayData.length > 0 ? displayData : [0])) - Math.min(...(displayData.length > 0 ? displayData : [0])))}) * ${height - 40}px)`
               : "50%",
           transform: "translate(50%, -50%)",
         }}

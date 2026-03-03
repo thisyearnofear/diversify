@@ -35,7 +35,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
     } catch (error) {
         console.error("[Momentum Proxy] Failed to fetch:", error);
-        res.status(500).json({ 
+        res.status(200).json({ 
             error: "Failed to fetch momentum data",
             data: {
                 globalStablecoinCap: 162400000000,

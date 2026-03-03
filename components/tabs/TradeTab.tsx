@@ -23,8 +23,14 @@ const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
 const WETH_ADDRESS = RH_TESTNET_TOKENS.WETH;
 
-const STOCKS = ["ACME", "SPACELY", "WAYNE", "OSCORP", "STARK"] as const;
+const FICTIONAL_STOCKS = ["ACME", "SPACELY", "WAYNE", "OSCORP", "STARK"] as const;
+const REAL_STOCKS = ["NVDA", "GOOGL", "TSLA", "AAPL", "BTC", "ETH"] as const;
+const STOCKS = [...FICTIONAL_STOCKS, ...REAL_STOCKS] as const;
 type Stock = (typeof STOCKS)[number];
+
+const isFictionalStock = (stock: Stock): stock is typeof FICTIONAL_STOCKS[number] => {
+  return FICTIONAL_STOCKS.includes(stock as typeof FICTIONAL_STOCKS[number]);
+};
 
 const AMM_ABI = [
   "function quoteSwapETH(uint256 ethAmountIn, address tokenOut) view returns (uint256)",
@@ -69,6 +75,12 @@ export default function TradeTab() {
     WAYNE: "0",
     OSCORP: "0",
     STARK: "0",
+    NVDA: "0",
+    GOOGL: "0",
+    TSLA: "0",
+    AAPL: "0",
+    BTC: "0",
+    ETH: "0",
   });
   const [liveRates, setLiveRates] = useState<Record<Stock, string | null>>({
     ACME: null,
@@ -76,6 +88,12 @@ export default function TradeTab() {
     WAYNE: null,
     OSCORP: null,
     STARK: null,
+    NVDA: null,
+    GOOGL: null,
+    TSLA: null,
+    AAPL: null,
+    BTC: null,
+    ETH: null,
   });
 
   const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
@@ -83,15 +101,15 @@ export default function TradeTab() {
 
   const isOnRH = chainId === RH_CHAIN_ID;
   const design = getTokenDesign(selected);
-  const stockAddress = RH_TESTNET_TOKENS[selected];
+  const stockAddress = isFictionalStock(selected) ? RH_TESTNET_TOKENS[selected] : undefined;
+  const isRealStock = !isFictionalStock(selected);
 
   const { stats: stockStats, isLoading: isStatsLoading } = useStockStats(
     selected,
     liveRates[selected],
   );
 
-  const forecastVolatility = stockStats?.find(s => s.label === "Forecast Volatility")?.value;
-  const volatilityValue = forecastVolatility ? parseFloat(forecastVolatility.replace("%", "")) / 100 : 0.3;
+  const volatilityValue = stockStats?.forecastVol ?? 0.3;
 
   const { holderData, isHoldersLoading } = useTokenHolders(selected);
 
@@ -108,7 +126,7 @@ export default function TradeTab() {
       setEthBalance(ethers.utils.formatEther(bal));
 
       const entries = await Promise.all(
-        STOCKS.map(async (s) => {
+        FICTIONAL_STOCKS.map(async (s) => {
           const token = new ethers.Contract(
             RH_TESTNET_TOKENS[s],
             ERC20_ABI,
@@ -118,7 +136,9 @@ export default function TradeTab() {
           return [s, ethers.utils.formatEther(b)] as const;
         }),
       );
-      setStockBalances(Object.fromEntries(entries) as Record<Stock, string>);
+      const balances: Record<Stock, string> = Object.fromEntries(entries) as Record<Stock, string>;
+      REAL_STOCKS.forEach(s => { balances[s] = "0"; });
+      setStockBalances(balances);
     } catch (e) {
       console.warn("[Trade] Balance fetch error:", e);
     }
@@ -132,7 +152,7 @@ export default function TradeTab() {
       const refETH = ethers.utils.parseEther("0.001");
 
       const res = await Promise.all(
-        STOCKS.map(async (s) => {
+        FICTIONAL_STOCKS.map(async (s) => {
           try {
             const stockAddr = RH_TESTNET_TOKENS[s];
             const [out, [rETH, rStock]] = await Promise.all([
@@ -165,6 +185,12 @@ export default function TradeTab() {
         WAYNE: null,
         OSCORP: null,
         STARK: null,
+        NVDA: null,
+        GOOGL: null,
+        TSLA: null,
+        AAPL: null,
+        BTC: null,
+        ETH: null,
       };
       const resMap: Record<Stock, { eth: string; stock: string } | null> = {
         ACME: null,
@@ -172,6 +198,12 @@ export default function TradeTab() {
         WAYNE: null,
         OSCORP: null,
         STARK: null,
+        NVDA: null,
+        GOOGL: null,
+        TSLA: null,
+        AAPL: null,
+        BTC: null,
+        ETH: null,
       };
 
       res.forEach((item) => {
@@ -201,12 +233,11 @@ export default function TradeTab() {
   useEffect(() => {
     const fetchSynthIntelligence = async () => {
       const asset = SynthDataService.mapStockToSynthAsset(selected);
-      // This call is cached in SynthDataService, so it won't hit the network if useStockStats recently fetched it
       const data = await SynthDataService.getPredictions(asset);
       if (data) {
-        // Convert Synth prediction to an intelligence item
-        const forecastVol = (data.forecast_future?.average_volatility * 100 || 0).toFixed(2);
-        const realizedVol = (data.realized?.average_volatility * 100 || 0).toFixed(2);
+        const forecast24h = data["24H"];
+        const forecastVol = forecast24h ? (forecast24h.average_volatility * 100).toFixed(2) : "0";
+        const realizedVol = data.realized ? (data.realized.average_volatility * 100).toFixed(2) : "0";
         
         const synthItem: IntelligenceItem = {
           id: `synth-${selected}`,
@@ -218,12 +249,12 @@ export default function TradeTab() {
           timestamp: "Live",
         };
 
-        // Extract percentiles for the chart
-        const price = data.price;
+        const price = data.current_price;
+        const percentiles = forecast24h?.percentiles || {};
         setSynthForecast({
-          p10: price * (1 + data.forecast_future.percentiles.p10),
-          p50: price * (1 + data.forecast_future.percentiles.p50),
-          p90: price * (1 + data.forecast_future.percentiles.p90),
+          p10: price * (1 + (percentiles.p10 || 0)),
+          p50: price * (1 + (percentiles.p50 || 0)),
+          p90: price * (1 + (percentiles.p90 || 0)),
         });
 
         setIntelligenceItems(prev => {
@@ -284,7 +315,7 @@ export default function TradeTab() {
   // --- Quoting ---
 
   useEffect(() => {
-    if (!inputAmount || !isOnRH || parseFloat(inputAmount) <= 0) {
+    if (!inputAmount || !isOnRH || parseFloat(inputAmount) <= 0 || !stockAddress) {
       setQuote(null);
       setPriceImpact(null);
       return;
@@ -332,7 +363,7 @@ export default function TradeTab() {
   // --- Handlers ---
 
   const handleSwap = async () => {
-    if (!inputAmount || !address) return;
+    if (!inputAmount || !address || !stockAddress) return;
     setIsSwapping(true);
     setError(null);
     setTxHash(null);
@@ -569,27 +600,57 @@ export default function TradeTab() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
               >
-                <TradeWidget
-                  selected={selected}
-                  design={design}
-                  mode={mode}
-                  setMode={setMode}
-                  inputAmount={inputAmount}
-                  setInputAmount={setInputAmount}
-                  quote={quote}
-                  priceImpact={priceImpact}
-                  isQuoting={isQuoting}
-                  isSwapping={isSwapping}
-                  hasBalance={hasBalance}
-                  ethBalance={ethBalance}
-                  stockBalance={stockBalances[selected]}
-                  handleMax={handleMax}
-                  handleSwap={handleSwap}
-                  txHash={txHash}
-                  error={error}
-                  slippagePercent={SLIPPAGE_PERCENT}
-                  explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
-                />
+                {isRealStock ? (
+                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-6 text-center">
+                    <div className="text-3xl mb-3">{design.icon}</div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      {selected} - Live Forecast
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Probabilistic price predictions powered by Bittensor SN50
+                    </p>
+                    {synthForecast ? (
+                      <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                          <div className="text-xs text-gray-500">P10</div>
+                          <div className="font-bold text-red-600">${synthForecast.p10.toLocaleString()}</div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                          <div className="text-xs text-gray-500">Median</div>
+                          <div className="font-bold text-blue-600">${synthForecast.p50.toLocaleString()}</div>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                          <div className="text-xs text-gray-500">P90</div>
+                          <div className="font-bold text-green-600">${synthForecast.p90.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-gray-500">Loading Synth forecasts...</div>
+                    )}
+                  </div>
+                ) : (
+                  <TradeWidget
+                    selected={selected}
+                    design={design}
+                    mode={mode}
+                    setMode={setMode}
+                    inputAmount={inputAmount}
+                    setInputAmount={setInputAmount}
+                    quote={quote}
+                    priceImpact={priceImpact}
+                    isQuoting={isQuoting}
+                    isSwapping={isSwapping}
+                    hasBalance={hasBalance}
+                    ethBalance={ethBalance}
+                    stockBalance={stockBalances[selected]}
+                    handleMax={handleMax}
+                    handleSwap={handleSwap}
+                    txHash={txHash}
+                    error={error}
+                    slippagePercent={SLIPPAGE_PERCENT}
+                    explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                  />
+                )}
               </motion.div>
             ) : (
               <motion.div
@@ -598,14 +659,27 @@ export default function TradeTab() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.98 }}
               >
-                <LiquidityWidget
-                  selected={selected}
-                  address={address}
-                  ethBalance={ethBalance}
-                  stockBalance={stockBalances[selected]}
-                  onSuccess={fetchBalances}
-                  explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
-                />
+                {isRealStock ? (
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl p-6 text-center">
+                    <div className="text-3xl mb-3">📈</div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                      Earn with {selected}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Liquidity provision coming soon for real asset tokens. 
+                      Connect to Robinhood Chain to trade fictional stocks.
+                    </p>
+                  </div>
+                ) : (
+                  <LiquidityWidget
+                    selected={selected}
+                    address={address}
+                    ethBalance={ethBalance}
+                    stockBalance={stockBalances[selected]}
+                    onSuccess={fetchBalances}
+                    explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                  />
+                )}
               </motion.div>
             )}
           </AnimatePresence>
