@@ -5,9 +5,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { NETWORKS, RH_TESTNET_TOKENS, BROKER_ADDRESSES } from "../../config";
 import { getTokenDesign } from "../../constants/tokens";
 import { 
-  ProviderFactoryService,
-  SynthDataService,
-  marketPulseService 
+  ProviderFactoryService 
 } from "@diversifi/shared";
 import { useExperience } from "../../context/app/ExperienceContext";
 
@@ -254,36 +252,42 @@ export default function TradeTab() {
   // Fetch Synth Data for intelligence feed
   useEffect(() => {
     const fetchSynthIntelligence = async () => {
-      const asset = SynthDataService.mapStockToSynthAsset(selected);
-      const data = await SynthDataService.getPredictions(asset);
-      if (data) {
-        const forecast24h = data["24H"];
-        const forecastVol = forecast24h ? (forecast24h.average_volatility * 100).toFixed(2) : "0";
-        const realizedVol = data.realized ? (data.realized.average_volatility * 100).toFixed(2) : "0";
+      try {
+        const response = await fetch(`/api/trading/stock-stats?stock=${selected}`);
+        if (!response.ok) return;
         
-        const synthItem: IntelligenceItem = {
-          id: `synth-${selected}`,
-          type: "impact",
-          title: `Synth Probabilistic Forecast: ${selected}`,
-          description: `SN50 models predict ${forecastVol}% annualized volatility. Realized volatility is currently ${realizedVol}%.`,
-          impact: parseFloat(forecastVol) > parseFloat(realizedVol) ? "negative" : "positive",
-          impactAsset: selected,
-          timestamp: "Live",
-        };
+        const data = await response.json();
+        if (data.success && data.synthData) {
+          const forecast = data.synthData;
+          const forecast24h = forecast["24H"];
+          const forecastVol = forecast24h ? (forecast24h.average_volatility * 100).toFixed(2) : "0";
+          const realizedVol = forecast.realized ? (forecast.realized.average_volatility * 100).toFixed(2) : "0";
+          
+          const synthItem: IntelligenceItem = {
+            id: `synth-${selected}`,
+            type: "impact",
+            title: `Synth Probabilistic Forecast: ${selected}`,
+            description: `SN50 models predict ${forecastVol}% annualized volatility. Realized volatility is currently ${realizedVol}%.`,
+            impact: parseFloat(forecastVol) > parseFloat(realizedVol) ? "negative" : "positive",
+            impactAsset: selected,
+            timestamp: "Live",
+          };
 
-        const price = data.current_price;
-        const percentiles = forecast24h?.percentiles || {};
-        setSynthForecast({
-          p10: price * (1 + (percentiles.p10 || 0)),
-          p50: price * (1 + (percentiles.p50 || 0)),
-          p90: price * (1 + (percentiles.p90 || 0)),
-        });
+          const price = forecast.current_price;
+          const percentiles = forecast24h?.percentiles || {};
+          setSynthForecast({
+            p10: price * (1 + (percentiles.p10 || 0)),
+            p50: price * (1 + (percentiles.p50 || 0)),
+            p90: price * (1 + (percentiles.p90 || 0)),
+          });
 
-        setIntelligenceItems(prev => {
-          // Replace previous synth item for this specific asset to avoid duplicates
-          const filtered = prev.filter(item => item.id !== `synth-${selected}`);
-          return [synthItem, ...filtered];
-        });
+          setIntelligenceItems(prev => {
+            const filtered = prev.filter(item => item.id !== `synth-${selected}`);
+            return [synthItem, ...filtered];
+          });
+        }
+      } catch (e) {
+        console.warn("[TradeTab] Failed to fetch synth intelligence:", e);
       }
     };
 
@@ -296,7 +300,11 @@ export default function TradeTab() {
   useEffect(() => {
     const fetchMarketIntelligence = async () => {
       try {
-        const pulseItems = await marketPulseService.generateIntelligenceItems();
+        const response = await fetch("/api/trading/market-pulse");
+        if (!response.ok) throw new Error("Failed to fetch market pulse API");
+        
+        const data = await response.json();
+        const pulseItems = data.success && data.pulse?.intelligence ? data.pulse.intelligence : [];
         
         const staticItems: IntelligenceItem[] = [
           {
@@ -309,19 +317,27 @@ export default function TradeTab() {
           },
         ];
         
-        setIntelligenceItems([...pulseItems, ...staticItems]);
+        setIntelligenceItems(prev => {
+          // Keep user-specific synth items, merge with global pulse items
+          const synthItems = prev.filter(item => item.id.startsWith("synth-"));
+          return [...synthItems, ...pulseItems, ...staticItems];
+        });
       } catch (error) {
         console.warn("[Trade] Failed to fetch market pulse:", error);
-        setIntelligenceItems([
-          {
-            id: "static-1",
-            type: "news",
-            title: "DiversiFi Expands to Latin America",
-            description: "New regional integration expected to drive volume for emerging market assets.",
-            impact: "positive",
-            timestamp: "15m ago",
-          },
-        ]);
+        setIntelligenceItems(prev => {
+          const synthItems = prev.filter(item => item.id.startsWith("synth-"));
+          return [
+            ...synthItems,
+            {
+              id: "static-1",
+              type: "news",
+              title: "DiversiFi Expands to Latin America",
+              description: "New regional integration expected to drive volume for emerging market assets.",
+              impact: "positive",
+              timestamp: "15m ago",
+            },
+          ];
+        });
       }
     };
 

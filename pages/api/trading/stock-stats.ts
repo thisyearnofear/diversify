@@ -8,6 +8,7 @@ export interface StockStatsResponse {
         forecast?: number;
         realized?: number;
     };
+    synthData?: any;
     error?: string;
 }
 
@@ -42,6 +43,7 @@ export default async function handler(
                 forecast,
                 realized,
             },
+            synthData,
         });
     } catch (error: any) {
         console.error('[Stock Stats API] Error:', error);

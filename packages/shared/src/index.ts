@@ -13,7 +13,7 @@ export { AIService, generateChatCompletion, getAIServiceStatus } from './service
 export { StrategyService } from './services/strategy/strategy.service';
 
 // Export Utils
-export * from './utils/market-pulse-service';
+export { MarketPulseService, marketPulseService } from './utils/market-pulse-service';
 export {
   analyzePortfolio,
   calculateWeightedInflationRisk,

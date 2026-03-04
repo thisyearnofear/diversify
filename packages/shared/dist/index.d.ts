@@ -10,7 +10,7 @@ export * from './services/ai/intelligence.service';
 export * from './services/ai/intent-discovery.service';
 export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
 export { StrategyService } from './services/strategy/strategy.service';
-export * from './utils/market-pulse-service';
+export { MarketPulseService, marketPulseService } from './utils/market-pulse-service';
 export { analyzePortfolio, calculateWeightedInflationRisk, calculateDiversificationScore, getConcentrationRisk, calculateProjections, generateRebalancingOpportunities, generateTargetAllocations, detectGuidedTour, createEmptyAnalysis } from './utils/portfolio-analysis';
 export type { PortfolioAnalysis, TokenAllocation, RegionalExposure, RebalancingOpportunity } from './utils/portfolio-analysis';
 export * from './utils/unified-cache-service';

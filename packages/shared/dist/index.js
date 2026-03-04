@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.marketMomentumService = exports.scoreTokens = exports.TokenScoringUtils = exports.getTokenApy = exports.DEFAULT_MARKET_CONTEXT = exports.getBestTokenForRegionDynamic = exports.calculateRealYield = exports.TokenPriceService = exports.ExchangeRateService = exports.ImprovedInflationService = exports.exchangeRateService = exports.inflationService = exports.createEmptyAnalysis = exports.detectGuidedTour = exports.generateTargetAllocations = exports.generateRebalancingOpportunities = exports.calculateProjections = exports.getConcentrationRisk = exports.calculateDiversificationScore = exports.calculateWeightedInflationRisk = exports.analyzePortfolio = exports.StrategyService = exports.getAIServiceStatus = exports.generateChatCompletion = exports.AIService = void 0;
+exports.marketMomentumService = exports.scoreTokens = exports.TokenScoringUtils = exports.getTokenApy = exports.DEFAULT_MARKET_CONTEXT = exports.getBestTokenForRegionDynamic = exports.calculateRealYield = exports.TokenPriceService = exports.ExchangeRateService = exports.ImprovedInflationService = exports.exchangeRateService = exports.inflationService = exports.createEmptyAnalysis = exports.detectGuidedTour = exports.generateTargetAllocations = exports.generateRebalancingOpportunities = exports.calculateProjections = exports.getConcentrationRisk = exports.calculateDiversificationScore = exports.calculateWeightedInflationRisk = exports.analyzePortfolio = exports.marketPulseService = exports.MarketPulseService = exports.StrategyService = exports.getAIServiceStatus = exports.generateChatCompletion = exports.AIService = void 0;
 // Export Services
 __exportStar(require("./services/arc-agent"), exports);
 __exportStar(require("./services/social-connect-service"), exports);
@@ -33,7 +33,9 @@ Object.defineProperty(exports, "getAIServiceStatus", { enumerable: true, get: fu
 var strategy_service_1 = require("./services/strategy/strategy.service");
 Object.defineProperty(exports, "StrategyService", { enumerable: true, get: function () { return strategy_service_1.StrategyService; } });
 // Export Utils
-__exportStar(require("./utils/market-pulse-service"), exports);
+var market_pulse_service_1 = require("./utils/market-pulse-service");
+Object.defineProperty(exports, "MarketPulseService", { enumerable: true, get: function () { return market_pulse_service_1.MarketPulseService; } });
+Object.defineProperty(exports, "marketPulseService", { enumerable: true, get: function () { return market_pulse_service_1.marketPulseService; } });
 var portfolio_analysis_1 = require("./utils/portfolio-analysis");
 Object.defineProperty(exports, "analyzePortfolio", { enumerable: true, get: function () { return portfolio_analysis_1.analyzePortfolio; } });
 Object.defineProperty(exports, "calculateWeightedInflationRisk", { enumerable: true, get: function () { return portfolio_analysis_1.calculateWeightedInflationRisk; } });
