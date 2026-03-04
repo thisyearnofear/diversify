@@ -29,8 +29,8 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
   const isBeginner = experienceMode === "beginner";
 
   // Use ChainDetectionService for all chain checks
-  const isCelo = ChainDetectionService.isCelo(chainId);
-  const isArbitrum = ChainDetectionService.isArbitrum(chainId);
+  const isCelo = ChainDetectionService.isCelo(chainId ?? null);
+  const isArbitrum = ChainDetectionService.isArbitrum(chainId ?? null);
 
   const displayTokens = isCelo
     ? availableTokens.filter((t) => !["PAXG", "USDY", "SYRUPUSDC"].includes(t.symbol))

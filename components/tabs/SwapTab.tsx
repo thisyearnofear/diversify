@@ -180,7 +180,7 @@ export default function SwapTab({
     );
   }, [tradeableTokens, searchQuery]);
 
-  const isArbitrum = ChainDetectionService.isArbitrum(walletChainId);
+  const isArbitrum = ChainDetectionService.isArbitrum(walletChainId ?? null);
 
   // Goal-aware swap defaults: read protection profile to personalise the experience
   const { config: profileConfig, isComplete: profileComplete } =

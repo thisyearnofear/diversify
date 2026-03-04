@@ -18,8 +18,8 @@ export default function WealthJourneyWidget({
   const { chainId } = useWalletContext();
 
   // Determine journey stage based on chain
-  const isCelo = ChainDetectionService.isCelo(chainId);
-  const isArbitrum = ChainDetectionService.isArbitrum(chainId);
+  const isCelo = ChainDetectionService.isCelo(chainId ?? null);
+  const isArbitrum = ChainDetectionService.isArbitrum(chainId ?? null);
 
   // Default stage
   let stage = 'accumulation';

@@ -199,7 +199,7 @@ export default function RwaAssetCards({
 }: RwaAssetCardsProps) {
     const [activeIndex, setActiveIndex] = useState(0);
     const [hasJustSwitched, setHasJustSwitched] = useState(false);
-    const isCelo = ChainDetectionService.isCelo(chainId);
+    const isCelo = ChainDetectionService.isCelo(chainId ?? null);
 
     // Guard against undefined chains
     const safeChains = chains || [];
