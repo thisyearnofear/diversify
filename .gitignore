@@ -48,6 +48,12 @@ debug.log
 # backups
 *.bak
 *.swp
+
+# Hidden node_modules
+node_modules_hidden/
+
+# Package lock files in sub-packages
+packages/*/pnpm-lock.yaml
 *~
 *.tmp
 
