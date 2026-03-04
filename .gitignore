@@ -62,10 +62,10 @@ cache/
 script/
 
 # Deployment scripts with server-specific details
-scripts/deploy-hetzner.sh
-scripts/deploy-env-to-server.sh
-scripts/nginx-diversifi-api.conf
-scripts/setup-mongodb.sh
+!scripts/deploy-hetzner.sh
+!scripts/deploy-env-to-server.sh
+!scripts/nginx-diversifi-api.conf
+!scripts/setup-mongodb.sh
 
 # Keep example/template versions instead
 !scripts/deploy-hetzner.sh.example
