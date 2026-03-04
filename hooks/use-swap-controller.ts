@@ -8,8 +8,8 @@ import { NETWORKS } from "../config";
 import {
   isTokenAvailableOnChain,
   getTokensForChain,
-} from "../utils/cross-chain-tokens";
-import { SwapErrorHandler } from "../services/swap/error-handler";
+  SwapErrorHandler,
+} from "@diversifi/shared";
 
 interface Token {
   symbol: string;

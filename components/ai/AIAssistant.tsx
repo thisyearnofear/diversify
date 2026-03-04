@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDiversifiAI, type AIAdvice } from "../../hooks/use-diversifi-ai";
-import { createEmptyAnalysis } from "../../utils/portfolio-analysis";
+import { createEmptyAnalysis } from "@diversifi/shared";
 import { useAnimatedCounter } from "../../hooks/use-animated-counter";
 import { useToast } from "../ui/Toast";
 import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
-import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+import { 
+  ChainDetectionService,
+  StrategyService
+} from "@diversifi/shared";
 import { useInflationData } from "../../hooks/use-inflation-data";
 import { useNetworkActivity } from "../../hooks/use-network-activity";
 import { useTour } from "../../context/app/TourContext";
@@ -16,7 +19,6 @@ import { REGIONS, type Region } from "../../hooks/use-user-region";
 import InteractiveAdviceCard from "../agent/InteractiveAdviceCard";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
-import { StrategyService } from "../../services/strategy/strategy.service";
 
 import sdk from "@farcaster/miniapp-sdk";
 

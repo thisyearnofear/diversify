@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AutomationService } from '../../../services/automation-service';
+import { AutomationService } from '@diversifi/shared';
 
 /**
  * Agent Automation API

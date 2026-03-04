@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethers";
-import { ProviderFactoryService } from "../services/swap/provider-factory.service";
+import { ProviderFactoryService } from "@diversifi/shared";
 import { NETWORKS, BROKER_ADDRESSES, RH_TESTNET_TOKENS } from "../config";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;

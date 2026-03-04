@@ -16,13 +16,11 @@ import {
   isSupportedChainId,
   DEFAULT_CHAIN_ID,
   toHexChainId,
-} from "../modules/wallet/core/chains";
-import {
   getWalletEnvironment,
   getWalletProvider,
   setupWalletEventListenersForProvider,
-} from "../utils/wallet-provider";
-import { WalletProviderType } from "../modules/wallet/core/provider-registry";
+  type WalletProviderType
+} from "@diversifi/shared";
 import { WALLET_FEATURES } from "../config/features";
 
 export function useWallet() {

@@ -14,7 +14,7 @@ export async function fetchOnChainStatus(address: string): Promise<OnChainStatus
   };
 
   try {
-    const { GoodDollarService } = await import('../../../../services/gooddollar-service');
+    const { GoodDollarService } = await import('@diversifi/shared');
     const service = GoodDollarService.createReadOnly();
     const eligibility = await service.checkClaimEligibility(address);
 

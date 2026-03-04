@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useAnimatedNumber } from "../../hooks/use-animation";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
-import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+import { ChainDetectionService } from "@diversifi/shared";
 
 // ============================================================================
 // NEW: Progressive Disclosure Components (following Core Principles)

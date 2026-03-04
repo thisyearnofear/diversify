@@ -61,7 +61,12 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
             className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3 shadow-sm relative overflow-hidden group hover:border-blue-200 dark:hover:border-blue-800 transition-colors"
           >
             {item.id.startsWith("synth-") && (
-              <div className="absolute top-0 right-0">
+              <div className="absolute top-0 right-0 flex items-center">
+                {item.id.includes("guardian") && (
+                  <div className="bg-purple-600 text-white text-[7px] font-black px-2 py-0.5 uppercase tracking-widest shadow-sm">
+                    Guardian
+                  </div>
+                )}
                 <div className="bg-blue-600 text-white text-[7px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-widest shadow-sm">
                   Synth
                 </div>

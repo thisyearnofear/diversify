@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle } from "react";
 import { useSwapController } from "../../hooks/use-swap-controller";
-import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+import { ChainDetectionService } from "@diversifi/shared";
 import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";
 import SwapAIInsight from "./SwapAIInsight";

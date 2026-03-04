@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ethers } from "ethers";
-import { ProviderFactoryService } from "../../services/swap/provider-factory.service";
+import { ProviderFactoryService } from "@diversifi/shared";
 import { RH_TESTNET_TOKENS, BROKER_ADDRESSES } from "../../config";
 
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;

@@ -10,7 +10,7 @@ import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RealLifeScenario from "../demo/RealLifeScenario";
 import { getChainAssets, NETWORKS, isTestnetChain } from "../../config";
-import { ChainDetectionService } from "../../services/swap/chain-detection.service";
+import { ChainDetectionService } from "@diversifi/shared";
 import { TabHeader, Card, ConnectWalletPrompt } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
 import { useSwap } from "../../hooks/use-swap";

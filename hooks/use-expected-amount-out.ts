@@ -8,9 +8,7 @@ import {
 } from '../config';
 import { EXCHANGE_RATES } from '../config';
 import { NETWORKS } from '../config';
-import { TokenPriceService } from '../utils/api-services';
-import { ChainDetectionService } from '../services/swap/chain-detection.service';
-import { ProviderFactoryService } from '../services/swap/provider-factory.service';
+import { TokenPriceService, ChainDetectionService, ProviderFactoryService } from '@diversifi/shared';
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 

@@ -197,9 +197,8 @@ export function useStreakRewards(): StreakState & StreakActions {
 
     try {
       // Dynamic imports to avoid loading on every render
-      const [{ GoodDollarService }, { getWalletProvider }] = await Promise.all([
-        import('../services/gooddollar-service'),
-        import('../modules/wallet/core/provider-registry'),
+      const [{ GoodDollarService, getWalletProvider }] = await Promise.all([
+        import('@diversifi/shared'),
       ]);
 
       // Use the provider registry (supports Farcaster, MiniPay, injected wallets)
@@ -235,9 +234,8 @@ export function useStreakRewards(): StreakState & StreakActions {
     if (!address) return { success: false, error: 'Wallet not connected' };
 
     try {
-      const [{ GoodDollarService }, { getWalletProvider }] = await Promise.all([
-        import('../services/gooddollar-service'),
-        import('../modules/wallet/core/provider-registry'),
+      const [{ GoodDollarService, getWalletProvider }] = await Promise.all([
+        import('@diversifi/shared'),
       ]);
 
       // Use the provider registry (supports Farcaster, MiniPay, injected wallets)

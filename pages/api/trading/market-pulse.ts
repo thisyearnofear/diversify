@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { marketPulseService, type StockTrigger } from '../../../utils/market-pulse-service';
+import { marketPulseService } from '@diversifi/shared';
 
 export interface MarketPulseResponse {
   success: boolean;

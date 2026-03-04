@@ -10,7 +10,14 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Headless mode for Backend deployment (Hetzner)
+  // When DEPLOY_TARGET=api, we skip some UI-only compilation steps if needed
+  // and can use this flag elsewhere in the build pipeline.
+  env: {
+    IS_HEADLESS: process.env.DEPLOY_TARGET === 'api' ? 'true' : 'false',
+  },
   transpilePackages: [
+    "@diversifi/shared",
     "@stable-station/mento-utils",
   ],
 

@@ -1,6 +1,6 @@
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
-import { isMiniPayEnvironment } from "../utils/environment";
+import { isMiniPayEnvironment } from "@diversifi/shared";
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import ErrorBoundary from "../components/ui/ErrorBoundary";

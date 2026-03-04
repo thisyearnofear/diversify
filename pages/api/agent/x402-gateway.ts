@@ -1,9 +1,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
-import { ARC_DATA_HUB_CONFIG } from '../../../config';
-import { x402Analytics } from '../../../utils/x402-analytics';
-import { CircleGatewayService } from '../../../services/circle-gateway';
+import { ARC_DATA_HUB_CONFIG, x402Analytics, CircleGatewayService } from '@diversifi/shared';
 
 /**
  * Arc Data Hub - Production Gateway (v2)

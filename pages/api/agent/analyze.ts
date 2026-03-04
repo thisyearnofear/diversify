@@ -1,9 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateChatCompletion } from '../../../services/ai/ai-service';
-import { analyzePortfolio, type PortfolioAnalysis } from '../../../utils/portfolio-analysis';
-import { getOnrampSystemPrompt } from '../../../services/ai/onramp-agent-context';
-import type { RegionalInflationData } from '../../../hooks/use-inflation-data';
-import type { ChainBalance } from '../../../hooks/use-multichain-balances';
+import { 
+    generateChatCompletion, 
+    analyzePortfolio, 
+    getOnrampSystemPrompt,
+    type PortfolioAnalysis,
+    type RegionalInflationData,
+    type ChainBalance
+} from '@diversifi/shared';
 
 /**
  * Robustly clean JSON strings from AI responses

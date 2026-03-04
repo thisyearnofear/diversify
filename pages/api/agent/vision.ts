@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateChatCompletion } from '../../../services/ai/ai-service';
+import { generateChatCompletion } from '@diversifi/shared';
 
 export const config = {
     api: {

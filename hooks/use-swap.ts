@@ -5,14 +5,18 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { SwapOrchestratorService } from '../services/swap/swap-orchestrator.service';
-import { ProviderFactoryService } from '../services/swap/provider-factory.service';
-import { ChainDetectionService } from '../services/swap/chain-detection.service';
-import { SwapErrorHandler } from '../services/swap/error-handler';
-import { isMiniPayEnvironment } from '../utils/environment';
+import { 
+    SwapOrchestratorService,
+    ProviderFactoryService,
+    ChainDetectionService,
+    SwapErrorHandler 
+} from '@diversifi/shared';
+import { 
+    isMiniPayEnvironment,
+    getWalletProvider, 
+    setupWalletEventListenersForProvider 
+} from '@diversifi/shared';
 import { TX_CONFIG } from '../config';
-import type { SwapParams as OrchestratorSwapParams, SwapCallbacks, SwapResult, SwapState } from '../types/swap';
-import { getWalletProvider, setupWalletEventListenersForProvider } from '../utils/wallet-provider';
 
 interface HookSwapParams {
     fromToken: string;

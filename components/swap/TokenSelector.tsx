@@ -2,8 +2,8 @@ import React from "react";
 import RegionalIconography from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { REGION_COLORS, TOKEN_METADATA } from "../../config";
-import type { UserExperienceMode, FinancialStrategy } from "@/context/app/types";
-import { StrategyService } from "@/services/strategy/strategy.service";
+import type { UserExperienceMode } from "@/context/app/types";
+import { StrategyService, type FinancialStrategy } from "@diversifi/shared";
 
 
 interface Token {

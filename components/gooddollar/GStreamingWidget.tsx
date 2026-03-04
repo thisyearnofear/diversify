@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWalletContext } from '../wallet/WalletProvider';
 import DashboardCard from '../shared/DashboardCard';
-import { GoodDollarService, StreamInfo } from '../../services/gooddollar-service';
+import { GoodDollarService, type StreamInfo } from '@diversifi/shared';
 
 // Example GoodCollective & Social Impact Pools
 const COLLECTIVES = [

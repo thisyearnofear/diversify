@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { SynthDataService } from '../../../services/synth-data-service';
+import { SynthDataService } from '@diversifi/shared';
 
 export interface StockStatsResponse {
     success: boolean;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChainDetectionService } from "@/services/swap/chain-detection.service";
+import { ChainDetectionService } from "@diversifi/shared";
 import type { UserGoal } from "@/hooks/use-protection-profile";
 import { useExperience } from "@/context/app/ExperienceContext";
 

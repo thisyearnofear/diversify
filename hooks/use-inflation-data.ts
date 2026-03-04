@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { inflationService } from '../utils/improved-data-services';
+import { inflationService } from '@diversifi/shared';
 import {
   FALLBACK_INFLATION_DATA,
   COUNTRY_TO_REGION,

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type GeographicRegion } from '../config';
-import { exchangeRateService } from '../utils/improved-data-services';
+import { exchangeRateService } from '@diversifi/shared';
 
 interface CurrencyPerformance {
   symbol: string;

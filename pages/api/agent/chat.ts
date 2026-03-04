@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AIService } from '../../../services/ai/ai-service';
+import { AIService } from '@diversifi/shared';
 import { isTestnetChain, NETWORKS } from '../../../config';
 
 /**

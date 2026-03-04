@@ -4,7 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { NETWORKS, RH_TESTNET_TOKENS, BROKER_ADDRESSES } from "../../config";
 import { getTokenDesign } from "../../constants/tokens";
-import { ProviderFactoryService } from "../../services/swap/provider-factory.service";
+import { 
+  ProviderFactoryService,
+  SynthDataService,
+  marketPulseService 
+} from "@diversifi/shared";
 import { useExperience } from "../../context/app/ExperienceContext";
 
 // Modular Components
@@ -18,8 +22,6 @@ import HoldersWidget from "../trade/HoldersWidget";
 import TradeIntelligence, { type IntelligenceItem } from "../trade/TradeIntelligence";
 import EmergingMarketsTracker from "../trade/EmergingMarketsTracker";
 
-import { SynthDataService } from "../../services/synth-data-service";
-import { marketPulseService } from "../../utils/market-pulse-service";
 import {
   EMERGING_MARKETS_CONFIG,
   FICTIONAL_EMERGING_MARKET_COMPANIES,

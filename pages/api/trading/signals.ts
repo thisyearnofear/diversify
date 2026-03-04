@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { marketPulseService, type StockTrigger } from '../../../utils/market-pulse-service';
+import { marketPulseService } from '@diversifi/shared';
 
 export interface TradeSignalResponse {
   success: boolean;
@@ -62,7 +62,7 @@ export default async function handler(
       });
     }
 
-    const { TradeAgent } = await import('../../../services/trade-agent');
+    const { TradeAgent } = await import('@diversifi/shared');
     const agent = new TradeAgent({
       privateKey,
       rpcUrl: process.env.RH_RPC_URL || 'https://rpc.testnet.chain.robinhood.com',

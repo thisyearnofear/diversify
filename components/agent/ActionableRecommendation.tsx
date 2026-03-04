@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import type { PortfolioAnalysis, RebalancingOpportunity } from '../../utils/portfolio-analysis';
+import { type PortfolioAnalysis, type RebalancingOpportunity } from '@diversifi/shared';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 
 interface ActionableRecommendationProps {

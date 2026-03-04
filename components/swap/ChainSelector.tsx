@@ -1,6 +1,6 @@
 import React from 'react';
 import { NETWORKS } from '../../config';
-import { ChainDetectionService } from '../../services/swap/chain-detection.service';
+import { ChainDetectionService } from '@diversifi/shared';
 
 interface ChainSelectorProps {
     selectedChainId: number;

@@ -6,7 +6,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { getTradeableTokenSymbols } from "@stable-station/mento-utils";
 import { NETWORKS } from "../config";
-import { ChainDetectionService } from "../services/swap/chain-detection.service";
+import { ChainDetectionService } from "@diversifi/shared";
 
 // Mento rebranded their tokens from C-prefix to m-suffix (e.g., CUSD → USDm)
 // This maps Mento's new symbols to our config symbols

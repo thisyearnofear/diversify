@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCurrencyPerformance } from './use-currency-performance';
-import { marketMomentumService, type MarketMomentum } from '../utils/market-momentum-service';
+import { marketMomentumService, type MarketMomentum } from '@diversifi/shared';
 
 /**
  * useNetworkActivity - Adaptive Behavioral & Social Proof Hook

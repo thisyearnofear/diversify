@@ -15,7 +15,7 @@ import { useNavigation } from '../context/app/NavigationContext';
 import { useDemoMode } from '../context/app/DemoModeContext';
 import { useAIOracle } from './use-ai-oracle';
 import { useToast } from '../components/ui/Toast';
-import { IntentDiscoveryService } from '../services/ai/intent-discovery.service';
+import { IntentDiscoveryService } from '@diversifi/shared';
 
 interface VoiceIntentOptions {
   /** Called when the user asks for wallet/connection help */
@@ -57,8 +57,7 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
           (async () => {
             try {
               // Note: For hackathon/MiniPay, we use the user's provider for ODIS auth
-              const { ProviderFactoryService } = await import('../services/swap/provider-factory.service');
-              const { SocialConnectService } = await import('../services/social-connect-service');
+              const { SocialConnectService, ProviderFactoryService } = await import('@diversifi/shared');
               const { ethers } = await import('ethers');
 
               const signer = await ProviderFactoryService.getSignerForChain(42220); // Celo

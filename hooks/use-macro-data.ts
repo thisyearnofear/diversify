@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   macroService,
   type MacroIndicator,
-} from "../utils/macro-economic-service";
+} from "@diversifi/shared";
 
 export function useMacroData(countries?: string[]) {
   const [macroData, setMacroData] = useState<Record<string, MacroIndicator>>(

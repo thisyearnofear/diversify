@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import formidable from 'formidable';
 import fs from 'fs/promises';
-import { AIService } from '../../../services/ai/ai-service';
+import { AIService } from '@diversifi/shared';
 
 export const config = {
     api: {

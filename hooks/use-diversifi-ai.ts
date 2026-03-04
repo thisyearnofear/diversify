@@ -16,7 +16,7 @@ import type { MultichainPortfolio } from "./use-multichain-balances";
 import {
   analyzePortfolio,
   type PortfolioAnalysis,
-} from "../utils/portfolio-analysis";
+} from "@diversifi/shared";
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 

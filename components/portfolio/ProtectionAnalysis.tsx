@@ -6,7 +6,7 @@ import NetworkSwitcher from '../swap/NetworkSwitcher';
 import sdk from '@farcaster/miniapp-sdk';
 import { useAnimatedCounter } from '../../hooks/use-animated-counter';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
-import type { TokenAllocation } from '../../utils/portfolio-analysis';
+import { type TokenAllocation } from '@diversifi/shared';
 import { AssetInventory } from './AssetInventory';
 
 interface ProtectionAnalysisProps {

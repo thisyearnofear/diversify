@@ -6,7 +6,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { emergingMarketsPriceService } from "@/services/price/emerging-markets-price.service";
+import { emergingMarketsPriceService } from "@diversifi/shared";
 
 // Simple in-memory cache for API responses
 const apiCache = new Map<string, { data: unknown; timestamp: number }>();

@@ -18,11 +18,11 @@ import {
   type AssetRegion,
   REGION_COLORS,
 } from "../config";
-import { executeMulticall, type ContractCall } from "../utils/multicall";
+import { executeMulticall, type ContractCall } from "@diversifi/shared";
 import {
   analyzePortfolio,
   type PortfolioAnalysis,
-} from "../utils/portfolio-analysis";
+} from "@diversifi/shared";
 import { useInflationData } from "./use-inflation-data";
 import { useMacroData } from "./use-macro-data";
 
@@ -235,7 +235,7 @@ async function fetchChainBalances(
     const pricePromises = tokenInfoList.map(
       async ({ symbol, tokenAddress }) => {
         try {
-          const { TokenPriceService } = await import("../utils/api-services");
+          const { TokenPriceService } = await import("@diversifi/shared");
           const livePrice = await TokenPriceService.getTokenUsdPrice({
             chainId: chain.chainId,
             address: tokenAddress,

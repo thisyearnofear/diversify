@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ArcAgent } from '../../../services/arc-agent';
+import { ArcAgent } from '@diversifi/shared';
 
 let agentInstance: ArcAgent | null = null;
 

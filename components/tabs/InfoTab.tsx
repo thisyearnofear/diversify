@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useExperience } from "../../context/app/ExperienceContext";
-import { ChainDetectionService } from "@/services/swap/chain-detection.service";
+import { ChainDetectionService } from "@diversifi/shared";
 import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
 import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
