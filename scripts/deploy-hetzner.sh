@@ -49,7 +49,7 @@ fi
 
 # ── 4. Install dependencies ─────────────────────────────────────────────────
 echo "📦 Installing dependencies..."
-pnpm install --frozen-lockfile
+pnpm install --no-frozen-lockfile
 
 # ── 5. Build ─────────────────────────────────────────────────────────────────
 echo "🔨 Building..."
