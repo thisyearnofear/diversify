@@ -42,6 +42,7 @@ export {
   TokenScoringUtils,
   scoreTokens
 } from './utils/token-scoring';
+export { emergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 export { marketMomentumService, type MarketMomentum } from './utils/market-momentum-service';
 export * from './utils/x402-analytics';
 
