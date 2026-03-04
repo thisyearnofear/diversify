@@ -3,6 +3,7 @@ export * from './services/arc-agent';
 export * from './services/social-connect-service';
 export * from './services/gooddollar-service';
 export * from './services/rwa-service';
+export * from './services/swap';
 export * from './services/ai/intelligence.service';
 export * from './services/ai/intent-discovery.service';
 export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';

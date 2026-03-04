@@ -20,6 +20,7 @@ __exportStar(require("./services/arc-agent"), exports);
 __exportStar(require("./services/social-connect-service"), exports);
 __exportStar(require("./services/gooddollar-service"), exports);
 __exportStar(require("./services/rwa-service"), exports);
+__exportStar(require("./services/swap"), exports);
 __exportStar(require("./services/ai/intelligence.service"), exports);
 __exportStar(require("./services/ai/intent-discovery.service"), exports);
 var ai_service_1 = require("./services/ai/ai-service");

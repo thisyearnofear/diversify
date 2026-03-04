@@ -1,28 +1,7 @@
 /**
  * Strict TypeScript types for swap functionality
  */
-export interface SwapParams {
-    fromToken: string;
-    toToken: string;
-    amount: string;
-    fromChainId: number;
-    toChainId: number;
-    userAddress: string;
-    slippageTolerance?: number;
-    recipientAddress?: string;
-    phoneNumber?: string;
-}
-export interface SwapCallbacks {
-    onApprovalSubmitted?: (txHash: string) => void;
-    onApprovalConfirmed?: () => void;
-    onSwapSubmitted?: (txHash: string) => void;
-}
-export interface SwapResult {
-    success: boolean;
-    approvalTxHash?: string;
-    swapTxHash?: string;
-    error?: string;
-}
+export type { SwapParams, SwapResult, SwapCallbacks, SwapEstimate, } from '../services/swap/strategies/base-swap.strategy';
 export interface ExchangeInfo {
     provider: string;
     exchangeId: string;
