@@ -61,7 +61,7 @@ export default function SwapTab({
   isBalancesLoading,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
-  const { swapPrefill, clearSwapPrefill } = useNavigation();
+  const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
   const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
   const { demoMode } = useDemoMode();
   const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
@@ -115,6 +115,8 @@ export default function SwapTab({
       amount?: string,
       fromChainId?: number,
       toChainId?: number,
+      phoneNumber?: string,
+      recipientAddress?: string,
     ) => void;
   }>(null);
 

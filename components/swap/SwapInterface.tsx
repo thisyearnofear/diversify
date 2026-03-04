@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
 import { useSwapController } from "../../hooks/use-swap-controller";
 import { ChainDetectionService } from "@diversifi/shared";
 import TokenSelector from "./TokenSelector";
@@ -48,6 +48,8 @@ const SwapInterface = forwardRef<
       amount?: string,
       fromChainId?: number,
       toChainId?: number,
+      phoneNumber?: string,
+      recipientAddress?: string,
     ) => void;
   },
   SwapInterfaceProps
@@ -100,8 +102,6 @@ const SwapInterface = forwardRef<
     handleSwitchTokens,
     executeSwap,
     refreshBalances,
-    phoneNumber,
-    recipientAddress,
   } = useSwapController({
     address,
     chainId,
@@ -110,6 +110,10 @@ const SwapInterface = forwardRef<
     preferredFromRegion,
     preferredToRegion,
   });
+
+  // Local state for SocialConnect features
+  const [phoneNumber, setPhoneNumber] = useState<string>("");
+  const [recipientAddress, setRecipientAddress] = useState<string>("");
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({

@@ -7,20 +7,22 @@ export * from './services/swap';
 export * from './services/ai/intelligence.service';
 export * from './services/ai/intent-discovery.service';
 export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
+export { StrategyService } from './services/strategy/strategy.service';
 
 // Export Utils
 export * from './utils/market-pulse-service';
-export { 
-  analyzePortfolio, 
-  calculateWeightedInflationRisk, 
-  calculateDiversificationScore, 
-  getConcentrationRisk, 
-  calculateProjections, 
-  generateRebalancingOpportunities, 
-  generateTargetAllocations, 
-  detectGuidedTour, 
+export {
+  analyzePortfolio,
+  calculateWeightedInflationRisk,
+  calculateDiversificationScore,
+  getConcentrationRisk,
+  calculateProjections,
+  generateRebalancingOpportunities,
+  generateTargetAllocations,
+  detectGuidedTour,
   createEmptyAnalysis
 } from './utils/portfolio-analysis';
+export type { PortfolioAnalysis, TokenAllocation, RegionalExposure, RebalancingOpportunity } from './utils/portfolio-analysis';
 export * from './utils/unified-cache-service';
 export { inflationService, exchangeRateService, ImprovedInflationService, ExchangeRateService } from './utils/improved-data-services';
 export * from './utils/macro-economic-service';
@@ -29,9 +31,9 @@ export * from './utils/wallet-provider';
 export * from './utils/cross-chain-tokens';
 export * from './utils/multicall';
 export { TokenPriceService } from './utils/api-services';
-export { 
-  calculateRealYield, 
-  getBestTokenForRegionDynamic, 
+export {
+  calculateRealYield,
+  getBestTokenForRegionDynamic,
   DEFAULT_MARKET_CONTEXT,
   getTokenApy,
   TokenScoringUtils,

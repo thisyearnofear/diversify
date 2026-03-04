@@ -7,6 +7,8 @@ export interface SwapPrefill {
   reason?: string;
   fromChainId?: number;
   toChainId?: number;
+  phoneNumber?: string;
+  recipientAddress?: string;
 }
 
 export interface GuidedTourState {
@@ -18,15 +20,8 @@ export interface GuidedTourState {
 
 export type UserExperienceMode = 'beginner' | 'intermediate' | 'advanced';
 
-export type FinancialStrategy =
-  | 'africapitalism'
-  | 'buen_vivir'
-  | 'confucian'
-  | 'gotong_royong'
-  | 'islamic'
-  | 'global'
-  | 'custom'
-  | null;
+// Re-export from shared package to ensure consistency
+export type { FinancialStrategy } from '@diversifi/shared';
 
 export interface UserActivity {
   swapCount: number;

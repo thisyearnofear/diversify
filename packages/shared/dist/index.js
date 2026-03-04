@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.scoreTokens = exports.TokenScoringUtils = exports.getTokenApy = exports.DEFAULT_MARKET_CONTEXT = exports.getBestTokenForRegionDynamic = exports.calculateRealYield = exports.TokenPriceService = exports.ExchangeRateService = exports.ImprovedInflationService = exports.exchangeRateService = exports.inflationService = exports.createEmptyAnalysis = exports.detectGuidedTour = exports.generateTargetAllocations = exports.generateRebalancingOpportunities = exports.calculateProjections = exports.getConcentrationRisk = exports.calculateDiversificationScore = exports.calculateWeightedInflationRisk = exports.analyzePortfolio = exports.getAIServiceStatus = exports.generateChatCompletion = exports.AIService = void 0;
+exports.scoreTokens = exports.TokenScoringUtils = exports.getTokenApy = exports.DEFAULT_MARKET_CONTEXT = exports.getBestTokenForRegionDynamic = exports.calculateRealYield = exports.TokenPriceService = exports.ExchangeRateService = exports.ImprovedInflationService = exports.exchangeRateService = exports.inflationService = exports.createEmptyAnalysis = exports.detectGuidedTour = exports.generateTargetAllocations = exports.generateRebalancingOpportunities = exports.calculateProjections = exports.getConcentrationRisk = exports.calculateDiversificationScore = exports.calculateWeightedInflationRisk = exports.analyzePortfolio = exports.StrategyService = exports.getAIServiceStatus = exports.generateChatCompletion = exports.AIService = void 0;
 // Export Services
 __exportStar(require("./services/arc-agent"), exports);
 __exportStar(require("./services/social-connect-service"), exports);
@@ -27,6 +27,8 @@ var ai_service_1 = require("./services/ai/ai-service");
 Object.defineProperty(exports, "AIService", { enumerable: true, get: function () { return ai_service_1.AIService; } });
 Object.defineProperty(exports, "generateChatCompletion", { enumerable: true, get: function () { return ai_service_1.generateChatCompletion; } });
 Object.defineProperty(exports, "getAIServiceStatus", { enumerable: true, get: function () { return ai_service_1.getAIServiceStatus; } });
+var strategy_service_1 = require("./services/strategy/strategy.service");
+Object.defineProperty(exports, "StrategyService", { enumerable: true, get: function () { return strategy_service_1.StrategyService; } });
 // Export Utils
 __exportStar(require("./utils/market-pulse-service"), exports);
 var portfolio_analysis_1 = require("./utils/portfolio-analysis");
