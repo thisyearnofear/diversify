@@ -1,19 +1,38 @@
 // Export Services
-export * from './services/arc-agent';
-export * from './services/social-connect-service';
-export * from './services/gooddollar-service';
-export * from './services/rwa-service';
-export * from './services/swap';
-export * from './services/synth-data-service';
-export * from './services/trade-agent';
-export * from './services/zapier-mcp-service';
-export * from './services/ai/intelligence.service';
-export * from './services/ai/intent-discovery.service';
-export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
-export { StrategyService } from './services/strategy/strategy.service';
+import { ArcAgent } from './services/arc-agent';
+import { SocialConnectService } from './services/social-connect-service';
+import { GoodDollarService } from './services/gooddollar-service';
+import { RwaService } from './services/rwa-service';
+import { SynthDataService } from './services/synth-data-service';
+import { TradeAgent } from './services/trade-agent';
+import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
+import { IntelligenceService } from './services/ai/intelligence.service';
+import { IntentDiscoveryService } from './services/ai/intent-discovery.service';
+import { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
+import { StrategyService } from './services/strategy/strategy.service';
+import { emergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
+
+export {
+  ArcAgent,
+  SocialConnectService,
+  GoodDollarService,
+  RwaService,
+  SynthDataService,
+  TradeAgent,
+  ZapierMCPService,
+  zapierMCPService,
+  IntelligenceService,
+  IntentDiscoveryService,
+  AIService,
+  generateChatCompletion,
+  getAIServiceStatus,
+  StrategyService,
+  emergingMarketsPriceService,
+  EmergingMarketsPriceService
+};
 
 // Export Utils
-export { MarketPulseService, marketPulseService } from './utils/market-pulse-service';
+export * from './utils/market-pulse-service';
 export {
   analyzePortfolio,
   calculateWeightedInflationRisk,
@@ -42,7 +61,6 @@ export {
   TokenScoringUtils,
   scoreTokens
 } from './utils/token-scoring';
-export { emergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 export { marketMomentumService, type MarketMomentum } from './utils/market-momentum-service';
 export * from './utils/x402-analytics';
 
