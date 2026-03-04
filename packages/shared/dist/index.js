@@ -14,13 +14,16 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.scoreTokens = exports.TokenScoringUtils = exports.getTokenApy = exports.DEFAULT_MARKET_CONTEXT = exports.getBestTokenForRegionDynamic = exports.calculateRealYield = exports.TokenPriceService = exports.ExchangeRateService = exports.ImprovedInflationService = exports.exchangeRateService = exports.inflationService = exports.createEmptyAnalysis = exports.detectGuidedTour = exports.generateTargetAllocations = exports.generateRebalancingOpportunities = exports.calculateProjections = exports.getConcentrationRisk = exports.calculateDiversificationScore = exports.calculateWeightedInflationRisk = exports.analyzePortfolio = exports.StrategyService = exports.getAIServiceStatus = exports.generateChatCompletion = exports.AIService = void 0;
+exports.marketMomentumService = exports.scoreTokens = exports.TokenScoringUtils = exports.getTokenApy = exports.DEFAULT_MARKET_CONTEXT = exports.getBestTokenForRegionDynamic = exports.calculateRealYield = exports.TokenPriceService = exports.ExchangeRateService = exports.ImprovedInflationService = exports.exchangeRateService = exports.inflationService = exports.createEmptyAnalysis = exports.detectGuidedTour = exports.generateTargetAllocations = exports.generateRebalancingOpportunities = exports.calculateProjections = exports.getConcentrationRisk = exports.calculateDiversificationScore = exports.calculateWeightedInflationRisk = exports.analyzePortfolio = exports.StrategyService = exports.getAIServiceStatus = exports.generateChatCompletion = exports.AIService = void 0;
 // Export Services
 __exportStar(require("./services/arc-agent"), exports);
 __exportStar(require("./services/social-connect-service"), exports);
 __exportStar(require("./services/gooddollar-service"), exports);
 __exportStar(require("./services/rwa-service"), exports);
 __exportStar(require("./services/swap"), exports);
+__exportStar(require("./services/synth-data-service"), exports);
+__exportStar(require("./services/trade-agent"), exports);
+__exportStar(require("./services/zapier-mcp-service"), exports);
 __exportStar(require("./services/ai/intelligence.service"), exports);
 __exportStar(require("./services/ai/intent-discovery.service"), exports);
 var ai_service_1 = require("./services/ai/ai-service");
@@ -61,7 +64,9 @@ Object.defineProperty(exports, "DEFAULT_MARKET_CONTEXT", { enumerable: true, get
 Object.defineProperty(exports, "getTokenApy", { enumerable: true, get: function () { return token_scoring_1.getTokenApy; } });
 Object.defineProperty(exports, "TokenScoringUtils", { enumerable: true, get: function () { return token_scoring_1.TokenScoringUtils; } });
 Object.defineProperty(exports, "scoreTokens", { enumerable: true, get: function () { return token_scoring_1.scoreTokens; } });
-__exportStar(require("./utils/market-momentum-service"), exports);
+var market_momentum_service_1 = require("./utils/market-momentum-service");
+Object.defineProperty(exports, "marketMomentumService", { enumerable: true, get: function () { return market_momentum_service_1.marketMomentumService; } });
+__exportStar(require("./utils/x402-analytics"), exports);
 // Export Modules (Wallet, etc.)
 __exportStar(require("./modules/wallet/core/chains"), exports);
 __exportStar(require("./modules/wallet/core/provider-registry"), exports);

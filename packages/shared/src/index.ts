@@ -4,6 +4,9 @@ export * from './services/social-connect-service';
 export * from './services/gooddollar-service';
 export * from './services/rwa-service';
 export * from './services/swap';
+export * from './services/synth-data-service';
+export * from './services/trade-agent';
+export * from './services/zapier-mcp-service';
 export * from './services/ai/intelligence.service';
 export * from './services/ai/intent-discovery.service';
 export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
@@ -39,7 +42,8 @@ export {
   TokenScoringUtils,
   scoreTokens
 } from './utils/token-scoring';
-export * from './utils/market-momentum-service';
+export { marketMomentumService, type MarketMomentum } from './utils/market-momentum-service';
+export * from './utils/x402-analytics';
 
 // Export Modules (Wallet, etc.)
 export * from './modules/wallet/core/chains';

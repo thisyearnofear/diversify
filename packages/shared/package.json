@@ -17,6 +17,9 @@
     "@circle-fin/developer-controlled-wallets": "10.0.1",
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",
+    "@farcaster/miniapp-sdk": "0.2.1",
+    "abitype": "1.0.6",
+    "axios": "1.13.2",
     "ethers": "^5.7",
     "openai": "6.16.0",
     "viem": "^2.37.0"

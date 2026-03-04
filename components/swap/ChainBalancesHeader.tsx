@@ -82,10 +82,10 @@ export default function ChainBalancesHeader({
   return (
     <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-4 shadow-sm">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+        <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
           Your Balances
         </h3>
-        <span className="text-[10px] text-gray-400 dark:text-gray-500">
+        <span className="text-[10px] text-gray-600 dark:text-gray-400 font-medium">
           Click to switch chain
         </span>
       </div>
@@ -107,8 +107,8 @@ export default function ChainBalancesHeader({
               key={chain.chainId}
               onClick={() => onSwitchChain(chain.chainId)}
               className={`relative p-2.5 rounded-lg border-2 text-left transition-all ${isCurrentChain
-                  ? 'border-blue-500 bg-blue-50 shadow-sm'
-                  : 'border-gray-100 bg-gray-50 hover:border-gray-200'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
+                  : 'border-gray-200 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
             >
               {/* Active indicator */}
@@ -134,7 +134,7 @@ export default function ChainBalancesHeader({
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-300 truncate">
+                  <p className="text-[10px] text-gray-600 dark:text-gray-400 truncate font-medium">
                     {config.description}
                   </p>
                 </div>
@@ -146,7 +146,7 @@ export default function ChainBalancesHeader({
                   {hasBalance ? `$${chain.totalValue.toFixed(0)}` : '$0'}
                 </span>
                 {hasBalance && chain.tokenCount > 0 && (
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                  <span className="text-[10px] text-gray-600 dark:text-gray-400 font-medium">
                     {chain.tokenCount} token{chain.tokenCount !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -158,8 +158,8 @@ export default function ChainBalancesHeader({
 
       {/* Total across chains */}
       {displayChains.some(c => c.totalValue > 0) && (
-        <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Total Value</span>
+        <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">Total Value</span>
           <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
             ${displayChains.reduce((sum, c) => sum + c.totalValue, 0).toFixed(2)}
           </span>
