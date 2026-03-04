@@ -2,7 +2,7 @@
 import { ArcAgent } from './services/arc-agent';
 import { SocialConnectService } from './services/social-connect-service';
 import { GoodDollarService } from './services/gooddollar-service';
-import { RwaService } from './services/rwa-service';
+import { RWAService, rwaService } from './services/rwa-service';
 import { SynthDataService } from './services/synth-data-service';
 import { TradeAgent } from './services/trade-agent';
 import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
@@ -16,7 +16,8 @@ export {
   ArcAgent,
   SocialConnectService,
   GoodDollarService,
-  RwaService,
+  RWAService,
+  rwaService,
   SynthDataService,
   TradeAgent,
   ZapierMCPService,
