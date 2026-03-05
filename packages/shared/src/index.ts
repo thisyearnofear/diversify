@@ -11,6 +11,8 @@ import { IntentDiscoveryService } from './services/ai/intent-discovery.service';
 import { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
 import { StrategyService } from './services/strategy/strategy.service';
 import { emergingMarketsPriceService, EmergingMarketsPriceService, getEmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
+import { AutomationService } from './services/automation-service';
+import { getOnrampRecommendation } from './services/ai/onramp-agent-context';
 
 export {
   ArcAgent,
@@ -30,7 +32,9 @@ export {
   StrategyService,
   emergingMarketsPriceService,
   EmergingMarketsPriceService,
-  getEmergingMarketsPriceService
+  getEmergingMarketsPriceService,
+  AutomationService,
+  getOnrampRecommendation
 };
 
 // Export Utils
