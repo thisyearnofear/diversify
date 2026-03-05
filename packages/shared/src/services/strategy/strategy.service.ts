@@ -9,7 +9,7 @@
  */
 
 import type { FinancialStrategy } from '../../types/strategy';
-import type { AssetRegion } from '@/config';
+import type { AssetRegion } from '../../config';
 
 export interface StrategyConfig {
     // Preferred regions for this strategy

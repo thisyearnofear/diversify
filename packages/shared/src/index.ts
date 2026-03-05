@@ -33,7 +33,6 @@ export {
 };
 
 // Export Utils
-export * from './services/price/emerging-markets-price.service';
 export * from './utils/market-pulse-service';
 export {
   analyzePortfolio,

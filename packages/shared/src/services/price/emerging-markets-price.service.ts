@@ -4,7 +4,7 @@
  * Supports both real emerging market stocks and fictional companies
  */
 
-import { EMERGING_MARKET_STOCKS, type EmergingMarketStock } from "@/config/emerging-markets";
+import { EMERGING_MARKET_STOCKS, type EmergingMarketStock } from "../../config/emerging-markets";
 
 interface PriceCache {
     symbol: string;
