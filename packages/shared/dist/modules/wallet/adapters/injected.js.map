@@ -1,1 +1,0 @@
-{"version":3,"file":"injected.js","sourceRoot":"","sources":["../../../../src/modules/wallet/adapters/injected.ts"],"names":[],"mappings":";;AAAA,kDAIC;AAJD,SAAgB,mBAAmB;IACjC,IAAI,OAAO,MAAM,KAAK,WAAW;QAAE,OAAO,IAAI,CAAC;IAC/C,MAAM,QAAQ,GAAI,MAAc,CAAC,QAAQ,CAAC;IAC1C,OAAO,QAAQ,EAAE,OAAO,CAAC,CAAC,CAAC,QAAQ,CAAC,CAAC,CAAC,IAAI,CAAC;AAC7C,CAAC"}

@@ -1,0 +1,9 @@
+# Compiled output
+dist/
+*.tsbuildinfo
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log

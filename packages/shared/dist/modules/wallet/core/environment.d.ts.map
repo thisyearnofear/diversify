@@ -1,1 +1,0 @@
-{"version":3,"file":"environment.d.ts","sourceRoot":"","sources":["../../../../src/modules/wallet/core/environment.ts"],"names":[],"mappings":"AAGA,MAAM,WAAW,iBAAiB;IAChC,SAAS,EAAE,OAAO,CAAC;IACnB,WAAW,EAAE,OAAO,CAAC;IACrB,gBAAgB,EAAE,GAAG,GAAG,IAAI,CAAC;CAC9B;AASD,wBAAsB,uBAAuB,IAAI,OAAO,CAAC,iBAAiB,CAAC,CA6B1E"}
