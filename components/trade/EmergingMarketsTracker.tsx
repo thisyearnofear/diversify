@@ -15,6 +15,7 @@ import {
 } from "../../config/emerging-markets";
 import { useEmergingMarketsPrices } from "../../hooks/use-emerging-markets-prices";
 import { useWatchlist } from "../../hooks/use-watchlist";
+import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 
 // ============================================
 // Mobile-Optimized Stock Card (Compact)
@@ -223,7 +224,7 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
   showFictionalCTA = true,
 }) => {
   const [activeRegion, setActiveRegion] = useState<"all" | "africa" | "latam" | "asia">("all");
-  const { prices, isLoading, error, refresh } = useEmergingMarketsPrices();
+  const { prices, isLoading, error, refresh, lastUpdated, isStale } = useEmergingMarketsPrices();
   const { watchlist, toggleWatchlist, isInWatchlist } = useWatchlist();
   const [showAll, setShowAll] = useState(false);
 
@@ -253,16 +254,27 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
 
   const hasMore = filteredStocks.length > displayStocks.length;
 
-  if (error) {
+  // Error state with graceful fallback - show cached data if available
+  if (error && Object.keys(prices).length === 0) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-red-500 mb-2">Failed to load market data</p>
-        <p className="text-sm text-gray-500 mb-4">{error}</p>
+      <div className="p-6 text-center bg-red-50 dark:bg-red-900/20 rounded-2xl border border-red-200 dark:border-red-800">
+        <div className="text-4xl mb-3">📡</div>
+        <h3 className="text-lg font-bold text-red-700 dark:text-red-300 mb-2">
+          Connection Issue
+        </h3>
+        <p className="text-sm text-red-600 dark:text-red-400 mb-4">
+          We're having trouble fetching the latest market data. This could be due to:
+        </p>
+        <ul className="text-xs text-gray-600 dark:text-gray-400 mb-6 space-y-1">
+          <li>• Network connectivity problems</li>
+          <li>• API service temporarily unavailable</li>
+          <li>• Rate limiting from data provider</li>
+        </ul>
         <button
           onClick={refresh}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 transition"
         >
-          Retry
+          Try Again
         </button>
       </div>
     );
@@ -277,9 +289,19 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
             <span>🌍</span>
             Emerging Markets
           </h2>
-          <p className="text-xs text-gray-500">
-            Track real stocks • Star favorites for quick access
-          </p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-xs text-gray-500">
+              Track real stocks • Star favorites for quick access
+            </p>
+            <DataFreshnessIndicator
+              lastUpdated={lastUpdated}
+              isStale={isStale}
+              isLoading={isLoading}
+              error={error}
+              onRefresh={refresh}
+              className="ml-2"
+            />
+          </div>
         </div>
         <button
           onClick={refresh}
@@ -297,6 +319,21 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
           </svg>
         </button>
       </div>
+
+      {/* Error banner - show if error but we have cached data */}
+      {error && Object.keys(prices).length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-500">⚠️</span>
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Showing cached data due to connection issues. 
+              <button onClick={refresh} className="underline ml-1 hover:text-amber-900">
+                Try refreshing
+              </button>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Quick Access (Watchlist) - Compact horizontal scroll */}
       <QuickAccessBar 

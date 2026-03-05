@@ -22,6 +22,8 @@ interface UseEmergingMarketsPricesReturn {
     error: string | null;
     refresh: () => Promise<void>;
     getPrice: (symbol: string) => PriceData | undefined;
+    lastUpdated: number | null;
+    isStale: boolean;
 }
 
 export function useEmergingMarketsPrices(
@@ -31,6 +33,7 @@ export function useEmergingMarketsPrices(
     const [prices, setPrices] = useState<Record<string, PriceData>>({});
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [lastUpdated, setLastUpdated] = useState<number | null>(null);
 
     const fetchPrices = useCallback(async () => {
         try {
@@ -47,11 +50,13 @@ export function useEmergingMarketsPrices(
 
             if (data.prices) {
                 setPrices(data.prices);
+                setLastUpdated(Date.now());
             }
         } catch (err) {
             const message = err instanceof Error ? err.message : "Failed to fetch prices";
             setError(message);
             console.error("[useEmergingMarketsPrices] Error:", err);
+            // Don't clear prices on error - keep stale data as fallback
         } finally {
             setIsLoading(false);
         }
@@ -75,12 +80,17 @@ export function useEmergingMarketsPrices(
         [prices]
     );
 
+    // Calculate if data is stale (older than 5 minutes)
+    const isStale = lastUpdated ? Date.now() - lastUpdated > 5 * 60 * 1000 : false;
+
     return {
         prices,
         isLoading,
         error,
         refresh: fetchPrices,
         getPrice,
+        lastUpdated,
+        isStale,
     };
 }
 
