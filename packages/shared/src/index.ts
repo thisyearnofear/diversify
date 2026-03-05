@@ -71,6 +71,9 @@ export * from './modules/wallet/core/chains';
 export * from './modules/wallet/core/provider-registry';
 export * from './modules/wallet/core/environment';
 
+// Export Swap Services
+export * from './services/swap';
+
 // Export Types
 export * from './types/swap';
 export * from './types/portfolio';
