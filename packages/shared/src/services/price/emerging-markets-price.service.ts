@@ -475,5 +475,29 @@ export class EmergingMarketsPriceService {
     }
 }
 
-// Singleton instance
-export const emergingMarketsPriceService = new EmergingMarketsPriceService();
+// Singleton instance - lazy initialization for better module compatibility
+let _emergingMarketsPriceService: EmergingMarketsPriceService | null = null;
+
+function ensureService(): EmergingMarketsPriceService {
+    if (!_emergingMarketsPriceService) {
+        _emergingMarketsPriceService = new EmergingMarketsPriceService();
+    }
+    return _emergingMarketsPriceService;
+}
+
+// Eager singleton for backward compatibility
+try {
+    _emergingMarketsPriceService = new EmergingMarketsPriceService();
+} catch (error) {
+    console.error("[EmergingMarketsPriceService] Failed to initialize singleton:", error);
+}
+
+export const emergingMarketsPriceService = _emergingMarketsPriceService as EmergingMarketsPriceService;
+
+/**
+ * Get the singleton instance of the price service
+ * More reliable in bundled/standalone environments
+ */
+export function getEmergingMarketsPriceService(): EmergingMarketsPriceService {
+    return ensureService();
+}

@@ -6,7 +6,20 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { emergingMarketsPriceService } from "@diversifi/shared";
+import { getEmergingMarketsPriceService, emergingMarketsPriceService } from "@diversifi/shared";
+
+// Get the service instance with fallback to handle module resolution edge cases
+const getPriceService = () => {
+    // Try the getter function first (more reliable in standalone mode)
+    if (typeof getEmergingMarketsPriceService === 'function') {
+        return getEmergingMarketsPriceService();
+    }
+    // Fallback to direct singleton export
+    if (emergingMarketsPriceService) {
+        return emergingMarketsPriceService;
+    }
+    throw new Error("EmergingMarketsPriceService not available");
+};
 
 // Simple in-memory cache for API responses
 const apiCache = new Map<string, { data: unknown; timestamp: number }>();
@@ -35,7 +48,7 @@ export default async function handler(
 
         if (symbol && typeof symbol === "string") {
             // Get specific stock price
-            const price = await emergingMarketsPriceService.getPrice(symbol);
+            const price = await getPriceService().getPrice(symbol);
 
             if (!price) {
                 return res.status(404).json({
@@ -56,7 +69,7 @@ export default async function handler(
             };
         } else {
             // Get all prices
-            const prices = await emergingMarketsPriceService.getAllPrices();
+            const prices = await getPriceService().getAllPrices();
 
             data = {
                 count: Object.keys(prices).length,

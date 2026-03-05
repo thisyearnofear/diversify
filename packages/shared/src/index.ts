@@ -10,7 +10,7 @@ import { IntelligenceService } from './services/ai/intelligence.service';
 import { IntentDiscoveryService } from './services/ai/intent-discovery.service';
 import { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
 import { StrategyService } from './services/strategy/strategy.service';
-import { emergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
+import { emergingMarketsPriceService, EmergingMarketsPriceService, getEmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 
 export {
   ArcAgent,
@@ -29,7 +29,8 @@ export {
   getAIServiceStatus,
   StrategyService,
   emergingMarketsPriceService,
-  EmergingMarketsPriceService
+  EmergingMarketsPriceService,
+  getEmergingMarketsPriceService
 };
 
 // Export Utils
