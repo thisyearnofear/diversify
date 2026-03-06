@@ -260,9 +260,13 @@ export default function TradeTab() {
         const data = await response.json();
         if (data.success && data.synthData) {
           const forecast = data.synthData;
-          const forecast24h = forecast["24H"];
-          const forecastVol = forecast24h ? (forecast24h.average_volatility * 100).toFixed(2) : "0";
-          const realizedVol = forecast.realized ? (forecast.realized.average_volatility * 100).toFixed(2) : "0";
+          // Get volatility from the volatility field (returned from getVolatility API)
+          const forecastVol = data.volatility?.forecast 
+            ? (data.volatility.forecast * 100).toFixed(2) 
+            : "0";
+          const realizedVol = data.volatility?.realized 
+            ? (data.volatility.realized * 100).toFixed(2) 
+            : "0";
           
           const synthItem: IntelligenceItem = {
             id: `synth-${selected}`,
@@ -275,11 +279,13 @@ export default function TradeTab() {
           };
 
           const price = forecast.current_price;
-          const percentiles = forecast24h?.percentiles || {};
+          // Get the last percentile object from the array (most recent forecast)
+          const forecastData = forecast.forecast_future || forecast["24H"];
+          const percentiles = forecastData?.percentiles?.[forecastData.percentiles.length - 1] || {};
           setSynthForecast({
-            p10: price * (1 + (percentiles.p10 || 0)),
-            p50: price * (1 + (percentiles.p50 || 0)),
-            p90: price * (1 + (percentiles.p90 || 0)),
+            p10: percentiles["0.2"] || price,
+            p50: percentiles["0.5"] || price,
+            p90: percentiles["0.8"] || price,
           });
 
           setIntelligenceItems(prev => {

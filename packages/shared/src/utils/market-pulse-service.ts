@@ -104,7 +104,12 @@ export class MarketPulseService {
 
     // Calculate metrics with fallback logic
     const btcPrice = btcData?.current_price || this.generateFallbackPrice();
-    const btcChange24h = btcData?.["24H"]?.percentiles?.p50 || this.generateFallbackChange();
+    // Support both new API format (forecast_future) and legacy format (24H)
+    const forecastData = btcData?.forecast_future || btcData?.["24H"];
+    const lastPercentile = forecastData?.percentiles?.[forecastData.percentiles.length - 1];
+    const btcChange24h = lastPercentile?.["0.5"] 
+      ? ((lastPercentile["0.5"] - btcPrice) / btcPrice) * 100
+      : this.generateFallbackChange();
     const sentiment = volData?.forecast_vol ? 50 + (volData.forecast_vol * 100) : this.generateFallbackSentiment();
     
     const warRisk = this.calculateWarRisk(macroResult.data);
@@ -183,7 +188,10 @@ export class MarketPulseService {
     if (!btc || !vol) return 50;
 
     const volScore = vol.forecast_vol > vol.realized_vol ? 60 : 45;
-    const priceMomentum = btc["24H"]?.percentiles?.p50 || 0;
+    // Support both new API format (forecast_future) and legacy format (24H)
+    const forecastData = btc.forecast_future || btc["24H"];
+    const lastPercentile = forecastData?.percentiles?.[forecastData.percentiles.length - 1];
+    const priceMomentum = lastPercentile?.["0.5"] || 0;
 
     return Math.min(100, Math.max(0, 50 + priceMomentum * 10 + volScore - 50));
   }

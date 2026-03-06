@@ -3,20 +3,29 @@ import { unifiedCache } from "../utils/unified-cache-service";
 
 export interface SynthForecast {
   current_price: number;
-  "1H": {
-    average_volatility: number;
-    percentiles: Record<string, number>;
-  };
-  "24H": {
-    average_volatility: number;
-    percentiles: Record<string, number>;
-  };
   forecast_future?: {
-    average_volatility: number;
-    percentiles: Record<string, number>;
+    average_volatility?: number;
+    volatility?: number[];
+    percentiles?: Array<Record<string, number>>;
+  };
+  forecast_past?: {
+    average_volatility?: number;
+    volatility?: number[];
+    percentiles?: Array<Record<string, number>>;
   };
   realized?: {
+    average_volatility?: number;
+    volatility?: number[];
+    percentiles?: Array<Record<string, number>>;
+  };
+  // Legacy format support (for fallback data)
+  "1H"?: {
     average_volatility: number;
+    percentiles: Record<string, number>;
+  };
+  "24H"?: {
+    average_volatility: number;
+    percentiles: Record<string, number>;
   };
 }
 
@@ -235,8 +244,9 @@ export class SynthDataService {
           );
           if (!data) throw new Error('No data from API');
 
+          // The API returns realized and forecast_future with volatility arrays
           const mappedData: SynthVolatility = {
-            asset: data.asset || asset,
+            asset: asset,
             realized_vol: data.realized?.average_volatility || 0,
             forecast_vol: data.forecast_future?.average_volatility || 0,
           };

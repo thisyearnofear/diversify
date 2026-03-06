@@ -30,11 +30,14 @@ export default async function handler(
         // Map stock to Synth asset
         const synthAsset = SynthDataService.mapStockToSynthAsset(stock);
 
-        // Fetch volatility data from Synth API (cached on server)
-        const synthData = await SynthDataService.getPredictions(synthAsset);
+        // Fetch both predictions and volatility data from Synth API (cached on server)
+        const [synthData, volData] = await Promise.all([
+            SynthDataService.getPredictions(synthAsset),
+            SynthDataService.getVolatility(synthAsset)
+        ]);
 
-        const forecast = synthData?.forecast_future?.average_volatility;
-        const realized = synthData?.realized?.average_volatility;
+        const forecast = volData?.forecast_vol;
+        const realized = volData?.realized_vol;
 
         res.status(200).json({
             success: true,
