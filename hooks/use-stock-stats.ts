@@ -117,7 +117,8 @@ export function useStockStats(
       let forecastVol: number | undefined;
       let realizedVol: number | undefined;
       try {
-        const response = await fetch(`/api/trading/stock-stats?stock=${selectedStock}`);
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+        const response = await fetch(`${apiBase}/api/trading/stock-stats?stock=${selectedStock}`);
         if (response.ok) {
           const data = await response.json();
           if (data.success) {

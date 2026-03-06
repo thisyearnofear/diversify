@@ -253,7 +253,8 @@ export default function TradeTab() {
   useEffect(() => {
     const fetchSynthIntelligence = async () => {
       try {
-        const response = await fetch(`/api/trading/stock-stats?stock=${selected}`);
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+        const response = await fetch(`${apiBase}/api/trading/stock-stats?stock=${selected}`);
         if (!response.ok) return;
         
         const data = await response.json();
@@ -300,7 +301,8 @@ export default function TradeTab() {
   useEffect(() => {
     const fetchMarketIntelligence = async () => {
       try {
-        const response = await fetch("/api/trading/market-pulse");
+        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+        const response = await fetch(`${apiBase}/api/trading/market-pulse`);
         if (!response.ok) throw new Error("Failed to fetch market pulse API");
         
         const data = await response.json();

@@ -77,7 +77,21 @@ export function useStreakRewards(): StreakState & StreakActions {
     try {
       // 1. Check On-chain GoodDollar status
       const onChainStatus = await fetchOnChainStatus(address);
-      // 2. Try API for streak data
+      
+      // 2. Fetch real entitlement from contract
+      let realEntitlement = '~$0.25'; // Default fallback
+      try {
+        const { GoodDollarService } = await import('@diversifi/shared');
+        const service = GoodDollarService.createReadOnly();
+        const eligibility = await service.checkClaimEligibility(address);
+        if (eligibility.claimAmount && parseFloat(eligibility.claimAmount) > 0) {
+          realEntitlement = `${parseFloat(eligibility.claimAmount).toFixed(2)} G$`;
+        }
+      } catch (err) {
+        console.warn('[StreakRewards] Could not fetch real entitlement:', err);
+      }
+
+      // 3. Try API for streak data
       const { streak, raw } = await fetchStreakFromApi(address);
 
       const streakState = calculateStreakState(streak);
@@ -95,6 +109,7 @@ export function useStreakRewards(): StreakState & StreakActions {
           ...prev,
           ...streakState,
           ...onChainStatus,
+          estimatedReward: realEntitlement,
           crossChainActivity: raw.crossChainActivity || prev.crossChainActivity,
           achievements: nextAchievements,
           newlyEarnedAchievements: newlyEarned,

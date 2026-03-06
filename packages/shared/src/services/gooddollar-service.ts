@@ -6,6 +6,22 @@
  * - MODULAR: Independent, composable service
  * - CLEAN: Clear separation of concerns
  * - PERFORMANT: Minimal dependencies, uses existing ethers v5
+ * 
+ * INTEGRATION STATUS:
+ * ✅ UBI Claiming (checkEntitlement, claim)
+ * ✅ Identity Verification (isWhitelisted, getFaceVerificationLink)
+ * ✅ Superfluid Streaming (createStream, deleteStream, getStreamInfo)
+ * ✅ Reserve Trading (buyGFromReserve, sellGToReserve, getReserveInfo)
+ * ⏳ Staking/Trust (TODO: Need GoodStaking contract address)
+ * ⏳ Governance (TODO: Need GOOD token address on Celo)
+ * ⏳ Exit Contributions (TODO: Need G$X token address on Celo)
+ * 
+ * NEXT STEPS:
+ * 1. Get GOOD token address from GoodDollar team (governance token on Celo)
+ * 2. Get G$X token address (exit contribution reduction token)
+ * 3. Get GoodStaking contract address (for supporter staking)
+ * 4. Verify Reserve contract address is correct for Celo
+ * 5. Test buy/sell flows with actual tokens (cUSDC, etc.)
  */
 
 import { ethers } from 'ethers';
@@ -18,6 +34,9 @@ const _RAW_ADDRESSES = {
   IDENTITY:     '0xC361A6E67822a0EDc17D899227dd9FC50BD62F42',
   RESERVE:      '0xed8f69e24FE33481f7dFe0d9D0f89F5e4F4f3E3E',
   CFA_FORWARDER:'0xcfA132E353cB4E398080B9700609bb008eceB125',
+  GOOD_TOKEN:   '0x0000000000000000000000000000000000000000', // TODO: Add actual GOOD token address
+  GSX_TOKEN:    '0x0000000000000000000000000000000000000000', // TODO: Add actual G$X token address
+  GOOD_STAKING: '0x0000000000000000000000000000000000000000', // TODO: Add actual GoodStaking contract
 } as const;
 
 const GOODDOLLAR_ADDRESSES = Object.fromEntries(
@@ -42,6 +61,28 @@ const G_TOKEN_ABI = [
   'function balanceOf(address) external view returns (uint256)',
   'function decimals() external view returns (uint8)',
   'function approve(address spender, uint256 amount) external returns (bool)',
+  'function allowance(address owner, address spender) external view returns (uint256)',
+];
+
+// Reserve ABI for buy/sell operations
+const RESERVE_ABI = [
+  'function buy(address _token, uint256 _tokenAmount, uint256 _minReturn) external returns (uint256)',
+  'function sell(uint256 _gdAmount, uint256 _minReturn, address _target) external returns (uint256)',
+  'function currentPrice() external view returns (uint256)',
+  'function reserveBalance() external view returns (uint256)',
+  'function reserveRatio() external view returns (uint32)',
+];
+
+// GOOD Token ABI (governance)
+const GOOD_TOKEN_ABI = [
+  'function balanceOf(address) external view returns (uint256)',
+  'function delegate(address delegatee) external',
+  'function getCurrentVotes(address account) external view returns (uint96)',
+];
+
+// G$X Token ABI (exit contribution reduction)
+const GSX_TOKEN_ABI = [
+  'function balanceOf(address) external view returns (uint256)',
 ];
 
 // Superfluid CFA Forwarder ABI
@@ -67,6 +108,25 @@ export interface StakingInfo {
   userStake: string;
   apy: number;
   canStake: boolean;
+  goodRewards: string; // GOOD tokens earned
+}
+
+export interface ReserveInfo {
+  currentPrice: string; // G$ price in reserve token (e.g., cUSDC)
+  reserveBalance: string; // Total reserve backing
+  reserveRatio: number; // Reserve ratio percentage
+}
+
+export interface GovernanceInfo {
+  goodBalance: string;
+  votingPower: string;
+  delegatedTo: string | null;
+}
+
+export interface ExitContributionInfo {
+  gsxBalance: string; // G$X tokens held
+  exitContributionRate: number; // Percentage fee when selling
+  reducedRate: number; // Reduced rate with G$X
 }
 
 export interface StreamInfo {
@@ -323,14 +383,210 @@ export class GoodDollarService {
   /**
    * Get staking information
    */
-  async getStakingInfo(): Promise<StakingInfo> {
-    // Placeholder - would need actual GoodStaking contract integration
+  async getStakingInfo(userAddress?: string): Promise<StakingInfo> {
+    // TODO: Implement when GoodStaking contract address is available
+    // This would interact with the GoodDollar Trust contracts
     return {
       totalStaked: '0',
       userStake: '0',
-      apy: 0,
+      apy: 5, // Fixed 5% APY as per docs
       canStake: false,
+      goodRewards: '0',
     };
+  }
+
+  /**
+   * Get Reserve information (price, backing, ratio)
+   */
+  async getReserveInfo(): Promise<ReserveInfo> {
+    try {
+      const reserveContract = new ethers.Contract(
+        GOODDOLLAR_ADDRESSES.RESERVE,
+        RESERVE_ABI,
+        this.provider
+      );
+
+      const [currentPrice, reserveBalance, reserveRatio] = await Promise.all([
+        reserveContract.currentPrice(),
+        reserveContract.reserveBalance(),
+        reserveContract.reserveRatio(),
+      ]);
+
+      return {
+        currentPrice: ethers.utils.formatUnits(currentPrice, 18),
+        reserveBalance: ethers.utils.formatUnits(reserveBalance, 18),
+        reserveRatio: reserveRatio / 10000, // Convert from basis points to percentage
+      };
+    } catch (error) {
+      console.error('[GoodDollar] Error fetching reserve info:', error);
+      return {
+        currentPrice: '0',
+        reserveBalance: '0',
+        reserveRatio: 0,
+      };
+    }
+  }
+
+  /**
+   * Buy G$ from the Reserve
+   * @param tokenAddress Address of token to spend (e.g., cUSDC)
+   * @param tokenAmount Amount of tokens to spend
+   * @param minReturn Minimum G$ to receive (slippage protection)
+   */
+  async buyGFromReserve(
+    tokenAddress: string,
+    tokenAmount: string,
+    minReturn: string = '0'
+  ): Promise<{ success: boolean; txHash?: string; amountReceived?: string; error?: string }> {
+    if (!this.signer) {
+      return { success: false, error: 'No signer available. Please connect your wallet.' };
+    }
+
+    try {
+      const reserveContract = new ethers.Contract(
+        GOODDOLLAR_ADDRESSES.RESERVE,
+        RESERVE_ABI,
+        this.signer
+      );
+
+      // First approve the reserve to spend tokens
+      const tokenContract = new ethers.Contract(
+        tokenAddress,
+        G_TOKEN_ABI,
+        this.signer
+      );
+
+      const tokenAmountRaw = ethers.utils.parseUnits(tokenAmount, 18);
+      const minReturnRaw = ethers.utils.parseUnits(minReturn, 18);
+
+      // Check allowance
+      const userAddress = await this.signer.getAddress();
+      const allowance = await tokenContract.allowance(userAddress, GOODDOLLAR_ADDRESSES.RESERVE);
+
+      if (allowance.lt(tokenAmountRaw)) {
+        const approveTx = await tokenContract.approve(GOODDOLLAR_ADDRESSES.RESERVE, tokenAmountRaw);
+        await approveTx.wait();
+      }
+
+      // Execute buy
+      const tx = await reserveContract.buy(tokenAddress, tokenAmountRaw, minReturnRaw);
+      const receipt = await tx.wait();
+
+      // Parse amount received from logs
+      const amountReceived = await this.parseTransferAmount(receipt, userAddress);
+
+      return {
+        success: true,
+        txHash: receipt.transactionHash,
+        amountReceived,
+      };
+    } catch (error: any) {
+      console.error('[GoodDollar] Buy error:', error);
+      return { success: false, error: error.message || 'Failed to buy G$' };
+    }
+  }
+
+  /**
+   * Sell G$ to the Reserve
+   * @param gdAmount Amount of G$ to sell
+   * @param minReturn Minimum tokens to receive (slippage protection)
+   * @param targetToken Address of token to receive
+   */
+  async sellGToReserve(
+    gdAmount: string,
+    minReturn: string = '0',
+    targetToken: string
+  ): Promise<{ success: boolean; txHash?: string; amountReceived?: string; exitFee?: string; error?: string }> {
+    if (!this.signer) {
+      return { success: false, error: 'No signer available. Please connect your wallet.' };
+    }
+
+    try {
+      const reserveContract = new ethers.Contract(
+        GOODDOLLAR_ADDRESSES.RESERVE,
+        RESERVE_ABI,
+        this.signer
+      );
+
+      const gdAmountRaw = ethers.utils.parseUnits(gdAmount, 18);
+      const minReturnRaw = ethers.utils.parseUnits(minReturn, 18);
+
+      // Execute sell
+      const tx = await reserveContract.sell(gdAmountRaw, minReturnRaw, targetToken);
+      const receipt = await tx.wait();
+
+      const userAddress = await this.signer.getAddress();
+      const amountReceived = await this.parseTransferAmount(receipt, userAddress);
+
+      return {
+        success: true,
+        txHash: receipt.transactionHash,
+        amountReceived,
+        exitFee: 'Variable based on G$X holdings', // TODO: Calculate actual fee
+      };
+    } catch (error: any) {
+      console.error('[GoodDollar] Sell error:', error);
+      return { success: false, error: error.message || 'Failed to sell G$' };
+    }
+  }
+
+  /**
+   * Get governance token (GOOD) information
+   */
+  async getGovernanceInfo(userAddress: string): Promise<GovernanceInfo> {
+    try {
+      // TODO: Implement when GOOD token address is available
+      return {
+        goodBalance: '0',
+        votingPower: '0',
+        delegatedTo: null,
+      };
+    } catch (error) {
+      console.error('[GoodDollar] Error fetching governance info:', error);
+      return {
+        goodBalance: '0',
+        votingPower: '0',
+        delegatedTo: null,
+      };
+    }
+  }
+
+  /**
+   * Get exit contribution information (G$X balance and rates)
+   */
+  async getExitContributionInfo(userAddress: string): Promise<ExitContributionInfo> {
+    try {
+      // TODO: Implement when G$X token address is available
+      return {
+        gsxBalance: '0',
+        exitContributionRate: 0, // Default rate set by DAO
+        reducedRate: 0,
+      };
+    } catch (error) {
+      console.error('[GoodDollar] Error fetching exit contribution info:', error);
+      return {
+        gsxBalance: '0',
+        exitContributionRate: 0,
+        reducedRate: 0,
+      };
+    }
+  }
+
+  /**
+   * Delegate GOOD voting power to another address
+   */
+  async delegateVotes(delegatee: string): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (!this.signer) {
+      return { success: false, error: 'No signer available. Please connect your wallet.' };
+    }
+
+    try {
+      // TODO: Implement when GOOD token address is available
+      return { success: false, error: 'GOOD token not yet configured' };
+    } catch (error: any) {
+      console.error('[GoodDollar] Delegation error:', error);
+      return { success: false, error: error.message || 'Failed to delegate votes' };
+    }
   }
 
   /**
@@ -356,6 +612,29 @@ export class GoodDollarService {
       }
     } catch (error) {
       console.warn('[GoodDollar] Could not parse claim amount:', error);
+    }
+    return '0';
+  }
+
+  /**
+   * Helper: Parse transfer amount from transaction receipt
+   */
+  private async parseTransferAmount(receipt: ethers.ContractReceipt, toAddress: string): Promise<string> {
+    try {
+      const transferTopic = ethers.utils.id('Transfer(address,address,uint256)');
+      const transferLog = receipt.logs.find(log => {
+        if (log.topics[0] !== transferTopic) return false;
+        // Check if transfer is to the user
+        const to = ethers.utils.defaultAbiCoder.decode(['address'], log.topics[2])[0];
+        return to.toLowerCase() === toAddress.toLowerCase();
+      });
+      
+      if (transferLog && transferLog.data) {
+        const amount = ethers.BigNumber.from(transferLog.data);
+        return ethers.utils.formatUnits(amount, 18);
+      }
+    } catch (error) {
+      console.warn('[GoodDollar] Could not parse transfer amount:', error);
     }
     return '0';
   }

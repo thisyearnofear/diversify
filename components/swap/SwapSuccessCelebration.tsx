@@ -246,47 +246,57 @@ export default function SwapSuccessCelebration({
               </p>
             </motion.div>
 
-            {/* ENHANCEMENT: GoodDollar UBI Unlock - PROMINENT */}
-            {parseFloat(amount) >= STREAK_CONFIG.MIN_SWAP_USD && (
+            {/* ENHANCEMENT: GoodDollar UBI - Contextual hint (not prominent) */}
+            {parseFloat(amount) >= STREAK_CONFIG.MIN_SWAP_USD && !isEligible && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.8, type: "spring" }}
-                className="bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl p-5 mb-4 shadow-xl border-2 border-emerald-300 dark:border-emerald-700"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 mb-4 border border-emerald-200 dark:border-emerald-800"
               >
-                <div className="flex items-start gap-3">
-                  <div className="text-4xl">💚</div>
+                <div className="flex items-start gap-2">
+                  <div className="text-lg">💚</div>
                   <div className="flex-1">
-                    <p className="text-base font-black text-white mb-1">
-                      {canClaim
-                        ? `🎉 ${estimatedReward} G$ Ready!`
-                        : isEligible
-                          ? "🔥 Streak Active!"
-                          : "🎁 Daily UBI Unlocked!"}
+                    <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-1">
+                      Daily UBI Unlocked
                     </p>
-                    <p className="text-xs text-emerald-50 mb-3 leading-relaxed">
-                      {canClaim
-                        ? "Your free daily GoodDollar UBI is ready to claim now!"
-                        : isEligible
-                          ? "Keep swapping to maintain your streak and claim tomorrow"
-                          : "You can now claim free G$ tokens daily from GoodDollar"}
+                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-500/80 leading-relaxed">
+                      You can now claim free G$ tokens daily. Check InfoTab to learn more.
                     </p>
-                    {canClaim ? (
-                      <button
-                        onClick={() => {
-                          onClose();
-                          onClaimG?.();
-                        }}
-                        className="inline-block text-sm font-black px-4 py-2 bg-white hover:bg-emerald-50 text-emerald-700 rounded-lg transition-all shadow-md hover:shadow-lg"
-                      >
-                        Claim G$ Now →
-                      </button>
-                    ) : (
-                      <div className="text-xs font-bold text-emerald-100">
-                        ✓ Check Swap tab to track your streak
-                      </div>
-                    )}
                   </div>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Show claim prompt only if already eligible and can claim now */}
+            {canClaim && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
+                className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 mb-4 border border-emerald-200 dark:border-emerald-800"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="text-lg">💚</div>
+                    <div>
+                      <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
+                        {estimatedReward} G$ Ready
+                      </p>
+                      <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500/70">
+                        Daily UBI available
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      onClaimG?.();
+                    }}
+                    className="text-[10px] font-black px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                  >
+                    Claim →
+                  </button>
                 </div>
               </motion.div>
             )}

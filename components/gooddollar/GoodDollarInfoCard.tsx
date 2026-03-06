@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardCard from "../shared/DashboardCard";
 import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import { useWalletContext } from "../wallet/WalletProvider";
 
 const GoodDollarClaimFlow = dynamic(() => import("./GoodDollarClaimFlow"), {
     ssr: false,
@@ -77,6 +78,13 @@ interface GoodDollarInfoCardProps {
     onVerify?: () => void;
 }
 
+interface ReserveState {
+    price: string;
+    balance: string;
+    ratio: number;
+    isLoading: boolean;
+}
+
 /**
  * GoodDollar hub — consolidated educational + action card.
  * compact=true: one-line summary (used in ProtectionTab banner).
@@ -93,11 +101,43 @@ export default function GoodDollarInfoCard({
     onClaim,
     onVerify,
 }: GoodDollarInfoCardProps) {
+    const { address, isConnected } = useWalletContext();
     const [openSection, setOpenSection] = useState<string | null>(null);
     const [showClaimFlow, setShowClaimFlow] = useState(false);
+    const [reserveState, setReserveState] = useState<ReserveState>({
+        price: '0',
+        balance: '0',
+        ratio: 0,
+        isLoading: false,
+    });
 
     const toggleSection = (id: string) =>
         setOpenSection((prev) => (prev === id ? null : id));
+
+    // Fetch reserve info when component mounts
+    useEffect(() => {
+        if (!isConnected) return;
+        
+        const fetchReserveInfo = async () => {
+            setReserveState(prev => ({ ...prev, isLoading: true }));
+            try {
+                const { GoodDollarService } = await import('@diversifi/shared');
+                const service = GoodDollarService.createReadOnly();
+                const info = await service.getReserveInfo();
+                setReserveState({
+                    price: info.currentPrice,
+                    balance: info.reserveBalance,
+                    ratio: info.reserveRatio,
+                    isLoading: false,
+                });
+            } catch (err) {
+                console.error('[GoodDollar] Failed to fetch reserve info:', err);
+                setReserveState(prev => ({ ...prev, isLoading: false }));
+            }
+        };
+
+        fetchReserveInfo();
+    }, [isConnected]);
 
     // Compact mode — used as a slim banner in ProtectionTab
     if (compact) {
@@ -195,6 +235,60 @@ export default function GoodDollarInfoCard({
                     {/* Accordion Sections */}
                     <div className="space-y-2">
                         <AccordionSection
+                            id="reserve"
+                            icon="💱"
+                            title="Reserve & Trading"
+                            openId={openSection}
+                            onToggle={toggleSection}
+                        >
+                            <div className="space-y-3 pt-1">
+                                {/* Reserve Stats - Educational */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-lg">
+                                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase">G$ Price</div>
+                                        <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">
+                                            {reserveState.isLoading ? '...' : `$${parseFloat(reserveState.price).toFixed(4)}`}
+                                        </div>
+                                    </div>
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-lg">
+                                        <div className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase">Reserve</div>
+                                        <div className="text-sm font-black text-blue-700 dark:text-blue-300">
+                                            {reserveState.isLoading ? '...' : `$${(parseFloat(reserveState.balance) / 1000000).toFixed(1)}M`}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                    G$ is backed by a reserve of crypto assets. You can buy/sell G$ directly from the reserve or trade on DEXs like Uniswap.
+                                </p>
+
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-sm">🎁</span>
+                                        <p className="text-[10px] text-gray-700 dark:text-gray-300 leading-relaxed">
+                                            <strong>Buy G$:</strong> Receive G$X tokens as bonus (reduces exit fees)
+                                        </p>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-sm">💰</span>
+                                        <p className="text-[10px] text-gray-700 dark:text-gray-300 leading-relaxed">
+                                            <strong>Sell G$:</strong> Exit contribution applies (reduced with G$X)
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <a
+                                    href="https://app.uniswap.org/#/swap?outputCurrency=0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A&chain=celo"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block w-full py-2.5 text-center text-[10px] font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                                >
+                                    Trade on Uniswap →
+                                </a>
+                            </div>
+                        </AccordionSection>
+
+                        <AccordionSection
                             id="how"
                             icon="🔄"
                             title="How It Works"
@@ -272,6 +366,7 @@ export default function GoodDollarInfoCard({
                             <button
                                 onClick={onStake}
                                 className="flex-1 text-[10px] font-black py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                                title="Stake stablecoins to support UBI and earn GOOD tokens"
                             >
                                 🌱 Support UBI
                             </button>
