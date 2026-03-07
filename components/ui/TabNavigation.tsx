@@ -1,6 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
+import type { UserExperienceMode } from "@/context/app/types";
 
 interface TabItem {
   id: TabId;
@@ -13,6 +14,7 @@ interface TabNavigationProps {
   setActiveTab: (tab: TabId) => void;
   /** Optional badge counts keyed by tab id */
   badges?: Partial<Record<TabId, number>>;
+  experienceMode?: UserExperienceMode;
 }
 
 const TABS: TabItem[] = [
@@ -72,11 +74,17 @@ const TABS: TabItem[] = [
   },
 ];
 
-export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: TabNavigationProps) {
+// Tabs shown in beginner mode (primary tabs only)
+const BEGINNER_TAB_IDS: TabId[] = ["overview", "swap", "protect"];
+
+export default function TabNavigation({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
+  const isBeginner = experienceMode === 'beginner';
+  const visibleTabs = isBeginner ? TABS.filter(t => BEGINNER_TAB_IDS.includes(t.id)) : TABS;
+
   return (
-    <div className="mb-4">
-      <div className="flex overflow-x-auto scrollbar-hide bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1 -mx-1 sm:mx-0">
-        {TABS.map((tab) => {
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] pb-safe">
+      <div className="max-w-md mx-auto flex">
+        {visibleTabs.map((tab) => {
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
           const isActive = activeTab === tab.id;
@@ -86,7 +94,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               whileTap={{ scale: 0.95 }}
-              className={`flex-1 min-w-0 py-1.5 sm:py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg relative ${
+              className={`flex-1 min-w-0 py-2 px-1 min-h-[56px] text-center flex flex-col items-center justify-center transition-all duration-200 relative ${
                 isActive
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"

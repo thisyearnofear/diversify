@@ -221,7 +221,7 @@ export default function WalletButton({
 
         {/* Dropdown Menu */}
         {showDropdown && (
-          <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+          <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
             <div className="py-1">
               {/* Network Status with Chain Selector */}
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">

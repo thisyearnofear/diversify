@@ -48,6 +48,7 @@ import { useToast } from "../components/ui/Toast";
 import GuidedTour from "../components/tour/GuidedTour";
 import TourTrigger from "../components/tour/TourTrigger";
 import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
+import PullToRefresh from "../components/ui/PullToRefresh";
 
 import { useVoiceIntent } from "../hooks/use-voice-intent";
 import { useAIOracle } from "../hooks/use-ai-oracle";
@@ -119,7 +120,7 @@ export default function DiversiFiPage() {
   }, [detectedRegion, isRegionLoading]);
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 p-4 transition-colors relative">
+    <div className="min-h-screen bg-white dark:bg-gray-950 p-2 sm:p-4 transition-colors relative">
       <Head>
         <title>DiversiFi - Protect Your Savings</title>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -255,7 +256,7 @@ export default function DiversiFiPage() {
                     "info"
                   );
                 }}
-                className="w-8 h-8 text-sm rounded-xl transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg"
+                className="w-10 h-10 text-sm rounded-xl transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg"
                 aria-label={
                   experienceMode === "beginner"
                     ? "Switch to Standard mode — unlock more features"
@@ -306,7 +307,7 @@ export default function DiversiFiPage() {
             {/* Oracle — persistent AI entry point with unread badge */}
             <button
               onClick={openOracle}
-              className="relative w-8 h-8 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-md"
+              className="relative w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-md"
               aria-label="Open AI Oracle"
             >
               <span className="text-sm">🤖</span>
@@ -325,19 +326,34 @@ export default function DiversiFiPage() {
           </div>
         </div>
 
-        <div className="sticky top-0 z-40 py-2 bg-white/80 dark:bg-gray-950/80 backdrop-blur-md">
-          <TabNavigation
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            badges={{ protect: unreadCount }}
-          />
-        </div>
+        <TabNavigation
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          badges={{ protect: unreadCount }}
+          experienceMode={experienceMode}
+        />
 
         <AnimatePresence>
           <GuidedTour />
         </AnimatePresence>
 
-        <div className="pt-2">
+        <motion.div
+          className="pt-2 pb-20"
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.05}
+          onPanEnd={(_e, info) => {
+            const SWIPE_THRESHOLD = 60;
+            // Tab display order matches TabNavigation TABS array
+            const TAB_ORDER = ["overview", "swap", "trade", "agent", "protect", "info"] as const;
+            const idx = TAB_ORDER.indexOf(activeTab as typeof TAB_ORDER[number]);
+            if (info.offset.x < -SWIPE_THRESHOLD && idx < TAB_ORDER.length - 1) {
+              setActiveTab(TAB_ORDER[idx + 1]);
+            } else if (info.offset.x > SWIPE_THRESHOLD && idx > 0) {
+              setActiveTab(TAB_ORDER[idx - 1]);
+            }
+          }}
+        >
           <ErrorBoundary>
             <AnimatePresence mode="wait">
               {activeTab === "overview" && (
@@ -345,16 +361,18 @@ export default function DiversiFiPage() {
                   initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
                   transition={{ duration: 0.15, ease: "easeOut" }}
                 >
-                  <OverviewTab
-                    portfolio={multichainPortfolio}
-                    isRegionLoading={isRegionLoading}
-                    userRegion={userRegion}
-                    setUserRegion={setUserRegion}
-                    REGIONS={REGIONS}
-                    setActiveTab={setActiveTab}
-                    refreshBalances={refresh}
-                    currencyPerformanceData={currencyPerformanceData}
-                  />
+                  <PullToRefresh onRefresh={refresh}>
+                    <OverviewTab
+                      portfolio={multichainPortfolio}
+                      isRegionLoading={isRegionLoading}
+                      userRegion={userRegion}
+                      setUserRegion={setUserRegion}
+                      REGIONS={REGIONS}
+                      setActiveTab={setActiveTab}
+                      refreshBalances={refresh}
+                      currencyPerformanceData={currencyPerformanceData}
+                    />
+                  </PullToRefresh>
                 </motion.div>
               )}
 
@@ -417,7 +435,7 @@ export default function DiversiFiPage() {
               )}
             </AnimatePresence>
           </ErrorBoundary>
-        </div>
+        </motion.div>
 
         <WalletTutorial
           isOpen={isTutorialOpen}
