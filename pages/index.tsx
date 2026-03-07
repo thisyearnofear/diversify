@@ -211,8 +211,8 @@ export default function DiversiFiPage() {
 
         {/* HEADER - Adaptive based on mode and connection */}
         <div className="flex items-center justify-between mb-2 py-1">
-          {/* Left: Logo - hidden on mobile when in Farcaster to save space */}
-          <div className={`flex items-center gap-2 ${isFarcaster ? 'hidden sm:flex' : 'flex'}`}>
+          {/* Left: Logo - hidden on mobile to give wallet button room */}
+          <div className="hidden sm:flex items-center gap-2">
             <div className="w-7 h-7 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
               <span className="text-white text-sm font-black">D</span>
             </div>
@@ -233,8 +233,8 @@ export default function DiversiFiPage() {
             </div>
           </div>
 
-          {/* Right: Consistent controls across ALL modes - more compact on mobile in Farcaster */}
-          <div className={`flex items-center ${isFarcaster ? 'gap-1 sm:gap-2' : 'gap-2'}`}>
+          {/* Right: Consistent controls across ALL modes - compact on mobile */}
+          <div className="flex items-center gap-1 sm:gap-2">
             {/* Mode toggle — same button in all modes, emoji reflects current state */}
             <div
               className="relative"
@@ -317,8 +317,8 @@ export default function DiversiFiPage() {
               )}
             </button>
 
-            {/* Theme toggle - hidden on mobile in Farcaster to save space */}
-            <div className={isFarcaster ? 'hidden sm:block' : 'block'}>
+            {/* Theme toggle - hidden on mobile to save space */}
+            <div className="hidden sm:block">
               <ThemeToggle />
             </div>
             {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}

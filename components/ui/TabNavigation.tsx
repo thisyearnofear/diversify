@@ -75,7 +75,7 @@ const TABS: TabItem[] = [
 export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: TabNavigationProps) {
   return (
     <div className="mb-4">
-      <div className="flex bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1">
+      <div className="flex overflow-x-auto scrollbar-hide bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1 -mx-1 sm:mx-0">
         {TABS.map((tab) => {
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
@@ -86,7 +86,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               whileTap={{ scale: 0.95 }}
-              className={`flex-1 py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg relative ${
+              className={`flex-1 min-w-0 py-1.5 sm:py-2 px-1 text-center flex flex-col items-center justify-center transition-all duration-200 rounded-lg relative ${
                 isActive
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
@@ -96,7 +96,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
               {isActive && (
                 <motion.span 
                   layoutId="activeTabIndicator"
-                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"
+                  className="absolute bottom-0 left-1/2 -translate-x-1/2 w-6 sm:w-8 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full"
                 />
               )}
               <motion.div 
@@ -104,7 +104,9 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
                 animate={hasBadge ? { scale: [1, 1.05, 1] } : {}}
                 transition={hasBadge ? { repeat: Infinity, duration: 2, ease: "easeInOut" } : {}}
               >
-                {tab.icon}
+                <div className="[&>svg]:size-5 [&>svg]:sm:size-6 [&>svg]:mb-0.5 [&>svg]:sm:mb-1">
+                  {tab.icon}
+                </div>
                 {hasBadge && (
                   <motion.span 
                     initial={{ scale: 0 }}
@@ -115,7 +117,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {} }: 
                   </motion.span>
                 )}
               </motion.div>
-              <span className={`text-xs font-bold uppercase tracking-wider mt-0.5 ${isActive ? "opacity-100" : "opacity-60"}`}>
+              <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-0.5 ${isActive ? "opacity-100" : "opacity-60"}`}>
                 {tab.label}
               </span>
             </motion.button>

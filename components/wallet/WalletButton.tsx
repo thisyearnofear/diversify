@@ -368,7 +368,7 @@ export default function WalletButton({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleConnect}
-        className={`group relative flex items-center justify-center px-5 py-2 rounded-full font-medium transition-all duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
+        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 rounded-full font-medium text-sm sm:text-base transition-all duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
         title={hasInjectedWallet ? "Connect with MetaMask/Coinbase or other browser wallet" : "Connect via WalletConnect, Email, or Social login"}
       >
         {variant === 'primary' && (
@@ -377,7 +377,7 @@ export default function WalletButton({
 
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          className="h-5 w-5 mr-2"
+          className="h-5 w-5 mr-2 hidden sm:block"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -389,7 +389,8 @@ export default function WalletButton({
             d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
           />
         </svg>
-        <span>Connect Wallet</span>
+        <span className="sm:hidden">Connect</span>
+        <span className="hidden sm:inline">Connect Wallet</span>
       </motion.button>
       {walletError && (
         <p className="text-red-500 text-[10px] mt-1 font-medium">{walletError}</p>
