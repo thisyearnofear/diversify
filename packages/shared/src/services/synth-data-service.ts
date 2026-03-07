@@ -6,17 +6,17 @@ export interface SynthForecast {
   forecast_future?: {
     average_volatility?: number;
     volatility?: number[];
-    percentiles?: Array<Record<string, number>>;
+    percentiles?: Record<string, number>;
   };
   forecast_past?: {
     average_volatility?: number;
     volatility?: number[];
-    percentiles?: Array<Record<string, number>>;
+    percentiles?: Record<string, number>;
   };
   realized?: {
     average_volatility?: number;
     volatility?: number[];
-    percentiles?: Array<Record<string, number>>;
+    percentiles?: Record<string, number>;
   };
   // Legacy format support (for fallback data)
   "1H"?: {

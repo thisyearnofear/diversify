@@ -106,9 +106,15 @@ export class MarketPulseService {
     const btcPrice = btcData?.current_price || this.generateFallbackPrice();
     // Support both new API format (forecast_future) and legacy format (24H)
     const forecastData = btcData?.forecast_future || btcData?.["24H"];
-    const lastPercentile = forecastData?.percentiles?.[forecastData.percentiles.length - 1];
-    const btcChange24h = lastPercentile?.["0.5"] 
-      ? ((lastPercentile["0.5"] - btcPrice) / btcPrice) * 100
+    const percentiles = forecastData?.percentiles;
+    // Handle percentiles as either Record<string, number> or array
+    const medianPrice = percentiles 
+      ? (typeof percentiles === 'object' && !Array.isArray(percentiles) 
+          ? percentiles.p50 || percentiles["0.5"]
+          : undefined)
+      : undefined;
+    const btcChange24h = medianPrice 
+      ? ((medianPrice - btcPrice) / btcPrice) * 100
       : this.generateFallbackChange();
     const sentiment = volData?.forecast_vol ? 50 + (volData.forecast_vol * 100) : this.generateFallbackSentiment();
     

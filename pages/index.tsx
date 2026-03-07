@@ -27,6 +27,16 @@ const TradeTab = dynamic(() => import("../components/tabs/TradeTab"), {
     </div>
   ),
 });
+const AgentTab = dynamic(() => import("../components/tabs/AgentTab"), {
+  ssr: false,
+  loading: () => (
+    <div className="animate-pulse space-y-4 pt-4">
+      <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl w-3/4 mx-auto" />
+      <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
+      <div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
+    </div>
+  ),
+});
 import InfoTab from "../components/tabs/InfoTab";
 import WalletButton from "../components/wallet/WalletButton";
 import FarcasterWalletButton from "../components/wallet/FarcasterWalletButton";
@@ -382,6 +392,15 @@ export default function DiversiFiPage() {
                   transition={{ duration: 0.15, ease: "easeOut" }}
                 >
                   <TradeTab />
+                </motion.div>
+              )}
+
+              {activeTab === "agent" && (
+                <motion.div key="agent"
+                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                  transition={{ duration: 0.15, ease: "easeOut" }}
+                >
+                  <AgentTab isMiniPay={isInMiniPay} isFarcaster={isInFarcaster} />
                 </motion.div>
               )}
 

@@ -1,7 +1,7 @@
 // Single source of truth for main navigation tab IDs.
 // Keep in sync with pages/index.tsx render switch + TabNavigation items.
 
-export const TAB_IDS = ["overview", "protect", "swap", "trade", "info"] as const;
+export const TAB_IDS = ["overview", "protect", "swap", "trade", "agent", "info"] as const;
 export type TabId = (typeof TAB_IDS)[number];
 
 export function isTabId(value: string): value is TabId {

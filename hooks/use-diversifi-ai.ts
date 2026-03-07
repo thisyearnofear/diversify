@@ -29,6 +29,24 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 // TYPES
 // ============================================================================
 
+export interface AgentActivity {
+  id: string;
+  timestamp: number;
+  type: 'analysis' | 'recommendation' | 'execution' | 'payment';
+  tier: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN';
+  description: string;
+  status: 'success' | 'pending' | 'failed';
+  details?: {
+    action?: string;
+    amount?: string;
+    token?: string;
+    txHash?: string;
+    x402Hash?: string;
+    savings?: number;
+    cost?: number;
+  };
+}
+
 export interface AIAdvice {
   // Level-based classification
   level: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN';
@@ -153,6 +171,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [portfolioAnalysis, setPortfolioAnalysis] =
     useState<PortfolioAnalysis | null>(null);
+  const [activities, setActivities] = useState<AgentActivity[]>([]);
 
   // Use global conversation context if available and requested
   const globalConversation = useAIConversationOptional();
@@ -181,6 +200,16 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       setLocalMessages([]);
     }
   }, [isUsingGlobal, globalConversation]);
+
+  // Activity tracking
+  const addActivity = useCallback((activity: Omit<AgentActivity, 'id' | 'timestamp'>) => {
+    const newActivity: AgentActivity = {
+      ...activity,
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+    };
+    setActivities(prev => [newActivity, ...prev].slice(0, 50)); // Keep last 50
+  }, []);
 
   // Capabilities (from feature flags + server status)
   const [capabilities, setCapabilities] = useState<AICapabilities>({
@@ -366,6 +395,19 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           setAnalysisProgress(100);
           setThinkingStep("Analysis complete!");
           setAdvice(result.advice);
+          
+          // Track activity
+          addActivity({
+            type: 'analysis',
+            tier: 'ORACLE',
+            description: `Analyzed portfolio: ${result.advice?.oneLiner || 'Portfolio analysis complete'}`,
+            status: 'success',
+            details: {
+              action: result.advice?.action,
+              savings: result.advice?.expectedSavings,
+            },
+          });
+          
           return result.advice;
         } else {
           // Handle non-200 responses gently
@@ -902,6 +944,10 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
     // Autonomous mode (optional)
     autonomousStatus,
     runAutonomousAnalysis,
+
+    // Activity tracking
+    activities,
+    addActivity,
 
     // Utilities
     clearMessages,
