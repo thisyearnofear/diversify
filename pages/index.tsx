@@ -56,6 +56,25 @@ import { useStreakRewards } from "../hooks/use-streak-rewards";
 import { useProtectionProfile } from "../hooks/use-protection-profile";
 
 
+// Tab display order — single source of truth for swipe navigation
+const TAB_DISPLAY_ORDER = ["overview", "swap", "trade", "agent", "protect", "info"] as const;
+type TabId = typeof TAB_DISPLAY_ORDER[number];
+
+// Reusable animated tab wrapper — eliminates repeated motion.div boilerplate
+function TabPane({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <motion.div
+      key={id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 export default function DiversiFiPage() {
   const { activeTab, setActiveTab } = useNavigation();
   const { experienceMode, setExperienceMode } = useExperience();
@@ -65,8 +84,23 @@ export default function DiversiFiPage() {
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
 
+  // Shared Farcaster mini-app config — single source of truth for both meta tags
+  const farcasterMeta = {
+    version: "1",
+    imageUrl: ogImageUrl,
+    button: {
+      title: "Open DiversiFi",
+      action: {
+        name: "DiversiFi",
+        url: "https://diversifiapp.vercel.app",
+        splashImageUrl: "https://diversifiapp.vercel.app/splash.png",
+        splashBackgroundColor: "#8B5CF6",
+      },
+    },
+  };
+
   const {
-    isMiniPay: isInMiniPay,
+    isMiniPay,
     isFarcaster,
     address,
     chainId: walletChainId,
@@ -102,7 +136,7 @@ export default function DiversiFiPage() {
 
   // Available tokens based on current chain (for swap tab)
   const availableTokens = useMemo(() => {
-    return getChainAssets(walletChainId || 42220);
+    return getChainAssets(walletChainId || NETWORKS.CELO_MAINNET.chainId);
   }, [walletChainId]);
 
   const { inflationData } = useInflationData();
@@ -143,38 +177,12 @@ export default function DiversiFiPage() {
         {/* Farcaster Mini App */}
         <meta
           name="fc:miniapp"
-          content={JSON.stringify({
-            version: "1",
-            imageUrl: ogImageUrl,
-            button: {
-              title: "Open DiversiFi",
-              action: {
-                type: "launch_miniapp",
-                name: "DiversiFi",
-                url: "https://diversifiapp.vercel.app",
-                splashImageUrl: "https://diversifiapp.vercel.app/splash.png",
-                splashBackgroundColor: "#8B5CF6"
-              }
-            }
-          })}
+          content={JSON.stringify({ ...farcasterMeta, button: { ...farcasterMeta.button, action: { ...farcasterMeta.button.action, type: "launch_miniapp" } } })}
         />
         {/* Backward compatibility */}
         <meta
           name="fc:frame"
-          content={JSON.stringify({
-            version: "1",
-            imageUrl: ogImageUrl,
-            button: {
-              title: "Open DiversiFi",
-              action: {
-                type: "launch_frame",
-                name: "DiversiFi",
-                url: "https://diversifiapp.vercel.app",
-                splashImageUrl: "https://diversifiapp.vercel.app/splash.png",
-                splashBackgroundColor: "#8B5CF6"
-              }
-            }
-          })}
+          content={JSON.stringify({ ...farcasterMeta, button: { ...farcasterMeta.button, action: { ...farcasterMeta.button.action, type: "launch_frame" } } })}
         />
       </Head>
 
@@ -345,8 +353,8 @@ export default function DiversiFiPage() {
           onPanEnd={(_e, info) => {
             const SWIPE_THRESHOLD = 60;
             // Tab display order matches TabNavigation TABS array
-            const TAB_ORDER = ["overview", "swap", "trade", "agent", "protect", "info"] as const;
-            const idx = TAB_ORDER.indexOf(activeTab as typeof TAB_ORDER[number]);
+            const TAB_ORDER = TAB_DISPLAY_ORDER;
+            const idx = TAB_ORDER.indexOf(activeTab as TabId);
             if (info.offset.x < -SWIPE_THRESHOLD && idx < TAB_ORDER.length - 1) {
               setActiveTab(TAB_ORDER[idx + 1]);
             } else if (info.offset.x > SWIPE_THRESHOLD && idx > 0) {
@@ -354,94 +362,86 @@ export default function DiversiFiPage() {
             }
           }}
         >
-          <ErrorBoundary>
-            <AnimatePresence mode="wait">
+          <AnimatePresence mode="wait">
               {activeTab === "overview" && (
-                <motion.div key="overview"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                >
-                  <PullToRefresh onRefresh={refresh}>
-                    <OverviewTab
-                      portfolio={multichainPortfolio}
-                      isRegionLoading={isRegionLoading}
-                      userRegion={userRegion}
-                      setUserRegion={setUserRegion}
-                      REGIONS={REGIONS}
-                      setActiveTab={setActiveTab}
-                      refreshBalances={refresh}
-                      currencyPerformanceData={currencyPerformanceData}
-                    />
-                  </PullToRefresh>
-                </motion.div>
+                <TabPane id="overview">
+                  <ErrorBoundary>
+                    <PullToRefresh onRefresh={refresh}>
+                      <OverviewTab
+                        portfolio={multichainPortfolio}
+                        isRegionLoading={isRegionLoading}
+                        userRegion={userRegion}
+                        setUserRegion={setUserRegion}
+                        REGIONS={REGIONS}
+                        setActiveTab={setActiveTab}
+                        refreshBalances={refresh}
+                        currencyPerformanceData={currencyPerformanceData}
+                      />
+                    </PullToRefresh>
+                  </ErrorBoundary>
+                </TabPane>
               )}
 
               {activeTab === "protect" && (
-                <motion.div key="protect"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                >
-                  <ProtectionTab
-                    userRegion={userRegion}
-                    portfolio={multichainPortfolio}
-                    setActiveTab={setActiveTab}
-                  />
-                </motion.div>
+                <TabPane id="protect">
+                  <ErrorBoundary>
+                    <ProtectionTab
+                      userRegion={userRegion}
+                      portfolio={multichainPortfolio}
+                      setActiveTab={setActiveTab}
+                    />
+                  </ErrorBoundary>
+                </TabPane>
               )}
 
               {activeTab === "swap" && (
-                <motion.div key="swap"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                >
-                  <SwapTab
-                    userRegion={userRegion}
-                    inflationData={inflationData as Record<string, RegionalInflationData>}
-                    refreshBalances={refresh}
-                    refreshChainId={async () => walletChainId}
-                    isBalancesLoading={isMultichainLoading}
-                  />
-                </motion.div>
+                <TabPane id="swap">
+                  <ErrorBoundary>
+                    <SwapTab
+                      userRegion={userRegion}
+                      inflationData={inflationData as Record<string, RegionalInflationData>}
+                      refreshBalances={refresh}
+                      refreshChainId={async () => walletChainId}
+                      isBalancesLoading={isMultichainLoading}
+                    />
+                  </ErrorBoundary>
+                </TabPane>
               )}
 
               {activeTab === "trade" && (
-                <motion.div key="trade"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                >
-                  <TradeTab />
-                </motion.div>
+                <TabPane id="trade">
+                  <ErrorBoundary>
+                    <TradeTab />
+                  </ErrorBoundary>
+                </TabPane>
               )}
 
               {activeTab === "agent" && (
-                <motion.div key="agent"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                >
-                  <AgentTab isMiniPay={isInMiniPay} isFarcaster={isInFarcaster} />
-                </motion.div>
+                <TabPane id="agent">
+                  <ErrorBoundary>
+                    <AgentTab isMiniPay={isMiniPay} isFarcaster={isFarcaster} />
+                  </ErrorBoundary>
+                </TabPane>
               )}
 
               {activeTab === "info" && (
-                <motion.div key="info"
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.15, ease: "easeOut" }}
-                >
-                  <InfoTab
-                    availableTokens={availableTokens}
-                    userRegion={userRegion}
-                  />
-                </motion.div>
+                <TabPane id="info">
+                  <ErrorBoundary>
+                    <InfoTab
+                      availableTokens={availableTokens}
+                      userRegion={userRegion}
+                    />
+                  </ErrorBoundary>
+                </TabPane>
               )}
             </AnimatePresence>
-          </ErrorBoundary>
         </motion.div>
 
         <WalletTutorial
           isOpen={isTutorialOpen}
           onClose={closeTutorial}
           onConnect={connectWallet}
-          isMiniPay={isInMiniPay}
+          isMiniPay={isMiniPay}
         />
 
         <StrategyModal

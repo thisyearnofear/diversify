@@ -45,12 +45,20 @@ export default function AgentTab({ isMiniPay, isFarcaster }: AgentTabProps) {
       />
 
       {/* Automation Settings (only in advanced mode) */}
-      {experienceMode === 'advanced' && autonomousStatus && (
-        <AutomationSettings
-          config={config}
-          onConfigChange={updateConfig}
-          autonomousStatus={autonomousStatus}
-        />
+      {experienceMode === 'advanced' && (
+        autonomousStatus ? (
+          <AutomationSettings
+            config={config}
+            onConfigChange={updateConfig}
+            autonomousStatus={autonomousStatus}
+          />
+        ) : (
+          <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 text-center">
+            <div className="text-2xl mb-2">⚙️</div>
+            <p className="text-sm font-semibold text-gray-500 dark:text-gray-400">Agent initialising…</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Automation settings will appear once the agent is ready.</p>
+          </div>
+        )
       )}
 
       {/* Info Card */}
