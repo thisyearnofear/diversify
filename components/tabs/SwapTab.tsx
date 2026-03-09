@@ -10,7 +10,8 @@ import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RealLifeScenario from "../demo/RealLifeScenario";
 import { getChainAssets, NETWORKS, isTestnetChain } from "../../config";
-import { ChainDetectionService } from "@diversifi/shared";
+import { ChainDetectionService, StrategyService } from "@diversifi/shared";
+import { getPersistedStrategy } from "../../hooks/useFinancialStrategies";
 import { TabHeader, Card, ConnectWalletPrompt } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
 import { useSwap } from "../../hooks/use-swap";
@@ -168,7 +169,22 @@ export default function SwapTab({
         ),
     );
 
-    return [...filtered, ...essentials];
+    const combined = [...filtered, ...essentials];
+
+    // Strategy-aware ordering: bubble recommended assets to top
+    const recommended = StrategyService.getRecommendedAssets(getPersistedStrategy());
+    if (recommended.length > 0) {
+      combined.sort((a, b) => {
+        const aIdx = recommended.indexOf(a.symbol);
+        const bIdx = recommended.indexOf(b.symbol);
+        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+        if (aIdx !== -1) return -1;
+        if (bIdx !== -1) return 1;
+        return 0;
+      });
+    }
+
+    return combined;
   }, [networkTokens, tradeableSymbols]);
 
   const filteredTokens = useMemo(() => {

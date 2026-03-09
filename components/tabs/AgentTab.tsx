@@ -61,6 +61,7 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
           analysis={portfolioAnalysis}
           portfolio={portfolio ?? null}
           onExecuteSwap={(fromToken, toToken, amount, reason) => {
+            ask(`I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ''} based on Oracle recommendation${reason ? `: ${reason}` : ''}. Please confirm this aligns with my strategy.`);
             navigateToSwap({ fromToken, toToken, amount, reason });
           }}
         />
