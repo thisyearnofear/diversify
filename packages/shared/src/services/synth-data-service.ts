@@ -265,6 +265,56 @@ export class SynthDataService {
   }
 
   /**
+   * Fetches option pricing insights for a specific asset.
+   */
+  static async getOptionPricing(asset: string): Promise<any | null> {
+    try {
+      const result = await unifiedCache.getOrFetch<any>(
+        `synth:options:${asset}`,
+        async () => {
+          const data = await this.makeApiRequest<any>(
+            `${BASE_URL}/insights/option-pricing`,
+            { asset }
+          );
+          if (!data) throw new Error('No data from API');
+          return { data, source: 'synth-api' };
+        },
+        'volatile',
+        false
+      );
+      return result.data;
+    } catch (error) {
+      console.error(`[Synth API] Failed to fetch option pricing for ${asset}:`, error);
+      return this.getFallbackOptionPricing(asset);
+    }
+  }
+
+  /**
+   * Fetches liquidation probabilities for a specific asset.
+   */
+  static async getLiquidation(asset: string): Promise<any | null> {
+    try {
+      const result = await unifiedCache.getOrFetch<any>(
+        `synth:liquidation:${asset}`,
+        async () => {
+          const data = await this.makeApiRequest<any>(
+            `${BASE_URL}/insights/liquidation`,
+            { asset }
+          );
+          if (!data) throw new Error('No data from API');
+          return { data, source: 'synth-api' };
+        },
+        'volatile',
+        false
+      );
+      return result.data;
+    } catch (error) {
+      console.error(`[Synth API] Failed to fetch liquidation for ${asset}:`, error);
+      return this.getFallbackLiquidation(asset);
+    }
+  }
+
+  /**
    * Makes an API request with retry logic and proper error handling.
    */
   private static async makeApiRequest<T>(
@@ -363,6 +413,26 @@ export class SynthDataService {
       asset,
       realized_vol: 0.04,
       forecast_vol: 0.06
+    };
+  }
+
+  /**
+   * Gets fallback option pricing data for an asset.
+   */
+  private static getFallbackOptionPricing(asset: string): any {
+    return {
+      asset,
+      implied_vol: 0.45 + (Math.random() * 0.1) // Random IV between 45% and 55%
+    };
+  }
+
+  /**
+   * Gets fallback liquidation data for an asset.
+   */
+  private static getFallbackLiquidation(asset: string): any {
+    return {
+      asset,
+      risk_score: 30 + Math.random() * 40 // Random risk between 30 and 70
     };
   }
 

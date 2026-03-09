@@ -14,6 +14,8 @@ export interface MarketPulse {
   warRisk: number;
   aiMomentum: number;
   defenseSpending: number;
+  liquidationRisk?: number;
+  impliedVolatility?: number;
   lastUpdated: number;
   source: string; // "api" | "fallback" | "mixed"
 }
@@ -74,15 +76,19 @@ export class MarketPulseService {
     }
 
     // Fetch data with error handling
-    const [synthBTC, synthVol, macroData] = await Promise.allSettled([
+    const [synthBTC, synthVol, synthLiq, synthOpt, macroData] = await Promise.allSettled([
       SynthDataService.getPredictions("BTC"),
       SynthDataService.getVolatility("BTC"),
+      SynthDataService.getLiquidation("BTC"),
+      SynthDataService.getOptionPricing("BTC"),
       macroService.getMacroData(),
     ]);
 
     // Determine data sources
     const synthSuccess = synthBTC.status === 'fulfilled' && synthBTC.value !== null;
     const volSuccess = synthVol.status === 'fulfilled' && synthVol.value !== null;
+    const liqSuccess = synthLiq.status === 'fulfilled' && synthLiq.value !== null;
+    const optSuccess = synthOpt.status === 'fulfilled' && synthOpt.value !== null;
     const macroSuccess = macroData.status === 'fulfilled' && macroData.value.data && Object.keys(macroData.value.data).length > 0;
 
     // Update service status
@@ -100,6 +106,8 @@ export class MarketPulseService {
     // Extract data with fallbacks
     const btcData = synthSuccess ? synthBTC.value : null;
     const volData = volSuccess ? synthVol.value : null;
+    const liqData = liqSuccess ? (synthLiq as PromiseFulfilledResult<any>).value : null;
+    const optData = optSuccess ? (synthOpt as PromiseFulfilledResult<any>).value : null;
     const macroResult = macroSuccess ? macroData.value : { data: {}, source: "fallback" };
 
     // Calculate metrics with fallback logic
@@ -108,21 +116,23 @@ export class MarketPulseService {
     const forecastData = btcData?.forecast_future || btcData?.["24H"];
     const percentiles = forecastData?.percentiles;
     // Handle percentiles as either Record<string, number> or array
-    const medianPrice = percentiles 
-      ? (typeof percentiles === 'object' && !Array.isArray(percentiles) 
-          ? percentiles.p50 || percentiles["0.5"]
-          : undefined)
+    const medianPrice = percentiles
+      ? (typeof percentiles === 'object' && !Array.isArray(percentiles)
+        ? percentiles.p50 || percentiles["0.5"]
+        : undefined)
       : undefined;
-    const btcChange24h = medianPrice 
+    const btcChange24h = medianPrice
       ? ((medianPrice - btcPrice) / btcPrice) * 100
       : this.generateFallbackChange();
     const sentiment = volData?.forecast_vol ? 50 + (volData.forecast_vol * 100) : this.generateFallbackSentiment();
-    
+
     const warRisk = this.calculateWarRisk(macroResult.data);
     const aiMomentum = this.calculateAIMomentum(btcData, volData);
     const defenseSpending = this.calculateDefenseSpending(warRisk);
     const goldPrice = 2650;
     const goldChange24h = 0.3;
+    const liquidationRisk = liqData?.risk_score || 50;
+    const impliedVolatility = optData?.implied_vol ? optData.implied_vol * 100 : 45;
 
     // Determine source
     let source: string;
@@ -143,6 +153,8 @@ export class MarketPulseService {
       warRisk,
       aiMomentum,
       defenseSpending,
+      liquidationRisk,
+      impliedVolatility,
       lastUpdated: Date.now(),
       source,
     };
@@ -219,6 +231,26 @@ export class MarketPulseService {
       });
     }
 
+    if (pulse.liquidationRisk && pulse.liquidationRisk > 75) {
+      triggers.push({
+        stock: "STARK",
+        signal: "SELL",
+        strength: Math.min(1, (pulse.liquidationRisk - 75) / 25),
+        reason: `High liquidation risk (${Math.round(pulse.liquidationRisk)}%) detected; cascade potential elevated.`,
+        source: "Liquidation Analysis",
+      });
+    }
+
+    if (pulse.impliedVolatility && pulse.impliedVolatility < 30 && pulse.sentiment > 60) {
+      triggers.push({
+        stock: "ACME",
+        signal: "BUY",
+        strength: 0.7,
+        reason: `Low IV (${Math.round(pulse.impliedVolatility)}%) with high sentiment signals a strong breakout setup.`,
+        source: "Options Pricing",
+      });
+    }
+
     if (pulse.btcChange24h < -3) {
       triggers.push({
         stock: "STARK",
@@ -282,7 +314,7 @@ export class MarketPulseService {
   static async generateIntelligenceItems(): Promise<IntelligenceItem[]> {
     const pulse = await this.getMarketPulse();
     const triggers = this.generateTriggers(pulse);
-    
+
     // Add real-time macro and inflation data for AI synthesis
     const { inflationService } = await import('./improved-data-services');
     const [inflationResult, macroResult] = await Promise.all([
@@ -294,8 +326,8 @@ export class MarketPulseService {
 
     // Add Guardian AI-generated insights (Synthesized from multiple data sources)
     const guardianInsights = await IntelligenceService.generateGuardianInsights(
-      pulse, 
-      inflationResult.data, 
+      pulse,
+      inflationResult.data,
       macroResult.data
     );
     items.push(...guardianInsights);

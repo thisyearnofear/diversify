@@ -22,6 +22,7 @@ import { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
 import { RobinhoodAMMStrategy } from './strategies/robinhood-amm.strategy';
 import { EmergingMarketsStrategy } from './strategies/emerging-markets.strategy';
 import { CurveArcStrategy } from './strategies/curve-arc.strategy';
+import { HyperliquidPerpStrategy } from './strategies/hyperliquid-perp.strategy';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
 
@@ -31,6 +32,9 @@ interface StrategyPerformance {
     lastUpdated: number;
 }
 
+// Islamic Finance strategy names — Hyperliquid perps are excluded for these
+const ISLAMIC_FINANCE_EXCLUDED_STRATEGIES = new Set(['HyperliquidPerp']);
+
 export class SwapOrchestratorService {
     private static strategies: BaseSwapStrategy[] = [
         new MentoSwapStrategy(),          // Celo same-chain (specialized)
@@ -38,6 +42,7 @@ export class SwapOrchestratorService {
         new CurveArcStrategy(),           // Curve Finance on Arc Testnet (direct integration)
         new ArcTestnetStrategy(),         // Arc Testnet fallback (guidance)
         new RobinhoodAMMStrategy(),       // Robinhood Chain testnet (stock tokens)
+        new HyperliquidPerpStrategy(),    // Hyperliquid commodity perps (GOLD, SILVER, OIL, COPPER)
         new OneInchSwapStrategy(),        // Multi-chain same-chain (best rates)
         new UniswapV3Strategy(),          // Direct Uniswap V3 (reliable fallback)
         new LiFiSwapStrategy(),           // LiFi same-chain (fallback)
@@ -49,10 +54,12 @@ export class SwapOrchestratorService {
 
     /**
      * Execute a swap using the appropriate strategy with automatic fallback
+     * @param islamicFinance - When true, excludes Hyperliquid perp strategies
      */
     static async executeSwap(
         params: SwapParams,
-        callbacks?: SwapCallbacks
+        callbacks?: SwapCallbacks,
+        islamicFinance = false
     ): Promise<SwapResult> {
         console.log('[SwapOrchestrator] Executing swap', {
             from: `${params.fromToken} on chain ${params.fromChainId}`,
@@ -61,7 +68,7 @@ export class SwapOrchestratorService {
         });
 
         // Get ranked strategies for intelligent fallback
-        const rankedStrategies = this.getRankedStrategies(params);
+        const rankedStrategies = this.getRankedStrategies(params, islamicFinance);
 
         if (rankedStrategies.length === 0) {
             const error = this.getNoStrategyError(params);
@@ -158,9 +165,10 @@ export class SwapOrchestratorService {
 
     /**
      * Get swap estimate from the best available strategy
+     * @param islamicFinance - When true, excludes Hyperliquid perp strategies
      */
-    static async getEstimate(params: SwapParams): Promise<SwapEstimate> {
-        const rankedStrategies = this.getRankedStrategies(params);
+    static async getEstimate(params: SwapParams, islamicFinance = false): Promise<SwapEstimate> {
+        const rankedStrategies = this.getRankedStrategies(params, islamicFinance);
 
         if (rankedStrategies.length === 0) {
             throw new Error(this.getUserFriendlyError(this.getNoStrategyError(params)));
@@ -194,10 +202,15 @@ export class SwapOrchestratorService {
 
     /**
      * Get strategies ranked by performance and context
+     * @param islamicFinance - When true, excludes Hyperliquid perp strategies (speculation/no underlying)
      */
-    private static getRankedStrategies(params: SwapParams): BaseSwapStrategy[] {
-        // Filter supporting strategies
-        const supportingStrategies = this.strategies.filter(s => s.supports(params));
+    private static getRankedStrategies(params: SwapParams, islamicFinance = false): BaseSwapStrategy[] {
+        // Filter supporting strategies, excluding Islamic Finance-incompatible ones if needed
+        const supportingStrategies = this.strategies.filter(s => {
+            if (!s.supports(params)) return false;
+            if (islamicFinance && ISLAMIC_FINANCE_EXCLUDED_STRATEGIES.has(s.getName())) return false;
+            return true;
+        });
 
         if (supportingStrategies.length === 0) {
             return [];

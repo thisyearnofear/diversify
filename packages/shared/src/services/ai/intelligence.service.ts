@@ -26,7 +26,7 @@ export class IntelligenceService {
     ): Promise<IntelligenceItem[]> {
         try {
             const insights: IntelligenceItem[] = [];
-            
+
             // 1. Cross-Regional Inflation Insight
             if (pulse.sentiment > 60 && pulse.btcChange24h > 2) {
                 insights.push({
@@ -66,6 +66,19 @@ export class IntelligenceService {
                 });
             }
 
+            // 4. Liquidation Cascade Risk
+            if (pulse.liquidationRisk && pulse.liquidationRisk > 65) {
+                insights.push({
+                    id: `synth-guardian-liq-${this.getDayKey()}`,
+                    type: 'alert',
+                    title: 'Systemic Liquidation Risk',
+                    description: `Anomalous leverage ratio detected across centralized prediction markets. Synth models assign a ${Math.round(pulse.liquidationRisk)}% probability to a downside cascade.`,
+                    impact: 'negative',
+                    impactAsset: 'STARK',
+                    timestamp: 'Autonomous'
+                });
+            }
+
             // Filter out insights already seen or that have redundant content
             return this.deduplicateInsights(insights);
         } catch (error) {
@@ -83,9 +96,9 @@ export class IntelligenceService {
         try {
             const seenDataRaw = localStorage.getItem(SEEN_INSIGHTS_KEY);
             let seenInsights: Record<string, number> = seenDataRaw ? JSON.parse(seenDataRaw) : {};
-            
+
             const now = Date.now();
-            
+
             // Cleanup old seen insights
             seenInsights = Object.fromEntries(
                 Object.entries(seenInsights).filter(([_, timestamp]) => now - timestamp < MAX_SEEN_AGE)
@@ -94,14 +107,14 @@ export class IntelligenceService {
             const filtered = newInsights.filter(insight => {
                 // Generate a content hash to detect similar but differently ID-ed items
                 const contentHash = this.hashString(`${insight.title}|${insight.description.substring(0, 30)}`);
-                
+
                 if (seenInsights[contentHash]) {
                     // If we've seen this specific content in the last 6 hours, skip it
                     if (now - seenInsights[contentHash] < 1000 * 60 * 60 * 6) {
                         return false;
                     }
                 }
-                
+
                 // Mark as seen
                 seenInsights[contentHash] = now;
                 return true;

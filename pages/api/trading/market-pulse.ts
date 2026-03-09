@@ -12,10 +12,12 @@ export interface MarketPulseResponse {
     warRisk: number;
     aiMomentum: number;
     defenseSpending: number;
+    liquidationRisk?: number;
+    impliedVolatility?: number;
     lastUpdated: number;
     source: string;
   };
-  triggers?: StockTrigger[];
+  triggers?: any[];
   error?: string;
   warnings?: string[];
 }
@@ -25,8 +27,8 @@ export default async function handler(
   res: NextApiResponse<MarketPulseResponse>
 ) {
   if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false, 
+    return res.status(405).json({
+      success: false,
       error: 'Method not allowed',
       warnings: ['Only GET and POST methods are supported']
     });
@@ -34,11 +36,11 @@ export default async function handler(
 
   try {
     const { includeTriggers } = req.query;
-    
+
     const pulse = await marketPulseService.getMarketPulse();
-    
+
     const warnings: string[] = [];
-    
+
     // Add warnings based on data source
     if (pulse.source === 'fallback') {
       warnings.push('Using synthetic fallback data due to API unavailability');

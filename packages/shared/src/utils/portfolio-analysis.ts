@@ -115,6 +115,18 @@ export interface PortfolioAnalysis {
     exploring: TargetAllocation[];
   };
 
+  // Hyperliquid commodity perp exposure (sourced from Hyperliquid positions)
+  hyperliquidExposure: {
+    totalValue: number;          // USD value of all Hyperliquid perp positions
+    percentage: number;          // % of total portfolio in Hyperliquid perps
+    positions: Array<{
+      symbol: string;            // GOLD, SILVER, OIL, COPPER
+      value: number;             // USD value
+      percentage: number;        // % of total portfolio
+      isInflationHedge: boolean;
+    }>;
+  };
+
   // Projections
   projections: {
     currentPath: {
@@ -166,6 +178,11 @@ export function createEmptyAnalysis(): PortfolioAnalysis {
       description: "Analyzing your holdings to find protection opportunities.",
       recommendations: [],
     },
+    hyperliquidExposure: {
+      totalValue: 0,
+      percentage: 0,
+      positions: [],
+    },
     targetAllocations: {
       inflation_protection: [],
       geographic_diversification: [],
@@ -190,11 +207,12 @@ export function createEmptyAnalysis(): PortfolioAnalysis {
 // Optimal regional allocations by goal
 const GOAL_ALLOCATIONS = {
   inflation_protection: {
-    Europe: 35, // Low inflation anchor
-    USA: 30, // Reserve currency stability
-    Global: 25, // Gold/PAXG hedge
+    Europe: 25, // Low inflation anchor
+    USA: 20, // Reserve currency stability
+    Global: 15, // USDC/global liquidity
+    Commodities: 25, // Gold/PAXG/GOLD perp hedge
     Asia: 10, // Growth exposure
-    Africa: 0, // Minimize high inflation
+    Africa: 5, // Emerging market exposure
     LatAm: 0, // Minimize high inflation
   },
   geographic_diversification: {
@@ -206,10 +224,11 @@ const GOAL_ALLOCATIONS = {
     Global: 5,
   },
   rwa_access: {
-    Global: 50, // Heavy gold allocation
-    Europe: 20,
-    USA: 20,
-    Asia: 10,
+    Global: 30, // USDC/global liquidity
+    Commodities: 35, // PAXG + Hyperliquid GOLD/SILVER/OIL/COPPER
+    Europe: 15,
+    USA: 15,
+    Asia: 5,
     Africa: 0,
     LatAm: 0,
   },
@@ -301,7 +320,7 @@ export function calculateDiversificationScore(
 
   // 3. RWA & Yield Protection Bonus
   // Max 10 points
-  const rwaSymbols = ["PAXG", "USDY", "SYRUPUSDC"];
+  const rwaSymbols = ["PAXG", "USDY", "SYRUPUSDC", "GOLD", "SILVER", "OIL", "COPPER"];
   const hasRWA = tokens.some((t) =>
     rwaSymbols.includes(t.symbol.toUpperCase()),
   );
@@ -815,13 +834,17 @@ export function analyzePortfolio(
     }
   } else if (currentGoal === "rwa_access") {
     goalAnalysis.title = "Real-World Assets";
-    const hasGold = tokens.some((t) => t.symbol === "PAXG");
-    if (hasGold) {
+    const hasGold = tokens.some((t) => ["PAXG", "GOLD"].includes(t.symbol.toUpperCase()));
+    const hasCommodityPerp = hyperliquidPositions.length > 0;
+    if (hasGold && hasCommodityPerp) {
       goalAnalysis.description =
-        "You have RWA exposure. Consider increasing your allocation to gold or yield-bearing treasuries.";
+        "Strong RWA exposure with both physical gold (PAXG) and Hyperliquid commodity perps. Consider adding USDY for yield.";
+    } else if (hasGold) {
+      goalAnalysis.description =
+        "You have gold exposure. Consider adding SILVER or OIL perps on Hyperliquid for broader commodity diversification.";
     } else {
       goalAnalysis.description =
-        "Add gold-backed PAXG or yield-bearing USDY to protect your purchasing power with hard assets.";
+        "Add gold-backed PAXG on Arbitrum or GOLD/SILVER perps on Hyperliquid to protect your purchasing power with hard assets.";
     }
   } else if (currentGoal === "inflation_protection") {
     goalAnalysis.title = "Inflation Protection";
@@ -837,16 +860,25 @@ export function analyzePortfolio(
       "Get personalized recommendations based on your holdings and market conditions.";
   }
 
-  // Calculate projections
-  const optimizedInflationRisk = weightedInflationRisk * 0.6;
-  const projections = calculateProjections(
-    weightedInflationRisk,
-    optimizedInflationRisk,
-    portfolio.totalValue,
-  );
+  // Calculate Hyperliquid commodity perp exposure
+  const hyperliquidSymbols = new Set(["GOLD", "SILVER", "OIL", "COPPER"]);
+  const hyperliquidPositions = tokens
+    .filter((t) => hyperliquidSymbols.has(t.symbol.toUpperCase()))
+    .map((t) => ({
+      symbol: t.symbol,
+      value: t.value,
+      percentage: t.percentage,
+      isInflationHedge: t.symbol.toUpperCase() === "GOLD" || t.symbol.toUpperCase() === "SILVER",
+    }));
+  const hyperliquidTotalValue = hyperliquidPositions.reduce((sum, p) => sum + p.value, 0);
+  const hyperliquidExposure = {
+    totalValue: hyperliquidTotalValue,
+    percentage: portfolio.totalValue > 0 ? (hyperliquidTotalValue / portfolio.totalValue) * 100 : 0,
+    positions: hyperliquidPositions,
+  };
 
   // Calculate Goal Scores
-  const rwaSymbols = ["PAXG", "USDY", "SYRUPUSDC"];
+  const rwaSymbols = ["PAXG", "USDY", "SYRUPUSDC", "GOLD", "SILVER", "OIL", "COPPER"];
   const hasRWA = tokens.some((t) =>
     rwaSymbols.includes(t.symbol.toUpperCase()),
   );
@@ -872,7 +904,7 @@ export function analyzePortfolio(
     );
   if (!hasRWA)
     diversificationTips.push(
-      "Add PAXG on Arbitrum as a hedge against currency debasement.",
+      "Add PAXG on Arbitrum or GOLD/SILVER perps on Hyperliquid as a hedge against currency debasement.",
     );
 
   // 5. Macro Stability Tips
@@ -955,7 +987,12 @@ export function analyzePortfolio(
         inflationData,
       ),
     },
-    projections,
+    projections: calculateProjections(
+      weightedInflationRisk,
+      weightedInflationRisk * 0.6,
+      portfolio.totalValue,
+    ),
+    hyperliquidExposure,
   };
 }
 

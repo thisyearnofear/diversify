@@ -38,6 +38,12 @@ export const NETWORKS = {
         explorerUrl: 'https://explorer.testnet.chain.robinhood.com',
         devOnly: true,
     },
+    HYPERLIQUID: {
+        chainId: 998, // Virtual chain ID for Hyperliquid perp markets (not EVM)
+        name: 'Hyperliquid',
+        rpcUrl: 'https://api.hyperliquid.xyz',
+        explorerUrl: 'https://app.hyperliquid.xyz',
+    },
 } as const;
 
 // Arc Data Hub Configuration (X402 Economy)
@@ -197,6 +203,13 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     // Inflation Hedges (store of value, no yield)
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
 
+    // Hyperliquid Perpetual Commodity Markets (synthetic 1x long exposure)
+    // These represent perp positions on Hyperliquid, collateralized in USDC
+    GOLD: { name: 'Gold Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
+    SILVER: { name: 'Silver Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
+    OIL: { name: 'Crude Oil Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: false },
+    COPPER: { name: 'Copper Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: false },
+
     // Native ETH (used as quote token on Robinhood Chain)
     ETH: { name: 'Ether', region: REGIONS.GLOBAL, decimals: 18, apy: 0 },
 
@@ -247,6 +260,7 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH', 'ACME', 'SPACELY', 'WAYNE', 'OSCORP', 'STARK'],
+    [NETWORKS.HYPERLIQUID.chainId]: ['GOLD', 'SILVER', 'OIL', 'COPPER'],
 };
 
 // Helper: Get full asset list with metadata for a specific chain
@@ -283,6 +297,10 @@ export const EXCHANGE_RATES: Record<string, number> = {
     USDC: 1,
     EURC: 1.08,
     PAXG: 2650,
+    GOLD: 3200,
+    SILVER: 32,
+    OIL: 75,
+    COPPER: 4.5,
     USDY: 1,
     SYRUPUSDC: 1,
     ETH: 3500,

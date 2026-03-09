@@ -54,11 +54,13 @@ export class StrategyService {
         switch (strategy) {
             case 'africapitalism':
                 return {
-                    preferredRegions: ['Africa'],
+                    preferredRegions: ['Africa', 'Commodities'],
                     targetAllocations: [
-                        { region: 'Africa', min: 30, ideal: 60, max: 90 },
+                        { region: 'Africa', min: 30, ideal: 50, max: 80 },
+                        { region: 'Commodities', min: 10, ideal: 20, max: 35 }, // GOLD/SILVER/OIL/COPPER via Hyperliquid
                     ],
-                    prioritizeAssets: ['KESm', 'GHSm', 'ZARm', 'NGNm', 'XOFm'],
+                    prioritizeAssets: ['KESm', 'GHSm', 'ZARm', 'NGNm', 'XOFm', 'GOLD', 'OIL', 'COPPER'],
+                    // Note: Hyperliquid perps allowed (commodity exposure aligns with resource-rich Africa thesis)
                     scoringWeights: {
                         regionalConcentration: 0.7,
                         globalDiversification: 0.2,
@@ -73,11 +75,13 @@ export class StrategyService {
 
             case 'buen_vivir':
                 return {
-                    preferredRegions: ['LatAm'],
+                    preferredRegions: ['LatAm', 'Commodities'],
                     targetAllocations: [
-                        { region: 'LatAm', min: 30, ideal: 50, max: 70 },
+                        { region: 'LatAm', min: 25, ideal: 45, max: 65 },
+                        { region: 'Commodities', min: 10, ideal: 20, max: 35 }, // SILVER/OIL/COPPER via Hyperliquid
                     ],
-                    prioritizeAssets: ['BRLm', 'COPm', 'MXNm', 'ARSm'],
+                    prioritizeAssets: ['BRLm', 'COPm', 'MXNm', 'ARSm', 'SILVER', 'OIL', 'COPPER'],
+                    // Note: Hyperliquid perps allowed (commodity exposure aligns with LatAm resource economy)
                     scoringWeights: {
                         regionalConcentration: 0.6,
                         globalDiversification: 0.3,
@@ -134,8 +138,8 @@ export class StrategyService {
                     targetAllocations: [
                         { region: 'Commodities', min: 20, ideal: 40, max: 60 },
                     ],
-                    excludeAssets: ['USDY', 'Interest-bearing'], // Filter out interest-bearing
-                    prioritizeAssets: ['PAXG', 'Asset-backed'],
+                    excludeAssets: ['USDY', 'SYRUPUSDC', 'Interest-bearing', 'GOLD', 'SILVER', 'OIL', 'COPPER'], // Filter out interest-bearing AND Hyperliquid perps (speculation, no underlying ownership)
+                    prioritizeAssets: ['PAXG', 'Asset-backed'], // PAXG is physical gold — Sharia-compliant; Hyperliquid perps are not
                     scoringWeights: {
                         regionalConcentration: 0.2,
                         globalDiversification: 0.3,

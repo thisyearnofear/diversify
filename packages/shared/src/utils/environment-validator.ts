@@ -109,7 +109,7 @@ export class EnvironmentValidator {
    */
   static requireValid(): void {
     const result = this.validate();
-    
+
     if (!result.isValid) {
       throw new Error(
         `Environment validation failed. Missing required keys: ${result.missingKeys.join(', ')}`
@@ -121,4 +121,7 @@ export class EnvironmentValidator {
 // Auto-log results when module is imported (development only)
 if (process.env.NODE_ENV !== 'production') {
   EnvironmentValidator.logResults();
+} else if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') {
+  // Enforce unconditionally in true production, allowing graceful degradation in demo mode
+  EnvironmentValidator.requireValid();
 }
