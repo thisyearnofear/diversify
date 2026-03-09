@@ -355,9 +355,19 @@ export const TokenPriceService = {
       USDY: 'ondo-us-dollar-yield',
       WETH: 'weth',
       WBTC: 'wrapped-bitcoin',
+      BTC: 'bitcoin',
+      ETH: 'ethereum',
+      NVDA: 'nvidia',
+      GOOGL: 'alphabet-inc',
+      TSLA: 'tesla',
+      AAPL: 'apple',
+      MSFT: 'microsoft',
+      AMZN: 'amazon',
+      META: 'meta-platforms',
     };
     return idMap[symbol.toUpperCase()] || null;
-  },
+  }
+,
 
   /**
    * Map our symbols to CoinPaprika IDs
@@ -371,9 +381,16 @@ export const TokenPriceService = {
       'G$': 'g-gooddollar',
       WETH: 'eth-ethereum',
       WBTC: 'wbtc-wrapped-bitcoin',
+      BTC: 'btc-bitcoin',
+      ETH: 'eth-ethereum',
+      NVDA: 'nvda-nvidia-corp',
+      GOOGL: 'goog-alphabet-inc',
+      TSLA: 'tsla-tesla-motors-inc',
+      AAPL: 'aapl-apple-inc',
     };
     return idMap[symbol.toUpperCase()] || null;
-  },
+  }
+,
 
   /**
    * DefiLlama chain prefix by chainId

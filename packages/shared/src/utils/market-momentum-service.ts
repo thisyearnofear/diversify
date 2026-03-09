@@ -37,12 +37,16 @@ export class MarketMomentumService {
     }
 
     private async fetchAllMomentum(): Promise<{ data: MarketMomentum; source: string }> {
+        const isServer = typeof window === 'undefined';
+        const baseUrl = isServer 
+            ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+            : '';
+
         try {
             // Fetch from our server-side proxy to avoid CSP issues and minimize client workload
-            const response = await fetch("/api/finance/momentum", { 
-                signal: AbortSignal.timeout(10000) 
+            const response = await fetch(`${baseUrl}/api/finance/momentum`, {
+                signal: AbortSignal.timeout(10000)
             });
-
             if (!response.ok) {
                 throw new Error(`Proxy returned ${response.status}`);
             }

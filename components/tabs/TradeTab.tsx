@@ -5,7 +5,8 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { NETWORKS, RH_TESTNET_TOKENS, BROKER_ADDRESSES } from "../../config";
 import { getTokenDesign } from "../../constants/tokens";
 import {
-  ProviderFactoryService
+  ProviderFactoryService,
+  TokenPriceService
 } from "@diversifi/shared";
 import { useExperience } from "../../context/app/ExperienceContext";
 
@@ -171,33 +172,54 @@ export default function TradeTab() {
       const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
       const refETH = ethers.utils.parseEther("0.001");
 
-      const res = await Promise.all(
-        FICTIONAL_STOCKS.map(async (s) => {
-          try {
-            const stockAddr = RH_TESTNET_TOKENS[s];
-            const [out, [rETH, rStock]] = await Promise.all([
-              amm.quoteSwapETH(refETH, stockAddr),
-              amm.getReserves(WETH_ADDRESS, stockAddr),
-            ]);
+      const [res, realRes] = await Promise.all([
+        Promise.all(
+          FICTIONAL_STOCKS.map(async (s) => {
+            try {
+              const stockAddr = RH_TESTNET_TOKENS[s];
+              const [out, [rETH, rStock]] = await Promise.all([
+                amm.quoteSwapETH(refETH, stockAddr),
+                amm.getReserves(WETH_ADDRESS, stockAddr),
+              ]);
 
-            const perMilliETH = parseFloat(ethers.utils.formatEther(out));
-            const rate = (perMilliETH * 1000).toLocaleString("en-US", {
-              maximumFractionDigits: 0,
-            });
+              const perMilliETH = parseFloat(ethers.utils.formatEther(out));
+              const rate = (perMilliETH * 1000).toLocaleString("en-US", {
+                maximumFractionDigits: 0,
+              });
 
-            return {
-              symbol: s,
-              rate,
-              reserves: {
-                eth: ethers.utils.formatEther(rETH),
-                stock: ethers.utils.formatEther(rStock),
-              },
-            };
-          } catch {
-            return { symbol: s, rate: null, reserves: null };
-          }
-        }),
-      );
+              return {
+                symbol: s,
+                rate,
+                reserves: {
+                  eth: ethers.utils.formatEther(rETH),
+                  stock: ethers.utils.formatEther(rStock),
+                },
+              };
+            } catch {
+              return { symbol: s, rate: null, reserves: null };
+            }
+          }),
+        ),
+        Promise.all(
+          REAL_STOCKS.map(async (s) => {
+            try {
+              if (s === "ETH") return { symbol: s, rate: "1" };
+              if (s === "BTC") {
+                const price = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "BTC" });
+                return { symbol: s, rate: price ? (3000 / price).toFixed(6) : null };
+              }
+              // For stocks like NVDA, GOOGL etc.
+              const price = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: s });
+              // Rate is "Tokens per 1 ETH", so Rate = ETH_Price / Token_Price
+              // Assuming ETH_Price = 3000 for consistency in UI calculation
+              return { symbol: s, rate: price ? (3000 / price).toFixed(2) : null };
+            } catch (err) {
+              console.warn(`[Trade] Price fetch error for ${s}:`, err);
+              return { symbol: s, rate: null };
+            }
+          })
+        )
+      ]);
 
       const rates: Record<Stock, string | null> = {
         ACME: null,
@@ -229,6 +251,10 @@ export default function TradeTab() {
       res.forEach((item) => {
         rates[item.symbol as Stock] = item.rate;
         resMap[item.symbol as Stock] = item.reserves;
+      });
+
+      realRes.forEach((item) => {
+        rates[item.symbol as Stock] = item.rate;
       });
 
       setLiveRates(rates);

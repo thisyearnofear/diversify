@@ -11,6 +11,7 @@ import { IntentDiscoveryService } from './services/ai/intent-discovery.service';
 import { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
 import { StrategyService } from './services/strategy/strategy.service';
 import { AutomationService } from './services/automation-service';
+import { GoodDollarService } from './services/gooddollar-service';
 
 export {
   circleService,
@@ -30,7 +31,8 @@ export {
   generateChatCompletion,
   getAIServiceStatus,
   StrategyService,
-  AutomationService
+  AutomationService,
+  GoodDollarService
 };
 
 // Export Utils

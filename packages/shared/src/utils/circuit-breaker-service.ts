@@ -55,7 +55,7 @@ export class CircuitBreaker {
   }
 
   /**
-   * Execute a function with fallback on circuit breaker rejection
+   * Execute a function with fallback on any error or circuit breaker rejection
    */
   async callWithFallback<T>(
     fn: () => Promise<T>,
@@ -64,11 +64,8 @@ export class CircuitBreaker {
     try {
       return await this.call(fn);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('Circuit breaker')) {
-        console.warn('Using fallback due to circuit breaker');
-        return await fallback();
-      }
-      throw error;
+      console.warn(`[CircuitBreaker] Call failed, using fallback. Error: ${error instanceof Error ? error.message : String(error)}`);
+      return await fallback();
     }
   }
 

@@ -37,7 +37,13 @@ export class ImprovedInflationService {
    * Fetch from API proxy (handles IMF/World Bank server-side)
    */
   private async fetchFromProxy(): Promise<{ data: any; source: string }> {
-    const response = await fetch('/api/inflation', {
+    // Determine the base URL based on environment
+    const isServer = typeof window === 'undefined';
+    const baseUrl = isServer 
+      ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+      : '';
+      
+    const response = await fetch(`${baseUrl}/api/inflation`, {
       signal: AbortSignal.timeout(15000)
     });
 
@@ -134,7 +140,12 @@ export class ExchangeRateService {
    * Fetch current rate from API proxy
    */
   private async fetchCurrentRate(fromCurrency: string, toCurrency: string): Promise<{ data: any; source: string }> {
-    const response = await fetch(`/api/exchange-rates?from=${fromCurrency}&to=${toCurrency}`, {
+    const isServer = typeof window === 'undefined';
+    const baseUrl = isServer 
+      ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+      : '';
+      
+    const response = await fetch(`${baseUrl}/api/exchange-rates?from=${fromCurrency}&to=${toCurrency}`, {
       signal: AbortSignal.timeout(10000)
     });
 
@@ -157,7 +168,12 @@ export class ExchangeRateService {
    * Fetch historical rates from API proxy
    */
   private async fetchHistoricalRates(fromCurrency: string, toCurrency: string): Promise<{ data: any; source: string }> {
-    const response = await fetch(`/api/exchange-rates?from=${fromCurrency}&to=${toCurrency}&historical=true`, {
+    const isServer = typeof window === 'undefined';
+    const baseUrl = isServer 
+      ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+      : '';
+      
+    const response = await fetch(`${baseUrl}/api/exchange-rates?from=${fromCurrency}&to=${toCurrency}&historical=true`, {
       signal: AbortSignal.timeout(15000)
     });
 
