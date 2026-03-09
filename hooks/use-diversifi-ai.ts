@@ -402,6 +402,12 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           setAnalysisProgress(100);
           setThinkingStep("Analysis complete!");
           setAdvice(result.advice);
+          // Reset loading state after brief success display
+          setTimeout(() => {
+            setIsAnalyzing(false);
+            setThinkingStep("");
+            setAnalysisProgress(0);
+          }, 1500);
           
           // Track activity
           addActivity({
@@ -440,16 +446,17 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         }
       } catch (error) {
         console.error("[DiversifiAI] Analysis failed:", error);
-        // Keep error state visible for a moment
+        // Clear interval immediately on error
+        if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
         setThinkingStep("Connection interrupted. Please retry.");
-      } finally {
-        if (progressInterval) clearInterval(progressInterval);
-        // Always delay cleanup so user sees the final message (success or error)
+        // Reset loading state after brief error display
         setTimeout(() => {
           setIsAnalyzing(false);
           setThinkingStep("");
           setAnalysisProgress(0);
         }, 1500);
+      } finally {
+        if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
       }
     },
     [capabilities.analysis, config],
