@@ -31,6 +31,18 @@ const nextConfig = {
     return config;
   },
 
+  // Route heavy/slow API routes to Hetzner (always-on, no cold starts, no 15s timeout)
+  async rewrites() {
+    const hetznerBase = process.env.HETZNER_API_URL;
+    if (!hetznerBase) return [];
+    return [
+      { source: '/api/agent/analyze', destination: `${hetznerBase}/api/agent/analyze` },
+      { source: '/api/agent/deep-analyze', destination: `${hetznerBase}/api/agent/deep-analyze` },
+      { source: '/api/agent/chat', destination: `${hetznerBase}/api/agent/chat` },
+      { source: '/api/agent/x402-gateway', destination: `${hetznerBase}/api/agent/x402-gateway` },
+    ];
+  },
+
   // Configure redirects
   async redirects() {
     return [
