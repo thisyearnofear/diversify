@@ -1,82 +1,45 @@
 #!/usr/bin/env bash
 # =============================================================================
-# DiversiFi AI API — Hetzner Deployment Script
+# DiversiFi — Hetzner Deployment Script
 #
-# Deploys the Next.js app to Hetzner as a standalone AI API server.
-# Frontend stays on Netlify; all /api/agent/* routes are served from here.
+# Builds locally, rsyncs artifacts to Hetzner, restarts PM2.
+# NEVER builds on the server — next build uses ~48% RAM on the VPS.
 #
-# Usage:
+# Usage (from project root):
 #   chmod +x scripts/deploy-hetzner.sh
 #   ./scripts/deploy-hetzner.sh
+#
+# Prerequisites:
+#   - SSH alias "snel-bot" configured in ~/.ssh/config
+#   - rsync installed locally
 # =============================================================================
 set -euo pipefail
 
+REMOTE="snel-bot"
 DEPLOY_DIR="/opt/diversifi-api"
 APP_NAME="diversifi-api"
-PORT=6174
-REPO="https://github.com/thisyearnofear/diversify.git"
-BRANCH="main"
 
 echo "🚀 DiversiFi Hetzner Deploy — $(date)"
 
-# ── 1. Ensure pnpm is available ────────────────────────────────────────────
-if ! command -v pnpm &>/dev/null; then
-  echo "📦 Installing pnpm..."
-  npm install -g pnpm
-fi
+# ── 1. Build locally ─────────────────────────────────────────────────────────
+echo "🔨 Building locally (keeps server RAM free)..."
+pnpm run build
 
-# ── 2. Clone or pull latest code ────────────────────────────────────────────
-if [ -d "$DEPLOY_DIR/.git" ]; then
-  echo "🔄 Pulling latest from $BRANCH..."
-  cd "$DEPLOY_DIR"
-  git fetch origin
-  git reset --hard "origin/$BRANCH"
-else
-  echo "📥 Cloning repo..."
-  git clone --branch "$BRANCH" "$REPO" "$DEPLOY_DIR"
-  cd "$DEPLOY_DIR"
-fi
+# ── 2. Rsync build artifacts ─────────────────────────────────────────────────
+echo "📦 Syncing .next/standalone → Hetzner..."
+rsync -az --delete .next/standalone/ "$REMOTE:$DEPLOY_DIR/.next/standalone/"
 
-# ── 3. Verify .env exists ───────────────────────────────────────────────────
-if [ ! -f "$DEPLOY_DIR/.env" ]; then
-  echo "⚠️  No .env found at $DEPLOY_DIR/.env"
-  echo "   Copy .env.example and fill in at minimum:"
-  echo "     VENICE_API_KEY=..."
-  echo "     GEMINI_API_KEY=..."
-  echo "   Then re-run this script."
-  exit 1
-fi
+echo "📦 Syncing .next/static → Hetzner..."
+rsync -az --delete .next/static/ "$REMOTE:$DEPLOY_DIR/.next/static/"
 
-# ── 4. Install dependencies ─────────────────────────────────────────────────
-echo "📦 Installing dependencies..."
-pnpm install --no-frozen-lockfile
+echo "📦 Syncing public/ → Hetzner..."
+rsync -az public/ "$REMOTE:$DEPLOY_DIR/public/"
 
-# ── 5. Build ─────────────────────────────────────────────────────────────────
-echo "🔨 Building..."
-PORT=$PORT pnpm build
-
-# ── 6. Start/reload server ──────────────────────────────────────────────────
-echo "⚙️  Starting server..."
-# Kill any existing next-server processes on our port
-pkill -f "next-server.*$PORT" || true
-sleep 2
-
-# Start Next.js directly with proper env variables
-cd "$DEPLOY_DIR"
-nohup sh -c "PORT=$PORT HOSTNAME=127.0.0.1 NODE_ENV=production node_modules/.bin/next start > /var/log/diversifi-api.log 2>&1" &
-
-# Wait for server to start
-echo "⏳ Waiting for server to start..."
-sleep 12
-
-# Verify it's running
-if ss -tlnp | grep -q ":$PORT "; then
-  echo "✅ Server running on port $PORT"
-else
-  echo "⚠️  Server may not have started correctly. Check /var/log/diversifi-api.log"
-fi
+# ── 3. Restart PM2 ───────────────────────────────────────────────────────────
+echo "🔄 Restarting PM2 process..."
+ssh "$REMOTE" "pm2 restart $APP_NAME && sleep 2 && pm2 list | grep $APP_NAME"
 
 echo ""
 echo "✅ Deploy complete!"
-echo "   API running on http://127.0.0.1:$PORT"
-echo "   Nginx proxies https://api.diversifi.famile.xyz → port $PORT"
+echo "   API running on http://127.0.0.1:6174"
+echo "   Proxied via nginx → https://api.diversifi.famile.xyz"
