@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AIService, GoodDollarService } from '@diversifi/shared';
+import { AIService, GoodDollarService, StrategyService } from '@diversifi/shared';
+import type { FinancialStrategy } from '@diversifi/shared';
 import { isTestnetChain, NETWORKS } from '../../../config';
 
 /**
@@ -192,7 +193,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Dynamic system prompt based on context
     const gdContext = await getGoodDollarContext(address);
     const strategyContext = financialStrategy
-      ? `\nUSER'S FINANCIAL STRATEGY: ${financialStrategy} — tailor all portfolio advice, asset suggestions, and rebalancing recommendations to align with this philosophy. Reference it explicitly when relevant.\n`
+      ? `\nUSER'S FINANCIAL STRATEGY: ${financialStrategy}\n${StrategyService.getAIPrompt(financialStrategy as FinancialStrategy)}\nAlways reference this strategy explicitly when giving portfolio advice, asset suggestions, or rebalancing recommendations.\n`
       : '';
     const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId) + getMainnetChainContext(chainId) + gdContext + strategyContext;
 
