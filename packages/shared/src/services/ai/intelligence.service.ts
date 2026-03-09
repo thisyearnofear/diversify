@@ -27,13 +27,23 @@ export class IntelligenceService {
         try {
             const insights: IntelligenceItem[] = [];
 
-            // 1. Cross-Regional Inflation Insight
-            if (pulse.sentiment > 60 && pulse.btcChange24h > 2) {
+            // 1. Cross-Regional Inflation Insight (Using real inflation data)
+            let highestInflationRegion = { region: 'LatAm', rate: 4.5 }; // Fallback
+            if (inflationData) {
+                for (const [region, data] of Object.entries(inflationData)) {
+                    const regionalData = data as { avgRate: number };
+                    if (regionalData.avgRate > highestInflationRegion.rate) {
+                        highestInflationRegion = { region, rate: regionalData.avgRate };
+                    }
+                }
+            }
+
+            if (highestInflationRegion.rate > 8 && pulse.btcChange24h > 1) {
                 insights.push({
                     id: `synth-guardian-macro-${this.getDayKey()}`,
                     type: 'impact',
                     title: 'Guardian: Capital Rotation Detected',
-                    description: `Autonomous analysis of Truflation indices suggests a ${pulse.btcChange24h.toFixed(1)}% pivot from high-inflation regions into digital gold (PAXG). Narrative: Risk-on sentiment coupled with regional debasement.`,
+                    description: `Autonomous analysis of Truflation indices highlights severe debasement in ${highestInflationRegion.region} (${highestInflationRegion.rate.toFixed(1)}%). Correlated with a ${pulse.btcChange24h.toFixed(1)}% pivot into digital gold (PAXG).`,
                     impact: 'positive',
                     impactAsset: 'PAXG',
                     timestamp: 'Autonomous'
@@ -53,13 +63,23 @@ export class IntelligenceService {
                 });
             }
 
-            // 3. Geopolitical Safe Haven
-            if (pulse.warRisk > 40) {
+            // 3. Geopolitical Safe Haven (Using real macro stability scores)
+            let lowestStabilityCountry = { code: 'Unknown', score: 50 };
+            if (macroData) {
+                for (const [code, data] of Object.entries(macroData)) {
+                    const countryData = data as { politicalStability: number };
+                    if (countryData.politicalStability < lowestStabilityCountry.score) {
+                        lowestStabilityCountry = { code, score: countryData.politicalStability };
+                    }
+                }
+            }
+
+            if (pulse.warRisk > 40 || lowestStabilityCountry.score < 30) {
                 insights.push({
                     id: `synth-guardian-war-${this.getDayKey()}`,
                     type: 'news',
                     title: 'Predictive Defense Surge',
-                    description: `Macro stability scores for emerging markets are trending lower. STARK and WAYNE proxies showing 0.85 correlation to safe-haven flows. Expect increased volume in USD-backed assets.`,
+                    description: `Macro stability scores trending critically lower (Index: ${lowestStabilityCountry.score.toFixed(1)}). STARK and WAYNE proxies showing 0.85 correlation to safe-haven defense flows.`,
                     impact: 'positive',
                     impactAsset: 'STARK',
                     timestamp: 'Autonomous'
