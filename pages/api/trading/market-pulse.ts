@@ -63,6 +63,9 @@ export default async function handler(
       response.triggers = marketPulseService.generateTriggers(pulse);
     }
 
+    // Edge Caching: Cache response globally for 5 minutes, allowing serve-stale for up to 10 mins
+    res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=600');
+
     res.status(200).json(response);
   } catch (error: any) {
     console.error('[Market Pulse API] Error:', error);

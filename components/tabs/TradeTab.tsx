@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { NETWORKS, RH_TESTNET_TOKENS, BROKER_ADDRESSES } from "../../config";
 import { getTokenDesign } from "../../constants/tokens";
-import { 
-  ProviderFactoryService 
+import {
+  ProviderFactoryService
 } from "@diversifi/shared";
 import { useExperience } from "../../context/app/ExperienceContext";
 
@@ -112,7 +112,7 @@ export default function TradeTab() {
   const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
   const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
   const [showAllRobinhood, setShowAllRobinhood] = useState(false);
-  
+
   // Watchlist for Robinhood stocks
   const { watchlist: robinhoodWatchlist, toggleWatchlist: toggleRobinhoodWatchlist, isInWatchlist: isInRobinhoodWatchlist } = useWatchlist();
 
@@ -256,18 +256,18 @@ export default function TradeTab() {
         const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
         const response = await fetch(`${apiBase}/api/trading/stock-stats?stock=${selected}`);
         if (!response.ok) return;
-        
+
         const data = await response.json();
         if (data.success && data.synthData) {
           const forecast = data.synthData;
           // Get volatility from the volatility field (returned from getVolatility API)
-          const forecastVol = data.volatility?.forecast 
-            ? (data.volatility.forecast * 100).toFixed(2) 
+          const forecastVol = data.volatility?.forecast
+            ? (data.volatility.forecast * 100).toFixed(2)
             : "0";
-          const realizedVol = data.volatility?.realized 
-            ? (data.volatility.realized * 100).toFixed(2) 
+          const realizedVol = data.volatility?.realized
+            ? (data.volatility.realized * 100).toFixed(2)
             : "0";
-          
+
           const synthItem: IntelligenceItem = {
             id: `synth-${selected}`,
             type: "impact",
@@ -299,7 +299,7 @@ export default function TradeTab() {
     };
 
     fetchSynthIntelligence();
-    const interval = setInterval(fetchSynthIntelligence, 60000);
+    const interval = setInterval(fetchSynthIntelligence, 300000); // Poll every 5 minutes
     return () => clearInterval(interval);
   }, [selected]);
 
@@ -310,10 +310,10 @@ export default function TradeTab() {
         const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
         const response = await fetch(`${apiBase}/api/trading/market-pulse`);
         if (!response.ok) throw new Error("Failed to fetch market pulse API");
-        
+
         const data = await response.json();
         const pulseItems = data.success && data.pulse?.intelligence ? data.pulse.intelligence : [];
-        
+
         const staticItems: IntelligenceItem[] = [
           {
             id: "static-1",
@@ -324,7 +324,7 @@ export default function TradeTab() {
             timestamp: "15m ago",
           },
         ];
-        
+
         setIntelligenceItems(prev => {
           // Keep user-specific synth items, merge with global pulse items
           const synthItems = prev.filter(item => item.id.startsWith("synth-"));
@@ -350,7 +350,7 @@ export default function TradeTab() {
     };
 
     fetchMarketIntelligence();
-    const interval = setInterval(fetchMarketIntelligence, 60000);
+    const interval = setInterval(fetchMarketIntelligence, 300000); // Poll every 5 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -386,7 +386,7 @@ export default function TradeTab() {
           if (!relevantReserve.isZero()) {
             setPriceImpact(
               parseFloat(parsed.mul(10000).div(relevantReserve).toString()) /
-                100,
+              100,
             );
           }
         } catch {
@@ -482,7 +482,7 @@ export default function TradeTab() {
     const rate = liveRates[stock];
     const isWatched = isInRobinhoodWatchlist(stock);
     const isSelected = selected === stock;
-    
+
     return (
       <div
         key={stock}
@@ -495,11 +495,10 @@ export default function TradeTab() {
           setError(null);
           setSynthForecast(null);
         }}
-        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${
-          isSelected
+        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${isSelected
             ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700'
             : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-gray-300'
-        }`}
+          }`}
       >
         <div className="flex items-center gap-3">
           <span className="text-2xl">{d.icon}</span>
@@ -508,7 +507,7 @@ export default function TradeTab() {
             <div className="text-xs text-gray-500">{d.name}</div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           {rate ? (
             <div className="text-right">
@@ -522,18 +521,17 @@ export default function TradeTab() {
           ) : (
             <div className="text-sm text-gray-400">---</div>
           )}
-          
+
           {/* Star button */}
           <button
             onClick={(e) => {
               e.stopPropagation();
               toggleRobinhoodWatchlist(stock);
             }}
-            className={`p-1.5 rounded-full transition ${
-              isWatched
+            className={`p-1.5 rounded-full transition ${isWatched
                 ? 'text-yellow-500 bg-yellow-100 dark:bg-yellow-900/30'
                 : 'text-gray-300 hover:text-gray-400'
-            }`}
+              }`}
           >
             <svg className="w-4 h-4" fill={isWatched ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -553,7 +551,7 @@ export default function TradeTab() {
       {/* Paper Trading Badge */}
       <div className="flex items-center justify-center gap-2">
         {!isConnected ? (
-           <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold animate-pulse">
+          <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold animate-pulse">
             👁️ Preview Mode
           </span>
         ) : (
@@ -571,11 +569,10 @@ export default function TradeTab() {
             setActiveMarket("robinhood");
             setActiveTab("trade");
           }}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${
-            activeMarket === "robinhood"
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeMarket === "robinhood"
               ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600"
               : "text-gray-500 hover:text-gray-600"
-          }`}
+            }`}
         >
           <span>⚡</span>
           <div className="flex flex-col items-center leading-tight">
@@ -591,11 +588,10 @@ export default function TradeTab() {
             setActiveMarket("emerging-markets");
             setActiveTab("track");
           }}
-          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${
-            activeMarket === "emerging-markets"
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeMarket === "emerging-markets"
               ? "bg-white dark:bg-gray-700 shadow-sm text-green-600"
               : "text-gray-500 hover:text-gray-600"
-          }`}
+            }`}
         >
           <span>🌍</span>
           <div className="flex flex-col items-center leading-tight">
@@ -622,21 +618,19 @@ export default function TradeTab() {
             <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
               <button
                 onClick={() => setActiveTab("track")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                  activeTab === "track"
+                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${activeTab === "track"
                     ? "bg-white dark:bg-gray-700 shadow-sm text-green-600 dark:text-green-400"
                     : "text-gray-400 hover:text-gray-600"
-                }`}
+                  }`}
               >
                 📈 Track Real Stocks
               </button>
               <button
                 onClick={() => setActiveTab("trade")}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                  activeTab === "trade"
+                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${activeTab === "trade"
                     ? "bg-white dark:bg-gray-700 shadow-sm text-green-600 dark:text-green-400"
                     : "text-gray-400 hover:text-gray-600"
-                }`}
+                  }`}
               >
                 🎮 Trade Fictional
               </button>
@@ -731,11 +725,10 @@ export default function TradeTab() {
                   setActiveTab("trade");
                   setSelected("ACME");
                 }}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                  activeTab === "trade" && FICTIONAL_STOCKS.includes(selected as typeof FICTIONAL_STOCKS[number])
+                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${activeTab === "trade" && FICTIONAL_STOCKS.includes(selected as typeof FICTIONAL_STOCKS[number])
                     ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
                     : "text-gray-400 hover:text-gray-600"
-                }`}
+                  }`}
               >
                 🎮 Fictional ({FICTIONAL_STOCKS.length})
               </button>
@@ -744,22 +737,20 @@ export default function TradeTab() {
                   setActiveTab("earn");
                   setSelected("NVDA");
                 }}
-                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                  activeTab === "earn" || REAL_STOCKS.includes(selected as typeof REAL_STOCKS[number])
+                className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${activeTab === "earn" || REAL_STOCKS.includes(selected as typeof REAL_STOCKS[number])
                     ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
                     : "text-gray-400 hover:text-gray-600"
-                }`}
+                  }`}
               >
                 📈 Real ({REAL_STOCKS.length})
               </button>
               {robinhoodWatchlist.length > 0 && (
                 <button
                   onClick={() => setActiveTab("track")}
-                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                    activeTab === "track"
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${activeTab === "track"
                       ? "bg-white dark:bg-gray-700 shadow-sm text-yellow-600 dark:text-yellow-400"
                       : "text-gray-400 hover:text-gray-600"
-                  }`}
+                    }`}
                 >
                   ⭐ Watchlist ({robinhoodWatchlist.length})
                 </button>
@@ -772,8 +763,8 @@ export default function TradeTab() {
                 {activeTab === "track" && robinhoodWatchlist.length > 0
                   ? "⭐ Your starred stocks for quick access. Tap any stock to view details and trade."
                   : activeTab === "earn" || REAL_STOCKS.includes(selected as typeof REAL_STOCKS[number])
-                  ? "📈 Trade real-world stocks mirrored on Robinhood Testnet. Prices track actual market movements."
-                  : "🎮 Trade fictional stocks on Robinhood Testnet. Practice risk-free with testnet ETH!"
+                    ? "📈 Trade real-world stocks mirrored on Robinhood Testnet. Prices track actual market movements."
+                    : "🎮 Trade fictional stocks on Robinhood Testnet. Practice risk-free with testnet ETH!"
                 }
               </p>
             </div>
@@ -849,373 +840,371 @@ export default function TradeTab() {
               />
             </div>
 
-      {/* Main Content Area */}
-      <div className="grid grid-cols-1 gap-4">
-        {/* Info Card: Chart & Basic Stats */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm overflow-hidden">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">{design.icon}</span>
-                <h2 className="text-xl font-bold">
-                  {design.name}
-                </h2>
-                <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase tracking-tighter">
-                  {selected}
-                </span>
-              </div>
-              {!isBeginner && (
-                <p className="text-gray-500 dark:text-gray-400 text-xs max-w-sm leading-relaxed">
-                  {design.description}
-                </p>
-              )}
-            </div>
-            <div className="text-right">
-              {/* Price Display with Toggle */}
-              <div className="flex items-center justify-end gap-2 mb-1">
-                <div className="text-xl font-bold">
-                  {(() => {
-                    const rate = liveRates[selected];
-                    if (!rate) return "---";
-                    // Convert ETH price to USDC (assuming ETH = $3000)
-                    const ethPrice = parseFloat(rate);
-                    const usdcPrice = ethPrice * 3000;
-                    return `$${usdcPrice.toFixed(2)} USDC`;
-                  })()}
-                </div>
-              </div>
-              <div className="flex items-center justify-end gap-2">
-                <span className="text-xs text-gray-400">
-                  ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/ETH` : "---"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="h-[200px] w-full mb-4">
-            <StockChart
-              symbol={selected}
-              height={200}
-              currentPrice={liveRates[selected]}
-              volatility={volatilityValue}
-              forecastPercentiles={synthForecast}
-            />
-          </div>
-
-          {!isBeginner && (
-            <div className="flex gap-2 border-t border-gray-50 dark:border-gray-800 pt-3 mt-4">
-              {["1D", "1W", "1M", "ALL"].map((p) => (
-                <button
-                  key={p}
-                  className={`text-xs font-bold px-3 py-1 rounded-lg transition ${p === "1D" ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Trade/Earn Control Card */}
-        <div className="space-y-4">
-          <TradeIntelligence 
-            items={intelligenceItems} 
-            selectedAsset={selected} 
-            isAdvanced={isAdvanced}
-          />
-
-          <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
-            <button
-              onClick={() => setActiveTab("trade")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                activeTab === "trade"
-                  ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
-                  : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              Trade
-            </button>
-            <button
-              onClick={() => setActiveTab("earn")}
-              className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
-                activeTab === "earn"
-                  ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
-                  : "text-gray-400 hover:text-gray-600"
-              }`}
-            >
-              Earn
-            </button>
-          </div>
-
-          <AnimatePresence mode="wait">
-            {activeTab === "trade" ? (
-              <motion.div
-                key="trade-widget"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-              >
-                {!isConnected ? (
-                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-center shadow-lg shadow-blue-500/20 text-white">
-                    <div className="text-3xl mb-3">📈</div>
-                    <h3 className="text-xl font-bold mb-2">Connect Wallet to Trade</h3>
-                    <p className="text-blue-100 text-sm mb-6">
-                      Connect your wallet to start trading fictional stocks and earn rewards on the Robinhood Testnet.
-                    </p>
-                    <button
-                      onClick={connect}
-                      className="w-full py-3 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition transform active:scale-95 shadow-md"
-                    >
-                      Connect Wallet
-                    </button>
-                  </div>
-                ) : !isOnRH ? (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
-                    <div className="text-3xl mb-3">🔗</div>
-                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Switch Network</h3>
-                    <p className="text-amber-800 dark:text-amber-300 text-sm mb-6">
-                      To trade {selected}, you need to be on the Robinhood Chain Testnet.
-                    </p>
-                    <button
-                      onClick={() => switchNetwork(RH_CHAIN_ID)}
-                      className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition transform active:scale-95 shadow-md shadow-amber-500/20"
-                    >
-                      Switch to Robinhood
-                    </button>
-                  </div>
-                ) : isRealStock ? (
-                  <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-6 text-center">
-                    <div className="text-3xl mb-3">{design.icon}</div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                      {selected} - Live Forecast
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Probabilistic price predictions powered by Bittensor SN50
-                    </p>
-                    {synthForecast ? (
-                      <div className="grid grid-cols-3 gap-3 text-center">
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">P10</div>
-                          <div className="font-bold text-red-600">${synthForecast.p10.toLocaleString()}</div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">Median</div>
-                          <div className="font-bold text-blue-600">${synthForecast.p50.toLocaleString()}</div>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
-                          <div className="text-xs text-gray-500">P90</div>
-                          <div className="font-bold text-green-600">${synthForecast.p90.toLocaleString()}</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-500">Loading Synth forecasts...</div>
+            {/* Main Content Area */}
+            <div className="grid grid-cols-1 gap-4">
+              {/* Info Card: Chart & Basic Stats */}
+              <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm overflow-hidden">
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-2xl">{design.icon}</span>
+                      <h2 className="text-xl font-bold">
+                        {design.name}
+                      </h2>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase tracking-tighter">
+                        {selected}
+                      </span>
+                    </div>
+                    {!isBeginner && (
+                      <p className="text-gray-500 dark:text-gray-400 text-xs max-w-sm leading-relaxed">
+                        {design.description}
+                      </p>
                     )}
                   </div>
-                ) : (
-                  <TradeWidget
-                    selected={selected}
-                    design={design}
-                    mode={mode}
-                    setMode={setMode}
-                    inputAmount={inputAmount}
-                    setInputAmount={setInputAmount}
-                    quote={quote}
-                    priceImpact={priceImpact}
-                    isQuoting={isQuoting}
-                    isSwapping={isSwapping}
-                    hasBalance={hasBalance}
-                    ethBalance={ethBalance}
-                    stockBalance={stockBalances[selected]}
-                    handleMax={handleMax}
-                    handleSwap={handleSwap}
-                    txHash={txHash}
-                    error={error}
-                    slippagePercent={SLIPPAGE_PERCENT}
-                    explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
-                  />
-                )}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="earn-widget"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-              >
-                {!isConnected ? (
-                  <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-center shadow-lg shadow-purple-500/20 text-white">
-                    <div className="text-3xl mb-3">💎</div>
-                    <h3 className="text-xl font-bold mb-2">Connect to Earn</h3>
-                    <p className="text-purple-100 text-sm mb-6">
-                      Provide liquidity for fictional stocks and earn high yield on Robinhood Testnet.
-                    </p>
-                    <button
-                      onClick={connect}
-                      className="w-full py-3 bg-white text-purple-600 font-bold rounded-xl hover:bg-purple-50 transition transform active:scale-95 shadow-md"
-                    >
-                      Connect Wallet
-                    </button>
-                  </div>
-                ) : !isOnRH ? (
-                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
-                    <div className="text-3xl mb-3">🔗</div>
-                    <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Switch Network</h3>
-                    <p className="text-amber-800 dark:text-amber-300 text-sm mb-6">
-                      To provide liquidity, you need to be on the Robinhood Chain Testnet.
-                    </p>
-                    <button
-                      onClick={() => switchNetwork(RH_CHAIN_ID)}
-                      className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition transform active:scale-95 shadow-md shadow-amber-500/20"
-                    >
-                      Switch to Robinhood
-                    </button>
-                  </div>
-                ) : isRealStock ? (
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl p-6 text-center">
-                    <div className="text-3xl mb-3">📈</div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-                      Earn with {selected}
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Liquidity provision coming soon for real asset tokens. 
-                      Connect to Robinhood Chain to trade fictional stocks.
-                    </p>
-                  </div>
-                ) : (
-                  <LiquidityWidget
-                    selected={selected}
-                    address={address}
-                    ethBalance={ethBalance}
-                    stockBalance={stockBalances[selected]}
-                    onSuccess={fetchBalances}
-                    explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
-                  />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
-      {/* Detailed Stats & Holders - Only for Advanced */}
-        {isAdvanced && (
-          <div className="space-y-4">
-            <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
-                Key Statistics
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                {isStatsLoading || !stockStats ? (
-                  <div className="col-span-2 flex justify-center py-4">
-                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                  </div>
-                ) : (
-                  [
-                    {
-                      label: "Market Cap",
-                      value: stockStats?.marketCapETH != null ? `${stockStats.marketCapETH.toFixed(2)} ETH` : "—",
-                    },
-                    {
-                      label: "Holders",
-                      value: holderData?.holdersCount != null
-                        ? holderData.holdersCount.toLocaleString()
-                        : "—",
-                    },
-                    {
-                      label: "Div Yield",
-                      value:
-                        stockStats?.divYieldMock != null && stockStats.divYieldMock > 0
-                          ? `${stockStats.divYieldMock.toFixed(2)}%`
-                          : "—",
-                    },
-                    {
-                      label: "24h Volume",
-                      value: stockStats?.volume24hETH != null ? `${stockStats.volume24hETH.toFixed(2)} ETH` : "—",
-                    },
-                    {
-                      label: "Forecast Vol",
-                      value: stockStats?.forecastVol != null ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—",
-                      isSynth: true,
-                      description: "Predicted annualized price volatility powered by SynthData's SN50 machine learning models.",
-                    },
-                    {
-                      label: "Realized Vol",
-                      value: stockStats?.realizedVol != null ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—",
-                      isSynth: true,
-                      description: "Historical volatility observed in the actual market price over the recent period.",
-                    },
-                  ].map((stat: any, i) => (
-                    <div 
-                      key={i} 
-                      className={`group bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30 transition-all hover:shadow-sm ${stat.isSynth ? 'ring-1 ring-blue-500/10 hover:ring-blue-500/30' : ''}`}
-                      title={stat.description}
-                    >
-                      <div className="flex items-center justify-between mb-0.5">
-                        <div className="text-xs font-bold text-gray-400 uppercase tracking-tight">
-                          {stat.label}
-                        </div>
-                        {stat.isSynth && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-[7px] font-black text-blue-500 uppercase tracking-tighter bg-blue-50 dark:bg-blue-900/30 px-1 rounded-sm">
-                              SN50
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-sm font-bold text-gray-900 dark:text-white">
-                        {stat.value}
+                  <div className="text-right">
+                    {/* Price Display with Toggle */}
+                    <div className="flex items-center justify-end gap-2 mb-1">
+                      <div className="text-xl font-bold">
+                        {(() => {
+                          const rate = liveRates[selected];
+                          if (!rate) return "---";
+                          // Convert ETH price to USDC (assuming ETH = $3000)
+                          const ethPrice = parseFloat(rate);
+                          const usdcPrice = ethPrice * 3000;
+                          return `$${usdcPrice.toFixed(2)} USDC`;
+                        })()}
                       </div>
                     </div>
-                  ))
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-xs text-gray-400">
+                        ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/ETH` : "---"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="h-[200px] w-full mb-4">
+                  <StockChart
+                    symbol={selected}
+                    height={200}
+                    currentPrice={liveRates[selected]}
+                    volatility={volatilityValue}
+                    forecastPercentiles={synthForecast}
+                  />
+                </div>
+
+                {!isBeginner && (
+                  <div className="flex gap-2 border-t border-gray-50 dark:border-gray-800 pt-3 mt-4">
+                    {["1D", "1W", "1M", "ALL"].map((p) => (
+                      <button
+                        key={p}
+                        className={`text-xs font-bold px-3 py-1 rounded-lg transition ${p === "1D" ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                      >
+                        {p}
+                      </button>
+                    ))}
+                  </div>
                 )}
+              </div>
+
+              {/* Trade/Earn Control Card */}
+              <div className="space-y-4">
+                <TradeIntelligence
+                  items={intelligenceItems}
+                  selectedAsset={selected}
+                  isAdvanced={isAdvanced}
+                />
+
+                <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
+                  <button
+                    onClick={() => setActiveTab("trade")}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${activeTab === "trade"
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
+                        : "text-gray-400 hover:text-gray-600"
+                      }`}
+                  >
+                    Trade
+                  </button>
+                  <button
+                    onClick={() => setActiveTab("earn")}
+                    className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${activeTab === "earn"
+                        ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
+                        : "text-gray-400 hover:text-gray-600"
+                      }`}
+                  >
+                    Earn
+                  </button>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  {activeTab === "trade" ? (
+                    <motion.div
+                      key="trade-widget"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                    >
+                      {!isConnected ? (
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-center shadow-lg shadow-blue-500/20 text-white">
+                          <div className="text-3xl mb-3">📈</div>
+                          <h3 className="text-xl font-bold mb-2">Connect Wallet to Trade</h3>
+                          <p className="text-blue-100 text-sm mb-6">
+                            Connect your wallet to start trading fictional stocks and earn rewards on the Robinhood Testnet.
+                          </p>
+                          <button
+                            onClick={connect}
+                            className="w-full py-3 bg-white text-blue-600 font-bold rounded-xl hover:bg-blue-50 transition transform active:scale-95 shadow-md"
+                          >
+                            Connect Wallet
+                          </button>
+                        </div>
+                      ) : !isOnRH ? (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+                          <div className="text-3xl mb-3">🔗</div>
+                          <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Switch Network</h3>
+                          <p className="text-amber-800 dark:text-amber-300 text-sm mb-6">
+                            To trade {selected}, you need to be on the Robinhood Chain Testnet.
+                          </p>
+                          <button
+                            onClick={() => switchNetwork(RH_CHAIN_ID)}
+                            className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition transform active:scale-95 shadow-md shadow-amber-500/20"
+                          >
+                            Switch to Robinhood
+                          </button>
+                        </div>
+                      ) : isRealStock ? (
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-6 text-center">
+                          <div className="text-3xl mb-3">{design.icon}</div>
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                            {selected} - Live Forecast
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                            Probabilistic price predictions powered by Bittensor SN50
+                          </p>
+                          {synthForecast ? (
+                            <div className="grid grid-cols-3 gap-3 text-center">
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div className="text-xs text-gray-500">P10</div>
+                                <div className="font-bold text-red-600">${synthForecast.p10.toLocaleString()}</div>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div className="text-xs text-gray-500">Median</div>
+                                <div className="font-bold text-blue-600">${synthForecast.p50.toLocaleString()}</div>
+                              </div>
+                              <div className="bg-white dark:bg-gray-800 rounded-lg p-3">
+                                <div className="text-xs text-gray-500">P90</div>
+                                <div className="font-bold text-green-600">${synthForecast.p90.toLocaleString()}</div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-500">Loading Synth forecasts...</div>
+                          )}
+                        </div>
+                      ) : (
+                        <TradeWidget
+                          selected={selected}
+                          design={design}
+                          mode={mode}
+                          setMode={setMode}
+                          inputAmount={inputAmount}
+                          setInputAmount={setInputAmount}
+                          quote={quote}
+                          priceImpact={priceImpact}
+                          isQuoting={isQuoting}
+                          isSwapping={isSwapping}
+                          hasBalance={hasBalance}
+                          ethBalance={ethBalance}
+                          stockBalance={stockBalances[selected]}
+                          handleMax={handleMax}
+                          handleSwap={handleSwap}
+                          txHash={txHash}
+                          error={error}
+                          slippagePercent={SLIPPAGE_PERCENT}
+                          explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                        />
+                      )}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="earn-widget"
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                    >
+                      {!isConnected ? (
+                        <div className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-6 text-center shadow-lg shadow-purple-500/20 text-white">
+                          <div className="text-3xl mb-3">💎</div>
+                          <h3 className="text-xl font-bold mb-2">Connect to Earn</h3>
+                          <p className="text-purple-100 text-sm mb-6">
+                            Provide liquidity for fictional stocks and earn high yield on Robinhood Testnet.
+                          </p>
+                          <button
+                            onClick={connect}
+                            className="w-full py-3 bg-white text-purple-600 font-bold rounded-xl hover:bg-purple-50 transition transform active:scale-95 shadow-md"
+                          >
+                            Connect Wallet
+                          </button>
+                        </div>
+                      ) : !isOnRH ? (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-6 text-center">
+                          <div className="text-3xl mb-3">🔗</div>
+                          <h3 className="text-xl font-bold text-amber-900 dark:text-amber-100 mb-2">Switch Network</h3>
+                          <p className="text-amber-800 dark:text-amber-300 text-sm mb-6">
+                            To provide liquidity, you need to be on the Robinhood Chain Testnet.
+                          </p>
+                          <button
+                            onClick={() => switchNetwork(RH_CHAIN_ID)}
+                            className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl transition transform active:scale-95 shadow-md shadow-amber-500/20"
+                          >
+                            Switch to Robinhood
+                          </button>
+                        </div>
+                      ) : isRealStock ? (
+                        <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border border-purple-100 dark:border-purple-800 rounded-2xl p-6 text-center">
+                          <div className="text-3xl mb-3">📈</div>
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                            Earn with {selected}
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Liquidity provision coming soon for real asset tokens.
+                            Connect to Robinhood Chain to trade fictional stocks.
+                          </p>
+                        </div>
+                      ) : (
+                        <LiquidityWidget
+                          selected={selected}
+                          address={address}
+                          ethBalance={ethBalance}
+                          stockBalance={stockBalances[selected]}
+                          onSuccess={fetchBalances}
+                          explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                        />
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
-            <HoldersWidget
-              holderData={holderData}
-              isLoading={isHoldersLoading}
-              explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
-            />
-          </div>
-        )}
-
-        {/* Positions List */}
-        {Object.values(stockBalances).some((b) => parseFloat(b) > 0) && (
-          <div className="space-y-2">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 ml-1">
-              Your Positions
-            </h3>
-            <div className="grid grid-cols-1 gap-2">
-              {STOCKS.filter((s) => parseFloat(stockBalances[s]) > 0).map((s) => {
-                const d = getTokenDesign(s);
-                return (
-                  <div
-                    key={s}
-                    className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-800 overflow-hidden relative shadow-sm"
-                  >
-                    <div
-                      className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${d.gradient}`}
-                    />
-                    <div className="flex items-center gap-3 ml-1">
-                      <span className="text-xl">{d.icon}</span>
-                      <div>
-                        <div className="font-bold text-sm">
-                          {s}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {d.name}
-                        </div>
+            {/* Detailed Stats & Holders - Only for Advanced */}
+            {isAdvanced && (
+              <div className="space-y-4">
+                <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
+                    Key Statistics
+                  </h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {isStatsLoading || !stockStats ? (
+                      <div className="col-span-2 flex justify-center py-4">
+                        <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
                       </div>
-                    </div>
-                    <span className="font-bold text-gray-900 dark:text-white">
-                      {parseFloat(stockBalances[s]).toFixed(2)}
-                    </span>
+                    ) : (
+                      [
+                        {
+                          label: "Market Cap",
+                          value: stockStats?.marketCapETH != null ? `${stockStats.marketCapETH.toFixed(2)} ETH` : "—",
+                        },
+                        {
+                          label: "Holders",
+                          value: holderData?.holdersCount != null
+                            ? holderData.holdersCount.toLocaleString()
+                            : "—",
+                        },
+                        {
+                          label: "Div Yield",
+                          value:
+                            stockStats?.divYieldMock != null && stockStats.divYieldMock > 0
+                              ? `${stockStats.divYieldMock.toFixed(2)}%`
+                              : "—",
+                        },
+                        {
+                          label: "24h Volume",
+                          value: stockStats?.volume24hETH != null ? `${stockStats.volume24hETH.toFixed(2)} ETH` : "—",
+                        },
+                        {
+                          label: "Forecast Vol",
+                          value: stockStats?.forecastVol != null ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—",
+                          isSynth: true,
+                          description: "Predicted annualized price volatility powered by SynthData's SN50 machine learning models.",
+                        },
+                        {
+                          label: "Realized Vol",
+                          value: stockStats?.realizedVol != null ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—",
+                          isSynth: true,
+                          description: "Historical volatility observed in the actual market price over the recent period.",
+                        },
+                      ].map((stat: any, i) => (
+                        <div
+                          key={i}
+                          className={`group bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30 transition-all hover:shadow-sm ${stat.isSynth ? 'ring-1 ring-blue-500/10 hover:ring-blue-500/30' : ''}`}
+                          title={stat.description}
+                        >
+                          <div className="flex items-center justify-between mb-0.5">
+                            <div className="text-xs font-bold text-gray-400 uppercase tracking-tight">
+                              {stat.label}
+                            </div>
+                            {stat.isSynth && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[7px] font-black text-blue-500 uppercase tracking-tighter bg-blue-50 dark:bg-blue-900/30 px-1 rounded-sm">
+                                  SN50
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-sm font-bold text-gray-900 dark:text-white">
+                            {stat.value}
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                </div>
+
+                <HoldersWidget
+                  holderData={holderData}
+                  isLoading={isHoldersLoading}
+                  explorerUrl={NETWORKS.RH_TESTNET.explorerUrl}
+                />
+              </div>
+            )}
+
+            {/* Positions List */}
+            {Object.values(stockBalances).some((b) => parseFloat(b) > 0) && (
+              <div className="space-y-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 ml-1">
+                  Your Positions
+                </h3>
+                <div className="grid grid-cols-1 gap-2">
+                  {STOCKS.filter((s) => parseFloat(stockBalances[s]) > 0).map((s) => {
+                    const d = getTokenDesign(s);
+                    return (
+                      <div
+                        key={s}
+                        className="flex items-center justify-between bg-white dark:bg-gray-900 rounded-xl px-3 py-2 border border-gray-100 dark:border-gray-800 overflow-hidden relative shadow-sm"
+                      >
+                        <div
+                          className={`absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b ${d.gradient}`}
+                        />
+                        <div className="flex items-center gap-3 ml-1">
+                          <span className="text-xl">{d.icon}</span>
+                          <div>
+                            <div className="font-bold text-sm">
+                              {s}
+                            </div>
+                            <div className="text-xs text-gray-400">
+                              {d.name}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="font-bold text-gray-900 dark:text-white">
+                          {parseFloat(stockBalances[s]).toFixed(2)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       )}
