@@ -127,8 +127,8 @@ export interface AIMessage {
   timestamp: Date;
   type?: "text" | "recommendation" | "insight";
   action?: {
-    type: "navigate";
-    tab: string;
+    type: "navigate" | "claim_ubi" | "verify_identity";
+    tab?: string;
     delay?: number;
   };
 }
@@ -651,14 +651,6 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
       ) {
         fastPathResponse = "Taking you to demo mode... 🎮";
       } else if (
-        normalizedContent.includes("ubi") ||
-        normalizedContent.includes("gooddollar") ||
-        normalizedContent.includes("$g") ||
-        normalizedContent.includes("free money") ||
-        normalizedContent.includes("claim")
-      ) {
-        fastPathResponse = "Taking you to your daily UBI claim (Protect tab)... 💰";
-      } else if (
         normalizedContent.includes("learn") ||
         normalizedContent.includes("how to use") ||
         normalizedContent.includes("tutorial") ||
@@ -716,15 +708,6 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           normalizedContent.includes("islamic finance") ||
           normalizedContent.includes("confucian")
         ) {
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
-        } else if (
-          normalizedContent.includes("ubi") ||
-          normalizedContent.includes("gooddollar") ||
-          normalizedContent.includes("$g") ||
-          normalizedContent.includes("free money") ||
-          normalizedContent.includes("claim")
-        ) {
-          // Rewards tab was removed from main navigation; claim flow lives in Protect.
           navAction = { type: "navigate", tab: "protect", delay: 1500 };
         } else if (
           normalizedContent.includes("learn") ||
@@ -797,6 +780,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
             content: result.response,
             timestamp: new Date(),
             type: result.type || "text",
+            action: result.action,
           };
           addMessage(assistantMessage);
 

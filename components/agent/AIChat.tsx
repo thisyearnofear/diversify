@@ -1,10 +1,15 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useNavigation } from "../../context/app/NavigationContext";
 import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
 import { useDiversifiAI } from "../../hooks/use-diversifi-ai";
 import VoiceButton from "../ui/VoiceButton";
+import dynamic from "next/dynamic";
+
+const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
+  ssr: false,
+});
 
 // Track user-message count to distinguish "new message added" from "drawer closed"
 function useUserMessageCount(messages: { role: string }[]) {
@@ -30,6 +35,7 @@ export default function AIChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
+  const [showClaimFlow, setShowClaimFlow] = useState(false);
 
   // Track user-message count via ref so the auto-open effect only fires when
   // a NEW user message is added — not when the user simply closes the drawer.
@@ -61,24 +67,40 @@ export default function AIChat() {
     }
   }, [currentUserMsgCount, setDrawerOpen]);
 
-  // Handle navigation actions from AI responses
+  // Handle actions from AI responses
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role === "assistant" && lastMessage.action?.type === "navigate") {
-      const { tab, delay = 1500 } = lastMessage.action;
-      const timer = setTimeout(() => {
-        const migrated = LEGACY_TAB_MAP[tab];
-        const candidate = migrated || tab;
-        if (isTabId(candidate)) {
-          setActiveTab(candidate);
-        }
-        setDrawerOpen(false);
-      }, delay);
-      return () => clearTimeout(timer);
+    if (lastMessage?.role === "assistant" && lastMessage.action) {
+      const { type, delay = 1500 } = lastMessage.action;
+      
+      if (type === "navigate" && lastMessage.action.tab) {
+        const { tab } = lastMessage.action;
+        const timer = setTimeout(() => {
+          const migrated = LEGACY_TAB_MAP[tab];
+          const candidate = migrated || tab;
+          if (isTabId(candidate)) {
+            setActiveTab(candidate);
+          }
+          setDrawerOpen(false);
+        }, delay);
+        return () => clearTimeout(timer);
+      } else if (type === "claim_ubi") {
+        const timer = setTimeout(() => {
+          setShowClaimFlow(true);
+          setDrawerOpen(false);
+        }, delay);
+        return () => clearTimeout(timer);
+      } else if (type === "verify_identity") {
+        const timer = setTimeout(() => {
+          setActiveTab("protect");
+          setDrawerOpen(false);
+        }, delay);
+        return () => clearTimeout(timer);
+      }
     }
   }, [messages, setActiveTab, setDrawerOpen]);
 
-  if (!isDrawerOpen) return null;
+  if (!isDrawerOpen && !showClaimFlow) return null;
 
   const handleConfirmClear = () => {
     clearMessages();
@@ -87,17 +109,29 @@ export default function AIChat() {
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
+      {/* GoodDollar Claim Modal Triggered by AI */}
+      {showClaimFlow && (
+        <div className="pointer-events-auto">
+          <GoodDollarClaimFlow 
+            onClose={() => setShowClaimFlow(false)} 
+            onClaimSuccess={() => setShowClaimFlow(false)} 
+          />
+        </div>
+      )}
+
       {/* Backdrop */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={() => {
-          setDrawerOpen(false);
-          setShowClearConfirm(false);
-        }}
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
-      />
+      {isDrawerOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => {
+            setDrawerOpen(false);
+            setShowClearConfirm(false);
+          }}
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
+        />
+      )}
 
       {/* Clear Confirmation Modal */}
       {showClearConfirm && (
@@ -133,14 +167,15 @@ export default function AIChat() {
       )}
 
       {/* Drawer */}
-      <motion.div
-        initial={{ y: "100%" }}
-        animate={{ y: 0 }}
-        exit={{ y: "100%" }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="relative bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60vh] max-h-[92vh] flex flex-col pointer-events-auto border-t border-white/10"
-      >
-        {/* Drag Handle */}
+      {isDrawerOpen && (
+        <motion.div
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 25, stiffness: 300 }}
+          className="relative bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60vh] max-h-[92vh] flex flex-col pointer-events-auto border-t border-white/10"
+        >
+          {/* Drag Handle */}
         <div className="w-full flex justify-center py-3">
           <div
             className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full"
@@ -437,6 +472,7 @@ export default function AIChat() {
           </form>
         </div>
       </motion.div>
+      )}
     </div>
   );
 }

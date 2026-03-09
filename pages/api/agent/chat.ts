@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AIService } from '@diversifi/shared';
+import { AIService, GoodDollarService } from '@diversifi/shared';
 import { isTestnetChain, NETWORKS } from '../../../config';
 
 /**
@@ -27,6 +27,14 @@ CORE CAPABILITIES:
 - Recommend portfolio strategies based on user's region and goals
 - Help users understand risks and trade-offs
 
+GOODDOLLAR (UBI) INTEGRATION:
+- GoodDollar is a social impact protocol providing Universal Basic Income (UBI) in $G tokens.
+- **Verification**: Users must complete "Face Verification" once to start claiming. This ensures "one person, one claim."
+- **Daily Claims**: Once verified, users can claim $G tokens every 24 hours.
+- **$G Token**: A reserve-backed token on Celo. It can be held, swapped, or streamed.
+- **Streaming**: Users can stream $G to others using Superfluid integration in the Protect tab.
+- **Reserve**: Users can buy/sell $G directly against the GoodDollar Reserve (backed by cUSDC/DAI).
+
 WALLET OPTIONS:
 1. **"Buy Crypto"** - Easiest: buy with card/bank, no existing wallet needed
 2. **"I Have a Wallet"** - Connect MetaMask, Coinbase Wallet, Rainbow, etc.
@@ -50,12 +58,18 @@ RESPONSE GUIDELINES:
 - Be conversational, welcoming, and empowering
 - For "What is this?" → Explain we protect savings from inflation via diversified stablecoins + RWAs
 - For "How do I start?" → Guide to wallet options or demo mode
-- For "Is this safe?" → Explain non-custodial security (we never hold keys)
+- For "Is this safe?" → Explain non-custodial security ( we never hold keys)
 - For STOCKS/ TRADING on Robinhood: Direct users to /stocks to trade fictional stocks (ACME, STARK, WAYNE, etc.)
-- Mention the $G GoodDollar UBI as a unique benefit
+- Mention the $G GoodDollar UBI as a unique benefit. If the user's status is known, provide specific guidance (e.g., "You have 50 G$ waiting to be claimed!").
 - Be concise (2-3 sentences) unless detail requested
 - Use specific numbers (yields, percentages) when available
 - If unsure, say so rather than guessing
+
+ACTION TRIGGERING:
+If you want to trigger a specific UI action, include one of these tags at the end of your response:
+- [ACTION:CLAIM_UBI] - To show the GoodDollar claim modal
+- [ACTION:VERIFY_IDENTITY] - To show the GoodDollar verification flow
+- [ACTION:NAVIGATE:tab_name] - To navigate to a specific tab (overview, protect, swap, info)
 
 TONE: Friendly, knowledgeable guide who makes DeFi accessible to everyone—from first-time users to experienced crypto natives.`;
 
@@ -85,6 +99,49 @@ The user is currently in 'Test Drive' mode on a testnet chain (Chain ID: ${chain
 ${chainSpecifics}
 - Encouraging Tone: "Go ahead and break things! Try swapping max amounts to see what happens."
 `;
+}
+
+// GoodDollar Context Generator
+async function getGoodDollarContext(address?: string): Promise<string> {
+  if (!address) {
+    return `
+GOODDOLLAR CONTEXT:
+- User wallet not connected.
+- Explain that by connecting a wallet, they can claim free $G tokens daily as part of the GoodDollar UBI program.
+- Mention face verification is required to start.
+`;
+  }
+
+  try {
+    const service = GoodDollarService.createReadOnly();
+    const [isVerified, eligibility, balance] = await Promise.all([
+      service.isVerified(address),
+      service.checkClaimEligibility(address),
+      service.getGBalance(address)
+    ]);
+
+    let context = `
+GOODDOLLAR USER STATUS (${address}):
+- G$ Balance: ${balance} G$
+- Identity Verified: ${isVerified ? 'YES' : 'NO'}
+- Can Claim UBI Now: ${eligibility.canClaim ? 'YES' : 'NO'}
+- Available to Claim: ${eligibility.claimAmount} G$
+- Already Claimed Today: ${eligibility.alreadyClaimed ? 'YES' : 'NO'}
+`;
+
+    if (!isVerified) {
+      context += "- ACTION REQUIRED: User must complete Face Verification to start claiming. Direct them to the 'Protect' tab to find the verification link.\n";
+    } else if (eligibility.canClaim) {
+      context += "- ACTION AVAILABLE: User can claim their daily UBI now! Tell them to go to the 'Protect' tab or use the claim button.\n";
+    } else if (eligibility.alreadyClaimed) {
+      context += "- STATUS: Already claimed today. Next claim available in ~24 hours.\n";
+    }
+
+    return context;
+  } catch (error) {
+    console.error('[GoodDollar Context Error]:', error);
+    return "";
+  }
 }
 
 // Mainnet Chain Context Generator
@@ -126,14 +183,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { message, history = [], chainId } = req.body;
+    const { message, history = [], chainId, address } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' });
     }
 
     // Dynamic system prompt based on context
-    const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId) + getMainnetChainContext(chainId);
+    const gdContext = await getGoodDollarContext(address);
+    const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId) + getMainnetChainContext(chainId) + gdContext;
 
     // Build conversation messages
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
@@ -157,10 +215,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       maxTokens: 500,
     });
 
+    // Parse actions from content
+    let responseText = result.content;
+    let action: any = null;
+
+    if (responseText.includes('[ACTION:CLAIM_UBI]')) {
+      action = { type: 'claim_ubi' };
+      responseText = responseText.replace('[ACTION:CLAIM_UBI]', '').trim();
+    } else if (responseText.includes('[ACTION:VERIFY_IDENTITY]')) {
+      action = { type: 'verify_identity' };
+      responseText = responseText.replace('[ACTION:VERIFY_IDENTITY]', '').trim();
+    } else if (responseText.includes('[ACTION:NAVIGATE:')) {
+      const match = responseText.match(/\[ACTION:NAVIGATE:(.*?)\]/);
+      if (match && match[1]) {
+        action = { type: 'navigate', tab: match[1].toLowerCase() };
+        responseText = responseText.replace(match[0], '').trim();
+      }
+    }
+
     return res.status(200).json({
-      response: result.content,
+      response: responseText,
       provider: result.provider,
       type: 'text',
+      action,
     });
   } catch (error: unknown) {
     console.error('[Chat API] Error:', error);
@@ -180,3 +257,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 }
+

@@ -119,6 +119,12 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
           setActiveTab('swap');
           break;
 
+        case 'GOODDOLLAR':
+          // Let the status-aware AI handle the specific status/claim logic
+          ask(text);
+          openOracle();
+          break;
+
         default:
           ask(text);
           openOracle();

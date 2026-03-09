@@ -11,6 +11,7 @@ export type AppIntent =
     | { type: 'SEND_TO_PHONE'; phoneNumber: string; amount?: string; token?: string }
     | { type: 'ANALYZE_REQUEST'; goal?: string }
     | { type: 'ONBOARDING'; topic: 'what-is-this' | 'how-to-start' | 'is-safe' | 'wallet-help' | 'demo' }
+    | { type: 'GOODDOLLAR'; topic: 'claim' | 'verify' | 'status' | 'info' }
     | { type: 'QUERY'; context: 'market' | 'portfolio' | 'general' }
     | { type: 'UNKNOWN' };
 
@@ -20,6 +21,20 @@ export class IntentDiscoveryService {
      */
     static discover(text: string): AppIntent {
         const r = text.toLowerCase();
+
+        // 0. GoodDollar (UBI) Actions
+        if (r.includes("ubi") || r.includes("gooddollar") || r.includes("$g") || r.includes("free money")) {
+            if (r.includes("claim") || r.includes("get") || r.includes("receive")) {
+                return { type: 'GOODDOLLAR', topic: 'claim' };
+            }
+            if (r.includes("verify") || r.includes("face") || r.includes("whitelist") || r.includes("identity")) {
+                return { type: 'GOODDOLLAR', topic: 'verify' };
+            }
+            if (r.includes("balance") || r.includes("status") || r.includes("eligible") || r.includes("can i")) {
+                return { type: 'GOODDOLLAR', topic: 'status' };
+            }
+            return { type: 'GOODDOLLAR', topic: 'info' };
+        }
 
         // 0. SocialConnect / Send to Phone (Real-World Utility)
         // Matches: "Send 10 USDm to +254...", "Pay 5.5 to 0712...", "Transfer 100 to +44..."
