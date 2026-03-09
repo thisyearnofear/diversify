@@ -608,9 +608,27 @@ export default function ProtectionTab({
             const recommended = StrategyService.getRecommendedAssets(strategy as any);
             const toToken = recommended[0] || 'KESm';
             const fromToken = recommended.includes('USDm') ? 'USDC' : 'USDm';
+
+            // Compute suggested swap amount from target allocation gap
+            const config = StrategyService.getConfig(strategy as any);
+            const primaryTarget = config.targetAllocations[0];
+            let swapAmount: string | undefined;
+            if (primaryTarget && displayTotalValue > 0) {
+              const currentRegion = displayRegionData.find(
+                (r) => r.region === primaryTarget.region
+              );
+              const currentPct = currentRegion
+                ? ((currentRegion.usdValue ?? currentRegion.value) / displayTotalValue) * 100
+                : 0;
+              const gapPct = Math.max(0, primaryTarget.ideal - currentPct);
+              const gapUsd = (gapPct / 100) * displayTotalValue;
+              if (gapUsd > 1) swapAmount = gapUsd.toFixed(2);
+            }
+
             navigateToSwap({
               fromToken,
               toToken,
+              amount: swapAmount,
               reason: `Apply ${strategy} strategy — rebalancing toward ${toToken}`,
             });
           }}
