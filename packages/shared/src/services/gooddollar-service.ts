@@ -30,8 +30,8 @@ import { ethers } from 'ethers';
 // All addresses are normalised via getAddress() so any capitalisation typo is caught at load-time.
 const _RAW_ADDRESSES = {
   G_TOKEN:      '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
-  UBI_SCHEME:   '0x43d3f6e706eb579456d5189466a53d37238440c0', // Corrected UBIScheme (Celo)
-  IDENTITY:     '0xC361a6e6605f0C127953A83724f2E9F3F056633E', // Corrected Identity (Celo)
+  UBI_SCHEME:   '0x43d72Ff17701B2DA814620735C39C620Ce0ea4A1', // UBIScheme Proxy (Celo mainnet) — verified via docs.gooddollar.org
+  IDENTITY:     '0xC361A6E67822a0EDc17D899227dd9FC50BD62F42', // Identity (Celo mainnet) — verified via docs.gooddollar.org
   RESERVE:      '0xed8f69e24FE33481f7dFe0d9D0f89F5e4F4f3E3E',
   CFA_FORWARDER:'0xcfA132E353cB4E398080B9700609bb008eceB125',
   GOOD_TOKEN:   '0xa9000Aa66903b5E26F88Fa8462739CdCF7956EA6', // GOOD Governance (Celo)
