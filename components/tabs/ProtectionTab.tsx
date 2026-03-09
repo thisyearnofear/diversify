@@ -383,7 +383,7 @@ export default function ProtectionTab({
             </div>
             <div className="text-center">
               <div className="text-3xl font-black">
-                {Math.round((liveAnalysis?.diversificationScore + (100 - (liveAnalysis?.weightedInflationRisk || 0) * 5)) / 2)}%
+                {protectionScore}%
               </div>
               <div className="text-xs text-indigo-200 font-medium mt-1">
                 Protection Level

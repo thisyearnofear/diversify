@@ -236,7 +236,7 @@ async function fetchChainBalances(
       async ({ symbol, tokenAddress }) => {
         try {
           const { TokenPriceService } = await import("@diversifi/shared");
-          const livePrice = await TokenPriceService.getTokenUsdPrice({
+          const priceResult = await TokenPriceService.getTokenUsdPrice({
             chainId: chain.chainId,
             address: tokenAddress,
             symbol: symbol,
@@ -249,7 +249,7 @@ async function fetchChainBalances(
             EXCHANGE_RATES[symbol.toLowerCase()] ||
             1;
 
-          return livePrice ?? fallbackRate;
+          return priceResult?.price ?? fallbackRate;
         } catch (error) {
           console.warn(
             `[Multichain] Failed to fetch price for ${symbol}:`,
