@@ -31,6 +31,8 @@ export interface StockStats {
  * the "Key Statistics" panel. Blends real data (Market Cap, TVL, Volume) with
  * deterministic mock data for fictional company stats (P/E, Div Yield).
  */
+const FICTIONAL_STOCKS_SET = new Set(["ACME", "SPACELY", "WAYNE", "OSCORP", "STARK"]);
+
 export function useStockStats(
   selectedStock: string,
   currentRatePerETH: string | null,
@@ -39,6 +41,11 @@ export function useStockStats(
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchStats = useCallback(async () => {
+    // Real-world stocks have no on-chain AMM data — skip contract calls
+    if (!FICTIONAL_STOCKS_SET.has(selectedStock)) {
+      setIsLoading(false);
+      return;
+    }
     if (!selectedStock || !currentRatePerETH) return;
 
     setIsLoading(true);

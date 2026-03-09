@@ -112,6 +112,7 @@ export default function TradeTab() {
 
   const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
   const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
+  const [realStockPrice, setRealStockPrice] = useState<number | null>(null);
   const [showAllRobinhood, setShowAllRobinhood] = useState(false);
 
   // Watchlist for Robinhood stocks
@@ -121,6 +122,9 @@ export default function TradeTab() {
   const design = getTokenDesign(selected);
   const stockAddress = isFictionalStock(selected) ? RH_TESTNET_TOKENS[selected] : undefined;
   const isRealStock = !isFictionalStock(selected);
+
+  // Reset real stock price when switching stocks
+  useEffect(() => { setRealStockPrice(null); }, [selected]);
 
   const { stats: stockStats, isLoading: isStatsLoading } = useStockStats(
     selected,
@@ -206,13 +210,13 @@ export default function TradeTab() {
               if (s === "ETH") return { symbol: s, rate: "1" };
               if (s === "BTC") {
                 const price = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "BTC" });
-                return { symbol: s, rate: price ? (3000 / price).toFixed(6) : null };
+                // Rate = ETH_Price / BTC_Price
+                return { symbol: s, rate: price ? (3500 / price).toFixed(6) : null };
               }
               // For stocks like NVDA, GOOGL etc.
               const price = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: s });
-              // Rate is "Tokens per 1 ETH", so Rate = ETH_Price / Token_Price
-              // Assuming ETH_Price = 3000 for consistency in UI calculation
-              return { symbol: s, rate: price ? (3000 / price).toFixed(2) : null };
+              // Rate = ETH_Price / Stock_Price
+              return { symbol: s, rate: price ? (3500 / price).toFixed(2) : null };
             } catch (err) {
               console.warn(`[Trade] Price fetch error for ${s}:`, err);
               return { symbol: s, rate: null };
@@ -305,6 +309,10 @@ export default function TradeTab() {
           };
 
           const price = forecast.current_price;
+          // Store real stock price directly from Synth API
+          if (isRealStock && typeof price === 'number' && price > 0) {
+            setRealStockPrice(price);
+          }
           // Get the last percentile object from the array (most recent forecast)
           const forecastData = forecast.forecast_future || forecast["24H"];
           const percentiles = forecastData?.percentiles?.[forecastData.percentiles.length - 1] || {};
@@ -890,22 +898,30 @@ export default function TradeTab() {
                   <div className="text-right">
                     {/* Price Display with Toggle */}
                     <div className="flex items-center justify-end gap-2 mb-1">
-                      <div className="text-xl font-bold">
+                        <div className="text-xl font-bold">
                         {(() => {
+                          // Real stocks: use direct USD price from Synth API
+                          if (isRealStock) {
+                            if (!realStockPrice) return "---";
+                            return `$${realStockPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+                          }
+                          // Fictional stocks: derive from AMM rate (tokens per ETH)
                           const rate = liveRates[selected];
                           if (!rate) return "---";
-                          // Convert ETH price to USDC (assuming ETH = $3000)
-                          const ethPrice = parseFloat(rate);
-                          const usdcPrice = ethPrice * 3000;
-                          return `$${usdcPrice.toFixed(2)} USDC`;
+                          const tokensPerEth = parseFloat(rate.replace(/,/g, ""));
+                          if (tokensPerEth === 0) return "---";
+                          const usdcPrice = 3500 / tokensPerEth;
+                          return `$${usdcPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`;
                         })()}
                       </div>
                     </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <span className="text-xs text-gray-400">
-                        ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/ETH` : "---"}
-                      </span>
-                    </div>
+                    {!isRealStock && (
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-xs text-gray-400">
+                          ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/ETH` : "---"}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
