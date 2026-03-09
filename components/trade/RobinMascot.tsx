@@ -153,7 +153,7 @@ export const RobinMascot: React.FC<RobinMascotProps> = ({
             exit={{ opacity: 0, scale: 0.8 }}
             className="absolute -top-4 -right-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-xl rounded-2xl px-3 py-1.5 z-10"
           >
-            <span className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+            <span className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tighter">
               {action === "buying" && "To the moon! 🚀"}
               {action === "selling" && "Taking gains! 💎"}
               {action === "happy" && "Great trade! ✨"}

@@ -137,17 +137,17 @@ export default function HeaderMenu({
                                         <div className="text-sm font-black text-gray-900 dark:text-white leading-tight">
                                             {getModeInfo().label} Mode
                                         </div>
-                                        <div className="text-[10px] text-blue-500 font-bold uppercase tracking-tight">
+                                        <div className="text-xs text-blue-500 font-bold uppercase tracking-tight">
                                             {getModeInfo().summary}
                                         </div>
-                                        <div className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
+                                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1">
                                             <span>→</span>
                                             <span className="font-bold">{getNextModeInfo().emoji} {getNextModeInfo().label}:</span>
                                             <span>{getNextModeInfo().summary}</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="text-[10px] font-black p-1 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded uppercase">
+                                <div className="text-xs font-black p-1 bg-gray-100 dark:bg-gray-700 text-gray-400 rounded uppercase">
                                     Change
                                 </div>
                             </button>
@@ -199,7 +199,7 @@ export default function HeaderMenu({
                                             <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                             </svg>
-                                            <span className="text-[11px] font-black">Active — play money only</span>
+                                            <span className="text-xs font-black">Active — play money only</span>
                                         </div>
                                     )}
                                     {/* Single compact network selector — replaces the custom Arc/Celo buttons */}
@@ -209,7 +209,7 @@ export default function HeaderMenu({
                                         compact={true}
                                         className="w-full"
                                     />
-                                    <p className="text-[9px] text-gray-400 dark:text-gray-600 mt-1.5 leading-snug">
+                                    <p className="text-xs text-gray-400 dark:text-gray-600 mt-1.5 leading-snug">
                                         Free test tokens. Earn badges. Graduate to mainnet.
                                     </p>
                                 </div>

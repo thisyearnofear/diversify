@@ -424,7 +424,7 @@ export default function InflationProtectionInfo({
             Data: {freshnessInfo.dataSources.join(', ') || 'World Bank'} 
             {freshnessInfo.mostRecentYear !== 'Unknown' && ` (${freshnessInfo.mostRecentYear})`}
           </span>
-          <span className="text-[9px] font-mono opacity-70">Indicator: FP.CPI.TOTL.ZG</span>
+          <span className="text-xs font-mono opacity-70">Indicator: FP.CPI.TOTL.ZG</span>
         </div>
         <div className="text-right">
           <div className="font-bold">
@@ -432,7 +432,7 @@ export default function InflationProtectionInfo({
              dataSource.includes('cache') ? 'Regional Cache' : 
              'Standard Fallback'}
           </div>
-          <div className="text-[9px] opacity-70 italic">Updated via IMF/WB Proxy</div>
+          <div className="text-xs opacity-70 italic">Updated via IMF/WB Proxy</div>
         </div>
       </div>
     </div>

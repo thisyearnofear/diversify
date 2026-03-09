@@ -308,7 +308,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           <span className="mr-1">{getBalanceLabel()}</span>
           {getBalanceDisplay()}
           {hasBalance && !isCrossChain && (
-            <span className="ml-1.5 text-[8px] bg-blue-500 text-white px-1 rounded uppercase">MAX</span>
+            <span className="ml-1.5 text-xs bg-blue-500 text-white px-1 rounded uppercase">MAX</span>
           )}
         </button>
       </div>
@@ -456,7 +456,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block leading-tight">
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block leading-tight">
                   {TOKEN_METADATA[selectedToken]?.name || selectedToken}
                 </span>
                 <span className="font-bold text-xs text-gray-900 dark:text-gray-100 block leading-tight">
@@ -471,7 +471,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 if (yieldBadge) {
                   return (
                     <div className={`px-2 py-1 rounded-md shadow-sm flex-shrink-0 ${yieldBadge.color}`}>
-                      <span className="text-[10px] font-black block leading-tight">
+                      <span className="text-xs font-black block leading-tight">
                         {yieldBadge.text}
                       </span>
                     </div>
@@ -480,7 +480,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 return null;
               })()}
               <div className="bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <span className="text-[10px] text-gray-500 dark:text-gray-400 font-medium block leading-tight">
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block leading-tight">
                   Inflation
                 </span>
                 <span

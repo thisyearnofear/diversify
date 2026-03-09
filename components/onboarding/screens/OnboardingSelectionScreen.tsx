@@ -77,7 +77,7 @@ export function OnboardingSelectionScreen({
                             <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
                                 {option.title}
                             </h4>
-                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-tight">
                                 {option.description}
                             </p>
                         </div>

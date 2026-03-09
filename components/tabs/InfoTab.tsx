@@ -100,7 +100,7 @@ export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
           <div className="flex-1">
             <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
               Universal Basic Income
-              {canClaim && <span className="text-emerald-500 text-[10px]">• Ready</span>}
+              {canClaim && <span className="text-emerald-500 text-xs">• Ready</span>}
             </h3>
             <p className="text-sm font-bold text-gray-900 dark:text-white">Free Daily G$ on Celo</p>
           </div>

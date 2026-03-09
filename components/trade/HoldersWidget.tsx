@@ -56,11 +56,11 @@ export default function HoldersWidget({
     <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">
           Holders
         </h3>
         <div className="bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">
-          <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400">
+          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
             👥 {holdersCount.toLocaleString()}
           </span>
         </div>
@@ -78,7 +78,7 @@ export default function HoldersWidget({
             />
           ))}
         </div>
-        <p className="text-[9px] font-bold text-gray-400 mt-1">
+        <p className="text-xs font-bold text-gray-400 mt-1">
           Top 10 hold {top10Total.toFixed(2)}%
         </p>
       </div>
@@ -88,7 +88,7 @@ export default function HoldersWidget({
         {topHolders.map((holder, i) => (
           <div
             key={holder.address}
-            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] ${
+            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs ${
               i === 0
                 ? "bg-amber-50 dark:bg-amber-900/10 border border-amber-100/50 dark:border-amber-800/30"
                 : i % 2 === 1
@@ -109,7 +109,7 @@ export default function HoldersWidget({
               href={`${explorerUrl}/address/${holder.address}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-[9px] text-gray-500 hover:text-blue-600 transition"
+              className="font-mono text-xs text-gray-500 hover:text-blue-600 transition"
             >
               {truncateAddress(holder.address)}
             </a>

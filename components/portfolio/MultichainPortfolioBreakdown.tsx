@@ -221,7 +221,7 @@ export default function MultichainPortfolioBreakdown({
                                 {info.features.map((feature, idx) => (
                                     <span
                                         key={idx}
-                                        className="text-[10px] px-2 py-0.5 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700"
+                                        className="text-xs px-2 py-0.5 bg-white dark:bg-gray-800 rounded-full text-gray-600 dark:text-gray-300 border border-gray-100 dark:border-gray-700"
                                     >
                                         {feature}
                                     </span>
@@ -230,7 +230,7 @@ export default function MultichainPortfolioBreakdown({
 
                             {/* Token count if available */}
                             {data.tokenCount > 0 && (
-                                <div className="mt-2 text-[10px] text-gray-400">
+                                <div className="mt-2 text-xs text-gray-400">
                                     {data.tokenCount} token{data.tokenCount !== 1 ? 's' : ''} held
                                 </div>
                             )}

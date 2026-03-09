@@ -230,7 +230,7 @@ export default function WalletButton({
                     <div className="flex items-center justify-between mb-2">
                       <button
                         onClick={() => setShowChainSelector(true)}
-                        className={`flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded hover:opacity-80 transition-opacity ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
+                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded hover:opacity-80 transition-opacity ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
                       >
                         {isTestnet ? 'TESTNET' : 'MAINNET'}
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -393,7 +393,7 @@ export default function WalletButton({
         <span className="hidden sm:inline">Connect Wallet</span>
       </motion.button>
       {walletError && (
-        <p className="text-red-500 text-[10px] mt-1 font-medium">{walletError}</p>
+        <p className="text-red-500 text-xs mt-1 font-medium">{walletError}</p>
       )}
     </div>
   );
@@ -457,7 +457,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
       {/* FarCaster Warning */}
       {isFarcaster && (
         <div className="px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800/30">
-          <p className="text-[10px] text-blue-700 dark:text-blue-300">
+          <p className="text-xs text-blue-700 dark:text-blue-300">
             <span className="font-bold">ℹ️ FarCaster Mode:</span> Only Celo, Arbitrum & Sepolia supported
           </p>
         </div>
@@ -465,7 +465,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
       
       {/* Mainnet Chains */}
       <div className="space-y-1">
-        <span className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase">Mainnet</span>
+        <span className="text-xs font-bold text-green-600 dark:text-green-400 uppercase">Mainnet</span>
         {mainnetChains.map((chain) => (
           <button
             key={chain.id}
@@ -479,7 +479,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
             <span>{chain.icon}</span>
             <div className="flex-1 text-left">
               <div className="font-medium">{chain.name}</div>
-              <div className="text-[10px] opacity-70">{chain.desc}</div>
+              <div className="text-xs opacity-70">{chain.desc}</div>
             </div>
             {chainId === chain.id && <span>✓</span>}
           </button>
@@ -488,7 +488,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
       
       {/* Testnet Chains */}
       <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
-        <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 uppercase">Testnet</span>
+        <span className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase">Testnet</span>
         {testnetChains.map((chain) => {
           const isSupported = CHAIN_METADATA[chain.id]?.farcasterSupported;
           const isDisabled = isFarcaster && !isSupported;
@@ -511,10 +511,10 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
                   <div className="font-medium flex items-center gap-1">
                     {chain.name}
                     {isDisabled && (
-                      <span className="text-[9px] bg-gray-200 dark:bg-gray-700 px-1 rounded">FarCaster</span>
+                      <span className="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded">FarCaster</span>
                     )}
                   </div>
-                  <div className="text-[10px] opacity-70">{chain.desc}</div>
+                  <div className="text-xs opacity-70">{chain.desc}</div>
                 </div>
                 {chainId === chain.id && <span>✓</span>}
                 {/* Help icon for adding network */}
@@ -559,7 +559,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
       
       {/* Chainlist Footer */}
       <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
-        <p className="text-[10px] text-gray-500 dark:text-gray-400 text-center">
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
           Missing a network?{' '}
           <button 
             onClick={() => window.open('https://chainlist.org', '_blank')}

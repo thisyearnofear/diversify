@@ -234,7 +234,7 @@ export default function StockChart({
       {/* Price Overlay */}
       <div className="absolute top-0 right-0 text-right">
         <div
-          className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${
+          className={`text-xs font-bold px-1.5 py-0.5 rounded-full border ${
             isUp
               ? "bg-blue-600/5 text-blue-600 border-blue-600/20"
               : "bg-red-500/5 text-red-500 border-red-500/20"

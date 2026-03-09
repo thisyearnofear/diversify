@@ -131,7 +131,7 @@ function GoalAlignmentBanner({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span
-              className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${meta.badge}`}
+              className={`text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${meta.badge}`}
             >
               Your Goal
             </span>
@@ -139,21 +139,21 @@ function GoalAlignmentBanner({
               {meta.label}
             </span>
             {riskTolerance && (
-              <span className="text-[10px] text-gray-500">
+              <span className="text-xs text-gray-500">
                 • {riskTolerance} risk{timeHorizon ? ` • ${timeHorizon}` : ""}
               </span>
             )}
           </div>
-          <p className="text-[11px] text-gray-600 dark:text-gray-400">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             {meta.description}
           </p>
           {/* Progress bar */}
           <div className="mt-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-[9px] font-black uppercase text-gray-400 tracking-widest">
+              <span className="text-xs font-black uppercase text-gray-400 tracking-widest">
                 Goal Progress
               </span>
-              <span className="text-[10px] font-black text-gray-700 dark:text-gray-300">
+              <span className="text-xs font-black text-gray-700 dark:text-gray-300">
                 {score}%
               </span>
             </div>
@@ -205,7 +205,7 @@ function InflationTooltip() {
         </svg>
       </button>
       {showTooltip && (
-        <div className="absolute z-50 left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 dark:bg-gray-800 text-white text-[10px] rounded-lg shadow-xl">
+        <div className="absolute z-50 left-0 bottom-full mb-2 w-48 p-2 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg shadow-xl">
           <p className="font-bold mb-1">📊 Data Source</p>
           <p className="opacity-80">
             Based on IMF & World Bank CPI data. Updated periodically.
@@ -357,7 +357,7 @@ export default function OverviewTab({
                 defaultAmount="100"
                 className="w-full !rounded-lg !py-3"
               />
-              <p className="text-[10px] text-blue-600 dark:text-blue-400 text-center">
+              <p className="text-xs text-blue-600 dark:text-blue-400 text-center">
                 💳 Buy with card or bank transfer • Low KYC
               </p>
             </div>
@@ -451,8 +451,81 @@ export default function OverviewTab({
 
   return (
     <div className="space-y-6">
-      {/* AGENTIC TIERS: Command Center */}
-       <AgentTierStatus showActivityFeed={true} onNavigateToAgent={() => setActiveTab("agent")} />
+      {/* 1. PRIMARY HEALTH SCORE / HERO — always first so user sees their status immediately */}
+      <Card
+        padding="p-6"
+        className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10"
+      >
+        <div className="relative z-10">
+          <HeroValue
+            value={
+              isBeginner
+                ? `${diversificationScore}%`
+                : `$${totalValue.toFixed(0)}`
+            }
+            label={isBeginner ? "Health Score" : "Total Value"}
+          />
+          <div
+            className={`mt-2 text-sm font-bold px-4 py-1.5 rounded-full inline-block ${
+              diversificationScore >= 80
+                ? "bg-green-100 text-green-800"
+                : diversificationScore >= 60
+                  ? "bg-blue-100 text-blue-800"
+                  : "bg-red-100 text-red-800"
+            }`}
+          >
+            {diversificationRating}
+          </div>
+          {isBeginner && (
+            <p className="text-xs text-gray-500 mt-3 max-w-[200px] mx-auto leading-relaxed">
+              Your money is currently{" "}
+              <strong>{diversificationScore}% protected</strong> from local
+              inflation.
+            </p>
+          )}
+        </div>
+        <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
+      </Card>
+
+      {/* 1b. GOAL ALIGNMENT — shown when user has a complete protection profile */}
+      {profileComplete &&
+        profileConfig.userGoal &&
+        profileConfig.userGoal !== "exploring" && (
+          <GoalAlignmentBanner
+            goal={profileConfig.userGoal}
+            riskTolerance={profileConfig.riskTolerance}
+            timeHorizon={profileConfig.timeHorizon}
+            goalScores={activePortfolio.goalScores}
+            onAction={() => setActiveTab("swap")}
+          />
+        )}
+
+      {/* DAILY CLAIM BANNER — shown just below hero when G$ reward is ready */}
+      {address && isWhitelisted && canClaim && (
+        <button
+          onClick={() => setActiveTab("protect")}
+          className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all"
+          aria-label="Claim your daily GoodDollar reward"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl animate-bounce">🎁</span>
+            <div className="text-left">
+              <div className="text-xs font-black uppercase tracking-widest">
+                Daily G$ Reward Ready!
+              </div>
+              <div className="text-xs text-emerald-100 font-medium">
+                {streak?.daysActive
+                  ? `${streak.daysActive} day streak`
+                  : "Start your streak"}{" "}
+                — tap to claim →
+              </div>
+            </div>
+          </div>
+          <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap">
+            Claim Now
+          </div>
+        </button>
+      )}
 
       {/* DEMO MODE BANNER */}
       {isDemo && (
@@ -518,7 +591,7 @@ export default function OverviewTab({
                   defaultAmount="100"
                   className="w-full"
                 />
-                <p className="text-[10px] text-amber-600 dark:text-amber-400 text-center">
+                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
                   💳 Buy with card or bank transfer • Low KYC
                 </p>
               </div>
@@ -535,11 +608,11 @@ export default function OverviewTab({
               </div>
 
               <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
-                <p className="text-[10px] text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">
+                <p className="text-xs text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">
                   Transfer from exchange
                 </p>
                 <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-inner">
-                  <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
+                  <code className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
                     {address}
                   </code>
                   <button
@@ -575,82 +648,6 @@ export default function OverviewTab({
         </Card>
       )}
 
-      {/* DAILY CLAIM BANNER — shown at top when G$ reward is ready */}
-      {address && isWhitelisted && canClaim && (
-        <button
-          onClick={() => setActiveTab("protect")}
-          className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all"
-          aria-label="Claim your daily GoodDollar reward"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl animate-bounce">🎁</span>
-            <div className="text-left">
-              <div className="text-xs font-black uppercase tracking-widest">
-                Daily G$ Reward Ready!
-              </div>
-              <div className="text-[10px] text-emerald-100 font-medium">
-                {streak?.daysActive
-                  ? `${streak.daysActive} day streak`
-                  : "Start your streak"}{" "}
-                — tap to claim →
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap">
-            Claim Now
-          </div>
-        </button>
-      )}
-
-      {/* 1. PRIMARY HEALTH SCORE / HERO (Dynamic by Mode) */}
-      <Card
-        padding="p-6"
-        className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10"
-      >
-        <div className="relative z-10">
-          <HeroValue
-            value={
-              isBeginner
-                ? `${diversificationScore}%`
-                : `$${totalValue.toFixed(0)}`
-            }
-            label={isBeginner ? "Health Score" : "Total Value"}
-          />
-          <div
-            className={`mt-2 text-sm font-bold px-4 py-1.5 rounded-full inline-block ${
-              diversificationScore >= 80
-                ? "bg-green-100 text-green-800"
-                : diversificationScore >= 60
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-red-100 text-red-800"
-            }`}
-          >
-            {diversificationRating}
-          </div>
-          {isBeginner && (
-            <p className="text-xs text-gray-500 mt-3 max-w-[200px] mx-auto leading-relaxed">
-              Your money is currently{" "}
-              <strong>{diversificationScore}% protected</strong> from local
-              inflation.
-            </p>
-          )}
-        </div>
-        {/* Visual background element */}
-        <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
-      </Card>
-
-      {/* 1b. GOAL ALIGNMENT — shown when user has a complete protection profile */}
-      {profileComplete &&
-        profileConfig.userGoal &&
-        profileConfig.userGoal !== "exploring" && (
-          <GoalAlignmentBanner
-            goal={profileConfig.userGoal}
-            riskTolerance={profileConfig.riskTolerance}
-            timeHorizon={profileConfig.timeHorizon}
-            goalScores={activePortfolio.goalScores}
-            onAction={() => setActiveTab("swap")}
-          />
-        )}
 
       {/* 2. PROTECTION ANALYSIS - Moved to top for priority visibility */}
       {hasHoldings &&
@@ -685,7 +682,7 @@ export default function OverviewTab({
             <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
               <button
                 onClick={() => setShowAssetDetails(!showAssetDetails)}
-                className="w-full flex items-center justify-between py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
+                className="w-full flex items-center justify-between py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
               >
                 <span>
                   {showAssetDetails ? "Hide" : "View"} Asset Inventory
@@ -696,7 +693,7 @@ export default function OverviewTab({
               {showAssetDetails && (
                 <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <AssetInventory tokens={activePortfolio.allTokens || []} />
-                  <p className="mt-4 text-[9px] text-gray-400 font-bold text-center uppercase tracking-tighter">
+                  <p className="mt-4 text-xs text-gray-400 font-bold text-center uppercase tracking-tighter">
                     Tired of toggling? Switch to{" "}
                     <span className="text-blue-500">Standard Mode</span> in the
                     header to unlock full details.
@@ -1024,6 +1021,14 @@ export default function OverviewTab({
             </div>
           )}
         </Card>
+      )}
+
+      {/* AGENT COMMAND CENTER — shown in Standard/Advanced mode at the bottom */}
+      {!isBeginner && (
+        <AgentTierStatus
+          showActivityFeed={true}
+          onNavigateToAgent={() => setActiveTab("agent")}
+        />
       )}
     </div>
   );

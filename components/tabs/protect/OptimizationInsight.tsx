@@ -62,7 +62,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
               {title}
             </h4>
             {isUrgent && (
-              <span className="bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
+              <span className="bg-orange-500 text-white text-xs font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
                 Action Required
               </span>
             )}
@@ -84,7 +84,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
             <div className="size-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold text-xs shadow-lg">
               {fromToken}
             </div>
-            <span className="text-[10px] font-black text-red-500">{fromInflation.toFixed(1)}% Inflation</span>
+            <span className="text-xs font-black text-red-500">{fromInflation.toFixed(1)}% Inflation</span>
           </div>
 
           {/* Arrow / Connector */}
@@ -102,7 +102,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
                 </motion.div>
                 <div className="flex-1 h-0.5 bg-gradient-to-r from-emerald-200 to-emerald-400 dark:from-emerald-900/30 dark:to-emerald-900" />
              </div>
-             <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
+             <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded-full">
                 {impact}
              </span>
           </div>
@@ -112,7 +112,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
             <div className="size-10 rounded-full bg-blue-600 flex items-center justify-center font-black text-white text-xs shadow-lg shadow-blue-500/20">
               {toToken}
             </div>
-            <span className="text-[10px] font-black text-emerald-500">{toInflation.toFixed(1)}% Inflation</span>
+            <span className="text-xs font-black text-emerald-500">{toInflation.toFixed(1)}% Inflation</span>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
         {/* Secondary Options */}
         {secondaryOptions.length > 0 && (
           <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
+            <p className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-4">
               Alternative Opportunities
             </p>
             <div className="space-y-2">
@@ -144,12 +144,12 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
                   onClick={opt.onClick}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black text-gray-500">{opt.fromToken}</span>
+                    <span className="text-xs font-black text-gray-500">{opt.fromToken}</span>
                     <span className="text-gray-300">→</span>
-                    <span className="text-[10px] font-black text-blue-600 dark:text-blue-400">{opt.toToken}</span>
+                    <span className="text-xs font-black text-blue-600 dark:text-blue-400">{opt.toToken}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">+${opt.annualSavings.toFixed(2)}</span>
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold">+${opt.annualSavings.toFixed(2)}</span>
                     <div className="size-6 bg-blue-50 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />

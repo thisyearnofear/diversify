@@ -200,7 +200,7 @@ export default function SwapSuccessCelebration({
                     </div>
                     {previousGoalScore != null &&
                       goalScore > previousGoalScore && (
-                        <div className="mt-2 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 animate-pulse">
+                        <div className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-pulse">
                           Projected Impact: +{goalScore - previousGoalScore}%
                         </div>
                       )}
@@ -260,7 +260,7 @@ export default function SwapSuccessCelebration({
                     <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-1">
                       Daily UBI Unlocked
                     </p>
-                    <p className="text-[10px] text-emerald-600/80 dark:text-emerald-500/80 leading-relaxed">
+                    <p className="text-xs text-emerald-600/80 dark:text-emerald-500/80 leading-relaxed">
                       You can now claim free G$ tokens daily. Check InfoTab to learn more.
                     </p>
                   </div>
@@ -283,7 +283,7 @@ export default function SwapSuccessCelebration({
                       <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">
                         {estimatedReward} G$ Ready
                       </p>
-                      <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500/70">
+                      <p className="text-xs text-emerald-600/70 dark:text-emerald-500/70">
                         Daily UBI available
                       </p>
                     </div>
@@ -293,7 +293,7 @@ export default function SwapSuccessCelebration({
                       onClose();
                       onClaimG?.();
                     }}
-                    className="text-[10px] font-black px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                    className="text-xs font-black px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                   >
                     Claim →
                   </button>

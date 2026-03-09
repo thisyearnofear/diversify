@@ -97,18 +97,18 @@ export default function StockCategories({
               
               <div className="font-bold text-sm mb-0.5">{stock.symbol}</div>
               
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mb-1">
+              <div className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1">
                 {stock.name}
               </div>
 
               {stock.market && (
-                <div className="text-[8px] font-bold text-blue-600 dark:text-blue-400 uppercase">
+                <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">
                   {stock.market}
                 </div>
               )}
 
               {rate && (
-                <div className="text-[10px] font-bold text-gray-900 dark:text-white mt-1">
+                <div className="text-xs font-bold text-gray-900 dark:text-white mt-1">
                   {rate}
                 </div>
               )}

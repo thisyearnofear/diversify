@@ -233,7 +233,7 @@ export default function DiversiFiPage() {
                 <div className="flex items-center gap-1">
                   <div className={`w-1.5 h-1.5 rounded-full ${isWhitelisted ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
                   {isWhitelisted && (
-                    <span className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
                       Verified
                     </span>
                   )}
@@ -285,13 +285,13 @@ export default function DiversiFiPage() {
                   >
                     ✕
                   </button>
-                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1 pr-5">
+                  <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1 pr-5">
                     {experienceMode === "beginner" ? "Simple 🌱" : experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
                   </div>
                   <div className="text-xs font-bold text-white mb-0.5">
                     Tap → {experienceMode === "beginner" ? "Standard 🚀" : experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
                   </div>
-                  <div className="text-[10px] text-gray-300 leading-relaxed">
+                  <div className="text-xs text-gray-300 leading-relaxed">
                     {experienceMode === "beginner"
                       ? "Unlocks: token search, inflation comparison, AI chat"
                       : experienceMode === "intermediate"
@@ -320,7 +320,7 @@ export default function DiversiFiPage() {
             >
               <span className="text-sm">🤖</span>
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               )}

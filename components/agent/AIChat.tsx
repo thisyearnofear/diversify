@@ -168,7 +168,7 @@ export default function AIChat() {
                   transition={{ duration: 2, repeat: Infinity }}
                   className="w-1.5 h-1.5 rounded-full bg-amber-500" 
                 />
-                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase">
                   Get Stable or Die Trying
                 </span>
               </div>
@@ -177,7 +177,7 @@ export default function AIChat() {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase"
+              className="text-xs font-bold text-gray-400 hover:text-gray-600 uppercase"
             >
               Clear
             </button>
@@ -305,7 +305,7 @@ export default function AIChat() {
                 <div className="relative z-10">{msg.content}</div>
                 
                 {/* Timestamp */}
-                <div className={`text-[10px] mt-1.5 opacity-60 ${
+                <div className={`text-xs mt-1.5 opacity-60 ${
                   msg.role === "user" ? "text-blue-100" : "text-amber-700 dark:text-amber-400"
                 }`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -382,7 +382,7 @@ export default function AIChat() {
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: i * 0.15, repeat: Infinity, repeatDelay: 2 }}
-                      className="text-[10px] px-2 py-1 bg-amber-100/60 dark:bg-amber-800/20 rounded-full text-amber-700 dark:text-amber-300 font-medium border border-amber-200/50 dark:border-amber-700/30"
+                      className="text-xs px-2 py-1 bg-amber-100/60 dark:bg-amber-800/20 rounded-full text-amber-700 dark:text-amber-300 font-medium border border-amber-200/50 dark:border-amber-700/30"
                     >
                       <motion.span
                         animate={{ opacity: [0.5, 1, 0.5] }}
@@ -396,7 +396,7 @@ export default function AIChat() {
                 </div>
 
                 <div className="pt-2 border-t border-blue-100 dark:border-blue-800/30">
-                  <p className="text-[11px] text-blue-600/80 dark:text-blue-300/80 font-medium leading-relaxed">
+                  <p className="text-xs text-blue-600/80 dark:text-blue-300/80 font-medium leading-relaxed">
                     🔍 Analyzing your portfolio across multiple chains and comparing against real-time inflation data...
                   </p>
                 </div>

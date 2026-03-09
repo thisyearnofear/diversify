@@ -50,7 +50,7 @@ export function ConfirmationScreen({
                     <h2 className="text-xl md:text-3xl font-[900] text-white mb-1 md:mb-2 tracking-tight">
                         {strategyData.name}
                     </h2>
-                    <div className="inline-block px-3 py-1 md:px-4 md:py-1.5 bg-black/20 backdrop-blur-sm rounded-full text-white/90 text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em]">
+                    <div className="inline-block px-3 py-1 md:px-4 md:py-1.5 bg-black/20 backdrop-blur-sm rounded-full text-white/90 text-xs md:text-xs font-black uppercase tracking-[0.2em]">
                         {strategyData.tagline}
                     </div>
                 </motion.div>
@@ -59,7 +59,7 @@ export function ConfirmationScreen({
             {/* Content Body - The Concierge Experience */}
             <div className="flex-1 -mt-6 md:-mt-8 bg-gray-50 dark:bg-gray-900 rounded-t-[2rem] md:rounded-t-[3rem] p-6 md:p-8 space-y-6 md:space-y-8 relative z-20">
                 <section>
-                    <h3 className="text-[10px] md:text-xs font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-3 md:mb-4">
+                    <h3 className="text-xs md:text-xs font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-3 md:mb-4">
                         Projected Path
                     </h3>
                     <div className="p-4 md:p-6 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg leading-relaxed">
@@ -71,7 +71,7 @@ export function ConfirmationScreen({
 
                 {/* AI Profile Preview */}
                 <section>
-                    <h3 className="text-[10px] md:text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 md:mb-4">
+                    <h3 className="text-xs md:text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 md:mb-4">
                         Your Personal AI Coach
                     </h3>
                     <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-lg">
@@ -82,7 +82,7 @@ export function ConfirmationScreen({
                             <h4 className="text-xs md:text-sm font-black text-gray-900 dark:text-white">
                                 {strategy === 'islamic' ? 'Halal Wealth Advisor' : strategy === 'africapitalism' ? 'Pan-African Expert' : 'Global Asset Coach'}
                             </h4>
-                            <p className="text-[8px] md:text-[10px] text-gray-500 font-bold uppercase tracking-tight">
+                            <p className="text-xs md:text-xs text-gray-500 font-bold uppercase tracking-tight">
                                 Specialized in {strategyData.name}
                             </p>
                         </div>
@@ -116,7 +116,7 @@ export function ConfirmationScreen({
                                 transition={{ delay: 0.1 * i }}
                                 className="flex items-start gap-3 md:gap-4 text-xs md:text-sm font-bold text-blue-50"
                             >
-                                <div className="size-4 md:size-5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-[8px] md:text-[10px] mt-0.5 shrink-0">
+                                <div className="size-4 md:size-5 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-xs md:text-xs mt-0.5 shrink-0">
                                     {i + 1}
                                 </div>
                                 <span>{rec}</span>
@@ -127,22 +127,22 @@ export function ConfirmationScreen({
 
                 {/* Key Superpowers Awareness */}
                 <section>
-                    <h3 className="text-[10px] md:text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-3 md:mb-4">
+                    <h3 className="text-xs md:text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-widest mb-3 md:mb-4">
                         DiversiFi Superpowers
                     </h3>
                     <div className="grid grid-cols-1 gap-2 md:gap-3">
                         <div className="p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-md flex items-center gap-3 md:gap-4">
                             <div className="size-8 md:size-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center text-lg md:text-xl">🎙️</div>
                             <div>
-                                <h4 className="text-[10px] md:text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Voice Insights</h4>
-                                <p className="text-[8px] md:text-[10px] text-gray-500 font-bold">Ask &quot;How am I protected today?&quot;</p>
+                                <h4 className="text-xs md:text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Voice Insights</h4>
+                                <p className="text-xs md:text-xs text-gray-500 font-bold">Ask &quot;How am I protected today?&quot;</p>
                             </div>
                         </div>
                         <div className="p-3 md:p-4 bg-white dark:bg-gray-800 rounded-2xl md:rounded-3xl shadow-md flex items-center gap-3 md:gap-4">
                             <div className="size-8 md:size-10 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-lg md:text-xl">🎯</div>
                             <div>
-                                <h4 className="text-[10px] md:text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Rewards & Missions</h4>
-                                <p className="text-[8px] md:text-[10px] text-gray-500 font-bold">Earn points for every smart swap.</p>
+                                <h4 className="text-xs md:text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider">Rewards & Missions</h4>
+                                <p className="text-xs md:text-xs text-gray-500 font-bold">Earn points for every smart swap.</p>
                             </div>
                         </div>
                     </div>
@@ -151,7 +151,7 @@ export function ConfirmationScreen({
                 {/* Final Note */}
                 <div className="p-4 md:p-6 bg-amber-50 dark:bg-amber-900/10 rounded-2xl md:rounded-[2rem] border border-amber-100 dark:border-amber-900/50 flex items-start gap-3 md:gap-4">
                     <span className="text-xl md:text-2xl">💡</span>
-                    <p className="text-[9px] md:text-xs text-amber-900 dark:text-amber-100 font-bold leading-relaxed">
+                    <p className="text-xs md:text-xs text-amber-900 dark:text-amber-100 font-bold leading-relaxed">
                         Your chosen <span className="font-black underline decoration-amber-500/30">{getModeLabel()} View</span> is active. You can refine this anytime in the header.
                     </p>
                 </div>
@@ -170,7 +170,7 @@ export function ConfirmationScreen({
                     {onBack && (
                         <button
                             onClick={onBack}
-                            className="flex-1 px-4 py-2 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
+                            className="flex-1 px-4 py-2 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
                         >
                             Back
                         </button>
@@ -178,7 +178,7 @@ export function ConfirmationScreen({
                     {onSkip && (
                         <button
                             onClick={onSkip}
-                            className="flex-1 px-4 py-2 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
+                            className="flex-1 px-4 py-2 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
                         >
                             Skip
                         </button>

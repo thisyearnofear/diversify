@@ -85,7 +85,7 @@ export default function ChainBalancesHeader({
         <h3 className="text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">
           Your Balances
         </h3>
-        <span className="text-[10px] text-gray-600 dark:text-gray-400 font-medium">
+        <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
           Click to switch chain
         </span>
       </div>
@@ -129,12 +129,12 @@ export default function ChainBalancesHeader({
                       {config.name}
                     </span>
                     {isCurrentChain && (
-                      <span className="text-[8px] bg-blue-500 text-white px-1 py-0.5 rounded">
+                      <span className="text-xs bg-blue-500 text-white px-1 py-0.5 rounded">
                         ACTIVE
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-gray-600 dark:text-gray-400 truncate font-medium">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 truncate font-medium">
                     {config.description}
                   </p>
                 </div>
@@ -146,7 +146,7 @@ export default function ChainBalancesHeader({
                   {hasBalance ? `$${chain.totalValue.toFixed(0)}` : '$0'}
                 </span>
                 {hasBalance && chain.tokenCount > 0 && (
-                  <span className="text-[10px] text-gray-600 dark:text-gray-400 font-medium">
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">
                     {chain.tokenCount} token{chain.tokenCount !== 1 ? 's' : ''}
                   </span>
                 )}

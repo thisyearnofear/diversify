@@ -27,31 +27,31 @@ export const AssetInventory: React.FC<AssetInventoryProps> = ({
         <div className={`space-y-2 ${className}`}>
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                    <h3 className="font-black text-gray-900 dark:text-white text-[10px] uppercase tracking-widest">
+                    <h3 className="font-black text-gray-900 dark:text-white text-xs uppercase tracking-widest">
                         {showPaper ? '🎮 Paper Portfolio' : 'Your Portfolio'}
                     </h3>
                     {showPaperToggle && hasPaperPositions && (
                         <button
                             onClick={() => setShowPaper(!showPaper)}
-                            className="text-[9px] px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-bold hover:bg-blue-200 transition"
+                            className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-bold hover:bg-blue-200 transition"
                         >
                             {showPaper ? 'Show Real' : 'Show Paper'}
                         </button>
                     )}
                 </div>
-                <span className="text-[10px] font-black uppercase text-gray-400">Value</span>
+                <span className="text-xs font-black uppercase text-gray-400">Value</span>
             </div>
 
             {/* Paper Portfolio Summary */}
             {showPaper && isLoaded && (
                 <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-200 dark:border-blue-800 mb-3">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-[10px] text-gray-500">Cash</span>
+                        <span className="text-xs text-gray-500">Cash</span>
                         <span className="text-sm font-bold">${cash.toFixed(2)}</span>
                     </div>
                     {paperMetrics && (
                         <div className="flex justify-between items-center">
-                            <span className="text-[10px] text-gray-500">Total P&L</span>
+                            <span className="text-xs text-gray-500">Total P&L</span>
                             <span className={`text-sm font-bold ${paperMetrics.totalPnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {paperMetrics.totalPnl >= 0 ? '+' : ''}{paperMetrics.pnlPercentage.toFixed(2)}%
                             </span>
@@ -74,7 +74,7 @@ export const AssetInventory: React.FC<AssetInventoryProps> = ({
                                         <div className="text-sm font-black text-gray-900 dark:text-white leading-none mb-1">
                                             {position.symbol}
                                         </div>
-                                        <div className="text-[10px] text-gray-400 font-bold uppercase leading-none">
+                                        <div className="text-xs text-gray-400 font-bold uppercase leading-none">
                                             Avg: ${position.avgBuyPrice.toFixed(4)}
                                         </div>
                                     </div>
@@ -83,7 +83,7 @@ export const AssetInventory: React.FC<AssetInventoryProps> = ({
                                     <div className="text-sm font-black text-gray-900 dark:text-white leading-none mb-1">
                                         {position.amount.toFixed(4)}
                                     </div>
-                                    <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold leading-none">
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 font-bold leading-none">
                                         Paper
                                     </div>
                                 </div>
@@ -106,7 +106,7 @@ export const AssetInventory: React.FC<AssetInventoryProps> = ({
                                     <div className="text-sm font-black text-gray-900 dark:text-white leading-none mb-1">
                                         {token.symbol}
                                     </div>
-                                    <div className="text-[10px] text-gray-400 font-bold uppercase leading-none flex items-center gap-1">
+                                    <div className="text-xs text-gray-400 font-bold uppercase leading-none flex items-center gap-1">
                                         <span className="size-1 rounded-full bg-blue-500"></span>
                                         {token.chainName}
                                     </div>
@@ -116,7 +116,7 @@ export const AssetInventory: React.FC<AssetInventoryProps> = ({
                                 <div className="text-sm font-black text-gray-900 dark:text-white leading-none mb-1">
                                     {token.formattedBalance}
                                 </div>
-                                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold leading-none">
+                                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold leading-none">
                                     ${token.value.toFixed(2)}
                                 </div>
                             </div>
@@ -127,7 +127,7 @@ export const AssetInventory: React.FC<AssetInventoryProps> = ({
 
             {/* Toggle hint */}
             {showPaperToggle && hasPaperPositions && !showPaper && (
-                <p className="text-[9px] text-center text-gray-400 mt-2">
+                <p className="text-xs text-center text-gray-400 mt-2">
                     💡 Toggle "Show Paper" to see your simulated portfolio
                 </p>
             )}

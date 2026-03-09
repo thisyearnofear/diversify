@@ -78,10 +78,10 @@ export default function ProtectHeroCard({
                     <div className="flex items-center gap-2">
                         <span className="text-base">💚</span>
                         <div className="text-left">
-                            <span className="text-[10px] font-black text-white/90">
+                            <span className="text-xs font-black text-white/90">
                                 {canClaim ? "G$ Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
                             </span>
-                            <p className="text-[9px] text-white/60">
+                            <p className="text-xs text-white/60">
                                 {canClaim ? (estimatedReward || "Claim now") : "Free UBI on Celo"}
                             </p>
                         </div>
@@ -90,7 +90,7 @@ export default function ProtectHeroCard({
                         {canClaim && (
                             <span className="size-1.5 bg-emerald-400 rounded-full animate-pulse" />
                         )}
-                        <span className="text-[10px] font-black text-white/70 group-hover:translate-x-0.5 transition-transform">→</span>
+                        <span className="text-xs font-black text-white/70 group-hover:translate-x-0.5 transition-transform">→</span>
                     </div>
                 </button>
             )}

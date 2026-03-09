@@ -113,12 +113,12 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
         {/* Input Field */}
         <div className="bg-gray-50 dark:bg-gray-800/40 rounded-xl p-3 border border-gray-100 dark:border-gray-700/50">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               You pay
             </span>
             <button
               onClick={handleMax}
-              className="text-[10px] text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 font-bold uppercase"
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 font-bold uppercase"
             >
               Max
             </button>
@@ -135,7 +135,7 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
               {inputLabel}
             </span>
           </div>
-          <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 font-medium">
+          <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-medium">
             {mode === "buy"
               ? `Balance: ${ethBalance ? parseFloat(ethBalance).toFixed(4) : "—"} ETH`
               : `Balance: ${parseFloat(stockBalance).toFixed(2)} ${selected}`}
@@ -163,7 +163,7 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
 
         {/* Output Preview */}
         <div className="bg-gray-50/50 dark:bg-gray-800/20 rounded-xl p-3 border border-gray-100 dark:border-gray-700/30">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <span className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             You receive
           </span>
           <div className="flex items-center gap-3 mt-1">
@@ -189,7 +189,7 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
               exit={{ opacity: 0, height: 0 }}
               className="bg-gray-50 dark:bg-gray-800/30 rounded-xl px-4 py-3 border border-gray-200/50 dark:border-gray-700/20 space-y-1.5 overflow-hidden"
             >
-              <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
                 <span className="text-gray-500 dark:text-gray-400">
                   Slippage tolerance
                 </span>
@@ -198,7 +198,7 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
                 </span>
               </div>
               {priceImpact !== null && (
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
                   <span className="text-gray-500 dark:text-gray-400">
                     Price impact
                   </span>
@@ -216,7 +216,7 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
                 </div>
               )}
               {minimumOutput && (
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider">
+                <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider">
                   <span className="text-gray-500 dark:text-gray-400">
                     Minimum received
                   </span>

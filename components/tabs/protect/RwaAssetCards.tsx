@@ -163,7 +163,7 @@ function RwaFlipCard({
                                         initial={{ opacity: 0, x: -10 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: 0.1 + idx * 0.1 }}
-                                        className="flex items-center gap-2 text-[10px] sm:text-xs text-white/90"
+                                        className="flex items-center gap-2 text-xs sm:text-xs text-white/90"
                                     >
                                         <span className="text-emerald-300 flex-shrink-0">✓</span>
                                         <span className="truncate">{benefit}</span>
@@ -172,7 +172,7 @@ function RwaFlipCard({
                             </div>
 
                             {asset.expectedSlippage && (
-                                <p className="text-[10px] sm:text-xs text-white/50">
+                                <p className="text-xs sm:text-xs text-white/50">
                                     Expected slippage: ~{asset.expectedSlippage}
                                 </p>
                             )}
@@ -180,7 +180,7 @@ function RwaFlipCard({
 
                         {/* Manual flip hint - more compact on mobile */}
                         <div className="text-center mt-1 sm:mt-0">
-                            <span className="text-[10px] text-white/40">Tap card to see next →</span>
+                            <span className="text-xs text-white/40">Tap card to see next →</span>
                         </div>
                     </div>
                 </motion.div>
@@ -275,7 +275,7 @@ export default function RwaAssetCards({
                     >
                         <span>Get {activeAsset.symbol}</span>
                         {apyBadge && (
-                            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">
+                            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
                                 Earn {apyBadge}
                             </span>
                         )}

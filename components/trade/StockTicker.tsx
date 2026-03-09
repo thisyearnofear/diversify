@@ -53,16 +53,16 @@ export const StockTicker: React.FC<StockTickerProps> = ({
             />
             <div className="text-xl mb-1 mt-1">{d.icon}</div>
             <div className="font-bold text-sm tracking-tight">{s}</div>
-            <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate mb-1 font-medium">
+            <div className="text-xs text-gray-500 dark:text-gray-400 truncate mb-1 font-medium">
               {d.name}
             </div>
             {rate && (
-              <div className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+              <div className="text-xs text-blue-600 dark:text-blue-400 font-bold">
                 {rate}/ETH
               </div>
             )}
             {parseFloat(bal) > 0 && (
-              <div className="text-[9px] text-gray-400 dark:text-gray-500 mt-1 font-bold bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded inline-block">
+              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-bold bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded inline-block">
                 {parseFloat(bal).toFixed(1)}
               </div>
             )}

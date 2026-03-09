@@ -153,7 +153,7 @@ export default function GStreamingWidget() {
                       TO: {stream.receiver}
                     </div>
                     <div className="text-lg font-black text-blue-600 dark:text-blue-400">
-                      {parseFloat(stream.monthlyAmount).toFixed(1)} G$ <span className="text-[10px] text-gray-400 uppercase font-bold">/ MONTH</span>
+                      {parseFloat(stream.monthlyAmount).toFixed(1)} G$ <span className="text-xs text-gray-400 uppercase font-bold">/ MONTH</span>
                     </div>
                   </div>
                   <button
@@ -172,7 +172,7 @@ export default function GStreamingWidget() {
             )}
             
             {/* Superfluid explanation */}
-            <p className="text-[10px] text-gray-500 italic text-center px-4 leading-relaxed">
+            <p className="text-xs text-gray-500 italic text-center px-4 leading-relaxed">
               Streams move value second-by-second. Powered by Superfluid on Celo.
             </p>
           </div>
@@ -180,7 +180,7 @@ export default function GStreamingWidget() {
           <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
             {/* Quick Select Collectives */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
                 Impact Collectives
               </label>
               <div className="grid grid-cols-1 gap-2">
@@ -197,7 +197,7 @@ export default function GStreamingWidget() {
                     <span className="text-xl">{c.icon}</span>
                     <div>
                       <div className="text-xs font-black">{c.name}</div>
-                      <div className="text-[10px] text-gray-500 leading-tight mt-0.5">{c.description}</div>
+                      <div className="text-xs text-gray-500 leading-tight mt-0.5">{c.description}</div>
                     </div>
                   </button>
                 ))}
@@ -206,7 +206,7 @@ export default function GStreamingWidget() {
 
             {/* Custom Input */}
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+              <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
                 Monthly Amount (G$)
               </label>
               <input

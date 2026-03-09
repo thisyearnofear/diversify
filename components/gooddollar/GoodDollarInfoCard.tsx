@@ -152,7 +152,7 @@ export default function GoodDollarInfoCard({
                         <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
                             {canClaim ? "G$ Ready to Claim!" : `G$ · ${streak?.daysActive || 0}-Day Streak`}
                         </span>
-                        <p className="text-[10px] text-emerald-600/70 dark:text-emerald-500/70">
+                        <p className="text-xs text-emerald-600/70 dark:text-emerald-500/70">
                             {canClaim ? estimatedReward || "Claim now" : "Free daily UBI on Celo"}
                         </p>
                     </div>
@@ -196,7 +196,7 @@ export default function GoodDollarInfoCard({
                                     <div className="text-sm font-black text-gray-900 dark:text-white">
                                         {streak ? `${streak.daysActive}-Day Streak` : "No streak yet"}
                                     </div>
-                                    <div className="text-[10px] text-gray-500 dark:text-gray-400">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
                                         {!streak || streak.daysActive === 0
                                             ? "Swap $1+ to start earning"
                                             : !isWhitelisted
@@ -210,14 +210,14 @@ export default function GoodDollarInfoCard({
                             {!isWhitelisted && streak && streak.daysActive > 0 ? (
                                 <button
                                     onClick={onVerify}
-                                    className="text-[10px] font-black px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    className="text-xs font-black px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                 >
                                     Verify →
                                 </button>
                             ) : canClaim ? (
                                 <button
                                     onClick={() => setShowClaimFlow(true)}
-                                    className="text-[10px] font-black px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all shadow-sm"
+                                    className="text-xs font-black px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all shadow-sm"
                                 >
                                     Claim →
                                 </button>
@@ -245,13 +245,13 @@ export default function GoodDollarInfoCard({
                                 {/* Reserve Stats - Educational */}
                                 <div className="grid grid-cols-2 gap-2">
                                     <div className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-lg">
-                                        <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase">G$ Price</div>
+                                        <div className="text-xs text-emerald-600 dark:text-emerald-400 font-black uppercase">G$ Price</div>
                                         <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">
                                             {reserveState.isLoading ? '...' : `$${parseFloat(reserveState.price).toFixed(4)}`}
                                         </div>
                                     </div>
                                     <div className="bg-blue-50 dark:bg-blue-900/20 p-2.5 rounded-lg">
-                                        <div className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase">Reserve</div>
+                                        <div className="text-xs text-blue-600 dark:text-blue-400 font-black uppercase">Reserve</div>
                                         <div className="text-sm font-black text-blue-700 dark:text-blue-300">
                                             {reserveState.isLoading ? '...' : `$${(parseFloat(reserveState.balance) / 1000000).toFixed(1)}M`}
                                         </div>
@@ -265,13 +265,13 @@ export default function GoodDollarInfoCard({
                                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
                                     <div className="flex items-start gap-2">
                                         <span className="text-sm">🎁</span>
-                                        <p className="text-[10px] text-gray-700 dark:text-gray-300 leading-relaxed">
+                                        <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
                                             <strong>Buy G$:</strong> Receive G$X tokens as bonus (reduces exit fees)
                                         </p>
                                     </div>
                                     <div className="flex items-start gap-2">
                                         <span className="text-sm">💰</span>
-                                        <p className="text-[10px] text-gray-700 dark:text-gray-300 leading-relaxed">
+                                        <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
                                             <strong>Sell G$:</strong> Exit contribution applies (reduced with G$X)
                                         </p>
                                     </div>
@@ -281,7 +281,7 @@ export default function GoodDollarInfoCard({
                                     href="https://app.uniswap.org/#/swap?outputCurrency=0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A&chain=celo"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="block w-full py-2.5 text-center text-[10px] font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                                    className="block w-full py-2.5 text-center text-xs font-black bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                                 >
                                     Trade on Uniswap →
                                 </a>
@@ -309,7 +309,7 @@ export default function GoodDollarInfoCard({
                                         transition={{ delay: parseInt(step) * 0.08 }}
                                         className="flex items-start gap-2.5"
                                     >
-                                        <span className="size-5 flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-[10px] font-black text-emerald-700 dark:text-emerald-400 shrink-0">
+                                        <span className="size-5 flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30 rounded-full text-xs font-black text-emerald-700 dark:text-emerald-400 shrink-0">
                                             {step}
                                         </span>
                                         <span className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{text}</span>
@@ -340,8 +340,8 @@ export default function GoodDollarInfoCard({
                                         className="bg-emerald-50 dark:bg-emerald-900/20 p-2.5 rounded-lg"
                                     >
                                         <div className="text-base mb-0.5">{f.icon}</div>
-                                        <div className="text-[10px] font-black text-emerald-700 dark:text-emerald-400">{f.label}</div>
-                                        <div className="text-[10px] text-gray-500 dark:text-gray-400">{f.sub}</div>
+                                        <div className="text-xs font-black text-emerald-700 dark:text-emerald-400">{f.label}</div>
+                                        <div className="text-xs text-gray-500 dark:text-gray-400">{f.sub}</div>
                                     </motion.div>
                                 ))}
                             </div>
@@ -365,7 +365,7 @@ export default function GoodDollarInfoCard({
                         {onStake && (
                             <button
                                 onClick={onStake}
-                                className="flex-1 text-[10px] font-black py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
+                                className="flex-1 text-xs font-black py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
                                 title="Stake stablecoins to support UBI and earn GOOD tokens"
                             >
                                 🌱 Support UBI
@@ -374,7 +374,7 @@ export default function GoodDollarInfoCard({
                         {onLearnMore && (
                             <button
                                 onClick={onLearnMore}
-                                className="flex-1 text-[10px] font-black py-2 px-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-emerald-700 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors"
+                                className="flex-1 text-xs font-black py-2 px-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-emerald-700 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors"
                             >
                                 Docs →
                             </button>

@@ -505,7 +505,7 @@ export default function TradeTab() {
           <span className="text-2xl">{d.icon}</span>
           <div>
             <div className="font-bold text-sm">{stock}</div>
-            <div className="text-[10px] text-gray-500">{d.name}</div>
+            <div className="text-xs text-gray-500">{d.name}</div>
           </div>
         </div>
         
@@ -515,7 +515,7 @@ export default function TradeTab() {
               <div className="text-sm font-bold">
                 ${(parseFloat(rate) * 3000).toFixed(0)}
               </div>
-              <div className="text-[10px] text-gray-400">
+              <div className="text-xs text-gray-400">
                 {parseFloat(rate).toLocaleString()}/ETH
               </div>
             </div>
@@ -561,7 +561,7 @@ export default function TradeTab() {
             🎮 Paper Trading
           </span>
         )}
-        <span className="text-[10px] text-gray-400">Practice with fictional tokens • No real money</span>
+        <span className="text-xs text-gray-400">Practice with fictional tokens • No real money</span>
       </div>
 
       {/* Market Selector */}
@@ -582,7 +582,7 @@ export default function TradeTab() {
             <span className="hidden sm:inline">Robinhood Testnet</span>
             <span className="sm:hidden">Robinhood</span>
             {!isConnected && (
-              <span className="text-[8px] uppercase tracking-tighter text-blue-400 font-black">Preview</span>
+              <span className="text-xs uppercase tracking-tighter text-blue-400 font-black">Preview</span>
             )}
           </div>
         </button>
@@ -602,7 +602,7 @@ export default function TradeTab() {
             <span className="hidden sm:inline">Emerging Markets</span>
             <span className="sm:hidden">Emerging</span>
             {!isConnected && (
-              <span className="text-[8px] uppercase tracking-tighter text-green-400 font-black">Live Track</span>
+              <span className="text-xs uppercase tracking-tighter text-green-400 font-black">Live Track</span>
             )}
           </div>
         </button>
@@ -782,7 +782,7 @@ export default function TradeTab() {
             {activeTab === "track" && robinhoodWatchlist.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">
                     ⭐ Starred Stocks
                   </h4>
                 </div>
@@ -794,10 +794,10 @@ export default function TradeTab() {
             {(activeTab === "trade" || (activeTab !== "track" && FICTIONAL_STOCKS.includes(selected as typeof FICTIONAL_STOCKS[number]))) && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">
                     🎮 Fictional Companies
                   </h4>
-                  <span className="text-[10px] text-gray-400">{FICTIONAL_STOCKS.length} stocks</span>
+                  <span className="text-xs text-gray-400">{FICTIONAL_STOCKS.length} stocks</span>
                 </div>
                 <div className="space-y-2">
                   {FICTIONAL_STOCKS.map((stock) => renderStockItem(stock))}
@@ -809,10 +809,10 @@ export default function TradeTab() {
             {(activeTab === "earn" || REAL_STOCKS.includes(selected as typeof REAL_STOCKS[number])) && activeTab !== "track" && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                  <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">
                     📈 Real World Stocks
                   </h4>
-                  <span className="text-[10px] text-gray-400">
+                  <span className="text-xs text-gray-400">
                     {showAllRobinhood ? REAL_STOCKS.length : Math.min(3, REAL_STOCKS.length)} of {REAL_STOCKS.length}
                   </span>
                 </div>
@@ -860,7 +860,7 @@ export default function TradeTab() {
                 <h2 className="text-xl font-bold">
                   {design.name}
                 </h2>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase tracking-tighter">
+                <span className="text-xs font-bold px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 uppercase tracking-tighter">
                   {selected}
                 </span>
               </div>
@@ -885,7 +885,7 @@ export default function TradeTab() {
                 </div>
               </div>
               <div className="flex items-center justify-end gap-2">
-                <span className="text-[9px] text-gray-400">
+                <span className="text-xs text-gray-400">
                   ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/ETH` : "---"}
                 </span>
               </div>
@@ -907,7 +907,7 @@ export default function TradeTab() {
               {["1D", "1W", "1M", "ALL"].map((p) => (
                 <button
                   key={p}
-                  className={`text-[10px] font-bold px-3 py-1 rounded-lg transition ${p === "1D" ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+                  className={`text-xs font-bold px-3 py-1 rounded-lg transition ${p === "1D" ? "bg-blue-600 text-white shadow-sm" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
                 >
                   {p}
                 </button>
@@ -1101,7 +1101,7 @@ export default function TradeTab() {
         {isAdvanced && (
           <div className="space-y-4">
             <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">
                 Key Statistics
               </h3>
               <div className="grid grid-cols-2 gap-3">
@@ -1151,7 +1151,7 @@ export default function TradeTab() {
                       title={stat.description}
                     >
                       <div className="flex items-center justify-between mb-0.5">
-                        <div className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-tight">
                           {stat.label}
                         </div>
                         {stat.isSynth && (
@@ -1182,7 +1182,7 @@ export default function TradeTab() {
         {/* Positions List */}
         {Object.values(stockBalances).some((b) => parseFloat(b) > 0) && (
           <div className="space-y-2">
-            <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 ml-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 ml-1">
               Your Positions
             </h3>
             <div className="grid grid-cols-1 gap-2">
@@ -1202,7 +1202,7 @@ export default function TradeTab() {
                         <div className="font-bold text-sm">
                           {s}
                         </div>
-                        <div className="text-[10px] text-gray-400">
+                        <div className="text-xs text-gray-400">
                           {d.name}
                         </div>
                       </div>
@@ -1226,7 +1226,7 @@ export default function TradeTab() {
           href="https://faucet.testnet.chain.robinhood.com"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[10px] text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest hover:underline"
+          className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-widest hover:underline"
         >
           Need testnet ETH? Get some from the faucet →
         </a>

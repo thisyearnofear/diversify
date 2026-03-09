@@ -136,7 +136,7 @@ export const InsightCard = ({
 
           {impact && (
             <div className="flex items-center gap-2 mt-2">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${variant === 'reward' ? 'text-green-700 bg-green-200' : 'text-green-600 bg-green-100'}`}>
+              <span className={`text-xs font-bold px-2 py-0.5 rounded ${variant === 'reward' ? 'text-green-700 bg-green-200' : 'text-green-600 bg-green-100'}`}>
                 {impact}
               </span>
             </div>
@@ -170,7 +170,7 @@ export const InsightCard = ({
             action.label
           )}
           {action.cost && !action.loading && (
-            <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px]">
+            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
               {action.cost}
             </span>
           )}
@@ -209,11 +209,11 @@ export const QuickSelect = <T extends string>({
             }`}
         >
           {opt.icon && <div className="text-xl mb-1">{opt.icon}</div>}
-          <div className="text-[10px] font-black uppercase text-gray-900 leading-tight">
+          <div className="text-xs font-black uppercase text-gray-900 leading-tight">
             {opt.label}
           </div>
           {opt.description && (
-            <div className="text-[9px] text-gray-500 mt-0.5">{opt.description}</div>
+            <div className="text-xs text-gray-500 mt-0.5">{opt.description}</div>
           )}
         </button>
       ))}
@@ -281,7 +281,7 @@ export const ProtectionScore = ({
           </svg>
           {/* Score label centred over the ring */}
           <div className={`absolute inset-0 flex items-center justify-center ${textColor}`}>
-            <span className="text-[11px] font-black leading-none">{score}%</span>
+            <span className="text-xs font-black leading-none">{score}%</span>
           </div>
         </div>
 
@@ -290,7 +290,7 @@ export const ProtectionScore = ({
           <div className="flex items-center gap-2">
             <span className={`text-sm font-black ${textColor}`}>Protection Score</span>
           </div>
-          <span className={`text-[11px] font-bold ${textColor} opacity-80`}>{statusText} protection</span>
+          <span className={`text-xs font-bold ${textColor} opacity-80`}>{statusText} protection</span>
         </div>
 
         {factors && (
@@ -310,8 +310,8 @@ export const ProtectionScore = ({
                 <span className="text-xs w-4 shrink-0">{factor.icon}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">{factor.label}</span>
-                    <span className="text-[9px] text-gray-500">{factor.status}</span>
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{factor.label}</span>
+                    <span className="text-xs text-gray-500">{factor.status}</span>
                   </div>
                   <div className="h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
                     <div
@@ -437,7 +437,7 @@ export const ProtectionDashboard = ({
                 {totalValue || '$0'}
               </motion.div>
             )}
-            <div className="text-[10px] text-indigo-200 font-bold uppercase tracking-widest mt-1 opacity-80 group-hover:opacity-100 transition-opacity">
+            <div className="text-xs text-indigo-200 font-bold uppercase tracking-widest mt-1 opacity-80 group-hover:opacity-100 transition-opacity">
               {isLoading ? 'Loading...' : (chainCount ? `Across ${chainCount} chain${chainCount !== 1 ? 's' : ''}` : 'Total Value')}
             </div>
           </div>
@@ -474,7 +474,7 @@ export const ProtectionDashboard = ({
               <span className="text-xl font-black leading-none drop-shadow-md" style={{ color: ringColor }}>
                 {score}%
               </span>
-              <span className="text-[9px] font-black uppercase tracking-tighter opacity-90 drop-shadow-sm mt-0.5" style={{ color: ringColor }}>
+              <span className="text-xs font-black uppercase tracking-tighter opacity-90 drop-shadow-sm mt-0.5" style={{ color: ringColor }}>
                 {statusText}
               </span>
             </div>
@@ -502,7 +502,7 @@ export const ProtectionDashboard = ({
                 <span className="text-xs font-black text-white tracking-tight block">
                   {canClaim ? "G$ Reward Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
                 </span>
-                <p className="text-[10px] text-white/60 font-medium">
+                <p className="text-xs text-white/60 font-medium">
                   {canClaim ? (estimatedReward || "Claim now") : "Free UBI on Celo Network"}
                 </p>
               </div>
@@ -511,13 +511,13 @@ export const ProtectionDashboard = ({
               {canClaim && (
                 <span className="size-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
               )}
-              <span className="size-6 bg-white/10 rounded-lg flex items-center justify-center text-[10px] font-black text-white group-hover:bg-white/30 transition-colors">→</span>
+              <span className="size-6 bg-white/10 rounded-lg flex items-center justify-center text-xs font-black text-white group-hover:bg-white/30 transition-colors">→</span>
             </div>
           </motion.button>
         )}
 
         {isStale && (
-          <p className="text-[10px] text-white/40 mt-4 text-center font-bold uppercase tracking-widest">
+          <p className="text-xs text-white/40 mt-4 text-center font-bold uppercase tracking-widest">
             Data may be stale. Pull down to refresh.
           </p>
         )}
@@ -526,8 +526,8 @@ export const ProtectionDashboard = ({
       {/* Factors Section */}
       <div className="bg-white dark:bg-gray-800 p-5 space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Protection Factors</span>
-          <span className="text-[10px] font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">Live Scan</span>
+          <span className="text-xs font-black uppercase text-gray-400 tracking-widest">Protection Factors</span>
+          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">Live Scan</span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -545,8 +545,8 @@ export const ProtectionDashboard = ({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 truncate uppercase tracking-tight">{factor.label}</span>
-                    <span className={`text-[9px] font-bold ${
+                    <span className="text-xs font-black text-gray-700 dark:text-gray-300 truncate uppercase tracking-tight">{factor.label}</span>
+                    <span className={`text-xs font-bold ${
                       factor.value >= 80 ? 'text-emerald-500' :
                       factor.value >= 60 ? 'text-amber-500' : 'text-red-500'
                     }`}>{factor.value}%</span>
@@ -966,7 +966,7 @@ export const ConnectWalletPrompt = ({
           </div>
         </div>
         {WalletButtonComponent}
-        <p className="text-[10px] text-blue-600 dark:text-blue-400 mt-3 text-center">
+        <p className="text-xs text-blue-600 dark:text-blue-400 mt-3 text-center">
           🔒 Secure connection • No signup required • Free to use
         </p>
       </div>
@@ -989,17 +989,17 @@ export const ConnectWalletPrompt = ({
                   </div>
                   <div>
                     <div className="text-xs font-bold text-gray-900 dark:text-white">{rec.symbol}</div>
-                    <div className="text-[9px] text-gray-500">{rec.region} • {(STABLECOIN_RATES[rec.symbol] || 0).toFixed(1)}% inflation</div>
+                    <div className="text-xs text-gray-500">{rec.region} • {(STABLECOIN_RATES[rec.symbol] || 0).toFixed(1)}% inflation</div>
                   </div>
                 </div>
                 <div className="text-right">
                   <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">+{rec.savings.toFixed(1)}%/yr</div>
-                  <div className="text-[9px] text-gray-500">on $100</div>
+                  <div className="text-xs text-gray-500">on $100</div>
                 </div>
               </div>
             ))}
           </div>
-          <p className="text-[9px] text-emerald-700 dark:text-emerald-400 mt-3 text-center font-medium italic">
+          <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-3 text-center font-medium italic">
             💡 Connect wallet to start saving — takes 2 minutes
           </p>
         </div>
@@ -1010,7 +1010,7 @@ export const ConnectWalletPrompt = ({
         <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest">Available Assets</h4>
-            <span className="text-[10px] text-gray-500 font-bold">{availableTokens.length} tokens</span>
+            <span className="text-xs text-gray-500 font-bold">{availableTokens.length} tokens</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {availableTokens.slice(0, 6).map((token) => {
@@ -1019,14 +1019,14 @@ export const ConnectWalletPrompt = ({
               return (
                 <div key={token.symbol} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
                   <div className="flex items-center gap-2 mb-1">
-                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-[10px] font-black text-blue-700 dark:text-blue-300">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-black text-blue-700 dark:text-blue-300">
                       {token.symbol.slice(0, 2)}
                     </div>
                     <span className="text-xs font-bold text-gray-900 dark:text-white">{token.symbol}</span>
                   </div>
-                  <div className="text-[9px] text-gray-500 truncate">{token.region}</div>
+                  <div className="text-xs text-gray-500 truncate">{token.region}</div>
                   {savings > 0 && (
-                    <div className="text-[9px] font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                    <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-1">
                       +{savings.toFixed(1)}% vs {userRegion}
                     </div>
                   )}
@@ -1035,7 +1035,7 @@ export const ConnectWalletPrompt = ({
             })}
           </div>
           {availableTokens.length > 6 && (
-            <p className="text-[9px] text-gray-400 mt-2 text-center font-medium">
+            <p className="text-xs text-gray-400 mt-2 text-center font-medium">
               +{availableTokens.length - 6} more tokens available after connecting
             </p>
           )}
@@ -1053,24 +1053,24 @@ export const ConnectWalletPrompt = ({
           </div>
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <div className="text-[9px] font-black uppercase text-gray-400 mb-1">Your Region</div>
+              <div className="text-xs font-black uppercase text-gray-400 mb-1">Your Region</div>
               <div className="text-2xl font-black text-gray-900 dark:text-white">{homeInflation.toFixed(1)}%</div>
-              <div className="text-[9px] text-gray-500 mt-1">{userRegion}</div>
+              <div className="text-xs text-gray-500 mt-1">{userRegion}</div>
             </div>
             <div className="flex items-center px-4">
               <div className="text-gray-300 text-2xl">→</div>
-              <div className="ml-2 text-[9px] font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
+              <div className="ml-2 text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full">
                 Save up to {(homeInflation - 0.5).toFixed(1)}%
               </div>
             </div>
             <div className="text-center flex-1">
-              <div className="text-[9px] font-black uppercase text-gray-400 mb-1">Stablecoins</div>
+              <div className="text-xs font-black uppercase text-gray-400 mb-1">Stablecoins</div>
               <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300">0.5-3.1%</div>
-              <div className="text-[9px] text-gray-500 mt-1">Global avg</div>
+              <div className="text-xs text-gray-500 mt-1">Global avg</div>
             </div>
           </div>
           {isBeginner && (
-            <p className="text-[9px] text-amber-700 dark:text-amber-400 mt-3 text-center font-medium leading-relaxed">
+            <p className="text-xs text-amber-700 dark:text-amber-400 mt-3 text-center font-medium leading-relaxed">
               💡 <strong>Quick tip:</strong> Converting just $100 to stablecoins can save you <strong>${(100 * (homeInflation - 3.1) / 100).toFixed(2)}</strong> per year
             </p>
           )}
@@ -1166,7 +1166,7 @@ export const HeroValue = ({
             </motion.span>
             {trend && (
               <motion.span 
-                className={`text-[10px] font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}
+                className={`text-xs font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}
                 initial={{ opacity: 0, x: -5 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}

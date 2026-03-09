@@ -48,16 +48,16 @@ export default function GoalAlignmentBanner({
     <div className="mb-3 flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
       <span className="text-base">{meta.emoji}</span>
       <div className="flex-1 min-w-0">
-        <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
+        <span className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">
           {meta.label} mode
         </span>
         {riskTolerance && (
-          <span className="ml-2 text-[10px] text-blue-400 dark:text-blue-500">
+          <span className="ml-2 text-xs text-blue-400 dark:text-blue-500">
             • {riskTolerance} risk • {timeHorizon || 'flexible'}
           </span>
         )}
       </div>
-      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black shrink-0">
+      <span className="text-xs text-emerald-600 dark:text-emerald-400 font-black shrink-0">
         ✓ Personalised
       </span>
     </div>

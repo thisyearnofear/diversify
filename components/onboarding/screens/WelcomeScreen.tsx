@@ -124,7 +124,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                                     Test Drive — No Real Money
                                 </span>
                             </div>
-                            <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-snug mb-3">
+                            <p className="text-xs text-violet-600 dark:text-violet-500 leading-snug mb-3">
                                 Try Arc Testnet with free USDC. Earn badges. Graduate to mainnet when ready.
                             </p>
                             {switchDone ? (
@@ -134,20 +134,20 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                                         </svg>
-                                        <span className="text-[10px] font-black">Switched to Arc Testnet!</span>
+                                        <span className="text-xs font-black">Switched to Arc Testnet!</span>
                                     </div>
                                     <a
                                         href="https://faucet.circle.com"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white text-[11px] font-black rounded-xl transition-colors"
+                                        className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl transition-colors"
                                     >
                                         <span>Get Free USDC from Faucet</span>
                                         <span>→</span>
                                     </a>
                                     <button
                                         onClick={onContinue}
-                                        className="w-full py-1.5 text-[10px] font-bold text-violet-600 dark:text-violet-400 hover:text-violet-900 transition-colors"
+                                        className="w-full py-1.5 text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-900 transition-colors"
                                     >
                                         Continue to App →
                                     </button>
@@ -157,7 +157,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                                 <button
                                     onClick={handleSwitchToTestnet}
                                     disabled={isSwitching}
-                                    className={`w-full py-2 rounded-xl text-[11px] font-black transition-all flex items-center justify-center gap-2 ${
+                                    className={`w-full py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
                                         isSwitching
                                             ? 'bg-violet-200 dark:bg-violet-900/40 text-violet-400 cursor-wait'
                                             : 'bg-violet-600 hover:bg-violet-700 text-white active:scale-95'
@@ -174,14 +174,14 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                                 </button>
                             ) : (
                                 /* No wallet — prompt to connect first */
-                                <div className="text-[10px] text-violet-500 dark:text-violet-400 text-center">
+                                <div className="text-xs text-violet-500 dark:text-violet-400 text-center">
                                     Connect your wallet above, then tap here to switch to testnet
                                 </div>
                             )}
                         </div>
                         {/* Footer: faucet links always visible */}
                         {!switchDone && (
-                            <div className="px-4 pb-3 flex gap-3 text-[9px] text-violet-400 dark:text-violet-500 font-medium">
+                            <div className="px-4 pb-3 flex gap-3 text-xs text-violet-400 dark:text-violet-500 font-medium">
                                 <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="hover:text-violet-700 dark:hover:text-violet-300 transition-colors">Arc faucet →</a>
                                 <a href="https://faucet.celo.org" target="_blank" rel="noopener noreferrer" className="hover:text-violet-700 dark:hover:text-violet-300 transition-colors">Celo faucet →</a>
                             </div>

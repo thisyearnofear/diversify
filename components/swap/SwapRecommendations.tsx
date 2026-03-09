@@ -110,7 +110,7 @@ export default function SwapRecommendations({
 
   return (
     <div className="space-y-2 mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
-      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+      <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
         {goalLabel}
       </p>
       {recs.map((r, i) => (
@@ -119,7 +119,7 @@ export default function SwapRecommendations({
           className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 flex justify-between items-center"
         >
           <span className="text-xs font-bold">{r.from} → {r.to}</span>
-          <span className="text-[10px] text-blue-500 font-medium">{r.reason}</span>
+          <span className="text-xs text-blue-500 font-medium">{r.reason}</span>
         </div>
       ))}
     </div>

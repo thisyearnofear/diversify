@@ -59,7 +59,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
                         <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Instant Access</h3>
                         <p className="text-sm font-bold text-gray-900 dark:text-white">Buy with Card/Transfer</p>
                     </div>
-                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-[10px] font-black text-green-700 dark:text-green-400 rounded-md">
+                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-xs font-black text-green-700 dark:text-green-400 rounded-md">
                         LOW KYC
                     </span>
                 </div>
@@ -69,7 +69,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
                         variant="default"
                         className="w-full"
                     />
-                    <p className="text-[10px] text-gray-400 mt-3 text-center italic">
+                    <p className="text-xs text-gray-400 mt-3 text-center italic">
                         Secured by regulated Swiss & EU infrastructure
                     </p>
                 </div>
@@ -81,7 +81,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
                 <div className="flex flex-col items-center gap-3">
                     <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 w-full">
                         <div className="flex items-center justify-between gap-2">
-                            <code className="text-[10px] font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
+                            <code className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
                                 {address}
                             </code>
                             <button
@@ -95,7 +95,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
                             </button>
                         </div>
                     </div>
-                    <p className="text-[10px] text-gray-500 text-center px-4 leading-relaxed">
+                    <p className="text-xs text-gray-500 text-center px-4 leading-relaxed">
                         Copy your address to send funds from Binance, Coinbase, or other exchanges.
                     </p>
                 </div>

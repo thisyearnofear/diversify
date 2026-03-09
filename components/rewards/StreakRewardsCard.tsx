@@ -211,10 +211,10 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
         >
           {/* Secondary option — one line, no new card */}
           <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between">
-            <span className="text-[10px] text-gray-400">Not ready to use real money?</span>
+            <span className="text-xs text-gray-400">Not ready to use real money?</span>
             <button
               onClick={() => switchNetwork?.(NETWORKS.CELO_SEPOLIA.chainId)}
-              className="text-[10px] font-black text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
+              className="text-xs font-black text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
             >
               🧪 Try Testnet →
             </button>
@@ -327,7 +327,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
               <div className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wider mb-1">
                 Test Drive Available
               </div>
-              <p className="text-[10px] text-violet-600 dark:text-violet-500 leading-relaxed mb-2">
+              <p className="text-xs text-violet-600 dark:text-violet-500 leading-relaxed mb-2">
                 Explore 3 testnets risk-free. Earn badges. Graduate to mainnet when ready.
               </p>
               {/* Direct network switch — one tap, no chain-selector hunting */}
@@ -342,7 +342,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
                   href="https://faucet.celo.org"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] font-bold text-violet-500 dark:text-violet-400 hover:underline"
+                  className="text-xs font-bold text-violet-500 dark:text-violet-400 hover:underline"
                 >
                   Get free funds →
                 </a>
@@ -369,16 +369,16 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
           {/* Chain badges */}
           <div className="flex flex-wrap gap-1.5 mb-3">
             {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.CELO_SEPOLIA.chainId) && (
-              <span className="px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-[10px] font-bold rounded-full">Celo Sepolia</span>
+              <span className="px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-xs font-bold rounded-full">Celo Sepolia</span>
             )}
             {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ARC_TESTNET.chainId) && (
-              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-[10px] font-bold rounded-full">Arc</span>
+              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-full">Arc</span>
             )}
             {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.RH_TESTNET.chainId) && (
-              <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-[10px] font-bold rounded-full">Robinhood</span>
+              <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-xs font-bold rounded-full">Robinhood</span>
             )}
             {crossChainActivity.graduation.isGraduated && (
-              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold rounded-full">Mainnet 🚀</span>
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-full">Mainnet 🚀</span>
             )}
           </div>
 

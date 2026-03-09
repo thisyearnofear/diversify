@@ -263,7 +263,7 @@ export default function RealWorldUseCases({
                   <span className={`text-xl mb-1 transition-transform duration-500 ${isActive ? 'scale-110 rotate-12' : 'group-hover:scale-110'}`}>
                     {goal.icon}
                   </span>
-                  <span className={`text-[9px] font-black uppercase tracking-tighter ${isActive ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                  <span className={`text-xs font-black uppercase tracking-tighter ${isActive ? 'text-purple-600 dark:text-purple-400' : 'text-gray-400 dark:text-gray-500'}`}>
                     {goal.shortTitle}
                   </span>
                   
@@ -312,11 +312,11 @@ export default function RealWorldUseCases({
                     {/* Stats Pill Row */}
                     <div className="flex flex-wrap gap-2 mb-4">
                       {currentGoal.regions.map((region) => (
-                        <div key={region} className="px-2 py-1 bg-white dark:bg-gray-800 rounded-lg text-[9px] font-black text-gray-500 border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div key={region} className="px-2 py-1 bg-white dark:bg-gray-800 rounded-lg text-xs font-black text-gray-500 border border-gray-100 dark:border-gray-700 shadow-sm">
                           🌍 {region}
                         </div>
                       ))}
-                      <div className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-[9px] font-black text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 shadow-sm">
+                      <div className="px-2 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-lg text-xs font-black text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 shadow-sm">
                         🥇 {currentGoal.commodityAllocation}% GOLD
                       </div>
                     </div>
@@ -331,10 +331,10 @@ export default function RealWorldUseCases({
                           transition={{ delay: 0.2 + idx * 0.1 }}
                           className="flex items-center gap-2"
                         >
-                          <div className={`size-4 rounded-full flex items-center justify-center bg-white dark:bg-gray-800 text-[8px] border border-gray-100 dark:border-gray-700 text-emerald-500 shadow-sm`}>
+                          <div className={`size-4 rounded-full flex items-center justify-center bg-white dark:bg-gray-800 text-xs border border-gray-100 dark:border-gray-700 text-emerald-500 shadow-sm`}>
                             ✓
                           </div>
-                          <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                          <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
                             {benefit}
                           </span>
                         </motion.div>
@@ -354,16 +354,16 @@ export default function RealWorldUseCases({
                       className="bg-gray-900 rounded-2xl p-3 border border-gray-800 flex flex-col justify-between"
                     >
                       <div>
-                        <div className="text-[9px] font-black text-purple-400 uppercase tracking-widest mb-1.5 flex justify-between">
+                        <div className="text-xs font-black text-purple-400 uppercase tracking-widest mb-1.5 flex justify-between">
                           <span>{example.title}</span>
                           <span className="text-emerald-400">●</span>
                         </div>
-                        <p className="text-[9px] text-gray-400 font-medium leading-snug">
+                        <p className="text-xs text-gray-400 font-medium leading-snug">
                           {example.description}
                         </p>
                       </div>
                       <div className="mt-3 pt-2 border-t border-gray-800 flex items-center justify-between">
-                        <span className="text-[10px] font-black text-white">{example.metric}</span>
+                        <span className="text-xs font-black text-white">{example.metric}</span>
                         <div className="size-4 rounded-full bg-purple-500/20 flex items-center justify-center">
                           <svg className="size-2 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -411,7 +411,7 @@ export default function RealWorldUseCases({
                         <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-100 dark:border-gray-800 space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Goal (USD)</label>
+                              <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-1.5">Goal (USD)</label>
                               <div className="relative group">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-black text-xs">$</span>
                                 <input
@@ -423,7 +423,7 @@ export default function RealWorldUseCases({
                               </div>
                             </div>
                             <div>
-                              <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Months</label>
+                              <label className="block text-xs font-black uppercase tracking-widest text-gray-400 mb-1.5">Months</label>
                               <div className="flex items-center gap-2">
                                 <input
                                   type="range"
@@ -433,18 +433,18 @@ export default function RealWorldUseCases({
                                   onChange={(e) => setTimeframeMonths(Number(e.target.value))}
                                   className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full appearance-none cursor-pointer accent-purple-600"
                                 />
-                                <span className="text-[10px] font-black text-purple-600 w-6">{timeframeMonths}</span>
+                                <span className="text-xs font-black text-purple-600 w-6">{timeframeMonths}</span>
                               </div>
                             </div>
                           </div>
 
                           <div className="grid grid-cols-2 gap-3">
                             <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                              <div className="text-[8px] font-black uppercase text-gray-400 mb-1">Monthly Goal</div>
+                              <div className="text-xs font-black uppercase text-gray-400 mb-1">Monthly Goal</div>
                               <div className="text-base font-black text-purple-600">${monthlySavingsNeeded.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                             </div>
                             <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                              <div className="text-[8px] font-black uppercase text-gray-400 mb-1">Protected Value</div>
+                              <div className="text-xs font-black uppercase text-gray-400 mb-1">Protected Value</div>
                               <div className="text-base font-black text-emerald-600">${estimatedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div>
                             </div>
                           </div>
@@ -467,7 +467,7 @@ export default function RealWorldUseCases({
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
              </svg>
           </div>
-          <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 leading-normal">
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 leading-normal">
             <span className="text-gray-900 dark:text-white font-black uppercase tracking-tighter mr-1">Insider Insight:</span>
             In emerging markets, local currencies lose <span className="text-purple-600 dark:text-purple-400">10-30% yearly</span>. 
             Diversification isn't just a strategy; it's the ultimate hedge.

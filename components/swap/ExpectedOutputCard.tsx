@@ -77,7 +77,7 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
                         )}
                     </div>
                 </div>
-                <div className="mt-1.5 text-[10px] text-gray-600 dark:text-gray-400" suppressHydrationWarning>
+                <div className="mt-1.5 text-xs text-gray-600 dark:text-gray-400" suppressHydrationWarning>
                     Rate: 1 {fromToken} ≈ {rate.toFixed(4)} {toToken}
                 </div>
             </div>

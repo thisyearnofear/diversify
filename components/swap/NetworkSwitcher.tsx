@@ -100,7 +100,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                     value={currentChainId || ''}
                     onChange={(e) => switchNetwork(Number(e.target.value))}
                     disabled={isSwitching}
-                    className="text-[10px] font-black uppercase tracking-tight bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 pr-6 text-gray-700 dark:text-gray-300 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 appearance-none cursor-pointer"
+                    className="text-xs font-black uppercase tracking-tight bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 pr-6 text-gray-700 dark:text-gray-300 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 appearance-none cursor-pointer"
                     style={{
                         backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                         backgroundPosition: 'right 0.25rem center',
@@ -115,7 +115,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                     ))}
                 </select>
                 {error && (
-                    <div className="absolute top-full right-0 mt-1 text-[8px] text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-800 whitespace-nowrap z-10">
+                    <div className="absolute top-full right-0 mt-1 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 px-1.5 py-0.5 rounded border border-red-100 dark:border-red-800 whitespace-nowrap z-10">
                         {error}
                     </div>
                 )}
@@ -167,10 +167,10 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                             <div className="flex items-center gap-2">
                                 <span className="text-xl leading-none">{network.icon}</span>
                                 <div>
-                                    <div className="font-bold text-[10px] uppercase tracking-wider leading-none">
+                                    <div className="font-bold text-xs uppercase tracking-wider leading-none">
                                         {network.label.split(' ')[0]}
                                     </div>
-                                    <div className="text-[9px] opacity-60 leading-none mt-0.5 truncate max-w-[80px]">
+                                    <div className="text-xs opacity-60 leading-none mt-0.5 truncate max-w-[80px]">
                                         {network.description}
                                     </div>
                                 </div>
@@ -187,7 +187,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             {testnetNetworks.length > 0 && (
                 <>
                     <div className="flex items-center gap-2 mt-3 mb-2">
-                        <span className="text-[9px] font-black text-violet-500 dark:text-violet-400 uppercase tracking-widest">🧪 Test Drive</span>
+                        <span className="text-xs font-black text-violet-500 dark:text-violet-400 uppercase tracking-widest">🧪 Test Drive</span>
                         <div className="flex-1 h-px bg-violet-200 dark:bg-violet-900/40" />
                     </div>
                     <div className="grid grid-cols-2 gap-2">
@@ -206,10 +206,10 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                                     <div className="flex items-center gap-2">
                                         <span className="text-xl leading-none">{network.icon}</span>
                                         <div>
-                                            <div className="font-bold text-[10px] uppercase tracking-wider leading-none">
+                                            <div className="font-bold text-xs uppercase tracking-wider leading-none">
                                                 {network.label.split(' ')[0]}
                                             </div>
-                                            <div className="text-[9px] opacity-60 leading-none mt-0.5 truncate max-w-[80px]">
+                                            <div className="text-xs opacity-60 leading-none mt-0.5 truncate max-w-[80px]">
                                                 {network.description}
                                             </div>
                                         </div>
@@ -225,12 +225,12 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             )}
 
             {error && (
-                <div className="mt-2 text-[10px] text-red-600 dark:text-red-400 font-medium">
+                <div className="mt-2 text-xs text-red-600 dark:text-red-400 font-medium">
                     {error}
                 </div>
             )}
 
-            <div className="mt-2 flex items-center gap-1.5 text-[9px] text-gray-500 dark:text-gray-500 bg-white/30 dark:bg-black/20 px-2 py-1.5 rounded-lg border border-gray-100/50 dark:border-white/5">
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 bg-white/30 dark:bg-black/20 px-2 py-1.5 rounded-lg border border-gray-100/50 dark:border-white/5">
                 <span className="shrink-0">🔄</span>
                 <span>Switching networks will reload your balances</span>
             </div>

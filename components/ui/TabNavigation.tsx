@@ -119,13 +119,13 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
                   <motion.span 
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
+                    className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
                   >
                     {badgeCount > 99 ? "99+" : badgeCount}
                   </motion.span>
                 )}
               </motion.div>
-              <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-0.5 ${isActive ? "opacity-100" : "opacity-60"}`}>
+              <span className={`text-xs sm:text-xs font-bold uppercase tracking-wider mt-0.5 ${isActive ? "opacity-100" : "opacity-60"}`}>
                 {tab.label}
               </span>
             </motion.button>

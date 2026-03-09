@@ -16,14 +16,14 @@ export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: Interfa
                 <h3 className="text-lg md:text-xl font-[900] tracking-tight text-gray-900 dark:text-white mb-1 md:mb-2">
                     Visual Experience
                 </h3>
-                <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-widest">
+                <p className="text-xs md:text-xs text-gray-400 font-bold uppercase tracking-widest">
                     Step 3 of 4: Dashboard Setup
                 </p>
             </div>
 
             <div className="flex-1 p-6 md:p-8 space-y-6 md:space-y-8">
                 <section>
-                    <h4 className="text-[10px] md:text-xs font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-4 md:mb-6 text-center">
+                    <h4 className="text-xs md:text-xs font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-4 md:mb-6 text-center">
                         How should we present your wealth?
                     </h4>
 
@@ -42,7 +42,7 @@ export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: Interfa
                                 </div>
                                 <div className="text-left">
                                     <h5 className={`text-base md:text-xl font-black mb-0.5 md:mb-1 ${experienceMode === 'beginner' ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>Simple Mode</h5>
-                                    <p className="text-[9px] md:text-[10px] font-bold text-gray-500 dark:text-gray-400 leading-snug max-w-[140px] md:max-w-[160px]">
+                                    <p className="text-xs md:text-xs font-bold text-gray-500 dark:text-gray-400 leading-snug max-w-[140px] md:max-w-[160px]">
                                         Focus on protection scores and safety. Best for daily peace of mind.
                                     </p>
                                 </div>
@@ -63,7 +63,7 @@ export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: Interfa
                                 </div>
                                 <div className="text-left">
                                     <h5 className={`text-base md:text-xl font-black mb-0.5 md:mb-1 ${experienceMode === 'intermediate' || experienceMode === 'advanced' ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>Standard Mode</h5>
-                                    <p className="text-[9px] md:text-[10px] font-bold text-gray-500 dark:text-gray-400 leading-snug max-w-[140px] md:max-w-[160px]">
+                                    <p className="text-xs md:text-xs font-bold text-gray-500 dark:text-gray-400 leading-snug max-w-[140px] md:max-w-[160px]">
                                         Full balance transparency and multi-chain asset visibility.
                                     </p>
                                 </div>
@@ -73,7 +73,7 @@ export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: Interfa
                 </section>
 
                 <div className="bg-blue-50/50 dark:bg-blue-900/10 p-4 md:p-6 rounded-2xl md:rounded-3xl border border-blue-100 dark:border-blue-900/40 text-center">
-                    <p className="text-[9px] md:text-[10px] text-blue-800 dark:text-blue-300 font-bold leading-relaxed">
+                    <p className="text-xs md:text-xs text-blue-800 dark:text-blue-300 font-bold leading-relaxed">
                         Interface adapts in real-time. Beginners enjoy a calmer UI, while Pros get dense data insights.
                     </p>
                 </div>
@@ -90,7 +90,7 @@ export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: Interfa
                     {onBack && (
                         <button
                             onClick={onBack}
-                            className="flex-1 px-4 py-2 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
+                            className="flex-1 px-4 py-2 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
                         >
                             Back
                         </button>
@@ -98,7 +98,7 @@ export function InterfaceSelectionScreen({ onContinue, onBack, onSkip }: Interfa
                     {onSkip && (
                         <button
                             onClick={onSkip}
-                            className="flex-1 px-4 py-2 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
+                            className="flex-1 px-4 py-2 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
                         >
                             Skip
                         </button>

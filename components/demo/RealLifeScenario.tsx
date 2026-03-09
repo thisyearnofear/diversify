@@ -110,7 +110,7 @@ export default function RealLifeScenario({
         </div>
 
         {/* Compact description */}
-        <p className="text-[11px] text-gray-600 mb-2 leading-snug">
+        <p className="text-xs text-gray-600 mb-2 leading-snug">
           {scenarioContent.description}
         </p>
 
@@ -121,13 +121,13 @@ export default function RealLifeScenario({
             <div className="flex items-center gap-1.5">
               {/* Monthly */}
               <div className="flex flex-col items-center bg-white px-2 py-1 rounded-lg border border-gray-100 shadow-sm min-w-[40px]">
-                <div className="text-[8px] text-gray-500 font-black uppercase tracking-wide leading-none mb-0.5">Monthly</div>
+                <div className="text-xs text-gray-500 font-black uppercase tracking-wide leading-none mb-0.5">Monthly</div>
                 <div className="font-black text-sm text-gray-900">${monthlyAmount}</div>
               </div>
               <span className="text-gray-300 text-xs font-bold">→</span>
               {/* Annual Loss */}
               <div className="flex flex-col items-center bg-red-50 px-2 py-1 rounded-lg border border-red-100 shadow-sm min-w-[40px]">
-                <div className="text-[8px] text-red-600 font-black uppercase tracking-wide leading-none mb-0.5">Loss/yr</div>
+                <div className="text-xs text-red-600 font-black uppercase tracking-wide leading-none mb-0.5">Loss/yr</div>
                 <div className="font-black text-sm text-red-600">-${lostValue.toFixed(0)}</div>
               </div>
               {/* Potential Gain */}
@@ -135,7 +135,7 @@ export default function RealLifeScenario({
                 <>
                   <span className="text-gray-300 text-xs font-bold">→</span>
                   <div className="flex flex-col items-center bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100 shadow-sm min-w-[40px]">
-                    <div className="text-[8px] text-emerald-600 font-black uppercase tracking-wide leading-none mb-0.5">Save/yr</div>
+                    <div className="text-xs text-emerald-600 font-black uppercase tracking-wide leading-none mb-0.5">Save/yr</div>
                     <div className="font-black text-sm text-emerald-600">+${potentialSavings.toFixed(0)}</div>
                   </div>
                 </>
@@ -152,7 +152,7 @@ export default function RealLifeScenario({
                   >
                     <RegionalIconography region={region} size="sm" className="text-white" />
                   </div>
-                  <span className="mx-0.5 text-[10px] text-gray-400">→</span>
+                  <span className="mx-0.5 text-xs text-gray-400">→</span>
                   <div
                     className="w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
                     style={{ backgroundColor: REGION_COLORS[targetRegion as keyof typeof REGION_COLORS] }}
@@ -166,7 +166,7 @@ export default function RealLifeScenario({
                   const swapElement = document.querySelector(".SwapInterface");
                   if (swapElement) swapElement.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="px-2.5 py-1.5 text-[10px] rounded-lg bg-blue-600 text-white font-black shadow-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 uppercase tracking-wide whitespace-nowrap"
+                className="px-2.5 py-1.5 text-xs rounded-lg bg-blue-600 text-white font-black shadow-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 uppercase tracking-wide whitespace-nowrap"
               >
                 {scenarioContent.action}
               </button>

@@ -34,7 +34,7 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between px-1">
-        <h3 className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
@@ -48,7 +48,7 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
               <span className="text-[7px] font-black text-white uppercase tracking-tighter">SN50 Active</span>
             </div>
           )}
-          <span className="text-[8px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded uppercase tracking-tighter border border-blue-100 dark:border-blue-800">
+          <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded uppercase tracking-tighter border border-blue-100 dark:border-blue-800">
             {isAdvanced ? "SN50 Predictive" : "Live Pulse"}
           </span>
         </div>
@@ -100,31 +100,31 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
                     <h4 className="text-xs font-bold text-gray-900 dark:text-white truncate">
                       {item.title}
                     </h4>
-                    <span className="text-[9px] font-medium text-gray-400 whitespace-nowrap">
+                    <span className="text-xs font-medium text-gray-400 whitespace-nowrap">
                       {item.timestamp}
                     </span>
                   </div>
-                  <p className={`text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed transition-all font-medium ${isExpanded ? '' : 'line-clamp-2'}`}>
+                  <p className={`text-xs text-gray-500 dark:text-gray-400 leading-relaxed transition-all font-medium ${isExpanded ? '' : 'line-clamp-2'}`}>
                     {item.description}
                   </p>
 
                   {isAdvanced && item.impact && (
                     <div className="mt-2 flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${item.impact === "positive"
+                        <span className={`text-xs font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${item.impact === "positive"
                             ? "text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30"
                             : "text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30"
                           }`}>
                           {item.impact} Impact
                         </span>
                         {item.impactAsset && (
-                          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-tight">
+                          <span className="text-xs font-bold text-gray-400 uppercase tracking-tight">
                             Target: {item.impactAsset}
                           </span>
                         )}
                       </div>
                       {item.id.startsWith("synth-") && (
-                        <div className="text-[8px] font-bold text-blue-500 flex items-center gap-1 group/link">
+                        <div className="text-xs font-bold text-blue-500 flex items-center gap-1 group/link">
                           <span>{isExpanded ? 'Collapse' : 'Details'}</span>
                           <svg className={`w-2 h-2 transition-transform ${isExpanded ? 'rotate-90' : 'group-hover/link:translate-x-0.5'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
@@ -144,7 +144,7 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
           href="https://synthdata.co"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[8px] font-bold text-gray-400 hover:text-blue-500 transition-colors uppercase tracking-[0.2em] flex items-center gap-1"
+          className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-colors uppercase tracking-[0.2em] flex items-center gap-1"
         >
           Intelligence by <span className="text-blue-500 dark:text-blue-400">SynthData.co</span>
           <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -46,14 +46,14 @@ export default function SwapStatusPanel({
 
       {txHash && (
         <div className="flex items-center justify-between pt-2 border-t border-current/10">
-          <span className="text-[10px] font-bold opacity-70">
+          <span className="text-xs font-bold opacity-70">
             Transaction Hash: {txHash.slice(0, 8)}...{txHash.slice(-8)}
           </span>
           <a
             href={`${explorerUrl}/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[10px] font-black uppercase underline hover:opacity-80 transition-opacity flex items-center gap-1"
+            className="text-xs font-black uppercase underline hover:opacity-80 transition-opacity flex items-center gap-1"
           >
             View on Explorer
             <svg className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

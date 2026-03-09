@@ -71,24 +71,24 @@ export const AgentTierStatus: React.FC<{
               <div className="text-2xl font-black text-green-600 dark:text-green-400">
                 ${metrics.totalSavings.toFixed(2)}
               </div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Total Savings</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Savings</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-black text-blue-600 dark:text-blue-400">
                 {metrics.totalActions}
               </div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Actions Executed</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Actions Executed</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-black text-purple-600 dark:text-purple-400">
                 {metrics.successRate.toFixed(0)}%
               </div>
-              <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">Success Rate</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Success Rate</div>
             </div>
           </div>
           {metrics.totalCost > 0 && (
             <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800 text-center">
-              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 x402 Payments: ${metrics.totalCost.toFixed(4)} USDC
               </span>
             </div>
@@ -108,7 +108,7 @@ export const AgentTierStatus: React.FC<{
             <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-xl">
               <span className="text-xl">🔮</span>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${oracleStatus === 'Online' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${oracleStatus === 'Online' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
               {oracleStatus}
             </span>
           </div>
@@ -125,7 +125,7 @@ export const AgentTierStatus: React.FC<{
               >
                   <div className="text-center">
                       <div className="size-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-1"></div>
-                      <p className="text-[10px] font-bold text-blue-700 dark:text-blue-300 truncate max-w-[120px]">
+                      <p className="text-xs font-bold text-blue-700 dark:text-blue-300 truncate max-w-[120px]">
                           {thinkingStep || "Thinking..."}
                       </p>
                   </div>
@@ -146,7 +146,7 @@ export const AgentTierStatus: React.FC<{
             <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-xl">
               <span className="text-xl">🎙️</span>
             </div>
-            <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase">
+            <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase">
               {assistantStatus}
             </span>
           </div>
@@ -171,7 +171,7 @@ export const AgentTierStatus: React.FC<{
             <div className="bg-purple-100 dark:bg-purple-900/50 p-2 rounded-xl">
               <span className="text-xl">🛡️</span>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${guardianActive ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${guardianActive ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>
               {guardianStatus}
             </span>
           </div>
@@ -203,7 +203,7 @@ const ActivityFeed: React.FC<{ activities: AgentActivity[] }> = ({ activities })
   if (activities.length === 0) {
     return (
       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-[10px] text-gray-400 text-center">No recent activity</p>
+        <p className="text-xs text-gray-400 text-center">No recent activity</p>
       </div>
     );
   }
@@ -223,11 +223,11 @@ const ActivityFeed: React.FC<{ activities: AgentActivity[] }> = ({ activities })
             'bg-red-500'
           }`} />
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-gray-700 dark:text-gray-300 leading-tight">
+            <p className="text-xs text-gray-700 dark:text-gray-300 leading-tight">
               {activity.description}
             </p>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-[9px] text-gray-400">
+              <span className="text-xs text-gray-400">
                 {new Date(activity.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
               {activity.details?.txHash && (
@@ -235,7 +235,7 @@ const ActivityFeed: React.FC<{ activities: AgentActivity[] }> = ({ activities })
                   href={`https://celoscan.io/tx/${activity.details.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[9px] text-blue-500 hover:underline"
+                  className="text-xs text-blue-500 hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
                   View tx →

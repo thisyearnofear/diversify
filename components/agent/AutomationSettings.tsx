@@ -169,30 +169,30 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                             <span className="text-2xl">🛡️</span>
                             <div>
                                 <h3 className="font-black text-purple-900 dark:text-purple-100 uppercase tracking-tight text-sm">Guardian Autonomous Wallet</h3>
-                                <p className="text-[10px] sm:text-xs text-purple-700 dark:text-purple-300">Agent pays for its own data access via x402 protocol</p>
+                                <p className="text-xs sm:text-xs text-purple-700 dark:text-purple-300">Agent pays for its own data access via x402 protocol</p>
                             </div>
                         </div>
                         <div className="text-right">
-                             <div className="text-[9px] font-black uppercase text-purple-400">STATUS</div>
+                             <div className="text-xs font-black uppercase text-purple-400">STATUS</div>
                              <div className="text-xs font-black text-green-600">ACTIVE</div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
                         <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-                             <div className="text-[9px] text-gray-400 font-black uppercase tracking-wider">WALLET TYPE</div>
+                             <div className="text-xs text-gray-400 font-black uppercase tracking-wider">WALLET TYPE</div>
                              <div className="text-xs font-black text-gray-700 dark:text-gray-200">{autonomousStatus.walletType.toUpperCase()}</div>
                         </div>
                         <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-                             <div className="text-[9px] text-gray-400 font-black uppercase tracking-wider">DAILY LIMIT</div>
+                             <div className="text-xs text-gray-400 font-black uppercase tracking-wider">DAILY LIMIT</div>
                              <div className="text-xs font-black text-gray-700 dark:text-gray-200">${autonomousStatus.spendingLimit.toFixed(2)}</div>
                         </div>
                         <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-                             <div className="text-[9px] text-gray-400 font-black uppercase tracking-wider">SPENT TODAY</div>
+                             <div className="text-xs text-gray-400 font-black uppercase tracking-wider">SPENT TODAY</div>
                              <div className="text-xs font-black text-purple-600 dark:text-purple-400">${autonomousStatus.spent.toFixed(4)}</div>
                         </div>
                         <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-                             <div className="text-[9px] text-gray-400 font-black uppercase tracking-wider">REMAINING</div>
+                             <div className="text-xs text-gray-400 font-black uppercase tracking-wider">REMAINING</div>
                              <div className="text-xs font-black text-green-600 dark:text-green-400">${autonomousStatus.remaining.toFixed(4)}</div>
                         </div>
                     </div>
@@ -212,13 +212,13 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                         </div>
                         <div>
                             <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm">AI Strategy Core</h3>
-                            <p className="text-[10px] sm:text-xs text-gray-600 dark:text-gray-400">Configure how the Oracle analyzes your wealth</p>
+                            <p className="text-xs sm:text-xs text-gray-600 dark:text-gray-400">Configure how the Oracle analyzes your wealth</p>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">PRIMARY GOAL</label>
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">PRIMARY GOAL</label>
                             <select 
                                 value={config.goal}
                                 onChange={(e) => onConfigChange({...config, goal: e.target.value})}
@@ -231,7 +231,7 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">RISK TOLERANCE</label>
+                            <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">RISK TOLERANCE</label>
                             <select 
                                 value={config.riskTolerance}
                                 onChange={(e) => onConfigChange({...config, riskTolerance: e.target.value})}

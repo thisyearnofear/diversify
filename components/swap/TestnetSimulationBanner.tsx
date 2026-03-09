@@ -95,7 +95,7 @@ export function TestnetSimulationBanner({ chainId, onSimulated }: Props) {
             <span className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wide">
               {meta.name}{chainId === RH_CHAIN_ID ? '' : ' — Simulation Mode'}
             </span>
-            <span className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded ${
+            <span className={`px-1.5 py-0.5 text-xs font-black uppercase rounded ${
               chainId === RH_CHAIN_ID
                 ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
                 : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
@@ -105,7 +105,7 @@ export function TestnetSimulationBanner({ chainId, onSimulated }: Props) {
           </div>
 
           {/* Description */}
-          <p className="text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
+          <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed mb-3">
             {meta.description}
           </p>
 
@@ -143,7 +143,7 @@ export function TestnetSimulationBanner({ chainId, onSimulated }: Props) {
               href={meta.faucetUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors underline-offset-2 hover:underline"
+              className="text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors underline-offset-2 hover:underline"
             >
               {meta.faucetLabel}
             </a>

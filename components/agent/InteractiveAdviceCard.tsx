@@ -86,7 +86,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                     {/* AI Reasoning */}
                     <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700">
                         <div className="mb-2">
-                            <h5 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">
+                            <h5 className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest mb-1">
                                 Strategy
                             </h5>
                             <p className="text-sm font-black text-gray-900 dark:text-white leading-tight">
@@ -101,7 +101,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                         {advice.portfolioAnalysis && (
                             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                                         <div className="flex items-center gap-2">
                                             <span>📊</span>
                                             <span>
@@ -127,10 +127,10 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
 
                                     {/* Macro Proof (Provenance) */}
                                     <div className="flex flex-wrap gap-2 pt-1">
-                                        <div className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[9px] text-gray-500 font-mono">
+                                        <div className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-500 font-mono">
                                             Indicator: NY.GDP.MKTP.KD.ZG (Growth)
                                         </div>
-                                        <div className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[9px] text-gray-500 font-mono">
+                                        <div className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-500 font-mono">
                                             Indicator: WGI.Governance (Composite)
                                         </div>
                                     </div>
@@ -250,7 +250,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                 className="overflow-hidden"
                                             >
                                                 <div className="mt-3 p-3 bg-green-50 dark:bg-green-900/10 rounded-lg border border-green-100 dark:border-green-800/30">
-                                                    <div className="space-y-2 text-[11px] font-mono text-gray-600 dark:text-gray-400">
+                                                    <div className="space-y-2 text-xs font-mono text-gray-600 dark:text-gray-400">
                                                         <div className="flex justify-between">
                                                             <span>{advice.portfolioAnalysis.topOpportunity.fromRegion || advice.portfolioAnalysis.topOpportunity.fromToken || 'Current'} Inflation:</span>
                                                             <span className="font-bold text-red-500">{advice.portfolioAnalysis.topOpportunity.fromInflation || 'N/A'}%</span>
@@ -273,7 +273,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                                 ${advice.portfolioAnalysis.topOpportunity.annualSavings?.toFixed(2) || advice.expectedSavings?.toFixed(2) || '0.00'}/year
                                                             </span>
                                                         </div>
-                                                        <p className="text-[10px] font-sans italic mt-2 text-gray-400">
+                                                        <p className="text-xs font-sans italic mt-2 text-gray-400">
                                                             * Calculation: Amount × (Current Inflation - Target Inflation) = Annual Purchasing Power Preserved
                                                         </p>
                                                     </div>
@@ -442,21 +442,21 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
 
                                         {/* Alternative Metadata (Credibility) */}
                                         <div className="mb-3 px-2 py-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg flex items-center justify-between">
-                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Macro Proof</span>
-                                            <span className="text-[9px] font-mono text-blue-500">Source: WB Official 2024</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Macro Proof</span>
+                                            <span className="text-xs font-mono text-blue-500">Source: WB Official 2024</span>
                                         </div>
 
                                         {/* Comparison vs Primary */}
                                         {alt.comparisonVsPrimary && (
                                             <div className="grid grid-cols-3 gap-2 mb-3">
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
-                                                    <div className="text-[10px] text-gray-500 uppercase">Savings</div>
+                                                    <div className="text-xs text-gray-500 uppercase">Savings</div>
                                                     <div className={`text-xs font-bold ${alt.comparisonVsPrimary.savingsDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                                         {alt.comparisonVsPrimary.savingsDiff >= 0 ? '+' : ''}{alt.comparisonVsPrimary.savingsDiff.toFixed(0)}
                                                     </div>
                                                 </div>
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
-                                                    <div className="text-[10px] text-gray-500 uppercase">Risk</div>
+                                                    <div className="text-xs text-gray-500 uppercase">Risk</div>
                                                     <div className={`text-xs font-bold ${alt.comparisonVsPrimary.riskDiff === 'LOWER' ? 'text-green-600' :
                                                         alt.comparisonVsPrimary.riskDiff === 'HIGHER' ? 'text-red-600' : 'text-gray-600'
                                                         }`}>
@@ -464,7 +464,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                     </div>
                                                 </div>
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
-                                                    <div className="text-[10px] text-gray-500 uppercase">Liquid</div>
+                                                    <div className="text-xs text-gray-500 uppercase">Liquid</div>
                                                     <div className={`text-xs font-bold ${alt.comparisonVsPrimary.liquidityDiff === 'BETTER' ? 'text-green-600' :
                                                         alt.comparisonVsPrimary.liquidityDiff === 'WORSE' ? 'text-red-600' : 'text-gray-600'
                                                         }`}>
@@ -479,7 +479,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                             <div className="grid grid-cols-2 gap-3 mb-3">
                                                 {alt.pros && (
                                                     <div>
-                                                        <div className="text-[10px] font-bold text-green-600 dark:text-green-400 uppercase mb-1">Pros</div>
+                                                        <div className="text-xs font-bold text-green-600 dark:text-green-400 uppercase mb-1">Pros</div>
                                                         <ul className="space-y-1">
                                                             {alt.pros.slice(0, 2).map((pro, i) => (
                                                                 <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
@@ -492,7 +492,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                 )}
                                                 {alt.cons && (
                                                     <div>
-                                                        <div className="text-[10px] font-bold text-red-600 dark:text-red-400 uppercase mb-1">Cons</div>
+                                                        <div className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1">Cons</div>
                                                         <ul className="space-y-1">
                                                             {alt.cons.slice(0, 2).map((con, i) => (
                                                                 <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">

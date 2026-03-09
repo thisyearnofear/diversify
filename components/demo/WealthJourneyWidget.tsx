@@ -69,16 +69,16 @@ export default function WealthJourneyWidget({
         <div className="flex-1">
           <div className="flex justify-between items-center mb-1.5">
             <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{title}</h3>
-            <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full uppercase tracking-wider">
               {stage === 'accumulation' ? 'START' : stage === 'fortification' ? 'RECOMMENDED' : 'ACTIVE'}
             </span>
           </div>
-          <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-4 leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4 leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
             {description}
           </p>
           <button
             onClick={action}
-            className="text-[10px] font-black uppercase tracking-[0.1em] text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 py-2.5 px-5 rounded-xl transition-all w-full sm:w-auto shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 hover:translate-x-1"
+            className="text-xs font-black uppercase tracking-[0.1em] text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 py-2.5 px-5 rounded-xl transition-all w-full sm:w-auto shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 hover:translate-x-1"
           >
             {cta}
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

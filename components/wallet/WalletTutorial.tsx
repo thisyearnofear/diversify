@@ -130,7 +130,7 @@ export const WalletTutorial: React.FC<{
                             <div className={`w-12 h-12 ${item.bg} rounded-xl flex items-center justify-center mb-2`}>
                               <span className="text-xl">{item.icon}</span>
                             </div>
-                            <span className="text-[10px] md:text-xs font-bold text-gray-600 dark:text-gray-400">{item.label}</span>
+                            <span className="text-xs md:text-xs font-bold text-gray-600 dark:text-gray-400">{item.label}</span>
                           </div>
                         ))}
                       </div>
@@ -244,7 +244,7 @@ export const WalletTutorial: React.FC<{
                             </div>
                             <div>
                               <p className="font-bold text-sm text-gray-900 dark:text-white">I Have a Wallet</p>
-                              <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">MetaMask, Coinbase, WalletConnect, and more</p>
+                              <p className="text-xs md:text-xs text-gray-500 dark:text-gray-400 font-medium">MetaMask, Coinbase, WalletConnect, and more</p>
                             </div>
                           </motion.button>
 
@@ -270,7 +270,7 @@ export const WalletTutorial: React.FC<{
                             </div>
                             <div>
                               <p className="font-bold text-sm text-gray-900 dark:text-white">Create with Email</p>
-                              <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 font-medium">Easiest option - uses your email address</p>
+                              <p className="text-xs md:text-xs text-gray-500 dark:text-gray-400 font-medium">Easiest option - uses your email address</p>
                             </div>
                           </motion.button>
                         </div>

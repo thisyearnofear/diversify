@@ -165,7 +165,7 @@ const SwapInterface = forwardRef<
             {isBeginner ? "Convert Money" : title}
           </h3>
           {!isBeginner && inflationDataSource === "api" && (
-            <span className="text-[10px] bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
+            <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
               Live Data
             </span>
           )}
@@ -228,7 +228,7 @@ const SwapInterface = forwardRef<
               <p className="text-sm text-green-700 dark:text-green-300">
                 Sending to <span className="font-bold">{phoneNumber}</span>
                 {recipientAddress && (
-                  <span className="text-[10px] block opacity-70 truncate max-w-[200px]">
+                  <span className="text-xs block opacity-70 truncate max-w-[200px]">
                     {recipientAddress}
                   </span>
                 )}

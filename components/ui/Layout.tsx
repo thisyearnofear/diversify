@@ -82,7 +82,7 @@ export default function Layout({
               {/* Mode switcher - Compact on mobile */}
               <button
                 onClick={cycleMode}
-                className={`px-2.5 sm:px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-1 sm:gap-1.5 ${!isBeginner
+                className={`px-2.5 sm:px-3 py-1.5 text-xs font-black uppercase tracking-widest rounded-full transition-all flex items-center gap-1 sm:gap-1.5 ${!isBeginner
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95"
                   : "bg-white dark:bg-gray-800 text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-500"
                   }`}
@@ -100,7 +100,7 @@ export default function Layout({
           {/* Beginner mode hint - now below everything */}
           {isBeginner && (
             <div className="mt-2 text-center sm:text-right">
-              <span className="text-[8px] font-bold text-blue-500 animate-pulse uppercase tracking-tighter">
+              <span className="text-xs font-bold text-blue-500 animate-pulse uppercase tracking-tighter">
                 Unlock Features →
               </span>
             </div>

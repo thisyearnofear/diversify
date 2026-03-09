@@ -57,9 +57,9 @@ const CompactStockCard: React.FC<CompactStockCardProps> = ({
         <div className="min-w-0">
           <div className="flex items-center gap-1">
             <span className="font-bold text-sm truncate">{symbol}</span>
-            <span className="text-[10px] text-gray-400">{stock.market}</span>
+            <span className="text-xs text-gray-400">{stock.market}</span>
           </div>
-          <p className="text-[10px] text-gray-500 truncate">{stock.name}</p>
+          <p className="text-xs text-gray-500 truncate">{stock.name}</p>
         </div>
       </div>
 
@@ -73,7 +73,7 @@ const CompactStockCard: React.FC<CompactStockCardProps> = ({
               ${price.usdEquivalent.toFixed(price.usdEquivalent < 1 ? 4 : 2)}
             </div>
             {price.changePercent24h !== null && price.changePercent24h !== undefined && (
-              <div className={`text-[10px] font-medium ${
+              <div className={`text-xs font-medium ${
                 isPositive ? 'text-green-500' : 'text-red-500'
               }`}>
                 {isPositive ? '+' : ''}{price.changePercent24h.toFixed(1)}%
@@ -124,10 +124,10 @@ const QuickAccessBar: React.FC<QuickAccessBarProps> = ({
   return (
     <div className="mb-4">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+        <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">
           ⭐ Quick Access
         </h4>
-        <span className="text-[10px] text-gray-400">{watchlist.length} starred</span>
+        <span className="text-xs text-gray-400">{watchlist.length} starred</span>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
         {watchlist.map((symbol) => {
@@ -147,7 +147,7 @@ const QuickAccessBar: React.FC<QuickAccessBarProps> = ({
                 {isLoading || !price || price.usdEquivalent == null ? (
                   <div className="w-12 h-3 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 ) : (
-                  <div className={`text-[10px] font-medium ${
+                  <div className={`text-xs font-medium ${
                     isPositive ? 'text-green-600' : 'text-red-600'
                   }`}>
                     ${price.usdEquivalent.toFixed(price.usdEquivalent < 1 ? 4 : 2)}
@@ -202,7 +202,7 @@ const RegionFilter: React.FC<RegionFilterProps> = ({ activeRegion, onRegionChang
         >
           <span>{region.icon}</span>
           <span>{region.label}</span>
-          <span className="text-[10px] text-gray-400">({region.count})</span>
+          <span className="text-xs text-gray-400">({region.count})</span>
         </button>
       ))}
     </div>
@@ -353,10 +353,10 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
       {/* Stock List (Compact Cards) */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+          <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">
             {activeRegion === 'all' ? 'All Stocks' : `${REGION_METADATA[activeRegion].label} Stocks`}
           </h3>
-          <span className="text-[10px] text-gray-400">
+          <span className="text-xs text-gray-400">
             {displayStocks.length} of {filteredStocks.length}
           </span>
         </div>
@@ -389,10 +389,10 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
       {showFictionalCTA && (
         <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+            <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">
               🎮 Practice Trading
             </h3>
-            <span className="text-[10px] px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
+            <span className="text-xs px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full">
               Fictional
             </span>
           </div>
@@ -408,14 +408,14 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-gray-400 mt-2 text-center">
+          <p className="text-xs text-gray-400 mt-2 text-center">
             Tap "Trade Fictional" tab to practice with {FICTIONAL_EMERGING_MARKET_COMPANIES.length} companies
           </p>
         </div>
       )}
 
       {/* Footer */}
-      <div className="text-center text-[10px] text-gray-400 pt-2">
+      <div className="text-center text-xs text-gray-400 pt-2">
         Prices via Yahoo Finance, Alpha Vantage • Updated every 15 min
       </div>
     </div>

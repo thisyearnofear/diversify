@@ -30,7 +30,7 @@ const TierBadge = ({ level }: { level: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN' }) =>
   };
   const config = configs[level];
   return (
-    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${config.bg} ${config.border} text-[10px] font-black uppercase tracking-tight shadow-sm`}>
+    <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${config.bg} ${config.border} text-xs font-black uppercase tracking-tight shadow-sm`}>
       <span>{config.icon}</span>
       <span>{config.label}</span>
     </div>
@@ -326,7 +326,7 @@ export default function AIAssistant({
             </div>
             <button
               onClick={() => markAsRead?.()}
-              className="text-[10px] font-bold text-blue-500 hover:text-blue-700 uppercase tracking-wide"
+              className="text-xs font-bold text-blue-500 hover:text-blue-700 uppercase tracking-wide"
             >
               Mark read
             </button>
@@ -377,7 +377,7 @@ export default function AIAssistant({
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                  <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest">
                     Analyzing
                   </h4>
                   <p className="text-sm text-blue-600 font-bold mt-1 truncate">
@@ -391,7 +391,7 @@ export default function AIAssistant({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
+                        className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
                         <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' :
@@ -436,12 +436,12 @@ export default function AIAssistant({
                   {/* Projection Comparison */}
                   <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] font-black uppercase text-gray-400">
+                      <span className="text-xs font-black uppercase text-gray-400">
                         3-Year Projection
                       </span>
                       {portfolioAnalysis && (
                         <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded ${portfolioAnalysis.diversificationScore > 70
+                          className={`text-xs font-bold px-2 py-0.5 rounded ${portfolioAnalysis.diversificationScore > 70
                             ? "bg-emerald-100 text-emerald-700"
                             : portfolioAnalysis.diversificationScore > 40
                               ? "bg-amber-100 text-amber-700"
@@ -456,7 +456,7 @@ export default function AIAssistant({
 
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-gray-500 w-20 shrink-0">
+                        <span className="text-xs text-gray-500 w-20 shrink-0">
                           Current
                         </span>
                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -474,7 +474,7 @@ export default function AIAssistant({
                             className="h-full bg-red-400"
                           />
                         </div>
-                        <span className="text-[10px] text-red-500 font-bold w-16 text-right">
+                        <span className="text-xs text-red-500 font-bold w-16 text-right">
                           -$
                           {advice.comparisonProjection
                             ? (
@@ -485,7 +485,7 @@ export default function AIAssistant({
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-blue-600 w-20 shrink-0">
+                        <span className="text-xs text-blue-600 w-20 shrink-0">
                           Optimized
                         </span>
                         <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
@@ -495,7 +495,7 @@ export default function AIAssistant({
                             className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                           />
                         </div>
-                        <span className="text-[10px] text-emerald-600 font-bold w-16 text-right">
+                        <span className="text-xs text-emerald-600 font-bold w-16 text-right">
                           +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
                             ? advice.comparisonProjection.oraclePathValue -
                             advice.comparisonProjection.currentPathValue
@@ -542,16 +542,16 @@ export default function AIAssistant({
                             <h4 className="text-xs font-bold text-indigo-900">
                               {advice.guidedTour.title}
                             </h4>
-                            <p className="text-[10px] text-indigo-700 mt-1">
+                            <p className="text-xs text-indigo-700 mt-1">
                               {advice.guidedTour.description}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] text-indigo-600">
+                          <span className="text-xs text-indigo-600">
                             💰 {advice.guidedTour.estimatedBenefit}
                           </span>
-                          <span className="text-[10px] text-indigo-500">
+                          <span className="text-xs text-indigo-500">
                             {advice.guidedTour.steps.length} steps
                           </span>
                         </div>
@@ -624,7 +624,7 @@ export default function AIAssistant({
                       <div className="flex items-center justify-between mb-2">
                         <TierBadge level="GUARDIAN" />
                         {advice.autonomous.isNanopaymentEnabled && (
-                            <span className="text-[9px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-black uppercase tracking-widest">
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-black uppercase tracking-widest">
                                 Circle Nanopayment Active
                             </span>
                         )}
@@ -636,7 +636,7 @@ export default function AIAssistant({
                         <a 
                           href={advice.autonomous.x402Evidence}
                           target="_blank"
-                          className="mt-2 block text-[10px] text-purple-600 underline truncate"
+                          className="mt-2 block text-xs text-purple-600 underline truncate"
                         >
                           View Nanopayment Evidence: {advice.autonomous.x402Evidence}
                         </a>
@@ -656,7 +656,7 @@ export default function AIAssistant({
                         key={prompt}
                         onClick={() => handleQuickAsk(prompt)}
                         disabled={isAnalyzing}
-                        className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 rounded-full transition-colors disabled:opacity-50"
+                        className="px-2.5 py-1 text-xs font-bold bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-700 rounded-full transition-colors disabled:opacity-50"
                       >
                         {prompt}
                       </button>
@@ -679,7 +679,7 @@ export default function AIAssistant({
                       {messages.length > 1 && (
                         <button
                           onClick={clearMessages}
-                          className="text-[9px] text-gray-400 hover:text-gray-600 mt-1"
+                          className="text-xs text-gray-400 hover:text-gray-600 mt-1"
                         >
                           Clear • {messages.length} messages
                         </button>
@@ -873,7 +873,7 @@ export default function AIAssistant({
                     </motion.div>
                   ))}
                   {messages.length > 3 && (
-                    <div className="text-[9px] text-gray-400 text-center">
+                    <div className="text-xs text-gray-400 text-center">
                       {messages.length - 3} earlier messages
                     </div>
                   )}
@@ -899,7 +899,7 @@ export default function AIAssistant({
                     {capabilities.analysis ? "Run Analysis" : "AI Unavailable"}
                   </span>
                   {capabilities.analysis && (
-                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">
+                    <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full">
                       $0.05
                     </span>
                   )}
@@ -915,14 +915,14 @@ export default function AIAssistant({
 
               {messages.length === 0 ? (
                 <div className="space-y-2">
-                  <p className="text-[10px] text-gray-400">
+                  <p className="text-xs text-gray-400">
                     Analyzes ${amount.toFixed(2)} against real-time global
                     inflation data
                   </p>
                   {effectiveRegion &&
                     liveInflationData &&
                     liveInflationData[effectiveRegion] && (
-                      <p className="text-[9px] text-blue-600 dark:text-blue-400">
+                      <p className="text-xs text-blue-600 dark:text-blue-400">
                         Using {effectiveRegion} region (
                         {liveInflationData[effectiveRegion].avgRate.toFixed(1)}%
                         inflation)
@@ -932,7 +932,7 @@ export default function AIAssistant({
               ) : (
                 <button
                   onClick={clearMessages}
-                  className="text-[10px] text-gray-400 hover:text-gray-600 underline"
+                  className="text-xs text-gray-400 hover:text-gray-600 underline"
                 >
                   Clear conversation
                 </button>
@@ -961,12 +961,12 @@ export default function AIAssistant({
                 AI Assistant
               </h3>
               <div className="flex items-center gap-1.5 mt-1">
-                <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
                   AI
                 </span>
                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-black/20 border border-white/10">
                   <div className="w-1 h-1 rounded-full bg-blue-400 animate-pulse" />
-                  <span className="text-[9px] font-mono text-blue-100">
+                  <span className="text-xs font-mono text-blue-100">
                     AI Assistant
                   </span>
                 </div>
@@ -983,7 +983,7 @@ export default function AIAssistant({
 
             {autonomousStatus?.enabled && (
               <div className="flex flex-col items-end hidden md:flex">
-                <span className="text-[10px] text-blue-100 font-bold uppercase tracking-tighter opacity-80 underline">
+                <span className="text-xs text-blue-100 font-bold uppercase tracking-tighter opacity-80 underline">
                   On-Chain Verified
                 </span>
               </div>
@@ -1053,7 +1053,7 @@ export default function AIAssistant({
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="text-[10px] font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
+                        className="text-xs font-mono text-gray-500 dark:text-gray-400 uppercase flex items-center gap-1.5"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
                         <span className="font-black text-blue-600/70">HIT:</span> {thinkingStep.toLowerCase().includes('macro') ? 'WORLD_BANK_WGI' :
@@ -1105,7 +1105,7 @@ export default function AIAssistant({
                   </div>
                   <div className="flex items-center gap-2">
                     {amount === 0 && (
-                      <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-2 py-1 rounded tracking-tighter shadow-sm">
+                      <span className="bg-blue-600 text-white text-xs font-black uppercase px-2 py-1 rounded tracking-tighter shadow-sm">
                         Sim Mode
                       </span>
                     )}
@@ -1131,10 +1131,10 @@ export default function AIAssistant({
                   {/* Projection Card - Using Real Calculated Data */}
                   <div className="bg-white dark:bg-gray-950 rounded-2xl p-4 border border-gray-100 dark:border-white/5 shadow-inner">
                     <div className="flex justify-between items-center mb-3">
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      <span className="text-xs font-black text-gray-400 uppercase tracking-widest">
                         3-Year Projection
                       </span>
-                      <span className="text-[10px] font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">
+                      <span className="text-xs font-bold text-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">
                         {portfolioAnalysis
                           ? `Inflation Risk: ${portfolioAnalysis.weightedInflationRisk.toFixed(1)}%`
                           : "Protection Model"}
@@ -1143,7 +1143,7 @@ export default function AIAssistant({
 
                     <div className="space-y-4">
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-bold">
+                        <div className="flex justify-between text-xs font-bold">
                           <span className="text-gray-500">
                             Current Path (Do Nothing)
                           </span>
@@ -1172,7 +1172,7 @@ export default function AIAssistant({
                             className="h-full bg-red-400"
                           />
                         </div>
-                        <div className="text-[9px] text-gray-400">
+                        <div className="text-xs text-gray-400">
                           Value: $
                           {advice.comparisonProjection?.currentPathValue.toFixed(
                             2,
@@ -1181,7 +1181,7 @@ export default function AIAssistant({
                       </div>
 
                       <div className="space-y-1">
-                        <div className="flex justify-between text-[10px] font-bold">
+                        <div className="flex justify-between text-xs font-bold">
                           <span className="text-blue-600">Optimized Path</span>
                           <span className="text-green-600">
                             +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
@@ -1205,7 +1205,7 @@ export default function AIAssistant({
                             className="h-full bg-gradient-to-r from-blue-500 to-emerald-500"
                           />
                         </div>
-                        <div className="text-[9px] text-gray-400">
+                        <div className="text-xs text-gray-400">
                           Value: $
                           {advice.comparisonProjection?.oraclePathValue?.toFixed(
                             2,
@@ -1216,7 +1216,7 @@ export default function AIAssistant({
 
                     {portfolioAnalysis && (
                       <div className="mt-3 pt-3 border-t border-gray-100">
-                        <div className="flex justify-between text-[10px]">
+                        <div className="flex justify-between text-xs">
                           <span className="text-gray-500">
                             Diversification Score
                           </span>
@@ -1334,12 +1334,12 @@ export default function AIAssistant({
                   {/* Portfolio Analysis Summary */}
                   {advice.portfolioAnalysis && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h5 className="text-[10px] font-black uppercase text-gray-400 mb-2">
+                      <h5 className="text-xs font-black uppercase text-gray-400 mb-2">
                         Analysis Factors
                       </h5>
                       <div className="grid grid-cols-2 gap-2">
                         <div className="bg-gray-50 rounded-lg p-2">
-                          <div className="text-[9px] text-gray-500">
+                          <div className="text-xs text-gray-500">
                             Inflation Risk
                           </div>
                           <div
@@ -1358,7 +1358,7 @@ export default function AIAssistant({
                           </div>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-2">
-                          <div className="text-[9px] text-gray-500">
+                          <div className="text-xs text-gray-500">
                             Diversification
                           </div>
                           <div
@@ -1377,7 +1377,7 @@ export default function AIAssistant({
 
                       {advice.portfolioAnalysis.topOpportunity && (
                         <div className="mt-2 bg-blue-50 rounded-lg p-2">
-                          <div className="text-[9px] text-blue-600 font-bold">
+                          <div className="text-xs text-blue-600 font-bold">
                             Top Opportunity
                           </div>
                           <div className="text-xs text-blue-800">
@@ -1402,7 +1402,7 @@ export default function AIAssistant({
                   {amount === 0 && (
                     <button
                       onClick={clearMessages}
-                      className="w-full py-3 rounded-2xl bg-gray-100 text-gray-500 font-black text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all border-b-2 border-gray-300"
+                      className="w-full py-3 rounded-2xl bg-gray-100 text-gray-500 font-black text-xs uppercase tracking-widest hover:bg-gray-200 transition-all border-b-2 border-gray-300"
                     >
                       Exit Simulation
                     </button>
@@ -1567,7 +1567,7 @@ export default function AIAssistant({
                         : "Simulation"}
                   </h4>
                   {amount === 0 && messages.length === 0 && (
-                    <span className="bg-blue-600 text-white text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-tighter shadow-sm">
+                    <span className="bg-blue-600 text-white text-xs font-black uppercase px-1.5 py-0.5 rounded tracking-tighter shadow-sm">
                       Sim Mode
                     </span>
                   )}
@@ -1622,7 +1622,7 @@ export default function AIAssistant({
                       : "Intelligence Hub Unavailable"}
                   </span>
                   {capabilities.analysis && (
-                    <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">
+                    <span className="text-xs font-bold bg-white/20 px-2 py-0.5 rounded-full">
                       $0.05
                     </span>
                   )}

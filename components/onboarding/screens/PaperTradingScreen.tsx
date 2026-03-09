@@ -55,7 +55,7 @@ export function PaperTradingScreen({ onContinue, onBack, onSkip }: PaperTradingS
                 <h3 className="text-lg md:text-xl font-[900] tracking-tight text-gray-900 dark:text-white mb-1 md:mb-2">
                     Paper Trading
                 </h3>
-                <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-widest">
+                <p className="text-xs md:text-xs text-gray-400 font-bold uppercase tracking-widest">
                     Learn before you invest
                 </p>
             </div>
@@ -72,7 +72,7 @@ export function PaperTradingScreen({ onContinue, onBack, onSkip }: PaperTradingS
 
                 {/* Features */}
                 <section>
-                    <h4 className="text-[10px] md:text-xs font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-4 md:mb-6 text-center">
+                    <h4 className="text-xs md:text-xs font-black text-blue-600 dark:text-blue-500 uppercase tracking-widest mb-4 md:mb-6 text-center">
                         How it works
                     </h4>
                     <div className="space-y-3">
@@ -107,7 +107,7 @@ export function PaperTradingScreen({ onContinue, onBack, onSkip }: PaperTradingS
 
                 {/* Markets */}
                 <section>
-                    <h4 className="text-[10px] md:text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4 text-center">
+                    <h4 className="text-xs md:text-xs font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-4 text-center">
                         Available Markets
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -123,7 +123,7 @@ export function PaperTradingScreen({ onContinue, onBack, onSkip }: PaperTradingS
                                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                                     {market.description}
                                 </p>
-                                <p className="text-[10px] text-gray-400 font-mono">
+                                <p className="text-xs text-gray-400 font-mono">
                                     {market.tokens}
                                 </p>
                             </div>
@@ -152,7 +152,7 @@ export function PaperTradingScreen({ onContinue, onBack, onSkip }: PaperTradingS
                     {onBack && (
                         <button
                             onClick={onBack}
-                            className="flex-1 px-4 py-2 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
+                            className="flex-1 px-4 py-2 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
                         >
                             Back
                         </button>
@@ -160,7 +160,7 @@ export function PaperTradingScreen({ onContinue, onBack, onSkip }: PaperTradingS
                     {onSkip && (
                         <button
                             onClick={onSkip}
-                            className="flex-1 px-4 py-2 text-[10px] font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
+                            className="flex-1 px-4 py-2 text-xs font-black text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest text-center"
                         >
                             Skip
                         </button>

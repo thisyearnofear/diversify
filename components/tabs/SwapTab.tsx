@@ -622,7 +622,7 @@ export default function SwapTab({
             </div>
             <div className="p-4 bg-white/50 dark:bg-gray-800/50 rounded-xl flex justify-between items-center border border-amber-100/50 dark:border-amber-900/20">
               <div className="text-center">
-                <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">
+                <div className="text-xs font-black text-gray-400 uppercase tracking-tighter mb-1">
                   Your Region ({userRegion})
                 </div>
                 <div className="text-2xl font-black text-gray-900 dark:text-white">
@@ -633,7 +633,7 @@ export default function SwapTab({
                 <div className="text-gray-300 text-xl">→</div>
                 {inflationDifference !== 0 && (
                   <div
-                    className={`mt-1 text-[10px] font-black px-1.5 py-0.5 rounded ${
+                    className={`mt-1 text-xs font-black px-1.5 py-0.5 rounded ${
                       inflationDifference > 0
                         ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
                         : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
@@ -645,7 +645,7 @@ export default function SwapTab({
                 )}
               </div>
               <div className="text-center">
-                <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">
+                <div className="text-xs font-black text-gray-400 uppercase tracking-tighter mb-1">
                   Target ({targetRegion})
                 </div>
                 <div className="text-2xl font-black text-gray-900 dark:text-white">

@@ -111,7 +111,7 @@ export default function ZakatCalculator({ totalPortfolioValue = 0, onClose }: Za
       {/* Results */}
       <div className="grid grid-cols-2 gap-3">
         <div className="p-3 bg-white dark:bg-emerald-900 rounded-xl border border-emerald-200 dark:border-emerald-700 text-center">
-          <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wide">
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block uppercase tracking-wide">
             Taxable Amount
           </span>
           <span className="text-lg font-black text-emerald-900 dark:text-emerald-100">
@@ -119,7 +119,7 @@ export default function ZakatCalculator({ totalPortfolioValue = 0, onClose }: Za
           </span>
         </div>
         <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl text-white text-center">
-          <span className="text-[10px] font-bold text-emerald-100 block uppercase tracking-wide">
+          <span className="text-xs font-bold text-emerald-100 block uppercase tracking-wide">
             Yearly Zakat
           </span>
           <span className="text-xl font-black">

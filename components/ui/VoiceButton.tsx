@@ -449,7 +449,7 @@ export default function VoiceButton({
                         ⏳
                     </motion.span>
                 ) : recordingState === 'recording' ? (
-                    <span className="relative z-10 text-white font-bold text-[10px]">STOP</span>
+                    <span className="relative z-10 text-white font-bold text-xs">STOP</span>
                 ) : (
                     <motion.span
                         animate={{
@@ -564,7 +564,7 @@ export default function VoiceButton({
                             </button>
                         ))}
                         <div className="px-3 py-2 border-t border-gray-100 dark:border-gray-800 mt-1">
-                            <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                            <p className="text-xs text-gray-400 dark:text-gray-500">
                                 Tap a suggestion or speak your question
                             </p>
                         </div>

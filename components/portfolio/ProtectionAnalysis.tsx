@@ -345,7 +345,7 @@ export default function ProtectionAnalysis({
                         <div className="flex items-center justify-between mb-3">
                             <div>
                                 <h3 className="font-black text-gray-900 dark:text-white text-xs uppercase tracking-wider">Network</h3>
-                                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
                                     Switch blockchain for transactions
                                 </p>
                             </div>
@@ -368,7 +368,7 @@ export default function ProtectionAnalysis({
                             <h3 className="font-black text-gray-900 dark:text-white text-sm uppercase tracking-tight">Your Assets</h3>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-blue-500 uppercase">
+                            <span className="text-xs font-bold text-blue-500 uppercase">
                                 {yieldSummary?.allTokens?.length || 0} Assets
                             </span>
                             <span className="text-gray-400">{showAssetInventory ? "↑" : "↓"}</span>

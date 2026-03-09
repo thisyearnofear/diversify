@@ -193,13 +193,13 @@ function CrossChainSection({
                             {onExecuteBridge && op.chainId !== 42220 && (
                                 <button
                                     onClick={() => onExecuteBridge(op.chainId, 42161, 'USDC', op.value.toFixed(2))}
-                                    className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded-lg hover:bg-indigo-700 transition-colors"
+                                    className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors"
                                 >
                                     Bridge
                                 </button>
                             )}
                         </div>
-                        <p className="text-[10px] text-gray-500 mt-2">💡 {op.recommendedAction}</p>
+                        <p className="text-xs text-gray-500 mt-2">💡 {op.recommendedAction}</p>
                     </div>
                 ))}
             </div>
@@ -243,7 +243,7 @@ function RebalancingSection({
                                     <span className="text-gray-400">→</span>
                                     <span className="text-blue-600">{opp.toToken}</span>
                                 </div>
-                                <div className="text-[10px] text-gray-500 mt-0.5">
+                                <div className="text-xs text-gray-500 mt-0.5">
                                     Save ${opp.annualSavings.toFixed(2)}/year • {opp.inflationDelta.toFixed(1)}% inflation reduction
                                 </div>
                             </div>
@@ -258,7 +258,7 @@ function RebalancingSection({
                                     opp.suggestedAmount.toFixed(2),
                                     `Rebalance: Reduce ${opp.fromRegion} exposure (${opp.fromInflation}%) → ${opp.toRegion} (${opp.toInflation}%)`
                                 )}
-                                className="px-3 py-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-lg hover:bg-blue-700 transition-colors"
+                                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors"
                             >
                                 Swap
                             </button>
@@ -268,7 +268,7 @@ function RebalancingSection({
             </div>
 
             {opportunities.length > 3 && (
-                <p className="text-[10px] text-gray-400 text-center mt-2">
+                <p className="text-xs text-gray-400 text-center mt-2">
                     +{opportunities.length - 3} more opportunities
                 </p>
             )}
@@ -327,7 +327,7 @@ function ConfidenceFactors({ analysis }: { analysis: PortfolioAnalysis }) {
                     <div key={idx} className="bg-white rounded-lg p-2 border border-gray-100">
                         <div className="flex items-center gap-1.5">
                             <span className="text-xs">{factor.icon}</span>
-                            <span className="text-[10px] font-bold text-gray-600">{factor.label}</span>
+                            <span className="text-xs font-bold text-gray-600">{factor.label}</span>
                         </div>
                         <div className="mt-1 flex items-center justify-between">
                             <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
@@ -339,7 +339,7 @@ function ConfidenceFactors({ analysis }: { analysis: PortfolioAnalysis }) {
                                     style={{ width: `${factor.value * 100}%` }}
                                 />
                             </div>
-                            <span className="text-[9px] text-gray-500">{factor.status}</span>
+                            <span className="text-xs text-gray-500">{factor.status}</span>
                         </div>
                     </div>
                 ))}
@@ -356,7 +356,7 @@ function ImpactBadge({ impact }: { impact: string }) {
     const isHigh = impact.includes('$') && parseFloat(impact.replace(/[^0-9.]/g, '')) > 10;
 
     return (
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isHigh
+        <span className={`px-2 py-0.5 rounded text-xs font-bold ${isHigh
             ? 'bg-green-100 text-green-700'
             : 'bg-blue-100 text-blue-700'
             }`}>
@@ -373,7 +373,7 @@ function ConfidenceBadge({ level }: { level: 'HIGH' | 'MEDIUM' | 'LOW' }) {
     };
 
     return (
-        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${colors[level]}`}>
+        <span className={`px-2 py-0.5 rounded text-xs font-bold ${colors[level]}`}>
             {level} confidence
         </span>
     );

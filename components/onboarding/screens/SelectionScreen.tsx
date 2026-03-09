@@ -84,7 +84,7 @@ export function SelectionScreen({
                     <h3 className="text-lg md:text-xl font-[900] tracking-tight text-gray-900 dark:text-white">
                         Financial Philosophy
                     </h3>
-                    <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[10px] font-black rounded-full uppercase tracking-widest">
+                    <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-xs font-black rounded-full uppercase tracking-widest">
                         {currentIndex + 1} / {STRATEGIES.length}
                     </div>
                 </div>
@@ -158,7 +158,7 @@ export function SelectionScreen({
                                 }`}
                         >
                             {selected === strategy.id && (
-                                <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-blue-500 text-white text-[7px] md:text-[8px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-full shadow-lg shadow-blue-500/50">
+                                <div className="absolute top-3 right-3 md:top-4 md:right-4 bg-blue-500 text-white text-[7px] md:text-xs font-black uppercase tracking-tighter px-2 py-0.5 rounded-full shadow-lg shadow-blue-500/50">
                                     Selected
                                 </div>
                             )}
@@ -169,7 +169,7 @@ export function SelectionScreen({
                                 {strategy.name}
                             </h4>
                             {strategy.nativeName && (
-                                <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 dark:text-blue-400 text-center mb-4 md:mb-6 opacity-80">
+                                <p className="text-xs md:text-xs font-black uppercase tracking-[0.2em] text-blue-500 dark:text-blue-400 text-center mb-4 md:mb-6 opacity-80">
                                     {strategy.nativeName}
                                 </p>
                             )}
@@ -183,7 +183,7 @@ export function SelectionScreen({
                                 {strategy.values.map((value, i) => (
                                     <span
                                         key={i}
-                                        className={`text-[8px] md:text-[9px] px-2 py-0.5 md:px-2.5 md:py-1 rounded-lg font-black uppercase tracking-wider transition-colors duration-500 ${selected === strategy.id
+                                        className={`text-xs md:text-xs px-2 py-0.5 md:px-2.5 md:py-1 rounded-lg font-black uppercase tracking-wider transition-colors duration-500 ${selected === strategy.id
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-gray-100 dark:bg-gray-800 text-gray-400'
                                             }`}
@@ -200,7 +200,7 @@ export function SelectionScreen({
                     <div className="flex items-center justify-center gap-2">
                         <div className="size-1 rounded-full bg-gray-300 animate-pulse" />
                         {/* Touch devices: swipe hint / pointer devices: arrow key hint */}
-                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">
+                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
                             <span className="md:hidden">Swipe to Explore</span>
                             <span className="hidden md:inline">← → to Browse</span>
                         </p>

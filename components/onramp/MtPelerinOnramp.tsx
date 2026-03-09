@@ -227,7 +227,7 @@ function MtPelerinModal({ widgetUrl, onClose }: MtPelerinModalProps) {
               <span className="font-semibold text-gray-900 dark:text-white leading-tight">
                 Mt Pelerin
               </span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
                 Secure Swiss Ramp
               </span>
             </div>
