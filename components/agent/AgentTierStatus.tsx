@@ -22,7 +22,7 @@ export const AgentTierStatus: React.FC<{
   showActivityFeed?: boolean;
   onNavigateToAgent?: () => void;
 }> = ({ isMiniPay, isFarcaster, showActivityFeed = false, onNavigateToAgent }) => {
-  const { capabilities, autonomousStatus, isAnalyzing, thinkingStep, activities } = useDiversifiAI();
+  const { capabilities, autonomousStatus, isAnalyzing, thinkingStep, activities, addActivity } = useDiversifiAI();
   const { experienceMode } = useExperience();
   const [expandedTier, setExpandedTier] = useState<'oracle' | 'assistant' | 'guardian' | null>(null);
 
@@ -56,8 +56,20 @@ export const AgentTierStatus: React.FC<{
       const provider = new ethers.providers.Web3Provider(window.ethereum as any);
       const signer = provider.getSigner();
       await requestPermission('COPILOT', address, signer, chainId);
+      addActivity({
+        type: 'execution',
+        tier: 'GUARDIAN',
+        description: 'Autonomous Mode enabled — scoped session key granted (COPILOT, $10/day, 7 days)',
+        status: 'success',
+      });
     } catch (e) {
       console.error('[Guardian] Failed to request permission:', e);
+      addActivity({
+        type: 'execution',
+        tier: 'GUARDIAN',
+        description: 'Autonomous Mode request cancelled or failed',
+        status: 'failed',
+      });
     }
   }, [address, chainId, requestPermission]);
 
@@ -232,7 +244,7 @@ export const AgentTierStatus: React.FC<{
                     </div>
                   )}
                   <button
-                    onClick={revokePermission}
+                    onClick={() => { revokePermission(); addActivity({ type: 'execution', tier: 'GUARDIAN', description: 'Autonomous Mode revoked — session key cleared', status: 'success' }); }}
                     className="w-full text-xs text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-1.5 mt-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     Revoke Permission

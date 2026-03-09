@@ -24,9 +24,9 @@ interface AgentTabProps {
 }
 
 export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTabProps) {
-  const { autonomousStatus, config, updateConfig, portfolioAnalysis } = useDiversifiAI();
+  const { autonomousStatus, config, updateConfig, portfolioAnalysis, addActivity } = useDiversifiAI();
   const { experienceMode } = useExperience();
-  const { ask, openOracle } = useAIOracle();
+  const { ask } = useAIOracle();
   const { navigateToSwap } = useNavigation();
 
   const handleAskAgent = () => {
@@ -62,6 +62,12 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
           portfolio={portfolio ?? null}
           onExecuteSwap={(fromToken, toToken, amount, reason) => {
             ask(`I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ''} based on Oracle recommendation${reason ? `: ${reason}` : ''}. Please confirm this aligns with my strategy.`);
+            addActivity({
+              type: 'swap',
+              tier: 'GUARDIAN',
+              description: `Swap ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ''}${reason ? ` — ${reason}` : ''}`,
+              status: 'pending',
+            });
             navigateToSwap({ fromToken, toToken, amount, reason });
           }}
         />
