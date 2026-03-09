@@ -8,6 +8,27 @@ import { ChainDetectionService } from "@diversifi/shared";
 // NEW: Progressive Disclosure Components (following Core Principles)
 // ============================================================================
 
+/**
+ * Skeleton - Base component for loading states
+ * Reduces Cumulative Layout Shift (CLS) on mobile
+ */
+export const Skeleton = ({ 
+  className = "", 
+  variant = "rect" 
+}: { 
+  className?: string; 
+  variant?: "rect" | "circle" | "text" 
+}) => {
+  const baseStyles = "animate-pulse bg-gray-200 dark:bg-gray-800";
+  const variantStyles = {
+    rect: "rounded-xl",
+    circle: "rounded-full",
+    text: "rounded h-3 w-full",
+  };
+  
+  return <div className={`${baseStyles} ${variantStyles[variant]} ${className}`} />;
+};
+
 /** 
  * StepCard - Used for wizard-style progressive disclosure 
  * Shows one step at a time, reducing cognitive load

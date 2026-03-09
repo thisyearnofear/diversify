@@ -46,7 +46,14 @@ const themeScript = `
 export default function Document() {
   return (
     <Html lang="en" suppressHydrationWarning>
-      <Head />
+      <Head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#2563eb" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="DiversiFi" />
+        <link rel="apple-touch-icon" href="/icon.png" />
+      </Head>
       <body className="bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <Main />

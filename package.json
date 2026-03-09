@@ -10,12 +10,12 @@
   ],
   "scripts": {
     "dev": "next dev -p 3005",
-    "build": "pnpm -r build && next build",
+    "build": "turbo run build --filter=@diversifi/shared --filter=@stable-station/mento-utils && next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "turbo lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "clean": "rm -rf .next out node_modules cache .cache",
+    "clean": "turbo clean && rm -rf .next out node_modules cache .cache",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "setup-arc-agent": "node scripts/setup-arc-agent.js",
     "create-wallet": "npx tsx --env-file=.env.local scripts/create-circle-wallet.ts",
@@ -60,7 +60,9 @@
     "@types/react-dom": "^18",
     "eslint": "^8.57.0",
     "eslint-config-next": "15.2.0",
+    "turbo": "^2.1.2",
     "typescript": "^5.6.3",
     "vitest": "^2.1.9"
-  }
+  },
+  "packageManager": "pnpm@10.30.0"
 }

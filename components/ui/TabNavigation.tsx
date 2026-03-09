@@ -92,9 +92,14 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
           return (
             <motion.button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              whileTap={{ scale: 0.95 }}
-              className={`flex-1 min-w-0 py-2 px-1 min-h-[56px] text-center flex flex-col items-center justify-center transition-all duration-200 relative ${
+              onClick={() => {
+                if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
+                  window.navigator.vibrate(10);
+                }
+                setActiveTab(tab.id);
+              }}
+              whileTap={{ scale: 0.9 }}
+              className={`flex-1 min-w-0 py-2 px-1 min-h-[64px] text-center flex flex-col items-center justify-center transition-all duration-200 relative ${
                 isActive
                   ? "text-blue-600 dark:text-blue-400"
                   : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
