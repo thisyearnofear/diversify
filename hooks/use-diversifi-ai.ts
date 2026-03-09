@@ -439,11 +439,15 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
 
           // Surface analysis result in the AI chat drawer so both surfaces stay in sync
           if (result.advice) {
+            const topAction = result.advice.action
+              ? `\n\n💡 **Top action:** ${result.advice.action}${result.advice.oneLiner ? ` — ${result.advice.oneLiner}` : ''}. Want me to set that up?`
+              : '';
             const summary = [
               `📊 **Portfolio Analysis Complete**`,
               result.advice.oneLiner,
               result.advice.reasoning ? `\n${result.advice.reasoning}` : '',
               result.advice.expectedSavings ? `\n💰 Potential savings: $${result.advice.expectedSavings.toFixed(2)}/yr` : '',
+              topAction,
             ].filter(Boolean).join('\n');
             addMessage({
               id: `analysis-${Date.now()}`,

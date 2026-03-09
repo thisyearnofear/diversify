@@ -605,8 +605,13 @@ export default function ProtectionTab({
             displayRegionData.map((r) => [r.region, (r.usdValue ?? r.value) / (displayTotalValue || 1)])
           )}
           onSelectStrategy={(strategy) => {
+            const recommended = StrategyService.getRecommendedAssets(strategy as any);
+            const toToken = recommended[0] || 'KESm';
+            const fromToken = recommended.includes('USDm') ? 'USDC' : 'USDm';
             navigateToSwap({
-              reason: `Apply ${strategy} strategy — rebalancing your portfolio toward target allocations`,
+              fromToken,
+              toToken,
+              reason: `Apply ${strategy} strategy — rebalancing toward ${toToken}`,
             });
           }}
         />

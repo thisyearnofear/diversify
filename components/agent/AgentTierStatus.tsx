@@ -9,7 +9,7 @@
  * - ENHANCEMENT FIRST: Enhanced with activity feed and performance metrics inline.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useDiversifiAI, AgentActivity } from '../../hooks/use-diversifi-ai';
 import { useExperience } from '../../context/app/ExperienceContext';
 import { useSessionKey } from '../../hooks/use-session-key';
@@ -46,8 +46,11 @@ export const AgentTierStatus: React.FC<{
   const permissionExpiry = signedPermission ? new Date(signedPermission.permission.expiresAt * 1000).toLocaleDateString() : null;
   const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
 
-  const handleRequestPermission = async () => {
+  const [showPermissionModal, setShowPermissionModal] = useState(false);
+
+  const handleRequestPermission = useCallback(async () => {
     if (!address || !chainId) return;
+    setShowPermissionModal(false);
     try {
       const { ethers } = await import('ethers');
       const provider = new ethers.providers.Web3Provider(window.ethereum as any);
@@ -56,7 +59,7 @@ export const AgentTierStatus: React.FC<{
     } catch (e) {
       console.error('[Guardian] Failed to request permission:', e);
     }
-  };
+  }, [address, chainId, requestPermission]);
 
   // Calculate performance metrics
   const metrics = useMemo(() => {
@@ -241,12 +244,48 @@ export const AgentTierStatus: React.FC<{
                     Enable Autonomous Mode by granting a scoped session key — no master key required.
                   </p>
                   <button
-                    onClick={handleRequestPermission}
+                    onClick={() => setShowPermissionModal(true)}
                     disabled={isRequesting}
                     className="w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl py-2 mt-1 transition-colors"
                   >
                     {isRequesting ? 'Waiting for wallet…' : '🔐 Enable Autonomous Mode'}
                   </button>
+                  {/* Pre-sign confirmation modal */}
+                  {showPermissionModal && (
+                    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={() => setShowPermissionModal(false)}>
+                      <div className="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-md p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-base font-black text-gray-900 dark:text-gray-100">🔐 Proof of Protection</h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">You are granting a scoped session key. The Guardian can only act within these limits:</p>
+                        <div className="space-y-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 dark:text-gray-400">Daily spending limit</span>
+                            <span className="font-bold text-gray-900 dark:text-gray-100">$10 / day</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 dark:text-gray-400">Permission expires</span>
+                            <span className="font-bold text-gray-900 dark:text-gray-100">7 days</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 dark:text-gray-400">Allowed actions</span>
+                            <span className="font-bold text-gray-900 dark:text-gray-100">swap, rebalance</span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500 dark:text-gray-400">Allowed tokens</span>
+                            <span className="font-bold text-gray-900 dark:text-gray-100">USDC, PAXG, ETH, USDm</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-purple-600 dark:text-purple-400">Your wallet remains the owner. The Guardian cannot send funds outside these constraints.</p>
+                        <div className="flex gap-3">
+                          <button onClick={() => setShowPermissionModal(false)} className="flex-1 text-xs border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 text-gray-600 dark:text-gray-400">
+                            Cancel
+                          </button>
+                          <button onClick={handleRequestPermission} className="flex-1 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-2.5 transition-colors">
+                            Sign in Wallet
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
