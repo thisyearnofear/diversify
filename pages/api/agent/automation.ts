@@ -30,9 +30,6 @@ interface AutomationPreferences {
     };
 }
 
-// In-memory storage for demo (use database in production)
-const userPreferences = new Map<string, AutomationPreferences>();
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { method } = req;
     const { userAddress, email } = req.query;
@@ -41,13 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'User address required' });
     }
 
-    const userId = userAddress as string;
-
     switch (method) {
         case 'GET': {
-            // Get user's automation preferences
-            const preferences = userPreferences.get(userId) || getDefaultPreferences(email as string);
-            return res.status(200).json({ preferences });
+            // Stateless: client owns preferences in localStorage; return defaults only
+            return res.status(200).json({ preferences: getDefaultPreferences(email as string) });
         }
 
         case 'POST':
@@ -55,7 +49,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             if (req.url?.includes('/test')) {
                 // Test automation with sample data
                 try {
-                    const testPreferences = userPreferences.get(userId) || getDefaultPreferences(email as string);
+                    const testPreferences = (req.body as AutomationPreferences) || getDefaultPreferences(email as string);
 
                     const testAnalysis = {
                         action: 'SWAP' as const,
@@ -131,25 +125,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 }
             }
 
-            // Update user's automation preferences
+            // Stateless: client owns preferences in localStorage; just validate and ack
             try {
                 const newPreferences: AutomationPreferences = req.body;
 
-                // Validate preferences
                 if (!newPreferences.email?.address && newPreferences.email?.enabled) {
                     return res.status(400).json({ error: 'Email address required when email notifications are enabled' });
                 }
 
-                userPreferences.set(userId, newPreferences);
-
                 return res.status(200).json({
                     success: true,
-                    message: 'Automation preferences updated',
+                    message: 'Automation preferences acknowledged',
                     preferences: newPreferences
                 });
             } catch (error) {
-                console.error('Failed to update automation preferences:', error);
-                return res.status(500).json({ error: 'Failed to update preferences' });
+                console.error('Failed to process automation preferences:', error);
+                return res.status(500).json({ error: 'Failed to process preferences' });
             }
 
         default:

@@ -5,6 +5,33 @@ import { useVoiceEnabled } from '../ui/VoiceButton';
 import { useToast } from '../ui/Toast';
 
 const isDev = process.env.NODE_ENV === 'development';
+const AUTOMATION_STORAGE_KEY = 'diversifi-automation-prefs';
+
+function getStorageKey(address: string) {
+    return `${AUTOMATION_STORAGE_KEY}-${address.toLowerCase()}`;
+}
+
+function loadPrefsFromStorage(address: string): AutomationPreferences | null {
+    try {
+        const raw = localStorage.getItem(getStorageKey(address));
+        return raw ? JSON.parse(raw) : null;
+    } catch { return null; }
+}
+
+function savePrefsToStorage(address: string, prefs: AutomationPreferences) {
+    try {
+        localStorage.setItem(getStorageKey(address), JSON.stringify(prefs));
+    } catch {}
+}
+
+function getDefaultPreferences(): AutomationPreferences {
+    return {
+        email: { enabled: false, address: '', frequency: 'immediate', types: ['rebalance_alert', 'urgent_action'] },
+        zapier: { enabled: false, triggers: ['high_urgency', 'critical_urgency'] },
+        slack: { enabled: false, urgencyThreshold: 'HIGH' },
+        thresholds: { minSavings: 25, urgencyLevel: 'MEDIUM' },
+    };
+}
 
 interface AutomationPreferences {
     email: {
@@ -57,16 +84,11 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
     const [saving, setSaving] = useState(false);
     const [testingAutomation, setTestingAutomation] = useState(false);
 
-    const loadPreferences = useCallback(async () => {
-        try {
-            const response = await fetch(`/api/agent/automation?userAddress=${address}`);
-            const data = await response.json();
-            setPreferences(data.preferences);
-        } catch (error) {
-            console.error('Failed to load automation preferences:', error);
-        } finally {
-            setLoading(false);
-        }
+    const loadPreferences = useCallback(() => {
+        if (!address) return;
+        const stored = loadPrefsFromStorage(address);
+        setPreferences(stored || getDefaultPreferences());
+        setLoading(false);
     }, [address]);
 
     useEffect(() => {
@@ -75,22 +97,12 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
         }
     }, [address, loadPreferences]);
 
-    const savePreferences = async () => {
+    const savePreferences = () => {
         if (!preferences || !address) return;
-
         setSaving(true);
         try {
-            const response = await fetch(`/api/agent/automation?userAddress=${address}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(preferences)
-            });
-
-            if (response.ok) {
-                showToast('✅ Automation preferences saved successfully', 'success');
-            } else {
-                throw new Error('Failed to save preferences');
-            }
+            savePrefsToStorage(address, preferences);
+            showToast('✅ Automation preferences saved successfully', 'success');
         } catch (error) {
             console.error('Failed to save automation preferences:', error);
             showToast('❌ Failed to save automation preferences', 'error');

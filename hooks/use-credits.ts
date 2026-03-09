@@ -106,6 +106,19 @@ export function useCredits() {
     }
     setClaimingAction(action);
     try {
+      // For verifiable actions, validate proof URL server-side first
+      if (requiresProof.includes(action)) {
+        const res = await fetch('/api/agent/credits', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, proof }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: 'Verification failed' }));
+          showToast(`❌ ${err.error}`, 'error');
+          return { success: false, creditsEarned: 0 };
+        }
+      }
       const reward = REWARD_ACTIONS[action];
       updateStored(prev => ({
         ...prev,
