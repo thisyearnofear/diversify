@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
+import { useDiversifiAI, AgentActivity } from '../../hooks/use-diversifi-ai';
 import { useExperience } from '../../context/app/ExperienceContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -18,7 +18,8 @@ export const AgentTierStatus: React.FC<{
   isMiniPay?: boolean;
   isFarcaster?: boolean;
   showActivityFeed?: boolean;
-}> = ({ isMiniPay, isFarcaster, showActivityFeed = false }) => {
+  onNavigateToAgent?: () => void;
+}> = ({ isMiniPay, isFarcaster, showActivityFeed = false, onNavigateToAgent }) => {
   const { capabilities, autonomousStatus, isAnalyzing, thinkingStep, activities } = useDiversifiAI();
   const { experienceMode } = useExperience();
   const [expandedTier, setExpandedTier] = useState<'oracle' | 'assistant' | 'guardian' | null>(null);
@@ -101,7 +102,7 @@ export const AgentTierStatus: React.FC<{
         <motion.div 
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-blue-100 dark:border-blue-900 shadow-sm relative overflow-hidden cursor-pointer"
-          onClick={() => showActivityFeed && setExpandedTier(expandedTier === 'oracle' ? null : 'oracle')}
+          onClick={() => { setExpandedTier(expandedTier === 'oracle' ? null : 'oracle'); onNavigateToAgent?.(); }}
         >
           <div className="flex justify-between items-start mb-2 relative z-10">
             <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-xl">
@@ -139,7 +140,7 @@ export const AgentTierStatus: React.FC<{
         <motion.div 
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-green-100 dark:border-green-900 shadow-sm cursor-pointer"
-          onClick={() => showActivityFeed && setExpandedTier(expandedTier === 'assistant' ? null : 'assistant')}
+          onClick={() => { setExpandedTier(expandedTier === 'assistant' ? null : 'assistant'); onNavigateToAgent?.(); }}
         >
           <div className="flex justify-between items-start mb-2">
             <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-xl">
@@ -164,7 +165,7 @@ export const AgentTierStatus: React.FC<{
         <motion.div 
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-purple-100 dark:border-purple-900 shadow-sm relative cursor-pointer"
-          onClick={() => showActivityFeed && setExpandedTier(expandedTier === 'guardian' ? null : 'guardian')}
+          onClick={() => { setExpandedTier(expandedTier === 'guardian' ? null : 'guardian'); onNavigateToAgent?.(); }}
         >
           <div className="flex justify-between items-start mb-2">
             <div className="bg-purple-100 dark:bg-purple-900/50 p-2 rounded-xl">
@@ -198,7 +199,7 @@ export const AgentTierStatus: React.FC<{
 };
 
 // Activity Feed Component (inline, not separate file)
-const ActivityFeed: React.FC<{ activities: any[] }> = ({ activities }) => {
+const ActivityFeed: React.FC<{ activities: AgentActivity[] }> = ({ activities }) => {
   if (activities.length === 0) {
     return (
       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">

@@ -452,7 +452,7 @@ export default function OverviewTab({
   return (
     <div className="space-y-6">
       {/* AGENTIC TIERS: Command Center */}
-      <AgentTierStatus />
+       <AgentTierStatus showActivityFeed={true} onNavigateToAgent={() => setActiveTab("agent")} />
 
       {/* DEMO MODE BANNER */}
       {isDemo && (

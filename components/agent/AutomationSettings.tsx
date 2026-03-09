@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useWalletContext } from '../wallet/WalletProvider';
 import { useVoiceEnabled } from '../ui/VoiceButton';
+import { useToast } from '../ui/Toast';
 
 const isDev = process.env.NODE_ENV === 'development';
 
@@ -50,6 +51,7 @@ interface AutomationSettingsProps {
 export default function AutomationSettings({ config, onConfigChange, autonomousStatus }: AutomationSettingsProps) {
     const { address } = useWalletContext();
     const { isEnabled: voiceEnabled, enable: enableVoice, disable: disableVoice } = useVoiceEnabled();
+    const { showToast } = useToast();
     const [preferences, setPreferences] = useState<AutomationPreferences | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -85,12 +87,13 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
             });
 
             if (response.ok) {
-                console.log('Automation preferences saved successfully');
+                showToast('✅ Automation preferences saved successfully', 'success');
             } else {
                 throw new Error('Failed to save preferences');
             }
         } catch (error) {
             console.error('Failed to save automation preferences:', error);
+            showToast('❌ Failed to save automation preferences', 'error');
         } finally {
             setSaving(false);
         }
@@ -107,13 +110,13 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
             const result = await response.json();
 
             if (result.success) {
-                alert(`✅ Zapier MCP test successful!\n\n${result.message}\n\nNext steps:\n${result.nextSteps.join('\n')}`);
+                showToast(`✅ Zapier MCP test successful! ${result.message}`, 'success');
             } else {
-                alert(`❌ Zapier MCP test failed:\n\n${result.error}\n\nTroubleshooting:\n${result.troubleshooting?.join('\n') || 'Check console for details'}`);
+                showToast(`❌ Zapier MCP test failed: ${result.error}`, 'error');
             }
         } catch (error) {
             console.error('Zapier test failed:', error);
-            alert('❌ Zapier test failed. Check console for details.');
+            showToast('❌ Zapier test failed. Check console for details.', 'error');
         } finally {
             setTestingAutomation(false);
         }
@@ -247,14 +250,14 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
             >
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">🎤</span>
                         <div>
-                            <h3 className="font-semibold text-gray-900">Voice Input</h3>
-                            <p className="text-sm text-gray-600">Ask questions using your microphone</p>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Voice Input</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Ask questions using your microphone</p>
                         </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -269,15 +272,15 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                 </div>
 
                 <div className="pl-11 space-y-2">
-                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span className="text-green-500 mt-0.5">✓</span>
                         <span>Tap once to start, tap again to stop (no hold required)</span>
                     </div>
-                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span className="text-green-500 mt-0.5">✓</span>
                         <span>Microphone released immediately when you stop</span>
                     </div>
-                    <div className="flex items-start gap-2 text-sm text-gray-600">
+                    <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span className="text-green-500 mt-0.5">✓</span>
                         <span>Audio processed on-device before sending</span>
                     </div>
@@ -295,14 +298,14 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
             >
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">📧</span>
                         <div>
-                            <h3 className="font-semibold text-gray-900">Email Notifications</h3>
-                            <p className="text-sm text-gray-600">Get notified about important recommendations</p>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Email Notifications</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Get notified about important recommendations</p>
                         </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -319,18 +322,18 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                 {preferences.email.enabled && (
                     <div className="space-y-4 pl-11">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
                             <input
                                 type="email"
                                 value={preferences.email.address}
                                 onChange={(e) => updatePreferences('email', { address: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="your@email.com"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Notification Types</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Notification Types</label>
                             <div className="space-y-2">
                                 {[
                                     { key: 'rebalance_alert', label: 'Rebalancing Alerts', desc: 'When AI recommends portfolio changes' },
@@ -350,8 +353,8 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                                             className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                         />
                                         <div>
-                                            <div className="font-medium text-gray-900">{label}</div>
-                                            <div className="text-sm text-gray-600">{desc}</div>
+                                            <div className="font-medium text-gray-900 dark:text-white">{label}</div>
+                                            <div className="text-sm text-gray-600 dark:text-gray-400">{desc}</div>
                                         </div>
                                     </label>
                                 ))}
@@ -366,14 +369,14 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
             >
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                         <span className="text-2xl">⚡</span>
                         <div>
-                            <h3 className="font-semibold text-gray-900">Zapier Integration</h3>
-                            <p className="text-sm text-gray-600">Trigger custom workflows and automations</p>
+                            <h3 className="font-semibold text-gray-900 dark:text-white">Zapier Integration</h3>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">Trigger custom workflows and automations</p>
                         </div>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
@@ -390,15 +393,15 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                 {preferences.zapier.enabled && (
                     <div className="space-y-4 pl-11">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Webhook URL</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Webhook URL</label>
                             <input
                                 type="url"
                                 value={preferences.zapier.webhookUrl || ''}
                                 onChange={(e) => updatePreferences('zapier', { webhookUrl: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="https://hooks.zapier.com/hooks/catch/..."
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 Create a webhook trigger in Zapier and paste the URL here
                             </p>
                         </div>
@@ -411,39 +414,39 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6"
+                className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
             >
                 <div className="flex items-center gap-3 mb-4">
                     <span className="text-2xl">🎯</span>
                     <div>
-                        <h3 className="font-semibold text-gray-900">Automation Thresholds</h3>
-                        <p className="text-sm text-gray-600">Control when automations are triggered</p>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">Automation Thresholds</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Control when automations are triggered</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Minimum Expected Savings
                         </label>
                         <div className="relative">
-                            <span className="absolute left-3 top-2 text-gray-500">$</span>
+                            <span className="absolute left-3 top-2 text-gray-500 dark:text-gray-400">$</span>
                             <input
                                 type="number"
                                 value={preferences.thresholds.minSavings}
                                 onChange={(e) => updatePreferences('thresholds', { minSavings: parseInt(e.target.value) || 0 })}
-                                className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 min="0"
                                 step="5"
                             />
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                             Only trigger automations for recommendations with at least this much expected savings
                         </p>
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                             Minimum Urgency Level
                         </label>
                         <select
@@ -452,7 +455,7 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                                 const value = e.target.value as 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
                                 updatePreferences('thresholds', { urgencyLevel: value });
                             }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="LOW">Low - All recommendations</option>
                             <option value="MEDIUM">Medium - Important changes</option>
@@ -499,31 +502,15 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
                     )}
                 </button>
 
-                <button
-                    onClick={() => {/* Keep old test for email */ }}
-                    disabled={testingAutomation || !preferences.email.enabled}
-                    className="px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                    {testingAutomation ? (
-                        <>
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                            Testing...
-                        </>
-                    ) : (
-                        <>
-                            📧 Test Email
-                        </>
-                    )}
-                </button>
             </div>
 
             {/* Info Box */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <div className="flex items-start gap-3">
                     <span className="text-blue-600 text-xl">💡</span>
                     <div>
-                        <h4 className="font-medium text-blue-900 mb-1">How It Works</h4>
-                        <p className="text-sm text-blue-800">
+                        <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">How It Works</h4>
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
                             Your AI agent analyzes your portfolio continuously and triggers automations when it detects
                             wealth protection opportunities that meet your configured thresholds.
                             {isDev && ' All analysis costs are paid autonomously by the agent using x402 micropayments on Arc Network.'}

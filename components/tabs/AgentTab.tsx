@@ -53,22 +53,6 @@ export default function AgentTab({ isMiniPay, isFarcaster }: AgentTabProps) {
         />
       )}
 
-      {/* Info Card */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800">
-        <div className="flex items-start gap-3">
-          <span className="text-2xl">💡</span>
-          <div className="flex-1">
-            <h4 className="text-sm font-bold text-blue-900 dark:text-blue-100 mb-1">
-              How It Works
-            </h4>
-            <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-              <li>🔮 <strong>Oracle</strong> analyzes your portfolio and market conditions</li>
-              <li>🎙️ <strong>Assistant</strong> executes your voice commands and intents</li>
-              <li>🛡️ <strong>Guardian</strong> {autonomousStatus?.enabled ? 'autonomously protects your savings' : 'autonomously protects your savings (coming soon)'}</li>
-            </ul>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
