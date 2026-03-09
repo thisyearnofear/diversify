@@ -315,12 +315,19 @@ export class MarketPulseService {
     const pulse = await this.getMarketPulse();
     const triggers = this.generateTriggers(pulse);
 
-    // Add real-time macro and inflation data for AI synthesis
+    // Add real-time macro, inflation, and synth data for AI synthesis
     const { inflationService } = await import('./improved-data-services');
-    const [inflationResult, macroResult] = await Promise.all([
+    const { SynthDataService } = await import('../services/synth-data-service');
+
+    // Fetch BTC and ETH forecasts for the intelligence engine
+    const [inflationResult, macroResult, btcSynth, ethSynth] = await Promise.all([
       inflationService.getInflationData(),
-      macroService.getMacroData()
+      macroService.getMacroData(),
+      SynthDataService.getPredictions('BTC'),
+      SynthDataService.getPredictions('ETH')
     ]);
+
+    const synthData = { BTC: btcSynth, ETH: ethSynth };
 
     const items: IntelligenceItem[] = [];
 
@@ -328,7 +335,8 @@ export class MarketPulseService {
     const guardianInsights = await IntelligenceService.generateGuardianInsights(
       pulse,
       inflationResult.data,
-      macroResult.data
+      macroResult.data,
+      synthData
     );
     items.push(...guardianInsights);
 

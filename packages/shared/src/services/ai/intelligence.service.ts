@@ -22,7 +22,8 @@ export class IntelligenceService {
     static async generateGuardianInsights(
         pulse: MarketPulse,
         inflationData: any,
-        macroData: any
+        macroData: any,
+        synthData?: Record<string, any>
     ): Promise<IntelligenceItem[]> {
         try {
             const insights: IntelligenceItem[] = [];
@@ -97,6 +98,22 @@ export class IntelligenceService {
                     impactAsset: 'STARK',
                     timestamp: 'Autonomous'
                 });
+            }
+
+            // 5. Synth Forecast Alpha
+            if (synthData && synthData['BTC']) {
+                const btc = synthData['BTC'];
+                if (btc.forecast_future && btc.forecast_future.percentiles.p95 > btc.current_price * 1.05) {
+                    insights.push({
+                        id: `synth-guardian-alpha-${this.getDayKey()}`,
+                        type: 'impact',
+                        title: 'Bullish Prediction: BTC Alpha',
+                        description: `SynthData 24h probabilistic models show a 95th percentile outlier target of $${Math.round(btc.forecast_future.percentiles.p95).toLocaleString()}. Potential +5% alpha detected in current volatility regime.`,
+                        impact: 'positive',
+                        impactAsset: 'BTC',
+                        timestamp: 'Autonomous'
+                    });
+                }
             }
 
             // Filter out insights already seen or that have redundant content

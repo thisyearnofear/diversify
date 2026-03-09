@@ -7,6 +7,10 @@
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
 import { rwaService } from './rwa-service';
 import { circleService, CircleService } from './circle-service';
+import { SynthDataService } from './synth-data-service';
+import { AIService } from './ai/ai-service';
+import { marketPulseService } from '../utils/market-pulse-service';
+import { inflationService } from '../utils/improved-data-services';
 
 export interface Payment {
     amount: string;
@@ -292,7 +296,7 @@ export class SessionKeyProvider implements AgentWalletProvider {
         const check = erc7715Service.isActionAllowed(
             this.permission, 'payment' as any, 'USDC' as any, amountUSD, this.spentTodayUSD
         );
-        
+
         if (!check.allowed) {
             throw new Error(`[SessionKeyProvider] Nanopayment denied: ${check.reason}`);
         }
@@ -369,14 +373,14 @@ export class ArcAgent {
             if (balance < this.spendingLimit) {
                 if (parseFloat(unifiedBalance.totalUSDC) >= this.spendingLimit) {
                     steps.push("Optimizing capital location via BridgeService...");
-                    
+
                     // Determine best bridge strategy: LI.FI for optimal routing, Circle for Native USDC
                     // This satisfies LI.FI hackathon's "Capital Efficiency" track
                     const sourceChain = unifiedBalance.chainBalances?.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount))[0];
-                    
+
                     if (sourceChain) {
                         steps.push(`Moving capital from ${sourceChain.chainName} using LI.FI optimal route...`);
-                        
+
                         // We use LI.FI here because it can handle swaps if the source asset is not USDC, 
                         // ensuring the agent never gets stuck.
                         try {
@@ -387,7 +391,7 @@ export class ArcAgent {
                                 toToken: 'USDC',
                                 amount: this.spendingLimit.toString()
                             });
-                            
+
                             steps.push(`✓ Capital optimized: ${bridgeResult.txHash}`);
                             return this.getFallbackRecommendation();
                         } catch (bridgeError) {
@@ -434,8 +438,74 @@ export class ArcAgent {
             const yieldResult = await this.fetchYieldData(steps, dataSources);
             Object.assign(paymentHashes, yieldResult.hashes);
 
-            // ... (Analysis and On-chain Recording)
-            return this.getFallbackRecommendation(); // Placeholder for brevity in response
+            // Step 6: Get high-fidelity price forecasts from SynthData 
+            steps.push("Analyzing probabilistic price forecasts (SynthData)...");
+            const synthPredictions: Record<string, any> = {};
+            const assetsToAnalyze = ['BTC', 'ETH', 'NVDAX', 'SPYX'];
+            await Promise.all(assetsToAnalyze.map(async (asset) => {
+                const pred = await SynthDataService.getPredictions(asset);
+                if (pred) synthPredictions[asset] = pred;
+            }));
+
+            // Step 7: Final AI Reasoning with all premium data
+            steps.push("Synthesizing multi-source intelligence...");
+            const pulse = await marketPulseService.getMarketPulse();
+
+            const prompt = `
+                You are ArcAgent, an autonomous AI financial analyst with access to premium verified data.
+                Analyze the following data and provide a portfolio recommendation.
+
+                PORTFOLIO:
+                - Balance: ${unifiedBalance.totalUSDC} USDC
+                - Holdings: ${portfolioData.holdings.join(', ')}
+
+                MARKET PULSE:
+                - Sentiment: ${pulse.sentiment}
+                - AI Momentum: ${pulse.aiMomentum}
+                - War Risk: ${pulse.warRisk}
+                - Liquidation Risk: ${pulse.liquidationRisk}%
+
+                TRUFLATION / MACRO:
+                ${JSON.stringify(inflationResult.data, null, 2)}
+                ${JSON.stringify(economicResult.data, null, 2)}
+
+                SYNTHDATA FORECASTS:
+                ${JSON.stringify(synthPredictions, null, 2)}
+
+                YIELD OPPORTUNITIES:
+                ${JSON.stringify(yieldResult.data, null, 2)}
+
+                TASK:
+                Provide a JSON response with:
+                - action: 'SWAP', 'REBALANCE', or 'HOLD'
+                - targetToken: (if applicable)
+                - confidence: 0-1
+                - reasoning: A detailed explanation leveraging the data above
+                - riskLevel: 'LOW', 'MEDIUM', 'HIGH'
+                - expectedSavings: Estimated alpha generated
+            `;
+
+            const aiResponse = await AIService.chat({
+                messages: [{ role: 'system', content: prompt }],
+                responseMimeType: 'application/json'
+            });
+
+            const recommendation = JSON.parse(aiResponse.content);
+
+            return {
+                action: recommendation.action || 'HOLD',
+                targetToken: recommendation.targetToken,
+                confidence: recommendation.confidence || 0.8,
+                reasoning: recommendation.reasoning || "Balanced hold strategy based on current macro stability.",
+                expectedSavings: recommendation.expectedSavings || 0,
+                timeHorizon: '7D',
+                riskLevel: recommendation.riskLevel || 'MEDIUM',
+                dataSources,
+                paymentHashes,
+                executionMode: 'ADVISORY',
+                actionSteps: steps.concat(recommendation.actionSteps || []),
+                urgencyLevel: recommendation.confidence > 0.9 ? 'HIGH' : 'LOW'
+            };
         } catch (error) {
             console.error('Autonomous analysis failed:', error);
             return this.getFallbackRecommendation();
@@ -454,11 +524,11 @@ export class ArcAgent {
         amount: string;
     }): Promise<any> {
         console.log(`[Arc Agent] LI.FI Autonomous Bridge: ${params.fromToken} (${params.fromChainId}) -> ${params.toToken} (${params.toChainId})`);
-        
+
         // Dynamically import LiFiBridgeStrategy to avoid circular dependencies
         const { LiFiBridgeStrategy } = await import('./swap/strategies/lifi-bridge.strategy');
         const strategy = new LiFiBridgeStrategy();
-        
+
         return await strategy.execute({
             fromToken: params.fromToken,
             toToken: params.toToken,
@@ -710,7 +780,7 @@ export class ArcAgent {
 
                     // --- Nanopayment Flow (EIP-3009) ---
                     console.log(`[Arc Agent] Creating gas-free Nanopayment Mandate for ${url}`);
-                    
+
                     const mandate = await this.circleService.createNanopaymentMandate(
                         this.wallet,
                         {
@@ -748,7 +818,7 @@ export class ArcAgent {
                         // If mandate fails, fall back to on-chain payment (Legacy mode)
                         console.log(`[Arc Agent] Mandate rejected, falling back to on-chain payment...`);
                         const paymentTx = await this.executeUSDCPayment(challenge.recipient, challenge.amount || payment.amount);
-                        
+
                         const legacyRetryResponse = await fetch(initialUrl, {
                             headers: {
                                 ...headers,
@@ -758,13 +828,13 @@ export class ArcAgent {
                                 'X-Payment-Nonce': challenge.nonce
                             }
                         });
-                        
+
                         if (legacyRetryResponse.ok) {
                             this.spentToday += parseFloat(payment.amount);
                             return legacyRetryResponse;
                         }
                     }
-                    
+
                     throw new Error(`Payment failed: ${retryResponse.status}`);
                 }
 
@@ -1110,7 +1180,7 @@ export class ArcAgent {
         queryType: 'macro' | 'yield' | 'strategy'
     ): Promise<any> {
         console.log(`[Arc Agent] A2A Request from ${requesterAddress} for ${queryType}`);
-        
+
         // In a real x402 flow, this would be gated by a payment check
         // For the hackathon, we demonstrate the response capability
         const intelligence = {

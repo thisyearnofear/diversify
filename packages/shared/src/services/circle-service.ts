@@ -199,7 +199,7 @@ export class CircleService {
         console.log(`[Circle Service] Creating Nanopayment Mandate: ${intent.amount} USDC to ${intent.recipient}`);
 
         const sender = await signer.getAddress();
-        
+
         const domain = {
             name: 'USD Coin',
             version: '2',
@@ -227,7 +227,7 @@ export class CircleService {
             nonce: intent.nonce.startsWith('0x') ? intent.nonce : utils.formatBytes32String(intent.nonce)
         };
 
-        const signature = signer._signTypedData 
+        const signature = signer._signTypedData
             ? await signer._signTypedData(domain, types, value)
             : await signer.signTypedData(domain, types, value);
 
@@ -294,13 +294,13 @@ export class CircleService {
         tokenAddress: string = ARC_DATA_HUB_CONFIG.USDC_TESTNET
     ): Promise<BridgeQuote> {
         try {
-            const supportedChains = [1, 42161, 5042002]; 
+            const supportedChains = [1, 42161, 5042002];
             if (!supportedChains.includes(sourceChainId) || !supportedChains.includes(destinationChainId)) {
                 throw new Error('Unsupported chain for Circle Bridge Kit');
             }
-            
+
             console.log(`[Circle Service] Getting bridge quote for ${amount} USDC`);
-            
+
             return {
                 sourceChainId,
                 destinationChainId,
@@ -329,7 +329,7 @@ export class CircleService {
         quoteId: string
     ): Promise<BridgeTransaction> {
         console.log(`[Circle Service] Bridging ${amount} USDC via ${quoteId}`);
-        
+
         return {
             transactionId: 'circle-bridge-tx-' + Math.random().toString(36).substr(2, 12),
             sourceChainId,
@@ -356,6 +356,13 @@ export class CircleService {
                 'bridge_kit_cctp'
             ]
         };
+    }
+
+    /**
+     * Alias for getStatus to satisfy ArcAgent expectations
+     */
+    async getBridgeKitStatus(): Promise<any> {
+        return this.getStatus();
     }
 }
 

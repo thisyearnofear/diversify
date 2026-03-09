@@ -356,4 +356,26 @@ export class RealCircleWalletProvider implements AgentWalletProvider {
             throw new Error(`Failed to estimate fee: ${error.message}`);
         }
     }
+
+    /**
+     * Sign typed data (EIP-712) using Circle's signing API
+     */
+    async signTypedData(domain: any, types: any, value: any): Promise<string> {
+        this.ensureInitialized();
+
+        try {
+            console.log(`[Circle Wallet] Signing typed data for ${this.walletAddress}...`);
+
+            // For developer-controlled wallets, use signTypedData
+            const response = await this.client.signTypedData({
+                walletId: this.walletId,
+                data: JSON.stringify({ domain, types, message: value })
+            });
+
+            return response.data?.signature || '';
+        } catch (error: any) {
+            console.error('[Circle Wallet] Typed data signing failed:', error.message);
+            throw new Error(`Failed to sign typed data: ${error.message}`);
+        }
+    }
 }
