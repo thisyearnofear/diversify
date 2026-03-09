@@ -18,6 +18,7 @@ import {
   type PortfolioAnalysis,
 } from "@diversifi/shared";
 import { useAIConversationOptional } from "../context/AIConversationContext";
+import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 
 // Points to the AI backend. In production, set NEXT_PUBLIC_API_BASE_URL to
@@ -770,7 +771,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         const response = await fetch(`${API_BASE}/api/agent/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, history: messages, chainId, address }),
+          body: JSON.stringify({ message: content, history: messages, chainId, address, financialStrategy: getPersistedStrategy() }),
         });
 
         if (response.ok) {

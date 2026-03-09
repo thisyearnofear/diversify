@@ -9,7 +9,9 @@ export type FinancialStrategy =
   | 'confucian'
   | 'gotong_royong'
   | 'islamic'
-  | 'global';
+  | 'global'
+  | 'halo'
+  | 'taco';
 
 export interface StrategyOption {
   id: FinancialStrategy;

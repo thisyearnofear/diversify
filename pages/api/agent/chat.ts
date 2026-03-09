@@ -46,7 +46,7 @@ KEY FEATURES TO MENTION:
 - **Multi-chain**: Celo + Arbitrum
 - **Fiat On/Off Ramps**: Guardarian, Mt Pelerin
 - **Experience Modes**: Simple, Standard, Advanced
-- **Cultural Strategies**: Africapitalism, Buen Vivir, Confucian, Islamic Finance
+- **Cultural Strategies**: Africapitalism, Buen Vivir, Confucian, Islamic Finance, Gotong Royong (Mutual Aid), HALO Trade, TACO Strategy, Global Diversification
 
 AVAILABLE ASSETS:
 - **Celo (Mento stables)**: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC
@@ -183,7 +183,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { message, history = [], chainId, address } = req.body;
+    const { message, history = [], chainId, address, financialStrategy } = req.body;
 
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'Message is required' });
@@ -191,7 +191,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Dynamic system prompt based on context
     const gdContext = await getGoodDollarContext(address);
-    const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId) + getMainnetChainContext(chainId) + gdContext;
+    const strategyContext = financialStrategy
+      ? `\nUSER'S FINANCIAL STRATEGY: ${financialStrategy} — tailor all portfolio advice, asset suggestions, and rebalancing recommendations to align with this philosophy. Reference it explicitly when relevant.\n`
+      : '';
+    const contextPrompt = SYSTEM_PROMPT + getTestDriveContext(chainId) + getMainnetChainContext(chainId) + gdContext + strategyContext;
 
     // Build conversation messages
     const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [

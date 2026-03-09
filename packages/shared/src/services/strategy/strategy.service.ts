@@ -174,6 +174,46 @@ export class StrategyService {
                     },
                 };
 
+            case 'halo':
+                return {
+                    preferredRegions: ['Commodities', 'USA'],
+                    targetAllocations: [
+                        { region: 'Commodities', min: 30, ideal: 50, max: 70 },
+                        { region: 'USA', min: 20, ideal: 30, max: 50 },
+                    ],
+                    prioritizeAssets: ['PAXG', 'USDY'],
+                    scoringWeights: {
+                        regionalConcentration: 0.4,
+                        globalDiversification: 0.4,
+                        assetCompliance: 0.2,
+                    },
+                    successThresholds: {
+                        excellent: 80,
+                        good: 60,
+                        needsWork: 40,
+                    },
+                };
+
+            case 'taco':
+                return {
+                    preferredRegions: ['Global', 'Europe'],
+                    targetAllocations: [
+                        { region: 'Global', min: 40, ideal: 60, max: 80 },
+                        { region: 'Europe', min: 10, ideal: 20, max: 40 },
+                    ],
+                    prioritizeAssets: ['USDC', 'EURC', 'USDm', 'EURm'],
+                    scoringWeights: {
+                        regionalConcentration: 0.2,
+                        globalDiversification: 0.7,
+                        assetCompliance: 0.1,
+                    },
+                    successThresholds: {
+                        excellent: 80,
+                        good: 60,
+                        needsWork: 40,
+                    },
+                };
+
             case 'custom':
             default:
                 return this.getDefaultConfig();
@@ -316,6 +356,22 @@ export class StrategyService {
 - Balance developed and emerging markets
 - Hedge currency and geopolitical risk
 - Target: Equal distribution across continents`;
+
+            case 'halo':
+                return `The user follows HALO (Hard Assets, Low Obsolescence) strategy. Prioritize recommendations that:
+- Focus on asset-backed tokens with intrinsic value
+- Increase exposure to physical gold (PAXG)
+- Use US Treasury-backed yield (USDY) for stability
+- Avoid high-velocity regional stables in favor of "hard" base assets
+- Target: 50% Commodities (PAXG), 30% US Treasuries (USDY)`;
+
+            case 'taco':
+                return `The user follows TACO (Political Neutrality/Hedge) strategy. Prioritize recommendations that:
+- Hedge against political and macro-economic volatility
+- Prioritize high-liquidity, neutral stablecoins (USDC, EURC)
+- Maintain global flexibility by avoiding regional concentration
+- Suggest assets that are geographically distant from the user's primary region
+- Target: 60% Global Neutral Assets, 20% European Stability`;
 
             default:
                 return 'Analyze the portfolio and provide balanced diversification recommendations.';

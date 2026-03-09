@@ -6,15 +6,11 @@
  */
 
 import { useMemo } from 'react';
+import { useStrategy } from '@/context/app/StrategyContext';
+import type { FinancialStrategy as SharedFinancialStrategy } from '@diversifi/shared';
 
-export type FinancialStrategy =
-    | 'africapitalism'
-    | 'buen_vivir'
-    | 'confucian'
-    | 'gotong_royong'
-    | 'islamic'
-    | 'global'
-    | 'custom';
+/** Single source of truth — re-exported from @diversifi/shared */
+export type FinancialStrategy = SharedFinancialStrategy;
 
 export interface Strategy {
     id: FinancialStrategy;
@@ -85,6 +81,28 @@ const STRATEGIES: Strategy[] = [
         regions: ['Middle East', 'North Africa', 'Global'],
     },
     {
+        id: 'halo',
+        name: 'HALO Trade',
+        nativeName: 'Hard Assets Only',
+        icon: '🧱',
+        tagline: 'Assets that last',
+        description: 'Focus on Hard Assets with Low Obsolescence. Protect against fiat degradation by holding physical-backed assets.',
+        values: ['Intrinsic value', 'No obsolescence', 'Store of value'],
+        example: 'Target: 50% Gold (PAXG), 30% Treasuries (USDY)',
+        regions: ['Commodities', 'USA'],
+    },
+    {
+        id: 'taco',
+        name: 'TACO Strategy',
+        nativeName: 'Political Hedge',
+        icon: '🌮',
+        tagline: 'Neutrality is king',
+        description: 'Hedge against political volatility and macro-shocks. Move into high-liquidity, neutral assets that transcend borders.',
+        values: ['Political hedge', 'Maximum liquidity', 'Geo-neutrality'],
+        example: '60% Global Neutral (USDC), 20% European Stability',
+        regions: ['Global', 'Europe'],
+    },
+    {
         id: 'global',
         name: 'Global Diversification',
         icon: '🌐',
@@ -107,11 +125,21 @@ const STRATEGIES: Strategy[] = [
 ];
 
 export function useFinancialStrategies() {
+    const { financialStrategy, setFinancialStrategy } = useStrategy();
+
     return useMemo(() => ({
         strategies: STRATEGIES,
+        selectedStrategy: financialStrategy as FinancialStrategy | null,
+        setSelectedStrategy: setFinancialStrategy as (s: FinancialStrategy | null) => void,
         getStrategyById: (id: FinancialStrategy) => STRATEGIES.find(s => s.id === id),
         getStrategyIndex: (id: FinancialStrategy) => STRATEGIES.findIndex(s => s.id === id),
-    }), []);
+    }), [financialStrategy, setFinancialStrategy]);
+}
+
+/** Read the persisted strategy without a React hook (for use in API calls) */
+export function getPersistedStrategy(): FinancialStrategy | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('financialStrategy') as FinancialStrategy | null;
 }
 
 // Export for backward compatibility

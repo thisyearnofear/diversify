@@ -364,6 +364,7 @@ export const ProtectionDashboard = ({
   canClaim,
   estimatedReward,
   onClaim,
+  strategy = 'global',
 }: {
   title?: string;
   subtitle?: string;
@@ -379,23 +380,47 @@ export const ProtectionDashboard = ({
   canClaim?: boolean;
   estimatedReward?: string;
   onClaim?: () => void;
+  strategy?: string;
 }) => {
   const isGood = score >= 80;
   const isOk = score >= 60;
 
-  const ringColor = isGood ? '#10b981' : isOk ? '#f59e0b' : '#ef4444';
+  const ringColor = strategy === 'halo' ? '#fbbf24' : strategy === 'taco' ? '#22c55e' : isGood ? '#10b981' : isOk ? '#f59e0b' : '#ef4444';
   const statusText = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
 
   const filled = (score / 100) * RING_C;
   const hasStreak = streak && streak.daysActive > 0;
 
+  // Strategy-specific themes
+  const themes = {
+    halo: "from-amber-400 via-yellow-600 to-amber-800",
+    taco: "from-emerald-600 via-teal-700 to-emerald-900",
+    default: "from-indigo-600 via-indigo-700 to-purple-800",
+  };
+
+  const currentTheme = strategy === 'halo' ? themes.halo : strategy === 'taco' ? themes.taco : themes.default;
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
       {/* Hero Section - Visual Header Banner Style */}
-      <div className="relative p-6 text-white bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-800 overflow-hidden">
+      <div className={`relative p-6 text-white bg-gradient-to-br ${currentTheme} overflow-hidden`}>
         {/* Animated Background Elements */}
+        {strategy === 'halo' ? (
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5" />
+        ) : strategy === 'taco' ? (
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')] opacity-10" />
+        ) : null}
+        
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/10 rounded-full blur-2xl -ml-10 -mb-10" />
+
+        {strategy === 'taco' && (
+          <motion.div 
+            className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-400/5 to-transparent h-20 w-full"
+            animate={{ top: ['-20%', '120%'] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+          />
+        )}
 
         <div className="relative z-10 flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">

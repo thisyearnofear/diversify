@@ -19,6 +19,7 @@ import {
   USER_GOALS,
 } from "@/hooks/use-protection-profile";
 import { useAIOracle } from "@/hooks/use-ai-oracle";
+import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
 
 import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
@@ -98,6 +99,9 @@ export default function ProtectionTab({
     setRiskTolerance,
     setTimeHorizon,
   } = useProtectionProfile();
+
+  const { selectedStrategy, getStrategyById } = useFinancialStrategies();
+  const selectedStrategyData = selectedStrategy ? getStrategyById(selectedStrategy) : null;
 
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
   const [showClaimFlow, setShowClaimFlow] = useState(false);
@@ -289,6 +293,29 @@ export default function ProtectionTab({
 
   return (
     <div className="space-y-4">
+      {/* Strategy Alignment Bar */}
+      {selectedStrategyData && (
+        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
+          <span className="text-xl">{selectedStrategyData.icon}</span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300 truncate">
+                {selectedStrategyData.name}
+              </span>
+              <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 ml-2 shrink-0">
+                {protectionScore}% aligned
+              </span>
+            </div>
+            <div className="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5">
+              <div
+                className="bg-indigo-600 dark:bg-indigo-400 h-1.5 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(protectionScore, 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* =====================================================================
           CONSOLIDATED PROTECTION DASHBOARD
           ===================================================================== */}
@@ -347,6 +374,7 @@ export default function ProtectionTab({
           totalValue={`$${displayTotalValue.toFixed(0)}`}
           chainCount={displayChainCount}
           score={protectionScore}
+          strategy={config.userGoal || 'global'}
           factors={[
             {
               label: "Portfolio Coverage",
