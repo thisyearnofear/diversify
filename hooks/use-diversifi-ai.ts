@@ -364,9 +364,14 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
           }
         }, 800);
 
+        // Abort after 30s to prevent perpetual loading if the server hangs
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+
         const response = await fetch(`${API_BASE}/api/agent/analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             portfolio,
             inflationData,
@@ -378,6 +383,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
             strategyPrompt: strategyPrompt, // Include strategy context
           }),
         });
+        clearTimeout(timeoutId);
 
         if (progressInterval) {
           clearInterval(progressInterval);
@@ -420,17 +426,12 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         setThinkingStep("Connection interrupted. Please retry.");
       } finally {
         if (progressInterval) clearInterval(progressInterval);
-        // Delay cleaning up state so user sees 100% or error
-        if (!isAnalyzing) {
-          // Only reset if we're not already reset (safety)
-          setTimeout(() => {
-            setIsAnalyzing(false);
-            setThinkingStep("");
-            setAnalysisProgress(0);
-          }, 1500);
-        } else {
+        // Always delay cleanup so user sees the final message (success or error)
+        setTimeout(() => {
           setIsAnalyzing(false);
-        }
+          setThinkingStep("");
+          setAnalysisProgress(0);
+        }, 1500);
       }
     },
     [capabilities.analysis, config],
