@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useWalletContext } from '../context/app/WalletContext';
+import { useWalletContext } from '../components/wallet/WalletProvider';
 import { useToast } from '../components/ui/Toast';
 import { REWARD_ACTIONS } from '../pages/api/agent/credits';
 import type { RewardActionKey } from '../pages/api/agent/credits';
