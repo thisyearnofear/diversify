@@ -822,6 +822,16 @@ export function analyzePortfolio(
     description: "",
     recommendations: rebalancingOpportunities,
   };
+  // Calculate Hyperliquid commodity perp exposure
+  const hyperliquidSymbols = new Set(["GOLD", "SILVER", "OIL", "COPPER"]);
+  const hyperliquidPositions = tokens
+    .filter((t) => hyperliquidSymbols.has(t.symbol.toUpperCase()))
+    .map((t) => ({
+      symbol: t.symbol,
+      value: t.value || 0,
+      percentage: t.percentage || 0,
+      isInflationHedge: t.symbol.toUpperCase() === "GOLD" || t.symbol.toUpperCase() === "SILVER",
+    }));
 
   if (currentGoal === "geographic_diversification") {
     goalAnalysis.title = "Regional Diversification";
@@ -860,17 +870,8 @@ export function analyzePortfolio(
       "Get personalized recommendations based on your holdings and market conditions.";
   }
 
-  // Calculate Hyperliquid commodity perp exposure
-  const hyperliquidSymbols = new Set(["GOLD", "SILVER", "OIL", "COPPER"]);
-  const hyperliquidPositions = tokens
-    .filter((t) => hyperliquidSymbols.has(t.symbol.toUpperCase()))
-    .map((t) => ({
-      symbol: t.symbol,
-      value: t.value,
-      percentage: t.percentage,
-      isInflationHedge: t.symbol.toUpperCase() === "GOLD" || t.symbol.toUpperCase() === "SILVER",
-    }));
-  const hyperliquidTotalValue = hyperliquidPositions.reduce((sum, p) => sum + p.value, 0);
+  // Calculate Hyperliquid exposure summary
+  const hyperliquidTotalValue = hyperliquidPositions.reduce((sum, p) => sum + (p.value || 0), 0);
   const hyperliquidExposure = {
     totalValue: hyperliquidTotalValue,
     percentage: portfolio.totalValue > 0 ? (hyperliquidTotalValue / portfolio.totalValue) * 100 : 0,

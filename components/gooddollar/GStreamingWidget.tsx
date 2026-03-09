@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWalletContext } from '../wallet/WalletProvider';
 import DashboardCard from '../shared/DashboardCard';
-import { GoodDollarService, type StreamInfo } from '@diversifi/shared';
+import { GoodDollarService, type StreamInfo, getWalletProvider } from '@diversifi/shared';
 
 // Example GoodCollective & Social Impact Pools
 const COLLECTIVES = [
@@ -60,13 +60,18 @@ export default function GStreamingWidget() {
 
   // Handle stream creation
   const handleCreateStream = async () => {
-    if (!address || !window.ethereum) return;
+    if (!address) return;
     
     setIsLoading(true);
     setStatus({ type: 'none', msg: '' });
     
     try {
-      const service = await GoodDollarService.fromWeb3Provider(window.ethereum);
+      const walletProvider = await getWalletProvider();
+      if (!walletProvider) {
+        throw new Error('No wallet provider found');
+      }
+      
+      const service = await GoodDollarService.fromWeb3Provider(walletProvider);
       const result = await service.createStream(newStreamTarget, newStreamAmount);
       
       if (result.success) {
@@ -86,11 +91,16 @@ export default function GStreamingWidget() {
 
   // Handle stream deletion
   const handleDeleteStream = async (receiver: string) => {
-    if (!address || !window.ethereum) return;
+    if (!address) return;
     
     setIsLoading(true);
     try {
-      const service = await GoodDollarService.fromWeb3Provider(window.ethereum);
+      const walletProvider = await getWalletProvider();
+      if (!walletProvider) {
+        throw new Error('No wallet provider found');
+      }
+
+      const service = await GoodDollarService.fromWeb3Provider(walletProvider);
       const result = await service.deleteStream(receiver);
       
       if (result.success) {

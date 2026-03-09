@@ -30,14 +30,17 @@ import { ethers } from 'ethers';
 // All addresses are normalised via getAddress() so any capitalisation typo is caught at load-time.
 const _RAW_ADDRESSES = {
   G_TOKEN:      '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A',
-  UBI_SCHEME:   '0x43d72Ff17701B2DA814620735C39C620Ce0ea4A1',
-  IDENTITY:     '0xC361A6E67822a0EDc17D899227dd9FC50BD62F42',
+  UBI_SCHEME:   '0x43d3f6e706eb579456d5189466a53d37238440c0', // Corrected UBIScheme (Celo)
+  IDENTITY:     '0xC361A6E6605f0C127953a83724f2E9f3f056633E', // Corrected Identity (Celo)
   RESERVE:      '0xed8f69e24FE33481f7dFe0d9D0f89F5e4F4f3E3E',
   CFA_FORWARDER:'0xcfA132E353cB4E398080B9700609bb008eceB125',
-  GOOD_TOKEN:   '0x0000000000000000000000000000000000000000', // TODO: Add actual GOOD token address
-  GSX_TOKEN:    '0x0000000000000000000000000000000000000000', // TODO: Add actual G$X token address
-  GOOD_STAKING: '0x0000000000000000000000000000000000000000', // TODO: Add actual GoodStaking contract
+  GOOD_TOKEN:   '0xa9000Aa66903b5E26F88Fa8462739CdCF7956EA6', // GOOD Governance (Celo)
+  GSX_TOKEN:    '0x0000000000000000000000000000000000000000',
+  GOOD_STAKING: '0x0000000000000000000000000000000000000000',
 } as const;
+
+const GOODDOLLAR_RELAYER_URL = 'https://goodserver.gooddollar.org';
+
 
 const GOODDOLLAR_ADDRESSES = Object.fromEntries(
   Object.entries(_RAW_ADDRESSES).map(([k, v]) => [k, ethers.utils.getAddress(v)])
@@ -216,13 +219,44 @@ export class GoodDollarService {
   }
 
   /**
-   * Claim UBI tokens
+   * Claim UBI tokens (GASLESS via Relayer if possible, fallback to On-chain)
    */
   async claimUBI(): Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }> {
     if (!this.signer) {
       return { success: false, error: 'No signer available. Please connect your wallet.' };
     }
 
+    const userAddress = await this.signer.getAddress();
+
+    // 1. TRY GASLESS CLAIM VIA RELAYER
+    try {
+      console.log('[GoodDollar] Attempting gasless claim via relayer...');
+      
+      // Relayer expects a POST to /ubi/claim with the user's address
+      const response = await fetch(`${GOODDOLLAR_RELAYER_URL}/ubi/claim`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address: userAddress })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.ok && result.txHash) {
+          console.log('[GoodDollar] Gasless claim success:', result.txHash);
+          return {
+            success: true,
+            txHash: result.txHash,
+            amount: result.amount || '0',
+          };
+        }
+      }
+      console.warn('[GoodDollar] Relayer claim failed or not supported, falling back to on-chain...');
+    } catch (relayerError) {
+      console.error('[GoodDollar] Relayer error:', relayerError);
+      // Fall through to on-chain fallback
+    }
+
+    // 2. FALLBACK: DIRECT ON-CHAIN CLAIM (Requires Gas)
     try {
       const ubiContract = new ethers.Contract(
         GOODDOLLAR_ADDRESSES.UBI_SCHEME,
@@ -232,7 +266,7 @@ export class GoodDollarService {
 
       // Execute claim
       const tx = await ubiContract.claim();
-      console.log('[GoodDollar] Claim transaction sent:', tx.hash);
+      console.log('[GoodDollar] On-chain claim transaction sent:', tx.hash);
 
       // Wait for confirmation
       const receipt = await tx.wait();

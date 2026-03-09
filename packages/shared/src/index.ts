@@ -2,6 +2,7 @@
 import { ArcAgent } from './services/arc-agent';
 import { SocialConnectService } from './services/social-connect-service';
 import { GoodDollarService } from './services/gooddollar-service';
+export * from './services/gooddollar-service';
 import { RWAService, rwaService } from './services/rwa-service';
 import { SynthDataService } from './services/synth-data-service';
 import { TradeAgent } from './services/trade-agent';
@@ -17,7 +18,6 @@ import { getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export {
   ArcAgent,
   SocialConnectService,
-  GoodDollarService,
   RWAService,
   rwaService,
   SynthDataService,
