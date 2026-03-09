@@ -174,7 +174,7 @@ export class GoodDollarService {
    */
   async getFaceVerificationLink(firstName: string, callbackUrl: string): Promise<string> {
     // Direct URL to GoodDollar's verification flow
-    return `https://goodwallet.xyz/FaceVerification?firstName=${encodeURIComponent(firstName)}&callback=${encodeURIComponent(callbackUrl)}`;
+    return `https://wallet.gooddollar.org/FaceVerification?firstName=${encodeURIComponent(firstName)}&callback=${encodeURIComponent(callbackUrl)}`;
   }
 
   /**
