@@ -40,10 +40,30 @@ export default function ActionableRecommendation({
     onExecuteSwap,
     onExecuteBridge
 }: ActionableRecommendationProps) {
-    if (!analysis || analysis.totalValue === 0) {
+    const portfolioTotalValue = portfolio?.totalValue ?? 0;
+
+    if (!analysis || (analysis.totalValue === 0 && portfolioTotalValue === 0)) {
         return (
-            <div className="bg-gray-50 rounded-xl p-4 text-center">
-                <p className="text-sm text-gray-500">No portfolio data available for recommendations.</p>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {portfolioTotalValue === 0
+                        ? 'Connect a wallet with funds to see recommendations.'
+                        : 'Run portfolio analysis to see actionable recommendations.'}
+                </p>
+            </div>
+        );
+    }
+
+    // If we have portfolio data but no analysis yet, show a prompt to run analysis
+    if (!analysis && portfolioTotalValue > 0) {
+        return (
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
+                <p className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+                    💡 Portfolio detected (${portfolioTotalValue.toFixed(0)} total)
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    Tap &quot;Analyze Portfolio&quot; above to get personalized recommendations.
+                </p>
             </div>
         );
     }

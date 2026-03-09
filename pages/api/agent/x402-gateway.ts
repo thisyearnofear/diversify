@@ -1,7 +1,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
-import { ARC_DATA_HUB_CONFIG, x402Analytics, CircleGatewayService } from '@diversifi/shared';
+import { ARC_DATA_HUB_CONFIG, x402Analytics, circleService } from '@diversifi/shared';
 
 /**
  * Arc Data Hub - Production Gateway (v2)
@@ -22,9 +22,6 @@ const USDC_MAINNET = '0xCa23545A2F2199b1307A0B2E15a0c1086da37798';
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 20; // Increased limit for batched users
 const BATCH_TOPUP_AMOUNT = '1.00'; // Suggest 1 USDC top-up
-
-// Initialize Circle Gateway Service for enhanced payment verification
-const circleGatewayService = new CircleGatewayService();
 
 // --- Types ---
 interface UserState {
@@ -104,7 +101,8 @@ export default async function handler(
     const start = Date.now();
     const { source } = req.query;
     const paymentProof = req.headers['x-payment-proof'] as string;
-    // Future: Support 'x-payment-mandate' for EIP-3009
+    const paymentMandate = req.headers['x-payment-mandate'] as string;
+    
     const clientIP = (req.headers['x-forwarded-for'] as string) || req.connection.remoteAddress || 'unknown';
     const clientKey = Array.isArray(clientIP) ? clientIP[0] : clientIP;
 
@@ -122,107 +120,102 @@ export default async function handler(
         return res.status(429).json({ error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter });
     }
 
-    // 2. Pricing & Free Tier Check
-    const pricing = ARC_DATA_HUB_CONFIG.PRICING as Record<string, string>;
-    const freeLimits = ARC_DATA_HUB_CONFIG.FREE_LIMITS as Record<string, number>;
-    const cost = parseFloat(pricing[source] || '0.01');
+    // 2. Pricing & Category Logic
+    const { CATEGORIES, PRICING, FREE_LIMITS } = ARC_DATA_HUB_CONFIG;
+    const baseSource = source.replace(/(_enhanced|_analytics|_realtime|_optimizer|_insights)$/, '') as keyof typeof PRICING;
+    
+    const isPremiumSource = CATEGORIES.PREMIUM.includes(baseSource as string);
+    const cost = parseFloat(PRICING[baseSource] || '0.01');
+    const freeLimit = (FREE_LIMITS as any)[baseSource] || 0;
+    const currentUsage = UserManager.getUsage(user, baseSource as string);
+    
+    // Logic: Free if it's a BASIC source AND under the limit
+    const isFreeEligible = !isPremiumSource && currentUsage < freeLimit;
 
-    // Simplify source name for limit checking (remove suffixes)
-    const baseSource = source.replace(/(_enhanced|_analytics|_realtime|_optimizer|_insights)$/, '');
-    const currentUsage = UserManager.getUsage(user, baseSource);
-    const freeLimit = freeLimits[baseSource] || 10;
-    const isFreeTier = currentUsage <= freeLimit;
-
-    // 3. Payment Processing (Top-up) - Enhanced with Circle Gateway
-    if (paymentProof) {
+    // 3. Nanopayment Processing (EIP-3009 Mandate) - High Priority, Gas-Free
+    if (paymentMandate) {
         try {
-            // Use enhanced verification that supports both on-chain and Circle Gateway payments
-            const amountCredited = await verifyCircleGatewayPayment(paymentProof);
-            if (amountCredited > 0) {
-                UserManager.addCredit(user, amountCredited);
-                console.log(`[Data Hub] User ${clientKey} deposited $${amountCredited}. New Balance: $${user.creditBalance}`);
-                
-                // Record deposit as a special payment event
-                const paymentMethod = paymentProof.startsWith('circle-gateway-') ? 'CIRCLE_GATEWAY' : 'ON_CHAIN';
-                x402Analytics.recordPayment('USDC_DEPOSIT', amountCredited, Date.now() - start, paymentMethod);
-                
-                // Don't return here; proceed to fulfill the request using the new credit
+            const mandate = JSON.parse(paymentMandate);
+            const isValid = await circleService.verifyNanopaymentMandate(mandate);
+            
+            if (isValid) {
+                const amount = parseFloat(mandate.amount);
+                UserManager.addCredit(user, amount);
+                console.log(`[Data Hub] Nanopayment Mandate verified: $${amount}`);
+                x402Analytics.recordPayment(source, amount, Date.now() - start, 'CIRCLE_NANOPAYMENT');
+            } else {
+                return res.status(401).json({ error: 'Invalid Nanopayment Mandate signature' });
             }
-        } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            x402Analytics.recordFailure('USDC_DEPOSIT', errorMessage);
-            return res.status(401).json({ error: `Payment verification failed: ${errorMessage}` });
+        } catch (error) {
+            return res.status(400).json({ error: 'Malformed Nanopayment Mandate' });
         }
     }
 
-    // 4. Billing Logic
-    if (isFreeTier) {
-        console.log(`[Data Hub] Free tier access: ${source} (${currentUsage}/${freeLimit})`);
-        UserManager.trackUsage(user, baseSource); // Increment usage
+    // 4. Legacy Payment Processing (On-chain txHash)
+    if (paymentProof) {
+        try {
+            const amountCredited = await verifyCircleGatewayPayment(paymentProof);
+            if (amountCredited > 0) {
+                UserManager.addCredit(user, amountCredited);
+                const paymentMethod = paymentProof.startsWith('circle-gateway-') ? 'CIRCLE_GATEWAY' : 'ON_CHAIN';
+                x402Analytics.recordPayment('USDC_DEPOSIT', amountCredited, Date.now() - start, paymentMethod);
+            }
+        } catch (error: unknown) {
+            return res.status(401).json({ error: `Payment verification failed` });
+        }
+    }
+
+    // 5. Fulfillment Logic
+    if (isFreeEligible) {
+        console.log(`[Data Hub] Free access: ${source} (${currentUsage + 1}/${freeLimit})`);
+        UserManager.trackUsage(user, baseSource as string);
         const data = await getActualPremiumData(source, true);
         return res.status(200).json({
             ...data,
             _billing: {
                 status: 'Free Tier',
-                remaining_free: freeLimit - currentUsage,
-                upgrade_info: 'Micro-payments enable enhanced analysis'
+                remaining_free: freeLimit - (currentUsage + 1),
+                reason: 'Basic data sources include a generous free tier'
             }
         });
     }
 
-    // 5. Paid Tier Logic (Credit Drawdown)
+    // Paid Tier Logic (Credit Drawdown)
     if (UserManager.deductCredit(user, cost)) {
-        console.log(`[Data Hub] Paid access: ${source} - Deducted $${cost}. Remaining: $${user.creditBalance}`);
-        // Record the actual usage payment
+        console.log(`[Data Hub] Paid access: ${source} - Deducted $${cost}`);
         x402Analytics.recordPayment(source, cost, Date.now() - start);
-        
-        // Note: Usage is NOT tracked against free limit for paid requests, or it IS?
-        // Let's say paid requests don't consume free limit, but free limit is already exhausted anyway.
         const data = await getActualPremiumData(source, false);
         return res.status(200).json({
             ...data,
             _billing: {
                 status: 'Paid',
                 cost: cost,
-                remaining_credit: user.creditBalance.toFixed(4)
+                remaining_credit: user.creditBalance.toFixed(4),
+                reason: isPremiumSource ? 'Premium insight unlocked' : 'Free tier exceeded, used micro-credits'
             }
         });
     }
 
-    // 6. Payment Required (402) - Enhanced with Circle Gateway options
+    // 6. Payment Required (402)
     const nonce = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    user.nonces.set(nonce, Date.now() + 300000); // 5 min expiry
-
-    // We don't record a failure here, as 402 is a valid flow step, but we could track 'challenges' if needed.
+    user.nonces.set(nonce, Date.now() + 300000);
 
     return res.status(402).json({
-        error: 'Insufficient credit',
+        error: isPremiumSource ? 'Premium Source Required' : 'Free Limit Exceeded',
+        reason: isPremiumSource 
+            ? `Accessing "${source}" requires premium micro-credits ($${cost} USDC)`
+            : `You have used all ${freeLimit} free requests for ${baseSource}. Micro-payments enable continued access.`,
         recipient: DATA_HUB_WALLET,
-        // Request Batch Top-up instead of single cost
-        amount: BATCH_TOPUP_AMOUNT,
+        amount: BATCH_TOPUP_AMOUNT, // Suggest 1 USDC top-up for efficiency
         currency: 'USDC',
-        chainId: 5042002, // Arc Testnet
+        chainId: 5042002,
         nonce,
         current_balance: user.creditBalance.toFixed(4),
         required_cost: cost,
-        instructions: {
-            method: 'USDC Transfer',
-            network: 'Arc Network',
-            note: 'Payment adds to your credit balance for multiple requests.'
-        },
         circle_gateway: {
             enabled: true,
             description: 'Use Circle Gateway for unified USDC balance across chains',
-            supported_chains: [
-                { chainId: 1, name: 'Ethereum' },
-                { chainId: 42161, name: 'Arbitrum' },
-                { chainId: 5042002, name: 'Arc Testnet' }
-            ],
-            benefits: [
-                'Unified USDC balance across all supported chains',
-                'Instant settlement on Arc network',
-                'Lower gas fees with USDC as native gas token'
-            ]
+            benefits: ['Zero-gas nanopayments', 'Instant settlement', 'Cross-chain liquidity']
         }
     });
 }
@@ -271,7 +264,7 @@ async function verifyCircleGatewayPayment(paymentProof: string): Promise<number>
     try {
         // Check if this is a Circle Gateway transaction
         if (paymentProof.startsWith('circle-gateway-')) {
-            const isValid = await circleGatewayService.verifyGatewayTransaction(paymentProof);
+            const isValid = await circleService.verifyGatewayTransaction(paymentProof);
             if (!isValid) {
                 throw new Error('Invalid Circle Gateway transaction');
             }

@@ -1,31 +1,8 @@
 // Export Services
-import { ArcAgent, SessionKeyProvider } from './services/arc-agent';
-export { ERC7715Service, erc7715Service } from './services/erc7715-service';
-export type {
-    AutonomyLevel,
-    AllowedAction,
-    AllowedToken,
-    SessionPermission,
-    SignedSessionPermission,
-    SessionKeyPair,
-    PermissionValidation,
-} from './services/erc7715-service';
-import { SocialConnectService } from './services/social-connect-service';
-import { GoodDollarService } from './services/gooddollar-service';
-export * from './services/gooddollar-service';
-import { RWAService, rwaService } from './services/rwa-service';
-import { SynthDataService } from './services/synth-data-service';
-import { TradeAgent } from './services/trade-agent';
-import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
-import { IntelligenceService } from './services/ai/intelligence.service';
-import { IntentDiscoveryService } from './services/ai/intent-discovery.service';
-import { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
-import { StrategyService } from './services/strategy/strategy.service';
-import { emergingMarketsPriceService, EmergingMarketsPriceService, getEmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
-import { AutomationService } from './services/automation-service';
-import { getOnrampRecommendation } from './services/ai/onramp-agent-context';
-
+import { circleService, CircleService } from './services/circle-service';
 export {
+  circleService,
+  CircleService,
   ArcAgent,
   SessionKeyProvider,
   SocialConnectService,

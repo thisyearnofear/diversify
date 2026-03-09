@@ -49,21 +49,30 @@ export const NETWORKS = {
 // Arc Data Hub Configuration (X402 Economy)
 export const ARC_DATA_HUB_CONFIG = {
     RECIPIENT_ADDRESS: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
+    // Categories for Freemium Logic
+    CATEGORIES: {
+        BASIC: ['alpha_vantage', 'world_bank', 'defillama', 'coingecko', 'fred', 'yearn'],
+        PREMIUM: ['macro_analysis', 'portfolio_optimization', 'risk_assessment', 'agent_execution', 'real_time_inflation']
+    },
     PRICING: {
-        'alpha_vantage_enhanced': '0.01',
-        'world_bank_analytics': '0.015',
-        'macro_analysis': '0.03',
+        // Basic Sources (Cost for "Enhanced" insights beyond free tier)
+        'alpha_vantage': '0.001',
+        'world_bank': '0.001',
+        'defillama': '0.001',
+        // Premium Sources (Always require micro-credits)
+        'macro_analysis': '0.01',
         'portfolio_optimization': '0.05',
-        'alpha_vantage_premium': '0.02',
-        'coingecko_premium': '0.025',
+        'risk_assessment': '0.02',
+        'agent_execution': '0.10',
+        'real_time_inflation': '0.01'
     },
     FREE_LIMITS: {
-        'alpha_vantage': 25,
+        'alpha_vantage': 10,
+        'world_bank': 20,
+        'defillama': 50,
         'coingecko': 50,
-        'world_bank': 100,
-        'defillama': 200,
-        'yearn': 100,
-        'fred': 100
+        'yearn': 20,
+        'fred': 50
     },
     USDC_TESTNET: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',
     CHAIN_ID: 5042002

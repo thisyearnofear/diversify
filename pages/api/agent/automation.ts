@@ -44,10 +44,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const userId = userAddress as string;
 
     switch (method) {
-        case 'GET':
+        case 'GET': {
             // Get user's automation preferences
             const preferences = userPreferences.get(userId) || getDefaultPreferences(email as string);
             return res.status(200).json({ preferences });
+        }
 
         case 'POST':
             // Check if this is a test request

@@ -6,8 +6,7 @@
 
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
 import { rwaService } from './rwa-service';
-import { CircleGatewayService } from './circle-gateway';
-import { CircleBridgeKitService } from './circle-bridge-kit';
+import { circleService, CircleService } from './circle-service';
 
 export interface Payment {
     amount: string;
@@ -141,6 +140,7 @@ export interface AgentWalletProvider {
     sendTransaction(tx: any): Promise<any>;
     balanceOf(tokenAddress: string): Promise<number>;
     transfer(to: string, amount: string, tokenAddress: string): Promise<any>;
+    signTypedData(domain: any, types: any, value: any): Promise<string>;
 }
 
 export class EthersWalletProvider implements AgentWalletProvider {
@@ -172,6 +172,9 @@ export class EthersWalletProvider implements AgentWalletProvider {
         const tx = await contract.transfer(to, amountWei);
         return await tx.wait();
     }
+    async signTypedData(domain: any, types: any, value: any) {
+        return await this.wallet._signTypedData(domain, types, value);
+    }
 }
 
 export class CircleWalletProvider implements AgentWalletProvider {
@@ -179,22 +182,16 @@ export class CircleWalletProvider implements AgentWalletProvider {
     constructor(private walletId: string, private apiKey: string) { }
 
     getAddress() {
-        // In reality, this would fetch from Circle API
-        // For hackathon, we'll use a mock address that looks realistic
         return '0x' + 'circle_wallet_' + this.walletId.slice(0, 10).padEnd(30, '0');
     }
 
     async signTransaction(tx: any) {
         console.log(`[Circle Wallet ${this.walletId}] Signing transaction...`);
-        // In reality, this would call Circle's transaction signing API
         return '0x' + 'circle_signed_' + Math.random().toString(16).slice(2, 58);
     }
 
     async sendTransaction(tx: any) {
         console.log(`[Circle Wallet ${this.walletId}] Executing programmable transaction...`);
-        console.log(`  To: ${tx.to}, Value: ${tx.value}, Data: ${tx.data?.slice(0, 50)}...`);
-
-        // In reality, this would call Circle's transaction execution API
         return {
             hash: '0x' + 'circle_tx_' + Math.random().toString(16).slice(2, 58),
             from: this.getAddress(),
@@ -204,19 +201,11 @@ export class CircleWalletProvider implements AgentWalletProvider {
     }
 
     async balanceOf(tokenAddress: string) {
-        // Implementation would call Circle's /wallets/{id}/balances
-        console.log(`[Circle Wallet ${this.walletId}] Checking balance for token: ${tokenAddress}`);
-
-        // For hackathon, return a realistic balance
-        // In production, this would be fetched from Circle API
         return 100.0; // Mock for demo
     }
 
     async transfer(to: string, amount: string, tokenAddress: string) {
         console.log(`[Circle Wallet ${this.walletId}] Programmable transfer: ${amount} USDC to ${to}`);
-        console.log(`  Using token: ${tokenAddress}`);
-
-        // In reality, this would call Circle's transfer API
         return {
             transactionHash: '0x' + 'circle_transfer_' + Math.random().toString(16).slice(2, 58),
             from: this.getAddress(),
@@ -227,30 +216,13 @@ export class CircleWalletProvider implements AgentWalletProvider {
         };
     }
 
-    /**
-     * Get wallet status from Circle API
-     */
-    async getWalletStatus() {
-        console.log(`[Circle Wallet ${this.walletId}] Fetching wallet status...`);
-
-        // In reality, this would call Circle's wallet status API
-        return {
-            walletId: this.walletId,
-            address: this.getAddress(),
-            status: 'active',
-            capabilities: ['programmable_transfers', 'cross_chain', 'batch_payments']
-        };
+    async signTypedData(domain: any, types: any, value: any) {
+        console.log(`[Circle Wallet ${this.walletId}] Signing typed data for EIP-3009 Nanopayment...`);
+        // In production, this calls Circle's /wallets/{id}/signatures/typed_data
+        return '0x' + 'circle_typed_sig_' + Math.random().toString(16).slice(2, 58);
     }
 }
 
-/**
- * SessionKeyProvider — non-custodial Guardian co-signer.
- * Holds a disposable session private key that was scoped and authorised by the
- * user's wallet via an ERC-7715 signed permission.  Before executing any
- * transaction it enforces the permission constraints (action allowlist, token
- * allowlist, daily spending limit) so the server can never exceed what the
- * user explicitly approved.
- */
 export class SessionKeyProvider implements AgentWalletProvider {
     private wallet: Wallet;
     private provider: providers.JsonRpcProvider;
@@ -277,7 +249,6 @@ export class SessionKeyProvider implements AgentWalletProvider {
     signTransaction(tx: any) { return this.wallet.signTransaction(tx); }
 
     async sendTransaction(tx: any) {
-        // Enforce permission scope before every send
         const { erc7715Service } = await import('./erc7715-service');
         const action = (tx._action ?? 'swap') as import('./erc7715-service').AllowedAction;
         const token = (tx._token ?? 'USDC') as import('./erc7715-service').AllowedToken;
@@ -313,6 +284,23 @@ export class SessionKeyProvider implements AgentWalletProvider {
         const tx = await contract.transfer(to, amountWei);
         return await tx.wait();
     }
+
+    async signTypedData(domain: any, types: any, value: any) {
+        // Enforce permission scope before signing (nanopayments consume spending limit)
+        const amountUSD = parseFloat(utils.formatUnits(value.value, 6));
+        const { erc7715Service } = await import('./erc7715-service');
+        const check = erc7715Service.isActionAllowed(
+            this.permission, 'payment' as any, 'USDC' as any, amountUSD, this.spentTodayUSD
+        );
+        
+        if (!check.allowed) {
+            throw new Error(`[SessionKeyProvider] Nanopayment denied: ${check.reason}`);
+        }
+
+        const sig = await this.wallet._signTypedData(domain, types, value);
+        this.spentTodayUSD += amountUSD;
+        return sig;
+    }
 }
 
 export class ArcAgent {
@@ -323,8 +311,7 @@ export class ArcAgent {
     public isProxy: boolean = false; // Flag for server-side proxy agents
     private spentToday: number = 0;
     private isTestnet: boolean;
-    private circleGatewayService: CircleGatewayService;
-    private circleBridgeKitService: CircleBridgeKitService;
+    private circleService: CircleService;
 
     constructor(config: {
         privateKey?: string;
@@ -339,8 +326,7 @@ export class ArcAgent {
         this.provider = new providers.JsonRpcProvider(
             config.rpcUrl || ARC_CONFIG.TESTNET_RPC
         );
-        this.circleGatewayService = new CircleGatewayService();
-        this.circleBridgeKitService = new CircleBridgeKitService();
+        this.circleService = circleService;
 
         if (config.circleWalletId && config.circleApiKey) {
             this.wallet = new CircleWalletProvider(config.circleWalletId, config.circleApiKey);
@@ -516,7 +502,7 @@ export class ArcAgent {
      */
     async getUnifiedUSDCBalance(): Promise<any> {
         try {
-            return await this.circleGatewayService.getUnifiedUSDCBalance(this.agentAddress);
+            return await this.circleService.getUnifiedUSDCBalance(this.agentAddress);
         } catch (error) {
             console.error('Failed to get unified USDC balance:', error);
             return {
@@ -536,7 +522,7 @@ export class ArcAgent {
         amount: string
     ): Promise<string> {
         try {
-            return await this.circleGatewayService.transferUSDCViaGateway(
+            return await this.circleService.transferUSDCViaGateway(
                 fromChainId, toChainId, amount, this.agentAddress
             );
         } catch (error) {
@@ -555,14 +541,14 @@ export class ArcAgent {
     ): Promise<any> {
         try {
             // Get bridge quote
-            const quote = await this.circleBridgeKitService.getBridgeQuote(
+            const quote = await this.circleService.getBridgeQuote(
                 sourceChainId, destinationChainId, amount, this.agentAddress
             );
 
             console.log(`[Circle Bridge Kit] Quote received: ${quote.estimatedAmountOut} USDC, Fees: ${quote.estimatedFees}, Time: ${quote.estimatedTime}s`);
 
             // Execute bridge transaction
-            const bridgeTx = await this.circleBridgeKitService.bridgeUSDC(
+            const bridgeTx = await this.circleService.bridgeUSDC(
                 sourceChainId, destinationChainId, amount, this.agentAddress, quote.quoteId
             );
 
@@ -583,7 +569,7 @@ export class ArcAgent {
      * Get Circle Bridge Kit status and capabilities
      */
     async getBridgeKitStatus() {
-        return await this.circleBridgeKitService.getBridgeKitStatus();
+        return await this.circleService.getBridgeKitStatus();
     }
 
     /**
@@ -689,7 +675,7 @@ export class ArcAgent {
     }
 
     /**
-     * Execute HTTP request with real x402 payment and enhanced error handling
+     * Execute HTTP request with real x402 payment and Nanopayment Mandate (EIP-3009)
      */
     private async fetchWithX402Payment(
         url: string,
@@ -708,98 +694,93 @@ export class ArcAgent {
             try {
                 console.log(`[Arc Agent] x402 payment attempt ${attempt}/${retries} to ${url}`);
 
-                // Step 1: Initial request - ensure absolute URL for server-side fetch
                 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
                 const initialUrl = url.startsWith('/') ? `${baseUrl}${url}` : url;
 
                 const initialResponse = await fetch(initialUrl, {
-                    headers: {
-                        ...headers,
-                        'Accept': 'application/json'
-                    }
+                    headers: { ...headers, 'Accept': 'application/json' }
                 });
 
-                // Step 2: Handle x402 payment challenge
                 if (initialResponse.status === 402) {
-                    console.log(`[Arc Agent] Received 402 Payment Required for ${url}`);
-
                     const challenge: X402Challenge = await initialResponse.json();
 
-                    // Validate challenge
-                    if (!challenge.recipient || !challenge.amount || !challenge.nonce) {
-                        throw new Error('Invalid x402 challenge format');
+                    if (!challenge.recipient || !challenge.nonce) {
+                        throw new Error('Invalid x402 challenge');
                     }
 
-                    // Check if nonce is expired
-                    if (challenge.expires && Date.now() > challenge.expires) {
-                        throw new Error('Payment challenge expired');
-                    }
-
-                    // Step 3: Execute USDC payment on Arc network
-                    const paymentTx = await this.executeUSDCPayment(
-                        challenge.recipient,
-                        challenge.amount || payment.amount
+                    // --- Nanopayment Flow (EIP-3009) ---
+                    console.log(`[Arc Agent] Creating gas-free Nanopayment Mandate for ${url}`);
+                    
+                    const mandate = await this.circleService.createNanopaymentMandate(
+                        this.wallet,
+                        {
+                            recipient: challenge.recipient,
+                            amount: challenge.amount || payment.amount,
+                            nonce: challenge.nonce,
+                            validAfter: 0,
+                            validBefore: Math.floor(Date.now() / 1000) + 3600 // 1 hour
+                        }
                     );
 
-                    // Step 4: Retry request with payment proof
-                    const fullUrl = url.startsWith('/') ? `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}${url}` : url;
-                    const retryResponse = await fetch(fullUrl, {
+                    // Retry with the signed mandate (Zero Gas!)
+                    const retryResponse = await fetch(initialUrl, {
                         headers: {
                             ...headers,
                             'Accept': 'application/json',
-                            'X-Payment-Proof': paymentTx.hash,
-                            'X-Payment-Amount': payment.amount,
-                            'X-Payment-Currency': payment.currency,
-                            'X-Payment-Sender': this.agentAddress,
-                            'X-Payment-Nonce': challenge.nonce
+                            'X-Payment-Mandate': JSON.stringify(mandate),
+                            'X-Payment-Sender': this.agentAddress
                         }
                     });
 
                     if (retryResponse.ok) {
                         this.spentToday += parseFloat(payment.amount);
-                        console.log(`[Arc Agent] x402 payment successful: ${payment.amount} USDC (tx: ${paymentTx.hash})`);
+                        console.log(`[Arc Agent] Nanopayment successful (gas-free signature)`);
 
-                        // Add payment proof to response headers for tracking
                         const finalHeaders = new Headers(retryResponse.headers);
-                        finalHeaders.set('x-payment-proof', paymentTx.hash);
+                        finalHeaders.set('x-payment-proof', `nanopay_${mandate.signature.slice(2, 10)}`);
 
-                        const responseWithProof = new Response(retryResponse.body, {
+                        return new Response(retryResponse.body, {
                             status: retryResponse.status,
                             statusText: retryResponse.statusText,
                             headers: finalHeaders
                         });
-
-                        return responseWithProof;
-                    } else {
-                        const errorText = await retryResponse.text();
-                        throw new Error(`Payment verification failed: ${retryResponse.status} - ${errorText}`);
+                    } else if (retryResponse.status === 401) {
+                        // If mandate fails, fall back to on-chain payment (Legacy mode)
+                        console.log(`[Arc Agent] Mandate rejected, falling back to on-chain payment...`);
+                        const paymentTx = await this.executeUSDCPayment(challenge.recipient, challenge.amount || payment.amount);
+                        
+                        const legacyRetryResponse = await fetch(initialUrl, {
+                            headers: {
+                                ...headers,
+                                'Accept': 'application/json',
+                                'X-Payment-Proof': paymentTx.hash,
+                                'X-Payment-Sender': this.agentAddress,
+                                'X-Payment-Nonce': challenge.nonce
+                            }
+                        });
+                        
+                        if (legacyRetryResponse.ok) {
+                            this.spentToday += parseFloat(payment.amount);
+                            return legacyRetryResponse;
+                        }
                     }
+                    
+                    throw new Error(`Payment failed: ${retryResponse.status}`);
                 }
 
-                // If no 402 response, return the initial response
                 return initialResponse;
 
             } catch (error: any) {
                 lastError = error;
-                console.error(`[Arc Agent] x402 payment attempt ${attempt} failed:`, error.message);
+                console.error(`[Arc Agent] x402 attempt ${attempt} failed:`, error.message);
 
-                // Don't retry on certain errors
-                if (error.message.includes('Daily spending limit') ||
-                    error.message.includes('Insufficient USDC balance') ||
-                    error.message.includes('Invalid x402 challenge')) {
-                    throw error;
-                }
-
-                // Wait before retry (exponential backoff)
                 if (attempt < retries) {
-                    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-                    console.log(`[Arc Agent] Retrying in ${delay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
+                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
                 }
             }
         }
 
-        throw lastError || new Error('x402 payment failed after all retries');
+        throw lastError || new Error('x402 payment failed');
     }
 
     // fetchWithAPIKey is deprecated in favor of x402-proxied gateway calls
