@@ -243,6 +243,78 @@ export class CircleWalletProvider implements AgentWalletProvider {
     }
 }
 
+/**
+ * SessionKeyProvider — non-custodial Guardian co-signer.
+ * Holds a disposable session private key that was scoped and authorised by the
+ * user's wallet via an ERC-7715 signed permission.  Before executing any
+ * transaction it enforces the permission constraints (action allowlist, token
+ * allowlist, daily spending limit) so the server can never exceed what the
+ * user explicitly approved.
+ */
+export class SessionKeyProvider implements AgentWalletProvider {
+    private wallet: Wallet;
+    private provider: providers.JsonRpcProvider;
+    readonly permission: import('./erc7715-service').SessionPermission;
+    private spentTodayUSD: number = 0;
+
+    constructor(
+        sessionPrivateKey: string,
+        permission: import('./erc7715-service').SessionPermission,
+        provider: providers.JsonRpcProvider
+    ) {
+        this.wallet = new Wallet(sessionPrivateKey, provider);
+        this.provider = provider;
+        this.permission = permission;
+
+        if (this.wallet.address.toLowerCase() !== permission.sessionKeyAddress.toLowerCase()) {
+            throw new Error(
+                `Session key address mismatch: key=${this.wallet.address} permission=${permission.sessionKeyAddress}`
+            );
+        }
+    }
+
+    getAddress() { return this.wallet.address; }
+    signTransaction(tx: any) { return this.wallet.signTransaction(tx); }
+
+    async sendTransaction(tx: any) {
+        // Enforce permission scope before every send
+        const { erc7715Service } = await import('./erc7715-service');
+        const action = (tx._action ?? 'swap') as import('./erc7715-service').AllowedAction;
+        const token = (tx._token ?? 'USDC') as import('./erc7715-service').AllowedToken;
+        const amountUSD = tx._amountUSD ?? 0;
+
+        const check = erc7715Service.isActionAllowed(
+            this.permission, action, token, amountUSD, this.spentTodayUSD
+        );
+        if (!check.allowed) {
+            throw new Error(`[SessionKeyProvider] Permission denied: ${check.reason}`);
+        }
+
+        const result = await this.wallet.sendTransaction(tx);
+        this.spentTodayUSD += amountUSD;
+        return result;
+    }
+
+    async balanceOf(tokenAddress: string) {
+        const abi = ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
+        const contract = new Contract(tokenAddress, abi, this.provider);
+        const [balance, decimals] = await Promise.all([
+            contract.balanceOf(this.wallet.address),
+            contract.decimals()
+        ]);
+        return parseFloat(utils.formatUnits(balance, decimals));
+    }
+
+    async transfer(to: string, amount: string, tokenAddress: string) {
+        const abi = ['function transfer(address, uint256) returns (bool)', 'function decimals() view returns (uint8)'];
+        const contract = new Contract(tokenAddress, abi, this.wallet);
+        const decimals = await contract.decimals();
+        const amountWei = utils.parseUnits(amount, decimals);
+        const tx = await contract.transfer(to, amountWei);
+        return await tx.wait();
+    }
+}
+
 export class ArcAgent {
     private provider: providers.JsonRpcProvider;
     private wallet: AgentWalletProvider;
@@ -256,6 +328,7 @@ export class ArcAgent {
 
     constructor(config: {
         privateKey?: string;
+        sessionKey?: { privateKey: string; permission: import('./erc7715-service').SessionPermission };
         circleWalletId?: string;
         circleApiKey?: string;
         rpcUrl?: string;
@@ -271,6 +344,13 @@ export class ArcAgent {
 
         if (config.circleWalletId && config.circleApiKey) {
             this.wallet = new CircleWalletProvider(config.circleWalletId, config.circleApiKey);
+        } else if (config.sessionKey) {
+            // Non-custodial path: disposable session key scoped by user-signed ERC-7715 permission
+            this.wallet = new SessionKeyProvider(
+                config.sessionKey.privateKey,
+                config.sessionKey.permission,
+                this.provider
+            );
         } else if (config.privateKey) {
             this.wallet = new EthersWalletProvider(config.privateKey, this.provider);
         } else {

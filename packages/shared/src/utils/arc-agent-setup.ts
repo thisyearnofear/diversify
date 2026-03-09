@@ -6,8 +6,13 @@
 import { ethers } from 'ethers';
 
 /**
- * Generate a new private key for the Arc Agent
- * This should be run once and the key stored securely in environment variables
+ * Generate a disposable session keypair for the Guardian agent.
+ * The private key is used server-side for a single request only and is never
+ * persisted.  The address is embedded in the SessionPermission the user signs.
+ *
+ * @deprecated generateAgentPrivateKey() — use erc7715Service.generateSessionKey()
+ * instead.  A master private key stored in env vars is the anti-pattern this
+ * architecture replaces.
  */
 export function generateAgentPrivateKey(): { privateKey: string; address: string } {
     const wallet = ethers.Wallet.createRandom();
@@ -30,17 +35,26 @@ export function validateAgentConfig(): {
     const warnings: string[] = [];
     const recommendations: string[] = [];
 
-    // Check required environment variables
-    if (!process.env.ARC_AGENT_PRIVATE_KEY) {
-        errors.push('ARC_AGENT_PRIVATE_KEY is required');
-        recommendations.push('Run `pnpm setup-arc-agent` to generate a wallet');
-    } else {
+    // ARC_AGENT_PRIVATE_KEY is now optional — the preferred path is the ERC-7715
+    // session key flow where the client sends a signed permission per request.
+    if (process.env.ARC_AGENT_PRIVATE_KEY) {
+        warnings.push(
+            'ARC_AGENT_PRIVATE_KEY is set but deprecated. ' +
+            'Migrate to the ERC-7715 session key flow: clients send a signed ' +
+            'SessionPermission with each /api/agent/deep-analyze request.'
+        );
         try {
             const wallet = new ethers.Wallet(process.env.ARC_AGENT_PRIVATE_KEY);
-            console.log(`Agent wallet address: ${wallet.address}`);
+            console.log(`[Legacy] Agent wallet address: ${wallet.address}`);
         } catch {
-            errors.push('ARC_AGENT_PRIVATE_KEY is not a valid private key');
+            errors.push('ARC_AGENT_PRIVATE_KEY is set but is not a valid private key');
         }
+    } else {
+        recommendations.push(
+            'No ARC_AGENT_PRIVATE_KEY set — good! Use the ERC-7715 session key flow: ' +
+            'call erc7715Service.buildPermission() on the client and send the signed ' +
+            'permission with each agent request.'
+        );
     }
 
     // Check network configuration
@@ -196,11 +210,21 @@ export async function checkX402Support(url: string): Promise<boolean> {
  * Setup instructions for new users
  */
 export const SETUP_INSTRUCTIONS = {
-    title: "Arc Agent Setup Guide",
+    title: "Arc Agent Setup Guide (ERC-7715 Session Key Model)",
     steps: [
         {
-            title: "Generate Agent Wallet",
-            description: "Run `generateAgentPrivateKey()` to create a new wallet for your agent",
+            title: "Enable Guardian Mode (client)",
+            description: "Call useSessionKey() in the UI to prompt the user for a scoped EIP-712 signature — no server key needed",
+            code: `
+import { useSessionKey } from '@/hooks/use-session-key';
+const { requestPermission, signedPermission } = useSessionKey();
+// Triggers MetaMask / Privy signature request:
+await requestPermission('GUARDIAN', userAddress, signer, chainId);
+      `
+        },
+        {
+            title: "[Legacy] Generate Agent Wallet (deprecated)",
+            description: "Only needed if you have not yet migrated to the session key flow",
             code: `
 import { generateAgentPrivateKey } from './utils/arc-agent-setup';
 const { privateKey, address } = generateAgentPrivateKey();

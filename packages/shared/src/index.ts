@@ -1,5 +1,15 @@
 // Export Services
-import { ArcAgent } from './services/arc-agent';
+import { ArcAgent, SessionKeyProvider } from './services/arc-agent';
+export { ERC7715Service, erc7715Service } from './services/erc7715-service';
+export type {
+    AutonomyLevel,
+    AllowedAction,
+    AllowedToken,
+    SessionPermission,
+    SignedSessionPermission,
+    SessionKeyPair,
+    PermissionValidation,
+} from './services/erc7715-service';
 import { SocialConnectService } from './services/social-connect-service';
 import { GoodDollarService } from './services/gooddollar-service';
 export * from './services/gooddollar-service';
@@ -17,6 +27,7 @@ import { getOnrampRecommendation } from './services/ai/onramp-agent-context';
 
 export {
   ArcAgent,
+  SessionKeyProvider,
   SocialConnectService,
   RWAService,
   rwaService,
