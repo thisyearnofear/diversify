@@ -28,6 +28,7 @@ import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import AssetModal from "./protect/AssetModal";
 import OptimizationInsight from "./protect/OptimizationInsight";
+import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
@@ -596,6 +597,20 @@ export default function ProtectionTab({
         </DashboardCard>
       )}
 
+
+      {/* Portfolio Strategy Recommendations - Non-beginner only */}
+      {!isBeginner && displayTotalValue > 0 && (
+        <PortfolioRecommendations
+          currentAllocations={Object.fromEntries(
+            displayRegionData.map((r) => [r.region, (r.usdValue ?? r.value) / (displayTotalValue || 1)])
+          )}
+          onSelectStrategy={(strategy) => {
+            navigateToSwap({
+              reason: `Apply ${strategy} strategy — rebalancing your portfolio toward target allocations`,
+            });
+          }}
+        />
+      )}
 
       {/* REMOVED: Goal-Based Strategies - consolidated to Learn tab with interactive RealWorldUseCases */}
 

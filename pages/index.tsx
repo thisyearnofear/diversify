@@ -419,7 +419,7 @@ export default function DiversiFiPage() {
               {activeTab === "agent" && (
                 <TabPane id="agent">
                   <ErrorBoundary>
-                    <AgentTab isMiniPay={isMiniPay} isFarcaster={isFarcaster} />
+                    <AgentTab isMiniPay={isMiniPay} isFarcaster={isFarcaster} portfolio={multichainPortfolio} />
                   </ErrorBoundary>
                 </TabPane>
               )}

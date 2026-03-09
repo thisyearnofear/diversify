@@ -10,19 +10,24 @@
 import React from 'react';
 import { AgentTierStatus } from '../agent/AgentTierStatus';
 import AutomationSettings from '../agent/AutomationSettings';
+import ActionableRecommendation from '../agent/ActionableRecommendation';
 import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
 import { useExperience } from '../../context/app/ExperienceContext';
 import { useAIOracle } from '../../hooks/use-ai-oracle';
+import { useNavigation } from '../../context/app/NavigationContext';
+import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 
 interface AgentTabProps {
   isMiniPay?: boolean;
   isFarcaster?: boolean;
+  portfolio?: MultichainPortfolio;
 }
 
-export default function AgentTab({ isMiniPay, isFarcaster }: AgentTabProps) {
-  const { autonomousStatus, config, updateConfig } = useDiversifiAI();
+export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTabProps) {
+  const { autonomousStatus, config, updateConfig, portfolioAnalysis } = useDiversifiAI();
   const { experienceMode } = useExperience();
   const { ask, openOracle } = useAIOracle();
+  const { navigateToSwap } = useNavigation();
 
   const handleAskAgent = () => {
     ask('Give me a summary of my portfolio protection status and any recommended actions.');
@@ -49,6 +54,17 @@ export default function AgentTab({ isMiniPay, isFarcaster }: AgentTabProps) {
         isFarcaster={isFarcaster}
         showActivityFeed={true}
       />
+
+      {/* Actionable Recommendations — non-beginner only, shown when analysis exists */}
+      {experienceMode !== 'beginner' && (
+        <ActionableRecommendation
+          analysis={portfolioAnalysis}
+          portfolio={portfolio ?? null}
+          onExecuteSwap={(fromToken, toToken, amount, reason) => {
+            navigateToSwap({ fromToken, toToken, amount, reason });
+          }}
+        />
+      )}
 
       {/* Automation Settings (only in advanced mode) */}
       {experienceMode === 'advanced' && (
