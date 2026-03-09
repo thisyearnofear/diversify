@@ -12,6 +12,8 @@
 import React, { useState, useMemo } from 'react';
 import { useDiversifiAI, AgentActivity } from '../../hooks/use-diversifi-ai';
 import { useExperience } from '../../context/app/ExperienceContext';
+import { useSessionKey } from '../../hooks/use-session-key';
+import { useWalletContext } from '../wallet/WalletProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const AgentTierStatus: React.FC<{
@@ -35,6 +37,26 @@ export const AgentTierStatus: React.FC<{
   // Tier 3: The Guardian (Autonomous)
   const guardianActive = autonomousStatus?.enabled;
   const guardianStatus = guardianActive ? 'Protecting' : 'Advisory';
+
+  // Session Key (ERC-7715) for non-custodial Guardian
+  const { address, chainId } = useWalletContext();
+  const { status: sessionStatus, signedPermission, permissionSummary, requestPermission, revokePermission, isPermissionValid } = useSessionKey();
+  const hasValidPermission = isPermissionValid();
+  const isRequesting = sessionStatus === 'requesting';
+  const permissionExpiry = signedPermission ? new Date(signedPermission.permission.expiresAt * 1000).toLocaleDateString() : null;
+  const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
+
+  const handleRequestPermission = async () => {
+    if (!address || !chainId) return;
+    try {
+      const { ethers } = await import('ethers');
+      const provider = new ethers.providers.Web3Provider(window.ethereum as any);
+      const signer = provider.getSigner();
+      await requestPermission('COPILOT', address, signer, chainId);
+    } catch (e) {
+      console.error('[Guardian] Failed to request permission:', e);
+    }
+  };
 
   // Calculate performance metrics
   const metrics = useMemo(() => {
@@ -188,6 +210,46 @@ export const AgentTierStatus: React.FC<{
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
                   </span>
               </div>
+          )}
+          {/* Session Key Panel — shown when expanded (non-beginner only) */}
+          {!isBeginner && expandedTier === 'guardian' && (
+            <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800 space-y-2" onClick={e => e.stopPropagation()}>
+              {hasValidPermission ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                    <span className="text-xs text-gray-700 dark:text-gray-300">Session key active · expires {permissionExpiry}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    ${dailyLimit}/day limit · Scoped to allowlisted tokens only
+                  </div>
+                  {permissionSummary && (
+                    <div className="text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2">
+                      {permissionSummary}
+                    </div>
+                  )}
+                  <button
+                    onClick={revokePermission}
+                    className="w-full text-xs text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-1.5 mt-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  >
+                    Revoke Permission
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Enable Autonomous Mode by granting a scoped session key — no master key required.
+                  </p>
+                  <button
+                    onClick={handleRequestPermission}
+                    disabled={isRequesting}
+                    className="w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl py-2 mt-1 transition-colors"
+                  >
+                    {isRequesting ? 'Waiting for wallet…' : '🔐 Enable Autonomous Mode'}
+                  </button>
+                </>
+              )}
+            </div>
           )}
           {showActivityFeed && expandedTier === 'guardian' && (
             <ActivityFeed activities={getActivitiesForTier('GUARDIAN')} />

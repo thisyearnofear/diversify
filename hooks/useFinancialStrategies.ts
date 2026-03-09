@@ -8,6 +8,7 @@
 import { useMemo } from 'react';
 import { useStrategy } from '@/context/app/StrategyContext';
 import type { FinancialStrategy as SharedFinancialStrategy } from '@diversifi/shared';
+import { StrategyService } from '@diversifi/shared';
 
 /** Single source of truth — re-exported from @diversifi/shared */
 export type FinancialStrategy = SharedFinancialStrategy;
@@ -140,6 +141,13 @@ export function useFinancialStrategies() {
 export function getPersistedStrategy(): FinancialStrategy | null {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('financialStrategy') as FinancialStrategy | null;
+}
+
+/** Get the full AI prompt for the persisted strategy (tokens + allocations) */
+export function getStrategyPrompt(): string | null {
+    const strategy = getPersistedStrategy();
+    if (!strategy) return null;
+    return StrategyService.getAIPrompt(strategy);
 }
 
 // Export for backward compatibility

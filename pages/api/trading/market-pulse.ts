@@ -16,6 +16,7 @@ export interface MarketPulseResponse {
     impliedVolatility?: number;
     lastUpdated: number;
     source: string;
+    intelligence?: any[];
   };
   triggers?: any[];
   error?: string;
@@ -38,6 +39,7 @@ export default async function handler(
     const { includeTriggers } = req.query;
 
     const pulse = await marketPulseService.getMarketPulse();
+    const intelligence = await marketPulseService.generateIntelligenceItems();
 
     const warnings: string[] = [];
 
@@ -50,7 +52,10 @@ export default async function handler(
 
     const response: MarketPulseResponse = {
       success: true,
-      pulse,
+      pulse: {
+        ...pulse,
+        intelligence,
+      },
       ...(warnings.length > 0 && { warnings }),
     };
 

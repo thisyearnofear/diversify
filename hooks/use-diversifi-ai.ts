@@ -16,9 +16,11 @@ import type { MultichainPortfolio } from "./use-multichain-balances";
 import {
   analyzePortfolio,
   type PortfolioAnalysis,
+  StrategyService,
 } from "@diversifi/shared";
 import { useAIConversationOptional } from "../context/AIConversationContext";
-import { getPersistedStrategy } from "./useFinancialStrategies";
+import { useToast } from "../components/ui/Toast";
+import { getPersistedStrategy, getStrategyPrompt } from "./useFinancialStrategies";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 
 // Points to the AI backend. In production, set NEXT_PUBLIC_API_BASE_URL to
@@ -177,6 +179,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
   // Use global conversation context if available and requested
   const globalConversation = useAIConversationOptional();
   const { chainId, address } = useWalletContext();
+  const { showToast } = useToast();
   const isUsingGlobal =
     useGlobalConversation && globalConversation !== undefined;
   const messages = isUsingGlobal ? globalConversation!.messages : localMessages;
@@ -329,6 +332,19 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
         );
         setPortfolioAnalysis(localAnalysis);
 
+        // Drift detection: compare current regional allocations against strategy targets
+        const strategy = getPersistedStrategy();
+        if (strategy && localAnalysis.regionalExposure.length > 0 && localAnalysis.totalValue > 0) {
+          const allocations = localAnalysis.regionalExposure.reduce((acc, r) => {
+            acc[r.region as any] = (r.value / localAnalysis.totalValue) * 100;
+            return acc;
+          }, {} as Record<string, number>);
+          const { score, feedback } = StrategyService.calculateScore(strategy, allocations as any);
+          if (score < 60 && feedback.length > 0) {
+            showToast(`⚠️ Strategy drift detected: ${feedback[0]}`, 'warning');
+          }
+        }
+
         // Phase 2: AI Consultation (25-90%)
         setAnalysisProgress(35);
 
@@ -381,7 +397,7 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
             goal: analysisGoal || userGoal || config.goal,
             riskTolerance: config.riskTolerance,
             userRegion: userRegion,
-            strategyPrompt: strategyPrompt, // Include strategy context
+            strategyPrompt: strategyPrompt || getStrategyPrompt(), // Auto-inject from persisted strategy if not provided
           }),
         });
         clearTimeout(timeoutId);
