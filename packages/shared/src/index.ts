@@ -1,5 +1,17 @@
 // Export Services
 import { circleService, CircleService } from './services/circle-service';
+import { ArcAgent, SessionKeyProvider } from './services/arc-agent';
+import { SocialConnectService } from './services/social-connect-service';
+import { RWAService, rwaService } from './services/rwa-service';
+import { SynthDataService } from './services/synth-data-service';
+import { TradeAgent } from './services/trade-agent';
+import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
+import { IntelligenceService } from './services/ai/intelligence.service';
+import { IntentDiscoveryService } from './services/ai/intent-discovery.service';
+import { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
+import { StrategyService } from './services/strategy/strategy.service';
+import { AutomationService } from './services/automation-service';
+
 export {
   circleService,
   CircleService,
@@ -18,11 +30,7 @@ export {
   generateChatCompletion,
   getAIServiceStatus,
   StrategyService,
-  emergingMarketsPriceService,
-  EmergingMarketsPriceService,
-  getEmergingMarketsPriceService,
-  AutomationService,
-  getOnrampRecommendation
+  AutomationService
 };
 
 // Export Utils
