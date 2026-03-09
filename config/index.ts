@@ -291,6 +291,11 @@ export const EXCHANGE_RATES: Record<string, number> = {
     WAYNE: 95,
     OSCORP: 35,
     STARK: 120,
+    NVDA: 181.84,
+    GOOGL: 168.22,
+    AAPL: 228.45,
+    TSLA: 260.10,
+    BTC: 67500,
 } as const;
 
 // Transaction Configuration

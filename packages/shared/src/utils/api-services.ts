@@ -190,7 +190,7 @@ export const TokenPriceService = {
     chainId: number;
     address?: string;
     symbol?: string;
-  }): Promise<number | null> {
+  }): Promise<{ price: number | null; source: string; isLive: boolean }> {
     const cacheKey = `token-usd-${params.chainId}-${(params.address || params.symbol || '').toLowerCase()}`;
 
     const result = await unifiedCache.getOrFetch(
@@ -200,7 +200,7 @@ export const TokenPriceService = {
         if (params.address) {
           const defiLlamaPrice = await this.fetchDefiLlamaPrice(params.chainId, params.address);
           if (typeof defiLlamaPrice === 'number') {
-            return { data: defiLlamaPrice, source: 'defillama' as const };
+            return { data: { price: defiLlamaPrice, isLive: true }, source: 'defillama' as const };
           }
         }
 
@@ -210,7 +210,7 @@ export const TokenPriceService = {
           if (cgId) {
             const coingeckoPrice = await this.fetchCoingeckoPrice(cgId);
             if (typeof coingeckoPrice === 'number') {
-              return { data: coingeckoPrice, source: 'coingecko' as const };
+              return { data: { price: coingeckoPrice, isLive: true }, source: 'coingecko' as const };
             }
           }
         }
@@ -219,17 +219,28 @@ export const TokenPriceService = {
         if (params.symbol) {
           const paprikaPrice = await this.fetchCoinPaprikaPrice(params.symbol);
           if (typeof paprikaPrice === 'number') {
-            return { data: paprikaPrice, source: 'coinpaprika' as const };
+            return { data: { price: paprikaPrice, isLive: true }, source: 'coinpaprika' as const };
           }
         }
 
-        // Return null to trigger fallback logic in calling code
-        return { data: null, source: 'fallback' as const };
+        // Use static fallback if available from config
+        if (params.symbol && EXCHANGE_RATES[params.symbol as keyof typeof EXCHANGE_RATES]) {
+          return { 
+            data: { price: EXCHANGE_RATES[params.symbol as keyof typeof EXCHANGE_RATES], isLive: false }, 
+            source: 'config-fallback' as const 
+          };
+        }
+
+        return { data: null, source: 'none' as const };
       },
       'volatile'
     );
 
-    return result.data ?? null;
+    return {
+      price: result.data?.price ?? null,
+      source: result.source,
+      isLive: result.data?.isLive ?? false
+    };
   },
 
   /**
@@ -256,17 +267,20 @@ export const TokenPriceService = {
       const toAddr = tokens[toToken] || tokens[toToken.toUpperCase()] || tokens[toToken.toLowerCase()];
 
       // Fetch live prices with proper fallback chain
-      const fromUsd = await this.getTokenUsdPrice({
+      const fromResult = await this.getTokenUsdPrice({
         chainId,
         address: fromAddr,
         symbol: fromToken
       });
 
-      const toUsd = await this.getTokenUsdPrice({
+      const toResult = await this.getTokenUsdPrice({
         chainId,
         address: toAddr,
         symbol: toToken
       });
+
+      const fromUsd = fromResult.price;
+      const toUsd = toResult.price;
 
       // Use live prices when available, fallback to static rates
       const fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] ?? 1);

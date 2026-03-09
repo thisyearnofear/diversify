@@ -54,6 +54,8 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
   const inputLabel = mode === "buy" ? "ETH" : selected;
   const outputLabel = mode === "buy" ? selected : "ETH";
 
+  const isRealStock = ["NVDA", "GOOGL", "TSLA", "AAPL", "BTC", "ETH"].includes(selected);
+
   const minimumOutput = quote
     ? ((parseFloat(quote) * (100 - slippagePercent)) / 100).toFixed(6)
     : null;
@@ -170,6 +172,8 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
             <span className="text-xl font-bold">
               {isQuoting ? (
                 <span className="inline-block w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-blue-500 rounded-full animate-spin" />
+              ) : isRealStock ? (
+                <span className="text-gray-400 italic text-sm font-normal italic">Unavailable on Testnet</span>
               ) : (
                 quote || "0.0"
               )}
@@ -179,6 +183,17 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
             </span>
           </div>
         </div>
+
+        {isRealStock && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-100 dark:border-blue-800/30 flex items-start gap-3">
+            <div className="text-blue-500 mt-0.5">ℹ️</div>
+            <div className="text-xs text-blue-800 dark:text-blue-300 leading-relaxed">
+              <span className="font-bold">Testnet Limitation:</span> Real stocks like {selected} are currently for 
+              <span className="font-bold"> tracking and analysis only</span> on this testnet. 
+              Switch to Celo or Arbitrum to trade live regional assets and RWAs.
+            </div>
+          </div>
+        )}
 
         {/* Price Impact & Details */}
         <AnimatePresence>
@@ -231,14 +246,14 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
 
         {/* Swap Button */}
         <motion.button
-          whileHover={{ scale: 1.01 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={(!inputAmount || !quote || isSwapping || !hasBalance || isRealStock) ? {} : { scale: 1.01 }}
+          whileTap={(!inputAmount || !quote || isSwapping || !hasBalance || isRealStock) ? {} : { scale: 0.98 }}
           onClick={handleSwap}
-          disabled={!inputAmount || !quote || isSwapping || !hasBalance}
+          disabled={!inputAmount || !quote || isSwapping || !hasBalance || isRealStock}
           className={`w-full py-4 rounded-xl font-bold text-base transition-all uppercase tracking-widest shadow-lg ${
             isSwapping
               ? "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-wait shadow-none"
-              : !inputAmount || !quote || !hasBalance
+              : !inputAmount || !quote || !hasBalance || isRealStock
                 ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed shadow-none"
                 : mode === "buy"
                   ? "bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20"

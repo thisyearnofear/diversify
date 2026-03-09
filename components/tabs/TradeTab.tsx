@@ -109,6 +109,19 @@ export default function TradeTab() {
     BTC: null,
     ETH: null,
   });
+  const [liveRateMetadata, setLiveRateMetadata] = useState<Record<Stock, { isLive: boolean; source: string }>>({
+    ACME: { isLive: false, source: 'amm' },
+    SPACELY: { isLive: false, source: 'amm' },
+    WAYNE: { isLive: false, source: 'amm' },
+    OSCORP: { isLive: false, source: 'amm' },
+    STARK: { isLive: false, source: 'amm' },
+    NVDA: { isLive: false, source: 'none' },
+    GOOGL: { isLive: false, source: 'none' },
+    TSLA: { isLive: false, source: 'none' },
+    AAPL: { isLive: false, source: 'none' },
+    BTC: { isLive: false, source: 'none' },
+    ETH: { isLive: true, source: 'native' },
+  });
 
   const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
   const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
@@ -207,19 +220,29 @@ export default function TradeTab() {
         Promise.all(
           REAL_STOCKS.map(async (s) => {
             try {
-              if (s === "ETH") return { symbol: s, rate: "1" };
+              if (s === "ETH") return { symbol: s, rate: "1", isLive: true, source: 'native' };
               if (s === "BTC") {
-                const price = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "BTC" });
+                const result = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "BTC" });
                 // Rate = ETH_Price / BTC_Price
-                return { symbol: s, rate: price ? (3500 / price).toFixed(6) : null };
+                return { 
+                  symbol: s, 
+                  rate: result.price ? (3500 / result.price).toFixed(6) : null,
+                  isLive: result.isLive,
+                  source: result.source
+                };
               }
               // For stocks like NVDA, GOOGL etc.
-              const price = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: s });
+              const result = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: s });
               // Rate = ETH_Price / Stock_Price
-              return { symbol: s, rate: price ? (3500 / price).toFixed(2) : null };
+              return { 
+                symbol: s, 
+                rate: result.price ? (3500 / result.price).toFixed(2) : null,
+                isLive: result.isLive,
+                source: result.source
+              };
             } catch (err) {
               console.warn(`[Trade] Price fetch error for ${s}:`, err);
-              return { symbol: s, rate: null };
+              return { symbol: s, rate: null, isLive: false, source: 'error' };
             }
           })
         )
@@ -252,16 +275,21 @@ export default function TradeTab() {
         ETH: null,
       };
 
+      const metadata: Record<Stock, { isLive: boolean; source: string }> = { ...liveRateMetadata };
+
       res.forEach((item) => {
         rates[item.symbol as Stock] = item.rate;
         resMap[item.symbol as Stock] = item.reserves;
+        metadata[item.symbol as Stock] = { isLive: false, source: 'amm' };
       });
 
       realRes.forEach((item) => {
         rates[item.symbol as Stock] = item.rate;
+        metadata[item.symbol as Stock] = { isLive: item.isLive, source: item.source };
       });
 
       setLiveRates(rates);
+      setLiveRateMetadata(metadata);
     } catch (e) {
       console.error("[Trade] Rate fetch error:", e);
     }
@@ -288,6 +316,18 @@ export default function TradeTab() {
         if (!response.ok) return;
 
         const data = await response.json();
+        
+        // Also fetch from our robust TokenPriceService for the actual price display
+        const priceResult = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: selected });
+        if (priceResult.price) {
+          setRealStockPrice(priceResult.price);
+          // Update metadata for this stock as well
+          setLiveRateMetadata(prev => ({
+            ...prev,
+            [selected]: { isLive: priceResult.isLive, source: priceResult.source }
+          }));
+        }
+
         if (data.success && data.synthData) {
           const forecast = data.synthData;
           // Get volatility from the volatility field (returned from getVolatility API)
@@ -896,25 +936,35 @@ export default function TradeTab() {
                     )}
                   </div>
                   <div className="text-right">
-                    {/* Price Display with Toggle */}
-                    <div className="flex items-center justify-end gap-2 mb-1">
-                        <div className="text-xl font-bold">
-                        {(() => {
-                          // Real stocks: use direct USD price from Synth API
-                          if (isRealStock) {
-                            if (!realStockPrice) return "---";
-                            return `$${realStockPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
-                          }
-                          // Fictional stocks: derive from AMM rate (tokens per ETH)
-                          const rate = liveRates[selected];
-                          if (!rate) return "---";
-                          const tokensPerEth = parseFloat(rate.replace(/,/g, ""));
-                          if (tokensPerEth === 0) return "---";
-                          const usdcPrice = 3500 / tokensPerEth;
-                          return `$${usdcPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`;
-                        })()}
-                      </div>
+                  {/* Price Display with Toggle */}
+                  <div className="flex items-center justify-end gap-2 mb-1">
+                      {liveRateMetadata[selected] && (
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold uppercase ${
+                          liveRateMetadata[selected].isLive 
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                        }`}>
+                          {liveRateMetadata[selected].isLive ? 'Live' : 'Fallback'}
+                        </span>
+                      )}
+                      <div className="text-xl font-bold">
+                      {(() => {
+                        // Real stocks: use direct USD price from price service
+                        if (isRealStock) {
+                          if (!realStockPrice) return "---";
+                          return `$${realStockPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+                        }
+                        // Fictional stocks: derive from AMM rate (tokens per ETH)
+                        const rate = liveRates[selected];
+                        if (!rate) return "---";
+                        const tokensPerEth = parseFloat(rate.replace(/,/g, ""));
+                        if (tokensPerEth === 0) return "---";
+                        const usdcPrice = 3500 / tokensPerEth;
+                        return `$${usdcPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`;
+                      })()}
                     </div>
+                  </div>
+
                     {!isRealStock && (
                       <div className="flex items-center justify-end gap-2">
                         <span className="text-xs text-gray-400">
