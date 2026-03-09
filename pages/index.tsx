@@ -316,7 +316,7 @@ export default function DiversiFiPage() {
             <button
               onClick={openOracle}
               className="relative w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-md"
-              aria-label="Open AI Oracle"
+              aria-label="AI Chat"
             >
               <span className="text-sm">🤖</span>
               {unreadCount > 0 && (
@@ -337,7 +337,7 @@ export default function DiversiFiPage() {
         <TabNavigation
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          badges={{ protect: unreadCount }}
+          badges={{}}
           experienceMode={experienceMode}
         />
 

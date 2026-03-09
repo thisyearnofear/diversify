@@ -12,6 +12,7 @@ import { AgentTierStatus } from '../agent/AgentTierStatus';
 import AutomationSettings from '../agent/AutomationSettings';
 import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
 import { useExperience } from '../../context/app/ExperienceContext';
+import { useAIOracle } from '../../hooks/use-ai-oracle';
 
 interface AgentTabProps {
   isMiniPay?: boolean;
@@ -21,6 +22,11 @@ interface AgentTabProps {
 export default function AgentTab({ isMiniPay, isFarcaster }: AgentTabProps) {
   const { autonomousStatus, config, updateConfig } = useDiversifiAI();
   const { experienceMode } = useExperience();
+  const { ask, openOracle } = useAIOracle();
+
+  const handleAskAgent = () => {
+    ask('Give me a summary of my portfolio protection status and any recommended actions.');
+  };
 
   return (
     <div className="space-y-4 pb-6">
@@ -52,6 +58,15 @@ export default function AgentTab({ isMiniPay, isFarcaster }: AgentTabProps) {
           autonomousStatus={autonomousStatus}
         />
       )}
+
+      {/* Ask Agent CTA — bridges Agent tab to AI chat drawer */}
+      <button
+        onClick={handleAskAgent}
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+      >
+        <span>💬</span>
+        <span>Ask your Agent</span>
+      </button>
 
     </div>
   );

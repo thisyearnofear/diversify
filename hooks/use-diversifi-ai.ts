@@ -413,6 +413,23 @@ export function useDiversifiAI(useGlobalConversation: boolean = true) {
               savings: result.advice?.expectedSavings,
             },
           });
+
+          // Surface analysis result in the AI chat drawer so both surfaces stay in sync
+          if (result.advice) {
+            const summary = [
+              `📊 **Portfolio Analysis Complete**`,
+              result.advice.oneLiner,
+              result.advice.reasoning ? `\n${result.advice.reasoning}` : '',
+              result.advice.expectedSavings ? `\n💰 Potential savings: $${result.advice.expectedSavings.toFixed(2)}/yr` : '',
+            ].filter(Boolean).join('\n');
+            addMessage({
+              id: `analysis-${Date.now()}`,
+              role: 'assistant',
+              content: summary,
+              timestamp: Date.now(),
+              type: 'text',
+            });
+          }
           
           return result.advice;
         } else {
