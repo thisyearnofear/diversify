@@ -20,6 +20,8 @@ import {
 } from "@/hooks/use-protection-profile";
 import { useAIOracle } from "@/hooks/use-ai-oracle";
 import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
+import { StrategyService } from "@diversifi/shared";
+import { useToast } from "@/components/ui/Toast";
 
 import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
@@ -102,6 +104,7 @@ export default function ProtectionTab({
 
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const selectedStrategyData = selectedStrategy ? getStrategyById(selectedStrategy) : null;
+  const { showToast } = useToast();
 
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
   const [showClaimFlow, setShowClaimFlow] = useState(false);
@@ -281,11 +284,47 @@ export default function ProtectionTab({
     );
   }
 
-  // Calculate protection score
+  // Calculate protection score (generic portfolio health)
   const protectionScore = liveAnalysis ? Math.round(
     (liveAnalysis.diversificationScore +
       (100 - (liveAnalysis.weightedInflationRisk || 0) * 5)) / 2
   ) : 0;
+
+  // Calculate real strategy alignment score using StrategyService
+  const strategyAlignmentScore = useMemo(() => {
+    if (!selectedStrategy || !displayRegionData.length) return protectionScore;
+    const totalVal = displayRegionData.reduce((s, r) => s + (r.usdValue || r.value || 0), 0);
+    if (totalVal === 0) return 0;
+    const regionAllocations = displayRegionData.reduce((acc, r) => {
+      acc[r.region] = ((r.usdValue || r.value || 0) / totalVal) * 100;
+      return acc;
+    }, {} as Record<string, number>);
+    const result = StrategyService.calculateScore(selectedStrategy, regionAllocations as any);
+    return Math.round(result.score);
+  }, [selectedStrategy, displayRegionData, protectionScore]);
+
+  const strategyAlignmentFeedback = useMemo(() => {
+    if (!selectedStrategy || !displayRegionData.length) return [];
+    const totalVal = displayRegionData.reduce((s, r) => s + (r.usdValue || r.value || 0), 0);
+    if (totalVal === 0) return [];
+    const regionAllocations = displayRegionData.reduce((acc, r) => {
+      acc[r.region] = ((r.usdValue || r.value || 0) / totalVal) * 100;
+      return acc;
+    }, {} as Record<string, number>);
+    return StrategyService.calculateScore(selectedStrategy, regionAllocations as any).feedback;
+  }, [selectedStrategy, displayRegionData]);
+
+  // Strategy change nudge — fires after score is computed
+  const prevStrategyRef = React.useRef(selectedStrategy);
+  React.useEffect(() => {
+    if (prevStrategyRef.current && selectedStrategy && prevStrategyRef.current !== selectedStrategy) {
+      const data = getStrategyById(selectedStrategy);
+      const msg = `${data?.icon ?? '🎯'} Switched to ${data?.name ?? selectedStrategy} — your portfolio is ${strategyAlignmentScore}% aligned. ${strategyAlignmentScore < 50 ? 'Rebalance to improve alignment.' : 'Looking good!'}`;
+      showToast(msg, strategyAlignmentScore < 50 ? 'warning' : 'success');
+    }
+    prevStrategyRef.current = selectedStrategy;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStrategy]);
 
   // ============================================================================
   // RENDER: Connected
@@ -303,15 +342,20 @@ export default function ProtectionTab({
                 {selectedStrategyData.name}
               </span>
               <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 ml-2 shrink-0">
-                {protectionScore}% aligned
+                {strategyAlignmentScore}% aligned
               </span>
             </div>
             <div className="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5">
               <div
                 className="bg-indigo-600 dark:bg-indigo-400 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(protectionScore, 100)}%` }}
+                style={{ width: `${Math.min(strategyAlignmentScore, 100)}%` }}
               />
             </div>
+            {strategyAlignmentFeedback.length > 0 && (
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 truncate">
+                {strategyAlignmentFeedback[0]}
+              </p>
+            )}
           </div>
         </div>
       )}
