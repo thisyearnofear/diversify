@@ -164,8 +164,25 @@ export class EmergingMarketsPriceService {
         }
 
         if (!result) {
-            console.error(`[PriceService] All sources failed for ${symbol}`);
-            return null;
+            console.error(`[PriceService] All sources failed for ${symbol}, using config fallback`);
+            
+            // Final fallback: use static config if available
+            const currency = this.inferCurrency(stock.market);
+            const fallbackPrice = stock.fallbackPrice || 100;
+            const usdEquivalent = await this.convertToUsd(fallbackPrice, currency);
+            
+            const cacheEntry: PriceCache = {
+                symbol,
+                price: fallbackPrice,
+                currency,
+                usdEquivalent,
+                change24h: 0,
+                changePercent24h: 0,
+                lastUpdated: Date.now(),
+                source: "static-fallback",
+            };
+            this.cache.set(symbol, cacheEntry);
+            return cacheEntry;
         }
 
         const cacheEntry: PriceCache = {

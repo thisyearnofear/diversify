@@ -17,6 +17,7 @@ export interface EmergingMarketStock {
   region: "africa" | "latam" | "asia";
   realTicker: string; // Real stock ticker for price tracking
   description: string;
+  fallbackPrice: number; // Fallback local currency price
   isTradeable: false; // Track-only
 }
 
@@ -49,6 +50,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "africa",
     realTicker: "SCOM.NR", // Nairobi Stock Exchange
     description: "Leading telecom and mobile money provider in East Africa",
+    fallbackPrice: 15.45,
     isTradeable: false,
   },
   {
@@ -59,6 +61,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "africa",
     realTicker: "DANGCEM.LG", // Lagos Stock Exchange
     description: "Africa's largest cement producer",
+    fallbackPrice: 650.00,
     isTradeable: false,
   },
   {
@@ -69,6 +72,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "africa",
     realTicker: "SHP.JO", // Johannesburg Stock Exchange
     description: "Africa's largest food retailer",
+    fallbackPrice: 285.50,
     isTradeable: false,
   },
 
@@ -81,6 +85,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "latam",
     realTicker: "PETR4.SA", // B3 (Brazil Stock Exchange)
     description: "Brazilian state-owned oil and gas giant",
+    fallbackPrice: 38.20,
     isTradeable: false,
   },
   {
@@ -91,6 +96,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "latam",
     realTicker: "MELI", // NASDAQ (also trades in LatAm)
     description: "Latin America's leading e-commerce platform",
+    fallbackPrice: 1850.00,
     isTradeable: false,
   },
   {
@@ -101,6 +107,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "latam",
     realTicker: "CEMEXCPO.MX", // Mexican Stock Exchange
     description: "Global building materials company",
+    fallbackPrice: 12.80,
     isTradeable: false,
   },
 
@@ -113,6 +120,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "asia",
     realTicker: "RELIANCE.NS", // NSE India
     description: "India's largest conglomerate",
+    fallbackPrice: 2950.00,
     isTradeable: false,
   },
   {
@@ -123,6 +131,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "asia",
     realTicker: "GRAB", // NASDAQ
     description: "Southeast Asia's super-app for transport and delivery",
+    fallbackPrice: 4.25,
     isTradeable: false,
   },
   {
@@ -133,6 +142,7 @@ export const REAL_EMERGING_MARKET_STOCKS: EmergingMarketStock[] = [
     region: "asia",
     realTicker: "JFC.PS", // Philippine Stock Exchange
     description: "Largest fast-food chain in the Philippines",
+    fallbackPrice: 265.00,
     isTradeable: false,
   },
 ];

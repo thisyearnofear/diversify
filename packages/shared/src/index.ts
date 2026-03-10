@@ -12,6 +12,7 @@ import { AIService, generateChatCompletion, getAIServiceStatus } from './service
 import { StrategyService } from './services/strategy/strategy.service';
 import { AutomationService } from './services/automation-service';
 import { GoodDollarService } from './services/gooddollar-service';
+import { emergingMarketsPriceService, getEmergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 
 export {
   circleService,
@@ -32,7 +33,10 @@ export {
   getAIServiceStatus,
   StrategyService,
   AutomationService,
-  GoodDollarService
+  GoodDollarService,
+  emergingMarketsPriceService,
+  getEmergingMarketsPriceService,
+  EmergingMarketsPriceService
 };
 
 // Export Utils

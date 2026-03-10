@@ -127,6 +127,11 @@ export default function TradeTab() {
   const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
   const [realStockPrice, setRealStockPrice] = useState<number | null>(null);
   const [showAllRobinhood, setShowAllRobinhood] = useState(false);
+  const [baseAsset, setBaseAsset] = useState<"ETH" | "BTC">("ETH");
+  const [basePrices, setBasePrices] = useState<Record<"ETH" | "BTC", number>>({
+    ETH: 3500,
+    BTC: 67000,
+  });
 
   // Watchlist for Robinhood stocks
   const { watchlist: robinhoodWatchlist, toggleWatchlist: toggleRobinhoodWatchlist, isInWatchlist: isInRobinhoodWatchlist } = useWatchlist();
@@ -182,6 +187,20 @@ export default function TradeTab() {
   const fetchRates = useCallback(async () => {
     // If connected but on wrong chain, OR if disconnected, we fetch from public provider for preview
     try {
+      // 1. Fetch Live Base Prices first
+      const [ethResult, btcResult] = await Promise.all([
+        TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "ETH" }),
+        TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "BTC" }),
+      ]);
+
+      const newBasePrices = {
+        ETH: ethResult.price || basePrices.ETH,
+        BTC: btcResult.price || basePrices.BTC,
+      };
+      setBasePrices(newBasePrices);
+
+      const currentBasePrice = newBasePrices[baseAsset];
+
       const provider = (isConnected && isOnRH)
         ? await ProviderFactoryService.getWeb3Provider()
         : ProviderFactoryService.getProvider(RH_CHAIN_ID);
@@ -200,13 +219,20 @@ export default function TradeTab() {
               ]);
 
               const perMilliETH = parseFloat(ethers.utils.formatEther(out));
-              const rate = (perMilliETH * 1000).toLocaleString("en-US", {
-                maximumFractionDigits: 0,
+              let rate = perMilliETH * 1000;
+              
+              // If base asset is BTC, convert from ETH rate to BTC rate
+              if (baseAsset === "BTC") {
+                rate = rate * (newBasePrices.BTC / newBasePrices.ETH);
+              }
+
+              const formattedRate = rate.toLocaleString("en-US", {
+                maximumFractionDigits: baseAsset === "BTC" ? 4 : 0,
               });
 
               return {
                 symbol: s,
-                rate,
+                rate: formattedRate,
                 reserves: {
                   eth: ethers.utils.formatEther(rETH),
                   stock: ethers.utils.formatEther(rStock),
@@ -220,23 +246,13 @@ export default function TradeTab() {
         Promise.all(
           REAL_STOCKS.map(async (s) => {
             try {
-              if (s === "ETH") return { symbol: s, rate: "1", isLive: true, source: 'native' };
-              if (s === "BTC") {
-                const result = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "BTC" });
-                // Rate = ETH_Price / BTC_Price
-                return { 
-                  symbol: s, 
-                  rate: result.price ? (3500 / result.price).toFixed(6) : null,
-                  isLive: result.isLive,
-                  source: result.source
-                };
-              }
-              // For stocks like NVDA, GOOGL etc.
+              if (s === baseAsset) return { symbol: s, rate: "1", isLive: true, source: 'native' };
+              
               const result = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: s });
-              // Rate = ETH_Price / Stock_Price
+              // Rate = BaseAsset_Price / Stock_Price
               return { 
                 symbol: s, 
-                rate: result.price ? (3500 / result.price).toFixed(2) : null,
+                rate: result.price ? (currentBasePrice / result.price).toFixed(baseAsset === "BTC" ? 6 : 2) : null,
                 isLive: result.isLive,
                 source: result.source
               };
@@ -293,7 +309,7 @@ export default function TradeTab() {
     } catch (e) {
       console.error("[Trade] Rate fetch error:", e);
     }
-  }, [isConnected, isOnRH]);
+  }, [isConnected, isOnRH, baseAsset, basePrices]);
 
   useEffect(() => {
     fetchBalances();
@@ -305,7 +321,7 @@ export default function TradeTab() {
     fetchRates();
     const interval = setInterval(fetchRates, 30000);
     return () => clearInterval(interval);
-  }, [fetchRates]);
+  }, [fetchRates, baseAsset]);
 
   // Fetch Synth Data for intelligence feed
   useEffect(() => {
@@ -586,10 +602,10 @@ export default function TradeTab() {
           {rate ? (
             <div className="text-right">
               <div className="text-sm font-bold">
-                ${(parseFloat(rate) * 3000).toFixed(0)}
+                ${(basePrices[baseAsset] / parseFloat(rate.replace(/,/g, ""))).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
-              <div className="text-xs text-gray-400">
-                {parseFloat(rate).toLocaleString()}/ETH
+              <div className="text-[10px] text-gray-400">
+                {rate} {stock}/{baseAsset}
               </div>
             </div>
           ) : (
@@ -936,6 +952,26 @@ export default function TradeTab() {
                     )}
                   </div>
                   <div className="text-right">
+                  {/* Base Asset Toggle */}
+                  <div className="flex items-center justify-end gap-2 mb-2">
+                    <span className="text-[10px] font-black text-gray-400 uppercase">Rate Base:</span>
+                    <div className="flex bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+                      {(['ETH', 'BTC'] as const).map((asset) => (
+                        <button
+                          key={asset}
+                          onClick={() => setBaseAsset(asset)}
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${
+                            baseAsset === asset 
+                              ? 'bg-white dark:bg-gray-700 text-blue-600 shadow-sm' 
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          {asset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Price Display with Toggle */}
                   <div className="flex items-center justify-end gap-2 mb-1">
                       {liveRateMetadata[selected] && (
@@ -954,21 +990,22 @@ export default function TradeTab() {
                           if (!realStockPrice) return "---";
                           return `$${realStockPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
                         }
-                        // Fictional stocks: derive from AMM rate (tokens per ETH)
+                        // Fictional stocks: derive from current base rate
                         const rate = liveRates[selected];
                         if (!rate) return "---";
-                        const tokensPerEth = parseFloat(rate.replace(/,/g, ""));
-                        if (tokensPerEth === 0) return "---";
-                        const usdcPrice = 3500 / tokensPerEth;
+                        const tokensPerBase = parseFloat(rate.replace(/,/g, ""));
+                        if (tokensPerBase === 0) return "---";
+                        const usdcPrice = basePrices[baseAsset] / tokensPerBase;
                         return `$${usdcPrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USDC`;
                       })()}
-                    </div>
+                      </div>
+
                   </div>
 
                     {!isRealStock && (
                       <div className="flex items-center justify-end gap-2">
                         <span className="text-xs text-gray-400">
-                          ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/ETH` : "---"}
+                          ≈ {liveRates[selected] ? `${liveRates[selected]} ${selected}/${baseAsset}` : "---"}
                         </span>
                       </div>
                     )}
@@ -979,7 +1016,14 @@ export default function TradeTab() {
                   <StockChart
                     symbol={selected}
                     height={200}
-                    currentPrice={liveRates[selected]}
+                    currentPrice={(() => {
+                      if (isRealStock) return realStockPrice?.toString() || null;
+                      const rate = liveRates[selected];
+                      if (!rate) return null;
+                      const tokensPerBase = parseFloat(rate.replace(/,/g, ""));
+                      if (tokensPerBase === 0) return null;
+                      return (basePrices[baseAsset] / tokensPerBase).toString();
+                    })()}
                     volatility={volatilityValue}
                     forecastPercentiles={synthForecast}
                   />
