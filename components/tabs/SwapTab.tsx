@@ -201,6 +201,8 @@ export default function SwapTab({
   const { config: profileConfig, isComplete: profileComplete } =
     useProtectionProfile();
 
+  const targetRegion = profileConfig.userRegion;
+
   useEffect(() => {
     if (swapPrefill && swapInterfaceRef.current?.setTokens) {
       swapInterfaceRef.current.setTokens(

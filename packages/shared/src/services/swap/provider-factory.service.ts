@@ -34,6 +34,7 @@ export class ProviderFactoryService {
      * Get Web3Provider from wallet (supports both regular and Farcaster wallets)
      */
     static async getWeb3Provider(): Promise<ethers.providers.Web3Provider> {
+        // If we have a cache, return it
         if (this.web3ProviderCache) {
             return this.web3ProviderCache;
         }
@@ -42,6 +43,7 @@ export class ProviderFactoryService {
         if (!provider) {
             throw new Error('No wallet provider available. Please connect your wallet.');
         }
+        
         console.log('[ProviderFactory] Using wallet provider (new instance)');
         this.web3ProviderCache = new ethers.providers.Web3Provider(provider);
         return this.web3ProviderCache;
