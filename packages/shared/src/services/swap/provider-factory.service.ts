@@ -10,6 +10,7 @@ import { getWalletProvider, isWalletProviderAvailable } from '../../utils/wallet
 
 export class ProviderFactoryService {
     private static providerCache = new Map<number, ethers.providers.Provider>();
+    private static web3ProviderCache: ethers.providers.Web3Provider | null = null;
 
     /**
      * Get or create a provider for a specific chain
@@ -33,12 +34,24 @@ export class ProviderFactoryService {
      * Get Web3Provider from wallet (supports both regular and Farcaster wallets)
      */
     static async getWeb3Provider(): Promise<ethers.providers.Web3Provider> {
+        if (this.web3ProviderCache) {
+            return this.web3ProviderCache;
+        }
+
         const provider = await getWalletProvider();
         if (!provider) {
             throw new Error('No wallet provider available. Please connect your wallet.');
         }
-        console.log('[ProviderFactory] Using wallet provider');
-        return new ethers.providers.Web3Provider(provider);
+        console.log('[ProviderFactory] Using wallet provider (new instance)');
+        this.web3ProviderCache = new ethers.providers.Web3Provider(provider);
+        return this.web3ProviderCache;
+    }
+
+    /**
+     * Clear Web3 cache (call this on wallet disconnect or account switch)
+     */
+    static clearWeb3Cache(): void {
+        this.web3ProviderCache = null;
     }
 
     /**

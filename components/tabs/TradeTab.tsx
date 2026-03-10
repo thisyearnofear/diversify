@@ -132,6 +132,9 @@ export default function TradeTab() {
     ETH: 3500,
     BTC: 67000,
   });
+  // Use a ref to break the infinite loop in fetchRates dependencies
+  const basePricesRef = useRef(basePrices);
+  useEffect(() => { basePricesRef.current = basePrices; }, [basePrices]);
 
   // Watchlist for Robinhood stocks
   const { watchlist: robinhoodWatchlist, toggleWatchlist: toggleRobinhoodWatchlist, isInWatchlist: isInRobinhoodWatchlist } = useWatchlist();
@@ -194,8 +197,8 @@ export default function TradeTab() {
       ]);
 
       const newBasePrices = {
-        ETH: ethResult.price || basePrices.ETH,
-        BTC: btcResult.price || basePrices.BTC,
+        ETH: ethResult.price || basePricesRef.current.ETH,
+        BTC: btcResult.price || basePricesRef.current.BTC,
       };
       setBasePrices(newBasePrices);
 
@@ -309,7 +312,7 @@ export default function TradeTab() {
     } catch (e) {
       console.error("[Trade] Rate fetch error:", e);
     }
-  }, [isConnected, isOnRH, baseAsset, basePrices]);
+  }, [isConnected, isOnRH, baseAsset]);
 
   useEffect(() => {
     fetchBalances();
