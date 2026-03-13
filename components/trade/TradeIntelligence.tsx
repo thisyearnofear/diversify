@@ -141,12 +141,12 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
       </div>
       <div className="pt-1 flex justify-center">
         <a
-          href="https://synthdata.co"
+          href="https://docs.synthdata.co"
           target="_blank"
           rel="noopener noreferrer"
           className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-colors uppercase tracking-[0.2em] flex items-center gap-1"
         >
-          Intelligence by <span className="text-blue-500 dark:text-blue-400">SynthData.co</span>
+          Risk Intelligence by <span className="text-blue-500 dark:text-blue-400">SynthData.co</span>
           <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>

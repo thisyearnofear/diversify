@@ -205,11 +205,13 @@ export class SynthDataService {
   /**
    * Fetches prediction data for a specific asset with unified caching and fallbacks.
    * @param asset The asset symbol (e.g., BTC, ETH, NVDAX)
+   * @param horizon Optional: "1h" for short-term or "24h" for longer-term forecasts
    */
-  static async getPredictions(asset: string): Promise<SynthForecast | null> {
+  static async getPredictions(asset: string, horizon: "1h" | "24h" = "24h"): Promise<SynthForecast | null> {
     try {
+      const cacheKey = horizon === "1h" ? `synth:predictions:${asset}:1h` : `synth:predictions:${asset}`;
       const result = await unifiedCache.getOrFetch<SynthForecast>(
-        `synth:predictions:${asset}`,
+        cacheKey,
         async () => {
           const data = await this.makeApiRequest<SynthForecast>(
             `${BASE_URL}/insights/prediction-percentiles`,
@@ -232,11 +234,13 @@ export class SynthDataService {
   /**
    * Fetches volatility insights for a specific asset with unified caching and fallbacks.
    * @param asset The asset symbol
+   * @param horizon Optional: "1h" for short-term or "24h" for longer-term volatility
    */
-  static async getVolatility(asset: string): Promise<SynthVolatility | null> {
+  static async getVolatility(asset: string, horizon: "1h" | "24h" = "24h"): Promise<SynthVolatility | null> {
     try {
+      const cacheKey = horizon === "1h" ? `synth:volatility:${asset}:1h` : `synth:volatility:${asset}`;
       const result = await unifiedCache.getOrFetch<SynthVolatility>(
-        `synth:volatility:${asset}`,
+        cacheKey,
         async () => {
           const data = await this.makeApiRequest<any>(
             `${BASE_URL}/insights/volatility`,

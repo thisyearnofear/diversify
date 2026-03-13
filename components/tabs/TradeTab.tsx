@@ -19,6 +19,7 @@ import { useStockStats } from "../../hooks/use-stock-stats";
 import { useTokenHolders } from "../../hooks/use-token-holders";
 import HoldersWidget from "../trade/HoldersWidget";
 import TradeIntelligence, { type IntelligenceItem } from "../trade/TradeIntelligence";
+import PortfolioRiskWidget from "../trade/PortfolioRiskWidget";
 import EmergingMarketsTracker from "../trade/EmergingMarketsTracker";
 
 import {
@@ -1053,6 +1054,9 @@ export default function TradeTab() {
                   selectedAsset={selected}
                   isAdvanced={isAdvanced}
                 />
+
+                {/* Portfolio Risk Widget - SynthData Risk Intelligence */}
+                <PortfolioRiskWidget />
 
                 <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
                   <button

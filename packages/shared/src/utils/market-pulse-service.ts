@@ -16,6 +16,9 @@ export interface MarketPulse {
   defenseSpending: number;
   liquidationRisk?: number;
   impliedVolatility?: number;
+  realizedVol?: number;      // From Synthdata: realized volatility
+  forecastVol?: number;      // From Synthdata: forecast volatility
+  horizon: "1h" | "24h";     // Time horizon for risk assessment
   lastUpdated: number;
   source: string; // "api" | "fallback" | "mixed"
 }
@@ -61,7 +64,7 @@ const FICTIONAL_TO_REAL: Record<string, {
 };
 
 export class MarketPulseService {
-  private static cache: { data: MarketPulse; timestamp: number } | null = null;
+  private static cache: { data: MarketPulse; timestamp: number; horizon: string } | null = null;
   private static readonly CACHE_TTL = 60000;
   private static serviceStatus = {
     synthWorking: true,
@@ -70,15 +73,20 @@ export class MarketPulseService {
     lastMacroError: 0
   };
 
-  static async getMarketPulse(): Promise<MarketPulse> {
-    if (this.cache && Date.now() - this.cache.timestamp < this.CACHE_TTL) {
+  /**
+   * Get market pulse with optional horizon for risk assessment
+   * @param horizon "1h" for short-term (scalping signals) or "24h" for longer-term (risk management)
+   */
+  static async getMarketPulse(horizon: "1h" | "24h" = "24h"): Promise<MarketPulse> {
+    // Use horizon-specific cache
+    if (this.cache && this.cache.horizon === horizon && Date.now() - this.cache.timestamp < this.CACHE_TTL) {
       return this.cache.data;
     }
 
-    // Fetch data with error handling
+    // Fetch data with error handling (pass horizon to SynthDataService)
     const [synthBTC, synthVol, synthLiq, synthOpt, macroData] = await Promise.allSettled([
-      SynthDataService.getPredictions("BTC"),
-      SynthDataService.getVolatility("BTC"),
+      SynthDataService.getPredictions("BTC", horizon),
+      SynthDataService.getVolatility("BTC", horizon),
       SynthDataService.getLiquidation("BTC"),
       SynthDataService.getOptionPricing("BTC"),
       macroService.getMacroData(),
@@ -155,11 +163,14 @@ export class MarketPulseService {
       defenseSpending,
       liquidationRisk,
       impliedVolatility,
+      realizedVol: volData?.realized_vol,
+      forecastVol: volData?.forecast_vol,
+      horizon,
       lastUpdated: Date.now(),
       source,
     };
 
-    this.cache = { data: pulse, timestamp: Date.now() };
+    this.cache = { data: pulse, timestamp: Date.now(), horizon };
     return pulse;
   }
 
