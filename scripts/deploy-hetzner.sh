@@ -35,6 +35,15 @@ rsync -az --delete .next/static/ "$REMOTE:$DEPLOY_DIR/.next/static/"
 echo "📦 Syncing public/ → Hetzner..."
 rsync -az public/ "$REMOTE:$DEPLOY_DIR/public/"
 
+# ── 2.1. Cleanup build artifacts on server (safety net) ─────────────────────
+echo "🧹 Cleaning up build artifacts on server..."
+ssh "$REMOTE" "
+  rm -rf $DEPLOY_DIR/node_modules 2>/dev/null || true
+  rm -rf $DEPLOY_DIR/.next/cache 2>/dev/null || true
+  rm -rf $DEPLOY_DIR/.turbo 2>/dev/null || true
+  rm -rf $DEPLOY_DIR/packages 2>/dev/null || true
+"
+
 # ── 3. Restart PM2 ───────────────────────────────────────────────────────────
 echo "🔄 Restarting PM2 process..."
 ssh "$REMOTE" "pm2 restart $APP_NAME && sleep 2 && pm2 list | grep $APP_NAME"

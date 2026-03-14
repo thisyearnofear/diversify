@@ -55,6 +55,13 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             icon: '🏦',
             color: 'green',
         },
+        {
+            ...NETWORKS.HYPERLIQUID,
+            label: `${NETWORKS.HYPERLIQUID.name} (Commodities)`,
+            description: 'Commodity perps (GOLD, SILVER, OIL, COPPER)',
+            icon: '🥇',
+            color: 'amber',
+        },
     ];
 
     // Split into mainnet and testnet (Test Drive) groups.

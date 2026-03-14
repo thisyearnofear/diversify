@@ -8,7 +8,7 @@
  * - All positions are USDC-collateralized
  * - Excluded from Islamic Finance portfolios (no underlying ownership)
  * - Uses Hyperliquid Info API for price feeds (no auth required)
- * - Uses Hyperliquid Exchange API for order placement (requires signed actions)
+ * - Uses Hyperliquid Exchange API for order placement (requires EIP-712 signed actions)
  */
 
 import { ethers } from 'ethers';
@@ -26,6 +26,23 @@ const HYPERLIQUID_CHAIN_ID = NETWORKS.HYPERLIQUID.chainId;
 
 // Hyperliquid REST API base URL
 const HL_API_BASE = 'https://api.hyperliquid.xyz';
+
+// EIP-712 domain for Hyperliquid user-signed actions (mainnet)
+export const HYPERLIQUID_EIP712_DOMAIN = {
+    name: 'HyperliquidSignTransaction',
+    version: '1',
+    chainId: 0x66eee, // 421614
+    verifyingContract: '0x0000000000000000000000000000000000000000' as const,
+};
+
+// EIP-712 types for order actions
+export const HYPERLIQUID_ORDER_TYPES = {
+    'HyperliquidTransaction:Order': [
+        { name: 'grouping', type: 'string' },
+        { name: 'orders', type: 'string' },
+        { name: 'nonce', type: 'uint64' },
+    ],
+};
 
 // Map from DiversiFi token symbol to Hyperliquid market ticker
 export const HYPERLIQUID_MARKET_TICKERS: Record<string, string> = {
@@ -64,6 +81,39 @@ export interface HyperliquidOrderResult {
     };
 }
 
+export interface HyperliquidPosition {
+    coin: string;
+    szi: string;
+    entryPx: string;
+    positionValue: string;
+    unrealizedPnl: string;
+    returnOnEquity: string;
+    liquidationPx: string | null;
+    leverage: { type: string; value: number };
+    marginUsed: string;
+    maxLeverage: number;
+}
+
+export interface HyperliquidUserState {
+    assetPositions: Array<{
+        position: HyperliquidPosition;
+        type: string;
+    }>;
+    crossMarginSummary: {
+        accountValue: string;
+        totalMarginUsed: string;
+        totalNtlPos: string;
+        totalRawUsd: string;
+    };
+    marginSummary: {
+        accountValue: string;
+        totalMarginUsed: string;
+        totalNtlPos: string;
+        totalRawUsd: string;
+    };
+    withdrawable: string;
+}
+
 /**
  * Fetch all mid prices from Hyperliquid Info API
  */
@@ -77,6 +127,98 @@ export async function fetchHyperliquidPrices(): Promise<HyperliquidAllMids> {
         throw new Error(`Hyperliquid allMids failed: ${response.status}`);
     }
     return response.json();
+}
+
+/**
+ * Fetch market metadata (asset indices, size decimals, max leverage)
+ */
+export async function fetchHyperliquidMeta(): Promise<HyperliquidMeta> {
+    const response = await fetch(`${HL_API_BASE}/info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'meta' }),
+    });
+    if (!response.ok) {
+        throw new Error(`Hyperliquid meta failed: ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Fetch user's open positions and account state
+ */
+export async function fetchHyperliquidUserState(userAddress: string): Promise<HyperliquidUserState> {
+    const response = await fetch(`${HL_API_BASE}/info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'clearinghouseState', user: userAddress }),
+    });
+    if (!response.ok) {
+        throw new Error(`Hyperliquid user state failed: ${response.status}`);
+    }
+    return response.json();
+}
+
+/**
+ * Resolve asset index from coin name using meta endpoint
+ */
+export async function resolveAssetIndex(coin: string): Promise<number> {
+    const meta = await fetchHyperliquidMeta();
+    const idx = meta.universe.findIndex(m => m.name === coin);
+    if (idx === -1) {
+        throw new Error(`Asset not found in Hyperliquid universe: ${coin}`);
+    }
+    return idx;
+}
+
+/**
+ * Get size decimals for a given coin
+ */
+export async function getSzDecimals(coin: string): Promise<number> {
+    const meta = await fetchHyperliquidMeta();
+    const market = meta.universe.find(m => m.name === coin);
+    if (!market) {
+        throw new Error(`Market not found: ${coin}`);
+    }
+    return market.szDecimals;
+}
+
+/**
+ * Round size to the correct number of decimals for a market
+ */
+export function roundSize(sz: number, szDecimals: number): string {
+    const factor = Math.pow(10, szDecimals);
+    return (Math.floor(sz * factor) / factor).toFixed(szDecimals);
+}
+
+/**
+ * Round price to 6 significant figures (Hyperliquid convention)
+ */
+export function roundPrice(px: number): string {
+    return parseFloat(px.toPrecision(6)).toString();
+}
+
+/**
+ * Sign an order action using EIP-712 typed data signing
+ */
+export async function signOrderAction(
+    signer: ethers.Signer,
+    orderAction: Record<string, unknown>,
+    nonce: number
+): Promise<{ r: string; s: string; v: number }> {
+    const message = {
+        grouping: (orderAction as any).grouping || 'na',
+        orders: JSON.stringify((orderAction as any).orders),
+        nonce,
+    };
+
+    const signature = await (signer as any)._signTypedData(
+        HYPERLIQUID_EIP712_DOMAIN,
+        HYPERLIQUID_ORDER_TYPES,
+        message
+    );
+
+    return ethers.utils.splitSignature(signature);
 }
 
 /**
@@ -98,26 +240,31 @@ export async function fetchHyperliquidPrice(symbol: string): Promise<number> {
 /**
  * Place a market order on Hyperliquid (requires wallet signer)
  * Opens a 1x long position by depositing USDC collateral and buying the perp.
+ * Uses proper EIP-712 signing as required by Hyperliquid's exchange API.
  */
 export async function placeHyperliquidOrder(
-    wallet: ethers.Wallet,
+    signer: ethers.Signer,
     coin: string,
     isBuy: boolean,
     sz: number,
     limitPx: number,
     vaultAddress?: string
 ): Promise<HyperliquidOrderResult> {
-    const timestamp = Date.now();
+    const nonce = Date.now();
+
+    // Resolve asset index from meta
+    const assetIndex = await resolveAssetIndex(coin);
+    const szDecimals = await getSzDecimals(coin);
 
     // Build the order action
     const orderAction = {
         type: 'order',
         orders: [
             {
-                a: 0, // asset index - resolved server-side by coin name
+                a: assetIndex,
                 b: isBuy,
-                p: limitPx.toFixed(6),
-                s: sz.toFixed(6),
+                p: roundPrice(limitPx),
+                s: roundSize(sz, szDecimals),
                 r: false, // not reduce-only
                 t: { limit: { tif: 'Ioc' } }, // Immediate-or-cancel market equivalent
             },
@@ -126,17 +273,13 @@ export async function placeHyperliquidOrder(
         ...(vaultAddress ? { vaultAddress } : {}),
     };
 
-    // Sign the action using EIP-712 style signing expected by Hyperliquid
-    const actionHash = ethers.utils.keccak256(
-        ethers.utils.toUtf8Bytes(JSON.stringify(orderAction) + timestamp.toString())
-    );
-    const signature = await wallet.signMessage(ethers.utils.arrayify(actionHash));
-    const { r, s, v } = ethers.utils.splitSignature(signature);
+    // Sign using EIP-712
+    const signature = await signOrderAction(signer, orderAction, nonce);
 
     const payload = {
         action: orderAction,
-        nonce: timestamp,
-        signature: { r, s, v },
+        nonce,
+        signature: { r: signature.r, s: signature.s, v: signature.v },
         ...(vaultAddress ? { vaultAddress } : {}),
     };
 
@@ -147,7 +290,61 @@ export async function placeHyperliquidOrder(
     });
 
     if (!response.ok) {
-        throw new Error(`Hyperliquid order failed: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Hyperliquid order failed (${response.status}): ${errorText}`);
+    }
+    return response.json();
+}
+
+/**
+ * Close an existing position (reduce-only order)
+ */
+export async function closeHyperliquidPosition(
+    signer: ethers.Signer,
+    coin: string,
+    currentSize: number,
+    currentPrice: number
+): Promise<HyperliquidOrderResult> {
+    const nonce = Date.now();
+    const isBuy = currentSize < 0;
+    const sz = Math.abs(currentSize);
+    const limitPx = isBuy ? currentPrice * 1.005 : currentPrice * 0.995;
+
+    const assetIndex = await resolveAssetIndex(coin);
+    const szDecimals = await getSzDecimals(coin);
+
+    const orderAction = {
+        type: 'order',
+        orders: [
+            {
+                a: assetIndex,
+                b: isBuy,
+                p: roundPrice(limitPx),
+                s: roundSize(sz, szDecimals),
+                r: true, // reduce-only for closing
+                t: { limit: { tif: 'Ioc' } },
+            },
+        ],
+        grouping: 'na',
+    };
+
+    const signature = await signOrderAction(signer, orderAction, nonce);
+
+    const payload = {
+        action: orderAction,
+        nonce,
+        signature: { r: signature.r, s: signature.s, v: signature.v },
+    };
+
+    const response = await fetch(`${HL_API_BASE}/exchange`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Hyperliquid close failed (${response.status}): ${errorText}`);
     }
     return response.json();
 }
@@ -162,8 +359,14 @@ export async function placeHyperliquidOrder(
  * Excluded from Islamic Finance portfolios via SwapOrchestratorService filter.
  */
 export class HyperliquidPerpStrategy extends BaseSwapStrategy {
+    private signer: ethers.Signer | null = null;
+
     getName(): string {
         return 'HyperliquidPerp';
+    }
+
+    setSigner(signer: ethers.Signer): void {
+        this.signer = signer;
     }
 
     /**
@@ -188,6 +391,7 @@ export class HyperliquidPerpStrategy extends BaseSwapStrategy {
         if (!params.userAddress) return false;
         const amount = parseFloat(params.amount);
         if (isNaN(amount) || amount <= 0) return false;
+        if (amount < 10) return false; // Hyperliquid minimum order value
         return true;
     }
 
@@ -230,11 +434,19 @@ export class HyperliquidPerpStrategy extends BaseSwapStrategy {
             const price = await fetchHyperliquidPrice(commoditySymbol);
             const usdcAmount = parseFloat(params.amount);
 
+            if (usdcAmount < 10) {
+                return { success: false, error: 'Minimum order value is $10' };
+            }
+
             // Calculate position size at 1x leverage
             const sz = isBuy ? usdcAmount / price : usdcAmount;
 
-            // Add 0.5% slippage buffer to limit price
-            const limitPx = isBuy ? price * 1.005 : price * 0.995;
+            // Add slippage buffer to limit price
+            const slippage = params.slippageTolerance ?? 0.5;
+            const slippageMultiplier = slippage / 100;
+            const limitPx = isBuy
+                ? price * (1 + slippageMultiplier)
+                : price * (1 - slippageMultiplier);
 
             this.log(`${isBuy ? 'Opening' : 'Closing'} 1x ${ticker} position`, {
                 price,
@@ -243,13 +455,69 @@ export class HyperliquidPerpStrategy extends BaseSwapStrategy {
                 usdcAmount,
             });
 
-            // Note: In production, wallet would be injected via dependency injection
-            // or retrieved from a wallet service. Here we signal intent and return
-            // a structured result for the UI to handle signing.
             callbacks?.onSwapSubmitted?.('hyperliquid-pending');
 
-            // Return structured result indicating Hyperliquid action required
-            // The actual signing happens client-side via the Hyperliquid SDK
+            // If we have a signer, execute the order directly via Hyperliquid API
+            if (this.signer) {
+                try {
+                    let result: HyperliquidOrderResult;
+                    if (isBuy) {
+                        result = await placeHyperliquidOrder(
+                            this.signer, ticker, true, sz, limitPx
+                        );
+                    } else {
+                        result = await closeHyperliquidPosition(
+                            this.signer, ticker, sz, price
+                        );
+                    }
+
+                    const status = result.response?.data?.statuses?.[0];
+                    if (status?.filled) {
+                        const txId = `hl-${ticker}-${status.filled.oid}`;
+                        callbacks?.onSwapSubmitted?.(txId);
+                        return {
+                            success: true,
+                            txHash: txId,
+                            steps: [{
+                                type: 'hyperliquid_perp',
+                                action: isBuy ? 'open_long' : 'close_long',
+                                coin: ticker,
+                                filledSize: status.filled.totalSz,
+                                avgPrice: status.filled.avgPx,
+                                orderId: status.filled.oid,
+                                leverage: 1,
+                                collateralUsdc: usdcAmount,
+                            }],
+                        };
+                    } else if (status?.resting) {
+                        return {
+                            success: true,
+                            txHash: `hl-${ticker}-${status.resting.oid}`,
+                            steps: [{
+                                type: 'hyperliquid_perp',
+                                action: isBuy ? 'open_long' : 'close_long',
+                                coin: ticker,
+                                orderId: status.resting.oid,
+                                status: 'resting',
+                                leverage: 1,
+                                collateralUsdc: usdcAmount,
+                            }],
+                        };
+                    } else if (status?.error) {
+                        return { success: false, error: `Hyperliquid: ${status.error}` };
+                    }
+
+                    return { success: false, error: 'Order returned unknown status' };
+                } catch (orderError: any) {
+                    this.logError('Direct order execution failed', orderError);
+                    return {
+                        success: false,
+                        error: `Hyperliquid order error: ${orderError?.message || 'Unknown error'}`,
+                    };
+                }
+            }
+
+            // No signer — return structured result for client-side signing
             return {
                 success: true,
                 txHash: `hl-${ticker}-${isBuy ? 'open' : 'close'}-${Date.now()}`,
@@ -262,6 +530,8 @@ export class HyperliquidPerpStrategy extends BaseSwapStrategy {
                         limitPrice: limitPx,
                         leverage: 1,
                         collateralUsdc: usdcAmount,
+                        requiresClientSigning: true,
+                        signingDomain: HYPERLIQUID_EIP712_DOMAIN,
                         note: 'Synthetic 1x long — not physical commodity ownership',
                     },
                 ],

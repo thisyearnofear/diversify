@@ -38,6 +38,12 @@ export const NETWORKS = {
         explorerUrl: 'https://explorer.testnet.chain.robinhood.com',
         devOnly: true,
     },
+    HYPERLIQUID: {
+        chainId: 998, // Virtual chain ID for Hyperliquid perp markets (not EVM)
+        name: 'Hyperliquid',
+        rpcUrl: 'https://api.hyperliquid.xyz',
+        explorerUrl: 'https://app.hyperliquid.xyz',
+    },
 } as const;
 
 // Arc Data Hub Configuration (X402 Economy)
@@ -207,6 +213,13 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     OSCORP: { name: 'Oscorp Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
     STARK: { name: 'Stark Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
 
+    // Hyperliquid Perpetual Commodity Markets (synthetic 1x long exposure)
+    // These represent perp positions on Hyperliquid, collateralized in USDC
+    GOLD: { name: 'Gold Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
+    SILVER: { name: 'Silver Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
+    OIL: { name: 'Crude Oil Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: false },
+    COPPER: { name: 'Copper Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: false },
+
     // Fictional Emerging Market Companies (Celo Sepolia Testnet)
     // Africa
     WAKANDA: { name: 'Wakanda Design Group', region: REGIONS.AFRICA, decimals: 18, apy: 0 },
@@ -247,6 +260,7 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH', 'ACME', 'SPACELY', 'WAYNE', 'OSCORP', 'STARK'],
+    [NETWORKS.HYPERLIQUID.chainId]: ['GOLD', 'SILVER', 'OIL', 'COPPER'],
 };
 
 // Helper: Get full asset list with metadata for a specific chain
@@ -291,6 +305,10 @@ export const EXCHANGE_RATES: Record<string, number> = {
     WAYNE: 95,
     OSCORP: 35,
     STARK: 120,
+    GOLD: 2650,
+    SILVER: 31,
+    OIL: 72,
+    COPPER: 4.2,
     NVDA: 181.84,
     GOOGL: 168.22,
     AAPL: 228.45,

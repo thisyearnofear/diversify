@@ -35,8 +35,36 @@ export interface SynthVolatility {
   forecast_vol: number;
 }
 
+export interface SynthOptionPricing {
+  asset: string;
+  implied_vol: number;
+}
+
+export interface SynthLiquidation {
+  asset: string;
+  risk_score: number;
+}
+
 const BASE_URL = "https://api.synthdata.co";
 const API_KEY = process.env.SYNTH_API_KEY;
+const DEFAULT_FALLBACK_FORECAST: SynthForecast = {
+  current_price: 100,
+  "1H": {
+    average_volatility: 0.02,
+    percentiles: { p5: 95, p25: 98, p50: 100, p75: 102, p95: 105 }
+  },
+  "24H": {
+    average_volatility: 0.05,
+    percentiles: { p5: 90, p25: 96, p50: 100, p75: 104, p95: 110 }
+  },
+  forecast_future: {
+    average_volatility: 0.08,
+    percentiles: { p5: 85, p25: 94, p50: 100, p75: 106, p95: 115 }
+  },
+  realized: {
+    average_volatility: 0.04
+  }
+};
 
 // Fallback data for when Synth API is unavailable
 const FALLBACK_DATA: Record<string, { forecast: SynthForecast; volatility: SynthVolatility }> = {
@@ -202,6 +230,8 @@ const FALLBACK_DATA: Record<string, { forecast: SynthForecast; volatility: Synth
  * - Smart TTL management (30min for price data)
  */
 export class SynthDataService {
+  private static readonly SUPPORTED_SYNTH_ASSETS = new Set(Object.keys(FALLBACK_DATA));
+
   /**
    * Fetches prediction data for a specific asset with unified caching and fallbacks.
    * @param asset The asset symbol (e.g., BTC, ETH, NVDAX)
@@ -213,19 +243,22 @@ export class SynthDataService {
       const result = await unifiedCache.getOrFetch<SynthForecast>(
         cacheKey,
         async () => {
-          const data = await this.makeApiRequest<SynthForecast>(
+          const data = await this.makeApiRequest<any>(
             `${BASE_URL}/insights/prediction-percentiles`,
             { asset }
           );
           if (!data) throw new Error('No data from API');
-          return { data, source: 'synth-api' };
+          const normalizedData = this.normalizeForecast(data, asset);
+          if (!normalizedData) throw new Error('Invalid Synth forecast schema');
+
+          return { data: normalizedData, source: 'synth-api' };
         },
         'volatile', // 30min TTL for price forecasts
         false
       );
       return result.data;
     } catch (error) {
-      console.error(`[Synth API] Failed to fetch predictions for ${asset}:`, error);
+      console.error(`[Synth API][${this.classifyError(error)}] Failed to fetch predictions for ${asset}:`, error);
       // Return fallback on any error (unified cache already tried stale data)
       return this.getFallbackForecast(asset);
     }
@@ -249,11 +282,8 @@ export class SynthDataService {
           if (!data) throw new Error('No data from API');
 
           // The API returns realized and forecast_future with volatility arrays
-          const mappedData: SynthVolatility = {
-            asset: asset,
-            realized_vol: data.realized?.average_volatility || 0,
-            forecast_vol: data.forecast_future?.average_volatility || 0,
-          };
+          const mappedData = this.normalizeVolatility(data, asset);
+          if (!mappedData) throw new Error('Invalid Synth volatility schema');
 
           return { data: mappedData, source: 'synth-api' };
         },
@@ -262,7 +292,7 @@ export class SynthDataService {
       );
       return result.data;
     } catch (error) {
-      console.error(`[Synth API] Failed to fetch volatility for ${asset}:`, error);
+      console.error(`[Synth API][${this.classifyError(error)}] Failed to fetch volatility for ${asset}:`, error);
       // Return fallback on any error (unified cache already tried stale data)
       return this.getFallbackVolatility(asset);
     }
@@ -271,9 +301,9 @@ export class SynthDataService {
   /**
    * Fetches option pricing insights for a specific asset.
    */
-  static async getOptionPricing(asset: string): Promise<any | null> {
+  static async getOptionPricing(asset: string): Promise<SynthOptionPricing | null> {
     try {
-      const result = await unifiedCache.getOrFetch<any>(
+      const result = await unifiedCache.getOrFetch<SynthOptionPricing>(
         `synth:options:${asset}`,
         async () => {
           const data = await this.makeApiRequest<any>(
@@ -281,14 +311,18 @@ export class SynthDataService {
             { asset }
           );
           if (!data) throw new Error('No data from API');
-          return { data, source: 'synth-api' };
+
+          const normalizedData = this.normalizeOptionPricing(data, asset);
+          if (!normalizedData) throw new Error('Invalid Synth option pricing schema');
+
+          return { data: normalizedData, source: 'synth-api' };
         },
         'volatile',
         false
       );
       return result.data;
     } catch (error) {
-      console.error(`[Synth API] Failed to fetch option pricing for ${asset}:`, error);
+      console.error(`[Synth API][${this.classifyError(error)}] Failed to fetch option pricing for ${asset}:`, error);
       return this.getFallbackOptionPricing(asset);
     }
   }
@@ -296,9 +330,9 @@ export class SynthDataService {
   /**
    * Fetches liquidation probabilities for a specific asset.
    */
-  static async getLiquidation(asset: string): Promise<any | null> {
+  static async getLiquidation(asset: string): Promise<SynthLiquidation | null> {
     try {
-      const result = await unifiedCache.getOrFetch<any>(
+      const result = await unifiedCache.getOrFetch<SynthLiquidation>(
         `synth:liquidation:${asset}`,
         async () => {
           const data = await this.makeApiRequest<any>(
@@ -306,14 +340,18 @@ export class SynthDataService {
             { asset }
           );
           if (!data) throw new Error('No data from API');
-          return { data, source: 'synth-api' };
+
+          const normalizedData = this.normalizeLiquidation(data, asset);
+          if (!normalizedData) throw new Error('Invalid Synth liquidation schema');
+
+          return { data: normalizedData, source: 'synth-api' };
         },
         'volatile',
         false
       );
       return result.data;
     } catch (error) {
-      console.error(`[Synth API] Failed to fetch liquidation for ${asset}:`, error);
+      console.error(`[Synth API][${this.classifyError(error)}] Failed to fetch liquidation for ${asset}:`, error);
       return this.getFallbackLiquidation(asset);
     }
   }
@@ -369,38 +407,12 @@ export class SynthDataService {
   private static getFallbackForecast(asset: string): SynthForecast | null {
     const fallback = FALLBACK_DATA[asset];
     if (fallback) {
-      // Add some randomness to make it feel more realistic
-      const randomFactor = 0.95 + Math.random() * 0.1;
-      const price = Math.round(fallback.forecast.current_price * randomFactor);
-
-      console.warn(`[Synth API] Using fallback forecast data for ${asset} (price: ${price})`);
-
-      return {
-        ...fallback.forecast,
-        current_price: price,
-      };
+      console.warn(`[Synth API] Using deterministic fallback forecast data for supported asset: ${asset}`);
+      return this.normalizeForecast(fallback.forecast, asset);
     }
 
-    // Default fallback for unknown assets
-    console.warn(`[Synth API] Using default fallback forecast for unknown asset: ${asset}`);
-    return {
-      current_price: 100,
-      "1H": {
-        average_volatility: 0.02,
-        percentiles: { p5: 95, p25: 98, p50: 100, p75: 102, p95: 105 }
-      },
-      "24H": {
-        average_volatility: 0.05,
-        percentiles: { p5: 90, p25: 96, p50: 100, p75: 104, p95: 110 }
-      },
-      forecast_future: {
-        average_volatility: 0.08,
-        percentiles: { p5: 85, p25: 94, p50: 100, p75: 106, p95: 115 }
-      },
-      realized: {
-        average_volatility: 0.04
-      }
-    };
+    console.warn(`[Synth API] Asset ${asset} is not in supported fallback coverage map; using default deterministic fallback.`);
+    return this.normalizeForecast(DEFAULT_FALLBACK_FORECAST, asset);
   }
 
   /**
@@ -423,21 +435,154 @@ export class SynthDataService {
   /**
    * Gets fallback option pricing data for an asset.
    */
-  private static getFallbackOptionPricing(asset: string): any {
+  private static getFallbackOptionPricing(asset: string): SynthOptionPricing {
     return {
       asset,
-      implied_vol: 0.45 + (Math.random() * 0.1) // Random IV between 45% and 55%
+      implied_vol: 0.5
     };
   }
 
   /**
    * Gets fallback liquidation data for an asset.
    */
-  private static getFallbackLiquidation(asset: string): any {
+  private static getFallbackLiquidation(asset: string): SynthLiquidation {
     return {
       asset,
-      risk_score: 30 + Math.random() * 40 // Random risk between 30 and 70
+      risk_score: 50
     };
+  }
+
+  private static normalizePercentiles(input: any): Record<string, number> | undefined {
+    if (!input || typeof input !== 'object') return undefined;
+
+    const normalized: Record<string, number> = {};
+    for (const [key, value] of Object.entries(input)) {
+      const num = Number(value);
+      if (Number.isFinite(num)) {
+        normalized[key] = num;
+      }
+    }
+
+    return Object.keys(normalized).length > 0 ? normalized : undefined;
+  }
+
+  private static normalizeForecastSection(input: any): {
+    average_volatility?: number;
+    volatility?: number[];
+    percentiles?: Record<string, number>;
+  } | undefined {
+    if (!input || typeof input !== 'object') return undefined;
+
+    const avg = Number(input.average_volatility);
+    const volatility = Array.isArray(input.volatility)
+      ? input.volatility.map((n: any) => Number(n)).filter((n: number) => Number.isFinite(n))
+      : undefined;
+    const percentiles = this.normalizePercentiles(input.percentiles);
+
+    const section = {
+      average_volatility: Number.isFinite(avg) ? avg : undefined,
+      volatility: volatility && volatility.length > 0 ? volatility : undefined,
+      percentiles
+    };
+
+    if (!section.average_volatility && !section.volatility && !section.percentiles) {
+      return undefined;
+    }
+
+    return section;
+  }
+
+  private static normalizeForecast(data: any, asset: string): SynthForecast | null {
+    if (!data || typeof data !== 'object') return null;
+
+    const fallbackCurrentPrice = FALLBACK_DATA[asset]?.forecast.current_price ?? DEFAULT_FALLBACK_FORECAST.current_price;
+    const currentPrice = Number(data.current_price ?? data.currentPrice ?? fallbackCurrentPrice);
+
+    if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+      return null;
+    }
+
+    const oneHour = this.normalizeForecastSection(data["1H"] ?? data.forecast_past ?? data.past);
+    const twentyFourHour = this.normalizeForecastSection(data["24H"] ?? data.forecast_future ?? data.future);
+    const forecastFuture = this.normalizeForecastSection(data.forecast_future ?? data["24H"]);
+    const forecastPast = this.normalizeForecastSection(data.forecast_past ?? data["1H"]);
+    const realized = this.normalizeForecastSection(data.realized);
+
+    return {
+      current_price: currentPrice,
+      ...(forecastFuture ? { forecast_future: forecastFuture } : {}),
+      ...(forecastPast ? { forecast_past: forecastPast } : {}),
+      ...(realized ? { realized } : {}),
+      ...(oneHour?.average_volatility && oneHour.percentiles
+        ? { "1H": { average_volatility: oneHour.average_volatility, percentiles: oneHour.percentiles } }
+        : {}),
+      ...(twentyFourHour?.average_volatility && twentyFourHour.percentiles
+        ? { "24H": { average_volatility: twentyFourHour.average_volatility, percentiles: twentyFourHour.percentiles } }
+        : {}),
+    };
+  }
+
+  private static normalizeVolatility(data: any, asset: string): SynthVolatility | null {
+    if (!data || typeof data !== 'object') return null;
+
+    const realizedVol = Number(data.realized_vol ?? data.realized?.average_volatility ?? data.realized?.volatility?.[0]);
+    const forecastVol = Number(data.forecast_vol ?? data.forecast_future?.average_volatility ?? data.forecast_future?.volatility?.[0]);
+
+    return {
+      asset,
+      realized_vol: Number.isFinite(realizedVol) ? realizedVol : 0,
+      forecast_vol: Number.isFinite(forecastVol) ? forecastVol : 0,
+    };
+  }
+
+  private static normalizeOptionPricing(data: any, asset: string): SynthOptionPricing | null {
+    if (!data || typeof data !== 'object') return null;
+
+    const impliedVol = Number(data.implied_vol ?? data.impliedVol ?? data.iv);
+    if (!Number.isFinite(impliedVol)) {
+      return null;
+    }
+
+    return {
+      asset,
+      implied_vol: impliedVol,
+    };
+  }
+
+  private static normalizeLiquidation(data: any, asset: string): SynthLiquidation | null {
+    if (!data || typeof data !== 'object') return null;
+
+    const riskScore = Number(data.risk_score ?? data.riskScore ?? data.probability);
+    if (!Number.isFinite(riskScore)) {
+      return null;
+    }
+
+    return {
+      asset,
+      risk_score: Math.max(0, Math.min(100, riskScore)),
+    };
+  }
+
+  private static classifyError(error: any): 'auth' | 'rate-limit' | 'provider' | 'schema' | 'unknown' {
+    const message = String(error?.message || '').toLowerCase();
+
+    if (message.includes('401') || message.includes('403') || message.includes('unauthorized') || message.includes('apikey')) {
+      return 'auth';
+    }
+
+    if (message.includes('429') || message.includes('rate')) {
+      return 'rate-limit';
+    }
+
+    if (message.includes('invalid synth') || message.includes('schema')) {
+      return 'schema';
+    }
+
+    if (message.includes('http') || message.includes('timeout') || message.includes('network')) {
+      return 'provider';
+    }
+
+    return 'unknown';
   }
 
   /**
@@ -462,5 +607,9 @@ export class SynthDataService {
       ETH: "ETH",
     };
     return mapping[stock] || "BTC";
+  }
+
+  static isSynthAssetCovered(asset: string): boolean {
+    return this.SUPPORTED_SYNTH_ASSETS.has(asset);
   }
 }

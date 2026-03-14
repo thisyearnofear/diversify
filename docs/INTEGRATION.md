@@ -52,6 +52,7 @@ export const NETWORKS = {
   CELO_MAINNET: { chainId: 42220, rpcUrl: 'https://forno.celo.org' },
   CELO_SEPOLIA: { chainId: 11142220, rpcUrl: 'https://forno.celo-sepolia.celo-testnet.org' },
   ARBITRUM_ONE: { chainId: 42161, rpcUrl: 'https://arb1.arbitrum.io/rpc' },
+  HYPERLIQUID: { chainId: 998, rpcUrl: 'https://api.hyperliquid.xyz' },
   ARC_TESTNET: { chainId: 5042002 },
   RH_TESTNET: { chainId: 46630 },
 };
@@ -94,6 +95,21 @@ export class LiFiService {
 // Fee: 0.3%
 ```
 
+#### Hyperliquid Perps (Commodities)
+```typescript
+// services/swap/strategies/hyperliquid-perp.strategy.ts
+// Virtual Chain ID: 998
+// Supported commodity markets: GOLD, SILVER, OIL, COPPER
+// Execution model: IOC-style perp orders
+// Signing: EIP-712 typed data (domain: HyperliquidSignTransaction)
+```
+
+**Execution & Signing Responsibilities:**
+- Strategy computes size/slippage and creates structured execution payload.
+- Backend can execute directly when signer is injected (`setSigner(...)`).
+- Otherwise UI/client receives typed-data signing instructions and submits signed action.
+- Islamic Finance strategy excludes Hyperliquid commodity perps by design.
+
 ## AI Integration
 
 ### Gemini AI
@@ -111,6 +127,33 @@ const analysis = await getGeminiAnalysis({
 // Primary inference provider
 // No data retention, private
 ```
+
+### SynthData (Probabilistic Intelligence)
+
+`SYNTH_API_KEY` enables authenticated market-intelligence requests against `https://api.synthdata.co`.
+
+**Endpoints used by the app:**
+- `/insights/prediction-percentiles`
+- `/insights/volatility`
+- `/insights/option-pricing`
+- `/insights/liquidation`
+
+**Integration contract (app behavior):**
+- Responses are normalized into stable internal DTOs before UI/agent consumption.
+- Unified cache provides request coalescing + stale-while-revalidate.
+- `volatile` TTL profile is used for Synth requests (~30 min class).
+- Fallback responses are deterministic (no random values in production-facing outputs).
+
+**Supported Synth fallback coverage map:**
+- `BTC`, `ETH`, `NVDAX`, `TSLAX`, `SPYX`, `AAPLX`
+- Unknown assets use default deterministic fallback values.
+
+**Error taxonomy for observability:**
+- `auth` (401/403/API key issues)
+- `rate-limit` (429)
+- `provider` (network/timeout/5xx)
+- `schema` (unexpected payload shape)
+- `unknown`
 
 ## Data Providers
 
@@ -171,3 +214,4 @@ export const CIRCLE_CONFIG = {
 - CoinGecko: 10-30 calls/minute (free tier)
 - LiFi: Per-route limits
 - Mento: Rate limited (use fallback RPCs)
+- SynthData: subject to API plan/rate limits (use cache + deterministic fallback)

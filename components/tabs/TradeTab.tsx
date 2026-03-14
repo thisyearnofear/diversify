@@ -21,6 +21,7 @@ import HoldersWidget from "../trade/HoldersWidget";
 import TradeIntelligence, { type IntelligenceItem } from "../trade/TradeIntelligence";
 import PortfolioRiskWidget from "../trade/PortfolioRiskWidget";
 import EmergingMarketsTracker from "../trade/EmergingMarketsTracker";
+import CommodityTrading from "../swap/CommodityTrading";
 
 import {
   EMERGING_MARKETS_CONFIG,
@@ -42,8 +43,8 @@ const isFictionalStock = (stock: Stock): stock is typeof FICTIONAL_STOCKS[number
   return FICTIONAL_STOCKS.includes(stock as typeof FICTIONAL_STOCKS[number]);
 };
 
-// Market type for switching between Robinhood and Emerging Markets
-type MarketType = "robinhood" | "emerging-markets";
+// Market type for switching between Robinhood, Emerging Markets, and Commodities
+type MarketType = "robinhood" | "emerging-markets" | "commodities";
 
 const AMM_ABI = [
   "function quoteSwapETH(uint256 ethAmountIn, address tokenOut) view returns (uint256)",
@@ -696,6 +697,25 @@ export default function TradeTab() {
             )}
           </div>
         </button>
+        <button
+          onClick={() => {
+            setActiveMarket("commodities");
+            setActiveTab("trade");
+          }}
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2 ${activeMarket === "commodities"
+              ? "bg-white dark:bg-gray-700 shadow-sm text-amber-600"
+              : "text-gray-500 hover:text-gray-600"
+            }`}
+        >
+          <span>🥇</span>
+          <div className="flex flex-col items-center leading-tight">
+            <span className="hidden sm:inline">Commodities</span>
+            <span className="sm:hidden">Commodities</span>
+            {!isConnected && (
+              <span className="text-xs uppercase tracking-tighter text-amber-400 font-black">Live</span>
+            )}
+          </div>
+        </button>
       </div>
 
       {/* Emerging Markets View */}
@@ -798,6 +818,35 @@ export default function TradeTab() {
                 )}
               </div>
             )}
+          </motion.div>
+        </AnimatePresence>
+      )}
+
+      {/* Commodities Market View */}
+      {activeMarket === "commodities" && (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key="commodities"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-4"
+          >
+            {/* Info Banner */}
+            <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-200 dark:border-amber-800">
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                🥇 Trade commodity perpetuals on Hyperliquid. Synthetic 1x exposure to GOLD, SILVER, OIL &amp; COPPER — collateralized in USDC.
+              </p>
+            </div>
+
+            <CommodityTrading
+              address={address}
+              chainId={NETWORKS.HYPERLIQUID.chainId}
+              onTrade={async (action, symbol, amount) => {
+                console.log(`[Commodities] ${action} ${symbol} for $${amount}`);
+                // TODO: Wire up to HyperliquidPerpStrategy.execute() with wallet signer
+              }}
+            />
           </motion.div>
         </AnimatePresence>
       )}

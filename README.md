@@ -1,6 +1,6 @@
 # 🧠 DiversiFi - Multi-Chain AI Wealth Protection
 
-**AI-powered wealth protection across Celo and Arbitrum. Smart stablecoin diversification, inflation hedging, and real-world asset access.**
+**AI-powered wealth protection across Celo, Arbitrum, and Hyperliquid. Smart stablecoin diversification, commodities exposure, inflation hedging, and real-world asset access.**
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
@@ -66,10 +66,12 @@ Each strategy shapes:
 ### Supported Chains
 - **Celo** - Local stablecoin access (cUSD, cEUR, cREAL) via Mento
 - **Arbitrum** - RWA yield tokens (USDY, PAXG, SYRUPUSDC) via LiFi/Uniswap
+- **Hyperliquid (Virtual Chain ID 998)** - Commodity perpetual exposure (GOLD, SILVER, OIL, COPPER) with EIP-712 typed-data signing
 
 ### AI Intelligence
 - **Venice AI** (primary) - Web search, private inference, no data retention
 - **Gemini 3.0 Flash** (fallback) - Portfolio analysis and recommendations
+- **SynthData** - Probabilistic market intelligence (`prediction-percentiles`, `volatility`, `option-pricing`, `liquidation`) with cache + deterministic fallback
 - **Real-time Data** - Inflation rates, exchange rates, macro indicators
 
 ### Cross-Chain Infrastructure
@@ -90,7 +92,8 @@ Each strategy shapes:
 |----------|------------|
 | **Frontend** | Next.js 15, React 19, Tailwind CSS |
 | **AI** | Google Gemini 3.0, Venice AI |
-| **Swaps** | Mento (Celo), LiFi (cross-chain), 1inch (Arbitrum) |
+| **Swaps & Execution** | Mento (Celo), LiFi (cross-chain), 1inch (Arbitrum), Hyperliquid Perps (commodities) |
+| **Market Intelligence** | SynthData probabilistic forecasts + volatility/risk endpoints |
 | **Wallet** | Reown AppKit (WalletConnect), Farcaster Mini App SDK, Circle Programmable Wallets |
 | **Voice** | OpenAI Whisper, ElevenLabs TTS |
 

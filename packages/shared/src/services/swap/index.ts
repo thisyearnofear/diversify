@@ -20,6 +20,28 @@ export { CurveArcStrategy } from './strategies/curve-arc.strategy';
 
 // Services
 export { CurveDiscoveryService } from './curve-discovery.service';
+export { HyperliquidPositionService } from './hyperliquid-position.service';
+export type { CommodityPosition, PortfolioSummary } from './hyperliquid-position.service';
+
+// Hyperliquid exports
+export {
+    HyperliquidPerpStrategy,
+    fetchHyperliquidPrices,
+    fetchHyperliquidPrice,
+    fetchHyperliquidMeta,
+    fetchHyperliquidUserState,
+    placeHyperliquidOrder,
+    closeHyperliquidPosition,
+    HYPERLIQUID_MARKET_TICKERS,
+    HYPERLIQUID_EIP712_DOMAIN,
+} from './strategies/hyperliquid-perp.strategy';
+export type {
+    HyperliquidPosition,
+    HyperliquidUserState,
+    HyperliquidOrderResult,
+    HyperliquidAllMids,
+    HyperliquidMeta,
+} from './strategies/hyperliquid-perp.strategy';
 
 // Legacy services (still used by strategies)
 export { ApprovalService } from './approval';
