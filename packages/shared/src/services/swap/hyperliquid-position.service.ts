@@ -8,6 +8,7 @@ import {
     fetchHyperliquidPrices,
     fetchHyperliquidUserState,
     HYPERLIQUID_MARKET_TICKERS,
+    getCommoditySymbolForCoin,
     HyperliquidPosition,
     HyperliquidUserState,
     HyperliquidAllMids,
@@ -44,7 +45,7 @@ for (const [symbol, ticker] of Object.entries(HYPERLIQUID_MARKET_TICKERS)) {
     TICKER_TO_SYMBOL[ticker] = symbol;
 }
 
-const COMMODITY_TICKERS = new Set(Object.values(HYPERLIQUID_MARKET_TICKERS));
+const COMMODITY_TICKERS = new Set(Object.values(HYPERLIQUID_MARKET_TICKERS).map(t => t.toUpperCase()));
 
 export class HyperliquidPositionService {
     private cachedState: HyperliquidUserState | null = null;
@@ -59,7 +60,7 @@ export class HyperliquidPositionService {
         const [state, prices] = await this.fetchData(userAddress);
 
         return state.assetPositions
-            .filter(ap => COMMODITY_TICKERS.has(ap.position.coin))
+            .filter(ap => this.isCommodityCoin(ap.position.coin))
             .map(ap => this.mapPosition(ap.position, prices))
             .filter((p): p is CommodityPosition => p !== null);
     }
@@ -70,7 +71,7 @@ export class HyperliquidPositionService {
     async getPortfolioSummary(userAddress: string): Promise<PortfolioSummary> {
         const [state, prices] = await this.fetchData(userAddress);
         const positions = state.assetPositions
-            .filter(ap => COMMODITY_TICKERS.has(ap.position.coin))
+            .filter(ap => this.isCommodityCoin(ap.position.coin))
             .map(ap => this.mapPosition(ap.position, prices))
             .filter((p): p is CommodityPosition => p !== null);
 
@@ -163,7 +164,7 @@ export class HyperliquidPositionService {
 
         return {
             coin: pos.coin,
-            symbol: TICKER_TO_SYMBOL[pos.coin] || pos.coin,
+            symbol: getCommoditySymbolForCoin(pos.coin) || TICKER_TO_SYMBOL[pos.coin] || pos.coin,
             size: Math.abs(size),
             entryPrice,
             currentPrice,
@@ -175,5 +176,10 @@ export class HyperliquidPositionService {
             marginUsed,
             side: size > 0 ? 'long' : 'short',
         };
+    }
+
+    private isCommodityCoin(coin: string): boolean {
+        const normalizedCoin = coin.toUpperCase();
+        return COMMODITY_TICKERS.has(normalizedCoin) || getCommoditySymbolForCoin(coin) !== null;
     }
 }

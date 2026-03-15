@@ -7,7 +7,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     HyperliquidPositionService,
     fetchHyperliquidPrices,
+    fetchHyperliquidMeta,
     HYPERLIQUID_MARKET_TICKERS,
+    resolveCommodityTickers,
 } from '@diversifi/shared';
 import type { CommodityPosition, PortfolioSummary } from '@diversifi/shared';
 
@@ -32,6 +34,7 @@ interface UseHyperliquidReturn {
     error: string | null;
     refresh: () => Promise<void>;
     atRiskPositions: CommodityPosition[];
+    unavailableSymbols: string[];
 }
 
 const COMMODITY_NAMES: Record<string, string> = {
@@ -52,22 +55,36 @@ export function useHyperliquid(options: UseHyperliquidOptions = {}): UseHyperliq
     const [atRiskPositions, setAtRiskPositions] = useState<CommodityPosition[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [unavailableSymbols, setUnavailableSymbols] = useState<string[]>([]);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchPrices = useCallback(async () => {
         try {
-            const allMids = await fetchHyperliquidPrices();
+            const [allMids, meta] = await Promise.all([
+                fetchHyperliquidPrices(),
+                fetchHyperliquidMeta(),
+            ]);
+            const resolvedTickers = resolveCommodityTickers(allMids, meta);
+
             const commodityPrices: CommodityPrice[] = Object.entries(HYPERLIQUID_MARKET_TICKERS)
                 .map(([symbol, ticker]) => ({
                     symbol,
-                    ticker,
-                    price: allMids[ticker] ? parseFloat(allMids[ticker]) : 0,
+                    ticker: resolvedTickers[symbol] || ticker,
+                    price: resolvedTickers[symbol] && allMids[resolvedTickers[symbol]]
+                        ? parseFloat(allMids[resolvedTickers[symbol]] as string)
+                        : 0,
                     name: COMMODITY_NAMES[symbol] || symbol,
                 }))
                 .filter(p => p.price > 0);
+
+            const unresolved = Object.keys(HYPERLIQUID_MARKET_TICKERS)
+                .filter(symbol => !resolvedTickers[symbol]);
+
+            setUnavailableSymbols(unresolved);
             setPrices(commodityPrices);
         } catch (err: any) {
             console.warn('[useHyperliquid] Price fetch failed:', err.message);
+            setUnavailableSymbols(Object.keys(HYPERLIQUID_MARKET_TICKERS));
         }
     }, []);
 
@@ -117,5 +134,6 @@ export function useHyperliquid(options: UseHyperliquidOptions = {}): UseHyperliq
         error,
         refresh,
         atRiskPositions,
+        unavailableSymbols,
     };
 }

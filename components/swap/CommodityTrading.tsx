@@ -139,7 +139,7 @@ function PriceCard({
 }
 
 export default function CommodityTrading({ address, onTrade, chainId }: CommodityTradingProps) {
-    const { positions, portfolio, prices, isLoading, error, refresh, atRiskPositions } = useHyperliquid({
+    const { positions, portfolio, prices, isLoading, error, refresh, atRiskPositions, unavailableSymbols } = useHyperliquid({
         address,
         autoRefresh: true,
         refreshInterval: 10000,
@@ -261,7 +261,11 @@ export default function CommodityTrading({ address, onTrade, chainId }: Commodit
             <div>
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Markets</h4>
                 {prices.length === 0 && !isLoading && (
-                    <p className="text-sm text-gray-400">Loading prices...</p>
+                    <p className="text-sm text-gray-400">
+                        {unavailableSymbols.length > 0
+                            ? `No supported commodity perps currently available on Hyperliquid (${unavailableSymbols.join(', ')} unavailable).`
+                            : 'Loading prices...'}
+                    </p>
                 )}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {prices.map(p => (

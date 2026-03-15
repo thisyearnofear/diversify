@@ -67,6 +67,16 @@ export interface HyperliquidAllMids {
     [ticker: string]: string; // price as string
 }
 
+const COMMODITY_SYMBOLS = ['GOLD', 'SILVER', 'OIL', 'COPPER'] as const;
+type CommoditySymbol = typeof COMMODITY_SYMBOLS[number];
+
+const COMMODITY_ALIAS_PATTERNS: Record<CommoditySymbol, RegExp[]> = {
+    GOLD: [/\bgold\b/i, /\bxau\b/i],
+    SILVER: [/\bsilver\b/i, /\bxag\b/i],
+    OIL: [/\boil\b/i, /\bwti\b/i, /\bcrude\b/i, /\bbrent\b/i],
+    COPPER: [/\bcopper\b/i, /\bhg\b/i],
+};
+
 export interface HyperliquidOrderResult {
     status: string;
     response?: {
@@ -112,6 +122,77 @@ export interface HyperliquidUserState {
         totalRawUsd: string;
     };
     withdrawable: string;
+}
+
+function buildTickerLookup(allMids: HyperliquidAllMids): Map<string, string> {
+    const lookup = new Map<string, string>();
+    for (const key of Object.keys(allMids)) {
+        lookup.set(key.toUpperCase(), key);
+    }
+    return lookup;
+}
+
+export function getCommoditySymbolForCoin(coin: string): string | null {
+    const normalized = coin.toUpperCase();
+
+    for (const [symbol, ticker] of Object.entries(HYPERLIQUID_MARKET_TICKERS)) {
+        if (ticker.toUpperCase() === normalized) {
+            return symbol;
+        }
+    }
+
+    for (const symbol of COMMODITY_SYMBOLS) {
+        if (COMMODITY_ALIAS_PATTERNS[symbol].some(pattern => pattern.test(coin))) {
+            return symbol;
+        }
+    }
+
+    return null;
+}
+
+export function resolveCommodityTickers(
+    allMids: HyperliquidAllMids,
+    meta?: HyperliquidMeta
+): Partial<Record<string, string>> {
+    const resolved: Partial<Record<string, string>> = {};
+    const tickerLookup = buildTickerLookup(allMids);
+
+    for (const symbol of COMMODITY_SYMBOLS) {
+        const configuredTicker = HYPERLIQUID_MARKET_TICKERS[symbol];
+        const configuredMatch = tickerLookup.get(configuredTicker.toUpperCase());
+        if (configuredMatch) {
+            resolved[symbol] = configuredMatch;
+            continue;
+        }
+
+        let discovered: string | undefined;
+
+        if (meta?.universe?.length) {
+            const marketIndex = meta.universe.findIndex(asset =>
+                COMMODITY_ALIAS_PATTERNS[symbol].some(pattern => pattern.test(asset.name))
+            );
+
+            if (marketIndex >= 0) {
+                const marketName = meta.universe[marketIndex]?.name;
+                discovered =
+                    (marketName && tickerLookup.get(marketName.toUpperCase())) ||
+                    tickerLookup.get(`@${marketIndex}`) ||
+                    tickerLookup.get(`@${marketIndex + 1}`);
+            }
+        }
+
+        if (!discovered) {
+            discovered = Object.keys(allMids).find(key =>
+                COMMODITY_ALIAS_PATTERNS[symbol].some(pattern => pattern.test(key))
+            );
+        }
+
+        if (discovered) {
+            resolved[symbol] = discovered;
+        }
+    }
+
+    return resolved;
 }
 
 /**
@@ -225,11 +306,35 @@ export async function signOrderAction(
  * Fetch price for a single commodity token
  */
 export async function fetchHyperliquidPrice(symbol: string): Promise<number> {
-    const ticker = HYPERLIQUID_MARKET_TICKERS[symbol.toUpperCase()];
-    if (!ticker) {
+    const normalizedSymbol = symbol.toUpperCase();
+    if (!SUPPORTED_TOKENS.has(normalizedSymbol)) {
         throw new Error(`No Hyperliquid ticker for symbol: ${symbol}`);
     }
+
+    const configuredTicker = HYPERLIQUID_MARKET_TICKERS[normalizedSymbol];
     const mids = await fetchHyperliquidPrices();
+
+    if (mids[configuredTicker]) {
+        return parseFloat(mids[configuredTicker]);
+    }
+
+    let resolvedTickers = resolveCommodityTickers(mids);
+    let ticker = resolvedTickers[normalizedSymbol];
+
+    if (!ticker) {
+        try {
+            const meta = await fetchHyperliquidMeta();
+            resolvedTickers = resolveCommodityTickers(mids, meta);
+            ticker = resolvedTickers[normalizedSymbol];
+        } catch {
+            // Fall back to deterministic error below when meta cannot be fetched.
+        }
+    }
+
+    if (!ticker) {
+        throw new Error(`No price found for ticker: ${configuredTicker}`);
+    }
+
     const price = mids[ticker];
     if (!price) {
         throw new Error(`No price found for ticker: ${ticker}`);
