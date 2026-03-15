@@ -9,7 +9,7 @@ import {
     fetchHyperliquidPrices,
     fetchHyperliquidMeta,
     HYPERLIQUID_MARKET_TICKERS,
-    resolveCommodityTickers,
+    analyzeCommodityAvailability,
 } from '@diversifi/shared';
 import type { CommodityPosition, PortfolioSummary } from '@diversifi/shared';
 
@@ -35,6 +35,7 @@ interface UseHyperliquidReturn {
     refresh: () => Promise<void>;
     atRiskPositions: CommodityPosition[];
     unavailableSymbols: string[];
+    unavailableReasons: Partial<Record<string, string>>;
 }
 
 const COMMODITY_NAMES: Record<string, string> = {
@@ -56,6 +57,7 @@ export function useHyperliquid(options: UseHyperliquidOptions = {}): UseHyperliq
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [unavailableSymbols, setUnavailableSymbols] = useState<string[]>([]);
+    const [unavailableReasons, setUnavailableReasons] = useState<Partial<Record<string, string>>>({});
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const fetchPrices = useCallback(async () => {
@@ -64,7 +66,8 @@ export function useHyperliquid(options: UseHyperliquidOptions = {}): UseHyperliq
                 fetchHyperliquidPrices(),
                 fetchHyperliquidMeta(),
             ]);
-            const resolvedTickers = resolveCommodityTickers(allMids, meta);
+            const availability = analyzeCommodityAvailability(allMids, meta);
+            const resolvedTickers = availability.resolvedTickers;
 
             const commodityPrices: CommodityPrice[] = Object.entries(HYPERLIQUID_MARKET_TICKERS)
                 .map(([symbol, ticker]) => ({
@@ -77,14 +80,18 @@ export function useHyperliquid(options: UseHyperliquidOptions = {}): UseHyperliq
                 }))
                 .filter(p => p.price > 0);
 
-            const unresolved = Object.keys(HYPERLIQUID_MARKET_TICKERS)
-                .filter(symbol => !resolvedTickers[symbol]);
-
-            setUnavailableSymbols(unresolved);
+            setUnavailableSymbols(availability.unavailableSymbols);
+            setUnavailableReasons(availability.unavailableReasons);
             setPrices(commodityPrices);
         } catch (err: any) {
             console.warn('[useHyperliquid] Price fetch failed:', err.message);
             setUnavailableSymbols(Object.keys(HYPERLIQUID_MARKET_TICKERS));
+            setUnavailableReasons({
+                GOLD: 'Failed to fetch Hyperliquid commodity market data',
+                SILVER: 'Failed to fetch Hyperliquid commodity market data',
+                OIL: 'Failed to fetch Hyperliquid commodity market data',
+                COPPER: 'Failed to fetch Hyperliquid commodity market data',
+            });
         }
     }, []);
 
@@ -135,5 +142,6 @@ export function useHyperliquid(options: UseHyperliquidOptions = {}): UseHyperliq
         refresh,
         atRiskPositions,
         unavailableSymbols,
+        unavailableReasons,
     };
 }

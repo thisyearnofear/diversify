@@ -423,7 +423,7 @@ describe('fetchHyperliquidPrice', () => {
 
     it('throws when ticker has no price', async () => {
         mockFetchResponse({ BTC: '50000' }); // No GOLD price
-        await expect(fetchHyperliquidPrice('GOLD')).rejects.toThrow('No price found');
+        await expect(fetchHyperliquidPrice('GOLD')).rejects.toThrow('No matching commodity perp in current Hyperliquid universe');
     });
 });
 

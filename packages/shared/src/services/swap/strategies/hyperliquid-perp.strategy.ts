@@ -67,6 +67,12 @@ export interface HyperliquidAllMids {
     [ticker: string]: string; // price as string
 }
 
+export interface CommodityAvailabilityResult {
+    resolvedTickers: Partial<Record<string, string>>;
+    unavailableSymbols: string[];
+    unavailableReasons: Partial<Record<string, string>>;
+}
+
 const COMMODITY_SYMBOLS = ['GOLD', 'SILVER', 'OIL', 'COPPER'] as const;
 type CommoditySymbol = typeof COMMODITY_SYMBOLS[number];
 
@@ -195,6 +201,44 @@ export function resolveCommodityTickers(
     return resolved;
 }
 
+export function analyzeCommodityAvailability(
+    allMids: HyperliquidAllMids,
+    meta?: HyperliquidMeta
+): CommodityAvailabilityResult {
+    const resolvedTickers = resolveCommodityTickers(allMids, meta);
+    const unavailableSymbols: string[] = [];
+    const unavailableReasons: Partial<Record<string, string>> = {};
+
+    const universeNames = new Set((meta?.universe || []).map(asset => (asset?.name || '').toUpperCase()));
+
+    for (const symbol of COMMODITY_SYMBOLS) {
+        if (resolvedTickers[symbol]) {
+            continue;
+        }
+
+        unavailableSymbols.push(symbol);
+
+        if (!meta?.universe?.length) {
+            unavailableReasons[symbol] = 'No matching commodity perp in current Hyperliquid universe';
+            continue;
+        }
+
+        const hasCommodityLikeUniverseName = Array.from(universeNames).some(name =>
+            COMMODITY_ALIAS_PATTERNS[symbol].some(pattern => pattern.test(name))
+        );
+
+        unavailableReasons[symbol] = hasCommodityLikeUniverseName
+            ? `Market exists in universe but has no live mid price`
+            : `No matching commodity perp in current Hyperliquid universe`;
+    }
+
+    return {
+        resolvedTickers,
+        unavailableSymbols,
+        unavailableReasons,
+    };
+}
+
 /**
  * Fetch all mid prices from Hyperliquid Info API
  */
@@ -318,13 +362,15 @@ export async function fetchHyperliquidPrice(symbol: string): Promise<number> {
         return parseFloat(mids[configuredTicker]);
     }
 
-    let resolvedTickers = resolveCommodityTickers(mids);
+    let availability = analyzeCommodityAvailability(mids);
+    let resolvedTickers = availability.resolvedTickers;
     let ticker = resolvedTickers[normalizedSymbol];
 
     if (!ticker) {
         try {
             const meta = await fetchHyperliquidMeta();
-            resolvedTickers = resolveCommodityTickers(mids, meta);
+            availability = analyzeCommodityAvailability(mids, meta);
+            resolvedTickers = availability.resolvedTickers;
             ticker = resolvedTickers[normalizedSymbol];
         } catch {
             // Fall back to deterministic error below when meta cannot be fetched.
@@ -332,6 +378,10 @@ export async function fetchHyperliquidPrice(symbol: string): Promise<number> {
     }
 
     if (!ticker) {
+        const reason = availability.unavailableReasons[normalizedSymbol];
+        if (reason) {
+            throw new Error(`${reason} (${normalizedSymbol})`);
+        }
         throw new Error(`No price found for ticker: ${configuredTicker}`);
     }
 
