@@ -47,6 +47,7 @@ export {
     closeHyperliquidPosition,
     HYPERLIQUID_MARKET_TICKERS,
     HYPERLIQUID_EIP712_DOMAIN,
+    analyzeCommodityAvailability,
 } from './strategies/hyperliquid-perp.strategy';
 export type {
     HyperliquidPosition,
