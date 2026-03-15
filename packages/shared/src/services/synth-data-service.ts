@@ -382,13 +382,16 @@ export class SynthDataService {
           validateStatus: (status) => status < 500, // Don't throw on 4xx errors
         });
 
+        // Don't retry 4xx errors — they are client errors that won't succeed on retry
         if (response.status >= 400) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         return response.data;
       } catch (error: any) {
-        if (attempt === maxRetries) {
+        // Skip retries for client errors (4xx) — only retry on network/server errors
+        const is4xx = error?.message?.match(/^HTTP 4\d\d/);
+        if (is4xx || attempt === maxRetries) {
           throw error;
         }
 

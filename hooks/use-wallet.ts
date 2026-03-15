@@ -1,27 +1,3 @@
-/**
- * Consolidated wallet hook
- * Single source of truth for connection state and provider operations.
- *
- * Priority order:
- * 1. Farcaster/MiniPay (auto-connect)
- * 2. Injected wallet (MetaMask/Coinbase)
- * 3. Privy (social login fallback)
- */
-
-import { useEffect, useRef, useState } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
-import {
-  getAddChainParameter,
-  getDefaultChainId,
-  isSupportedChainId,
-  DEFAULT_CHAIN_ID,
-  toHexChainId,
-  getWalletEnvironment,
-  getWalletProvider,
-  setupWalletEventListenersForProvider,
-  type WalletProviderType
-} from "@diversifi/shared";
-import { WALLET_FEATURES } from "../config/features";
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
@@ -349,24 +325,48 @@ export function useWallet() {
 
   const switchNetwork = async (targetChainId: number) => {
     try {
+      if (NON_EVM_CHAIN_IDS.has(targetChainId)) {
+        setError("Hyperliquid uses a provider-backed market mode and does not support wallet network switching.");
+        return;
+      }
+
+      // For Privy embedded wallets, use Privy's native switchChain API
+      if (privyEnabled && privy.authenticated && privyWallets.length > 0 && !providerRef.current) {
+        try {
+          const embeddedWallet = privyWallets[0];
+          await embeddedWallet.switchChain(targetChainId);
+          setChainId(targetChainId);
+          cacheChainId(targetChainId);
+          return;
+        } catch (privyError) {
+          console.error("[Wallet] Privy switchChain failed:", privyError);
+        }
+      }
+
       const provider = await getActiveProvider();
       if (!provider) {
         setError("No wallet connected");
         return;
       }
-      await provider.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: toHexChainId(targetChainId) }],
-      });
 
-      setChainId(targetChainId);
-      cacheChainId(targetChainId);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (switchError: any) {
-      // This error code indicates that the chain has not been added to MetaMask.
-      if (switchError.code === 4902) {
+      console.log("[Wallet] Switching to chain:", targetChainId, "hex:", toHexChainId(targetChainId));
+
+      try {
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: toHexChainId(targetChainId) }],
+        });
+
+        setChainId(targetChainId);
+        cacheChainId(targetChainId);
+        return;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (switchError: any) {
+        console.warn("[Wallet] wallet_switchEthereumChain failed:", switchError?.code, switchError?.message);
+
+        // Try wallet_addEthereumChain as fallback for any error
+        // (4902 = chain not added in MetaMask, but other wallets use different codes)
         try {
-          const provider = await getActiveProvider();
           await provider.request({
             method: "wallet_addEthereumChain",
             params: [getAddChainParameter(targetChainId)],
@@ -376,13 +376,13 @@ export function useWallet() {
           cacheChainId(targetChainId);
           return;
         } catch (addError) {
-          console.error("[Wallet] Failed adding chain:", addError);
-          setError("Failed to add network");
+          console.error("[Wallet] wallet_addEthereumChain also failed:", addError);
+          setError("Failed to add network. Please add Celo Sepolia manually.");
           return;
         }
       }
-
-      console.error("[Wallet] Failed switching network:", switchError);
+    } catch (err) {
+      console.error("[Wallet] switchNetwork unexpected error:", err);
       setError("Failed to switch network");
     }
   };
