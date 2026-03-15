@@ -231,6 +231,16 @@ const FALLBACK_DATA: Record<string, { forecast: SynthForecast; volatility: Synth
  */
 export class SynthDataService {
   private static readonly SUPPORTED_SYNTH_ASSETS = new Set(Object.keys(FALLBACK_DATA));
+  private static warnedMissingKey = false;
+
+  private static hasApiKey(): boolean {
+    if (API_KEY) return true;
+    if (!this.warnedMissingKey) {
+      console.warn('[Synth API] No API key configured; using deterministic fallback data.');
+      this.warnedMissingKey = true;
+    }
+    return false;
+  }
 
   /**
    * Fetches prediction data for a specific asset with unified caching and fallbacks.
@@ -239,6 +249,10 @@ export class SynthDataService {
    */
   static async getPredictions(asset: string, horizon: "1h" | "24h" = "24h"): Promise<SynthForecast | null> {
     try {
+      if (!this.hasApiKey()) {
+        return this.getFallbackForecast(asset);
+      }
+
       const cacheKey = horizon === "1h" ? `synth:predictions:${asset}:1h` : `synth:predictions:${asset}`;
       const result = await unifiedCache.getOrFetch<SynthForecast>(
         cacheKey,
@@ -271,6 +285,10 @@ export class SynthDataService {
    */
   static async getVolatility(asset: string, horizon: "1h" | "24h" = "24h"): Promise<SynthVolatility | null> {
     try {
+      if (!this.hasApiKey()) {
+        return this.getFallbackVolatility(asset);
+      }
+
       const cacheKey = horizon === "1h" ? `synth:volatility:${asset}:1h` : `synth:volatility:${asset}`;
       const result = await unifiedCache.getOrFetch<SynthVolatility>(
         cacheKey,
@@ -303,6 +321,10 @@ export class SynthDataService {
    */
   static async getOptionPricing(asset: string): Promise<SynthOptionPricing | null> {
     try {
+      if (!this.hasApiKey()) {
+        return this.getFallbackOptionPricing(asset);
+      }
+
       const result = await unifiedCache.getOrFetch<SynthOptionPricing>(
         `synth:options:${asset}`,
         async () => {
@@ -332,6 +354,10 @@ export class SynthDataService {
    */
   static async getLiquidation(asset: string): Promise<SynthLiquidation | null> {
     try {
+      if (!this.hasApiKey()) {
+        return this.getFallbackLiquidation(asset);
+      }
+
       const result = await unifiedCache.getOrFetch<SynthLiquidation>(
         `synth:liquidation:${asset}`,
         async () => {

@@ -76,6 +76,29 @@ const COMMODITY_NAMES: Record<string, string> = {
     COPPER: 'Copper',
 };
 
+type CommodityAvailability = {
+    resolvedTickers: Partial<Record<string, string>>;
+    unavailableSymbols: string[];
+    unavailableReasons: Partial<Record<string, string>>;
+};
+
+function buildFallbackAvailability(allMids: Record<string, string>): CommodityAvailability {
+    const resolvedTickers: Partial<Record<string, string>> = {};
+    const unavailableSymbols: string[] = [];
+    const unavailableReasons: Partial<Record<string, string>> = {};
+
+    for (const [symbol, ticker] of Object.entries(HYPERLIQUID_MARKET_TICKERS)) {
+        if (allMids[ticker]) {
+            resolvedTickers[symbol] = ticker;
+        } else {
+            unavailableSymbols.push(symbol);
+            unavailableReasons[symbol] = 'No live mid price for market ticker';
+        }
+    }
+
+    return { resolvedTickers, unavailableSymbols, unavailableReasons };
+}
+
 const positionService = new HyperliquidPositionService();
 const bridgeService = new HyperliquidBridgeService();
 
@@ -113,7 +136,9 @@ export function useHyperliquid(options: UseHyperliquidOptions = {}): UseHyperliq
                 fetchHyperliquidPrices(),
                 fetchHyperliquidMeta(),
             ]);
-            const availability = analyzeCommodityAvailability(allMids, meta);
+            const availability = typeof analyzeCommodityAvailability === 'function'
+                ? analyzeCommodityAvailability(allMids, meta)
+                : buildFallbackAvailability(allMids);
             const resolvedTickers = availability.resolvedTickers;
 
             const commodityPrices: CommodityPrice[] = Object.entries(HYPERLIQUID_MARKET_TICKERS)

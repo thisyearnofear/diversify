@@ -21,7 +21,10 @@ import {
   setupWalletEventListenersForProvider,
   type WalletProviderType
 } from "@diversifi/shared";
+import { NETWORKS } from "../config";
 import { WALLET_FEATURES } from "../config/features";
+
+const NON_EVM_CHAIN_IDS = new Set<number>([NETWORKS.HYPERLIQUID.chainId]);
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);

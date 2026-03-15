@@ -12,6 +12,12 @@ import { EXCHANGE_RATES } from '../config';
 
 // Points to the AI backend — mirrors the constant in hooks/use-diversifi-ai.ts
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
+
+const EQUITY_SYMBOLS = new Set(["TSLA", "AAPL", "GOOGL", "NVDA"]);
+const ALPHA_VANTAGE_RATE_LIMIT_MS = 15000; // 5 req/min -> 12s; keep some buffer
+const alphaVantageEquityCache = new Map<string, { price: number; timestamp: number }>();
+let lastAlphaVantageCallAt = 0;
 
 // Cache durations
 const CACHE_DURATIONS = {
@@ -193,6 +199,37 @@ export const TokenPriceService = {
   }): Promise<{ price: number | null; source: string; isLive: boolean }> {
     const cacheKey = `token-usd-${params.chainId}-${(params.address || params.symbol || '').toLowerCase()}`;
 
+    if (typeof window !== 'undefined') {
+      const result = await unifiedCache.getOrFetch(
+        cacheKey,
+        async () => {
+          const proxyResult = await this.fetchTokenUsdPriceViaProxy(params);
+          if (proxyResult) {
+            return {
+              data: { price: proxyResult.price, isLive: proxyResult.isLive },
+              source: proxyResult.source || 'proxy'
+            };
+          }
+
+          if (params.symbol && EXCHANGE_RATES[params.symbol as keyof typeof EXCHANGE_RATES]) {
+            return {
+              data: { price: EXCHANGE_RATES[params.symbol as keyof typeof EXCHANGE_RATES], isLive: false },
+              source: 'config-fallback' as const
+            };
+          }
+
+          return { data: null, source: 'proxy-error' as const };
+        },
+        'volatile'
+      );
+
+      return {
+        price: result.data?.price ?? null,
+        source: result.source,
+        isLive: result.data?.isLive ?? false
+      };
+    }
+
     const result = await unifiedCache.getOrFetch(
       cacheKey,
       async () => {
@@ -201,6 +238,14 @@ export const TokenPriceService = {
           const defiLlamaPrice = await this.fetchDefiLlamaPrice(params.chainId, params.address);
           if (typeof defiLlamaPrice === 'number') {
             return { data: { price: defiLlamaPrice, isLive: true }, source: 'defillama' as const };
+          }
+        }
+
+        // Try Alpha Vantage for equity symbols (server-only, API key required)
+        if (params.symbol && EQUITY_SYMBOLS.has(params.symbol.toUpperCase())) {
+          const equityPrice = await this.fetchAlphaVantageEquityPrice(params.symbol);
+          if (typeof equityPrice === 'number') {
+            return { data: { price: equityPrice, isLive: true }, source: 'alpha-vantage' as const };
           }
         }
 
@@ -241,6 +286,40 @@ export const TokenPriceService = {
       source: result.source,
       isLive: result.data?.isLive ?? false
     };
+  },
+
+  async fetchTokenUsdPriceViaProxy(params: {
+    chainId: number;
+    address?: string;
+    symbol?: string;
+  }): Promise<{ price: number | null; source: string; isLive: boolean } | null> {
+    const query = new URLSearchParams();
+    query.set('chainId', String(params.chainId));
+    if (params.address) query.set('address', params.address);
+    if (params.symbol) query.set('symbol', params.symbol);
+
+    const bases = API_BASE
+      ? [API_BASE.replace(/\/$/, ''), '']
+      : [''];
+
+    for (const base of bases) {
+      try {
+        const response = await fetch(`${base}/api/prices/token?${query.toString()}`);
+        if (!response.ok) continue;
+        const data = await response.json();
+        if (!data?.success) continue;
+
+        return {
+          price: typeof data.price === 'number' ? data.price : null,
+          source: data.source || 'proxy',
+          isLive: Boolean(data.isLive)
+        };
+      } catch {
+        continue;
+      }
+    }
+
+    return null;
   },
 
   /**
@@ -296,6 +375,40 @@ export const TokenPriceService = {
       console.warn('Error in getExpectedAmountOut:', error);
       // Ultimate fallback
       return { amount: "0", source: "error" };
+    }
+  },
+
+  /**
+   * Alpha Vantage equity price (requires API key)
+   * Uses GLOBAL_QUOTE endpoint to get latest price.
+   */
+  async fetchAlphaVantageEquityPrice(symbol: string): Promise<number | null> {
+    try {
+      if (!ALPHA_VANTAGE_API_KEY) return null;
+      const normalizedSymbol = symbol.toUpperCase();
+      const now = Date.now();
+      const cached = alphaVantageEquityCache.get(normalizedSymbol);
+      if (now - lastAlphaVantageCallAt < ALPHA_VANTAGE_RATE_LIMIT_MS) {
+        return cached?.price ?? null;
+      }
+      const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${encodeURIComponent(symbol)}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.Note || data?.Information) {
+        lastAlphaVantageCallAt = now;
+        return cached?.price ?? null;
+      }
+      const priceRaw = data?.["Global Quote"]?.["05. price"];
+      const price = Number(priceRaw);
+      if (Number.isFinite(price)) {
+        alphaVantageEquityCache.set(normalizedSymbol, { price, timestamp: now });
+        lastAlphaVantageCallAt = now;
+        return price;
+      }
+      return null;
+    } catch {
+      return null;
     }
   },
 
@@ -397,10 +510,6 @@ export const TokenPriceService = {
       WBTC: 'wbtc-wrapped-bitcoin',
       BTC: 'btc-bitcoin',
       ETH: 'eth-ethereum',
-      NVDA: 'nvda-nvidia-corp',
-      GOOGL: 'goog-alphabet-inc',
-      TSLA: 'tsla-tesla-motors-inc',
-      AAPL: 'aapl-apple-inc',
     };
     return idMap[symbol.toUpperCase()] || null;
   }
