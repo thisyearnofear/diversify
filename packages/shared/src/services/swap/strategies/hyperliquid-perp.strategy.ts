@@ -28,10 +28,11 @@ const HYPERLIQUID_CHAIN_ID = NETWORKS.HYPERLIQUID.chainId;
 const HL_API_BASE = 'https://api.hyperliquid.xyz';
 
 // EIP-712 domain for Hyperliquid user-signed actions (mainnet)
+// Hyperliquid uses Arbitrum One (chainId 42161) for EIP-712 signing
 export const HYPERLIQUID_EIP712_DOMAIN = {
     name: 'HyperliquidSignTransaction',
     version: '1',
-    chainId: 0x66eee, // 421614
+    chainId: 42161, // Arbitrum One (0xa4b1) - required for Hyperliquid mainnet
     verifyingContract: '0x0000000000000000000000000000000000000000' as const,
 };
 
@@ -591,6 +592,30 @@ export class HyperliquidPerpStrategy extends BaseSwapStrategy {
 
             if (usdcAmount < 10) {
                 return { success: false, error: 'Minimum order value is $10' };
+            }
+
+            // CRITICAL: Check Hyperliquid balance before opening positions
+            // Users must have USDC deposited to Hyperliquid, not just in their wallet
+            if (isBuy && params.userAddress) {
+                try {
+                    const userState = await fetchHyperliquidUserState(params.userAddress);
+                    const availableBalance = parseFloat(userState.withdrawable || '0');
+                    const accountValue = parseFloat(userState.crossMarginSummary?.accountValue || '0');
+                    
+                    if (availableBalance < usdcAmount && accountValue < usdcAmount) {
+                        return {
+                            success: false,
+                            error: `Insufficient Hyperliquid balance. You have $${availableBalance.toFixed(2)} USDC available on Hyperliquid. Deposit USDC from Arbitrum first.`,
+                            requiresDeposit: true,
+                            hyperliquidBalance: availableBalance,
+                            hyperliquidAccountValue: accountValue,
+                        } as SwapResult;
+                    }
+                } catch (balanceError: any) {
+                    // If we can't fetch balance, log warning but continue
+                    // (user might be new with no positions)
+                    this.log('Could not verify Hyperliquid balance', balanceError.message);
+                }
             }
 
             // Calculate position size at 1x leverage

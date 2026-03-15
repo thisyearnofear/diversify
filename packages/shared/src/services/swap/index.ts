@@ -23,6 +23,19 @@ export { CurveDiscoveryService } from './curve-discovery.service';
 export { HyperliquidPositionService } from './hyperliquid-position.service';
 export type { CommodityPosition, PortfolioSummary } from './hyperliquid-position.service';
 
+// Hyperliquid Bridge Service
+export {
+    HyperliquidBridgeService,
+    getAccountActivationStatus,
+    getHyperliquidAccountStatus,
+    activateHyperliquidAccount,
+    withdrawToArbitrum,
+    HYPERLIQUID_WITHDRAW_TYPES,
+    HYPERLIQUID_USD_SEND_TYPES,
+    HYPERLIQUID_ACTIVATE_TYPES,
+} from './hyperliquid-bridge.service';
+export type { HyperliquidBridgeResult, HyperliquidAccountStatus } from './hyperliquid-bridge.service';
+
 // Hyperliquid exports
 export {
     HyperliquidPerpStrategy,

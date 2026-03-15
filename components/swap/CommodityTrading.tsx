@@ -1,15 +1,23 @@
 /**
  * Commodity Trading Panel
  * UI for Hyperliquid commodity perp positions (GOLD, SILVER, OIL, COPPER)
- * Shows live prices, open positions with PnL, and buy/sell actions
+ * Shows live prices, open positions with PnL, buy/sell actions, and account management
+ * 
+ * Key features:
+ * - Displays Hyperliquid account balance (separate from wallet balance)
+ * - Guides users through deposit process from Arbitrum
+ * - Handles account activation ("Enable Trading")
+ * - Shows withdrawal options
  */
 
 import { useState } from 'react';
+import { ethers } from 'ethers';
 import { useHyperliquid } from '../../hooks/use-hyperliquid';
 import type { CommodityPosition } from '@diversifi/shared';
 
 interface CommodityTradingProps {
     address?: string | null;
+    signer?: ethers.Signer | null;
     onTrade?: (action: 'buy' | 'sell', symbol: string, amount: string) => Promise<void>;
     chainId?: number | null;
 }
@@ -109,12 +117,16 @@ function PriceCard({
     price,
     name,
     onBuy,
+    disabled,
+    disabledReason,
 }: {
     symbol: string;
     ticker: string;
     price: number;
     name: string;
     onBuy: (symbol: string) => void;
+    disabled?: boolean;
+    disabledReason?: string;
 }) {
     const icon = COMMODITY_ICONS[symbol] || '📊';
 
@@ -130,27 +142,42 @@ function PriceCard({
             <p className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-3">{formatUsd(price)}</p>
             <button
                 onClick={() => onBuy(symbol)}
-                className="w-full py-1.5 px-3 text-sm font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors"
+                disabled={disabled}
+                title={disabledReason}
+                className={`w-full py-1.5 px-3 text-sm font-medium rounded-md transition-colors ${
+                    disabled
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                }`}
             >
-                Buy {symbol}
+                {disabled ? 'Deposit First' : `Buy ${symbol}`}
             </button>
         </div>
     );
 }
 
-export default function CommodityTrading({ address, onTrade, chainId }: CommodityTradingProps) {
+export default function CommodityTrading({ address, signer, onTrade, chainId }: CommodityTradingProps) {
     const {
         positions,
         portfolio,
         prices,
+        accountStatus,
+        hyperliquidBalance,
+        isActivated,
         isLoading,
+        isActivating,
+        isWithdrawing,
         error,
         refresh,
+        activateAccount,
+        withdraw,
         atRiskPositions,
         unavailableSymbols,
         unavailableReasons,
+        depositInstructions,
     } = useHyperliquid({
         address,
+        signer,
         autoRefresh: true,
         refreshInterval: 10000,
     });
@@ -159,6 +186,12 @@ export default function CommodityTrading({ address, onTrade, chainId }: Commodit
     const [tradeAmount, setTradeAmount] = useState('');
     const [isTrading, setIsTrading] = useState(false);
     const [tradeError, setTradeError] = useState<string | null>(null);
+    
+    // New state for deposit/withdraw modals
+    const [showDepositModal, setShowDepositModal] = useState(false);
+    const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+    const [withdrawAmount, setWithdrawAmount] = useState('');
+    const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
     const handleBuy = (symbol: string) => {
         setTradeModal({ symbol, action: 'buy' });
@@ -195,6 +228,43 @@ export default function CommodityTrading({ address, onTrade, chainId }: Commodit
         }
     };
 
+    const handleActivateAccount = async () => {
+        const result = await activateAccount();
+        if (!result.success) {
+            setTradeError(result.error || 'Failed to activate account');
+        }
+    };
+
+    const handleWithdraw = async () => {
+        const amount = parseFloat(withdrawAmount);
+        if (isNaN(amount) || amount < 1) {
+            setWithdrawError('Minimum withdrawal is $1');
+            return;
+        }
+        
+        if (amount > hyperliquidBalance) {
+            setWithdrawError(`Insufficient balance. You have ${formatUsd(hyperliquidBalance)}`);
+            return;
+        }
+
+        const result = await withdraw(withdrawAmount);
+        if (result.success) {
+            setShowWithdrawModal(false);
+            setWithdrawAmount('');
+            setWithdrawError(null);
+        } else {
+            setWithdrawError(result.error || 'Withdrawal failed');
+        }
+    };
+
+    // Determine if trading is enabled
+    const canTrade = isActivated && hyperliquidBalance >= 10;
+    const tradingDisabledReason = !isActivated
+        ? 'Activate your account first'
+        : hyperliquidBalance < 10
+            ? 'Deposit at least $10 USDC to start trading'
+            : undefined;
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -221,11 +291,77 @@ export default function CommodityTrading({ address, onTrade, chainId }: Commodit
                 </div>
             )}
 
+            {/* Account Status Card - NEW */}
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
+                <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+                        Hyperliquid Account
+                    </h4>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        isActivated 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                        {isActivated ? 'Active' : 'Not Activated'}
+                    </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Available Balance</span>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            {formatUsd(hyperliquidBalance)}
+                        </p>
+                    </div>
+                    <div>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">Position Value</span>
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                            {formatUsd(accountStatus?.totalPositionValue ?? 0)}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex gap-2">
+                    {!isActivated && (
+                        <button
+                            onClick={handleActivateAccount}
+                            disabled={isActivating || !signer}
+                            className="flex-1 py-2 px-4 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            {isActivating ? 'Activating...' : 'Enable Trading'}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => setShowDepositModal(true)}
+                        className="flex-1 py-2 px-4 text-sm font-medium text-indigo-700 bg-white border border-indigo-300 rounded-lg hover:bg-indigo-50"
+                    >
+                        💰 Deposit USDC
+                    </button>
+                    {hyperliquidBalance > 0 && (
+                        <button
+                            onClick={() => setShowWithdrawModal(true)}
+                            disabled={isWithdrawing}
+                            className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                        >
+                            {isWithdrawing ? 'Withdrawing...' : '↗️ Withdraw'}
+                        </button>
+                    )}
+                </div>
+            </div>
+
             {/* Risk Warning */}
             {atRiskPositions.length > 0 && (
                 <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-700">
                     ⚠️ {atRiskPositions.length} position{atRiskPositions.length > 1 ? 's' : ''} near liquidation price.
                     Consider reducing exposure.
+                </div>
+            )}
+
+            {/* Insufficient Balance Warning - NEW */}
+            {isActivated && hyperliquidBalance < 10 && (
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-sm text-yellow-700">
+                    ⚠️ You need at least $10 USDC on Hyperliquid to trade. 
+                    Your balance: {formatUsd(hyperliquidBalance)}
                 </div>
             )}
 
@@ -297,6 +433,8 @@ export default function CommodityTrading({ address, onTrade, chainId }: Commodit
                             price={p.price}
                             name={p.name}
                             onBuy={handleBuy}
+                            disabled={!canTrade}
+                            disabledReason={tradingDisabledReason}
                         />
                     ))}
                 </div>
@@ -316,6 +454,12 @@ export default function CommodityTrading({ address, onTrade, chainId }: Commodit
                             {COMMODITY_ICONS[tradeModal.symbol] || '📊'}{' '}
                             {tradeModal.action === 'buy' ? 'Buy' : 'Close'} {tradeModal.symbol}
                         </h3>
+
+                        {tradeModal.action === 'buy' && (
+                            <p className="text-sm text-gray-500 mb-2">
+                                Available: {formatUsd(hyperliquidBalance)}
+                            </p>
+                        )}
 
                         <div className="mb-4">
                             <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
@@ -355,6 +499,112 @@ export default function CommodityTrading({ address, onTrade, chainId }: Commodit
                                 } disabled:opacity-50`}
                             >
                                 {isTrading ? 'Processing...' : tradeModal.action === 'buy' ? 'Buy' : 'Close'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Deposit Modal - NEW */}
+            {showDepositModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-md w-full p-6">
+                        <h3 className="text-lg font-bold mb-4 dark:text-gray-100">
+                            💰 Deposit USDC to Hyperliquid
+                        </h3>
+
+                        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 mb-4">
+                            <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
+                                <strong>Prerequisites:</strong>
+                            </p>
+                            <ul className="text-sm text-blue-700 dark:text-blue-300 list-disc pl-5">
+                                <li>USDC on Arbitrum network</li>
+                                <li>ETH on Arbitrum for gas</li>
+                            </ul>
+                        </div>
+
+                        <div className="mb-4">
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Steps:</p>
+                            <ol className="text-sm text-gray-700 dark:text-gray-300 list-decimal pl-5 space-y-1">
+                                {depositInstructions.steps.map((step, i) => (
+                                    <li key={i}>{step}</li>
+                                ))}
+                            </ol>
+                        </div>
+
+                        <a
+                            href={depositInstructions.bridgeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full py-2 px-4 text-center text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 mb-3"
+                        >
+                            Open Hyperliquid App ↗
+                        </a>
+
+                        <button
+                            onClick={() => setShowDepositModal(false)}
+                            className="w-full py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Withdraw Modal - NEW */}
+            {showWithdrawModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-sm w-full p-6">
+                        <h3 className="text-lg font-bold mb-4 dark:text-gray-100">
+                            ↗️ Withdraw to Arbitrum
+                        </h3>
+
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 mb-4">
+                            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                Withdrawals take ~5 minutes and cost $1 fee
+                            </p>
+                        </div>
+
+                        <p className="text-sm text-gray-500 mb-2">
+                            Available: {formatUsd(hyperliquidBalance)}
+                        </p>
+
+                        <div className="mb-4">
+                            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+                                Amount (USDC)
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={withdrawAmount}
+                                onChange={e => setWithdrawAmount(e.target.value)}
+                                placeholder="Min $1"
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+
+                        {withdrawError && (
+                            <p className="text-sm text-red-600 mb-3">{withdrawError}</p>
+                        )}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    setShowWithdrawModal(false);
+                                    setWithdrawError(null);
+                                }}
+                                className="flex-1 py-2 px-4 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                                disabled={isWithdrawing}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleWithdraw}
+                                disabled={isWithdrawing || !withdrawAmount}
+                                className="flex-1 py-2 px-4 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                {isWithdrawing ? 'Withdrawing...' : 'Withdraw'}
                             </button>
                         </div>
                     </div>

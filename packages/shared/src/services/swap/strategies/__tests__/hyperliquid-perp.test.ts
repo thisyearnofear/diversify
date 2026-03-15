@@ -462,7 +462,7 @@ describe('HYPERLIQUID_EIP712_DOMAIN', () => {
     it('has correct domain values', () => {
         expect(HYPERLIQUID_EIP712_DOMAIN.name).toBe('HyperliquidSignTransaction');
         expect(HYPERLIQUID_EIP712_DOMAIN.version).toBe('1');
-        expect(HYPERLIQUID_EIP712_DOMAIN.chainId).toBe(0x66eee);
+        expect(HYPERLIQUID_EIP712_DOMAIN.chainId).toBe(42161); // Arbitrum One (0xa4b1)
         expect(HYPERLIQUID_EIP712_DOMAIN.verifyingContract).toBe('0x0000000000000000000000000000000000000000');
     });
 });
