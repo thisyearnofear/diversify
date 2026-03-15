@@ -72,9 +72,9 @@ export default function TradeTab() {
   const isAdvanced = experienceMode === "advanced";
 
   // --- State ---
-  const [activeMarket, setActiveMarket] = useState<MarketType>("robinhood");
-  const [activeTab, setActiveTab] = useState<"trade" | "earn" | "track">("trade");
-  const [selected, setSelected] = useState<Stock>("ACME");
+  const [activeMarket, setActiveMarket] = useState<MarketType>("emerging-markets");
+  const [activeTab, setActiveTab] = useState<"trade" | "earn" | "track">("track");
+  const [selected, setSelected] = useState<Stock>("NVDA");
   const [selectedEmergingCompany, setSelectedEmergingCompany] = useState<FictionalCompany>(FICTIONAL_EMERGING_MARKET_COMPANIES[0]);
   const [mode, setMode] = useState<TradeMode>("buy");
   const [inputAmount, setInputAmount] = useState("");
@@ -643,18 +643,23 @@ export default function TradeTab() {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-4"
     >
-      {/* Paper Trading Badge */}
+      {/* Environment Badge */}
       <div className="flex items-center justify-center gap-2">
-        {!isConnected ? (
-          <span className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-xs font-bold animate-pulse">
-            👁️ Preview Mode
-          </span>
+        {activeMarket === "robinhood" && activeTab === "trade" && FICTIONAL_STOCKS.includes(selected as typeof FICTIONAL_STOCKS[number]) ? (
+          <>
+            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
+              🎮 Simulation • No real money
+            </span>
+            <span className="text-xs text-gray-400">Paper trading sandbox with fictional assets</span>
+          </>
         ) : (
-          <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs font-bold">
-            🎮 Paper Trading
-          </span>
+          <>
+            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-bold">
+              📡 Live-connected market data
+            </span>
+            <span className="text-xs text-gray-400">Market tracking and intelligence from integrated providers</span>
+          </>
         )}
-        <span className="text-xs text-gray-400">Practice with fictional tokens • No real money</span>
       </div>
 
       {/* Market Selector */}
@@ -671,8 +676,8 @@ export default function TradeTab() {
         >
           <span>⚡</span>
           <div className="flex flex-col items-center leading-tight">
-            <span className="hidden sm:inline">Robinhood Testnet</span>
-            <span className="sm:hidden">Robinhood</span>
+            <span className="hidden sm:inline">Paper Trade</span>
+            <span className="sm:hidden">Paper</span>
             {!isConnected && (
               <span className="text-xs uppercase tracking-tighter text-blue-400 font-black">Preview</span>
             )}
@@ -690,8 +695,8 @@ export default function TradeTab() {
         >
           <span>🌍</span>
           <div className="flex flex-col items-center leading-tight">
-            <span className="hidden sm:inline">Emerging Markets</span>
-            <span className="sm:hidden">Emerging</span>
+            <span className="hidden sm:inline">Live Track</span>
+            <span className="sm:hidden">Live</span>
             {!isConnected && (
               <span className="text-xs uppercase tracking-tighter text-green-400 font-black">Live Track</span>
             )}
@@ -709,7 +714,7 @@ export default function TradeTab() {
         >
           <span>🥇</span>
           <div className="flex flex-col items-center leading-tight">
-            <span className="hidden sm:inline">Commodities</span>
+            <span className="hidden sm:inline">Live Commodities</span>
             <span className="sm:hidden">Commodities</span>
             {!isConnected && (
               <span className="text-xs uppercase tracking-tighter text-amber-400 font-black">Live</span>
@@ -873,7 +878,7 @@ export default function TradeTab() {
                     : "text-gray-400 hover:text-gray-600"
                   }`}
               >
-                🎮 Fictional ({FICTIONAL_STOCKS.length})
+                🎮 Paper Trade ({FICTIONAL_STOCKS.length})
               </button>
               <button
                 onClick={() => {
@@ -885,7 +890,7 @@ export default function TradeTab() {
                     : "text-gray-400 hover:text-gray-600"
                   }`}
               >
-                📈 Real ({REAL_STOCKS.length})
+                📈 Live Track ({REAL_STOCKS.length})
               </button>
               {robinhoodWatchlist.length > 0 && (
                 <button
@@ -1115,7 +1120,7 @@ export default function TradeTab() {
                         : "text-gray-400 hover:text-gray-600"
                       }`}
                   >
-                    Trade
+                    Paper Trade
                   </button>
                   <button
                     onClick={() => setActiveTab("earn")}
@@ -1124,8 +1129,17 @@ export default function TradeTab() {
                         : "text-gray-400 hover:text-gray-600"
                       }`}
                   >
-                    Earn
+                    Live Forecast
                   </button>
+                </div>
+
+                <div className={`rounded-xl border px-3 py-2 text-xs font-semibold ${activeTab === "trade"
+                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300"
+                    : "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300"
+                  }`}>
+                  {activeTab === "trade"
+                    ? "🎮 Simulation lane • Fictional stocks on Robinhood Testnet • No real money"
+                    : "📡 Live market intelligence • Real-world stock signals and Synth forecasts"}
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -1139,9 +1153,9 @@ export default function TradeTab() {
                       {!isConnected ? (
                         <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-6 text-center shadow-lg shadow-blue-500/20 text-white">
                           <div className="text-3xl mb-3">📈</div>
-                          <h3 className="text-xl font-bold mb-2">Connect Wallet to Trade</h3>
+                          <h3 className="text-xl font-bold mb-2">Connect Wallet for Paper Trading</h3>
                           <p className="text-blue-100 text-sm mb-6">
-                            Connect your wallet to start trading fictional stocks and earn rewards on the Robinhood Testnet.
+                            Connect your wallet to use the simulation lane on Robinhood Testnet with fictional assets.
                           </p>
                           <button
                             onClick={connect}
