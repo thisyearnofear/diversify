@@ -840,7 +840,7 @@ export default function TradeTab() {
             {/* Info Banner */}
             <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl border border-amber-200 dark:border-amber-800">
               <p className="text-xs text-amber-800 dark:text-amber-300">
-                🥇 Trade commodity perpetuals on Hyperliquid. Synthetic 1x exposure to GOLD, SILVER, OIL &amp; COPPER — collateralized in USDC.
+                🥇 Trade commodity perpetuals on Hyperliquid. Synthetic 1x exposure to GOLD, SILVER, OIL &amp; COPPER — collateralized in USDC. No wallet network switch required.
               </p>
             </div>
 

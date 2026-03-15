@@ -331,14 +331,20 @@ export class MarketPulseService {
     const { SynthDataService } = await import('../services/synth-data-service');
 
     // Fetch BTC and ETH forecasts for the intelligence engine
-    const [inflationResult, macroResult, btcSynth, ethSynth] = await Promise.all([
+    const [inflationResult, macroResult] = await Promise.all([
       inflationService.getInflationData(),
       macroService.getMacroData(),
-      SynthDataService.getPredictions('BTC'),
-      SynthDataService.getPredictions('ETH')
     ]);
 
-    const synthData = { BTC: btcSynth, ETH: ethSynth };
+    const synthSettled = await Promise.allSettled([
+      SynthDataService.getPredictions('BTC'),
+      SynthDataService.getPredictions('ETH'),
+    ]);
+
+    const synthData = {
+      BTC: synthSettled[0].status === 'fulfilled' ? synthSettled[0].value : null,
+      ETH: synthSettled[1].status === 'fulfilled' ? synthSettled[1].value : null,
+    };
 
     const items: IntelligenceItem[] = [];
 
