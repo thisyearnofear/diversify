@@ -1,3 +1,27 @@
+/**
+ * Consolidated wallet hook
+ * Single source of truth for connection state and provider operations.
+ *
+ * Priority order:
+ * 1. Farcaster/MiniPay (auto-connect)
+ * 2. Injected wallet (MetaMask/Coinbase)
+ * 3. Privy (social login fallback)
+ */
+
+import { useEffect, useRef, useState } from "react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
+import {
+  getAddChainParameter,
+  getDefaultChainId,
+  isSupportedChainId,
+  DEFAULT_CHAIN_ID,
+  toHexChainId,
+  getWalletEnvironment,
+  getWalletProvider,
+  setupWalletEventListenersForProvider,
+  type WalletProviderType
+} from "@diversifi/shared";
+import { WALLET_FEATURES } from "../config/features";
 
 export function useWallet() {
   const [address, setAddress] = useState<string | null>(null);
