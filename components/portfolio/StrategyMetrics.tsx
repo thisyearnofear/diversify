@@ -422,6 +422,8 @@ function getStrategyIcon(strategy: FinancialStrategy): string {
         geographic_diversification: '🌍',
         rwa_access: '🥇',
         exploring: '🔍',
+        halo: '😇',
+        taco: '🌮',
     };
     return strategy ? icons[strategy] : '📊';
 }
@@ -439,6 +441,8 @@ function getStrategyName(strategy: FinancialStrategy): string {
         geographic_diversification: 'Geographic Diversification',
         rwa_access: 'RWA Access',
         exploring: 'Exploring',
+        halo: 'HALO',
+        taco: 'TACO',
     };
     return strategy ? names[strategy] : 'Strategy';
 }

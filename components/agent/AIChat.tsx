@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useNavigation } from "../../context/app/NavigationContext";
 import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";

@@ -80,7 +80,7 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
               if (resolvedAddress) {
                 showToast(`Resolved to ${resolvedAddress.slice(0, 6)}...`, 'success');
                 setSwapPrefill({
-                  fromToken: intent.fromToken || 'USDm',
+                  fromToken: 'USDm',
                   toToken: intent.token || 'KESm',
                   amount: intent.amount || '10',
                   reason: `SocialConnect: Send to ${intent.phoneNumber}`,

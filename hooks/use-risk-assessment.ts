@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { MarketPulseService, type MarketPulse } from "@diversifi/shared";
 import { useMultichainBalances } from "./use-multichain-balances";
 import { useStablecoinPortfolio } from "./use-stablecoin-portfolio";
+import { useWalletContext } from "../components/wallet/WalletProvider";
 
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
@@ -55,8 +56,11 @@ export function useRiskAssessment(horizon: "1h" | "24h" = "24h") {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const { balances, isLoading: balancesLoading } = useMultichainBalances();
-  const { totalStablecoins, isLoading: stablecoinsLoading } = useStablecoinPortfolio();
+  const { address } = useWalletContext();
+  const { totalValue: portfolioValue, isLoading: balancesLoading } = useMultichainBalances(address ?? undefined);
+  const { balances: stablecoinBalances, isLoading: stablecoinsLoading } = useStablecoinPortfolio(address ?? undefined);
+
+  const totalStablecoins = stablecoinBalances.reduce((sum, b) => sum + b.value, 0);
 
   const calculateRiskLevel = useCallback((score: number): RiskLevel => {
     if (score < 20) return "low";
@@ -175,7 +179,7 @@ export function useRiskAssessment(horizon: "1h" | "24h" = "24h") {
       const marketPulse = await MarketPulseService.getMarketPulse(horizon);
       
       // Calculate portfolio metrics
-      const totalValueUSD = balances.reduce((sum: number, b: { usdValue?: number }) => sum + (b.usdValue || 0), 0);
+      const totalValueUSD = portfolioValue;
       const stablecoinRatio = totalValueUSD > 0 ? totalStablecoins / totalValueUSD : 0;
       
       // Calculate overall risk score
@@ -220,7 +224,7 @@ export function useRiskAssessment(horizon: "1h" | "24h" = "24h") {
     }
   }, [
     horizon, 
-    balances, 
+    portfolioValue, 
     totalStablecoins, 
     calculateOverallScore, 
     calculateRiskLevel, 

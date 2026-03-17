@@ -266,8 +266,6 @@ export function useSwapController({
             fromChainId: enableCrossChain ? fromChainId : undefined,
             toChainId: enableCrossChain ? toChainId : undefined,
             slippageTolerance,
-            recipientAddress: recipientAddress || undefined,
-            phoneNumber: phoneNumber || undefined,
           });
           // Note: Hook state will be handled via useEffect tracking swapStep
         }

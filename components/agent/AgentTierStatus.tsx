@@ -19,7 +19,7 @@ import type { AgentActivity } from '../../hooks/agent-types';
 import { useExperience } from '../../context/app/ExperienceContext';
 import { useSessionKey } from '../../hooks/use-session-key';
 import { useWalletContext } from '../wallet/WalletProvider';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { agentEventBus } from '../../hooks/agent-event-bus';
 import { AUTONOMOUS_FEATURES } from '../../config/features';
 
@@ -30,7 +30,7 @@ export const AgentTierStatus: React.FC<{
   isFarcaster?: boolean;
   showActivityFeed?: boolean;
   onNavigateToAgent?: () => void;
-}> = ({ isMiniPay, isFarcaster, showActivityFeed = false, onNavigateToAgent }) => {
+}> = ({ isMiniPay, isFarcaster: _isFarcaster, showActivityFeed = false, onNavigateToAgent }) => {
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { activities, addActivity } = useAgentActivities();
   const { config } = useAgentConfig();

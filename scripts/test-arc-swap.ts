@@ -3,7 +3,7 @@
  * Verify that Arc Testnet swaps are properly configured
  */
 
-import { SwapOrchestratorService } from '../services/swap/swap-orchestrator.service';
+import { SwapOrchestratorService } from '@diversifi/shared';
 import { NETWORKS } from '../config';
 
 async function testArcSwapConfiguration() {

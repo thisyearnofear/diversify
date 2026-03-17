@@ -66,7 +66,7 @@ export default function OverviewTab({
   return (
     <ConnectedOverview
       portfolio={portfolio}
-      activePortfolio={activePortfolio}
+      activePortfolio={activePortfolio as any}
       address={address || ""}
       chainId={chainId}
       isDemo={isDemo}

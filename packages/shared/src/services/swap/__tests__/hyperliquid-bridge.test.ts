@@ -248,7 +248,8 @@ describe('activateHyperliquidAccount', () => {
         const fetchCall = mockFetch.mock.calls.find(
             call => call[0] === 'https://api.hyperliquid.xyz/exchange'
         );
-        const requestBody = JSON.parse(fetchCall[1].body);
+        expect(fetchCall).toBeDefined();
+        const requestBody = JSON.parse(fetchCall![1].body);
 
         expect(requestBody.action.type).toBe('approveAgent');
         expect(requestBody.action.hyperliquidChain).toBe('Mainnet');
@@ -336,7 +337,8 @@ describe('withdrawToArbitrum', () => {
         const fetchCall = mockFetch.mock.calls.find(
             call => call[0] === 'https://api.hyperliquid.xyz/exchange'
         );
-        const requestBody = JSON.parse(fetchCall[1].body);
+        expect(fetchCall).toBeDefined();
+        const requestBody = JSON.parse(fetchCall![1].body);
 
         expect(requestBody.action.type).toBe('withdraw3');
         expect(requestBody.action.amount).toBe('100');
@@ -388,7 +390,8 @@ describe('transferBetweenAccounts', () => {
         const fetchCall = mockFetch.mock.calls.find(
             call => call[0] === 'https://api.hyperliquid.xyz/exchange'
         );
-        const requestBody = JSON.parse(fetchCall[1].body);
+        expect(fetchCall).toBeDefined();
+        const requestBody = JSON.parse(fetchCall![1].body);
 
         expect(requestBody.action.type).toBe('usdClassTransfer');
         expect(requestBody.action.toPerp).toBe(true);

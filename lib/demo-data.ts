@@ -9,9 +9,26 @@ export const DEMO_PORTFOLIO = {
     totalValue: 1000,
     chainCount: 2,
     tokenCount: 5,
+    regionCount: 4,
     diversificationScore: 72,
     diversificationRating: "Good Diversification" as const,
     weightedInflationRisk: 4.2,
+    concentrationRisk: "MEDIUM" as const,
+
+    tokens: [
+        { symbol: "cUSD", name: "Celo Dollar", value: 400, allocation: 0.4, chainId: 42220, chainName: "Celo", region: "USA" as Region },
+        { symbol: "cEUR", name: "Celo Euro", value: 150, allocation: 0.15, chainId: 42220, chainName: "Celo", region: "Europe" as Region },
+        { symbol: "cKES", name: "Celo Kenyan Shilling", value: 100, allocation: 0.1, chainId: 42220, chainName: "Celo", region: "Africa" as Region },
+        { symbol: "USDC", name: "USD Coin", value: 250, allocation: 0.25, chainId: 42161, chainName: "Arbitrum", region: "USA" as Region },
+        { symbol: "PAXG", name: "Paxos Gold", value: 100, allocation: 0.1, chainId: 42161, chainName: "Arbitrum", region: "Global" as Region },
+    ],
+
+    regionalExposure: [
+        { region: "USA" as Region, value: 650, percentage: 65, currency: "USD" },
+        { region: "Europe" as Region, value: 150, percentage: 15, currency: "EUR" },
+        { region: "Africa" as Region, value: 100, percentage: 10, currency: "KES" },
+        { region: "Global" as Region, value: 100, percentage: 10, currency: "XAU" },
+    ],
 
     chains: [
         {
@@ -19,6 +36,8 @@ export const DEMO_PORTFOLIO = {
             chainName: "Celo",
             totalValue: 650,
             tokenCount: 3,
+            isLoading: false,
+            error: null,
             balances: [
                 {
                     symbol: "cUSD",
@@ -54,6 +73,8 @@ export const DEMO_PORTFOLIO = {
             chainName: "Arbitrum",
             totalValue: 350,
             tokenCount: 2,
+            isLoading: false,
+            error: null,
             balances: [
                 {
                     symbol: "USDC",
@@ -101,6 +122,22 @@ export const DEMO_PORTFOLIO = {
         "Great job diversifying across 2 chains!",
     ],
 
+    totalAnnualYield: 5.2,
+    totalInflationCost: 42,
+    netAnnualGain: 10,
+    avgYieldRate: 5.2,
+    netRate: 1.0,
+    isNetPositive: true,
+
+    goalAnalysis: {
+        userGoal: 'diversify',
+        hedgeScore: 75,
+        diversifyScore: 80,
+        rwaScore: 50,
+        overallScore: 68,
+        recommendations: ['Consider adding more RWA exposure'],
+    },
+
     rebalancingOpportunities: [
         {
             fromToken: "cUSD",
@@ -136,9 +173,42 @@ export const DEMO_PORTFOLIO = {
         })));
     },
 
+    get tokenMap(): Record<string, any> {
+        const map: Record<string, any> = {};
+        for (const chain of this.chains) {
+            for (const balance of chain.balances) {
+                map[balance.symbol] = {
+                    ...balance,
+                    formattedBalance: balance.balance,
+                    chainName: chain.chainName,
+                };
+            }
+        }
+        return map;
+    },
+
+    targetAllocations: [
+        { region: "USA" as Region, target: 40, current: 65 },
+        { region: "Europe" as Region, target: 20, current: 15 },
+        { region: "Africa" as Region, target: 20, current: 10 },
+        { region: "Global" as Region, target: 20, current: 10 },
+    ],
+
+    hyperliquidExposure: {
+        totalValue: 0,
+        positions: [],
+    },
+
+    projections: {
+        oneMonth: { optimistic: 1050, pessimistic: 950, expected: 1000 },
+        threeMonth: { optimistic: 1150, pessimistic: 850, expected: 1000 },
+        oneYear: { optimistic: 1500, pessimistic: 500, expected: 1000 },
+    },
+
     isLoading: false,
     isStale: false,
-    refresh: async () => { },
+    errors: [],
+    lastUpdated: Date.now(),
 };
 
 export const DEMO_USER = {

@@ -261,7 +261,7 @@ const SwapInterface = forwardRef<
             currentChainId={chainId ?? undefined}
             tokenChainId={fromChainId}
             experienceMode={experienceMode}
-            financialStrategy={financialStrategy}
+            financialStrategy={financialStrategy ?? undefined}
           />
 
           <div className="flex justify-center my-2">
@@ -303,7 +303,7 @@ const SwapInterface = forwardRef<
             currentChainId={chainId ?? undefined}
             tokenChainId={toChainId}
             experienceMode={experienceMode}
-            financialStrategy={financialStrategy}
+            financialStrategy={financialStrategy ?? undefined}
           />
 
           <ExpectedOutputCard

@@ -248,7 +248,7 @@ export function useSwap() {
 
             // Success
             result.success = true;
-            result.swapTxHash = swapResult.txHash;
+            result.txHash = swapResult.txHash;
             result.approvalTxHash = swapResult.approvalTxHash;
 
             setState({

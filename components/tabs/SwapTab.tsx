@@ -554,7 +554,7 @@ export default function SwapTab({
                 address={address}
                 onSwap={handleSwap}
                 preferredFromRegion={userRegion}
-                preferredToRegion={targetRegion}
+                preferredToRegion={targetRegion ?? undefined}
                 title=""
                 chainId={walletChainId}
                 enableCrossChain={true}
