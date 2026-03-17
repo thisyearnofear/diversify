@@ -126,6 +126,7 @@ export default function TradeTab() {
   });
 
   const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
+  const [isLoadingIntelligence, setIsLoadingIntelligence] = useState(true);
   const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
   const [realStockPrice, setRealStockPrice] = useState<number | null>(null);
   const [showAllRobinhood, setShowAllRobinhood] = useState(false);
@@ -441,6 +442,8 @@ export default function TradeTab() {
             },
           ];
         });
+      } finally {
+        setIsLoadingIntelligence(false);
       }
     };
 
@@ -1107,6 +1110,7 @@ export default function TradeTab() {
                   items={intelligenceItems}
                   selectedAsset={selected}
                   isAdvanced={isAdvanced}
+                  isLoading={isLoadingIntelligence}
                 />
 
                 {/* Portfolio Risk Widget - SynthData Risk Intelligence */}

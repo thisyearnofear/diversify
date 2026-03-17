@@ -29,8 +29,14 @@
     "**/*.ts",
     "**/*.tsx",
     "types/**/*.d.ts"
-, "scripts/DeployCeloEmergingMarkets.s.sol"  ],
+  ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "node_modules_hidden",
+    ".next",
+    "out",
+    "cache",
+    "contracts",
+    "script"
   ]
 }

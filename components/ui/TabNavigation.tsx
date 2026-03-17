@@ -77,9 +77,15 @@ const TABS: TabItem[] = [
 // Tabs shown in beginner mode (primary tabs only)
 const BEGINNER_TAB_IDS: TabId[] = ["overview", "swap", "protect"];
 
+// Tabs only available in advanced mode
+const ADVANCED_ONLY_TAB_IDS: TabId[] = ["trade"];
+
 export default function TabNavigation({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
   const isBeginner = experienceMode === 'beginner';
-  const visibleTabs = isBeginner ? TABS.filter(t => BEGINNER_TAB_IDS.includes(t.id)) : TABS;
+  const isAdvanced = experienceMode === 'advanced';
+  const visibleTabs = isBeginner
+    ? TABS.filter(t => BEGINNER_TAB_IDS.includes(t.id))
+    : TABS.filter(t => isAdvanced || !ADVANCED_ONLY_TAB_IDS.includes(t.id));
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] pb-safe">
