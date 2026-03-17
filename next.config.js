@@ -26,6 +26,16 @@ const nextConfig = {
         dns: false,
         child_process: false,
         readline: false,
+        zlib: false,
+        stream: false,
+        util: false,
+        buffer: false,
+        assert: false,
+        http: false,
+        https: false,
+        os: false,
+        url: false,
+        crypto: false,
       };
     }
     return config;
