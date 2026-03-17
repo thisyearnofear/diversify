@@ -7,6 +7,7 @@
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
 import { rwaService } from './rwa-service';
 import { circleService, CircleService } from './circle-service';
+import { RealCircleWalletProvider } from './circle-wallet-provider-real';
 import { SynthDataService } from './synth-data-service';
 import { AIService } from './ai/ai-service';
 import { marketPulseService } from '../utils/market-pulse-service';
@@ -140,6 +141,7 @@ const DATA_SOURCES: DataSource[] = [
 
 export interface AgentWalletProvider {
     getAddress(): string;
+    initialize?: () => Promise<void>;
     signTransaction(tx: any): Promise<string>;
     sendTransaction(tx: any): Promise<any>;
     balanceOf(tokenAddress: string): Promise<number>;
@@ -182,49 +184,25 @@ export class EthersWalletProvider implements AgentWalletProvider {
 }
 
 export class CircleWalletProvider implements AgentWalletProvider {
-    // This is a specialized provider for Circle's Programmable Wallets
-    constructor(private walletId: string, private apiKey: string) { }
-
-    getAddress() {
-        return '0x' + 'circle_wallet_' + this.walletId.slice(0, 10).padEnd(30, '0');
+    // Deprecated stub. Use RealCircleWalletProvider with circleEntitySecret instead.
+    constructor(private walletId: string, private apiKey: string) {
+        throw new Error(
+            'CircleWalletProvider is deprecated. Use RealCircleWalletProvider with circleEntitySecret for real Circle wallets.'
+        );
     }
 
-    async signTransaction(tx: any) {
-        console.log(`[Circle Wallet ${this.walletId}] Signing transaction...`);
-        return '0x' + 'circle_signed_' + Math.random().toString(16).slice(2, 58);
+    private notImplemented(method: string): never {
+        throw new Error(
+            `CircleWalletProvider.${method} is not implemented. Use RealCircleWalletProvider with circleEntitySecret.`
+        );
     }
 
-    async sendTransaction(tx: any) {
-        console.log(`[Circle Wallet ${this.walletId}] Executing programmable transaction...`);
-        return {
-            hash: '0x' + 'circle_tx_' + Math.random().toString(16).slice(2, 58),
-            from: this.getAddress(),
-            to: tx.to,
-            status: 'pending'
-        };
-    }
-
-    async balanceOf(tokenAddress: string) {
-        return 100.0; // Mock for demo
-    }
-
-    async transfer(to: string, amount: string, tokenAddress: string) {
-        console.log(`[Circle Wallet ${this.walletId}] Programmable transfer: ${amount} USDC to ${to}`);
-        return {
-            transactionHash: '0x' + 'circle_transfer_' + Math.random().toString(16).slice(2, 58),
-            from: this.getAddress(),
-            to: to,
-            amount: amount,
-            token: tokenAddress,
-            status: 'completed'
-        };
-    }
-
-    async signTypedData(domain: any, types: any, value: any) {
-        console.log(`[Circle Wallet ${this.walletId}] Signing typed data for EIP-3009 Nanopayment...`);
-        // In production, this calls Circle's /wallets/{id}/signatures/typed_data
-        return '0x' + 'circle_typed_sig_' + Math.random().toString(16).slice(2, 58);
-    }
+    getAddress() { return this.notImplemented('getAddress'); }
+    async signTransaction(_tx: any) { return this.notImplemented('signTransaction'); }
+    async sendTransaction(_tx: any) { return this.notImplemented('sendTransaction'); }
+    async balanceOf(_tokenAddress: string) { return this.notImplemented('balanceOf'); }
+    async transfer(_to: string, _amount: string, _tokenAddress: string) { return this.notImplemented('transfer'); }
+    async signTypedData(_domain: any, _types: any, _value: any) { return this.notImplemented('signTypedData'); }
 }
 
 export class SessionKeyProvider implements AgentWalletProvider {
@@ -310,18 +288,26 @@ export class SessionKeyProvider implements AgentWalletProvider {
 export class ArcAgent {
     private provider: providers.JsonRpcProvider;
     private wallet: AgentWalletProvider;
-    private agentAddress: string;
+    private agentAddress: string = '';
     private spendingLimit: number = 5.0;
     public isProxy: boolean = false; // Flag for server-side proxy agents
     private spentToday: number = 0;
     private isTestnet: boolean;
     private circleService: CircleService;
+    private initialized: boolean = false;
+    private dataSourceFailures: Map<string, { count: number; lastFailure: number; openUntil?: number }> = new Map();
+
+    private static readonly DATA_SOURCE_MAX_FAILURES = 3;
+    private static readonly DATA_SOURCE_FAILURE_WINDOW_MS = 5 * 60 * 1000;
+    private static readonly DATA_SOURCE_COOLDOWN_MS = 10 * 60 * 1000;
 
     constructor(config: {
         privateKey?: string;
         sessionKey?: { privateKey: string; permission: import('./erc7715-service').SessionPermission };
         circleWalletId?: string;
         circleApiKey?: string;
+        circleEntitySecret?: string;
+        circleBaseUrl?: string;
         rpcUrl?: string;
         spendingLimit?: number;
         isTestnet?: boolean;
@@ -333,7 +319,17 @@ export class ArcAgent {
         this.circleService = circleService;
 
         if (config.circleWalletId && config.circleApiKey) {
-            this.wallet = new CircleWalletProvider(config.circleWalletId, config.circleApiKey);
+            if (!config.circleEntitySecret) {
+                throw new Error(
+                    'Circle wallet configuration requires circleEntitySecret. Provide circleWalletId, circleApiKey, and circleEntitySecret.'
+                );
+            }
+            this.wallet = new RealCircleWalletProvider({
+                walletId: config.circleWalletId,
+                apiKey: config.circleApiKey,
+                entitySecret: config.circleEntitySecret,
+                baseUrl: config.circleBaseUrl
+            });
         } else if (config.sessionKey) {
             // Non-custodial path: disposable session key scoped by user-signed ERC-7715 permission
             this.wallet = new SessionKeyProvider(
@@ -341,14 +337,31 @@ export class ArcAgent {
                 config.sessionKey.permission,
                 this.provider
             );
+            this.agentAddress = this.wallet.getAddress();
+            this.initialized = true;
         } else if (config.privateKey) {
             this.wallet = new EthersWalletProvider(config.privateKey, this.provider);
+            this.agentAddress = this.wallet.getAddress();
+            this.initialized = true;
         } else {
             throw new Error('No wallet configuration provided for ArcAgent');
         }
 
-        this.agentAddress = this.wallet.getAddress();
+        if (!this.agentAddress) {
+            this.agentAddress = '';
+        }
         this.spendingLimit = config.spendingLimit || 5.0;
+    }
+
+    private async ensureInitialized(): Promise<void> {
+        if (this.initialized) return;
+
+        if (typeof this.wallet.initialize === 'function') {
+            await this.wallet.initialize();
+        }
+
+        this.agentAddress = this.wallet.getAddress();
+        this.initialized = true;
     }
 
     /**
@@ -364,6 +377,7 @@ export class ArcAgent {
         const paymentHashes: Record<string, string> = {};
 
         try {
+            await this.ensureInitialized();
             // Step 1: Check USDC balance and optimize location
             steps.push("Analyzing capital efficiency across chains...");
             const unifiedBalance = await this.getUnifiedUSDCBalance();
@@ -490,21 +504,30 @@ export class ArcAgent {
                 responseMimeType: 'application/json'
             });
 
-            const recommendation = JSON.parse(aiResponse.content);
+            const recommendation = this.parseRecommendation(aiResponse.content);
+            const action = this.normalizeAction(recommendation.action);
+            const confidence = this.normalizeNumber(recommendation.confidence, 0.8, 0, 1);
+            const expectedSavings = this.normalizeNumber(recommendation.expectedSavings, 0, 0);
+            const riskLevel = this.normalizeRiskLevel(recommendation.riskLevel);
+            const portfolioValue = this.normalizeNumber(unifiedBalance.totalUSDC, portfolioData.balance || 0, 0);
+            const urgencyLevel = this.determineUrgency({ action, expectedSavings }, portfolioValue);
+            const actionSteps = Array.isArray(recommendation.actionSteps)
+                ? recommendation.actionSteps
+                : [];
 
             return {
-                action: recommendation.action || 'HOLD',
+                action,
                 targetToken: recommendation.targetToken,
-                confidence: recommendation.confidence || 0.8,
+                confidence,
                 reasoning: recommendation.reasoning || "Balanced hold strategy based on current macro stability.",
-                expectedSavings: recommendation.expectedSavings || 0,
+                expectedSavings,
                 timeHorizon: '7D',
-                riskLevel: recommendation.riskLevel || 'MEDIUM',
+                riskLevel,
                 dataSources,
                 paymentHashes,
                 executionMode: 'ADVISORY',
-                actionSteps: steps.concat(recommendation.actionSteps || []),
-                urgencyLevel: recommendation.confidence > 0.9 ? 'HIGH' : 'LOW'
+                actionSteps: steps.concat(actionSteps),
+                urgencyLevel
             };
         } catch (error) {
             console.error('Autonomous analysis failed:', error);
@@ -558,6 +581,7 @@ export class ArcAgent {
      * Get USDC balance for the agent wallet
      */
     private async getUSDCBalance(): Promise<number> {
+        await this.ensureInitialized();
         try {
             return await this.wallet.balanceOf(ARC_CONFIG.USDC_TESTNET);
         } catch (error) {
@@ -572,6 +596,7 @@ export class ArcAgent {
      */
     async getUnifiedUSDCBalance(): Promise<any> {
         try {
+            await this.ensureInitialized();
             return await this.circleService.getUnifiedUSDCBalance(this.agentAddress);
         } catch (error) {
             console.error('Failed to get unified USDC balance:', error);
@@ -592,6 +617,7 @@ export class ArcAgent {
         amount: string
     ): Promise<string> {
         try {
+            await this.ensureInitialized();
             return await this.circleService.transferUSDCViaGateway(
                 fromChainId, toChainId, amount, this.agentAddress
             );
@@ -610,6 +636,7 @@ export class ArcAgent {
         amount: string
     ): Promise<any> {
         try {
+            await this.ensureInitialized();
             // Get bridge quote
             const quote = await this.circleService.getBridgeQuote(
                 sourceChainId, destinationChainId, amount, this.agentAddress
@@ -639,6 +666,7 @@ export class ArcAgent {
      * Get Circle Bridge Kit status and capabilities
      */
     async getBridgeKitStatus() {
+        await this.ensureInitialized();
         return await this.circleService.getBridgeKitStatus();
     }
 
@@ -653,24 +681,34 @@ export class ArcAgent {
         const hashes: Record<string, string> = {};
 
         for (const source of inflationSources.slice(0, 1)) {
+            if (this.isCircuitOpen(source.name)) {
+                steps.push(`⚠ ${source.name} temporarily unavailable (circuit open)`);
+                continue;
+            }
             try {
                 steps.push(`Accessing ${source.name}...`);
-                let response;
-                if (source.x402Enabled) {
-                    response = await this.fetchWithX402Payment(source.url, source.cost, source.headers);
-                    if (response.headers.get('x-payment-proof')) {
-                        hashes[source.name] = response.headers.get('x-payment-proof')!;
+                const response = await this.fetchWithRetry(async () => {
+                    if (source.x402Enabled) {
+                        return await this.fetchWithX402Payment(source.url, source.cost, source.headers, 1);
                     }
-                }
+                    return await fetch(source.url, { headers: source.headers });
+                });
 
                 if (response && response.ok) {
                     data[source.name] = await response.json();
                     sources.push(source.name);
                     steps.push(`✓ Retrieved data from ${source.name}`);
+                    if (response.headers.get('x-payment-proof')) {
+                        hashes[source.name] = response.headers.get('x-payment-proof')!;
+                    }
+                    this.recordSourceSuccess(source.name);
+                } else {
+                    throw new Error(`HTTP ${response?.status || 'unknown'} from ${source.name}`);
                 }
             } catch (error) {
                 console.warn(`Failed to fetch from ${source.name}:`, error);
                 steps.push(`⚠ ${source.name} unavailable`);
+                this.recordSourceFailure(source.name);
             }
         }
         return { data, hashes };
@@ -689,22 +727,34 @@ export class ArcAgent {
         const hashes: Record<string, string> = {};
 
         for (const source of economicSources.slice(0, 1)) {
+            if (this.isCircuitOpen(source.name)) {
+                steps.push(`⚠ ${source.name} temporarily unavailable (circuit open)`);
+                continue;
+            }
             try {
                 steps.push(`Purchasing data from ${source.name} via x402...`);
-                if (source.x402Enabled) {
-                    const response = await this.fetchWithX402Payment(source.url, source.cost, source.headers);
-                    if (response.ok) {
-                        data[source.name] = await response.json();
-                        sources.push(source.name);
-                        steps.push(`✓ Purchased data from ${source.name} for ${source.cost.amount} USDC`);
-                        if (response.headers.get('x-payment-proof')) {
-                            hashes[source.name] = response.headers.get('x-payment-proof')!;
-                        }
+                const response = await this.fetchWithRetry(async () => {
+                    if (source.x402Enabled) {
+                        return await this.fetchWithX402Payment(source.url, source.cost, source.headers, 1);
                     }
+                    return await fetch(source.url, { headers: source.headers });
+                });
+
+                if (response.ok) {
+                    data[source.name] = await response.json();
+                    sources.push(source.name);
+                    steps.push(`✓ Purchased data from ${source.name} for ${source.cost.amount} USDC`);
+                    if (response.headers.get('x-payment-proof')) {
+                        hashes[source.name] = response.headers.get('x-payment-proof')!;
+                    }
+                    this.recordSourceSuccess(source.name);
+                } else {
+                    throw new Error(`HTTP ${response?.status || 'unknown'} from ${source.name}`);
                 }
             } catch (error) {
                 console.warn(`Failed to fetch economic data from ${source.name}:`, error);
                 steps.push(`⚠ ${source.name} payment failed`);
+                this.recordSourceFailure(source.name);
             }
         }
         return { data, hashes };
@@ -719,26 +769,34 @@ export class ArcAgent {
         const hashes: Record<string, string> = {};
 
         for (const source of yieldSources.slice(0, 1)) {
+            if (this.isCircuitOpen(source.name)) {
+                steps.push(`⚠ ${source.name} temporarily unavailable (circuit open)`);
+                continue;
+            }
             try {
                 steps.push(`Accessing ${source.name}...`);
-                let response;
-                if (source.x402Enabled) {
-                    response = await this.fetchWithX402Payment(source.url, source.cost, source.headers);
-                    if (response.headers.get('x-payment-proof')) {
-                        hashes[source.name] = response.headers.get('x-payment-proof')!;
+                const response = await this.fetchWithRetry(async () => {
+                    if (source.x402Enabled) {
+                        return await this.fetchWithX402Payment(source.url, source.cost, source.headers, 1);
                     }
-                } else {
-                    response = await fetch(`${source.url}/pools`);
-                }
+                    return await fetch(`${source.url}/pools`);
+                });
 
                 if (response && response.ok) {
                     data[source.name] = await response.json();
                     sources.push(source.name);
                     steps.push(`✓ Retrieved yield data from ${source.name}`);
+                    if (response.headers.get('x-payment-proof')) {
+                        hashes[source.name] = response.headers.get('x-payment-proof')!;
+                    }
+                    this.recordSourceSuccess(source.name);
+                } else {
+                    throw new Error(`HTTP ${response?.status || 'unknown'} from ${source.name}`);
                 }
             } catch (error) {
                 console.warn(`Failed to fetch yield data from ${source.name}:`, error);
                 steps.push(`⚠ ${source.name} unavailable`);
+                this.recordSourceFailure(source.name);
             }
         }
         return { data, hashes };
@@ -753,6 +811,7 @@ export class ArcAgent {
         headers: Record<string, string> = {},
         retries: number = 3
     ): Promise<Response> {
+        await this.ensureInitialized();
         // Check spending limit
         if (this.spentToday + parseFloat(payment.amount) > this.spendingLimit) {
             throw new Error('Daily spending limit exceeded');
@@ -860,6 +919,7 @@ export class ArcAgent {
      */
     private async executeUSDCPayment(recipient: string, amount: string): Promise<any> {
         try {
+            await this.ensureInitialized();
             console.log(`[Arc Agent] Initiating USDC transfer: ${amount} to ${recipient}`);
             return await this.wallet.transfer(recipient, amount, ARC_CONFIG.USDC_TESTNET);
         } catch (error) {
@@ -972,6 +1032,7 @@ export class ArcAgent {
      */
     private async recordAnalysisOnChain(analysis: Partial<AnalysisResult>): Promise<string> {
         try {
+            await this.ensureInitialized();
             // Create analysis hash for on-chain record
             const analysisHash = utils.keccak256(
                 utils.toUtf8Bytes(JSON.stringify(analysis))
@@ -993,8 +1054,7 @@ export class ArcAgent {
             return receipt.transactionHash;
         } catch (error) {
             console.error('Failed to record analysis on-chain:', error);
-            // Return a placeholder hash if on-chain recording fails
-            return `0x${Math.random().toString(16).substr(2, 64)}`;
+            throw error;
         }
     }
 
@@ -1073,10 +1133,17 @@ export class ArcAgent {
     /**
      * Determine urgency level based on analysis
      */
-    private determineUrgency(analysis: any): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
-        if (analysis.expectedSavings > 100) return 'CRITICAL';
-        if (analysis.expectedSavings > 50) return 'HIGH';
-        if (analysis.action !== 'HOLD') return 'MEDIUM';
+    private determineUrgency(
+        analysis: { expectedSavings?: number; action?: string },
+        portfolioValue?: number
+    ): 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' {
+        const savings = Math.max(0, analysis.expectedSavings || 0);
+        const value = portfolioValue && portfolioValue > 0 ? portfolioValue : 0;
+        const ratio = value > 0 ? savings / value : 0;
+
+        if (ratio >= 0.05) return 'CRITICAL';
+        if (ratio >= 0.02) return 'HIGH';
+        if (ratio >= 0.005 || (analysis.action && analysis.action !== 'HOLD')) return 'MEDIUM';
         return 'LOW';
     }
 
@@ -1086,11 +1153,12 @@ export class ArcAgent {
     private generateAutomationTriggers(
         analysis: any,
         userEmail?: string,
-        executionMode: 'ADVISORY' | 'TESTNET_DEMO' | 'MAINNET_READY' = 'ADVISORY'
+        executionMode: 'ADVISORY' | 'TESTNET_DEMO' | 'MAINNET_READY' = 'ADVISORY',
+        portfolioValue?: number
     ): AnalysisResult['automationTriggers'] {
         if (!userEmail) return undefined;
 
-        const urgency = this.determineUrgency(analysis);
+        const urgency = this.determineUrgency(analysis, portfolioValue);
 
         return {
             email: {
@@ -1179,6 +1247,7 @@ export class ArcAgent {
         requesterAddress: string,
         queryType: 'macro' | 'yield' | 'strategy'
     ): Promise<any> {
+        await this.ensureInitialized();
         console.log(`[Arc Agent] A2A Request from ${requesterAddress} for ${queryType}`);
 
         // In a real x402 flow, this would be gated by a payment check
@@ -1222,6 +1291,7 @@ export class ArcAgent {
      */
     async getNetworkStatus() {
         try {
+            await this.ensureInitialized();
             const network = await this.provider.getNetwork();
             const balance = await this.getUSDCBalance();
 
@@ -1237,5 +1307,131 @@ export class ArcAgent {
             console.error('Failed to get network status:', error);
             return null;
         }
+    }
+
+    private isCircuitOpen(sourceName: string): boolean {
+        const state = this.dataSourceFailures.get(sourceName);
+        if (!state) return false;
+        if (state.openUntil && Date.now() < state.openUntil) {
+            return true;
+        }
+        return false;
+    }
+
+    private recordSourceFailure(sourceName: string) {
+        const now = Date.now();
+        const existing = this.dataSourceFailures.get(sourceName);
+
+        if (!existing || now - existing.lastFailure > ArcAgent.DATA_SOURCE_FAILURE_WINDOW_MS) {
+            this.dataSourceFailures.set(sourceName, {
+                count: 1,
+                lastFailure: now
+            });
+            return;
+        }
+
+        const nextCount = existing.count + 1;
+        const updated = {
+            count: nextCount,
+            lastFailure: now,
+            openUntil: existing.openUntil
+        };
+
+        if (nextCount >= ArcAgent.DATA_SOURCE_MAX_FAILURES) {
+            updated.openUntil = now + ArcAgent.DATA_SOURCE_COOLDOWN_MS;
+        }
+
+        this.dataSourceFailures.set(sourceName, updated);
+    }
+
+    private recordSourceSuccess(sourceName: string) {
+        this.dataSourceFailures.delete(sourceName);
+    }
+
+    private async fetchWithRetry<T>(
+        action: () => Promise<T>,
+        options: { retries?: number; baseDelayMs?: number } = {}
+    ): Promise<T> {
+        const retries = options.retries ?? 2;
+        const baseDelayMs = options.baseDelayMs ?? 750;
+        let lastError: unknown = null;
+
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                return await action();
+            } catch (error) {
+                lastError = error;
+                if (attempt >= retries) break;
+                const backoff = baseDelayMs * Math.pow(2, attempt);
+                const jitter = Math.floor(Math.random() * 150);
+                await new Promise(resolve => setTimeout(resolve, backoff + jitter));
+            }
+        }
+
+        throw lastError;
+    }
+
+    private parseRecommendation(content: unknown): any {
+        if (typeof content === 'object' && content !== null) {
+            return content;
+        }
+
+        const raw = typeof content === 'string' ? content : '';
+
+        try {
+            return JSON.parse(raw);
+        } catch (error) {
+            const start = raw.indexOf('{');
+            const end = raw.lastIndexOf('}');
+            if (start !== -1 && end > start) {
+                const candidate = raw.slice(start, end + 1);
+                try {
+                    return JSON.parse(candidate);
+                } catch (innerError) {
+                    // fall through to fallback
+                }
+            }
+
+            return {
+                action: 'HOLD',
+                reasoning: raw || 'Analysis completed, but no structured response was returned.',
+                confidence: 0.5,
+                riskLevel: 'MEDIUM',
+                expectedSavings: 0
+            };
+        }
+    }
+
+    private normalizeAction(action?: string): AnalysisResult['action'] {
+        const candidate = (action || '').toUpperCase();
+        if (candidate === 'SWAP' || candidate === 'REBALANCE' || candidate === 'HOLD' || candidate === 'BRIDGE') {
+            return candidate as AnalysisResult['action'];
+        }
+        return 'HOLD';
+    }
+
+    private normalizeRiskLevel(level?: string): AnalysisResult['riskLevel'] {
+        const candidate = (level || '').toUpperCase();
+        if (candidate === 'LOW' || candidate === 'MEDIUM' || candidate === 'HIGH') {
+            return candidate as AnalysisResult['riskLevel'];
+        }
+        return 'MEDIUM';
+    }
+
+    private normalizeNumber(
+        value: unknown,
+        fallback: number,
+        min?: number,
+        max?: number
+    ): number {
+        const parsed = typeof value === 'number'
+            ? value
+            : typeof value === 'string'
+                ? parseFloat(value)
+                : NaN;
+        const resolved = Number.isFinite(parsed) ? parsed : fallback;
+        const lowerBounded = typeof min === 'number' ? Math.max(min, resolved) : resolved;
+        const upperBounded = typeof max === 'number' ? Math.min(max, lowerBounded) : lowerBounded;
+        return upperBounded;
     }
 }

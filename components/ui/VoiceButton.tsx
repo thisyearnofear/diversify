@@ -1,12 +1,14 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
+import { useAgentStatus } from '../../hooks/use-agent-status';
+import { useAgentVoice } from '../../hooks/use-agent-voice';
 import { useNetworkActivity } from '../../hooks/use-network-activity';
 import { useToast } from './Toast';
 import sdk from '@farcaster/miniapp-sdk';
 
 const VOICE_DISABLED_KEY = 'diversifi-voice-disabled';
 const VOICE_FIRST_SEEN_KEY = 'diversifi-voice-first-seen';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 interface VoiceButtonProps {
     onTranscription?: (text: string) => void;
@@ -45,7 +47,8 @@ export default function VoiceButton({
     externalSuggestionsOpen,
     onSuggestionsChange,
 }: VoiceButtonProps) {
-    const { transcribeAudio, capabilities } = useDiversifiAI();
+    const { capabilities } = useAgentStatus();
+    const { transcribeAudio } = useAgentVoice({ apiBase: API_BASE, capabilities });
     const { showToast } = useToast();
     const { setOverridePulse } = useNetworkActivity();
 

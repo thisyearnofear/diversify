@@ -54,7 +54,7 @@ export function useRiskAssessment(horizon: "1h" | "24h" = "24h") {
   const [riskData, setRiskData] = useState<RiskAssessment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  
+
   const { balances, isLoading: balancesLoading } = useMultichainBalances();
   const { totalStablecoins, isLoading: stablecoinsLoading } = useStablecoinPortfolio();
 
@@ -71,22 +71,22 @@ export function useRiskAssessment(horizon: "1h" | "24h" = "24h") {
     stablecoinRatio: number
   ): number => {
     if (totalValueUSD === 0) return 50; // Neutral for empty portfolio
-    
+
     let score = 0;
-    
+
     // Market risk component (40% weight)
     const marketRisk = (
       (market.liquidationRisk || 50) * 0.2 +
       (market.impliedVolatility || 45) * 0.2
     );
     score += marketRisk;
-    
+
     // Sentiment component (20% weight) - extreme sentiment = higher risk
     const sentimentRisk = market.sentiment > 70 || market.sentiment < 30
       ? Math.abs(market.sentiment - 50) * 0.4
       : 0;
     score += sentimentRisk;
-    
+
     // Portfolio composition component (40% weight)
     // Low stablecoin ratio = higher risk
     const compositionRisk = (1 - stablecoinRatio) * 40;
@@ -175,7 +175,7 @@ export function useRiskAssessment(horizon: "1h" | "24h" = "24h") {
       const marketPulse = await MarketPulseService.getMarketPulse(horizon);
       
       // Calculate portfolio metrics
-      const totalValueUSD = balances.reduce((sum, b) => sum + (b.usdValue || 0), 0);
+      const totalValueUSD = balances.reduce((sum: number, b: { usdValue?: number }) => sum + (b.usdValue || 0), 0);
       const stablecoinRatio = totalValueUSD > 0 ? totalStablecoins / totalValueUSD : 0;
       
       // Calculate overall risk score

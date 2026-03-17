@@ -69,6 +69,7 @@ export default async function handler(
       tradeSizeETH: parseFloat(process.env.TRADE_SIZE_ETH || '0.01'),
       maxDailyTrades: parseInt(process.env.MAX_DAILY_TRADES || '10'),
     });
+    await agent.initialize();
 
     const executed = [];
     

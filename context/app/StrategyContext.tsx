@@ -1,22 +1,23 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import type { FinancialStrategy } from './types';
+import type { FinancialStrategy, NullableFinancialStrategy } from './types';
 
 type StrategyContextValue = {
-  financialStrategy: FinancialStrategy;
-  setFinancialStrategy: (strategy: FinancialStrategy) => void;
+  financialStrategy: NullableFinancialStrategy;
+  setFinancialStrategy: (strategy: NullableFinancialStrategy) => void;
 };
 
 const StrategyContext = createContext<StrategyContextValue | undefined>(undefined);
 
 export function StrategyProvider({ children }: { children: React.ReactNode }) {
-  const [financialStrategy, setFinancialStrategyState] = useState<FinancialStrategy>(null);
+  const [financialStrategy, setFinancialStrategyState] = useState<NullableFinancialStrategy>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('financialStrategy') as FinancialStrategy | null;
+      return saved || null;
+    }
+    return null;
+  });
 
-  useEffect(() => {
-    const saved = localStorage.getItem('financialStrategy') as FinancialStrategy | null;
-    setFinancialStrategyState(saved || null);
-  }, []);
-
-  const setFinancialStrategy = useCallback((strategy: FinancialStrategy) => {
+  const setFinancialStrategy = useCallback((strategy: NullableFinancialStrategy) => {
     setFinancialStrategyState(strategy);
     if (typeof window !== 'undefined') {
       if (strategy) localStorage.setItem('financialStrategy', strategy);

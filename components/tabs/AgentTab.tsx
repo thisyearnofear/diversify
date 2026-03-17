@@ -7,15 +7,21 @@
  * - MINIMAL: Only essential UI, no bloat
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { AgentTierStatus } from '../agent/AgentTierStatus';
 import AutomationSettings from '../agent/AutomationSettings';
 import ActionableRecommendation from '../agent/ActionableRecommendation';
-import { useDiversifiAI } from '../../hooks/use-diversifi-ai';
+import { useAgentStatus } from '../../hooks/use-agent-status';
+import { useAgentConfig } from '../../hooks/use-agent-config';
+import { useAgentAnalysis } from '../../hooks/use-agent-analysis';
+import { useAgentActivities } from '../../hooks/use-agent-activities';
 import { useExperience } from '../../context/app/ExperienceContext';
 import { useAIOracle } from '../../hooks/use-ai-oracle';
 import { useNavigation } from '../../context/app/NavigationContext';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
+import { AUTONOMOUS_FEATURES } from '../../config/features';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 interface AgentTabProps {
   isMiniPay?: boolean;
@@ -24,7 +30,19 @@ interface AgentTabProps {
 }
 
 export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTabProps) {
-  const { autonomousStatus, config, updateConfig, portfolioAnalysis, addActivity } = useDiversifiAI();
+  const { capabilities, autonomousStatus } = useAgentStatus();
+  const { config, updateConfig } = useAgentConfig();
+  const { addActivity } = useAgentActivities();
+  const noopMessage = useCallback(() => {}, []);
+  const { portfolioAnalysis } = useAgentAnalysis({
+    apiBase: API_BASE,
+    capabilities,
+    config,
+    addMessage: noopMessage,
+    addActivity,
+    autonomousStatus,
+    autonomousEnabled: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
+  });
   const { experienceMode } = useExperience();
   const { ask } = useAIOracle();
   const { navigateToSwap } = useNavigation();
@@ -63,7 +81,7 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
           onExecuteSwap={(fromToken, toToken, amount, reason) => {
             ask(`I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ''} based on Oracle recommendation${reason ? `: ${reason}` : ''}. Please confirm this aligns with my strategy.`);
             addActivity({
-              type: 'swap',
+              type: 'execution',
               tier: 'GUARDIAN',
               description: `Swap ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ''}${reason ? ` — ${reason}` : ''}`,
               status: 'pending',

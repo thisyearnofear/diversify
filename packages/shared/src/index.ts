@@ -6,9 +6,6 @@ import { RWAService, rwaService } from './services/rwa-service';
 import { SynthDataService } from './services/synth-data-service';
 import { TradeAgent } from './services/trade-agent';
 import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
-import { IntelligenceService } from './services/ai/intelligence.service';
-import { IntentDiscoveryService } from './services/ai/intent-discovery.service';
-import { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
 import { StrategyService } from './services/strategy/strategy.service';
 import { AutomationService } from './services/automation-service';
 import { GoodDollarService } from './services/gooddollar-service';
@@ -26,11 +23,6 @@ export {
   TradeAgent,
   ZapierMCPService,
   zapierMCPService,
-  IntelligenceService,
-  IntentDiscoveryService,
-  AIService,
-  generateChatCompletion,
-  getAIServiceStatus,
   StrategyService,
   AutomationService,
   GoodDollarService,
@@ -38,6 +30,12 @@ export {
   getEmergingMarketsPriceService,
   EmergingMarketsPriceService
 };
+
+// Export AI Services
+export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
+export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
+export { IntelligenceService } from './services/ai/intelligence.service';
+export { IntentDiscoveryService } from './services/ai/intent-discovery.service';
 
 // Export Utils
 export * from './utils/market-pulse-service';
@@ -86,6 +84,7 @@ export * from './types/portfolio';
 export * from './types/inflation';
 export * from './types/intelligence';
 export * from './types/strategy';
+export type { StreamInfo } from './services/gooddollar-service';
 
 // Export Config
 export * from './config/index';

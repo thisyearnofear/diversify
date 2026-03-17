@@ -1,5 +1,5 @@
 import sdk from '@farcaster/miniapp-sdk';
-import { isMiniPayEnvironment } from '../../../utils/environment';
+import { isMiniPayEnvironment } from '@diversifi/shared';
 
 export interface WalletEnvironment {
   isMiniPay: boolean;

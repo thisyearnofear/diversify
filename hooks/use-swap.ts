@@ -5,16 +5,19 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { 
+import {
     SwapOrchestratorService,
     ProviderFactoryService,
     ChainDetectionService,
-    SwapErrorHandler 
+    SwapErrorHandler,
+    type SwapState,
+    type SwapResult,
+    type SwapParams as OrchestratorSwapParams
 } from '@diversifi/shared';
-import { 
+import {
     isMiniPayEnvironment,
-    getWalletProvider, 
-    setupWalletEventListenersForProvider 
+    getWalletProvider,
+    setupWalletEventListenersForProvider
 } from '@diversifi/shared';
 import { TX_CONFIG } from '../config';
 

@@ -9,19 +9,14 @@
  * This replaces useWealthProtectionAgent with clearer nomenclature.
  */
 
-import { useState, useCallback, useEffect } from "react";
-import { AI_FEATURES, AUTONOMOUS_FEATURES } from "../config/features";
-import type { RegionalInflationData } from "./use-inflation-data";
-import type { MultichainPortfolio } from "./use-multichain-balances";
-import {
-  analyzePortfolio,
-  type PortfolioAnalysis,
-  StrategyService,
-} from "@diversifi/shared";
-import { useAIConversationOptional } from "../context/AIConversationContext";
-import { useToast } from "../components/ui/Toast";
-import { getPersistedStrategy, getStrategyPrompt } from "./useFinancialStrategies";
-import { useWalletContext } from "../components/wallet/WalletProvider";
+import { useMemo } from "react";
+import { AUTONOMOUS_FEATURES } from "../config/features";
+import { useAgentStatus } from "./use-agent-status";
+import { useAgentChat } from "./use-agent-chat";
+import { useAgentAnalysis } from "./use-agent-analysis";
+import { useAgentActivities } from "./use-agent-activities";
+import { useAgentConfig } from "./use-agent-config";
+import { useAgentVoice } from "./use-agent-voice";
 
 // Points to the AI backend. In production, set NEXT_PUBLIC_API_BASE_URL to
 // the Hetzner API server (e.g. https://api.diversifi.famile.xyz).
@@ -29,963 +24,121 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 // ============================================================================
-// TYPES
-// ============================================================================
-
-export interface AgentActivity {
-  id: string;
-  timestamp: number;
-  type: 'analysis' | 'recommendation' | 'execution' | 'payment';
-  tier: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN';
-  description: string;
-  status: 'success' | 'pending' | 'failed';
-  details?: {
-    action?: string;
-    amount?: string;
-    token?: string;
-    txHash?: string;
-    x402Hash?: string;
-    savings?: number;
-    cost?: number;
-  };
-}
-
-export interface AIAdvice {
-  // Level-based classification
-  level: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN';
-  
-  action:
-  | "SWAP"
-  | "HOLD"
-  | "REBALANCE"
-  | "BRIDGE"
-  | "BUY"
-  | "SELL"
-  | "GUIDED_TOUR"
-  | "SEND_TO_FRIEND"; // SocialConnect Integration
-
-  oneLiner: string; // Punchy, single-line summary for mobile/Farcaster
-  targetToken?: string;
-  token?: string; // Alias for targetToken (compatibility)
-  
-  // High-fidelity reasoning for humans
-  reasoning: string;
-  expandableReasoning?: {
-    whyThis: string;
-    risks: string[];
-    alternatives: string;
-    timing: string;
-    technicalDetails?: string;
-  };
-  
-  // Intent details for assistant actions
-  intent?: {
-    type: string;
-    targetAddress?: string;
-    phoneNumber?: string;
-    amount?: string;
-    token?: string;
-  };
-
-  // Autonomous details for Guardian/ArcAgent mode
-  autonomous?: {
-    strategyId: string;
-    lastExecuted?: number;
-    nextCheck?: number;
-    savingsGenerated?: number;
-    x402Evidence?: string; // Link to ArcScan/Payment hash
-    isNanopaymentEnabled: boolean;
-  };
-
-  confidence: number;
-  riskLevel?: "LOW" | "MEDIUM" | "HIGH";
-  dataSources?: string[];
-  expectedSavings?: number;
-  timeHorizon?: string;
-}
-
-// Tour step definition
-export interface TourStep {
-  tab: string;
-  section?: string;
-  title?: string;
-  description?: string;
-}
-
-// Onramp recommendation
-export interface OnrampRecommendation {
-  provider: string;
-  reasoning: string;
-  estimatedFee?: number;
-  estimatedTime?: string;
-  amount?: string;
-  currency?: string;
-  paymentMethod?: string;
-  alternatives?: string[];
-}
-
-export interface AIMessage {
-  role: "user" | "assistant" | "system";
-  content: string;
-  timestamp: Date;
-  type?: "text" | "recommendation" | "insight";
-  action?: {
-    type: "navigate" | "claim_ubi" | "verify_identity";
-    tab?: string;
-    delay?: number;
-  };
-}
-
-export interface AICapabilities {
-  analysis: boolean;
-  voiceInput: boolean;
-  voiceOutput: boolean;
-  chat: boolean;
-  webSearch: boolean;
-}
-
-export interface AutonomousStatus {
-  enabled: boolean;
-  isTestnet: boolean;
-  walletType: "privateKey" | "circle" | "none";
-  spendingLimit: number;
-  spent: number;
-  remaining: number;
-}
-
-interface AIConfig {
-  riskTolerance: "Conservative" | "Balanced" | "Aggressive";
-  goal: string;
-  timeHorizon: string;
-  spendingLimit: number;
-}
-
-// ============================================================================
 // MAIN HOOK
 // ============================================================================
 
 export function useDiversifiAI(useGlobalConversation: boolean = true) {
-  // Core AI state
-  const [advice, setAdvice] = useState<AIAdvice | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [thinkingStep, setThinkingStep] = useState<string>("");
-  const [analysisProgress, setAnalysisProgress] = useState(0);
-  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
-  const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
-  const [portfolioAnalysis, setPortfolioAnalysis] =
-    useState<PortfolioAnalysis | null>(null);
-  const [activities, setActivities] = useState<AgentActivity[]>([]);
+  const { activities, addActivity } = useAgentActivities();
 
-  // Use global conversation context if available and requested
-  const globalConversation = useAIConversationOptional();
-  const { chainId, address } = useWalletContext();
-  const { showToast } = useToast();
-  const isUsingGlobal =
-    useGlobalConversation && globalConversation !== undefined;
-  const messages = isUsingGlobal ? globalConversation!.messages : localMessages;
+  const { capabilities, autonomousStatus, initializeAI } = useAgentStatus();
 
-  // Unified add message function
-  const addMessage = useCallback(
-    (message: AIMessage) => {
-      if (isUsingGlobal) {
-        globalConversation!.addMessage(message);
-      } else {
-        setLocalMessages((prev) => [...prev, message]);
-      }
-    },
-    [isUsingGlobal, globalConversation],
-  );
+  const { config, updateConfig } = useAgentConfig();
 
-  // Unified clear messages function
-  const clearMessages = useCallback(() => {
-    if (isUsingGlobal) {
-      globalConversation!.clearMessages();
-    } else {
-      setLocalMessages([]);
-    }
-  }, [isUsingGlobal, globalConversation]);
-
-  // Activity tracking
-  const addActivity = useCallback((activity: Omit<AgentActivity, 'id' | 'timestamp'>) => {
-    const newActivity: AgentActivity = {
-      ...activity,
-      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-    };
-    setActivities(prev => [newActivity, ...prev].slice(0, 50)); // Keep last 50
-  }, []);
-
-  // Capabilities (from feature flags + server status)
-  const [capabilities, setCapabilities] = useState<AICapabilities>({
-    analysis: AI_FEATURES.ANALYSIS,
-    voiceInput: AI_FEATURES.VOICE_INPUT,
-    voiceOutput: AI_FEATURES.VOICE_OUTPUT,
-    chat: AI_FEATURES.CHAT,
-    webSearch: AI_FEATURES.WEB_SEARCH,
+  const { generateSpeech, transcribeAudio } = useAgentVoice({ apiBase: API_BASE, capabilities });
+  const {
+    messages,
+    isChatting,
+    thinkingStep: chatThinkingStep,
+    sendChatMessage,
+    addMessage,
+    clearMessages,
+  } = useAgentChat({
+    apiBase: API_BASE,
+    capabilities,
+    useGlobalConversation,
+    generateSpeech,
   });
-
-  // Autonomous mode state (separate from core AI)
-  const [autonomousStatus, setAutonomousStatus] =
-    useState<AutonomousStatus | null>(null);
-
-  const [config, setConfig] = useState<AIConfig>({
-    riskTolerance: "Balanced",
-    goal: "Inflation Hedge",
-    timeHorizon: "3 months",
-    spendingLimit: 5.0,
-  });
-
-  // ============================================================================
-  // INITIALIZATION
-  // ============================================================================
-
-  /**
-   * Initialize AI capabilities and check server status
-   * Core AI works independently of autonomous mode
-   */
-  const initializeAI = useCallback(async () => {
-    try {
-      const response = await fetch(`${API_BASE}/api/agent/status`);
-      if (response.ok) {
-        const status = await response.json();
-
-        // Update capabilities from server (validates API keys are working)
-        if (status.capabilities) {
-          setCapabilities({
-            analysis: status.capabilities.analysis ?? AI_FEATURES.ANALYSIS,
-            voiceInput:
-              status.capabilities.transcription ?? AI_FEATURES.VOICE_INPUT,
-            voiceOutput: status.capabilities.speech ?? AI_FEATURES.VOICE_OUTPUT,
-            chat: status.capabilities.analysis ?? AI_FEATURES.CHAT,
-            webSearch: status.capabilities.webSearch ?? AI_FEATURES.WEB_SEARCH,
-          });
-        }
-
-        // Set autonomous status separately (only if enabled)
-        if (AUTONOMOUS_FEATURES.AUTONOMOUS_MODE && status.enabled) {
-          setAutonomousStatus({
-            enabled: true,
-            isTestnet: status.isTestnet ?? true,
-            walletType: status.walletType ?? "none",
-            spendingLimit: status.spendingLimit ?? 5.0,
-            spent: status.spent ?? 0,
-            remaining: status.remaining ?? 5.0,
-          });
-        }
-      }
-    } catch (error) {
-      console.error("[DiversifiAI] Failed to initialize:", error);
-      // Fall back to feature flag defaults
-    }
-  }, []);
-
-  // Auto-initialize on mount
-  useEffect(() => {
-    initializeAI();
-  }, [initializeAI]);
-
-  // ============================================================================
-  // CORE AI FUNCTIONS
-  // ============================================================================
-
-  /**
-   * Analyze portfolio and generate recommendations
-   * Works on any chain (Celo, Arbitrum, etc.)
-   */
-  const analyzePortfolioAI = useCallback(
-    async (
-      inflationData: Record<string, RegionalInflationData>,
-      portfolio: MultichainPortfolio,
-      userGoal?: string,
-      userRegion?: string,
-      analysisGoal?: string,
-      macroData?: Record<string, any>,
-      networkActivity?: any,
-      strategyPrompt?: string,
-    ) => {
-      if (!capabilities.analysis) {
-        console.warn("[DiversifiAI] Analysis not available");
-        return null;
-      }
-
-      setIsAnalyzing(true);
-      setAnalysisProgress(0);
-      setThinkingStep("Initializing protection protocols...");
-
-      let progressInterval: any = null;
-
-      try {
-        // Phase 1: Local Data Collection (0-30%) - Faster progression
-        setAnalysisProgress(10);
-        setThinkingStep("Securing market data...");
-
-        // Simulate data gathering with professional timing
-        await new Promise((resolve) => setTimeout(resolve, 600));
-
-        setAnalysisProgress(25);
-        setThinkingStep("Calibrating inflation models...");
-        const localAnalysis = analyzePortfolio(
-          portfolio,
-          inflationData,
-          userGoal || config.goal,
-          macroData,
-        );
-        setPortfolioAnalysis(localAnalysis);
-
-        // Drift detection: compare current regional allocations against strategy targets
-        const strategy = getPersistedStrategy();
-        if (strategy && localAnalysis.regionalExposure.length > 0 && localAnalysis.totalValue > 0) {
-          const allocations = localAnalysis.regionalExposure.reduce((acc, r) => {
-            acc[r.region as any] = (r.value / localAnalysis.totalValue) * 100;
-            return acc;
-          }, {} as Record<string, number>);
-          const { score, feedback } = StrategyService.calculateScore(strategy, allocations as any);
-          if (score < 60 && feedback.length > 0) {
-            showToast(`⚠️ Strategy drift detected: ${feedback[0]}`, 'warning');
-          }
-        }
-
-        // Phase 2: AI Consultation (25-90%)
-        setAnalysisProgress(35);
-
-        const THEMATIC_MESSAGES = [
-          "Querying World Bank Macro indicators...",
-          "Analyzing IMF Inflation forecasts...",
-          "Fetching DefiLlama yield aggregates...",
-          "Cross-referencing market momentum...",
-          "Scanning on-chain stability protocols...",
-          "Calculating geographic risk premiums...",
-          "Verifying institutional liquidity...",
-          "Optimizing wealth preservation path...",
-          "Finalizing analyst insights...",
-        ];
-
-        let messageIndex = 0;
-        setThinkingStep(THEMATIC_MESSAGES[0]);
-
-        // Enhanced AI analysis via API
-        // Smoother, more realistic progress bar from 35% to 90%
-        progressInterval = setInterval(() => {
-          setAnalysisProgress((prev) => {
-            if (prev >= 90) return 90;
-            if (prev > 80) return Math.round(prev + 0.6);
-            if (prev > 70) return Math.round(prev + 0.9);
-            if (prev > 50) return Math.round(prev + 1.2);
-            return Math.round(prev + 1.6);
-          });
-
-          // Cycle messages every few ticks
-          if (Math.random() > 0.75) {
-            messageIndex = (messageIndex + 1) % THEMATIC_MESSAGES.length;
-            setThinkingStep(THEMATIC_MESSAGES[messageIndex]);
-          }
-        }, 800);
-
-        // Abort after 30s to prevent perpetual loading if the server hangs
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-        const response = await fetch(`${API_BASE}/api/agent/analyze`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            portfolio,
-            inflationData,
-            macroData,
-            networkActivity,
-            goal: analysisGoal || userGoal || config.goal,
-            riskTolerance: config.riskTolerance,
-            userRegion: userRegion,
-            strategyPrompt: strategyPrompt || getStrategyPrompt(), // Auto-inject from persisted strategy if not provided
-          }),
-        });
-        clearTimeout(timeoutId);
-
-        if (progressInterval) {
-          clearInterval(progressInterval);
-          progressInterval = null;
-        }
-
-        setAnalysisProgress(92); // Don't jump to 95% immediately
-        setThinkingStep("Finalizing strategy...");
-
-        // Add a small delay before completing
-        await new Promise((resolve) => setTimeout(resolve, 800));
-
-        if (response.ok) {
-          const result = await response.json();
-          setAnalysisProgress(100);
-          setThinkingStep("Analysis complete!");
-          setAdvice(result.advice);
-          // Reset loading state after brief success display
-          setTimeout(() => {
-            setIsAnalyzing(false);
-            setThinkingStep("");
-            setAnalysisProgress(0);
-          }, 1500);
-          
-          // Track activity
-          addActivity({
-            type: 'analysis',
-            tier: 'ORACLE',
-            description: `Analyzed portfolio: ${result.advice?.oneLiner || 'Portfolio analysis complete'}`,
-            status: 'success',
-            details: {
-              action: result.advice?.action,
-              savings: result.advice?.expectedSavings,
-            },
-          });
-
-          // Surface analysis result in the AI chat drawer so both surfaces stay in sync
-          if (result.advice) {
-            const topAction = result.advice.action
-              ? `\n\n💡 **Top action:** ${result.advice.action}${result.advice.oneLiner ? ` — ${result.advice.oneLiner}` : ''}. Want me to set that up?`
-              : '';
-            const summary = [
-              `📊 **Portfolio Analysis Complete**`,
-              result.advice.oneLiner,
-              result.advice.reasoning ? `\n${result.advice.reasoning}` : '',
-              result.advice.expectedSavings ? `\n💰 Potential savings: $${result.advice.expectedSavings.toFixed(2)}/yr` : '',
-              topAction,
-            ].filter(Boolean).join('\n');
-            addMessage({
-              id: `analysis-${Date.now()}`,
-              role: 'assistant',
-              content: summary,
-              timestamp: Date.now(),
-              type: 'text',
-            });
-          }
-          
-          return result.advice;
-        } else {
-          // Handle non-200 responses gently
-          setThinkingStep("Analysis disrupted. Retrying...");
-          throw new Error(`API returned ${response.status}`);
-        }
-      } catch (error) {
-        console.error("[DiversifiAI] Analysis failed:", error);
-        // Clear interval immediately on error
-        if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
-        setThinkingStep("Connection interrupted. Please retry.");
-        // Reset loading state after brief error display
-        setTimeout(() => {
-          setIsAnalyzing(false);
-          setThinkingStep("");
-          setAnalysisProgress(0);
-        }, 1500);
-      } finally {
-        if (progressInterval) { clearInterval(progressInterval); progressInterval = null; }
-      }
-    },
-    [capabilities.analysis, config],
-  );
-
-  /**
-   * Backward-compatible analyze function (legacy signature)
-   * Supports both old 6-param and new 2-param signatures
-   */
-  const analyze = useCallback(
-    async (
-      inflationData: Record<string, RegionalInflationData>,
-      userBalanceOrPortfolio: number | MultichainPortfolio,
-      currentHoldings?: string[],
-      networkInfo?: { chainId: number; name: string },
-      _multiChainContext?: unknown,
-      aggregatedPortfolio?: MultichainPortfolio,
-      userRegion?: string,
-      analysisGoal?: string,
-      macroData?: Record<string, any>,
-      networkActivity?: any,
-      strategyPrompt?: string,
-    ) => {
-      // Debug: Log the parameters received
-      console.log("[useDiversifiAI] analyze called with:", {
-        hasInflationData: !!inflationData,
-        userRegion: userRegion,
-        analysisGoal: analysisGoal,
-        portfolioType: typeof userBalanceOrPortfolio,
-        portfolioValue:
-          typeof userBalanceOrPortfolio === "number"
-            ? userBalanceOrPortfolio
-            : userBalanceOrPortfolio.totalValue,
-        approach: "Using app-level region settings (no duplicate UI)",
-      });
-
-      // Build portfolio from legacy params if needed
-      let portfolio: MultichainPortfolio;
-      if (typeof userBalanceOrPortfolio === "number") {
-        portfolio = aggregatedPortfolio || {
-          totalValue: userBalanceOrPortfolio,
-          chains: networkInfo
-            ? [
-              {
-                chainId: networkInfo.chainId,
-                chainName: networkInfo.name,
-                balances: [], // Changed from Object.fromEntries to array
-                totalValue: userBalanceOrPortfolio,
-                tokenCount: currentHoldings?.length || 0,
-                isLoading: false,
-                error: null,
-              },
-            ]
-            : [],
-          allTokens: [],
-          tokenMap: {},
-          regionData: [],
-          isLoading: false,
-          isStale: false,
-          errors: [],
-          lastUpdated: Date.now(),
-          chainCount: networkInfo ? 1 : 0,
-          ...({} as any),
-        };
-      } else {
-        portfolio = userBalanceOrPortfolio;
-      }
-
-      return analyzePortfolioAI(
-        inflationData,
-        portfolio,
-        undefined,
-        userRegion,
-        analysisGoal,
-        macroData,
-        networkActivity,
-        strategyPrompt,
-      );
-    },
-    [analyzePortfolioAI],
-  );
-
-  /**
-   * Generate speech from text
-   */
-  const generateSpeech = useCallback(
-    async (text: string): Promise<Blob | null> => {
-      if (!capabilities.voiceOutput) {
-        console.warn("[DiversifiAI] Voice output not available");
-        return null;
-      }
-
-      try {
-        const response = await fetch(`${API_BASE}/api/agent/speak`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
-
-        if (response.ok) {
-          return await response.blob();
-        }
-      } catch (error) {
-        console.error("[DiversifiAI] Speech generation failed:", error);
-      }
-      return null;
-    },
-    [capabilities.voiceOutput],
-  );
-
-  /**
-   * Send chat message to AI
-   */
-  const sendChatMessage = useCallback(
-    async (content: string) => {
-      if (!capabilities.chat) return;
-
-      // NOTE: Callers (useAIOracle.ask, AIChat.handleSubmit) are responsible
-      // for adding the user message to the conversation via addUserMessage().
-      // Do NOT add it here to avoid duplicate user bubbles.
-
-      // FAST PATH: Check for common onboarding questions to provide instant responses
-      const normalizedContent = content.toLowerCase().trim();
-      let fastPathResponse: string | null = null;
-
-      if (
-        normalizedContent.includes("what is diversifi") ||
-        normalizedContent.includes("what is diversify") ||
-        normalizedContent.includes("what's diversifi")
-      ) {
-        fastPathResponse =
-          "DiversiFi is a wealth protection protocol that helps you hedge against inflation by diversifying your stablecoin savings across multiple regions and real-world assets (RWAs). We make it easy to hold a basket of assets like Digital Gold (PAXG), Yield-bearing Treasury Tokens (USDY), and regional stablecoins (like Euro or Celo Real).";
-      } else if (
-        normalizedContent.includes("how does it work") ||
-        normalizedContent.includes("how to start") ||
-        normalizedContent.includes("get started")
-      ) {
-        fastPathResponse =
-          "It's simple: 1. Connect your wallet (or create one with email). 2. Choose a protection strategy or build your own portfolio in the 'Protect' tab. 3. Swap your funds into diversified assets. We handle the routing and optimization to ensure you get the best rates across Celo and Arbitrum.";
-      } else if (
-        normalizedContent.includes("is it safe") ||
-        normalizedContent.includes("is diversifi safe") ||
-        normalizedContent.includes("security")
-      ) {
-        fastPathResponse =
-          "DiversiFi is non-custodial, meaning you always retain full control of your funds. We never store your private keys. All transactions are executed on-chain via secure smart contracts. However, as with all DeFi protocols, there are risks including smart contract bugs and market volatility. Always do your own research.";
-      } else if (
-        normalizedContent.includes("portfolio") ||
-        normalizedContent.includes("what do i have") ||
-        normalizedContent.includes("my balance") ||
-        normalizedContent.includes("my holdings") ||
-        normalizedContent.includes("what's in my wallet") ||
-        normalizedContent.includes("whats in my wallet")
-      ) {
-        if (address) {
-          fastPathResponse = "Taking you to your portfolio... 📊";
-        } else {
-          fastPathResponse = "To see your portfolio, you'll need to connect your wallet first. Click the **Connect Wallet** button and choose your preferred option (email, existing wallet, or 'Buy Crypto'). Once connected, your holdings will appear in the **Overview** tab!";
-        }
-      } else if (
-        normalizedContent.includes("protect") ||
-        normalizedContent.includes("how to protect") ||
-        normalizedContent.includes("inflation protection") ||
-        normalizedContent.includes("hedge against inflation")
-      ) {
-        fastPathResponse = "Taking you to protection strategies... 🛡️";
-      } else if (
-        normalizedContent.includes("swap") ||
-        normalizedContent.includes("exchange") ||
-        normalizedContent.includes("trade") ||
-        normalizedContent.includes("convert") ||
-        normalizedContent.includes("buy") ||
-        normalizedContent.includes("sell")
-      ) {
-        fastPathResponse = address
-          ? "Taking you to the swap interface... 💱"
-          : "To swap tokens, you'll need to connect your wallet first. Click **Connect Wallet** to get started!";
-      } else if (
-        normalizedContent.includes("yield") ||
-        normalizedContent.includes("earn") ||
-        normalizedContent.includes("apy") ||
-        normalizedContent.includes("interest") ||
-        normalizedContent.includes("passive income")
-      ) {
-        fastPathResponse = "Taking you to yield opportunities... 📈";
-      } else if (
-        normalizedContent.includes("strategy") ||
-        normalizedContent.includes("philosophy") ||
-        normalizedContent.includes("africapitalism") ||
-        normalizedContent.includes("buen vivir") ||
-        normalizedContent.includes("islamic finance") ||
-        normalizedContent.includes("confucian")
-      ) {
-        fastPathResponse = "Taking you to strategy selection... 🎯";
-      } else if (
-        normalizedContent.includes("demo") ||
-        normalizedContent.includes("test") ||
-        normalizedContent.includes("try without wallet") ||
-        normalizedContent.includes("play money")
-      ) {
-        fastPathResponse = "Taking you to demo mode... 🎮";
-      } else if (
-        normalizedContent.includes("learn") ||
-        normalizedContent.includes("how to use") ||
-        normalizedContent.includes("tutorial") ||
-        normalizedContent.includes("what is paxg") ||
-        normalizedContent.includes("what is usdy")
-      ) {
-        fastPathResponse = "Taking you to the Learn section... 📚";
-      }
-
-      if (fastPathResponse) {
-        setIsAnalyzing(true);
-        setThinkingStep("Retrieving info...");
-
-        // Determine navigation action based on query type
-        let navAction: { type: "navigate"; tab: string; delay?: number } | undefined;
-        
-        if (address && (
-          normalizedContent.includes("portfolio") ||
-          normalizedContent.includes("what do i have") ||
-          normalizedContent.includes("my balance") ||
-          normalizedContent.includes("my holdings") ||
-          normalizedContent.includes("what's in my wallet") ||
-          normalizedContent.includes("whats in my wallet")
-        )) {
-          navAction = { type: "navigate", tab: "overview", delay: 1500 };
-        } else if (
-          normalizedContent.includes("protect") ||
-          normalizedContent.includes("how to protect") ||
-          normalizedContent.includes("inflation protection") ||
-          normalizedContent.includes("hedge against inflation")
-        ) {
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
-        } else if (
-          normalizedContent.includes("swap") ||
-          normalizedContent.includes("exchange") ||
-          normalizedContent.includes("trade") ||
-          normalizedContent.includes("convert") ||
-          normalizedContent.includes("buy") ||
-          normalizedContent.includes("sell")
-        ) {
-          navAction = { type: "navigate", tab: "swap", delay: 1500 };
-        } else if (
-          normalizedContent.includes("yield") ||
-          normalizedContent.includes("earn") ||
-          normalizedContent.includes("apy") ||
-          normalizedContent.includes("interest") ||
-          normalizedContent.includes("passive income")
-        ) {
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
-        } else if (
-          normalizedContent.includes("strategy") ||
-          normalizedContent.includes("philosophy") ||
-          normalizedContent.includes("africapitalism") ||
-          normalizedContent.includes("buen vivir") ||
-          normalizedContent.includes("islamic finance") ||
-          normalizedContent.includes("confucian")
-        ) {
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
-        } else if (
-          normalizedContent.includes("learn") ||
-          normalizedContent.includes("how to use") ||
-          normalizedContent.includes("tutorial") ||
-          normalizedContent.includes("what is paxg") ||
-          normalizedContent.includes("what is usdy")
-        ) {
-          navAction = { type: "navigate", tab: "info", delay: 1500 };
-        }
-
-        // Simulate a tiny delay for natural interaction feeling
-        setTimeout(async () => {
-          const assistantMessage: AIMessage = {
-            role: "assistant",
-            content: fastPathResponse!,
-            timestamp: new Date(),
-            type: "text",
-            ...(navAction && { action: navAction }),
-          };
-          addMessage(assistantMessage);
-          setIsAnalyzing(false);
-          setThinkingStep("");
-
-          if (capabilities.voiceOutput) {
-            try {
-              const speechBlob = await generateSpeech(fastPathResponse!);
-              if (speechBlob) {
-                const url = URL.createObjectURL(speechBlob);
-                const audio = new Audio(url);
-                audio.play();
-              }
-            } catch (speechError) {
-              console.warn("[DiversifiAI] Auto-speech failed:", speechError);
-            }
-          }
-        }, 600);
-        return;
-      }
-
-      setIsAnalyzing(true);
-      setThinkingStep("Consulting Oracle...");
-
-      const CHAT_THINKING_MESSAGES = [
-        "Analyzing query...",
-        "Scanning market data...",
-        "Checking inflation rates...",
-        "Reviewing RWA yields...",
-        "Consulting historical data...",
-        "Formulating response...",
-      ];
-
-      let messageIndex = 0;
-      const interval = setInterval(() => {
-        setThinkingStep(CHAT_THINKING_MESSAGES[messageIndex]);
-        messageIndex = (messageIndex + 1) % CHAT_THINKING_MESSAGES.length;
-      }, 3000);
-
-      try {
-        const response = await fetch(`${API_BASE}/api/agent/chat`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: content, history: messages, chainId, address, financialStrategy: getPersistedStrategy() }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          const assistantMessage: AIMessage = {
-            role: "assistant",
-            content: result.response,
-            timestamp: new Date(),
-            type: result.type || "text",
-            action: result.action,
-          };
-          addMessage(assistantMessage);
-
-          // Auto-speak the response if voice output is available
-          if (capabilities.voiceOutput) {
-            try {
-              const speechBlob = await generateSpeech(result.response);
-              if (speechBlob) {
-                const url = URL.createObjectURL(speechBlob);
-                const audio = new Audio(url);
-                audio.play();
-              }
-            } catch (speechError) {
-              console.warn("[DiversifiAI] Auto-speech failed:", speechError);
-            }
-          }
-        } else {
-          // Handle API error responses
-          const errorData = await response.json().catch(() => ({ error: "Unknown error" }));
-          console.error("[DiversifiAI] Chat API error:", response.status, errorData);
-          
-          const errorMessage: AIMessage = {
-            role: "assistant",
-            content: `⚠️ **Analysis Unavailable**\n\n${errorData.error || "The AI service is temporarily unavailable. Please try again in a moment."}`,
-            timestamp: new Date(),
-            type: "text",
-          };
-          addMessage(errorMessage);
-        }
-      } catch (error) {
-        console.error("[DiversifiAI] Chat failed:", error);
-        
-        // Handle network errors
-        const errorMessage: AIMessage = {
-          role: "assistant",
-          content: "⚠️ **Connection Error**\n\nUnable to reach the AI service. Please check your connection and try again.",
-          timestamp: new Date(),
-          type: "text",
-        };
-        addMessage(errorMessage);
-      } finally {
-        clearInterval(interval);
-        setIsAnalyzing(false);
-        setThinkingStep("");
-      }
-    },
-    [capabilities.chat, capabilities.voiceOutput, messages, generateSpeech],
-  );
-
-  /**
-   * Transcribe audio to text
-   */
-  const transcribeAudio = useCallback(
-    async (audioBlob: Blob): Promise<string | null> => {
-      if (!capabilities.voiceInput) {
-        console.warn("[DiversifiAI] Voice input not available");
-        return null;
-      }
-
-      try {
-        const formData = new FormData();
-        formData.append("audio", audioBlob);
-
-        const response = await fetch(`${API_BASE}/api/agent/transcribe`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          return result.text;
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error(
-            "[DiversifiAI] Transcription API error:",
-            response.status,
-            errorData,
-          );
-        }
-      } catch (error) {
-        console.error("[DiversifiAI] Transcription network error:", error);
-      }
-      return null;
-    },
-    [capabilities.voiceInput],
-  );
-
-  // ============================================================================
-  // AUTONOMOUS MODE FUNCTIONS (Optional)
-  // ============================================================================
-
-  /**
-   * Run autonomous analysis (only if autonomous mode enabled)
-   * This is the Arc Network / x402 integration
-   */
-  const runAutonomousAnalysis = useCallback(
-    async (
-      inflationData: Record<string, RegionalInflationData>,
-      portfolio: MultichainPortfolio,
-    ) => {
-      if (!AUTONOMOUS_FEATURES.AUTONOMOUS_MODE || !autonomousStatus?.enabled) {
-        console.warn("[DiversifiAI] Autonomous mode not available");
-        return null;
-      }
-
-      setIsAnalyzing(true);
-      setThinkingStep("Running autonomous analysis...");
-
-      try {
-        const response = await fetch(`${API_BASE}/api/agent/deep-analyze`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            portfolio,
-            inflationData,
-            useAutonomousMode: true,
-          }),
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          setAdvice(result.advice);
-          return result.advice;
-        }
-      } catch (error) {
-        console.error("[DiversifiAI] Autonomous analysis failed:", error);
-      } finally {
-        setIsAnalyzing(false);
-        setThinkingStep("");
-      }
-    },
-    [autonomousStatus],
-  );
-
-  // ============================================================================
-  // EXPORTS
-  // ============================================================================
-
-  return {
-    // Core AI
+  const {
     advice,
-    isAnalyzing,
-    thinkingStep,
+    isAnalyzing: isAnalysisRunning,
+    thinkingStep: analysisThinkingStep,
     analysisProgress,
     analysisSteps,
-    messages,
     portfolioAnalysis,
-    capabilities,
-
-    // Actions (with legacy aliases for compatibility)
     analyze,
-    analyzePortfolio: analyzePortfolioAI,
-    sendMessage: sendChatMessage,
-    sendChatMessage,
-    transcribeAudio,
-    generateSpeech,
-    initializeAI,
-
-    // Config
-    config,
-    updateConfig: setConfig,
-
-    // Autonomous mode (optional)
-    autonomousStatus,
+    analyzePortfolio,
     runAutonomousAnalysis,
-
-    // Activity tracking
-    activities,
+    clearAdvice,
+  } = useAgentAnalysis({
+    apiBase: API_BASE,
+    capabilities,
+    config,
+    addMessage,
     addActivity,
+    autonomousStatus,
+    autonomousEnabled: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
+  });
 
-    // Utilities
-    clearMessages,
-    clearConversation: clearMessages,
-    clearAdvice: () => setAdvice(null),
-  };
+  const isAnalyzing = isAnalysisRunning || isChatting;
+  const thinkingStep = isAnalysisRunning ? analysisThinkingStep : chatThinkingStep;
+
+  return useMemo(
+    () => ({
+      // Core AI
+      advice,
+      isAnalyzing,
+      thinkingStep,
+      analysisProgress,
+      analysisSteps,
+      messages,
+      portfolioAnalysis,
+      capabilities,
+
+      // Actions (with legacy aliases for compatibility)
+      analyze,
+      analyzePortfolio,
+      sendMessage: sendChatMessage,
+      sendChatMessage,
+      transcribeAudio,
+      generateSpeech,
+      initializeAI,
+
+      // Config
+      config,
+      updateConfig,
+
+      // Autonomous mode (optional)
+      autonomousStatus,
+      runAutonomousAnalysis,
+
+      // Activity tracking
+      activities,
+      addActivity,
+
+      // Utilities
+      clearMessages,
+      clearConversation: clearMessages,
+      clearAdvice,
+    }),
+    [
+      addActivity,
+      advice,
+      analysisProgress,
+      analysisSteps,
+      analyze,
+      analyzePortfolio,
+      activities,
+      autonomousStatus,
+      capabilities,
+      config,
+      updateConfig,
+      clearAdvice,
+      clearMessages,
+      initializeAI,
+      isAnalyzing,
+      messages,
+      portfolioAnalysis,
+      runAutonomousAnalysis,
+      sendChatMessage,
+      thinkingStep,
+      generateSpeech,
+      transcribeAudio,
+    ],
+  );
 }
 
 // Legacy export for gradual migration
 export { useDiversifiAI as useWealthProtectionAgent };
 export default useDiversifiAI;
+
+export type { AgentActivity, AIAdvice } from "./agent-types";

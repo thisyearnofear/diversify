@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { AIMessage } from '../hooks/use-diversifi-ai';
+import { AIMessage } from '../hooks/agent-types';
 
 // Conversation persistence key
 const CONVERSATION_STORAGE_KEY = 'diversifi-conversation';

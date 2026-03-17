@@ -34,11 +34,11 @@ interface StoredCredits {
   referralCode: string;
 }
 
-function getStorageKey(address?: string) {
+function getStorageKey(address?: string | null) {
   return address ? `${STORAGE_KEY}-${address.toLowerCase()}` : STORAGE_KEY;
 }
 
-function loadStored(address?: string): StoredCredits {
+function loadStored(address?: string | null): StoredCredits {
   try {
     const raw = localStorage.getItem(getStorageKey(address));
     if (raw) return JSON.parse(raw);
@@ -47,7 +47,7 @@ function loadStored(address?: string): StoredCredits {
   return { startedAt: Date.now(), bonusCredits: FREE_TRIAL_CREDITS, completedActions: [], referralCode: code };
 }
 
-function saveStored(data: StoredCredits, address?: string) {
+function saveStored(data: StoredCredits, address?: string | null) {
   try {
     localStorage.setItem(getStorageKey(address), JSON.stringify(data));
   } catch {}

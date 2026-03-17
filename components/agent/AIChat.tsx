@@ -3,7 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useNavigation } from "../../context/app/NavigationContext";
 import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
-import { useDiversifiAI } from "../../hooks/use-diversifi-ai";
+import { useAgentChat } from "../../hooks/use-agent-chat";
+import { useAgentStatus } from "../../hooks/use-agent-status";
+import { useAgentVoice } from "../../hooks/use-agent-voice";
+import { useCredits } from "../../hooks/use-credits";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";
 import dynamic from "next/dynamic";
@@ -11,6 +14,8 @@ import dynamic from "next/dynamic";
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
   ssr: false,
 });
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 // Track user-message count to distinguish "new message added" from "drawer closed"
 function useUserMessageCount(messages: { role: string }[]) {
@@ -31,7 +36,15 @@ export default function AIChat() {
     clearMessages,
     addUserMessage,
   } = useAIConversation();
-  const { isAnalyzing, thinkingStep, sendChatMessage } = useDiversifiAI();
+  const { capabilities } = useAgentStatus();
+  const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
+  const { isChatting, thinkingStep, sendChatMessage } = useAgentChat({
+    apiBase: API_BASE,
+    capabilities,
+    useGlobalConversation: true,
+    generateSpeech,
+  });
+  const { claimReward } = useCredits();
   const { setActiveTab } = useNavigation();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
@@ -45,7 +58,7 @@ export default function AIChat() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isAnalyzing) return;
+    if (!inputValue.trim() || isChatting) return;
     addUserMessage(inputValue.trim());
     sendChatMessage(inputValue.trim());
     setInputValue("");
@@ -56,7 +69,7 @@ export default function AIChat() {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isAnalyzing]);
+  }, [messages, isChatting]);
 
   // Only auto-open the drawer when a NEW user message is added.
   // Using a ref to track the previous count prevents re-opening when the user
@@ -238,7 +251,7 @@ export default function AIChat() {
           ref={scrollRef}
           className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
         >
-          {messages.length === 0 && !isAnalyzing && (
+          {messages.length === 0 && !isChatting && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -353,7 +366,7 @@ export default function AIChat() {
             </motion.div>
           ))}
 
-          {isAnalyzing && (
+          {isChatting && (
             <div className="flex justify-start">
               <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 dark:from-amber-900/20 dark:via-yellow-900/10 dark:to-amber-900/20 rounded-2xl rounded-bl-md px-5 py-4 flex flex-col gap-3 border border-amber-200/50 dark:border-amber-700/30 max-w-[90%] shadow-lg shadow-amber-500/10">
                 {/* Animated Gold Coin Oracle */}

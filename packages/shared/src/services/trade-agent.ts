@@ -44,6 +44,12 @@ export interface AgentPosition {
   lastTrade: number;
 }
 
+interface TradeAgentState {
+  positions: Record<string, AgentPosition>;
+  tradesToday: number;
+  lastReset: number;
+}
+
 export class TradeAgent {
   private provider: providers.JsonRpcProvider;
   private wallet: ethers.Wallet;
@@ -53,6 +59,8 @@ export class TradeAgent {
   private positions: Map<string, AgentPosition> = new Map();
   private tradesToday: number = 0;
   private lastReset: number = Date.now();
+  private stateStorageKey: string;
+  private stateFilePath: string | null = null;
 
   constructor(config: TradeAgentConfig) {
     this.provider = new providers.JsonRpcProvider(config.rpcUrl || NETWORKS.RH_TESTNET.rpcUrl);
@@ -66,6 +74,13 @@ export class TradeAgent {
     this.amm = new Contract(AMM_ADDRESS, AMM_ABI, this.wallet);
     this.tradeSizeETH = config.tradeSizeETH || 0.01;
     this.maxDailyTrades = config.maxDailyTrades || 10;
+    this.stateStorageKey = `diversifi-trade-agent:${this.wallet.address.toLowerCase()}`;
+    this.stateFilePath = this.resolveStateFilePath();
+    void this.initialize();
+  }
+
+  async initialize(): Promise<void> {
+    await this.loadState();
   }
 
   private resetDailyLimits(): void {
@@ -73,6 +88,7 @@ export class TradeAgent {
     if (now - this.lastReset > 24 * 60 * 60 * 1000) {
       this.tradesToday = 0;
       this.lastReset = now;
+      void this.persistState();
     }
   }
 
@@ -194,6 +210,7 @@ export class TradeAgent {
       }
       position.lastTrade = Date.now();
       this.positions.set(trigger.stock, position);
+      void this.persistState();
 
       return {
         success: true,
@@ -250,5 +267,86 @@ export class TradeAgent {
 
   getWalletAddress(): string {
     return this.wallet.address;
+  }
+
+  private resolveStateFilePath(): string | null {
+    const isNode = typeof process !== "undefined" && !!process.versions?.node;
+    if (!isNode) return null;
+    if (process.env.TRADE_AGENT_STATE_PATH) {
+      return process.env.TRADE_AGENT_STATE_PATH;
+    }
+    return `/tmp/diversifi-trade-agent-${this.wallet.address.toLowerCase()}.json`;
+  }
+
+  private async loadState(): Promise<void> {
+    try {
+      const isBrowser = typeof window !== "undefined" && typeof localStorage !== "undefined";
+      if (isBrowser) {
+        const raw = localStorage.getItem(this.stateStorageKey);
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as TradeAgentState;
+        this.applyState(parsed);
+        return;
+      }
+
+      if (this.stateFilePath) {
+        const fs = await import("fs/promises");
+        try {
+          const raw = await fs.readFile(this.stateFilePath, "utf8");
+          if (!raw) return;
+          const parsed = JSON.parse(raw) as TradeAgentState;
+          this.applyState(parsed);
+        } catch (error: any) {
+          if (error?.code !== "ENOENT") {
+            console.warn("[TradeAgent] Failed to read state file:", error);
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("[TradeAgent] Failed to load persisted state:", error);
+    }
+  }
+
+  private applyState(state: TradeAgentState) {
+    if (state && typeof state === "object") {
+      if (state.positions && typeof state.positions === "object") {
+        this.positions = new Map(Object.entries(state.positions));
+      }
+      if (typeof state.tradesToday === "number") {
+        this.tradesToday = state.tradesToday;
+      }
+      if (typeof state.lastReset === "number") {
+        this.lastReset = state.lastReset;
+      }
+    }
+  }
+
+  private buildState(): TradeAgentState {
+    return {
+      positions: Object.fromEntries(this.positions.entries()),
+      tradesToday: this.tradesToday,
+      lastReset: this.lastReset,
+    };
+  }
+
+  private async persistState(): Promise<void> {
+    try {
+      const state = this.buildState();
+      const isBrowser = typeof window !== "undefined" && typeof localStorage !== "undefined";
+      if (isBrowser) {
+        localStorage.setItem(this.stateStorageKey, JSON.stringify(state));
+        return;
+      }
+
+      if (this.stateFilePath) {
+        const fs = await import("fs/promises");
+        const path = await import("path");
+        const dir = path.dirname(this.stateFilePath);
+        await fs.mkdir(dir, { recursive: true });
+        await fs.writeFile(this.stateFilePath, JSON.stringify(state), "utf8");
+      }
+    } catch (error) {
+      console.warn("[TradeAgent] Failed to persist state:", error);
+    }
   }
 }

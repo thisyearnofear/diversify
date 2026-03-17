@@ -22,6 +22,10 @@ export type UserExperienceMode = 'beginner' | 'intermediate' | 'advanced';
 
 // Re-export from shared package to ensure consistency
 export type { FinancialStrategy } from '@diversifi/shared';
+import type { FinancialStrategy as FinancialStrategyType } from '@diversifi/shared';
+
+// Nullable version for local state
+export type NullableFinancialStrategy = FinancialStrategyType | null;
 
 export interface UserActivity {
   swapCount: number;

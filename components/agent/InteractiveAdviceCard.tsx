@@ -5,7 +5,7 @@ import { getTokenDesign } from '../../constants/tokens';
 
 interface InteractiveAdviceCardProps {
     advice: AIAdvice;
-    onSelectAlternative: (alternative: AIAdvice) => void;
+    onSelectAlternative: (alternative: NonNullable<AIAdvice['alternatives']>[number]) => void;
     onExecute: (token: string, amount?: number) => void;
 }
 
@@ -13,7 +13,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
     const [expandedSection, setExpandedSection] = useState<string | null>(null);
     const [selectedPercentage, setSelectedPercentage] = useState(100);
     const [showAlternatives, setShowAlternatives] = useState(false);
-    const [selectedAlternative, setSelectedAlternative] = useState<AIAdvice | null>(null);
+    const [selectedAlternative, setSelectedAlternative] = useState<NonNullable<AIAdvice['alternatives']>[number] | null>(null);
 
     const toggleSection = (section: string) => {
         setExpandedSection(expandedSection === section ? null : section);
@@ -430,7 +430,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                 </div>
                                             </div>
                                             {alt.riskLevel && (
-                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskBadgeColor(alt.riskLevel)}`}>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-full ${getRiskBadgeColor(alt.riskLevel as 'LOW' | 'MEDIUM' | 'HIGH')}`}>
                                                     {alt.riskLevel}
                                                 </span>
                                             )}
@@ -451,8 +451,8 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                             <div className="grid grid-cols-3 gap-2 mb-3">
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
                                                     <div className="text-xs text-gray-500 uppercase">Savings</div>
-                                                    <div className={`text-xs font-bold ${alt.comparisonVsPrimary.savingsDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                                        {alt.comparisonVsPrimary.savingsDiff >= 0 ? '+' : ''}{alt.comparisonVsPrimary.savingsDiff.toFixed(0)}
+                                                    <div className={`text-xs font-bold ${alt.comparisonVsPrimary.savingsDiff && alt.comparisonVsPrimary.savingsDiff >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                        {alt.comparisonVsPrimary.savingsDiff && alt.comparisonVsPrimary.savingsDiff >= 0 ? '+' : ''}{alt.comparisonVsPrimary.savingsDiff?.toFixed(0) || '0'}
                                                     </div>
                                                 </div>
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
@@ -460,7 +460,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                     <div className={`text-xs font-bold ${alt.comparisonVsPrimary.riskDiff === 'LOWER' ? 'text-green-600' :
                                                         alt.comparisonVsPrimary.riskDiff === 'HIGHER' ? 'text-red-600' : 'text-gray-600'
                                                         }`}>
-                                                        {alt.comparisonVsPrimary.riskDiff}
+                                                        {alt.comparisonVsPrimary.riskDiff || 'N/A'}
                                                     </div>
                                                 </div>
                                                 <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
@@ -468,7 +468,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                     <div className={`text-xs font-bold ${alt.comparisonVsPrimary.liquidityDiff === 'BETTER' ? 'text-green-600' :
                                                         alt.comparisonVsPrimary.liquidityDiff === 'WORSE' ? 'text-red-600' : 'text-gray-600'
                                                         }`}>
-                                                        {alt.comparisonVsPrimary.liquidityDiff}
+                                                        {alt.comparisonVsPrimary.liquidityDiff || 'N/A'}
                                                     </div>
                                                 </div>
                                             </div>
@@ -481,7 +481,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                     <div>
                                                         <div className="text-xs font-bold text-green-600 dark:text-green-400 uppercase mb-1">Pros</div>
                                                         <ul className="space-y-1">
-                                                            {alt.pros.slice(0, 2).map((pro, i) => (
+                                                            {alt.pros.slice(0, 2).map((pro: string, i: number) => (
                                                                 <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
                                                                     <span className="text-green-500">✓</span>
                                                                     <span className="flex-1">{pro}</span>
@@ -494,7 +494,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                                     <div>
                                                         <div className="text-xs font-bold text-red-600 dark:text-red-400 uppercase mb-1">Cons</div>
                                                         <ul className="space-y-1">
-                                                            {alt.cons.slice(0, 2).map((con, i) => (
+                                                            {alt.cons.slice(0, 2).map((con: string, i: number) => (
                                                                 <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
                                                                     <span className="text-red-500">×</span>
                                                                     <span className="flex-1">{con}</span>

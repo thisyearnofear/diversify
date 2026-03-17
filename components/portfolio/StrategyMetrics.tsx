@@ -418,6 +418,10 @@ function getStrategyIcon(strategy: FinancialStrategy): string {
         islamic: '☪️',
         global: '🌐',
         custom: '🎯',
+        inflation_protection: '🛡️',
+        geographic_diversification: '🌍',
+        rwa_access: '🥇',
+        exploring: '🔍',
     };
     return strategy ? icons[strategy] : '📊';
 }
@@ -431,6 +435,10 @@ function getStrategyName(strategy: FinancialStrategy): string {
         islamic: 'Islamic Finance',
         global: 'Global',
         custom: 'Custom',
+        inflation_protection: 'Inflation Protection',
+        geographic_diversification: 'Geographic Diversification',
+        rwa_access: 'RWA Access',
+        exploring: 'Exploring',
     };
     return strategy ? names[strategy] : 'Strategy';
 }

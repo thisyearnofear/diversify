@@ -22,6 +22,7 @@ export type TimeHorizon = '1 month' | '3 months' | '1 year';
 
 export interface ProtectionConfig {
   userGoal: UserGoal | null;
+  userRegion: string | null;
   riskTolerance: RiskTolerance | null;
   timeHorizon: TimeHorizon | null;
 }
@@ -50,6 +51,7 @@ const STORAGE_KEY = 'diversifi-protection-profile-v2';
 
 const DEFAULT_CONFIG: ProtectionConfig = {
   userGoal: null,
+  userRegion: null,
   riskTolerance: null,
   timeHorizon: null,
 };
@@ -117,6 +119,7 @@ function loadConfig(): ProtectionConfig {
       const parsed = JSON.parse(stored);
       return {
         userGoal: parsed.userGoal || null,
+        userRegion: parsed.userRegion || null,
         riskTolerance: parsed.riskTolerance || null,
         timeHorizon: parsed.timeHorizon || null,
       };
@@ -329,6 +332,9 @@ export function useProtectionProfile() {
     setUserGoal: useCallback((goal: UserGoal) => updateConfig('userGoal', goal), [updateConfig]),
     setRiskTolerance: useCallback((risk: RiskTolerance) => updateConfig('riskTolerance', risk), [updateConfig]),
     setTimeHorizon: useCallback((time: TimeHorizon) => updateConfig('timeHorizon', time), [updateConfig]),
+    
+    // Alias for updateConfig (backwards compatibility)
+    updateProfile: updateConfig,
   };
 }
 

@@ -1,6 +1,12 @@
 import React, { useEffect, useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDiversifiAI, type AIAdvice } from "../../hooks/use-diversifi-ai";
+import { useAgentStatus } from "../../hooks/use-agent-status";
+import { useAgentChat } from "../../hooks/use-agent-chat";
+import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
+import { useAgentActivities } from "../../hooks/use-agent-activities";
+import { useAgentConfig } from "../../hooks/use-agent-config";
+import { useAgentVoice } from "../../hooks/use-agent-voice";
+import type { AIAdvice } from "../../hooks/agent-types";
 import { createEmptyAnalysis } from "@diversifi/shared";
 import { useAnimatedCounter } from "../../hooks/use-animated-counter";
 import { useToast } from "../ui/Toast";
@@ -19,8 +25,11 @@ import { REGIONS, type Region } from "../../hooks/use-user-region";
 import InteractiveAdviceCard from "../agent/InteractiveAdviceCard";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
+import { AUTONOMOUS_FEATURES } from "../../config/features";
 
 import sdk from "@farcaster/miniapp-sdk";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 const TierBadge = ({ level }: { level: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN' }) => {
   const configs = {
@@ -102,19 +111,40 @@ export default function AIAssistant({
     });
   }, [userRegion, effectiveRegion, effectiveGoal, amount, holdings?.length]);
 
+  const { capabilities, autonomousStatus } = useAgentStatus();
+  const { addActivity } = useAgentActivities();
+  const { config: analysisConfig } = useAgentConfig();
+  const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
+  const {
+    messages,
+    clearMessages,
+    addMessage,
+    isChatting,
+    thinkingStep: chatThinkingStep,
+  } = useAgentChat({
+    apiBase: API_BASE,
+    capabilities,
+    useGlobalConversation: true,
+    generateSpeech,
+  });
   const {
     advice,
-    isAnalyzing,
-    thinkingStep,
+    isAnalyzing: isAnalysisRunning,
+    thinkingStep: analysisThinkingStep,
     analysisProgress,
     analyze,
-    sendMessage,
-    messages,
-    autonomousStatus,
-    capabilities,
-    clearMessages,
     portfolioAnalysis,
-  } = useDiversifiAI();
+  } = useAgentAnalysis({
+    apiBase: API_BASE,
+    capabilities,
+    config: analysisConfig,
+    addMessage,
+    addActivity,
+    autonomousStatus,
+    autonomousEnabled: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
+  });
+  const isAnalyzing = isAnalysisRunning || isChatting;
+  const thinkingStep = isAnalysisRunning ? analysisThinkingStep : chatThinkingStep;
 
   const { stats: networkActivityStats } = useNetworkActivity();
   const { inflationData: liveInflationData } = useInflationData();
@@ -197,11 +227,10 @@ export default function AIAssistant({
     }
   };
 
-  const handleSelectAlternative = (alternative: AIAdvice) => {
-    const token = alternative.token || alternative.targetToken;
+  const handleSelectAlternative = (alternative: NonNullable<AIAdvice['alternatives']>[number]) => {
+    const token = alternative.token;
     if (token) {
       showToast(`Switched to ${token} recommendation`, "success");
-      handleExecuteRecommendation(token, alternative.suggestedAmount);
     }
   };
 
@@ -303,7 +332,7 @@ export default function AIAssistant({
         "voiceQuery",
         handleVoiceQuery as EventListener,
       );
-  }, [sendMessage, addUserMessage, setDrawerOpen]);
+  }, [addUserMessage, setDrawerOpen]);
 
   // ============================================================================
   // EMBEDDED MODE: Compact rendering for integration within other cards
@@ -465,8 +494,8 @@ export default function AIAssistant({
                             animate={{
                               width: `${advice.comparisonProjection
                                 ? (advice.comparisonProjection
-                                  .currentPathValue /
-                                  amount) *
+                                  .currentPathValue || amount) /
+                                  amount *
                                 100
                                 : 85
                                 }%`,
@@ -479,7 +508,7 @@ export default function AIAssistant({
                           {advice.comparisonProjection
                             ? (
                               amount -
-                              advice.comparisonProjection.currentPathValue
+                              (advice.comparisonProjection.currentPathValue || amount)
                             ).toFixed(0)
                             : (amount * 0.15).toFixed(0)}
                         </span>
@@ -498,7 +527,7 @@ export default function AIAssistant({
                         <span className="text-xs text-emerald-600 font-bold w-16 text-right">
                           +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
                             ? advice.comparisonProjection.oraclePathValue -
-                            advice.comparisonProjection.currentPathValue
+                            (advice.comparisonProjection.currentPathValue || amount)
                             : amount * 0.2)} />
                         </span>
                       </div>
@@ -533,23 +562,23 @@ export default function AIAssistant({
                   )}
 
                   {/* Guided Tour Recommendation (embedded mode) */}
-                  {advice.guidedTour &&
+                  {advice.guidedTour && advice.guidedTour.tourId &&
                     !isTourDismissed(advice.guidedTour.tourId) && (
                       <div className="p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl border border-indigo-200">
                         <div className="flex items-start gap-2 mb-2">
                           <span className="text-lg">🎯</span>
                           <div className="flex-1">
                             <h4 className="text-xs font-bold text-indigo-900">
-                              {advice.guidedTour.title}
+                              {advice.guidedTour.steps[0]?.title}
                             </h4>
                             <p className="text-xs text-indigo-700 mt-1">
-                              {advice.guidedTour.description}
+                              {advice.guidedTour.steps[0]?.description}
                             </p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-indigo-600">
-                            💰 {advice.guidedTour.estimatedBenefit}
+                            💰 {advice.guidedTour.steps[0]?.estimatedBenefit}
                           </span>
                           <span className="text-xs text-indigo-500">
                             {advice.guidedTour.steps.length} steps
@@ -564,12 +593,12 @@ export default function AIAssistant({
                               const candidate = migrated || firstStep.tab;
                               if (isTabId(candidate)) {
                                 startTour(
-                                  tour.tourId,
+                                  tour.tourId || 'default-tour',
                                   tour.steps.length,
                                   candidate,
                                   firstStep.section,
                                 );
-                                showToast(`Starting ${tour.title}`, "info");
+                                showToast(`Starting ${firstStep.title}`, "info");
                               } else {
                                 showToast("Tour has an invalid starting tab.", "error");
                               }
@@ -580,7 +609,7 @@ export default function AIAssistant({
                           </button>
                           <button
                             onClick={() =>
-                              dismissTour(advice.guidedTour!.tourId)
+                              dismissTour(advice.guidedTour!.tourId || 'default-tour')
                             }
                             className="px-3 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-bold"
                           >
@@ -1152,7 +1181,7 @@ export default function AIAssistant({
                             {advice.comparisonProjection
                               ? (
                                 amount -
-                                advice.comparisonProjection.currentPathValue
+                                (advice.comparisonProjection.currentPathValue || amount)
                               ).toFixed(2)
                               : (amount * 0.15).toFixed(2)}
                           </span>
@@ -1163,8 +1192,8 @@ export default function AIAssistant({
                             animate={{
                               width: `${advice.comparisonProjection
                                 ? (advice.comparisonProjection
-                                  .currentPathValue /
-                                  amount) *
+                                  .currentPathValue || amount) /
+                                  amount *
                                 100
                                 : 85
                                 }%`,
@@ -1174,9 +1203,9 @@ export default function AIAssistant({
                         </div>
                         <div className="text-xs text-gray-400">
                           Value: $
-                          {advice.comparisonProjection?.currentPathValue.toFixed(
+                          {(advice.comparisonProjection?.currentPathValue || amount * 0.85).toFixed(
                             2,
-                          ) || (amount * 0.85).toFixed(2)}
+                          )}
                         </div>
                       </div>
 
@@ -1186,7 +1215,7 @@ export default function AIAssistant({
                           <span className="text-green-600">
                             +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
                               ? advice.comparisonProjection.oraclePathValue -
-                              advice.comparisonProjection.currentPathValue
+                              (advice.comparisonProjection.currentPathValue || amount)
                               : amount * 0.2)} />
                           </span>
                         </div>
@@ -1268,7 +1297,7 @@ export default function AIAssistant({
                             onClick={() => {
                               // Show full rebalancing plan in a modal or expand
                               showToast(
-                                `Full plan: ${advice.targetAllocation?.map((a) => `${a.symbol} ${a.percentage}%`).join(", ")}`,
+                                `Full plan: ${advice.targetAllocation?.map((a: { token: string; percentage: number; symbol?: string }) => `${a.symbol || a.token} ${a.percentage}%`).join(", ")}`,
                                 "info",
                               );
                             }}
@@ -1343,15 +1372,15 @@ export default function AIAssistant({
                             Inflation Risk
                           </div>
                           <div
-                            className={`text-sm font-bold ${advice.portfolioAnalysis.weightedInflationRisk > 5
+                            className={`text-sm font-bold ${advice.portfolioAnalysis.weightedInflationRisk && advice.portfolioAnalysis.weightedInflationRisk > 5
                               ? "text-red-600"
                               : advice.portfolioAnalysis
-                                .weightedInflationRisk > 3
+                                .weightedInflationRisk && advice.portfolioAnalysis.weightedInflationRisk > 3
                                 ? "text-amber-600"
                                 : "text-green-600"
                               }`}
                           >
-                            {advice.portfolioAnalysis.weightedInflationRisk.toFixed(
+                            {(advice.portfolioAnalysis.weightedInflationRisk || 0).toFixed(
                               1,
                             )}
                             %
@@ -1381,16 +1410,16 @@ export default function AIAssistant({
                             Top Opportunity
                           </div>
                           <div className="text-xs text-blue-800">
-                            {advice.portfolioAnalysis.topOpportunity.fromToken}{" "}
-                            → {advice.portfolioAnalysis.topOpportunity.toToken}
+                            {advice.portfolioAnalysis.topOpportunity?.fromToken}{" "}
+                            → {advice.portfolioAnalysis.topOpportunity?.toToken}
                             <span className="text-green-600 ml-1">
                               (+$
-                              {advice.portfolioAnalysis.topOpportunity.annualSavings?.toFixed(
+                              {advice.portfolioAnalysis.topOpportunity?.annualSavings?.toFixed(
                                 2,
-                              ) ??
-                                advice.portfolioAnalysis.topOpportunity.potentialSavings.toFixed(
+                              ) ?? (
+                                advice.portfolioAnalysis.topOpportunity?.potentialSavings?.toFixed(
                                   2,
-                                )}
+                                ) || '0.00')}
                               /year)
                             </span>
                           </div>

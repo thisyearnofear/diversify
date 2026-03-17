@@ -9,12 +9,21 @@
  * - ENHANCEMENT FIRST: Enhanced with activity feed and performance metrics inline.
  */
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { useDiversifiAI, AgentActivity } from '../../hooks/use-diversifi-ai';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useAgentStatus } from '../../hooks/use-agent-status';
+import { useAgentActivities } from '../../hooks/use-agent-activities';
+import { useAgentAnalysis } from '../../hooks/use-agent-analysis';
+import { useAgentChat } from '../../hooks/use-agent-chat';
+import { useAgentConfig } from '../../hooks/use-agent-config';
+import type { AgentActivity } from '../../hooks/agent-types';
 import { useExperience } from '../../context/app/ExperienceContext';
 import { useSessionKey } from '../../hooks/use-session-key';
 import { useWalletContext } from '../wallet/WalletProvider';
 import { motion, AnimatePresence } from 'framer-motion';
+import { agentEventBus } from '../../hooks/agent-event-bus';
+import { AUTONOMOUS_FEATURES } from '../../config/features';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 export const AgentTierStatus: React.FC<{
   isMiniPay?: boolean;
@@ -22,7 +31,29 @@ export const AgentTierStatus: React.FC<{
   showActivityFeed?: boolean;
   onNavigateToAgent?: () => void;
 }> = ({ isMiniPay, isFarcaster, showActivityFeed = false, onNavigateToAgent }) => {
-  const { capabilities, autonomousStatus, isAnalyzing, thinkingStep, activities, addActivity } = useDiversifiAI();
+  const { capabilities, autonomousStatus } = useAgentStatus();
+  const { activities, addActivity } = useAgentActivities();
+  const { config } = useAgentConfig();
+  const {
+    addMessage,
+    isChatting,
+    thinkingStep: chatThinkingStep,
+  } = useAgentChat({
+    apiBase: API_BASE,
+    capabilities,
+    useGlobalConversation: true,
+  });
+  const { isAnalyzing: isAnalysisRunning, thinkingStep: analysisThinkingStep } = useAgentAnalysis({
+    apiBase: API_BASE,
+    capabilities,
+    config,
+    addMessage,
+    addActivity,
+    autonomousStatus,
+    autonomousEnabled: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
+  });
+  const isAnalyzing = isAnalysisRunning || isChatting;
+  const thinkingStep = isAnalysisRunning ? analysisThinkingStep : chatThinkingStep;
   const { experienceMode } = useExperience();
   const [expandedTier, setExpandedTier] = useState<'oracle' | 'assistant' | 'guardian' | null>(null);
 
@@ -37,6 +68,29 @@ export const AgentTierStatus: React.FC<{
   // Tier 3: The Guardian (Autonomous)
   const guardianActive = autonomousStatus?.enabled;
   const guardianStatus = guardianActive ? 'Protecting' : 'Advisory';
+
+  useEffect(() => {
+    const unsubscribe = agentEventBus.on<{ advice: any; timestamp: number }>(
+      "oracle:analysis",
+      ({ advice }) => {
+        if (!guardianActive) return;
+        addActivity({
+          type: 'recommendation',
+          tier: 'GUARDIAN',
+          description: 'Guardian received Oracle signal for follow-up review',
+          status: 'pending',
+          details: {
+            action: advice?.action,
+            savings: advice?.expectedSavings,
+          },
+        });
+      },
+    );
+
+    return () => {
+      unsubscribe();
+    };
+  }, [addActivity, guardianActive]);
 
   // Session Key (ERC-7715) for non-custodial Guardian
   const { address, chainId } = useWalletContext();

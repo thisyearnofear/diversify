@@ -36,7 +36,7 @@ interface StrategyModalProps {
 
 export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWallet, isWalletConnected, chainId }: StrategyModalProps) {
     const { financialStrategy, setFinancialStrategy } = useStrategy();
-    const { config: profileConfig, updateProfile } = useProtectionProfile();
+    const { config: profileConfig, setMultipleConfig } = useProtectionProfile();
     const [step, setStep] = useState<'welcome' | 'region' | 'goal' | 'select' | 'interface' | 'paper-trading' | 'confirm'>('welcome');
     const [currentIndex, setCurrentIndex] = useState(0);
     const [selected, setSelected] = useState<FinancialStrategy | null>(financialStrategy || null);
@@ -73,7 +73,7 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
         } else if (selected === 'custom') {
             // Custom strategy goes straight to app
             setFinancialStrategy(selected);
-            updateProfile({
+            setMultipleConfig({
                 userRegion: selectedRegion as any,
                 userGoal: selectedGoal as any,
             });
@@ -91,7 +91,7 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
         }
         
         // Save profile choices
-        updateProfile({
+        setMultipleConfig({
             userRegion: selectedRegion as any,
             userGoal: selectedGoal as any,
         });
