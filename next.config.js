@@ -27,6 +27,7 @@ const nextConfig = {
         child_process: false,
         readline: false,
         zlib: false,
+        'dtrace-provider': false,
         stream: false,
         util: false,
         buffer: false,

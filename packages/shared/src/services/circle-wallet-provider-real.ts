@@ -5,7 +5,6 @@
  * This replaces the mock CircleWalletProvider in arc-agent.ts
  */
 
-import { initiateDeveloperControlledWalletsClient } from "@circle-fin/developer-controlled-wallets";
 import { ethers } from 'ethers';
 import type { AgentWalletProvider } from './arc-agent';
 
@@ -22,16 +21,11 @@ export class RealCircleWalletProvider implements AgentWalletProvider {
     private walletAddress: string | null = null;
     private blockchain: string = 'ARC-TESTNET';
     private initialized: boolean = false;
+    private config: CircleWalletConfig;
 
     constructor(config: CircleWalletConfig) {
         this.walletId = config.walletId;
-
-        // Initialize Circle SDK client
-        this.client = initiateDeveloperControlledWalletsClient({
-            apiKey: config.apiKey,
-            entitySecret: config.entitySecret,
-            baseUrl: config.baseUrl
-        });
+        this.config = config;
     }
 
     /**
@@ -45,6 +39,16 @@ export class RealCircleWalletProvider implements AgentWalletProvider {
 
         try {
             console.log(`[Circle Wallet] Initializing wallet ${this.walletId}...`);
+
+            // Dynamic import to avoid client-side bundling/crash issues
+            const { initiateDeveloperControlledWalletsClient } = await import("@circle-fin/developer-controlled-wallets");
+
+            // Initialize Circle SDK client
+            this.client = initiateDeveloperControlledWalletsClient({
+                apiKey: this.config.apiKey,
+                entitySecret: this.config.entitySecret,
+                baseUrl: this.config.baseUrl
+            });
 
             const response = await this.client.getWallet({ id: this.walletId });
 
