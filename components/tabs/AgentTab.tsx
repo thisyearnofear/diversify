@@ -21,6 +21,7 @@ import { useAIOracle } from '../../hooks/use-ai-oracle';
 import { useNavigation } from '../../context/app/NavigationContext';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import { AUTONOMOUS_FEATURES } from '../../config/features';
+import { Skeleton } from '../shared/TabComponents';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -31,7 +32,7 @@ interface AgentTabProps {
 }
 
 export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTabProps) {
-  const { capabilities, autonomousStatus } = useAgentStatus();
+  const { capabilities, autonomousStatus, isLoading: isStatusLoading } = useAgentStatus();
   const { config, updateConfig } = useAgentConfig();
   const { addActivity } = useAgentActivities();
   const noopMessage = useCallback(() => {}, []);
@@ -67,12 +68,25 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
         </p>
       </div>
 
-      {/* Enhanced Tier Status with Activity Feed */}
-      <AgentTierStatus 
-        isMiniPay={isMiniPay} 
-        isFarcaster={isFarcaster}
-        showActivityFeed={true}
-      />
+      {/* Enhanced Tier Status with Activity Feed - with skeleton loader */}
+      {isStatusLoading ? (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 space-y-4">
+          <div className="flex items-center gap-3">
+            <Skeleton className="w-12 h-12" variant="circle" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-32" variant="text" />
+              <Skeleton className="h-3 w-24" variant="text" />
+            </div>
+          </div>
+          <Skeleton className="h-20 w-full" variant="rect" />
+        </div>
+      ) : (
+        <AgentTierStatus 
+          isMiniPay={isMiniPay} 
+          isFarcaster={isFarcaster}
+          showActivityFeed={true}
+        />
+      )}
 
       {/* Actionable Recommendations — non-beginner only, shown when analysis exists */}
       {experienceMode !== 'beginner' && (

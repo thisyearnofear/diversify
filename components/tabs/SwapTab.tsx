@@ -11,7 +11,7 @@ import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import { getChainAssets, NETWORKS, isTestnetChain } from "../../config";
 import { ChainDetectionService, StrategyService } from "@diversifi/shared";
 import { getPersistedStrategy } from "../../hooks/useFinancialStrategies";
-import { TabHeader, Card, ConnectWalletPrompt } from "../shared/TabComponents";
+import { TabHeader, Card, ConnectWalletPrompt, Skeleton } from "../shared/TabComponents";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useNavigation } from "../../context/app/NavigationContext";
@@ -432,12 +432,20 @@ export default function SwapTab({
 
         {/* Hide chain balances header for beginners */}
         {address && !isBeginner && (
-          <ChainBalancesHeader
-            chains={chainBalancesData}
-            currentChainId={walletChainId}
-            onSwitchChain={handleSwitchChain}
-            isLoading={isMultichainLoading}
-          />
+          isMultichainLoading ? (
+            <div className="flex gap-2 py-2">
+              <Skeleton className="flex-1 h-16" variant="rect" />
+              <Skeleton className="flex-1 h-16" variant="rect" />
+              <Skeleton className="flex-1 h-16" variant="rect" />
+            </div>
+          ) : (
+            <ChainBalancesHeader
+              chains={chainBalancesData}
+              currentChainId={walletChainId}
+              onSwitchChain={handleSwitchChain}
+              isLoading={isMultichainLoading}
+            />
+          )
         )}
 
         {/* Hide search for beginners */}
@@ -545,11 +553,17 @@ export default function SwapTab({
             />
 
             {isTradeableLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-2"></div>
-                <span className="text-sm text-gray-500">
-                  Loading available tokens...
-                </span>
+              <div className="space-y-4 py-4">
+                {/* Token selector skeleton */}
+                <div className="flex gap-3">
+                  <Skeleton className="flex-1 h-12" variant="rect" />
+                  <Skeleton className="w-10 h-12" variant="rect" />
+                  <Skeleton className="flex-1 h-12" variant="rect" />
+                </div>
+                {/* Amount input skeleton */}
+                <Skeleton className="h-12 w-full" variant="rect" />
+                {/* Swap button skeleton */}
+                <Skeleton className="h-14 w-full" variant="rect" />
               </div>
             ) : (
               <SwapInterface
