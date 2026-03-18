@@ -1,19 +1,47 @@
 # Architecture
 
-Technical system design and technology stack for DiversiFi.
+Technical system design and technology stack for DiversiFi (2026 Edition).
 
 ## System Overview
 
 ```
 ┌─────────────────────────┐         ┌─────────────────────────┐
 │ Static Web Frontend     │         │ Long-running AI API    │
-│ (CDN-hosted)            │ ──────► │ (extended timeouts)    │
+│ (CDN-hosted)            │ ──────► │ (Arc Agent Hub)        │
 └─────────────────────────┘         └─────────────────────────┘
 ```
 
 **Why hybrid?**
 - Static hosting: Fast global delivery, simple scaling
-- Separate API: Handles AI operations beyond serverless limits
+- Separate API: Handles autonomous AI operations and cross-chain orchestration
+
+## Autonomous Agent Architecture (2026 "Hub & Spoke")
+
+We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and orchestrates actions across other chains.
+
+```
+       [ HUB: ARC L1 ]
+    The "Brain" & "Fuel Tank"
+  ┌───────────────────────────┐
+  │ User-Specific Agent Wallet│
+  │ (Circle MPC Sub-Account)  │◄─── [ USER FUNDED ]
+  │ Balance: USDC (Gas)       │
+  └─────────────┬─────────────┘
+                │
+        [ CROSS-CHAIN CCTP ]
+                │
+  ┌─────────────┴─────────────┐
+  ▼                           ▼
+[ SPOKE: ARBITRUM ]       [ SPOKE: HYPERLIQUID ]
+  Yield & RWA                 Hedging & Risk
+- USDY (Ondo)               - 1x Short Hedges
+- Uniswap V3                - Perps Trading
+```
+
+### The "Agent Fuel" Model
+*   **Custody**: User-funded, Developer-controlled (via Circle MPC).
+*   **Gas**: Native USDC on Arc L1. The agent pays for its own compute and Oracle data fees (x402) using its internal balance.
+*   **Lease**: Users grant permissions via **ERC-6900** modules (e.g., "Spend max $10/day on yield strategies").
 
 ## Technology Stack
 
@@ -23,45 +51,38 @@ Technical system design and technology stack for DiversiFi.
 - **Reown AppKit** - WalletConnect (email, social, wallets)
 - **Farcaster SDK** - Social integration
 
-### Backend
-- **AI**: Venice AI (primary), Gemini 3.0 (fallback)
-- **State**: React Context + SWR
-- **API**: Next.js API routes
+### Backend & AI
+- **Arc Agent**: Autonomous "Guardian" living on Arc L1
+- **Circle MPC**: User-scoped sub-wallets for agent autonomy
+- **Venice AI**: Primary reasoning engine (privacy-focused)
+- **Gemini 2.0**: Fallback high-speed reasoning
 
-### Blockchain
-- **Celo**: Mento protocol swaps
-- **Arbitrum**: 1inch aggregation, Uniswap V3
-- **Cross-chain**: LiFi SDK
-- **Wallets**: MetaMask, Coinbase, MiniPay, Circle
-
-### Data Providers
-- World Bank API - Macro indicators
-- FRED - US economic data
-- CoinGecko - Crypto pricing
-- DeFiLlama - Yield data
-- Yahoo Finance - Emerging market stock prices (unofficial)
-- Alpha Vantage - Stock price fallback
-- Finnhub - Real-time stock prices
+### Blockchain Network
+- **Arc L1 (Hub)**: Agent logic, Native USDC gas, Data payments
+- **Celo (Spoke)**: Social payments (MiniPay), Stablecoin swaps (Mento)
+- **Arbitrum (Spoke)**: RWA (Ondo), DeFi Yield
+- **Hyperliquid (Spoke)**: Risk hedging (Perps)
+- **Cross-chain**: Circle CCTP (Bridge), LiFi (Aggregator)
 
 ## Multi-Chain Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Celo Network  │    │  Arbitrum       │    │  RH Testnet     │
-│ - USDm, EURm    │    │ - USDC, USDY    │    │ - ACME, WAYNE   │
-│ - Mento swaps   │    │ - 1inch swaps   │    │ - AMM (x*y=k)   │
+│   Celo Network  │    │  Arbitrum       │    │  Hyperliquid    │
+│ - USDm, EURm    │    │ - USDC, USDY    │    │ - Hedges        │
+│ - Mento swaps   │    │ - 1inch swaps   │    │ - Perps         │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                      │
          └───────────────────────┘                      │
               Cross-chain bridges          Dedicated /trade page
 
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Celo Sepolia Testnet                         │
+│                    Arc L1 (Agent Hub)                           │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Emerging Markets Exchange                               │   │
-│  │  - Real stocks: SAFCOM, DANGOTE, PETROBRAS (track)      │   │
-│  │  - Fictional: WAKANDA, ARASAKA, MISHIMA (trade)         │   │
-│  │  - Price feeds: Yahoo Finance, Alpha Vantage            │   │
+│  │  Autonomous Agent Logic                                 │   │
+│  │  - Risk Models                                          │   │
+│  │  - Data Purchasing (x402)                               │   │
+│  │  - Cross-Chain Orchestration                            │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -116,12 +137,13 @@ This allows users to learn about real emerging market stocks while practicing tr
 
 | Chain | Strategy | Priority |
 |-------|----------|----------|
+| Arc L1 | ArcAgentStrategy | 100 |
+| Hyperliquid | HedgeStrategy | 100 |
 | Celo Mainnet | MentoSwapStrategy | 100 |
 | Celo Sepolia | MentoSwapStrategy | 100 |
 | Celo Sepolia | EmergingMarketsStrategy | 95 |
 | Arbitrum | OneInchSwapStrategy | 90 |
 | Arbitrum | UniswapV3Strategy | 80 |
-| Arc Testnet | CurveArcStrategy | 100 |
 | RH Testnet | RobinhoodAMMStrategy | 100 |
 
 ### Emerging Markets Strategy
@@ -142,22 +164,23 @@ export const NETWORKS = {
   ARBITRUM_ONE: { chainId: 42161, ... },
   ARC_TESTNET: { chainId: 5042002, ... },
   RH_TESTNET: { chainId: 46630, ... },
+  HYPERLIQUID: { chainId: 999, ... },
 };
 ```
 
 ## Security Measures
 
-- Client-side wallet integration (no private keys stored)
-- Transaction validation and slippage protection
-- Rate limiting on API endpoints
-- Input sanitization
+- **Agent Isolation**: Each user gets a dedicated MPC sub-wallet; no shared liquidity.
+- **Spending Limits**: Strict daily caps enforced by ERC-6900 logic.
+- **Client-side**: Standard wallet integration (no private keys stored).
+- **Transaction validation**: Slippage protection & Rate limiting.
 
 ## Performance
 
-- Code splitting for large components
-- SWR for server state with caching
-- Image optimization and lazy loading
-- Bundle size monitoring
+- **Native USDC Gas**: Eliminates swap-for-gas steps on Arc L1.
+- **Code splitting**: Large components lazy-loaded.
+- **SWR**: Server state caching.
+- **Bundle size**: Monitored.
 
 ## Directory Structure
 

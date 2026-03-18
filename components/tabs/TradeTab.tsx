@@ -29,6 +29,10 @@ import {
   type FictionalCompany,
 } from "../../config/emerging-markets";
 import { useWatchlist } from "../../hooks/use-watchlist";
+import { useMultichainBalances } from "../../hooks/use-multichain-balances";
+import { useNavigation } from "../../context/app/NavigationContext";
+import DiversificationHealthCard from "../trade/DiversificationHealthCard";
+import type { RebalancingOpportunity } from "@diversifi/shared";
 
 const RH_CHAIN_ID = NETWORKS.RH_TESTNET.chainId;
 const AMM_ADDRESS = BROKER_ADDRESSES.RH_TESTNET;
@@ -67,9 +71,32 @@ export default function TradeTab() {
   const { address, chainId, switchNetwork, isConnected, connect } =
     useWalletContext();
   const { experienceMode } = useExperience();
+  const { navigateToSwap } = useNavigation();
 
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
+
+  // Portfolio analysis for diversification health
+  const { 
+    diversificationScore, 
+    diversificationRating,
+    totalValue,
+    regionalExposure,
+    missingRegions,
+    rebalancingOpportunities,
+    diversificationTips,
+    isLoading: isPortfolioLoading 
+  } = useMultichainBalances(address);
+
+  // Handle diversification action - navigate to swap with prefill
+  const handleDiversificationAction = (opp: RebalancingOpportunity) => {
+    navigateToSwap({
+      fromToken: opp.fromToken,
+      toToken: opp.toToken,
+      amount: opp.suggestedAmount.toFixed(2),
+      reason: `Diversification: Reduce ${opp.fromRegion} exposure, add ${opp.toRegion} (${opp.inflationDelta.toFixed(1)}% inflation reduction)`,
+    });
+  };
 
   // --- State ---
   const [activeMarket, setActiveMarket] = useState<MarketType>("emerging-markets");
@@ -78,6 +105,7 @@ export default function TradeTab() {
   const [selectedEmergingCompany, setSelectedEmergingCompany] = useState<FictionalCompany>(FICTIONAL_EMERGING_MARKET_COMPANIES[0]);
   const [mode, setMode] = useState<TradeMode>("buy");
   const [inputAmount, setInputAmount] = useState("");
+  const [showAdvancedInsights, setShowAdvancedInsights] = useState(false);
   const [quote, setQuote] = useState<string | null>(null);
   const [priceImpact, setPriceImpact] = useState<number | null>(null);
   const [isQuoting, setIsQuoting] = useState(false);
@@ -130,6 +158,7 @@ export default function TradeTab() {
   const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
   const [realStockPrice, setRealStockPrice] = useState<number | null>(null);
   const [showAllRobinhood, setShowAllRobinhood] = useState(false);
+  const [showAllFictional, setShowAllFictional] = useState(false);
   const [baseAsset, setBaseAsset] = useState<"ETH" | "BTC">("ETH");
   const [basePrices, setBasePrices] = useState<Record<"ETH" | "BTC", number>>({
     ETH: 3500,
@@ -580,6 +609,7 @@ export default function TradeTab() {
     const rate = liveRates[stock];
     const isWatched = isInRobinhoodWatchlist(stock);
     const isSelected = selected === stock;
+    const isFictional = isFictionalStock(stock);
 
     return (
       <div
@@ -601,7 +631,17 @@ export default function TradeTab() {
         <div className="flex items-center gap-3">
           <span className="text-2xl">{d.icon}</span>
           <div>
-            <div className="font-bold text-sm">{stock}</div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm">{stock}</span>
+              {/* Asset type badge */}
+              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-tighter ${
+                isFictional 
+                  ? 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'
+                  : 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400'
+              }`}>
+                {isFictional ? '🎮 SIM' : '📡 LIVE'}
+              </span>
+            </div>
             <div className="text-xs text-gray-500">{d.name}</div>
           </div>
         </div>
@@ -725,6 +765,58 @@ export default function TradeTab() {
           </div>
         </button>
       </div>
+
+      {/* Diversification Health Card - Shows portfolio gaps and recommendations */}
+      {isConnected && (
+        <DiversificationHealthCard
+          analysis={isPortfolioLoading ? null : {
+            diversificationScore,
+            diversificationRating,
+            totalValue,
+            regionalExposure,
+            missingRegions,
+            rebalancingOpportunities,
+            diversificationTips,
+            tokenCount: regionalExposure?.length || 0,
+            regionCount: regionalExposure?.length || 0,
+            tokens: [],
+            weightedInflationRisk: 0,
+            concentrationRisk: "LOW",
+            goalScores: { hedge: 0, diversify: diversificationScore, rwa: 0 },
+            totalAnnualYield: 0,
+            totalInflationCost: 0,
+            netAnnualGain: 0,
+            avgYieldRate: 0,
+            netRate: 0,
+            isNetPositive: true,
+            overExposedRegions: [],
+            underExposedRegions: [],
+            goalAnalysis: {
+              userGoal: "exploring",
+              title: "Portfolio Analysis",
+              description: "Analyzing your holdings to find diversification opportunities.",
+              recommendations: rebalancingOpportunities || [],
+            },
+            targetAllocations: {
+              inflation_protection: [],
+              geographic_diversification: [],
+              rwa_access: [],
+              exploring: [],
+            },
+            hyperliquidExposure: {
+              totalValue: 0,
+              percentage: 0,
+              positions: [],
+            },
+            projections: {
+              currentPath: { value1Year: 0, value3Year: 0, purchasingPowerLost: 0 },
+              optimizedPath: { value1Year: 0, value3Year: 0, purchasingPowerPreserved: 0 },
+            },
+          } as any}
+          isLoading={isPortfolioLoading}
+          onTakeAction={handleDiversificationAction}
+        />
+      )}
 
       {/* Emerging Markets View */}
       {activeMarket === "emerging-markets" && (
@@ -939,11 +1031,21 @@ export default function TradeTab() {
                   <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">
                     🎮 Fictional Companies
                   </h4>
-                  <span className="text-xs text-gray-400">{FICTIONAL_STOCKS.length} stocks</span>
+                  <span className="text-xs text-gray-400">
+                    {showAllFictional ? FICTIONAL_STOCKS.length : Math.min(3, FICTIONAL_STOCKS.length)} of {FICTIONAL_STOCKS.length}
+                  </span>
                 </div>
                 <div className="space-y-2">
-                  {FICTIONAL_STOCKS.map((stock) => renderStockItem(stock))}
+                  {(showAllFictional ? FICTIONAL_STOCKS : FICTIONAL_STOCKS.slice(0, 3)).map((stock) => renderStockItem(stock))}
                 </div>
+                {!showAllFictional && FICTIONAL_STOCKS.length > 3 && (
+                  <button
+                    onClick={() => setShowAllFictional(true)}
+                    className="w-full py-3 text-sm font-bold text-purple-600 bg-purple-50 dark:bg-purple-900/20 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition"
+                  >
+                    Show All {FICTIONAL_STOCKS.length} Fictional Stocks
+                  </button>
+                )}
               </div>
             )}
 
@@ -1106,15 +1208,42 @@ export default function TradeTab() {
 
               {/* Trade/Earn Control Card */}
               <div className="space-y-4">
-                <TradeIntelligence
-                  items={intelligenceItems}
-                  selectedAsset={selected}
-                  isAdvanced={isAdvanced}
-                  isLoading={isLoadingIntelligence}
-                />
-
-                {/* Portfolio Risk Widget - SynthData Risk Intelligence */}
-                <PortfolioRiskWidget />
+                {/* Advanced Insights - Collapsible */}
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <button
+                    onClick={() => setShowAdvancedInsights(!showAdvancedInsights)}
+                    className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                      <span>📊</span>
+                      Advanced Insights
+                    </span>
+                    <svg
+                      className={`w-4 h-4 text-gray-400 transition-transform ${showAdvancedInsights ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {showAdvancedInsights && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="p-3 space-y-3 border-t border-gray-200 dark:border-gray-700"
+                    >
+                      <TradeIntelligence
+                        items={intelligenceItems}
+                        selectedAsset={selected}
+                        isAdvanced={isAdvanced}
+                        isLoading={isLoadingIntelligence}
+                      />
+                      <PortfolioRiskWidget />
+                    </motion.div>
+                  )}
+                </div>
 
                 <div className="flex bg-gray-100 dark:bg-gray-800/60 rounded-xl p-1">
                   <button

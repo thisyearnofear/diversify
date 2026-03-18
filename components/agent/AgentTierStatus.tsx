@@ -22,6 +22,7 @@ import { useWalletContext } from '../wallet/WalletProvider';
 import { motion } from 'framer-motion';
 import { agentEventBus } from '../../hooks/agent-event-bus';
 import { AUTONOMOUS_FEATURES } from '../../config/features';
+import AgentFuelGauge from './AgentFuelGauge';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -280,10 +281,17 @@ export const AgentTierStatus: React.FC<{
                   </span>
               </div>
           )}
-          {/* Session Key Panel — shown when expanded (non-beginner only) */}
+          {/* 2026 Agent Fuel / Session Key Panel — shown when expanded (non-beginner only) */}
           {!isBeginner && expandedTier === 'guardian' && (
-            <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800 space-y-2" onClick={e => e.stopPropagation()}>
-              {hasValidPermission ? (
+            <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800 space-y-3" onClick={e => e.stopPropagation()}>
+              
+              {/* Scenario 1: User-Specific Agent Fuel (MPC) */}
+              {autonomousStatus?.walletType === 'agent-fuel' ? (
+                <AgentFuelGauge status={autonomousStatus} />
+              ) : 
+              
+              /* Scenario 2: Traditional Session Key (ERC-7715) Fallback */
+              hasValidPermission ? (
                 <>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />

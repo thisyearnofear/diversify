@@ -183,28 +183,6 @@ export class EthersWalletProvider implements AgentWalletProvider {
     }
 }
 
-export class CircleWalletProvider implements AgentWalletProvider {
-    // Deprecated stub. Use RealCircleWalletProvider with circleEntitySecret instead.
-    constructor(private walletId: string, private apiKey: string) {
-        throw new Error(
-            'CircleWalletProvider is deprecated. Use RealCircleWalletProvider with circleEntitySecret for real Circle wallets.'
-        );
-    }
-
-    private notImplemented(method: string): never {
-        throw new Error(
-            `CircleWalletProvider.${method} is not implemented. Use RealCircleWalletProvider with circleEntitySecret.`
-        );
-    }
-
-    getAddress() { return this.notImplemented('getAddress'); }
-    async signTransaction(_tx: any) { return this.notImplemented('signTransaction'); }
-    async sendTransaction(_tx: any) { return this.notImplemented('sendTransaction'); }
-    async balanceOf(_tokenAddress: string) { return this.notImplemented('balanceOf'); }
-    async transfer(_to: string, _amount: string, _tokenAddress: string) { return this.notImplemented('transfer'); }
-    async signTypedData(_domain: any, _types: any, _value: any) { return this.notImplemented('signTypedData'); }
-}
-
 export class SessionKeyProvider implements AgentWalletProvider {
     private wallet: Wallet;
     private provider: providers.JsonRpcProvider;
@@ -288,6 +266,7 @@ export class SessionKeyProvider implements AgentWalletProvider {
 export class ArcAgent {
     private provider: providers.JsonRpcProvider;
     private wallet: AgentWalletProvider;
+    private userId?: string;
     private agentAddress: string = '';
     private spendingLimit: number = 5.0;
     public isProxy: boolean = false; // Flag for server-side proxy agents
@@ -302,6 +281,7 @@ export class ArcAgent {
     private static readonly DATA_SOURCE_COOLDOWN_MS = 10 * 60 * 1000;
 
     constructor(config: {
+        userId?: string;
         privateKey?: string;
         sessionKey?: { privateKey: string; permission: import('./erc7715-service').SessionPermission };
         circleWalletId?: string;
@@ -312,13 +292,23 @@ export class ArcAgent {
         spendingLimit?: number;
         isTestnet?: boolean;
     }) {
+        this.userId = config.userId;
         this.isTestnet = config.isTestnet ?? true;
         this.provider = new providers.JsonRpcProvider(
             config.rpcUrl || ARC_CONFIG.TESTNET_RPC
         );
         this.circleService = circleService;
 
-        if (config.circleWalletId && config.circleApiKey) {
+        if (this.userId) {
+            // New 2026 Path: Initialize a user-scoped agent wallet
+            // The walletId will be retrieved/created during ensureInitialized()
+            this.wallet = new RealCircleWalletProvider({
+                walletId: 'pending', // Will be updated during initialization
+                apiKey: config.circleApiKey || process.env.CIRCLE_API_KEY || '',
+                entitySecret: config.circleEntitySecret || process.env.CIRCLE_ENTITY_SECRET || '',
+                baseUrl: config.circleBaseUrl
+            });
+        } else if (config.circleWalletId && config.circleApiKey) {
             if (!config.circleEntitySecret) {
                 throw new Error(
                     'Circle wallet configuration requires circleEntitySecret. Provide circleWalletId, circleApiKey, and circleEntitySecret.'
@@ -355,6 +345,12 @@ export class ArcAgent {
 
     private async ensureInitialized(): Promise<void> {
         if (this.initialized) return;
+
+        // If we have a userId but no specific walletId, fetch/create it via CircleService
+        if (this.userId && this.wallet instanceof RealCircleWalletProvider) {
+            const walletId = await this.circleService.getOrCreateAgentWallet(this.userId);
+            (this.wallet as any).updateWalletId(walletId);
+        }
 
         if (typeof this.wallet.initialize === 'function') {
             await this.wallet.initialize();
@@ -491,8 +487,9 @@ export class ArcAgent {
 
                 TASK:
                 Provide a JSON response with:
-                - action: 'SWAP', 'REBALANCE', or 'HOLD'
+                - action: 'SWAP', 'REBALANCE', 'HOLD', or 'BRIDGE'
                 - targetToken: (if applicable)
+                - targetNetwork: 'Arc' | 'Arbitrum' | 'Celo'
                 - confidence: 0-1
                 - reasoning: A detailed explanation leveraging the data above
                 - riskLevel: 'LOW', 'MEDIUM', 'HIGH'
@@ -506,6 +503,27 @@ export class ArcAgent {
 
             const recommendation = this.parseRecommendation(aiResponse.content);
             const action = this.normalizeAction(recommendation.action);
+            
+            // --- 2026 Autonomous Execution Block ---
+            // If the AI recommends bridging to Arbitrum for yield, the agent can execute it
+            if (action === 'BRIDGE' && recommendation.targetNetwork === 'Arbitrum' && this.spendingLimit > 0) {
+                steps.push(`🚀 Autonomous Opportunity: Teleporting fuel to Arbitrum for yield...`);
+                
+                try {
+                    // Check if we have enough on Arc, if not, we use the unified balance logic earlier
+                    const bridgeAmount = (parseFloat(unifiedBalance.arcBalance) * 0.5).toFixed(2); // Bridge 50% of available fuel
+                    
+                    const bridgeTxId = await this.bridgeToArbitrum(bridgeAmount);
+                    steps.push(`✓ CCTP V2 Transfer Initiated: ${bridgeTxId}`);
+                    steps.push(`✓ Target: USDY (Ondo) Yield Vault`);
+                    
+                    recommendation.reasoning += ` [AUTONOMOUS ACTION TAKEN: Bridged ${bridgeAmount} USDC to Arbitrum via CCTP]`;
+                } catch (bridgeError: any) {
+                    console.error('[Arc Agent] Autonomous bridge failed:', bridgeError.message);
+                    steps.push(`⚠ Autonomous action failed: ${bridgeError.message}`);
+                }
+            }
+
             const confidence = this.normalizeNumber(recommendation.confidence, 0.8, 0, 1);
             const expectedSavings = this.normalizeNumber(recommendation.expectedSavings, 0, 0);
             const riskLevel = this.normalizeRiskLevel(recommendation.riskLevel);
@@ -533,6 +551,28 @@ export class ArcAgent {
             console.error('Autonomous analysis failed:', error);
             return this.getFallbackRecommendation();
         }
+    }
+
+    /**
+     * Bridge USDC from Arc L1 to Arbitrum via CCTP
+     * This is the "Teleportation" spoke of the 2026 architecture
+     */
+    async bridgeToArbitrum(amount: string): Promise<string> {
+        await this.ensureInitialized();
+        
+        if (!(this.wallet instanceof RealCircleWalletProvider)) {
+            throw new Error('Autonomous bridging requires a real Circle MPC wallet');
+        }
+
+        const walletId = (this.wallet as any).getWalletId();
+        const destinationAddress = this.agentAddress; // Same address on both chains for the agent
+
+        return await this.circleService.bridgeUSDC(
+            walletId,
+            'ARBITRUM',
+            destinationAddress,
+            amount
+        );
     }
 
     /**
@@ -631,29 +671,17 @@ export class ArcAgent {
      * Bridge USDC using Circle Bridge Kit for cross-chain operations
      */
     async bridgeUSDC(
-        sourceChainId: number,
-        destinationChainId: number,
         amount: string
     ): Promise<any> {
         try {
             await this.ensureInitialized();
-            // Get bridge quote
-            const quote = await this.circleService.getBridgeQuote(
-                sourceChainId, destinationChainId, amount, this.agentAddress
-            );
-
-            console.log(`[Circle Bridge Kit] Quote received: ${quote.estimatedAmountOut} USDC, Fees: ${quote.estimatedFees}, Time: ${quote.estimatedTime}s`);
-
-            // Execute bridge transaction
-            const bridgeTx = await this.circleService.bridgeUSDC(
-                sourceChainId, destinationChainId, amount, this.agentAddress, quote.quoteId
-            );
-
-            console.log(`[Circle Bridge Kit] Bridge transaction: ${bridgeTx.transactionId}, Status: ${bridgeTx.status}`);
+            
+            console.log(`[Arc Agent] Bridging ${amount} USDC to Arbitrum via CCTP`);
+            const txId = await this.bridgeToArbitrum(amount);
 
             return {
-                bridgeTransaction: bridgeTx,
-                quote: quote
+                transactionId: txId,
+                status: 'pending'
             };
 
         } catch (error) {

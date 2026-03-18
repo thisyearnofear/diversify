@@ -29,6 +29,23 @@ export class RealCircleWalletProvider implements AgentWalletProvider {
     }
 
     /**
+     * Update the walletId after construction but before initialization
+     */
+    updateWalletId(walletId: string): void {
+        if (this.initialized) {
+            throw new Error('Cannot update walletId after initialization');
+        }
+        this.walletId = walletId;
+    }
+
+    /**
+     * Get the internal Circle walletId
+     */
+    getWalletId(): string {
+        return this.walletId;
+    }
+
+    /**
      * Initialize the wallet by fetching real address from Circle API
      * MUST be called before using any other methods
      */

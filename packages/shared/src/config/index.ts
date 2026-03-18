@@ -338,7 +338,11 @@ export const CIRCLE_CONFIG = {
             BASE: '0x1682Ae6375C4009baf3d690757d822C92fc556aE',
         },
     },
-    WALLET: { API_BASE_URL: 'https://api.circle.com/v1/w3s', USER_ID_PREFIX: 'diversifi_agent_' }
+    WALLET: { 
+        API_BASE_URL: 'https://api.circle.com/v1/w3s', 
+        USER_ID_PREFIX: 'diversifi_agent_' 
+    },
+    USDC_TOKEN_ID_ARC: '0x3600000000000000000000000000000000000000', // Actual token ID for Arc testnet USDC
 };
 
 // ABIs

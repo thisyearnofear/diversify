@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import {
   analyzePortfolio,
   type PortfolioAnalysis,
@@ -58,6 +59,7 @@ export function useAgentAnalysis({
   autonomousStatus,
   autonomousEnabled = false,
 }: AgentAnalysisDependencies): AgentAnalysisState & AgentAnalysisActions {
+  const { user } = usePrivy();
   const { showToast } = useToast();
   const [state, setState] = useState<AnalysisStoreState>(cachedState);
 
@@ -364,6 +366,7 @@ export function useAgentAnalysis({
             portfolio,
             inflationData,
             useAutonomousMode: true,
+            userId: user?.id, // Pass authenticated user ID for "Agent Fuel" flow
           }),
         });
 
@@ -380,7 +383,7 @@ export function useAgentAnalysis({
 
       return null;
     },
-    [apiBase, autonomousEnabled, autonomousStatus],
+    [apiBase, autonomousEnabled, autonomousStatus, user?.id],
   );
 
   const clearAdvice = useCallback(() => updateState({ advice: null }), []);

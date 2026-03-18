@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { usePrivy } from "@privy-io/react-auth";
 import { AI_FEATURES, AUTONOMOUS_FEATURES } from "../config/features";
 import type { AICapabilities, AutonomousStatus } from "./agent-types";
 
@@ -8,6 +9,7 @@ type StatusState = {
   capabilities: AICapabilities;
   autonomousStatus: AutonomousStatus | null;
   initialized: boolean;
+  isLoading: boolean;
 };
 
 const defaultCapabilities: AICapabilities = {
@@ -18,25 +20,24 @@ const defaultCapabilities: AICapabilities = {
   webSearch: AI_FEATURES.WEB_SEARCH,
 };
 
-let cachedState: StatusState = {
+const defaultState: StatusState = {
   capabilities: defaultCapabilities,
   autonomousStatus: null,
   initialized: false,
+  isLoading: true,
 };
 
-const listeners = new Set<(state: StatusState) => void>();
-let inflight: Promise<void> | null = null;
+export function useAgentStatus() {
+  const { user, ready } = usePrivy();
+  const [state, setState] = useState<StatusState>(defaultState);
 
-const notifyListeners = () => {
-  listeners.forEach((listener) => listener(cachedState));
-};
-
-const fetchStatus = async () => {
-  if (inflight) return inflight;
-
-  inflight = (async () => {
+  const fetchStatus = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/agent/status`);
+      setState(prev => ({ ...prev, isLoading: true }));
+      
+      const userId = user?.id ? encodeURIComponent(user.id) : '';
+      const response = await fetch(`${API_BASE}/api/agent/status${userId ? `?userId=${userId}` : ''}`);
+      
       if (response.ok) {
         const status = await response.json();
 
@@ -48,58 +49,57 @@ const fetchStatus = async () => {
           webSearch: status.capabilities?.webSearch ?? AI_FEATURES.WEB_SEARCH,
         };
 
-        const autonomousStatus =
-          AUTONOMOUS_FEATURES.AUTONOMOUS_MODE && status.enabled
-            ? {
-                enabled: true,
-                isTestnet: status.isTestnet ?? true,
-                walletType: status.walletType ?? "none",
-                spendingLimit: status.spendingLimit ?? 5.0,
-                spent: status.spent ?? 0,
-                remaining: status.remaining ?? 5.0,
-              }
-            : null;
+        let autonomousStatus: AutonomousStatus | null = null;
+        
+        if (AUTONOMOUS_FEATURES.AUTONOMOUS_MODE && status.enabled) {
+          // If we have specific user agent data, use that
+          if (status.userAgent) {
+            autonomousStatus = {
+              enabled: true,
+              isTestnet: status.isTestnet ?? true,
+              walletType: "agent-fuel",
+              spendingLimit: status.spendingLimit ?? 5.0,
+              spent: status.userAgent.spent ?? 0,
+              remaining: status.userAgent.remaining ?? 5.0,
+              balance: status.userAgent.balance,
+              address: status.userAgent.address
+            };
+          } else {
+            // Fallback to server/global status
+            autonomousStatus = {
+              enabled: true,
+              isTestnet: status.isTestnet ?? true,
+              walletType: status.walletType ?? "none",
+              spendingLimit: status.spendingLimit ?? 5.0,
+              spent: status.spent ?? 0,
+              remaining: status.remaining ?? 5.0,
+            };
+          }
+        }
 
-        cachedState = {
+        setState({
           capabilities,
           autonomousStatus,
           initialized: true,
-        };
-        notifyListeners();
+          isLoading: false,
+        });
       }
     } catch (error) {
       console.error("[useAgentStatus] Failed to initialize:", error);
-    } finally {
-      inflight = null;
+      setState(prev => ({ ...prev, isLoading: false }));
     }
-  })();
-
-  return inflight;
-};
-
-export function useAgentStatus() {
-  const [state, setState] = useState<StatusState>(cachedState);
+  }, [user?.id]);
 
   useEffect(() => {
-    const listener = (next: StatusState) => setState(next);
-    listeners.add(listener);
-
-    if (!cachedState.initialized) {
+    if (ready) {
       void fetchStatus();
     }
-
-    return () => {
-      listeners.delete(listener);
-    };
-  }, []);
-
-  const initializeAI = useCallback(async () => {
-    await fetchStatus();
-  }, []);
+  }, [fetchStatus, ready]);
 
   return {
     capabilities: state.capabilities,
     autonomousStatus: state.autonomousStatus,
-    initializeAI,
+    isLoading: state.isLoading,
+    initializeAI: fetchStatus,
   };
 }

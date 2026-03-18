@@ -210,10 +210,12 @@ export interface AICapabilities {
 export interface AutonomousStatus {
   enabled: boolean;
   isTestnet: boolean;
-  walletType: "privateKey" | "circle" | "session" | "none";
+  walletType: "privateKey" | "circle" | "session" | "agent-fuel" | "none";
   spendingLimit: number;
   spent: number;
   remaining: number;
+  balance?: string; // USDC balance in the agent-specific wallet
+  address?: string; // On-chain address of the agent
 }
 
 export interface AIConfig {

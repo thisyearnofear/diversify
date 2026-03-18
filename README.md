@@ -39,6 +39,17 @@ cp .env.example .env.local
 pnpm dev
 ```
 
+## ⛽ The Agent Fuel Model (2026 Architecture)
+
+DiversiFi introduces a revolutionary **User-Funded Autonomous Economy** powered by **Arc L1** and **Circle MPC**.
+
+*   **Agent Fuel**: Users top up their dedicated AI Agent with **USDC**.
+*   **Native Gas**: The Agent uses this USDC to pay for its own compute, data access (x402), and execution fees.
+*   **Invisible Complexity**: No need for ETH, MATIC, or CELO. Just "Fuel" (USDC).
+*   **Safety**: Scoped by **ERC-6900** permissions (e.g., "Spend max $10/day").
+
+[**📖 Read the Full Agent Fuel Documentation**](./docs/AGENT_FUEL_MODEL.md)
+
 ## 🏗️ Architecture
 
 ### Deployment
