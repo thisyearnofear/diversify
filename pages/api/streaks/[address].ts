@@ -101,7 +101,7 @@ async function handleGet(address: string, res: NextApiResponse) {
         isStreakActive: false,
         canClaim: false,
         crossChainActivity: {
-          testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+          testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [], totalSimulations: 0, simulatedAlpha: 0 },
           mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
           graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
         },
@@ -262,7 +262,7 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
         totalStreaksCompleted: 0,
         milestones: { days7: false, days30: false, days100: false, days365: false },
         crossChainActivity: {
-          testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+          testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [], totalSimulations: 0, simulatedAlpha: 0 },
           mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
           graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
         },
@@ -280,6 +280,14 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
       }
     } else if (action === 'claim') {
       streak.crossChainActivity[isTestnet ? 'testnet' : 'mainnet'].totalClaims += 1;
+    } else if (action === 'simulation') {
+      // Track backtest simulations on testnet
+      if (isTestnet) {
+        streak.crossChainActivity.testnet.totalSimulations += 1;
+        if (usdValue) {
+          streak.crossChainActivity.testnet.simulatedAlpha += usdValue;
+        }
+      }
     } else if (action === 'graduation') {
       streak.crossChainActivity.graduation.isGraduated = true;
       streak.crossChainActivity.graduation.graduatedAt = new Date();
@@ -334,6 +342,18 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
       newAchievements.push('power-tester');
     }
 
+    // Simulation Master (5+ simulations)
+    if (streak.crossChainActivity.testnet.totalSimulations >= 5 && !hasAchievement('simulation-master')) {
+      streak.achievements.push('simulation-master');
+      newAchievements.push('simulation-master');
+    }
+
+    // Alpha Hunter ($50+ simulated alpha)
+    if (streak.crossChainActivity.testnet.simulatedAlpha >= 50 && !hasAchievement('alpha-hunter')) {
+      streak.achievements.push('alpha-hunter');
+      newAchievements.push('alpha-hunter');
+    }
+
     // Volume Trader ($100+ testnet volume)
     if (streak.crossChainActivity.testnet.totalVolume >= 100 && !hasAchievement('volume-trader')) {
       streak.achievements.push('volume-trader');
@@ -347,8 +367,11 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
       newAchievements.push('daily-claimer');
     }
 
-    // Ready to Graduate (3+ testnet swaps, not yet graduated)
-    if (streak.crossChainActivity.testnet.totalSwaps >= 3 &&
+    // Ready to Graduate (3+ testnet swaps OR 5+ simulations, not yet graduated)
+    const meetsGraduationCriteria = 
+      streak.crossChainActivity.testnet.totalSwaps >= 3 ||
+      streak.crossChainActivity.testnet.totalSimulations >= 5;
+    if (meetsGraduationCriteria &&
         !streak.crossChainActivity.graduation.isGraduated &&
         !hasAchievement('ready-to-graduate')) {
       streak.achievements.push('ready-to-graduate');

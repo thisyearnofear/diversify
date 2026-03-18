@@ -11,6 +11,7 @@ import React, { useCallback } from 'react';
 import { AgentTierStatus } from '../agent/AgentTierStatus';
 import AutomationSettings from '../agent/AutomationSettings';
 import ActionableRecommendation from '../agent/ActionableRecommendation';
+import { BacktestPanel } from '../agent/BacktestPanel';
 import { useAgentStatus } from '../../hooks/use-agent-status';
 import { useAgentConfig } from '../../hooks/use-agent-config';
 import { useAgentAnalysis } from '../../hooks/use-agent-analysis';
@@ -89,6 +90,11 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
             navigateToSwap({ fromToken, toToken, amount, reason });
           }}
         />
+      )}
+
+      {/* Backtest Lab (standard/advanced) */}
+      {experienceMode !== 'beginner' && (
+        <BacktestPanel />
       )}
 
       {/* Automation Settings (only in advanced mode) */}

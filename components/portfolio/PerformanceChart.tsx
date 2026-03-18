@@ -10,11 +10,19 @@ interface PerformanceChartProps {
     volatility: number;
   };
   title?: string;
+  /** Backtest simulation overlay - shows strategy performance vs baseline */
+  backtest?: {
+    strategyValues: number[];
+    strategyName: string;
+    alphaPercent: number;
+    isSimulated: boolean;
+  };
 }
 
 export default function PerformanceChart({
   data,
   title = "Portfolio Performance",
+  backtest,
 }: PerformanceChartProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -138,6 +146,31 @@ export default function PerformanceChart({
     ctx.closePath();
     ctx.fill();
 
+    // Draw backtest strategy line if provided
+    if (backtest && backtest.strategyValues.length > 0) {
+      ctx.beginPath();
+      ctx.strokeStyle = "#10B981"; // Emerald for strategy alpha
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 3]); // Dashed line for simulation
+
+      for (let i = 0; i < backtest.strategyValues.length; i++) {
+        const x = padding.left + (chartWidth * i) / (backtest.strategyValues.length - 1);
+        const y =
+          padding.top +
+          chartHeight -
+          (chartHeight * (backtest.strategyValues[i] - minValue)) / (maxValue - minValue);
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.stroke();
+      ctx.setLineDash([]); // Reset to solid
+    }
+
     // Draw data points
     for (
       let i = 0;
@@ -158,7 +191,7 @@ export default function PerformanceChart({
       ctx.lineWidth = 1;
       ctx.stroke();
     }
-  }, [data]);
+  }, [data, backtest]);
 
   return (
     <div className="bg-white rounded-2xl shadow-lg p-4 mb-4">
@@ -187,13 +220,27 @@ export default function PerformanceChart({
                 </svg>
               </span>
               <div className="absolute left-0 bottom-full mb-2 w-64 bg-white p-2 rounded-md shadow-lg border border-gray-200 text-xs text-gray-700 hidden group-hover:block z-10">
-                <p className="font-medium text-gray-900 mb-1">Simulated Data</p>
+                <p className="font-medium text-gray-900 mb-1">
+                  {backtest?.isSimulated ? 'Backtest Simulation' : 'Simulated Data'}
+                </p>
                 <p>
-                  This chart shows a simulation based on your current portfolio
-                  allocation. It is not actual historical performance data.
+                  {backtest?.isSimulated
+                    ? `Strategy "${backtest.strategyName}" shows ${backtest.alphaPercent >= 0 ? '+' : ''}${backtest.alphaPercent.toFixed(1)}% alpha vs baseline.`
+                    : 'This chart shows a simulation based on your current portfolio allocation. It is not actual historical performance data.'
+                  }
                 </p>
               </div>
             </div>
+            {/* Backtest Alpha Badge */}
+            {backtest && (
+              <div className={`ml-2 px-2 py-0.5 rounded text-xs font-bold ${
+                backtest.alphaPercent >= 0 
+                  ? 'bg-emerald-100 text-emerald-700' 
+                  : 'bg-red-100 text-red-700'
+              }`}>
+                {backtest.alphaPercent >= 0 ? '📈' : '📉'} {backtest.alphaPercent >= 0 ? '+' : ''}{backtest.alphaPercent.toFixed(1)}% α
+              </div>
+            )}
           </div>
         </div>
         <div className="flex space-x-4">

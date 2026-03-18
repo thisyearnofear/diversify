@@ -34,6 +34,8 @@ export interface IStreak extends Document {
       totalClaims: number;
       totalVolume: number;
       chainsUsed: number[]; // Chain IDs explored
+      totalSimulations: number; // Backtest simulations run
+      simulatedAlpha: number; // Cumulative simulated P&L
     };
     mainnet: {
       totalSwaps: number;
@@ -127,8 +129,10 @@ const StreakSchema: Schema = new Schema(
             totalClaims: { type: Number, default: 0 },
             totalVolume: { type: Number, default: 0 },
             chainsUsed: { type: [Number], default: [] },
+            totalSimulations: { type: Number, default: 0 },
+            simulatedAlpha: { type: Number, default: 0 },
           },
-          default: () => ({ totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] }),
+          default: () => ({ totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [], totalSimulations: 0, simulatedAlpha: 0 }),
         },
         mainnet: {
           type: {
@@ -148,7 +152,7 @@ const StreakSchema: Schema = new Schema(
         },
       },
       default: () => ({
-        testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+        testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [], totalSimulations: 0, simulatedAlpha: 0 },
         mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
         graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
       }),

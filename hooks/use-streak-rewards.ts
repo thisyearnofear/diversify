@@ -51,7 +51,7 @@ export function useStreakRewards(): StreakState & StreakActions {
     error: null,
     usingFallback: false,
     crossChainActivity: {
-      testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [] },
+      testnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0, chainsUsed: [], totalSimulations: 0, simulatedAlpha: 0 },
       mainnet: { totalSwaps: 0, totalClaims: 0, totalVolume: 0 },
       graduation: { isGraduated: false, testnetActionsBeforeGraduation: 0 },
     },
@@ -300,11 +300,12 @@ export function useStreakRewards(): StreakState & StreakActions {
 
   // Record cross-chain activity (consolidated from useCrossChainActivity)
   const recordActivity = useCallback(async (params: {
-    action: 'swap' | 'claim' | 'graduation';
+    action: 'swap' | 'claim' | 'graduation' | 'simulation';
     chainId: number;
     networkType: 'testnet' | 'mainnet';
     usdValue?: number;
     txHash?: string;
+    simulatedAlpha?: number;
   }): Promise<boolean> => {
     if (!address) return false;
 

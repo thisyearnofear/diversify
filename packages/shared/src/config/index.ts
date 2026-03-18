@@ -345,6 +345,14 @@ export const CIRCLE_CONFIG = {
     USDC_TOKEN_ID_ARC: '0x3600000000000000000000000000000000000000', // Actual token ID for Arc testnet USDC
 };
 
+// Hyperliquid Configuration
+export const HYPERLIQUID_CONFIG = {
+    BRIDGE_ADDRESS_ARBITRUM: '0x2Df1c51E09a42AD0809B739f5Ad8854a9554Dbc7', // Standard HL bridge on Arb
+    USDC_TOKEN_ID: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Mainnet USDC on Arbitrum
+    API_URL: 'https://api.hyperliquid.xyz',
+    TESTNET_API_URL: 'https://api.hyperliquid-testnet.xyz'
+};
+
 // ABIs
 export const ABIS = {
     ERC20: [

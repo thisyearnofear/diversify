@@ -1,11 +1,13 @@
 import { safeParseJson } from '../utils';
 
 export type RecordActivityParams = {
-  action: 'swap' | 'claim' | 'graduation';
+  action: 'swap' | 'claim' | 'graduation' | 'simulation';
   chainId: number;
   networkType: 'testnet' | 'mainnet';
   usdValue?: number;
   txHash?: string;
+  /** Alpha generated in simulations (simulated profit) */
+  simulatedAlpha?: number;
 };
 
 export async function patchActivity(address: string, params: RecordActivityParams): Promise<any> {
@@ -24,6 +26,8 @@ export async function patchActivity(address: string, params: RecordActivityParam
 
 export function computeEligibleForGraduation(crossChainActivity: any): boolean {
   const testnetSwaps = crossChainActivity?.testnet?.totalSwaps || 0;
+  const totalSimulations = crossChainActivity?.testnet?.totalSimulations || 0;
   const isGraduated = crossChainActivity?.graduation?.isGraduated || false;
-  return !isGraduated && testnetSwaps >= 3;
+  // Simulations count toward graduation (gamified learning)
+  return !isGraduated && (testnetSwaps >= 3 || totalSimulations >= 5);
 }

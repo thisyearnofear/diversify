@@ -22,6 +22,10 @@ export interface CrossChainActivityState {
     totalClaims: number;
     totalVolume: number;
     chainsUsed: number[];
+    /** Autonomous backtest simulations run */
+    totalSimulations: number;
+    /** Alpha generated in simulations (USD) */
+    simulatedAlpha: number;
   };
   mainnet: {
     totalSwaps: number;
@@ -61,10 +65,12 @@ export interface StreakActions {
   resetStreak: () => Promise<void>;
   refresh: () => Promise<void>;
   recordActivity: (params: {
-    action: 'swap' | 'claim' | 'graduation';
+    action: 'swap' | 'claim' | 'graduation' | 'simulation';
     chainId: number;
     networkType: 'testnet' | 'mainnet';
     usdValue?: number;
     txHash?: string;
+    /** For simulations: alpha generated (simulated profit) */
+    simulatedAlpha?: number;
   }) => Promise<boolean>;
 }

@@ -35,6 +35,8 @@ import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import YieldBridgePrompt from "../swap/YieldBridgePrompt";
 import SwapInsightsPanel from "../swap/SwapInsightsPanel";
+import { SocialContactPicker } from "../swap/SocialContactPicker";
+import { useSocialResolve } from "../../hooks/use-social-resolve";
 import dynamic from "next/dynamic";
 
 const GoodDollarClaimFlow = dynamic(
@@ -64,7 +66,9 @@ export default function SwapTab({
   const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
   const { demoMode } = useDemoMode();
   const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
+  const { resolveIdentifier } = useSocialResolve();
   const [searchQuery, setSearchQuery] = useState("");
+  const [showSocialPicker, setShowSocialPicker] = useState(false);
 
   const isBeginner = experienceMode === "beginner";
   const isDemo = demoMode.isActive;
@@ -559,6 +563,48 @@ export default function SwapTab({
                 chainId={walletChainId}
                 enableCrossChain={true}
               />
+            )}
+
+            {/* Social Contact Picker - Send to phone/email */}
+            {!isBeginner && address && (
+              <div className="mt-4">
+                <button
+                  onClick={() => setShowSocialPicker(!showSocialPicker)}
+                  className="w-full flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <span>👥</span>
+                    <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
+                      Send to Contact
+                    </span>
+                  </div>
+                  <span className="text-xs text-purple-500">
+                    {showSocialPicker ? '▲' : '▼'}
+                  </span>
+                </button>
+                {showSocialPicker && (
+                  <div className="mt-2">
+                    <SocialContactPicker
+                      onSelect={(contact) => {
+                        // Pre-fill swap interface with resolved address
+                        if (swapInterfaceRef.current?.setTokens) {
+                          swapInterfaceRef.current.setTokens(
+                            "USDC",
+                            "USDC",
+                            "",
+                            undefined,
+                            undefined,
+                            contact.identifier,
+                          );
+                        }
+                        setShowSocialPicker(false);
+                      }}
+                      onResolve={resolveIdentifier}
+                      disabled={isSwapLoading}
+                    />
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Transaction status + explorer link — delegated to SwapStatusPanel */}
