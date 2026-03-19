@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PrimaryButton } from '../shared/TabComponents';
+import { PrimaryButton, LoadingSpinner } from '../shared/TabComponents';
 import SimplePieChart from './SimplePieChart';
 import NetworkSwitcher from '../swap/NetworkSwitcher';
 import sdk from '@farcaster/miniapp-sdk';
@@ -186,7 +186,7 @@ export default function ProtectionAnalysis({
                             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
                         >
                             {isRefreshing ? (
-                                <span className="animate-spin">⏳</span>
+                                <LoadingSpinner size="sm" />
                             ) : (
                                 <span>🔄</span>
                             )}
