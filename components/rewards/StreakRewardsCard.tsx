@@ -13,6 +13,7 @@ import React, { useState, useEffect } from 'react';
 import { CompactStreakBanner } from './streak/CompactStreakBanner';
 import { MilestoneProgress } from './streak/MilestoneProgress';
 import { StreakProgressVisualizer } from './streak/StreakProgressVisualizer';
+import { GraduationProgressExplainer } from './GraduationProgressExplainer';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useWalletContext } from '../wallet/WalletProvider';
@@ -103,6 +104,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
 
   const [showClaimFlow, setShowClaimFlow] = useState(false);
   const [showGraduationModal, setShowGraduationModal] = useState(false);
+  const [showGraduationExplainer, setShowGraduationExplainer] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   // Start compact when an active streak exists but claiming isn't available yet —
   // prevents the card from occupying full height in the banner stack by default.
@@ -338,17 +340,28 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
                 >
                   🧪 Try Testnet →
                 </button>
-                <a
-                  href="https://faucet.celo.org"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => setShowGraduationExplainer(true)}
                   className="text-xs font-bold text-violet-500 dark:text-violet-400 hover:underline"
                 >
-                  Get free funds →
-                </a>
+                  How it works →
+                </button>
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Graduation Progress Explainer — expandable guide */}
+      {showGraduationExplainer && (
+        <div className="mt-3">
+          <GraduationProgressExplainer />
+          <button
+            onClick={() => setShowGraduationExplainer(false)}
+            className="w-full mt-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-center py-1"
+          >
+            ▲ Close
+          </button>
         </div>
       )}
 
@@ -396,6 +409,16 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
               className="w-full py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-bold rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all"
             >
               🎓 Graduate to Mainnet
+            </button>
+          )}
+
+          {/* Progress explainer link */}
+          {!crossChainActivity.graduation.isGraduated && (
+            <button
+              onClick={() => setShowGraduationExplainer(!showGraduationExplainer)}
+              className="w-full text-xs text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-center py-1 font-medium"
+            >
+              {showGraduationExplainer ? '▲ Hide journey guide' : '📍 View your journey to mainnet'}
             </button>
           )}
         </div>

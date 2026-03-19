@@ -22,6 +22,7 @@ import { useNavigation } from '../../context/app/NavigationContext';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import { AUTONOMOUS_FEATURES } from '../../config/features';
 import { Skeleton } from '../shared/TabComponents';
+import ErrorBoundary from '../ui/ErrorBoundary';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -69,55 +70,63 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
       </div>
 
       {/* Enhanced Tier Status with Activity Feed - with skeleton loader */}
-      {isStatusLoading ? (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 space-y-4">
-          <div className="flex items-center gap-3">
-            <Skeleton className="w-12 h-12" variant="circle" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" variant="text" />
-              <Skeleton className="h-3 w-24" variant="text" />
+      <ErrorBoundary moduleName="Agent Status">
+        {isStatusLoading ? (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="w-12 h-12" variant="circle" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-32" variant="text" />
+                <Skeleton className="h-3 w-24" variant="text" />
+              </div>
             </div>
+            <Skeleton className="h-20 w-full" variant="rect" />
           </div>
-          <Skeleton className="h-20 w-full" variant="rect" />
-        </div>
-      ) : (
-        <AgentTierStatus 
-          isMiniPay={isMiniPay} 
-          isFarcaster={isFarcaster}
-          showActivityFeed={true}
-        />
-      )}
+        ) : (
+          <AgentTierStatus 
+            isMiniPay={isMiniPay} 
+            isFarcaster={isFarcaster}
+            showActivityFeed={true}
+          />
+        )}
+      </ErrorBoundary>
 
       {/* Actionable Recommendations — non-beginner only, shown when analysis exists */}
       {experienceMode !== 'beginner' && (
-        <ActionableRecommendation
-          analysis={portfolioAnalysis}
-          portfolio={portfolio ?? null}
-          onExecuteSwap={(fromToken, toToken, amount, reason) => {
-            ask(`I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ''} based on Oracle recommendation${reason ? `: ${reason}` : ''}. Please confirm this aligns with my strategy.`);
-            addActivity({
-              type: 'execution',
-              tier: 'GUARDIAN',
-              description: `Swap ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ''}${reason ? ` — ${reason}` : ''}`,
-              status: 'pending',
-            });
-            navigateToSwap({ fromToken, toToken, amount, reason });
-          }}
-        />
+        <ErrorBoundary moduleName="Portfolio Recommendations">
+          <ActionableRecommendation
+            analysis={portfolioAnalysis}
+            portfolio={portfolio ?? null}
+            onExecuteSwap={(fromToken, toToken, amount, reason) => {
+              ask(`I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ''} based on Oracle recommendation${reason ? `: ${reason}` : ''}. Please confirm this aligns with my strategy.`);
+              addActivity({
+                type: 'execution',
+                tier: 'GUARDIAN',
+                description: `Swap ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ''}${reason ? ` — ${reason}` : ''}`,
+                status: 'pending',
+              });
+              navigateToSwap({ fromToken, toToken, amount, reason });
+            }}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Backtest Lab (standard/advanced) */}
       {experienceMode !== 'beginner' && (
-        <BacktestPanel />
+        <ErrorBoundary moduleName="Backtest Lab">
+          <BacktestPanel />
+        </ErrorBoundary>
       )}
 
       {/* Automation Settings (only in advanced mode) */}
       {experienceMode === 'advanced' && (
-        <AutomationSettings 
-          config={config}
-          onConfigChange={updateConfig}
-          autonomousStatus={autonomousStatus}
-        />
+        <ErrorBoundary moduleName="Automation Settings">
+          <AutomationSettings 
+            config={config}
+            onConfigChange={updateConfig}
+            autonomousStatus={autonomousStatus}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Ask Agent CTA — bridges Agent tab to AI chat drawer */}

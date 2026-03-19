@@ -37,6 +37,7 @@ import YieldBridgePrompt from "../swap/YieldBridgePrompt";
 import SwapInsightsPanel from "../swap/SwapInsightsPanel";
 import { SocialContactPicker } from "../swap/SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
+import ErrorBoundary from "../ui/ErrorBoundary";
 import dynamic from "next/dynamic";
 
 const GoodDollarClaimFlow = dynamic(
@@ -496,38 +497,42 @@ export default function SwapTab({
             <ExperienceModeNotification />
 
             {/* Testnet simulation banner — shown on Arc/RH when contracts aren't deployed yet */}
-            <TestnetSimulationBanner
-              chainId={walletChainId}
-              onSimulated={() => {
-                // Trigger the same celebration modal as a real swap so Arc/RH users
-                // get the same dopamine hit. Use $10 USDC→EURC as the mock trade.
-                if (profileConfig.userGoal && goalScores) {
-                  const currentScore =
-                    profileConfig.userGoal === "inflation_protection"
-                      ? goalScores.hedge
-                      : profileConfig.userGoal === "geographic_diversification"
-                        ? goalScores.diversify
-                        : profileConfig.userGoal === "rwa_access"
-                          ? goalScores.rwa
-                          : 0;
-                  setPreviousGoalScore(Math.round(currentScore));
-                }
-                setCelebrationData({
-                  fromToken: "USDC",
-                  toToken: "EURC",
-                  amount: "10",
-                  fromTokenInflation: 3.1,
-                  toTokenInflation: 2.3,
-                  chainId: walletChainId || 42161, // Default to Arbitrum if unknown
-                });
-                setShowCelebration(true);
-              }}
-            />
+            <ErrorBoundary moduleName="Testnet Banner">
+              <TestnetSimulationBanner
+                chainId={walletChainId}
+                onSimulated={() => {
+                  // Trigger the same celebration modal as a real swap so Arc/RH users
+                  // get the same dopamine hit. Use $10 USDC→EURC as the mock trade.
+                  if (profileConfig.userGoal && goalScores) {
+                    const currentScore =
+                      profileConfig.userGoal === "inflation_protection"
+                        ? goalScores.hedge
+                        : profileConfig.userGoal === "geographic_diversification"
+                          ? goalScores.diversify
+                          : profileConfig.userGoal === "rwa_access"
+                            ? goalScores.rwa
+                            : 0;
+                    setPreviousGoalScore(Math.round(currentScore));
+                  }
+                  setCelebrationData({
+                    fromToken: "USDC",
+                    toToken: "EURC",
+                    amount: "10",
+                    fromTokenInflation: 3.1,
+                    toTokenInflation: 2.3,
+                    chainId: walletChainId || 42161, // Default to Arbitrum if unknown
+                  });
+                  setShowCelebration(true);
+                }}
+              />
+            </ErrorBoundary>
 
             {/* GoodDollar UBI Streak — gated by StreakRewardsSection so hook only runs when visible */}
-            <div className="mb-4">
-              <StreakRewardsSection />
-            </div>
+            <ErrorBoundary moduleName="Streak Rewards">
+              <div className="mb-4">
+                <StreakRewardsSection />
+              </div>
+            </ErrorBoundary>
 
             {showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
@@ -552,32 +557,34 @@ export default function SwapTab({
               suppressedByAI={showAiRecommendation}
             />
 
-            {isTradeableLoading ? (
-              <div className="space-y-4 py-4">
-                {/* Token selector skeleton */}
-                <div className="flex gap-3">
-                  <Skeleton className="flex-1 h-12" variant="rect" />
-                  <Skeleton className="w-10 h-12" variant="rect" />
-                  <Skeleton className="flex-1 h-12" variant="rect" />
+            <ErrorBoundary moduleName="Swap Interface">
+              {isTradeableLoading ? (
+                <div className="space-y-4 py-4">
+                  {/* Token selector skeleton */}
+                  <div className="flex gap-3">
+                    <Skeleton className="flex-1 h-12" variant="rect" />
+                    <Skeleton className="w-10 h-12" variant="rect" />
+                    <Skeleton className="flex-1 h-12" variant="rect" />
+                  </div>
+                  {/* Amount input skeleton */}
+                  <Skeleton className="h-12 w-full" variant="rect" />
+                  {/* Swap button skeleton */}
+                  <Skeleton className="h-14 w-full" variant="rect" />
                 </div>
-                {/* Amount input skeleton */}
-                <Skeleton className="h-12 w-full" variant="rect" />
-                {/* Swap button skeleton */}
-                <Skeleton className="h-14 w-full" variant="rect" />
-              </div>
-            ) : (
-              <SwapInterface
-                ref={swapInterfaceRef}
-                availableTokens={filteredTokens}
-                address={address}
-                onSwap={handleSwap}
-                preferredFromRegion={userRegion}
-                preferredToRegion={targetRegion ?? undefined}
-                title=""
-                chainId={walletChainId}
-                enableCrossChain={true}
-              />
-            )}
+              ) : (
+                <SwapInterface
+                  ref={swapInterfaceRef}
+                  availableTokens={filteredTokens}
+                  address={address}
+                  onSwap={handleSwap}
+                  preferredFromRegion={userRegion}
+                  preferredToRegion={targetRegion ?? undefined}
+                  title=""
+                  chainId={walletChainId}
+                  enableCrossChain={true}
+                />
+              )}
+            </ErrorBoundary>
 
             {/* Social Contact Picker - Send to phone/email */}
             {!isBeginner && address && (
