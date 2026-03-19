@@ -224,7 +224,11 @@ export const AgentTierStatus: React.FC<{
               </motion.div>
           )}
           {showActivityFeed && expandedTier === 'oracle' && (
-            <ActivityFeed activities={getActivitiesForTier('ORACLE')} />
+            <ActivityFeed 
+              activities={getActivitiesForTier('ORACLE')} 
+              onNavigateToSwap={onNavigateToAgent}
+              hasWallet={!!address}
+            />
           )}
         </motion.div>
 
@@ -249,7 +253,11 @@ export const AgentTierStatus: React.FC<{
             {isBeginner ? "Helps you move money fast." : "Intent-based SocialConnect execution."}
           </p>
           {showActivityFeed && expandedTier === 'assistant' && (
-            <ActivityFeed activities={getActivitiesForTier('ASSISTANT')} />
+            <ActivityFeed 
+              activities={getActivitiesForTier('ASSISTANT')} 
+              onNavigateToSwap={onNavigateToAgent}
+              hasWallet={!!address}
+            />
           )}
         </motion.div>
 
@@ -365,7 +373,11 @@ export const AgentTierStatus: React.FC<{
             </div>
           )}
           {showActivityFeed && expandedTier === 'guardian' && (
-            <ActivityFeed activities={getActivitiesForTier('GUARDIAN')} />
+            <ActivityFeed 
+              activities={getActivitiesForTier('GUARDIAN')} 
+              onNavigateToSwap={onNavigateToAgent}
+              hasWallet={!!address}
+            />
           )}
         </motion.div>
       </div>
@@ -374,11 +386,27 @@ export const AgentTierStatus: React.FC<{
 };
 
 // Activity Feed Component (inline, not separate file)
-const ActivityFeed: React.FC<{ activities: AgentActivity[] }> = ({ activities }) => {
+const ActivityFeed: React.FC<{ 
+  activities: AgentActivity[]; 
+  onNavigateToSwap?: () => void;
+  hasWallet?: boolean;
+}> = ({ activities, onNavigateToSwap, hasWallet }) => {
   if (activities.length === 0) {
     return (
       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-400 text-center">No recent activity</p>
+        <div className="text-center py-2">
+          <p className="text-xs text-gray-400 mb-2">No recent activity</p>
+          {hasWallet ? (
+            <button
+              onClick={onNavigateToSwap}
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            >
+              Make your first swap →
+            </button>
+          ) : (
+            <p className="text-xs text-gray-500">Connect wallet to start</p>
+          )}
+        </div>
       </div>
     );
   }

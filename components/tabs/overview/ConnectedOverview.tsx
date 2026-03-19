@@ -556,13 +556,51 @@ export function ConnectedOverview({
               icon: <span>→</span>,
             }}
           />
+          
+          {/* Milestone-oriented next steps */}
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-900">
+              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-black text-blue-600 dark:text-blue-400">1</div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-gray-900 dark:text-white">Connect wallet</p>
+                <p className="text-xs text-gray-500">Secure & takes 30 seconds</p>
+              </div>
+              <span className="text-emerald-500 text-sm">✓</span>
+            </div>
+            <div className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400">2</div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-gray-900 dark:text-white">Add funds</p>
+                <p className="text-xs text-gray-500">Use on-ramp or transfer</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400">3</div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-gray-900 dark:text-white">Make first swap</p>
+                <p className="text-xs text-gray-500">Convert to stable currency</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Alternative: Testnet for risk-free learning */}
           {isBeginner && (
-            <div className="mt-4 p-3 bg-white dark:bg-gray-800 rounded-xl border border-blue-100 dark:border-blue-900">
+            <div className="mt-4 p-3 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
               <div className="flex items-start gap-2">
-                <span className="text-lg">💡</span>
-                <div className="text-xs text-gray-600 dark:text-gray-400">
-                  <strong className="text-gray-900 dark:text-white">Quick tip:</strong>{" "}
-                  Start small! Convert just $10-20 to see how it works. You can always do more later.
+                <span className="text-lg">🧪</span>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-violet-900 dark:text-violet-100 mb-1">
+                    Not ready to use real money?
+                  </p>
+                  <p className="text-xs text-violet-700 dark:text-violet-300 mb-2">
+                    Try testnet first — free tokens, same experience, no risk.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab("swap")}
+                    className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
+                  >
+                    Explore Test Drive →
+                  </button>
                 </div>
               </div>
             </div>
