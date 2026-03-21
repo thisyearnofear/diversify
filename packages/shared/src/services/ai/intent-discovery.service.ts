@@ -5,8 +5,10 @@
  * Centralizes intent parsing logic for both Voice and Text inputs.
  */
 
+export type AppTab = 'overview' | 'protect' | 'swap' | 'info' | 'trade' | 'agent';
+
 export type AppIntent =
-    | { type: 'NAVIGATE'; tab: 'overview' | 'protect' | 'swap' | 'info' }
+    | { type: 'NAVIGATE'; tab: AppTab }
     | { type: 'SWAP_SHORTCUT'; fromToken?: string; toToken?: string; amount?: string }
     | { type: 'SEND_TO_PHONE'; phoneNumber: string; amount?: string; token?: string }
     | { type: 'ANALYZE_REQUEST'; goal?: string }

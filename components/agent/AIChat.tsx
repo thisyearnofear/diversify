@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useNavigation } from "../../context/app/NavigationContext";
 import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
@@ -12,6 +12,10 @@ import FreemiumPanel from "./FreemiumPanel";
 import dynamic from "next/dynamic";
 
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
+  ssr: false,
+});
+
+const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
   ssr: false,
 });
 
@@ -50,6 +54,7 @@ export default function AIChat() {
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [showClaimFlow, setShowClaimFlow] = useState(false);
+  const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
 
   // Track user-message count via ref so the auto-open effect only fires when
   // a NEW user message is added — not when the user simply closes the drawer.
@@ -228,15 +233,25 @@ export default function AIChat() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowClearConfirm(true)}
-              className="text-xs font-bold text-gray-400 hover:text-gray-600 uppercase"
+              onClick={() => setCurrentView(currentView === 'chat' ? 'history' : 'chat')}
+              className={`text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-all ${
+                currentView === 'history' 
+                  ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-500/20' 
+                  : 'bg-white/50 dark:bg-gray-800/50 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-700/30'
+              }`}
             >
-              Clear
+              {currentView === 'chat' ? 'Library 📜' : 'Back to Chat 💬'}
+            </button>
+            <button
+              onClick={() => setShowClearConfirm(true)}
+              className="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase tracking-wider"
+            >
+              Reset
             </button>
             {/* Explicit close button so users can dismiss without confusion */}
             <button
               onClick={() => setDrawerOpen(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/30 transition-colors"
               aria-label="Close chat"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,250 +261,129 @@ export default function AIChat() {
           </div>
         </div>
 
-        {/* Message List */}
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
+        {/* Scrollable Content Area */}
+        <div 
+          className="flex-1 overflow-hidden flex flex-col pt-2"
         >
-          {messages.length === 0 && !isChatting && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5 }}
-              className="h-full flex flex-col items-center justify-center text-center space-y-5"
-            >
-              {/* Animated gold coin stack */}
-              <div className="relative">
-                <motion.div
-                  animate={{ y: [0, -10, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="text-5xl filter drop-shadow-lg"
-                >
-                  🪙
-                </motion.div>
-                <motion.div
-                  animate={{ y: [0, -8, 0], opacity: [0.5, 1, 0.5] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
-                  className="absolute -bottom-2 -right-4 text-3xl"
-                >
-                  🪙
-                </motion.div>
-                <motion.div
-                  animate={{ scale: [0, 1, 0], opacity: [0, 1, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute -top-2 -right-2 text-amber-400 text-xl"
-                >
-                  ✨
-                </motion.div>
-              </div>
-              
-              <div className="space-y-2">
-                <p className="text-base font-bold text-amber-800 dark:text-amber-200">
-                  DiversiFi awaits your question
-                </p>
-                <p className="text-sm text-amber-600/70 dark:text-amber-400/70 max-w-[240px]">
-                  Ask about your portfolio, gold, yields, or inflation protection
-                </p>
-              </div>
-              
-              {/* Quick action pills */}
-              <div className="flex flex-wrap justify-center gap-2 max-w-[280px]">
-                {["What's my portfolio?", "How do I earn yield?", "Protect my savings"].map((prompt, i) => (
-                  <motion.button
-                    key={prompt}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.1 }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setInputValue(prompt);
-                      addUserMessage(prompt);
-                      sendChatMessage(prompt);
-                      setInputValue("");
-                    }}
-                    className="px-3 py-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700/30 hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
-                  >
-                    {prompt}
-                  </motion.button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-
-          {messages.map((msg, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 20, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ 
-                type: "spring", 
-                stiffness: 300, 
-                damping: 20,
-                delay: i * 0.05 
-              }}
-              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} group`}
-            >
-              {/* AI Avatar with coin */}
-              {msg.role === "assistant" && (
-                <motion.div 
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
-                  className="w-8 h-8 mr-2 rounded-full bg-gradient-to-br from-amber-300 via-yellow-400 to-amber-500 flex items-center justify-center text-lg shadow-lg shadow-amber-500/20 border-2 border-amber-200 self-end"
-                >
-                  🪙
-                </motion.div>
-              )}
-              
-              <div
-                className={`relative max-w-[80%] px-4 py-3 rounded-2xl text-sm transition-all duration-300 ${
-                  msg.role === "user"
-                    ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-md shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/30 group-hover:scale-[1.02]"
-                    : "bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 dark:from-amber-900/20 dark:via-yellow-900/10 dark:to-amber-900/20 text-amber-900 dark:text-amber-100 rounded-bl-md border border-amber-200/50 dark:border-amber-700/30 shadow-lg shadow-amber-500/10 group-hover:shadow-amber-500/20 group-hover:scale-[1.02]"
-                }`}
+          <AnimatePresence mode="wait">
+            {currentView === 'chat' ? (
+              <motion.div
+                key="chat"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
+                ref={scrollRef}
               >
-                {/* Subtle shimmer effect for AI messages */}
-                {msg.role === "assistant" && (
-                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-amber-200/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                )}
-                
-                {msg.type === 'insight' && msg.insights ? (
-                  <div className="space-y-3 py-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-200/30 dark:bg-amber-800/30 px-2 py-0.5 rounded-full">
-                        Intelligent Insight
-                      </span>
-                    </div>
-                    <p className="font-bold leading-tight">{msg.insights.summary}</p>
-                    
-                    <div className="flex flex-wrap gap-1.5">
-                      {msg.insights.tags.map(tag => (
-                        <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 bg-white/50 dark:bg-black/20 rounded border border-amber-200/30">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t border-amber-200/30 space-y-2">
-                       <p className="text-[10px] font-black text-amber-800 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1">
-                         <span className="text-xs">🎯</span> Action Items
-                       </p>
-                       <ul className="space-y-1.5">
-                         {msg.insights.actionItems.map((item, idx) => (
-                           <li key={idx} className="text-xs flex items-start gap-2">
-                             <span className="w-4 h-4 rounded-full bg-amber-400/20 flex items-center justify-center text-[10px] mt-0.5">
-                               {idx + 1}
-                             </span>
-                             <span className="flex-1 opacity-90">{item}</span>
-                           </li>
-                         ))}
-                       </ul>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="relative z-10 whitespace-pre-wrap">{msg.content}</div>
-                )}
-                
-                {/* Timestamp */}
-                <div className={`text-xs mt-1.5 opacity-60 ${
-                  msg.role === "user" ? "text-blue-100" : "text-amber-700 dark:text-amber-400"
-                }`}>
-                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-              </div>
-            </motion.div>
-          ))}
-
-          {isChatting && (
-            <div className="flex justify-start">
-              <div className="bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 dark:from-amber-900/20 dark:via-yellow-900/10 dark:to-amber-900/20 rounded-2xl rounded-bl-md px-5 py-4 flex flex-col gap-3 border border-amber-200/50 dark:border-amber-700/30 max-w-[90%] shadow-lg shadow-amber-500/10">
-                {/* Animated Gold Coin Oracle */}
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    {/* Spinning gold coin */}
-                    <motion.div
-                      animate={{ rotateY: 360 }}
-                      transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                      className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-500 flex items-center justify-center text-2xl shadow-xl shadow-amber-500/30 border-4 border-amber-300"
-                      style={{ transformStyle: "preserve-3d" }}
-                    >
-                      🪙
-                    </motion.div>
-                    {/* Sparkle effects */}
-                    <motion.div
-                      animate={{ 
-                        scale: [0, 1, 0],
-                        opacity: [0, 1, 0],
-                        rotate: [0, 180, 360]
-                      }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                      className="absolute -top-2 -right-2 text-amber-400 text-lg"
-                    >
-                      ✨
-                    </motion.div>
-                    <motion.div
-                      animate={{ 
-                        scale: [0, 1, 0],
-                        opacity: [0, 1, 0],
-                        rotate: [0, -180, -360]
-                      }}
-                      transition={{ duration: 2, repeat: Infinity, delay: 1 }}
-                      className="absolute -bottom-1 -left-2 text-yellow-400 text-sm"
-                    >
-                      ✦
-                    </motion.div>
-                  </div>
-                  <div className="flex-1">
-                    <span className="text-sm font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
-                      {thinkingStep || "DiversiFi is analyzing..."}
-                    </span>
-                    {/* Gold progress bar */}
-                    <div className="mt-2 h-1.5 bg-amber-200/50 dark:bg-amber-800/30 rounded-full overflow-hidden">
+                {messages.length === 0 && !isChatting && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="h-full flex flex-col items-center justify-center text-center space-y-5"
+                  >
+                    {/* Animated gold coin stack */}
+                    <div className="relative">
                       <motion.div
-                        animate={{ 
-                          width: ["0%", "40%", "70%", "90%"],
-                        }}
-                        transition={{ 
-                          duration: 8, 
-                          repeat: Infinity,
-                          ease: "easeInOut"
-                        }}
-                        className="h-full bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 rounded-full"
-                      />
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Animated data points with gold theme */}
-                <div className="flex flex-wrap gap-2">
-                  {["Cross-chain data", "Inflation rates", "RWA yields", "Risk models"].map((item, i) => (
-                    <motion.span
-                      key={item}
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.15, repeat: Infinity, repeatDelay: 2 }}
-                      className="text-xs px-2 py-1 bg-amber-100/60 dark:bg-amber-800/20 rounded-full text-amber-700 dark:text-amber-300 font-medium border border-amber-200/50 dark:border-amber-700/30"
-                    >
-                      <motion.span
-                        animate={{ opacity: [0.5, 1, 0.5] }}
-                        transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-5xl filter drop-shadow-lg"
                       >
                         🪙
-                      </motion.span>{" "}
-                      {item}
-                    </motion.span>
-                  ))}
-                </div>
+                      </motion.div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <p className="text-base font-bold text-amber-800 dark:text-amber-200">
+                        DiversiFi awaits your question
+                      </p>
+                    </div>
+                    
+                    {/* Quick action pills */}
+                    <div className="flex flex-wrap justify-center gap-2 max-w-[280px]">
+                      {["What's my portfolio?", "How do I earn yield?", "Protect my savings"].map((prompt, i) => (
+                        <motion.button
+                          key={prompt}
+                          onClick={() => {
+                            setInputValue(prompt);
+                            addUserMessage(prompt);
+                            sendChatMessage(prompt);
+                            setInputValue("");
+                          }}
+                          className="px-3 py-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700/30 hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
+                        >
+                          {prompt}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
 
-                <div className="pt-2 border-t border-blue-100 dark:border-blue-800/30">
-                  <p className="text-xs text-blue-600/80 dark:text-blue-300/80 font-medium leading-relaxed">
-                    🔍 Analyzing your portfolio across multiple chains and comparing against real-time inflation data...
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+                {messages.map((msg, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} group`}
+                  >
+                    {msg.role === "assistant" && (
+                      <div className="w-8 h-8 mr-2 rounded-full bg-amber-400 flex items-center justify-center text-lg shadow-lg self-end border border-amber-300">
+                        🪙
+                      </div>
+                    )}
+                    
+                    <div
+                      className={`relative max-w-[80%] px-4 py-3 rounded-2xl text-sm transition-all duration-300 ${
+                        msg.role === "user"
+                          ? "bg-blue-600 text-white rounded-br-md shadow-lg shadow-blue-500/10"
+                          : "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md border border-gray-200 dark:border-gray-700 shadow-sm"
+                      }`}
+                    >
+                      {msg.type === 'insight' && msg.insights ? (
+                        <div className="space-y-3 py-1">
+                          <p className="font-bold leading-tight">{msg.insights.summary}</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {msg.insights.tags.map(tag => (
+                              <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                                #{tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="relative z-10 whitespace-pre-wrap">{msg.content}</div>
+                      )}
+                      
+                      <div className={`text-[10px] mt-1.5 opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>
+                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {isChatting && (
+                  <div className="flex justify-start">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm max-w-[90%]">
+                      <div className="flex items-center gap-3">
+                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="text-2xl">🪙</motion.div>
+                         <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">{thinkingStep || "Analyzing..."}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="history"
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="flex-1 overflow-hidden"
+              >
+                <IntelligenceHistory />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer Input */}

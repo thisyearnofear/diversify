@@ -15,7 +15,7 @@ import { useNavigation } from '../context/app/NavigationContext';
 import { useDemoMode } from '../context/app/DemoModeContext';
 import { useAIOracle } from './use-ai-oracle';
 import { useToast } from '../components/ui/Toast';
-import { IntentDiscoveryService } from '@diversifi/shared';
+import { IntentDiscoveryService, AgentActionService } from '@diversifi/shared';
 
 interface VoiceIntentOptions {
   /** Called when the user asks for wallet/connection help */
@@ -29,107 +29,19 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
   const { showToast } = useToast();
 
   const handleTranscription = useCallback(
-    (text: string) => {
+    async (text: string) => {
       const intent = IntentDiscoveryService.discover(text);
 
-      switch (intent.type) {
-        case 'ONBOARDING':
-          if (intent.topic === 'demo') {
-            showToast('Enabling demo mode...', 'info');
-            enableDemoMode();
-          } else if (intent.topic === 'wallet-help') {
-            // Caller (index.tsx) decides whether to show tutorial or connect prompt
-            options.onOpenWalletTutorial?.();
-          } else {
-            ask(text);
-          }
-          break;
-
-        case 'NAVIGATE':
-          showToast(`Switching to ${intent.tab.toUpperCase()}`, 'info');
-          setActiveTab(intent.tab);
-          break;
-
-        case 'SEND_TO_PHONE':
-          showToast(`Resolving ${intent.phoneNumber}...`, 'info');
-          
-          // Trigger resolution (async)
-          (async () => {
-            try {
-              // Note: For hackathon/MiniPay, we use the user's provider for ODIS auth
-              const { SocialConnectService, ProviderFactoryService } = await import('@diversifi/shared');
-              const { ethers } = await import('ethers');
-
-              const signer = await ProviderFactoryService.getSignerForChain(42220); // Celo
-              const address = await signer.getAddress();
-              
-              // Mock/Stub for walletClient expected by SocialConnectService
-              // In reality, this would be the viem client from useWallet
-              const authSigner = {
-                authenticationMethod: 'wallet_key',
-                sign191: (msg: string) => signer.signMessage(msg)
-              };
-
-              const scService = new SocialConnectService({ isTestnet: true });
-              const resolvedAddress = await scService.resolveIdentifier(
-                intent.phoneNumber,
-                undefined,
-                authSigner
-              );
-
-              if (resolvedAddress) {
-                showToast(`Resolved to ${resolvedAddress.slice(0, 6)}...`, 'success');
-                setSwapPrefill({
-                  fromToken: 'USDm',
-                  toToken: intent.token || 'KESm',
-                  amount: intent.amount || '10',
-                  reason: `SocialConnect: Send to ${intent.phoneNumber}`,
-                  phoneNumber: intent.phoneNumber,
-                  recipientAddress: resolvedAddress,
-                  fromChainId: 42220,
-                  toChainId: 42220
-                });
-                setActiveTab('swap');
-              } else {
-                showToast(`Could not resolve ${intent.phoneNumber}`, 'error');
-                // Fallback: still open swap but without recipient
-                setSwapPrefill({
-                  toToken: intent.token,
-                  amount: intent.amount,
-                  reason: `Manual: Send to ${intent.phoneNumber}`,
-                  phoneNumber: intent.phoneNumber
-                });
-                setActiveTab('swap');
-              }
-            } catch (err) {
-              console.error('SocialConnect resolution failed:', err);
-              showToast('SocialConnect error', 'error');
-            }
-          })();
-          break;
-
-        case 'SWAP_SHORTCUT':
-          showToast(`Preparing swap for ${intent.fromToken || 'assets'}...`, 'success');
-          setSwapPrefill({
-            fromToken: intent.fromToken,
-            toToken: intent.toToken,
-            amount: intent.amount,
-            reason: `Voice: "${text}"`,
-          });
-          setActiveTab('swap');
-          break;
-
-        case 'GOODDOLLAR':
-          // Let the status-aware AI handle the specific status/claim logic
-          ask(text);
-          openOracle();
-          break;
-
-        default:
-          ask(text);
-          openOracle();
-          break;
-      }
+      // Unified action execution logic
+      await AgentActionService.execute(intent, text, {
+        onNavigate: setActiveTab,
+        onSwapPrefill: setSwapPrefill,
+        onToast: showToast,
+        onOpenWalletTutorial: options.onOpenWalletTutorial,
+        onEnableDemoMode: enableDemoMode,
+        onAskAI: ask,
+        onOpenAIChat: openOracle,
+      });
     },
     [ask, enableDemoMode, openOracle, options, setActiveTab, setSwapPrefill, showToast],
   );

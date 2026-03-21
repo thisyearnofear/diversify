@@ -38,8 +38,9 @@ export {
 export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export { IntelligenceService } from './services/ai/intelligence.service';
-export { IntentDiscoveryService } from './services/ai/intent-discovery.service';
+export { IntentDiscoveryService, type AppIntent, type AppTab } from './services/ai/intent-discovery.service';
 export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';
+export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent-action.service';
 
 // Export Utils
 export * from './utils/market-pulse-service';

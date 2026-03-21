@@ -11,6 +11,7 @@ import { useAIConversation } from '../context/AIConversationContext';
 import { useAgentChat } from './use-agent-chat';
 import { useAgentStatus } from './use-agent-status';
 import { useAgentVoice } from './use-agent-voice';
+import { IntelligenceService } from '@diversifi/shared';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -42,6 +43,10 @@ export function useAIOracle() {
 
         if (response.ok) {
           const { insights } = await response.json();
+          
+          // Persistence: Store in deep history for cross-session reasoning
+          IntelligenceService.saveVoiceInsight(insights);
+
           addMessage({
              role: 'assistant',
              content: insights.summary,

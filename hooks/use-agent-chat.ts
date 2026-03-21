@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
-import { IntentDiscoveryService } from "@diversifi/shared";
+import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@diversifi/shared";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -83,76 +83,55 @@ export function useAgentChat({
       if (!capabilities.chat) return;
 
       const intent = IntentDiscoveryService.discover(content);
-      let fastPathResponse: string | null = null;
+      // 1. Fast-path routing for immediate UI feedback (Navigation, Demo, etc.)
+      let fastPathResponse: string | undefined;
 
-      if (intent.type === "ONBOARDING") {
-        switch (intent.topic) {
-          case "what-is-this":
-            fastPathResponse = "DiversiFi is a wealth protection protocol that helps you hedge against inflation by diversifying your stablecoin savings across multiple regions and real-world assets (RWAs). We make it easy to hold a basket of assets like Digital Gold (PAXG), Yield-bearing Treasury Tokens (USDY), and regional stablecoins (like Euro or Celo Real).";
-            break;
-          case "how-to-start":
-            fastPathResponse = "It's simple: 1. Connect your wallet (or create one with email). 2. Choose a protection strategy or build your own portfolio in the 'Protect' tab. 3. Swap your funds into diversified assets. We handle the routing and optimization to ensure you get the best rates across Celo and Arbitrum.";
-            break;
-          case "is-safe":
-            fastPathResponse = "DiversiFi is non-custodial, meaning you always retain full control of your funds. We never store your private keys. All transactions are executed on-chain via secure smart contracts. However, as with all DeFi protocols, there are risks including smart contract bugs and market volatility. Always do your own research.";
-            break;
-          case "demo":
-            fastPathResponse = "Taking you to demo mode... 🎮";
-            break;
-        }
-      } else if (intent.type === "NAVIGATE") {
-        switch (intent.tab) {
-          case "overview":
-            if (address) {
-              fastPathResponse = "Taking you to your portfolio... 📊";
-            } else {
-              fastPathResponse = "To see your portfolio, you'll need to connect your wallet first. Once connected, your holdings will appear in the **Overview** tab!";
-            }
-            break;
-          case "protect":
-            fastPathResponse = "Taking you to protection strategies... 🛡️";
-            break;
-          case "swap":
-            fastPathResponse = address
-              ? "Taking you to the swap interface... 💱"
-              : "To swap tokens, you'll need to connect your wallet first. Click **Connect Wallet** to get started!";
-            break;
-          case "info":
-            fastPathResponse = "Taking you to the Learn section... 📚";
-            break;
-        }
-      } else if (intent.type === "GOODDOLLAR") {
-        if (intent.topic === "claim") {
-          fastPathResponse = "Launching G$ UBI claim sequence... 🪙";
-        } else if (intent.topic === "verify") {
-          fastPathResponse = "Starting verification flow... 🛡️";
-        }
-      } else if (intent.type === "QUERY" && intent.context === "market") {
-          fastPathResponse = "Scanning global markets for real-time momentum... 🔍";
+      switch (intent.type) {
+        case 'NAVIGATE':
+          fastPathResponse = `Taking you to ${intent.tab.toUpperCase()}... 🚀`;
+          break;
+        case 'SWAP_SHORTCUT':
+          fastPathResponse = "Preparing your swap hub... 💱";
+          break;
+        case 'SEND_TO_PHONE':
+          fastPathResponse = `Resolving ${intent.phoneNumber} via SocialConnect... 📱`;
+          break;
+        case 'GOODDOLLAR':
+          fastPathResponse = intent.topic === 'claim' ? "Checking G$ UBI eligibility... 🪙" : "Starting verification... 🛡️";
+          break;
+        case 'ONBOARDING':
+          if (intent.topic === 'demo') {
+            fastPathResponse = "Entering Demo Mode... 🎮";
+          } else if (intent.topic === 'what-is-this') {
+            fastPathResponse = "DiversiFi is a wealth protection protocol that helps you hedge against inflation by diversifying your stablecoin savings across multiple regions and real-world assets (RWAs).";
+          } else if (intent.topic === 'how-to-start') {
+            fastPathResponse = "It's simple: 1. Connect your wallet. 2. Choose a protection strategy in the 'Protect' tab. 3. Swap your funds into diversified assets.";
+          } else if (intent.topic === 'is-safe') {
+            fastPathResponse = "DiversiFi is non-custodial. We never store your private keys. All transactions are executed on-chain via secure smart contracts.";
+          }
+          break;
       }
 
       if (fastPathResponse) {
-        updateChatState({
-          isChatting: true,
-          thinkingStep: "Retrieving info...",
-        });
+        updateChatState({ isChatting: true, thinkingStep: "Executing action..." });
 
+        // Execute background side-effects (SocialConnect resolution, etc.) via consolidated service
+        await AgentActionService.execute(intent, content, {});
+
+        // Determine the action for the UI component (AIChat) to execute after a delay
         let navAction: AIMessage["action"] | undefined;
-
         if (intent.type === "NAVIGATE") {
           navAction = { type: "navigate", tab: intent.tab, delay: 1500 };
         } else if (intent.type === "GOODDOLLAR") {
-          if (intent.topic === "claim") {
-            navAction = { type: "claim_ubi", delay: 1500 };
-          } else if (intent.topic === "verify") {
-            navAction = { type: "verify_identity", delay: 1500 };
-          }
-        }
- else if (intent.type === "ONBOARDING" && intent.topic === "demo") {
-           // No specific action needed, maybe navigate to overview
-           navAction = { type: "navigate", tab: "overview", delay: 1500 };
+          navAction = { 
+            type: intent.topic === 'claim' ? 'claim_ubi' : 'verify_identity', 
+            delay: 1500 
+          };
+        } else if (intent.type === "ONBOARDING" && intent.topic === "demo") {
+          navAction = { type: "navigate", tab: "overview", delay: 1500 };
         }
 
+        // Add the message to chat after a brief thinking delay
         setTimeout(async () => {
           const assistantMessage: AIMessage = {
             role: "assistant",
@@ -162,11 +141,8 @@ export function useAgentChat({
             ...(navAction && { action: navAction }),
           };
           addMessage(assistantMessage);
-          updateChatState({
-            isChatting: false,
-            thinkingStep: "",
-          });
 
+          // Handle auto-speech if enabled
           if (capabilities.voiceOutput && generateSpeech) {
             try {
               const speechBlob = await generateSpeech(fastPathResponse!);
@@ -175,10 +151,12 @@ export function useAgentChat({
                 const audio = new Audio(url);
                 audio.play();
               }
-            } catch (speechError) {
-              console.warn("[useAgentChat] Auto-speech failed:", speechError);
+            } catch (e) {
+              console.warn("[useAgentChat] Fast-path speech failed:", e);
             }
           }
+
+          updateChatState({ isChatting: false, thinkingStep: "" });
         }, 600);
         return;
       }
