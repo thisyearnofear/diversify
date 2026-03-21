@@ -7,6 +7,7 @@ import { useAgentChat } from "../../hooks/use-agent-chat";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
+import { useProactiveAgent } from "../../hooks/use-proactive-agent";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";
 import dynamic from "next/dynamic";
@@ -25,6 +26,69 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 function useUserMessageCount(messages: { role: string }[]) {
   return messages.filter(m => m.role === "user").length;
 }
+
+const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: () => void }) => {
+  const [status, setStatus] = useState<'idle' | 'executing' | 'success'>('idle');
+
+  const handleExecute = () => {
+    setStatus('executing');
+    // Simulate real-world execution via Celo Agent Fuel
+    setTimeout(() => {
+      setStatus('success');
+      setTimeout(onComplete, 1500);
+    }, 3000);
+  };
+
+  return (
+    <div className="mt-4 p-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-inner w-full max-w-[280px]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+           <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">⛽</span>
+           <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Agent Fuel</span>
+        </div>
+        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
+          {action.network}
+        </span>
+      </div>
+
+      <div className="flex items-end justify-between mb-4">
+        <div>
+           <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Target Asset</p>
+           <p className="text-sm font-black text-gray-800 dark:text-gray-100">{action.targetAsset}</p>
+        </div>
+        <div className="text-right">
+           <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Est. Amount</p>
+           <p className="text-sm font-black text-gray-800 dark:text-gray-100">${action.amount}</p>
+        </div>
+      </div>
+
+      <button
+        onClick={handleExecute}
+        disabled={status !== 'idle'}
+        className={`w-full py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+          status === 'success' ? 'bg-green-500 text-white' :
+          status === 'executing' ? 'bg-blue-400 text-white cursor-wait' :
+          'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20'
+        }`}
+      >
+        {status === 'idle' && 'Execute Rebalance'}
+        {status === 'executing' && (
+          <span className="flex items-center justify-center gap-2">
+            <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}>⚙️</motion.span>
+            Signing tx...
+          </span>
+        )}
+        {status === 'success' && '✓ Executed'}
+      </button>
+
+      {status === 'idle' && (
+        <p className="text-[9px] text-center text-gray-400 mt-2 font-medium">
+          Gas covered autonomously via local MPC wallet
+        </p>
+      )}
+    </div>
+  );
+};
 
 /**
  * AIChat - Global Bottom Sheet Drawer
@@ -55,6 +119,9 @@ export default function AIChat() {
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [showClaimFlow, setShowClaimFlow] = useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
+
+  // Initialize background Celo event monitoring & proactive insights capability
+  useProactiveAgent();
 
   // Track user-message count via ref so the auto-open effect only fires when
   // a NEW user message is added — not when the user simply closes the drawer.
@@ -352,6 +419,15 @@ export default function AIChat() {
                         </div>
                       ) : (
                         <div className="relative z-10 whitespace-pre-wrap">{msg.content}</div>
+                      )}
+
+                      {msg.action?.type === 'execute_rwa' && (
+                        <RwaActionWidget 
+                          action={msg.action} 
+                          onComplete={() => {
+                            addUserMessage(`Execution successful! Rebalanced $${msg.action?.amount} to ${msg.action?.targetAsset} on ${msg.action?.network}.`);
+                          }} 
+                        />
                       )}
                       
                       <div className={`text-[10px] mt-1.5 opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>

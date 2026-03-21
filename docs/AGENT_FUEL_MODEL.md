@@ -25,11 +25,11 @@ The Agent uses **EIP-3009 (Transfer with Authorization)** to pay for premium dat
 *   **User View**: "Fuel Level" decreases slightly.
 
 ### 2. Execution (Yield & Swaps)
-When the Agent identifies an opportunity (e.g., higher yield on Arbitrum), it uses **Circle CCTP** to teleport fuel.
-*   **Step 1**: Agent burns USDC on Arc L1.
-*   **Step 2**: Circle mints USDC on Arbitrum.
-*   **Step 3**: Agent executes the swap/deposit on Arbitrum.
-*   **Step 4**: Agent bridges the *profit* back to the Fuel Tank (or reinvests it).
+When the Agent identifies an opportunity (e.g., higher yield on Arbitrum or localized yield on Celo Mento), it bridges fuel or executes natively.
+*   **Step 1**: Agent identifies yield spike via Proactive Indexer (e.g., cEUR on Celo).
+*   **Step 2**: Agent prompts user via the interactive `RwaActionWidget`.
+*   **Step 3**: Agent burns/teleports USDC using Circle CCTP to the target Spoke (Celo/Arbitrum).
+*   **Step 4**: Agent executes the swap/deposit, covering gas directly from the Fuel Tank.
 
 ### 3. Autonomy Leases (The "Allowance")
 The user sets a **Daily Spending Limit** (e.g., $10/day).

@@ -198,9 +198,12 @@ export interface AIMessage {
     actionItems: string[];
   };
   action?: {
-    type: "navigate" | "claim_ubi" | "verify_identity";
+    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa";
     tab?: string;
     delay?: number;
+    amount?: string;
+    network?: string;
+    targetAsset?: string;
   };
 }
 

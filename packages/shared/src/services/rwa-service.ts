@@ -159,6 +159,46 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             riskLevel: 'medium'
         },
     ],
+    celo: [
+        {
+            address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
+            symbol: 'cEUR',
+            name: 'Celo Euro (Mento)',
+            type: 'stable_yield',
+            apy: 6.5,
+            tvl: 25000000,
+            chain: 'celo',
+            description: 'Mento stablecoin tracking the Euro with localized yield opportunities.',
+            minInvestment: 5,
+            riskLevel: 'low'
+        },
+        {
+            address: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+            symbol: 'cUSD',
+            name: 'Celo Dollar (Mento)',
+            type: 'stable_yield',
+            apy: 7.2,
+            tvl: 45000000,
+            chain: 'celo',
+            description: 'Mento stablecoin tracking the US Dollar. Currently experiencing high-yield demand.',
+            minInvestment: 5,
+            riskLevel: 'low'
+        }
+    ],
+    'celo-sepolia': [
+         {
+            address: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
+            symbol: 'cUSD',
+            name: 'Celo Dollar Testnet',
+            type: 'stable_yield',
+            apy: 12.0,
+            tvl: 100000,
+            chain: 'celo-sepolia',
+            description: 'Testnet Mento cUSD for Hackathon demonstration.',
+            minInvestment: 1,
+            riskLevel: 'low'
+        }
+    ],
     polygon: [
         {
             address: '0x2F800Db0fdb5223b3C3f354886d907A671414A7F',
@@ -200,6 +240,22 @@ export const RWA_NETWORKS = {
         blockExplorer: 'https://explorer.testnet.chain.robinhood.com',
         nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
         avgGasCost: 0.01
+    },
+    celo: {
+        chainId: 42220,
+        name: 'Celo Mainnet',
+        rpcUrl: 'https://forno.celo.org',
+        blockExplorer: 'https://celoscan.io',
+        nativeCurrency: { name: 'Celo', symbol: 'CELO', decimals: 18 },
+        avgGasCost: 0.001 // Extremely cheap transactions
+    },
+    'celo-sepolia': {
+        chainId: 11142220,
+        name: 'Celo Sepolia Testnet',
+        rpcUrl: 'https://sepolia-forno.celo-testnet.org',
+        blockExplorer: 'https://sepolia.celoscan.io',
+        nativeCurrency: { name: 'Celo', symbol: 'CELO', decimals: 18 },
+        avgGasCost: 0.001
     },
     polygon: {
         chainId: 137,

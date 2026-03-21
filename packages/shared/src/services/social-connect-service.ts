@@ -19,7 +19,7 @@ import {
     PublicClient,
     parseUnits 
 } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { celo, celoSepolia } from 'viem/chains';
 
 // Define required ODIS types manually if needed or import from @celo/identity
 type OdisContextName = 'mainnet' | 'alfajores' | 'asv-poc';
@@ -70,7 +70,7 @@ export class SocialConnectService {
     }) {
         this.isTestnet = options.isTestnet ?? true;
         this.client = createPublicClient({
-            chain: (this.isTestnet ? celoAlfajores : celo) as any,
+            chain: (this.isTestnet ? celoSepolia : celo) as any,
             transport: http(options.rpcUrl)
         });
         // Default to a known issuer or the user's own address if they are an issuer

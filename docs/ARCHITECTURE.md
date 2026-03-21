@@ -38,9 +38,10 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
 - Uniswap V3                - Perps Trading
 ```
 
-### The "Agent Fuel" Model
+### The "Agent Fuel" Model & Proactive Execution
 *   **Custody**: User-funded, Developer-controlled (via Circle MPC).
 *   **Gas**: Native USDC on Arc L1. The agent pays for its own compute and Oracle data fees (x402) using its internal balance.
+*   **Proactive Listening**: `useProactiveAgent` continuously monitors Envio/Celo indexers. When yield spikes (e.g., Mento cEUR), it pushes an interactive `RwaActionWidget` to the UI.
 *   **Lease**: Users grant permissions via **ERC-6900** modules (e.g., "Spend max $10/day on yield strategies").
 
 ## Technology Stack
@@ -70,7 +71,8 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Celo Network  │    │  Arbitrum       │    │  Hyperliquid    │
 │ - USDm, EURm    │    │ - USDC, USDY    │    │ - Hedges        │
-│ - Mento swaps   │    │ - 1inch swaps   │    │ - Perps         │
+│ - Mento / DEX   │    │ - 1inch swaps   │    │ - Perps         │
+│ - RWAs & Stable │    │ - RWA & Yield   │    │ - Execution     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                      │
          └───────────────────────┘                      │
