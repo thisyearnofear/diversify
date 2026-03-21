@@ -170,52 +170,68 @@ export class CircleService {
     // =========================================================================
 
     /**
-     * Get unified USDC balance across all chains via Circle Gateway
+     * Get unified USDC balance across all chains via real on-chain RPC queries.
+     * No hardcoded values — each chain balance is fetched from the actual contract.
      */
     async getUnifiedUSDCBalance(walletAddress: string): Promise<UnifiedUSDCBalance> {
-        await this.ensureClient();
-        
-        try {
-            console.log(`[Circle Service] Fetching unified USDC balance for ${walletAddress}`);
+        // Known USDC contract addresses per chain
+        const USDC_CONTRACTS: Record<number, { address: string; rpc: string; name: string; decimals: number }> = {
+            5042002: { address: ARC_DATA_HUB_CONFIG.USDC_TESTNET, rpc: process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network', name: 'Arc Testnet', decimals: 6 },
+            42161:   { address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', rpc: process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc', name: 'Arbitrum', decimals: 6 },
+            1:       { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', rpc: process.env.ETH_RPC_URL || 'https://eth.llamarpc.com', name: 'Ethereum', decimals: 6 },
+        };
 
-            // Real implementation: Fetch real balance from Arc Network
-            const arcBalance = await this.getUSDCBalanceOnArc(walletAddress);
+        const chainBalances: CircleGatewayBalance[] = [];
+        let arcBalanceStr = '0.00';
+        let ethereumBalanceStr = '0.00';
+        let arbitrumBalanceStr = '0.00';
 
-            // In 2026, we fetch real cross-chain data via Circle Gateway API
-            // For now, we return a structured response that aggregates real Arc and demo Spoke data
-            return {
-                totalUSDC: (parseFloat(arcBalance) + 1122.50).toFixed(2), // Real + Demo
-                chainBalances: [
-                    {
-                        chainId: 5042002,
-                        chainName: 'Arc Testnet',
-                        usdcBalance: arcBalance,
-                        nativeBalance: '0.00',
-                        lastUpdated: new Date().toISOString()
-                    },
-                    {
-                        chainId: 42161,
-                        chainName: 'Arbitrum',
-                        usdcBalance: '672.50',
-                        nativeBalance: '0.05',
-                        lastUpdated: new Date().toISOString()
-                    }
-                ],
-                arcBalance: arcBalance,
-                ethereumBalance: '450.00',
-                arbitrumBalance: '672.50'
-            };
+        // Query each chain in parallel
+        const results = await Promise.allSettled(
+            Object.entries(USDC_CONTRACTS).map(async ([chainIdStr, config]) => {
+                const chainId = parseInt(chainIdStr);
+                try {
+                    const rpcProvider = new providers.JsonRpcProvider(config.rpc);
+                    const contract = new ethers.Contract(
+                        config.address,
+                        ['function balanceOf(address) view returns (uint256)'],
+                        rpcProvider
+                    );
+                    const raw = await contract.balanceOf(walletAddress);
+                    const formatted = ethers.utils.formatUnits(raw, config.decimals);
+                    return { chainId, name: config.name, balance: formatted };
+                } catch (err) {
+                    console.warn(`[Circle Service] Failed to fetch USDC on ${config.name}:`, err);
+                    return { chainId, name: config.name, balance: '0.00' };
+                }
+            })
+        );
 
-        } catch (error) {
-            console.error('[Circle Service] Balance fetch failed:', error);
-            return {
-                totalUSDC: '0.00',
-                arcBalance: '0.00',
-                chainBalances: [],
-                ethereumBalance: '0.00',
-                arbitrumBalance: '0.00'
-            };
+        for (const result of results) {
+            if (result.status === 'fulfilled') {
+                const { chainId, name, balance } = result.value;
+                chainBalances.push({
+                    chainId,
+                    chainName: name,
+                    usdcBalance: balance,
+                    nativeBalance: '0.00', // Not critical for agent logic
+                    lastUpdated: new Date().toISOString(),
+                });
+                if (chainId === 5042002) arcBalanceStr = balance;
+                if (chainId === 1) ethereumBalanceStr = balance;
+                if (chainId === 42161) arbitrumBalanceStr = balance;
+            }
         }
+
+        const totalUSDC = chainBalances.reduce((sum, cb) => sum + parseFloat(cb.usdcBalance), 0).toFixed(2);
+
+        return {
+            totalUSDC,
+            chainBalances,
+            arcBalance: arcBalanceStr,
+            ethereumBalance: ethereumBalanceStr,
+            arbitrumBalance: arbitrumBalanceStr,
+        };
     }
 
     /**
@@ -238,7 +254,8 @@ export class CircleService {
     }
 
     /**
-     * Transfer USDC using Circle Gateway (Simulated cross-chain)
+     * Transfer USDC using Circle SDK createTransaction (cross-chain).
+     * Uses the same pattern as bridgeUSDC (line 366+) — real Circle SDK call.
      */
     async transferUSDCViaGateway(
         fromChainId: number,
@@ -246,8 +263,49 @@ export class CircleService {
         amount: string,
         walletAddress: string
     ): Promise<string> {
-        console.log(`[Circle Service] Gateway transfer: ${amount} USDC from ${fromChainId} to ${toChainId}`);
-        return 'circle-gateway-' + Math.random().toString(36).substr(2, 12);
+        await this.ensureClient();
+
+        try {
+            console.log(`[Circle Service] Gateway transfer: ${amount} USDC from chain ${fromChainId} to chain ${toChainId}`);
+
+            // Map chainIds to Circle blockchain identifiers
+            const CHAIN_MAP: Record<number, string> = {
+                5042002: 'ARC-TESTNET',
+                42161: 'ARB',
+                1: 'ETH',
+                42220: 'CELO',
+            };
+
+            const sourceBlockchain = CHAIN_MAP[fromChainId] || 'ARC-TESTNET';
+            const destBlockchain = CHAIN_MAP[toChainId] || 'ARB';
+
+            // Find a wallet for this user on the source chain
+            const listResponse = await this.client.listWallets({ pageSize: 10 });
+            const wallet = listResponse.data?.wallets?.find((w: any) =>
+                w.blockchain === sourceBlockchain || w.metadata?.type === 'agent-fuel-account'
+            );
+
+            if (!wallet) {
+                throw new Error(`No Circle wallet found for chain ${sourceBlockchain}`);
+            }
+
+            const response = await this.client.createTransaction({
+                walletId: wallet.id,
+                blockchain: sourceBlockchain,
+                tokenId: CIRCLE_CONFIG.USDC_TOKEN_ID_ARC || '',
+                destinationAddress: walletAddress,
+                destinationBlockchain: destBlockchain,
+                amount: [amount],
+                feeLevel: 'MEDIUM',
+            });
+
+            const txId = response.data?.id;
+            console.log(`[Circle Service] Transfer initiated: ${txId}`);
+            return txId;
+        } catch (error: any) {
+            console.error('[Circle Service] Gateway transfer failed:', error.message);
+            throw new Error(`Circle Gateway transfer failed: ${error.message}`);
+        }
     }
 
     /**

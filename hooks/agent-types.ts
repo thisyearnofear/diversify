@@ -231,6 +231,9 @@ export interface AIConfig {
   goal: "Inflation Hedge" | "Growth" | "Income";
   timeHorizon: string;
   spendingLimit: number;
+  // Proactive Agent Alert Thresholds (Phase 4C)
+  volatilityAlertThreshold?: number; // Implied volatility %, default 80
+  yieldAlertThreshold?: number;      // APY %, default 10
 }
 
 export interface AgentAnalysisDependencies {
@@ -279,6 +282,7 @@ export interface AgentAnalysisActions {
   runAutonomousAnalysis: (
     inflationData: Record<string, RegionalInflationData>,
     portfolio: MultichainPortfolio,
+    signedPermission?: any,
   ) => Promise<AIAdvice | null>;
   clearAdvice: () => void;
 }

@@ -97,8 +97,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             });
         }
 
-        const result = await agent.analyzePortfolioAutonomously(portfolio, config, networkInfo);
-        return res.status(200).json(result);
+        // Phase 1C: Extract the shape analyzePortfolioAutonomously actually expects.
+        // Frontend sends a full MultichainPortfolio, but the agent needs { balance, holdings }.
+        const agentPortfolio = {
+            balance: portfolio?.totalValue ?? 0,
+            holdings: portfolio?.allTokens?.map((t: any) => t.symbol) 
+                ?? portfolio?.chains?.flatMap((c: any) => c.balances?.map((b: any) => b.symbol) ?? []) 
+                ?? [],
+        };
+
+        // Also derive networkInfo if not explicitly sent
+        const resolvedNetworkInfo = networkInfo ?? {
+            chainId: portfolio?.chains?.[0]?.chainId ?? 42220,
+            name: portfolio?.chains?.[0]?.chainName ?? 'Celo',
+        };
+
+        const result = await agent.analyzePortfolioAutonomously(agentPortfolio, config, resolvedNetworkInfo);
+        // Phase 1B: Wrap response so frontend can read result.advice
+        return res.status(200).json({ advice: result });
     } catch (error: unknown) {
         console.error('[Deep Analyze] Error:', error);
         const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';

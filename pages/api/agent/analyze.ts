@@ -141,9 +141,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             );
         }
 
-        // Market context for prompt
-        const treasuryYield = 4.5; // Would fetch from API in production
-        const currentInflation = 3.2; // Would fetch from API in production
+        // Market context — fetch live values, fall back to reasonable defaults
+        let currentInflation = 3.2;
+        let treasuryYield = 4.5;
+
+        // 1) Use the inflation data already passed in the request as primary source
+        if (inflationData && Object.keys(inflationData).length > 0) {
+            const regions = Object.values(inflationData) as RegionalInflationData[];
+            const rates = regions.filter(r => r.avgRate > 0).map(r => r.avgRate);
+            if (rates.length > 0) {
+                currentInflation = parseFloat((rates.reduce((s, r) => s + r, 0) / rates.length).toFixed(1));
+            }
+        }
+
+        // 2) Try to fetch treasury yield from FRED API (10-Year Treasury Constant Maturity Rate)
+        try {
+            const fredRes = await fetch('https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=' + (process.env.FRED_API_KEY || 'DEMO_KEY') + '&sort_order=desc&limit=1&file_type=json');
+            if (fredRes.ok) {
+                const fredData = await fredRes.json();
+                const latestObs = fredData.observations?.[0];
+                if (latestObs?.value && latestObs.value !== '.') {
+                    treasuryYield = parseFloat(latestObs.value);
+                }
+            }
+        } catch (err) {
+            console.warn('[Analyze API] FRED fetch failed, using fallback treasury yield:', err);
+        }
+
         const realYield = treasuryYield - currentInflation;
 
         const systemInstruction = `

@@ -175,8 +175,11 @@ export function useAgentAnalysis({
             inflationData,
             macroData,
             networkActivity,
-            goal: analysisGoal || userGoal || config.goal,
-            riskTolerance: config.riskTolerance,
+            config: {
+              userGoal: analysisGoal || userGoal || config.goal,
+              riskTolerance: config.riskTolerance,
+              timeHorizon: config.timeHorizon || '3 months',
+            },
             userRegion: userRegion,
             strategyPrompt: strategyPrompt || getStrategyPrompt(),
           }),
@@ -350,6 +353,7 @@ export function useAgentAnalysis({
     async (
       inflationData: Record<string, RegionalInflationData>,
       portfolio: MultichainPortfolio,
+      signedPermission?: any,
     ) => {
       if (!autonomousEnabled || !autonomousStatus?.enabled) {
         console.warn("[useAgentAnalysis] Autonomous mode not available");
@@ -365,14 +369,27 @@ export function useAgentAnalysis({
           body: JSON.stringify({
             portfolio,
             inflationData,
+            config: {
+              userGoal: config.goal,
+              riskTolerance: config.riskTolerance,
+              timeHorizon: config.timeHorizon || '3 months',
+            },
             useAutonomousMode: true,
             userId: user?.id, // Pass authenticated user ID for "Agent Fuel" flow
+            signedPermission: signedPermission || undefined, // Phase 2A: Thread session permission
           }),
         });
 
         if (response.ok) {
           const result = await response.json();
           updateState({ advice: result.advice });
+          
+          // Phase 5B & 5C: Emit event for Guardian Activity Feed to show execution receipts
+          agentEventBus.emit("oracle:analysis", { 
+            advice: result.advice, 
+            timestamp: Date.now() 
+          });
+          
           return result.advice;
         }
       } catch (error) {
@@ -383,7 +400,7 @@ export function useAgentAnalysis({
 
       return null;
     },
-    [apiBase, autonomousEnabled, autonomousStatus, user?.id],
+    [apiBase, autonomousEnabled, autonomousStatus, user?.id, config],
   );
 
   const clearAdvice = useCallback(() => updateState({ advice: null }), []);

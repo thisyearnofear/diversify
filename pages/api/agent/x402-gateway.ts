@@ -93,6 +93,17 @@ class UserManager {
     }
 }
 
+// Alias map: The agent's DATA_SOURCES use descriptive names (macro-regime, truflation, etc.)
+// but the gateway's data functions use different keys. This bridges both naming conventions.
+const SOURCE_ALIASES: Record<string, string> = {
+    'macro-regime': 'macro_analysis',
+    'truflation': 'world_bank_analytics',     // Best available inflation proxy
+    'glassnode': 'coingecko_analytics',        // Best available on-chain proxy
+    'defi-yields': 'defillama_realtime',
+    'rwa-markets': 'portfolio_optimization',
+    // Direct keys pass through unchanged
+};
+
 // --- Handler ---
 export default async function handler(
     req: NextApiRequest,
@@ -122,7 +133,9 @@ export default async function handler(
 
     // 2. Pricing & Category Logic
     const { CATEGORIES, PRICING, FREE_LIMITS } = ARC_DATA_HUB_CONFIG;
-    const baseSource = source.replace(/(_enhanced|_analytics|_realtime|_optimizer|_insights)$/, '') as keyof typeof PRICING;
+    // Resolve aliases FIRST so agent source names (macro-regime, etc.) map to pricing keys
+    const resolvedSource = SOURCE_ALIASES[source] || source;
+    const baseSource = resolvedSource.replace(/(_enhanced|_analytics|_realtime|_optimizer|_insights)$/, '') as keyof typeof PRICING;
     
     const isPremiumSource = CATEGORIES.PREMIUM.includes(baseSource as string);
     const cost = parseFloat(PRICING[baseSource] || '0.01');
@@ -285,7 +298,11 @@ async function verifyCircleGatewayPayment(paymentProof: string): Promise<number>
 }
 
 // --- Data Fetching (Preserved & Cleaned) ---
+
 async function getActualPremiumData(source: string, isFreeTier: boolean = false) {
+    // Resolve aliases so the agent's source names map to real data functions
+    const resolvedSource = SOURCE_ALIASES[source] || source;
+
     const data: Record<string, Record<string, unknown>> = {
         'alpha_vantage_enhanced': await getAlphaVantageData(isFreeTier),
         'world_bank_analytics': await getWorldBankData(isFreeTier),
@@ -298,9 +315,9 @@ async function getActualPremiumData(source: string, isFreeTier: boolean = false)
         'risk_assessment': await getRiskAssessment(isFreeTier)
     };
 
-    return data[source] || {
+    return data[resolvedSource] || {
         status: 'Success',
-        message: 'Data source not available',
+        message: `Data source '${source}' (resolved: '${resolvedSource}') not available`,
         tier: isFreeTier ? 'free' : 'premium'
     };
 }

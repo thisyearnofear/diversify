@@ -66,23 +66,57 @@ export const AgentTierStatus: React.FC<{
   // Tier 2: The Assistant (Intents)
   const assistantStatus = capabilities.voiceInput ? 'Listening' : 'Ready';
   
-  // Tier 3: The Guardian (Autonomous)
-  const guardianActive = autonomousStatus?.enabled;
-  const guardianStatus = guardianActive ? 'Protecting' : 'Advisory';
+  // Session Key (ERC-7715) for non-custodial Guardian — declared BEFORE guardian state so it can reference hasValidPermission
+  const { address, chainId } = useWalletContext();
+  const { status: sessionStatus, signedPermission, permissionSummary, requestPermission, revokePermission, isPermissionValid } = useSessionKey();
+  const hasValidPermission = isPermissionValid();
+  const isRequesting = sessionStatus === 'requesting';
+  const permissionExpiry = signedPermission ? new Date(signedPermission.permission.expiresAt * 1000).toLocaleDateString() : null;
+  const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
+
+  // Tier 3: The Guardian (Autonomous) — Real State Machine
+  // Phase 2B: Derive honest state from actual system conditions
+  type GuardianState = 'idle' | 'authorized' | 'funded' | 'monitoring';
+  const guardianState: GuardianState = (() => {
+    const hasFuel = autonomousStatus?.walletType === 'agent-fuel' && Number(autonomousStatus?.balance ?? 0) > 0;
+    const hasPermission = hasValidPermission || hasFuel;
+    const isMonitoring = autonomousStatus?.enabled && hasPermission;
+
+    if (isMonitoring && hasFuel) return 'monitoring';
+    if (hasFuel) return 'funded';
+    if (hasPermission) return 'authorized';
+    return 'idle';
+  })();
+
+  // Phase 2C: Honest status labels
+  const guardianStatusLabel: Record<GuardianState, string> = {
+    idle: 'Setup Required',
+    authorized: 'Awaiting Fuel',
+    funded: 'Ready',
+    monitoring: 'Protecting',
+  };
+  const guardianStatus = guardianStatusLabel[guardianState];
+  const guardianActive = guardianState === 'monitoring';
 
   useEffect(() => {
     const unsubscribe = agentEventBus.on<{ advice: any; timestamp: number }>(
       "oracle:analysis",
       ({ advice }) => {
         if (!guardianActive) return;
+        
+        const hasExecuted = !!advice?.arcTxHash;
+        
         addActivity({
-          type: 'recommendation',
+          type: hasExecuted ? 'execution' : 'recommendation',
           tier: 'GUARDIAN',
-          description: 'Guardian received Oracle signal for follow-up review',
-          status: 'pending',
+          description: hasExecuted 
+            ? `Autonomous execution: Swapped USDC to ${advice?.targetToken || 'target asset'}` 
+            : 'Guardian received Oracle signal for follow-up review',
+          status: hasExecuted ? 'success' : 'pending',
           details: {
             action: advice?.action,
             savings: advice?.expectedSavings,
+            txHash: advice?.arcTxHash, // 5C: This renders the receipt link in the feed
           },
         });
       },
@@ -92,15 +126,6 @@ export const AgentTierStatus: React.FC<{
       unsubscribe();
     };
   }, [addActivity, guardianActive]);
-
-  // Session Key (ERC-7715) for non-custodial Guardian
-  const { address, chainId } = useWalletContext();
-  const { status: sessionStatus, signedPermission, permissionSummary, requestPermission, revokePermission, isPermissionValid } = useSessionKey();
-  const hasValidPermission = isPermissionValid();
-  const isRequesting = sessionStatus === 'requesting';
-  const permissionExpiry = signedPermission ? new Date(signedPermission.permission.expiresAt * 1000).toLocaleDateString() : null;
-  const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
-
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const handleRequestPermission = useCallback(async () => {
@@ -271,7 +296,12 @@ export const AgentTierStatus: React.FC<{
             <div className="bg-purple-100 dark:bg-purple-900/50 p-2 rounded-xl">
               <span className="text-xl">🛡️</span>
             </div>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${guardianActive ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>
+            <span className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${
+              guardianState === 'monitoring' ? 'bg-purple-100 text-purple-700' :
+              guardianState === 'funded' ? 'bg-green-100 text-green-700' :
+              guardianState === 'authorized' ? 'bg-blue-100 text-blue-700' :
+              'bg-amber-100 text-amber-700'
+            }`}>
               {guardianStatus}
             </span>
           </div>
@@ -279,7 +309,16 @@ export const AgentTierStatus: React.FC<{
             The Guardian
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {isBeginner ? "Keeps your savings safe." : "Autonomous rebalancing & Nanopayments."}
+            {isBeginner
+              ? guardianState === 'monitoring' ? 'Actively protecting your savings.' 
+                : guardianState === 'funded' ? 'Funded — enable monitoring to start.'
+                : guardianState === 'authorized' ? 'Fund your agent to activate.'
+                : 'Sign a permission to get started.'
+              : guardianState === 'monitoring' ? 'Autonomous rebalancing & Nanopayments active.'
+                : guardianState === 'funded' ? 'Fuel loaded — awaiting autonomous enablement.'
+                : guardianState === 'authorized' ? 'Permission granted — deposit USDC to fund.'
+                : 'Grant a scoped session key or fund an Agent Wallet.'
+            }
           </p>
           {guardianActive && (
               <div className="absolute top-2 right-2">
