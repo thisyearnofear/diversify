@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
+import { IntentDiscoveryService } from "@diversifi/shared";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -81,94 +82,53 @@ export function useAgentChat({
     async (content: string) => {
       if (!capabilities.chat) return;
 
-      const normalizedContent = content.toLowerCase().trim();
+      const intent = IntentDiscoveryService.discover(content);
       let fastPathResponse: string | null = null;
 
-      if (
-        normalizedContent.includes("what is diversifi") ||
-        normalizedContent.includes("what is diversify") ||
-        normalizedContent.includes("what's diversifi")
-      ) {
-        fastPathResponse =
-          "DiversiFi is a wealth protection protocol that helps you hedge against inflation by diversifying your stablecoin savings across multiple regions and real-world assets (RWAs). We make it easy to hold a basket of assets like Digital Gold (PAXG), Yield-bearing Treasury Tokens (USDY), and regional stablecoins (like Euro or Celo Real).";
-      } else if (
-        normalizedContent.includes("how does it work") ||
-        normalizedContent.includes("how to start") ||
-        normalizedContent.includes("get started")
-      ) {
-        fastPathResponse =
-          "It's simple: 1. Connect your wallet (or create one with email). 2. Choose a protection strategy or build your own portfolio in the 'Protect' tab. 3. Swap your funds into diversified assets. We handle the routing and optimization to ensure you get the best rates across Celo and Arbitrum.";
-      } else if (
-        normalizedContent.includes("is it safe") ||
-        normalizedContent.includes("is diversifi safe") ||
-        normalizedContent.includes("security")
-      ) {
-        fastPathResponse =
-          "DiversiFi is non-custodial, meaning you always retain full control of your funds. We never store your private keys. All transactions are executed on-chain via secure smart contracts. However, as with all DeFi protocols, there are risks including smart contract bugs and market volatility. Always do your own research.";
-      } else if (
-        normalizedContent.includes("portfolio") ||
-        normalizedContent.includes("what do i have") ||
-        normalizedContent.includes("my balance") ||
-        normalizedContent.includes("my holdings") ||
-        normalizedContent.includes("what's in my wallet") ||
-        normalizedContent.includes("whats in my wallet")
-      ) {
-        if (address) {
-          fastPathResponse = "Taking you to your portfolio... 📊";
-        } else {
-          fastPathResponse =
-            "To see your portfolio, you'll need to connect your wallet first. Click the **Connect Wallet** button and choose your preferred option (email, existing wallet, or 'Buy Crypto'). Once connected, your holdings will appear in the **Overview** tab!";
+      if (intent.type === "ONBOARDING") {
+        switch (intent.topic) {
+          case "what-is-this":
+            fastPathResponse = "DiversiFi is a wealth protection protocol that helps you hedge against inflation by diversifying your stablecoin savings across multiple regions and real-world assets (RWAs). We make it easy to hold a basket of assets like Digital Gold (PAXG), Yield-bearing Treasury Tokens (USDY), and regional stablecoins (like Euro or Celo Real).";
+            break;
+          case "how-to-start":
+            fastPathResponse = "It's simple: 1. Connect your wallet (or create one with email). 2. Choose a protection strategy or build your own portfolio in the 'Protect' tab. 3. Swap your funds into diversified assets. We handle the routing and optimization to ensure you get the best rates across Celo and Arbitrum.";
+            break;
+          case "is-safe":
+            fastPathResponse = "DiversiFi is non-custodial, meaning you always retain full control of your funds. We never store your private keys. All transactions are executed on-chain via secure smart contracts. However, as with all DeFi protocols, there are risks including smart contract bugs and market volatility. Always do your own research.";
+            break;
+          case "demo":
+            fastPathResponse = "Taking you to demo mode... 🎮";
+            break;
         }
-      } else if (
-        normalizedContent.includes("protect") ||
-        normalizedContent.includes("how to protect") ||
-        normalizedContent.includes("inflation protection") ||
-        normalizedContent.includes("hedge against inflation")
-      ) {
-        fastPathResponse = "Taking you to protection strategies... 🛡️";
-      } else if (
-        normalizedContent.includes("swap") ||
-        normalizedContent.includes("exchange") ||
-        normalizedContent.includes("trade") ||
-        normalizedContent.includes("convert") ||
-        normalizedContent.includes("buy") ||
-        normalizedContent.includes("sell")
-      ) {
-        fastPathResponse = address
-          ? "Taking you to the swap interface... 💱"
-          : "To swap tokens, you'll need to connect your wallet first. Click **Connect Wallet** to get started!";
-      } else if (
-        normalizedContent.includes("yield") ||
-        normalizedContent.includes("earn") ||
-        normalizedContent.includes("apy") ||
-        normalizedContent.includes("interest") ||
-        normalizedContent.includes("passive income")
-      ) {
-        fastPathResponse = "Taking you to yield opportunities... 📈";
-      } else if (
-        normalizedContent.includes("strategy") ||
-        normalizedContent.includes("philosophy") ||
-        normalizedContent.includes("africapitalism") ||
-        normalizedContent.includes("buen vivir") ||
-        normalizedContent.includes("islamic finance") ||
-        normalizedContent.includes("confucian")
-      ) {
-        fastPathResponse = "Taking you to strategy selection... 🎯";
-      } else if (
-        normalizedContent.includes("demo") ||
-        normalizedContent.includes("test") ||
-        normalizedContent.includes("try without wallet") ||
-        normalizedContent.includes("play money")
-      ) {
-        fastPathResponse = "Taking you to demo mode... 🎮";
-      } else if (
-        normalizedContent.includes("learn") ||
-        normalizedContent.includes("how to use") ||
-        normalizedContent.includes("tutorial") ||
-        normalizedContent.includes("what is paxg") ||
-        normalizedContent.includes("what is usdy")
-      ) {
-        fastPathResponse = "Taking you to the Learn section... 📚";
+      } else if (intent.type === "NAVIGATE") {
+        switch (intent.tab) {
+          case "overview":
+            if (address) {
+              fastPathResponse = "Taking you to your portfolio... 📊";
+            } else {
+              fastPathResponse = "To see your portfolio, you'll need to connect your wallet first. Once connected, your holdings will appear in the **Overview** tab!";
+            }
+            break;
+          case "protect":
+            fastPathResponse = "Taking you to protection strategies... 🛡️";
+            break;
+          case "swap":
+            fastPathResponse = address
+              ? "Taking you to the swap interface... 💱"
+              : "To swap tokens, you'll need to connect your wallet first. Click **Connect Wallet** to get started!";
+            break;
+          case "info":
+            fastPathResponse = "Taking you to the Learn section... 📚";
+            break;
+        }
+      } else if (intent.type === "GOODDOLLAR") {
+        if (intent.topic === "claim") {
+          fastPathResponse = "Launching G$ UBI claim sequence... 🪙";
+        } else if (intent.topic === "verify") {
+          fastPathResponse = "Starting verification flow... 🛡️";
+        }
+      } else if (intent.type === "QUERY" && intent.context === "market") {
+          fastPathResponse = "Scanning global markets for real-time momentum... 🔍";
       }
 
       if (fastPathResponse) {
@@ -177,61 +137,20 @@ export function useAgentChat({
           thinkingStep: "Retrieving info...",
         });
 
-        let navAction:
-          | { type: "navigate"; tab: string; delay?: number }
-          | undefined;
+        let navAction: AIMessage["action"] | undefined;
 
-        if (
-          address &&
-          (normalizedContent.includes("portfolio") ||
-            normalizedContent.includes("what do i have") ||
-            normalizedContent.includes("my balance") ||
-            normalizedContent.includes("my holdings") ||
-            normalizedContent.includes("what's in my wallet") ||
-            normalizedContent.includes("whats in my wallet"))
-        ) {
-          navAction = { type: "navigate", tab: "overview", delay: 1500 };
-        } else if (
-          normalizedContent.includes("protect") ||
-          normalizedContent.includes("how to protect") ||
-          normalizedContent.includes("inflation protection") ||
-          normalizedContent.includes("hedge against inflation")
-        ) {
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
-        } else if (
-          normalizedContent.includes("swap") ||
-          normalizedContent.includes("exchange") ||
-          normalizedContent.includes("trade") ||
-          normalizedContent.includes("convert") ||
-          normalizedContent.includes("buy") ||
-          normalizedContent.includes("sell")
-        ) {
-          navAction = { type: "navigate", tab: "swap", delay: 1500 };
-        } else if (
-          normalizedContent.includes("yield") ||
-          normalizedContent.includes("earn") ||
-          normalizedContent.includes("apy") ||
-          normalizedContent.includes("interest") ||
-          normalizedContent.includes("passive income")
-        ) {
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
-        } else if (
-          normalizedContent.includes("strategy") ||
-          normalizedContent.includes("philosophy") ||
-          normalizedContent.includes("africapitalism") ||
-          normalizedContent.includes("buen vivir") ||
-          normalizedContent.includes("islamic finance") ||
-          normalizedContent.includes("confucian")
-        ) {
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
-        } else if (
-          normalizedContent.includes("learn") ||
-          normalizedContent.includes("how to use") ||
-          normalizedContent.includes("tutorial") ||
-          normalizedContent.includes("what is paxg") ||
-          normalizedContent.includes("what is usdy")
-        ) {
-          navAction = { type: "navigate", tab: "info", delay: 1500 };
+        if (intent.type === "NAVIGATE") {
+          navAction = { type: "navigate", tab: intent.tab, delay: 1500 };
+        } else if (intent.type === "GOODDOLLAR") {
+          if (intent.topic === "claim") {
+            navAction = { type: "claim_ubi", delay: 1500 };
+          } else if (intent.topic === "verify") {
+            navAction = { type: "verify_identity", delay: 1500 };
+          }
+        }
+ else if (intent.type === "ONBOARDING" && intent.topic === "demo") {
+           // No specific action needed, maybe navigate to overview
+           navAction = { type: "navigate", tab: "overview", delay: 1500 };
         }
 
         setTimeout(async () => {

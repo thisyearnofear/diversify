@@ -39,6 +39,7 @@ export { AIService, generateChatCompletion, getAIServiceStatus } from './service
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export { IntelligenceService } from './services/ai/intelligence.service';
 export { IntentDiscoveryService } from './services/ai/intent-discovery.service';
+export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';
 
 // Export Utils
 export * from './utils/market-pulse-service';

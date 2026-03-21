@@ -354,7 +354,42 @@ export default function AIChat() {
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-amber-200/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                 )}
                 
-                <div className="relative z-10">{msg.content}</div>
+                {msg.type === 'insight' && msg.insights ? (
+                  <div className="space-y-3 py-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 bg-amber-200/30 dark:bg-amber-800/30 px-2 py-0.5 rounded-full">
+                        Intelligent Insight
+                      </span>
+                    </div>
+                    <p className="font-bold leading-tight">{msg.insights.summary}</p>
+                    
+                    <div className="flex flex-wrap gap-1.5">
+                      {msg.insights.tags.map(tag => (
+                        <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 bg-white/50 dark:bg-black/20 rounded border border-amber-200/30">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-amber-200/30 space-y-2">
+                       <p className="text-[10px] font-black text-amber-800 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1">
+                         <span className="text-xs">🎯</span> Action Items
+                       </p>
+                       <ul className="space-y-1.5">
+                         {msg.insights.actionItems.map((item, idx) => (
+                           <li key={idx} className="text-xs flex items-start gap-2">
+                             <span className="w-4 h-4 rounded-full bg-amber-400/20 flex items-center justify-center text-[10px] mt-0.5">
+                               {idx + 1}
+                             </span>
+                             <span className="flex-1 opacity-90">{item}</span>
+                           </li>
+                         ))}
+                       </ul>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative z-10 whitespace-pre-wrap">{msg.content}</div>
+                )}
                 
                 {/* Timestamp */}
                 <div className={`text-xs mt-1.5 opacity-60 ${

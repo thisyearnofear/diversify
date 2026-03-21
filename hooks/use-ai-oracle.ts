@@ -15,7 +15,7 @@ import { useAgentVoice } from './use-agent-voice';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 export function useAIOracle() {
-  const { addUserMessage, setDrawerOpen, markAsRead, unreadCount } = useAIConversation();
+  const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount } = useAIConversation();
   const { capabilities } = useAgentStatus();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
   const { sendChatMessage } = useAgentChat({
@@ -27,12 +27,38 @@ export function useAIOracle() {
 
   /** Add message to chat history AND trigger AI response in one call */
   const ask = useCallback(
-    (message: string) => {
+    async (message: string) => {
       addUserMessage(message);      // shows in chat UI immediately
       setDrawerOpen(true);          // explicitly open the drawer
       sendChatMessage(message);     // triggers AI analysis
+
+      // Intelligent Voice Insights (Summaries, Tags, Action Items)
+      try {
+        const response = await fetch(`${API_BASE}/api/agent/voice-insights`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transcription: message }),
+        });
+
+        if (response.ok) {
+          const { insights } = await response.json();
+          addMessage({
+             role: 'assistant',
+             content: insights.summary,
+             timestamp: new Date(),
+             type: 'insight',
+             insights: {
+               summary: insights.summary,
+               tags: insights.tags,
+               actionItems: insights.actionItems
+             }
+          });
+        }
+      } catch (err) {
+        console.warn("[useAIOracle] Failed to fetch voice insights:", err);
+      }
     },
-    [addUserMessage, sendChatMessage, setDrawerOpen],
+    [addMessage, addUserMessage, sendChatMessage, setDrawerOpen],
   );
 
   /** Open the AI drawer and mark existing messages read */

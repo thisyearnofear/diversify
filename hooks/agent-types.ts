@@ -192,6 +192,11 @@ export interface AIMessage {
   content: string;
   timestamp: Date;
   type?: "text" | "recommendation" | "insight";
+  insights?: {
+    summary: string;
+    tags: string[];
+    actionItems: string[];
+  };
   action?: {
     type: "navigate" | "claim_ubi" | "verify_identity";
     tab?: string;

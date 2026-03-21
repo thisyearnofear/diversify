@@ -128,6 +128,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // Model mappings
+// Model mappings
 const VENICE_MODELS = {
   flagship: "google-gemma-3-27b-it", // 198k context, best balance of price/speed/quality
   fast: "google-gemma-3-27b-it", // Same as flagship - tested best option ($0.12/$0.20)
@@ -136,8 +137,8 @@ const VENICE_MODELS = {
 };
 
 const GEMINI_MODELS = {
-  flash: "gemini-3-flash-preview", // Only working model for this API key
-  pro: "gemini-3-flash-preview", // Use same model for both (API key limitation)
+  flash: "gemini-3.1-flash-lite-preview", // Latest (March 2026) fastest model
+  pro: "gemini-3.1-pro-preview", // Flagsip 128k context agentic model
 };
 
 // TTS voice mappings

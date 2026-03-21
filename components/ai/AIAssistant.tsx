@@ -21,6 +21,7 @@ import { useTour } from "../../context/app/TourContext";
 import { useStrategy } from "../../context/app/StrategyContext";
 import { useAIConversationOptional } from "../../context/AIConversationContext";
 import VoiceButton from "../ui/VoiceButton";
+import { useAIOracle } from "../../hooks/use-ai-oracle";
 import { REGIONS, type Region } from "../../hooks/use-user-region";
 import InteractiveAdviceCard from "../agent/InteractiveAdviceCard";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
@@ -148,6 +149,7 @@ export default function AIAssistant({
 
   const { stats: networkActivityStats } = useNetworkActivity();
   const { inflationData: liveInflationData } = useInflationData();
+  const { ask } = useAIOracle();
   const { showToast } = useToast();
   const { startTour, dismissTour, isTourDismissed } = useTour();
   const { financialStrategy } = useStrategy();
@@ -181,17 +183,14 @@ export default function AIAssistant({
     e?.preventDefault();
     if (!chatInput.trim() || isAnalyzing) return;
 
-    // Switch to global drawer for conversation
-    addUserMessage?.(chatInput.trim());
-    setDrawerOpen?.(true);
+    ask(chatInput.trim());
 
     setChatInput("");
     setShowChatInput(false);
   };
 
   const handleQuickAsk = (prompt: string) => {
-    addUserMessage?.(prompt);
-    setDrawerOpen?.(true);
+    ask(prompt);
   };
 
   // Milestone haptics for Farcaster
@@ -305,7 +304,7 @@ export default function AIAssistant({
     );
   };
 
-  const handleVoiceTranscription = (transcription: string) => {
+  const handleVoiceTranscription = async (transcription: string) => {
     try {
       (
         sdk.actions as unknown as {
@@ -314,16 +313,14 @@ export default function AIAssistant({
       ).hapticFeedback({ type: "selection" });
     } catch { }
 
-    // Switch to global drawer for conversation
-    addUserMessage?.(transcription);
-    setDrawerOpen?.(true);
+    ask(transcription);
   };
 
   // Listen for voice queries from main page
   useEffect(() => {
     const handleVoiceQuery = (event: CustomEvent) => {
-      addUserMessage?.(event.detail);
-      setDrawerOpen?.(true);
+      const transcription = event.detail;
+      ask(transcription);
     };
 
     window.addEventListener("voiceQuery", handleVoiceQuery as EventListener);
