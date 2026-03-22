@@ -71,9 +71,9 @@ export function useWDKAgent() {
 
       // 2. Fallback to mock for hackathon demo if no real agent is found
       const mockIdentity: WDKAgentIdentity = {
-        agent_id: "wdk-galactica-001",
-        name: "Tether Galactica Agent",
-        version: "1.0.0-wdk",
+        agent_id: "wdk-settlement-001",
+        name: "WDK Settlement Agent",
+        version: "1.0.0",
         chains: ["Celo", "Arbitrum", "Polygon", "Avalanche", "Tron"],
         wallets: [
           { chain: "Celo", address: "0xTether...Celo", assets: ["USD₮"] },

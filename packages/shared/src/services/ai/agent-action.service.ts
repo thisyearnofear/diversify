@@ -102,11 +102,11 @@ export class AgentActionService {
 
             case 'WDK_ACTION':
                 if (intent.topic === 'switch') {
-                    callbacks.onToast?.('Augmenting agent with Tether WDK...', 'success');
+                    callbacks.onToast?.('Switching to WDK settlement infrastructure...', 'success');
                     // We can also trigger a navigation to settings to confirm
                     callbacks.onNavigate?.('agent');
-                } else if (intent.topic === 'galactica') {
-                    callbacks.onToast?.('Galactica WDK Protocol initialized.', 'ai');
+                } else if (intent.topic === 'settlement') {
+                    callbacks.onToast?.('WDK Settlement Protocol initialized.', 'ai');
                     callbacks.onNavigate?.('agent');
                 } else {
                     callbacks.onAskAI?.(originalText);

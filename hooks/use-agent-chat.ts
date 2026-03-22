@@ -101,11 +101,11 @@ export function useAgentChat({
           break;
         case 'WDK_ACTION':
           if (intent.topic === 'switch') {
-            fastPathResponse = "Switching your Guardian infrastructure to Tether WDK... 🌌";
+            fastPathResponse = "Switching your Guardian infrastructure to WDK settlement... 🌌";
           } else if (intent.topic === 'status') {
-            fastPathResponse = "Checking WDK Galactica agent status... 🛰️";
+            fastPathResponse = "Checking WDK settlement agent status... 🛰️";
           } else {
-            fastPathResponse = "Tether WDK (Wallet Development Kit) enables self-custodial agentic wallets with native USD₮ and XAU₮ support. 🌌";
+            fastPathResponse = "The WDK (Wallet Development Kit) enables self-custodial agentic wallets with native USD₮ and XAU₮ support for multi-chain settlement. 🌌";
           }
           break;
         case 'ONBOARDING':

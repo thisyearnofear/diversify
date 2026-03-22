@@ -345,11 +345,11 @@ export default function AutomationSettings({
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-lg">⛽</span>
                   <span className="font-black text-sm uppercase tracking-tight">
-                    Agent Fuel (Circle MPC)
+                    Circle Managed Wallet
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                  User-funded "Fuel Tank" using USDC as gas. Powered by Circle
+                  Fully managed "Fuel Tank" using USDC for gas. Powered by Circle
                   Programmable Wallets.
                 </p>
               </button>
@@ -367,18 +367,18 @@ export default function AutomationSettings({
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-lg">🌌</span>
                   <span className="font-black text-sm uppercase tracking-tight">
-                    Galactica (Tether WDK)
+                    Tether Settlement (WDK)
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
                   Self-custodial agentic wallets. Native USD₮ and XAU₮ support
-                  for economic sovereignty.
+                  for multi-chain economic sovereignty.
                 </p>
               </button>
             </div>
             <p className="mt-3 text-[10px] text-gray-400 italic">
-              * Augmenting your agent with Tether WDK enables multi-chain
-              settlement and native gold-hedging capabilities.
+              * Enabling Tether WDK provides global multi-chain settlement and
+              native gold-hedging capabilities.
             </p>
           </div>
         </motion.div>

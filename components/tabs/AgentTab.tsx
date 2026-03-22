@@ -129,12 +129,12 @@ export default function AgentTab({
             analysis={portfolioAnalysis}
             portfolio={portfolio ?? null}
             onExecuteSwap={async (fromToken, toToken, amount, reason) => {
-              if (config.walletProvider === "TETHER_WDK") {
+              if (config.walletProvider === 'TETHER_WDK') {
                 addActivity({
-                  type: "execution",
-                  tier: "GUARDIAN",
-                  description: `Initiating WDK Galactica execution: ${fromToken} → ${toToken}`,
-                  status: "pending",
+                  type: 'execution',
+                  tier: 'GUARDIAN',
+                  description: `Initiating multi-chain settlement: ${fromToken} → ${toToken}`,
+                  status: 'pending',
                 });
 
                 const result = await executeViaWDK({
@@ -148,7 +148,7 @@ export default function AgentTab({
                   addActivity({
                     type: "execution",
                     tier: "GUARDIAN",
-                    description: `WDK Execution Success: ${fromToken} → ${toToken} ($${amount})`,
+                    description: `Settlement Successful: ${fromToken} → ${toToken} ($${amount})`,
                     status: "success",
                     details: { txHash: result.txHash },
                   });
