@@ -24,7 +24,8 @@ import { agentEventBus } from '../../hooks/agent-event-bus';
 import { AUTONOMOUS_FEATURES } from '../../config/features';
 import AgentFuelGauge from './AgentFuelGauge';
 import OracleMetrics from './OracleMetrics';
-import OpenClawPanel from './OpenClawPanel';
+import GuardianOpenClawStatus from './GuardianOpenClawStatus';
+import { useGuardianOpenClaw } from '../../hooks/use-guardian-openclaw';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -61,7 +62,14 @@ export const AgentTierStatus: React.FC<{
   const thinkingStep = isAnalysisRunning ? analysisThinkingStep : chatThinkingStep;
   const { experienceMode } = useExperience();
   const [expandedTier, setExpandedTier] = useState<'oracle' | 'assistant' | 'guardian' | null>(null);
-  const [showOpenClaw, setShowOpenClaw] = useState(false);
+  const {
+    agentStatus: openClawStatus,
+    agentIdentity: openClawIdentity,
+    recentReceipts: openClawReceipts,
+    lastHeartbeat: openClawLastHeartbeat,
+    isExecuting: openClawExecuting,
+    triggerHeartbeat: openClawHeartbeat,
+  } = useGuardianOpenClaw();
 
   const isBeginner = experienceMode === 'beginner';
 
@@ -110,18 +118,21 @@ export const AgentTierStatus: React.FC<{
         if (!guardianActive) return;
         
         const hasExecuted = !!advice?.arcTxHash;
+        const hasOpenClaw = openClawStatus === 'online';
         
         addActivity({
           type: hasExecuted ? 'execution' : 'recommendation',
           tier: 'GUARDIAN',
           description: hasExecuted 
             ? `Autonomous execution: Swapped USDC to ${advice?.targetToken || 'target asset'}` 
+            : hasOpenClaw
+            ? `Guardian received Oracle signal — OpenClaw agent ready for execution`
             : 'Guardian received Oracle signal for follow-up review',
           status: hasExecuted ? 'success' : 'pending',
           details: {
             action: advice?.action,
             savings: advice?.expectedSavings,
-            txHash: advice?.arcTxHash, // 5C: This renders the receipt link in the feed
+            txHash: advice?.arcTxHash,
           },
         });
       },
@@ -130,7 +141,7 @@ export const AgentTierStatus: React.FC<{
     return () => {
       unsubscribe();
     };
-  }, [addActivity, guardianActive]);
+  }, [addActivity, guardianActive, openClawStatus]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const handleRequestPermission = useCallback(async () => {
@@ -425,26 +436,21 @@ export const AgentTierStatus: React.FC<{
               hasWallet={!!address}
             />
           )}
-          {/* OpenClaw Integration Button */}
+          {/* OpenClaw Guardian Status — inline agent status + receipts */}
           {expandedTier === 'guardian' && (
             <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800" onClick={e => e.stopPropagation()}>
-              <button
-                onClick={() => setShowOpenClaw(true)}
-                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold transition-all"
-              >
-                <span>🦞</span>
-                <span>Open OpenClaw Agent</span>
-              </button>
+              <GuardianOpenClawStatus
+                agentStatus={openClawStatus}
+                agentIdentity={openClawIdentity}
+                recentReceipts={openClawReceipts}
+                lastHeartbeat={openClawLastHeartbeat}
+                isExecuting={openClawExecuting}
+                onTriggerHeartbeat={openClawHeartbeat}
+              />
             </div>
           )}
         </motion.div>
       </div>
-
-      {/* OpenClaw Panel */}
-      <OpenClawPanel 
-        isOpen={showOpenClaw} 
-        onClose={() => setShowOpenClaw(false)} 
-      />
     </div>
   );
 };
