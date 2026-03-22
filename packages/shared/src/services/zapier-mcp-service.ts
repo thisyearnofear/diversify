@@ -14,7 +14,7 @@ export interface ZapierMCPConfig {
 }
 
 export interface ZapierTriggerData {
-    trigger_type: 'ai_agent_recommendation';
+    trigger_type: 'ai_agent_recommendation' | 'autonomous_execution_receipt';
     recommendation: {
         action: string;
         target_token?: string;
@@ -23,6 +23,15 @@ export interface ZapierTriggerData {
         urgency_level: string;
         confidence: number;
         reasoning: string;
+    };
+    transaction?: {
+        executed: boolean;
+        hash?: string;
+        explorer_url?: string;
+    };
+    macro_context?: {
+        risk_tier?: string;
+        sources_used?: number;
     };
     user: {
         email: string;
@@ -73,8 +82,10 @@ export class ZapierMCPService {
         }
 
         try {
+            const hasExecuted = !!analysis.arcTxHash;
+            
             const triggerData: ZapierTriggerData = {
-                trigger_type: 'ai_agent_recommendation',
+                trigger_type: hasExecuted ? 'autonomous_execution_receipt' : 'ai_agent_recommendation',
                 recommendation: {
                     action: analysis.action,
                     target_token: analysis.targetToken,
@@ -83,6 +94,15 @@ export class ZapierMCPService {
                     urgency_level: analysis.urgencyLevel || 'MEDIUM',
                     confidence: analysis.confidence,
                     reasoning: analysis.reasoning
+                },
+                transaction: {
+                    executed: hasExecuted,
+                    hash: analysis.arcTxHash,
+                    explorer_url: analysis.arcTxHash ? `https://celoscan.io/tx/${analysis.arcTxHash}` : undefined
+                },
+                macro_context: {
+                    risk_tier: analysis.riskLevel,
+                    sources_used: analysis.dataSources.length
                 },
                 user: {
                     email: userEmail,
@@ -135,17 +155,12 @@ export class ZapierMCPService {
         }
 
         try {
-            // This would use MCP to create a new Zap
-            // For now, return a mock response
-            const mockZapId = `zap_${Date.now()}`;
-            const mockWebhookUrl = `https://hooks.zapier.com/hooks/catch/${this.config.embedId || 'mock'}/${mockZapId}/`;
+            // A genuine implementation would use the @zapier/ai-actions MCP gateway here
+            // To strictly enforce the "no fabricated data" rule, we reject dummy generation
+            
+            console.log(`[Zapier Service] Real NLA extension required to generate Zap programmatically automatically. Please configure embedding.`);
 
-            console.log(`[Zapier Service] Created Zap: ${zapConfig.name} (${mockZapId})`);
-
-            return {
-                zapId: mockZapId,
-                webhookUrl: mockWebhookUrl
-            };
+            return null; // Return null intentionally to indicate the action wasn't completed rather than faking a response
 
         } catch (error) {
             console.error('[Zapier Service] Failed to create Zap:', error);
@@ -168,24 +183,9 @@ export class ZapierMCPService {
         }
 
         try {
-            // This would use MCP to list Zaps
-            // For now, return mock data
-            return [
-                {
-                    id: 'zap_diversifi_email',
-                    name: 'DiversiFi Email Alerts',
-                    status: 'on',
-                    trigger: 'AI Agent Recommendation',
-                    actions: 2
-                },
-                {
-                    id: 'zap_diversifi_slack',
-                    name: 'DiversiFi Slack Notifications',
-                    status: 'on',
-                    trigger: 'High Urgency Alert',
-                    actions: 1
-                }
-            ];
+            // A genuine implementation would sync via Zapier API
+            // Falsely injecting "active zaps" violates data transparency
+            return []; 
 
         } catch (error) {
             console.error('[Zapier Service] Failed to list Zaps:', error);

@@ -116,7 +116,10 @@ export default function AutomationSettings({ config, onConfigChange, autonomousS
         try {
             const response = await fetch('/api/agent/test-zapier', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    zapier: preferences?.zapier
+                })
             });
 
             const result = await response.json();

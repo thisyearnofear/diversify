@@ -363,6 +363,18 @@ export function useAgentAnalysis({
       updateState({ isAnalyzing: true, thinkingStep: "Running autonomous analysis..." });
 
       try {
+        let userZapierPrefs = undefined;
+        try {
+          // Attempt to locate any saved automation preferences in local storage to use client-defined webhooks
+          const prefKey = Object.keys(localStorage).find(k => k.startsWith('diversifi-automation-prefs'));
+          if (prefKey) {
+             const prefs = JSON.parse(localStorage.getItem(prefKey) || '{}');
+             userZapierPrefs = prefs?.zapier;
+          }
+        } catch (e) {
+            // Ignore parse errors securely
+        }
+
         const response = await fetch(`${apiBase}/api/agent/deep-analyze`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -373,6 +385,7 @@ export function useAgentAnalysis({
               userGoal: config.goal,
               riskTolerance: config.riskTolerance,
               timeHorizon: config.timeHorizon || '3 months',
+              zapier: userZapierPrefs // Phase 5D: Inject user-driven Zapier config map
             },
             useAutonomousMode: true,
             userId: user?.id, // Pass authenticated user ID for "Agent Fuel" flow

@@ -134,11 +134,19 @@ export class AutomationService {
      */
     private async triggerZapierWebhook(payload: NotificationPayload): Promise<void> {
         try {
-            // Use Zapier MCP service for better integration
-            const { zapierMCPService } = await import('./zapier-mcp-service');
+            // Instantiate a scoped ZapierMCPService with the automation config
+            // This ensures user-provided Webhook URLs from the UI are respected
+            const { ZapierMCPService } = await import('./zapier-mcp-service');
+            
+            const scopedZapierService = new ZapierMCPService({
+                enabled: this.config.zapier.enabled,
+                webhookUrl: this.config.zapier.webhookUrl || process.env.ZAPIER_WEBHOOK_URL,
+                embedId: process.env.ZAPIER_EMBED_ID,
+                embedSecret: process.env.ZAPIER_EMBED_SECRET
+            });
 
-            if (zapierMCPService.isConfigured()) {
-                const success = await zapierMCPService.triggerAutomation(
+            if (scopedZapierService.isConfigured()) {
+                const success = await scopedZapierService.triggerAutomation(
                     payload.analysis,
                     payload.user.email,
                     // Use actual wallet if available in user preferences or portfolio context, otherwise placeholder
@@ -147,10 +155,10 @@ export class AutomationService {
                 );
 
                 if (success) {
-                    console.log('[Automation] Zapier automation triggered successfully via Service');
+                    console.log('[Automation] Zapier automation triggered successfully via scoped Service');
                     return;
                 } else {
-                    console.warn('[Automation] Zapier automation failed to trigger via Service');
+                    console.warn('[Automation] Zapier automation failed to trigger via scoped Service');
                 }
             } else {
                 console.warn('[Automation] Zapier Service not configured (missing Webhook URL or Embed Creds)');

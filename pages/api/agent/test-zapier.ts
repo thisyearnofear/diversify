@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { zapierMCPService } from '@diversifi/shared';
+import { zapierMCPService, ZapierMCPService } from '@diversifi/shared';
 
 /**
  * Test Zapier MCP Integration
@@ -12,8 +12,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
+        const { zapier: userZapierConfig } = req.body;
+
+        // Use custom instance if user provided webhookUrl, otherwise fallback to global
+        let serviceToUse = zapierMCPService;
+        
+        if (userZapierConfig?.webhookUrl || userZapierConfig?.embedId) {
+            serviceToUse = new ZapierMCPService({
+                embedId: userZapierConfig.embedId || process.env.ZAPIER_EMBED_ID,
+                embedSecret: userZapierConfig.embedSecret || process.env.ZAPIER_EMBED_SECRET,
+                webhookUrl: userZapierConfig.webhookUrl || process.env.ZAPIER_WEBHOOK_URL,
+                enabled: true
+            });
+        }
+
         // Test the MCP connection first
-        const connectionTest = await zapierMCPService.testConnection();
+        const connectionTest = await serviceToUse.testConnection();
 
         if (!connectionTest.success) {
             return res.status(400).json({
@@ -22,41 +36,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 configuration: {
                     embedId: !!process.env.ZAPIER_EMBED_ID,
                     embedSecret: !!process.env.ZAPIER_EMBED_SECRET,
-                    webhookUrl: !!process.env.ZAPIER_WEBHOOK_URL
+                    webhookUrl: !!(userZapierConfig?.webhookUrl || process.env.ZAPIER_WEBHOOK_URL)
                 }
             });
         }
 
-        // If connection test passes, try a real automation trigger
-        const testAnalysis = {
-            action: 'SWAP' as const,
-            targetToken: 'PAXG',
-            targetNetwork: 'Arbitrum' as const,
-            confidence: 0.85,
-            reasoning: 'Test automation: High inflation detected. Moving to gold-backed PAXG provides better wealth protection.',
-            expectedSavings: 50,
-            timeHorizon: '6 months',
-            riskLevel: 'MEDIUM' as const,
-            dataSources: ['Truflation Premium', 'Macro Regime Oracle'],
-            executionMode: 'ADVISORY' as const,
-            actionSteps: [
-                'Open Arbitrum-compatible wallet',
-                'Search for PAXG trading pair',
-                'Consider swapping 20% of portfolio',
-                'Monitor gold prices'
-            ],
-            urgencyLevel: 'HIGH' as const
-        };
+        // If connection test passes, execute a genuine agent run to test the entire pipeline safely
+        const { ArcAgent } = await import('@diversifi/shared');
+        const agent = new ArcAgent({ 
+            userId: 'test-zapier@agent.user',
+            spendingLimit: 0 // Pass a zero spending limit to strictly prevent live execution side-effects
+        });
 
-        const automationSuccess = await zapierMCPService.triggerAutomation(
-            testAnalysis,
+        const realAnalysis = await agent.analyzePortfolioAutonomously(
+            { balance: 1000, holdings: ['USDC'] }, 
+            userZapierConfig || {}, 
+            { chainId: 11142220, name: 'Celo Sepolia' } // Contextual testnet targeting
+        );
+
+        const automationSuccess = await serviceToUse.triggerAutomation(
+            realAnalysis,
             'test@example.com',
             '0x742d35Cc6634C0532925a3b8D4C9db96590c6C87',
             { balance: 1000, holdings: ['USDm'] }
         );
 
         // Get user's Zaps for additional info
-        const userZaps = await zapierMCPService.listUserZaps();
+        const userZaps = await serviceToUse.listUserZaps();
 
         return res.status(200).json({
             success: true,
@@ -65,7 +71,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 connectionTest: connectionTest.success,
                 automationTrigger: automationSuccess,
                 userZaps: userZaps.length,
-                testData: testAnalysis
+                testData: realAnalysis
             },
             configuration: {
                 embedId: process.env.ZAPIER_EMBED_ID?.substring(0, 8) + '...',

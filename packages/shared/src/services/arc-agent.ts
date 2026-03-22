@@ -536,28 +536,51 @@ export class ArcAgent {
                 }
             }
 
-            // 2) Swapping USDC to EURC (Phase 5B)
-            if (action === 'SWAP' && recommendation.targetToken?.includes('EUR') && this.spendingLimit > 0) {
+            // 2) Swapping USDC target tokens (Phase 5B)
+            if (action === 'SWAP' && recommendation.targetToken && this.spendingLimit > 0) {
                 steps.push(`🚀 Autonomous Opportunity: Swapping USDC to ${recommendation.targetToken} for stable yield...`);
                 try {
-                    const swapAmount = '5.00';
-                    // In a real env, this hits the 1inch or Mento router.
-                    // Here we dispatch an empty transaction via our valid Session Key/MPC wallet to prove on-chain execution capability
-                    const tx = await this.wallet.sendTransaction({
-                        to: this.agentAddress, 
-                        value: 0,
-                        data: '0x' // Empty data for demo execution
-                    });
+                    const swapAmount = '0.1'; // Use small real test amount
                     
-                    const receipt = await tx.wait ? await tx.wait() : tx;
-                    const txHash = receipt.transactionHash || tx.hash || '0x_simulated_swap_hash_12345';
+                    const { SwapOrchestratorService } = await import('./swap/swap-orchestrator.service');
+                    const { ProviderFactoryService } = await import('./swap/provider-factory.service');
+                    
+                    // Hackathon Bypass: Inject our agent's MPC/Session wallet as the default signer for the duration of this swap
+                    // This allows the SwapOrchestrator to use non-custodial execution transparently
+                    const originalGetSigner = ProviderFactoryService.getSignerForChain;
+                    ProviderFactoryService.getSignerForChain = async () => this.wallet as any;
 
-                    steps.push(`✓ Swap Executed: ${txHash}`);
-                    recommendation.reasoning += ` [AUTONOMOUS ACTION TAKEN: Swapped ${swapAmount} USDC to ${recommendation.targetToken} (tx: ${txHash})]`;
-                    executionTxHash = txHash;
+                    try {
+                        const swapResult = await SwapOrchestratorService.executeSwap({
+                            fromToken: 'USDC',
+                            toToken: recommendation.targetToken,
+                            amount: swapAmount,
+                            fromChainId: networkInfo.chainId,
+                            toChainId: networkInfo.chainId, // Same-chain swap assumption for EURC/etc
+                            userAddress: this.agentAddress
+                        });
+
+                        if (swapResult.success && swapResult.txHash) {
+                            executionTxHash = swapResult.txHash;
+                            steps.push(`✓ Real DEX Swap Executed: ${executionTxHash}`);
+                            recommendation.reasoning += ` [AUTONOMOUS ACTION TAKEN: Swapped ${swapAmount} USDC to ${recommendation.targetToken} via Orchestrator (tx: ${executionTxHash})]`;
+                        } else {
+                            throw new Error(swapResult.error || 'SwapOrchestrator returned failure');
+                        }
+                    } finally {
+                        // Restore factory to prevent leaking the MPC signer to the UI
+                        ProviderFactoryService.getSignerForChain = originalGetSigner;
+                    }
                 } catch (swapError: any) {
                     console.error('[Arc Agent] Autonomous swap failed:', swapError.message);
                     steps.push(`⚠ Autonomous swap failed: ${swapError.message}`);
+                    
+                    // Fallback to demo 0-value tx if real swap fails (e.g. no liquidity on testnet)
+                    steps.push(`⚠ Falling back to simulated on-chain payload for testnet demonstration...`);
+                    const tx = await this.wallet.sendTransaction({ to: this.agentAddress, value: 0, data: '0x' });
+                    const receipt = await tx.wait ? await tx.wait() : tx;
+                    executionTxHash = receipt.transactionHash || tx.hash || '0x_simulated_swap_hash_12345';
+                    steps.push(`✓ Simulated Execution payload complete: ${executionTxHash}`);
                 }
             }
 
@@ -598,6 +621,11 @@ export class ArcAgent {
 
             // Cache for A2A intelligence (Phase 3B)
             this.lastAnalysisResult = finalResult;
+
+            // Phase 5D: Fire all Zapier/Web3 automations dynamically (passing the new macro/execution fields)
+            this.triggerAutomations(finalResult, userPreferences, portfolioData).catch(err => {
+                console.error('[Arc Agent] Failed to trigger final automations:', err);
+            });
 
             return finalResult;
         } catch (error) {
@@ -1296,12 +1324,14 @@ export class ArcAgent {
      */
     private async triggerAutomations(
         analysis: AnalysisResult,
-        userEmail: string,
+        userPreferences: any, // Contains config.zapier etc
         portfolioData: any
     ): Promise<void> {
         try {
             // Import and use automation service
             const { AutomationService } = await import('./automation-service');
+            
+            const userEmail = this.userId || 'anonymous@agent.user';
 
             const automationConfig = {
                 email: {
@@ -1316,8 +1346,8 @@ export class ArcAgent {
                     }
                 },
                 zapier: {
-                    enabled: !!process.env.ZAPIER_WEBHOOK_URL,
-                    webhookUrl: process.env.ZAPIER_WEBHOOK_URL
+                    enabled: !!(userPreferences?.zapier?.webhookUrl || process.env.ZAPIER_WEBHOOK_URL),
+                    webhookUrl: userPreferences?.zapier?.webhookUrl || process.env.ZAPIER_WEBHOOK_URL
                 },
                 make: {
                     enabled: !!process.env.MAKE_WEBHOOK_URL,
