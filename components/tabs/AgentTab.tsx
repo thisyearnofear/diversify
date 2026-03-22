@@ -111,8 +111,8 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
         </ErrorBoundary>
       )}
 
-      {/* Backtest Lab (standard/advanced) */}
-      {experienceMode !== 'beginner' && (
+      {/* Backtest Lab (standard/advanced) - Dev only */}
+      {experienceMode !== 'beginner' && process.env.NODE_ENV === 'development' && (
         <ErrorBoundary moduleName="Backtest Lab">
           <BacktestPanel />
         </ErrorBoundary>
