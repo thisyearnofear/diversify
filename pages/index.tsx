@@ -49,6 +49,7 @@ import StrategyModal, { useStrategyModal } from "../components/onboarding/Strate
 import PullToRefresh from "../components/ui/PullToRefresh";
 
 import { useVoiceIntent } from "../hooks/use-voice-intent";
+import { useAnalytics } from "../hooks/use-analytics";
 import { useAIOracle } from "../hooks/use-ai-oracle";
 import { useStreakRewards } from "../hooks/use-streak-rewards";
 import { useProtectionProfile } from "../hooks/use-protection-profile";
@@ -113,6 +114,7 @@ export default function DiversiFiPage() {
 
   // Declared after useWalletTutorial so openWalletTutorial is in scope
   const { handleTranscription } = useVoiceIntent({ onOpenWalletTutorial: openWalletTutorial });
+  const { trackTabChange } = useAnalytics();
 
   const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal } = useStrategyModal();
   const { isWhitelisted } = useStreakRewards();
@@ -368,9 +370,13 @@ export default function DiversiFiPage() {
             const TAB_ORDER = TAB_DISPLAY_ORDER;
             const idx = TAB_ORDER.indexOf(activeTab as TabId);
             if (info.offset.x < -SWIPE_THRESHOLD && idx < TAB_ORDER.length - 1) {
-              setActiveTab(TAB_ORDER[idx + 1]);
+              const newTab = TAB_ORDER[idx + 1];
+              trackTabChange(activeTab, newTab);
+              setActiveTab(newTab);
             } else if (info.offset.x > SWIPE_THRESHOLD && idx > 0) {
-              setActiveTab(TAB_ORDER[idx - 1]);
+              const newTab = TAB_ORDER[idx - 1];
+              trackTabChange(activeTab, newTab);
+              setActiveTab(newTab);
             }
           }}
         >

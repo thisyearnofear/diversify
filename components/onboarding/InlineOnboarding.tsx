@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { REGIONS, type Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "@/components/wallet/WalletProvider";
+import { useAnalytics } from "@/hooks/use-analytics";
 
 const STORAGE_KEY = "inlineOnboardingDismissed";
 const STEP_KEY = "inlineOnboardingStep";
@@ -28,6 +29,7 @@ interface InlineOnboardingProps {
 export default function InlineOnboarding({ onComplete }: InlineOnboardingProps) {
   const { isConnected, connect } = useWalletContext();
   const { config, setMultipleConfig } = useProtectionProfile();
+  const { trackOnboardingStep } = useAnalytics();
 
   const [step, setStep] = useState<"region" | "goal" | "cta">(() => {
     if (typeof window === "undefined") return "region";
@@ -37,17 +39,20 @@ export default function InlineOnboarding({ onComplete }: InlineOnboardingProps) 
   const [selectedRegion, setSelectedRegion] = useState<string | null>(config.userRegion || null);
   const [selectedGoal, setSelectedGoal] = useState<string | null>(config.userGoal || null);
 
-  // Persist step
+  // Persist step and track step views
   useEffect(() => {
     localStorage.setItem(STEP_KEY, step);
-  }, [step]);
+    trackOnboardingStep(step, 'view');
+  }, [step, trackOnboardingStep]);
 
   const handleDismiss = () => {
+    trackOnboardingStep(step, 'skip');
     localStorage.setItem(STORAGE_KEY, "1");
     onComplete();
   };
 
   const handleComplete = () => {
+    trackOnboardingStep('cta', 'complete');
     setMultipleConfig({
       userRegion: selectedRegion as any,
       userGoal: selectedGoal as any,

@@ -12,7 +12,6 @@ import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import { useNavigation } from "../../context/app/NavigationContext";
 import DiversificationHealthCard from "../trade/DiversificationHealthCard";
 import type { RebalancingOpportunity } from "@diversifi/shared";
-import { useAIOracle } from "../../hooks/use-ai-oracle";
 
 // Market type for switching between Robinhood, Emerging Markets, and Commodities
 type MarketType = "robinhood" | "emerging-markets" | "commodities";
