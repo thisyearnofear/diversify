@@ -1,29 +1,29 @@
 /**
  * AgentTab - Dedicated Agent Control Center
- * 
+ *
  * Core Principles:
  * - ENHANCEMENT FIRST: Uses enhanced AgentTierStatus component
  * - CONSOLIDATION: No duplicate components, reuses existing ones
  * - MINIMAL: Only essential UI, no bloat
  */
 
-import React, { useCallback, useState } from 'react';
-import { AgentTierStatus } from '../agent/AgentTierStatus';
-import AutomationSettings from '../agent/AutomationSettings';
-import ActionableRecommendation from '../agent/ActionableRecommendation';
-import { BacktestPanel } from '../agent/BacktestPanel';
-import { useAgentStatus } from '../../hooks/use-agent-status';
-import { useAgentConfig } from '../../hooks/use-agent-config';
-import { useAgentAnalysis } from '../../hooks/use-agent-analysis';
-import { useAgentActivities } from '../../hooks/use-agent-activities';
-import { useExperience } from '../../context/app/ExperienceContext';
-import { useAIOracle } from '../../hooks/use-ai-oracle';
-import { useNavigation } from '../../context/app/NavigationContext';
-import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
-import { AUTONOMOUS_FEATURES } from '../../config/features';
-import { Skeleton } from '../shared/TabComponents';
-import ErrorBoundary from '../ui/ErrorBoundary';
-import AgentQuickActions from '../agent/AgentQuickActions';
+import React, { useCallback, useState } from "react";
+import { AgentTierStatus } from "../agent/AgentTierStatus";
+import AutomationSettings from "../agent/AutomationSettings";
+import ActionableRecommendation from "../agent/ActionableRecommendation";
+import { BacktestPanel } from "../agent/BacktestPanel";
+import { useAgentStatus } from "../../hooks/use-agent-status";
+import { useAgentConfig } from "../../hooks/use-agent-config";
+import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
+import { useAgentActivities } from "../../hooks/use-agent-activities";
+import { useExperience } from "../../context/app/ExperienceContext";
+import { useAIOracle } from "../../hooks/use-ai-oracle";
+import { useNavigation } from "../../context/app/NavigationContext";
+import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
+import { AUTONOMOUS_FEATURES } from "../../config/features";
+import { Skeleton } from "../shared/TabComponents";
+import ErrorBoundary from "../ui/ErrorBoundary";
+import AgentQuickActions from "../agent/AgentQuickActions";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -33,10 +33,21 @@ interface AgentTabProps {
   portfolio?: MultichainPortfolio;
 }
 
-export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTabProps) {
-  const { capabilities, autonomousStatus, isLoading: isStatusLoading } = useAgentStatus();
+import { useWDKAgent } from "../../hooks/use-wdk-agent";
+
+export default function AgentTab({
+  isMiniPay,
+  isFarcaster,
+  portfolio,
+}: AgentTabProps) {
+  const {
+    capabilities,
+    autonomousStatus,
+    isLoading: isStatusLoading,
+  } = useAgentStatus();
   const { config, updateConfig } = useAgentConfig();
   const { addActivity } = useAgentActivities();
+  const { executeViaWDK } = useWDKAgent();
   const noopMessage = useCallback(() => {}, []);
   const { portfolioAnalysis } = useAgentAnalysis({
     apiBase: API_BASE,
@@ -53,12 +64,16 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
   const [showQuickActions, setShowQuickActions] = useState(false);
 
   const handleAskAgent = () => {
-    ask('Give me a summary of my portfolio protection status and any recommended actions.');
+    ask(
+      "Give me a summary of my portfolio protection status and any recommended actions.",
+    );
   };
 
   // Oracle: Market analysis prompt
   const handleOracleClick = () => {
-    ask('Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.');
+    ask(
+      "Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.",
+    );
   };
 
   // Assistant: Show quick action menu instead of opening chat
@@ -71,13 +86,14 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
       {/* Header */}
       <div className="text-center">
         <h2 className="text-2xl font-black text-gray-900 dark:text-white">
-          {experienceMode === 'beginner' ? 'Your AI Assistant' : 'Agent Command Center'}
+          {experienceMode === "beginner"
+            ? "Your AI Assistant"
+            : "Agent Command Center"}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {experienceMode === 'beginner' 
-            ? 'See what your AI is doing to protect your savings'
-            : 'Monitor and control your autonomous wealth protection agents'
-          }
+          {experienceMode === "beginner"
+            ? "See what your AI is doing to protect your savings"
+            : "Monitor and control your autonomous wealth protection agents"}
         </p>
       </div>
 
@@ -95,30 +111,60 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
             <Skeleton className="h-20 w-full" variant="rect" />
           </div>
         ) : (
-        <AgentTierStatus 
-          isMiniPay={isMiniPay} 
-          isFarcaster={isFarcaster}
-          showActivityFeed={true}
-          onNavigateToAgent={handleAskAgent}
-          onOracleClick={handleOracleClick}
-          onAssistantClick={handleAssistantClick}
-        />
+          <AgentTierStatus
+            isMiniPay={isMiniPay}
+            isFarcaster={isFarcaster}
+            showActivityFeed={true}
+            onNavigateToAgent={handleAskAgent}
+            onOracleClick={handleOracleClick}
+            onAssistantClick={handleAssistantClick}
+          />
         )}
       </ErrorBoundary>
 
       {/* Actionable Recommendations — non-beginner only, shown when analysis exists */}
-      {experienceMode !== 'beginner' && (
+      {experienceMode !== "beginner" && (
         <ErrorBoundary moduleName="Portfolio Recommendations">
           <ActionableRecommendation
             analysis={portfolioAnalysis}
             portfolio={portfolio ?? null}
-            onExecuteSwap={(fromToken, toToken, amount, reason) => {
-              ask(`I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ''} based on Oracle recommendation${reason ? `: ${reason}` : ''}. Please confirm this aligns with my strategy.`);
+            onExecuteSwap={async (fromToken, toToken, amount, reason) => {
+              if (config.walletProvider === "TETHER_WDK") {
+                addActivity({
+                  type: "execution",
+                  tier: "GUARDIAN",
+                  description: `Initiating WDK Galactica execution: ${fromToken} → ${toToken}`,
+                  status: "pending",
+                });
+
+                const result = await executeViaWDK({
+                  action: "SWAP",
+                  asset: toToken,
+                  amount: amount,
+                  chain: "Arbitrum", // Default for now
+                });
+
+                if (result.success) {
+                  addActivity({
+                    type: "execution",
+                    tier: "GUARDIAN",
+                    description: `WDK Execution Success: ${fromToken} → ${toToken} ($${amount})`,
+                    status: "success",
+                    details: { txHash: result.txHash },
+                  });
+                  return;
+                }
+              }
+
+              // Fallback to manual/standard flow
+              ask(
+                `I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ""} based on Oracle recommendation${reason ? `: ${reason}` : ""}. Please confirm this aligns with my strategy.`,
+              );
               addActivity({
-                type: 'execution',
-                tier: 'GUARDIAN',
-                description: `Swap ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ''}${reason ? ` — ${reason}` : ''}`,
-                status: 'pending',
+                type: "execution",
+                tier: "GUARDIAN",
+                description: `Swap ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ""}${reason ? ` — ${reason}` : ""}`,
+                status: "pending",
               });
               navigateToSwap({ fromToken, toToken, amount, reason });
             }}
@@ -127,16 +173,17 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
       )}
 
       {/* Backtest Lab (standard/advanced) - Dev only */}
-      {experienceMode !== 'beginner' && process.env.NODE_ENV === 'development' && (
-        <ErrorBoundary moduleName="Backtest Lab">
-          <BacktestPanel />
-        </ErrorBoundary>
-      )}
+      {experienceMode !== "beginner" &&
+        process.env.NODE_ENV === "development" && (
+          <ErrorBoundary moduleName="Backtest Lab">
+            <BacktestPanel />
+          </ErrorBoundary>
+        )}
 
       {/* Automation Settings (only in advanced mode) */}
-      {experienceMode === 'advanced' && (
+      {experienceMode === "advanced" && (
         <ErrorBoundary moduleName="Automation Settings">
-          <AutomationSettings 
+          <AutomationSettings
             config={config}
             onConfigChange={updateConfig}
             autonomousStatus={autonomousStatus}
@@ -154,11 +201,10 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
       </button>
 
       {/* Quick Actions Modal */}
-      <AgentQuickActions 
-        isOpen={showQuickActions} 
-        onClose={() => setShowQuickActions(false)} 
+      <AgentQuickActions
+        isOpen={showQuickActions}
+        onClose={() => setShowQuickActions(false)}
       />
-
     </div>
   );
 }

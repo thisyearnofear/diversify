@@ -100,6 +100,20 @@ export class AgentActionService {
                 callbacks.onOpenAIChat?.();
                 break;
 
+            case 'WDK_ACTION':
+                if (intent.topic === 'switch') {
+                    callbacks.onToast?.('Augmenting agent with Tether WDK...', 'success');
+                    // We can also trigger a navigation to settings to confirm
+                    callbacks.onNavigate?.('agent');
+                } else if (intent.topic === 'galactica') {
+                    callbacks.onToast?.('Galactica WDK Protocol initialized.', 'ai');
+                    callbacks.onNavigate?.('agent');
+                } else {
+                    callbacks.onAskAI?.(originalText);
+                    callbacks.onOpenAIChat?.();
+                }
+                break;
+
             case 'QUERY':
                 // Direct queries always go to the Oracle
                 callbacks.onAskAI?.(originalText);

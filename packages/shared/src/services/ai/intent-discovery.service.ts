@@ -14,6 +14,7 @@ export type AppIntent =
     | { type: 'ANALYZE_REQUEST'; goal?: string }
     | { type: 'ONBOARDING'; topic: 'what-is-this' | 'how-to-start' | 'is-safe' | 'wallet-help' | 'demo' }
     | { type: 'GOODDOLLAR'; topic: 'claim' | 'verify' | 'status' | 'info' }
+    | { type: 'WDK_ACTION'; topic: 'switch' | 'info' | 'status' | 'galactica' }
     | { type: 'QUERY'; context: 'market' | 'portfolio' | 'general' }
     | { type: 'UNKNOWN' };
 
@@ -73,6 +74,17 @@ export class IntentDiscoveryService {
 
         if (r.includes("demo") || r.includes("try it") || r.includes("test") || r.includes("practice")) {
             return { type: 'ONBOARDING', topic: 'demo' };
+        }
+
+        // 0. Tether WDK / Galactica Actions (Hackathon Augmentation)
+        if (r.includes("wdk") || r.includes("galactica") || r.includes("tether wallet") || r.includes("tether agent")) {
+            if (r.includes("switch") || r.includes("change") || r.includes("use")) {
+                return { type: 'WDK_ACTION', topic: 'switch' };
+            }
+            if (r.includes("status") || r.includes("online") || r.includes("receipt")) {
+                return { type: 'WDK_ACTION', topic: 'status' };
+            }
+            return { type: 'WDK_ACTION', topic: 'info' };
         }
 
         // 1. Navigation Shortcuts

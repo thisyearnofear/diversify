@@ -42,7 +42,7 @@ export default async function handler(
     }
 
     // Validate track
-    const validTracks = ['base-autonomous-trading', 'status-l2-gasless', 'open-track'];
+    const validTracks = ['base-autonomous-trading', 'status-l2-gasless', 'open-track', 'tether-galactica-wdk'];
     if (!validTracks.includes(track)) {
       return res.status(400).json({ 
         error: `Invalid track. Must be one of: ${validTracks.join(', ')}` 
@@ -60,6 +60,7 @@ export default async function handler(
       rpc_url: rpcUrl,
       raw_tx: rawTx,
       explorer_base: explorerBase,
+      metadata: req.body.metadata, // Pass through metadata (augmentation, hackathon, etc.)
     });
 
     return res.status(200).json({

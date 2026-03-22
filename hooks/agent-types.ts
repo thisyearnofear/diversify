@@ -234,6 +234,8 @@ export interface AIConfig {
   // Proactive Agent Alert Thresholds (Phase 4C)
   volatilityAlertThreshold?: number; // Implied volatility %, default 80
   yieldAlertThreshold?: number;      // APY %, default 10
+  // Wallet Provider Preference (Hackathon Galactica Augmentation)
+  walletProvider?: "CIRCLE_MPC" | "TETHER_WDK";
 }
 
 export interface AgentAnalysisDependencies {

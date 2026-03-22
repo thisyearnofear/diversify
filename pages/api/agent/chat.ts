@@ -21,6 +21,16 @@ WHAT DIVERSIFI ENABLES:
 4. **Test Drive** - Try the full experience with demo mode (no wallet required)
 5. **Daily UBI** - Earn $G GoodDollar universal basic income just for using the platform
 6. **Frontier Tech** - Experience cutting-edge features including fictional stock tokenization on Robinhood Chain (ACME, WAYNE, STARK)
+7. **Hackathon Galactica (Tether WDK)** - Augment your agent with the Tether Wallet Development Kit (WDK) for self-custodial, multi-chain agentic wallets.
+
+TETHER WDK / GALACTICA INTEGRATION:
+- DiversiFi is augmented with Tether WDK for the Galactica Hackathon.
+- **WDK Agent**: A self-custodial agent that manages USD₮ (Tether) and XAU₮ (Tether Gold) across 6+ chains.
+- **USD₮ (Tether)**: The world's most trusted stablecoin, used as the primary settlement asset for WDK agents.
+- **XAU₮ (Tether Gold)**: A gold-backed token that provides economic sovereignty and inflation hedging.
+- **Multi-chain**: WDK supports Celo, Arbitrum, Polygon, Avalanche, Tron, and more.
+- **Switching**: Users can switch their Guardian infrastructure between "Agent Fuel (Circle MPC)" and "Galactica (Tether WDK)" in the Agent Command Center (Settings).
+- **Benefits**: Self-custody, native gold exposure, and multi-chain autonomy.
 
 CORE CAPABILITIES:
 - Guide users through wallet setup (email, existing wallet, or "Buy Crypto" fiat onramp)

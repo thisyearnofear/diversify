@@ -6,6 +6,7 @@ const DEFAULT_CONFIG: AIConfig = {
   goal: "Inflation Hedge",
   timeHorizon: "3 months",
   spendingLimit: 5.0,
+  walletProvider: "CIRCLE_MPC", // Default to Circle MPC (Agent Fuel Model)
 };
 
 let cachedConfig: AIConfig = DEFAULT_CONFIG;

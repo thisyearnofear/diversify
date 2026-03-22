@@ -11,30 +11,6 @@
 // TYPES
 // ============================================================================
 
-export interface OpenClawMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
-
-export interface OpenClawChatRequest {
-  model: 'openclaw';
-  messages: OpenClawMessage[];
-}
-
-export interface OpenClawChatResponse {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: Array<{
-    index: number;
-    message: {
-      role: string;
-      content: string;
-    };
-    finish_reason: string;
-  }>;
-}
 
 export interface OpenClawExecuteRequest {
   run_id: string;
@@ -42,6 +18,7 @@ export interface OpenClawExecuteRequest {
   rpc_url: string;
   raw_tx: string;
   explorer_base: string;
+  metadata?: Record<string, any>;
 }
 
 export interface OpenClawExecuteResponse {
@@ -70,6 +47,13 @@ export interface OpenClawReceipt {
     explorer_url: string;
     tx_status: string;
   };
+}
+
+// Ingested via /api/agent/openclaw/webhook (future enhancement)
+export interface OpenClawWebhookPayload {
+  type: 'receipt' | 'run_summary' | 'status_change';
+  payload: OpenClawReceipt | OpenClawRunSummary | { status: string };
+  signature?: string;
 }
 
 export interface OpenClawRunSummary {
@@ -128,6 +112,9 @@ export class OpenClawService {
   private lastFailureTime: number = 0;
   private readonly CIRCUIT_BREAKER_THRESHOLD = 3;
   private readonly CIRCUIT_BREAKER_RESET_MS = 10 * 60 * 1000; // 10 minutes
+
+  private inMemoryReceipts: Map<string, OpenClawReceipt[]> = new Map();
+  private inMemorySummaries: Map<string, OpenClawRunSummary> = new Map();
 
   constructor() {
     this.config = getConfig();
@@ -242,34 +229,6 @@ export class OpenClawService {
     return this.isCircuitOpen();
   }
 
-  /**
-   * Send chat messages to OpenClaw gateway
-   */
-  async chat(messages: OpenClawMessage[]): Promise<OpenClawChatResponse> {
-    if (!this.isEnabled()) {
-      throw new Error('OpenClaw integration is not enabled');
-    }
-
-    if (this.isCircuitOpen()) {
-      throw new Error('OpenClaw service is temporarily unavailable (circuit breaker open)');
-    }
-
-    const request: OpenClawChatRequest = {
-      model: 'openclaw',
-      messages,
-    };
-
-    const response = await this.fetchWithRetry(
-      `${this.config.gatewayUrl}/v1/chat/completions`,
-      {
-        method: 'POST',
-        headers: this.getGatewayHeaders(),
-        body: JSON.stringify(request),
-      }
-    );
-
-    return response.json();
-  }
 
   /**
    * Execute a command via OpenClaw wrapper console API
@@ -334,35 +293,15 @@ export class OpenClawService {
       throw new Error('OpenClaw service is temporarily unavailable (circuit breaker open)');
     }
 
-    // Get action log from the agent state
-    const response = await this.fetchWithRetry(
-      `${this.config.wrapperUrl}/setup/api/console/run`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': this.getWrapperAuth(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          cmd: `cat /data/agent_state/logs/agent-actions.jsonl | grep "${runId}" || echo "[]"`
-        }),
-      }
-    );
+    // Source of truth: check in-memory cache populated by Webhooks first
+    const cached = this.inMemoryReceipts.get(runId);
+    if (cached) return cached;
 
-    const result = await response.json();
+    // TODO (Enhancement First / Clean Architecture)
+    // Active polling via shell commands is blocked by the Railway wrapper policy ("Command not allowed").
+    // Logs from the webhook ingress should be flushed to local PersistentMissionService/Storage.
+    console.warn(`[OpenClaw] No cached receipts for ${runId}. Active polling is disabled.`);
     
-    // Parse JSONL format
-    if (result.output) {
-      const lines = result.output.trim().split('\n').filter((line: string) => line.trim());
-      return lines.map((line: string) => {
-        try {
-          return JSON.parse(line);
-        } catch {
-          return null;
-        }
-      }).filter(Boolean);
-    }
-
     return [];
   }
 
@@ -378,31 +317,47 @@ export class OpenClawService {
       throw new Error('OpenClaw service is temporarily unavailable (circuit breaker open)');
     }
 
-    const response = await this.fetchWithRetry(
-      `${this.config.wrapperUrl}/setup/api/console/run`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': this.getWrapperAuth(),
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          cmd: `cat /data/agent_state/logs/run-summary.json 2>/dev/null || echo "{}"`
-        }),
-      }
-    );
+    // Source of truth: check in-memory cache populated by Webhooks first
+    const cached = this.inMemorySummaries.get(runId);
+    if (cached) return cached;
 
-    const result = await response.json();
-    
-    if (result.output) {
-      try {
-        return JSON.parse(result.output);
-      } catch {
-        return null;
-      }
-    }
+    // TODO (Performant / Clean)
+    // Active polling via shell commands is blocked by the Railway wrapper policy ("Command not allowed").
+    console.warn(`[OpenClaw] No cached summary for ${runId}. Active polling is disabled.`);
 
     return null;
+  }
+
+  /**
+   * Ingress data from external OpenClaw webhook
+   */
+  async ingressWebhook(payload: OpenClawWebhookPayload): Promise<{ success: boolean }> {
+    if (!this.isEnabled()) return { success: false };
+
+    try {
+      if (payload.type === 'receipt') {
+        const receipt = payload.payload as OpenClawReceipt;
+        const current = this.inMemoryReceipts.get(receipt.run_id) || [];
+        
+        // Prevent duplicates
+        if (!current.some(r => r.event_id === receipt.event_id)) {
+          this.inMemoryReceipts.set(receipt.run_id, [...current, receipt].sort((a, b) => 
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+          ).slice(0, 50)); // Keep last 50
+        }
+      } else if (payload.type === 'run_summary') {
+        const summary = payload.payload as OpenClawRunSummary;
+        this.inMemorySummaries.set(summary.run_id, summary);
+      } else if (payload.type === 'status_change') {
+        const { status } = payload.payload as { status: string };
+        console.log(`[OpenClaw] Agent status update: ${status}`);
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[OpenClaw] Webhook ingestion failed:', error);
+      return { success: false };
+    }
   }
 
   /**

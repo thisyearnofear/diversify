@@ -99,6 +99,15 @@ export function useAgentChat({
         case 'GOODDOLLAR':
           fastPathResponse = intent.topic === 'claim' ? "Checking G$ UBI eligibility... 🪙" : "Starting verification... 🛡️";
           break;
+        case 'WDK_ACTION':
+          if (intent.topic === 'switch') {
+            fastPathResponse = "Switching your Guardian infrastructure to Tether WDK... 🌌";
+          } else if (intent.topic === 'status') {
+            fastPathResponse = "Checking WDK Galactica agent status... 🛰️";
+          } else {
+            fastPathResponse = "Tether WDK (Wallet Development Kit) enables self-custodial agentic wallets with native USD₮ and XAU₮ support. 🌌";
+          }
+          break;
         case 'ONBOARDING':
           if (intent.topic === 'demo') {
             fastPathResponse = "Entering Demo Mode... 🎮";

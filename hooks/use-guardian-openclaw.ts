@@ -7,7 +7,41 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { OpenClawIdentity, OpenClawReceipt } from './use-openclaw';
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface OpenClawReceipt {
+  event_id: string;
+  run_id: string;
+  timestamp: string;
+  agent_id: string;
+  action_type: string;
+  tool: string;
+  status: 'success' | 'error' | 'retry' | 'skipped';
+  duration_ms: number;
+  onchain?: {
+    chain: string;
+    chain_id: number;
+    tx_hash: string;
+    explorer_url: string;
+    tx_status: string;
+  };
+}
+
+export interface OpenClawIdentity {
+  schema_version: string;
+  agent_id: string;
+  name: string;
+  agent_version: string;
+  operator_mode: string;
+  capabilities: string[];
+  wallets: Array<{
+    chain: string;
+    address: string;
+    purpose: string;
+  }>;
+}
 
 type AgentStatus = 'online' | 'offline' | 'unavailable' | 'loading';
 
@@ -93,6 +127,11 @@ export function useGuardianOpenClaw() {
             rpcUrl: action.rpcUrl,
             rawTx: action.rawTx,
             explorerBase: action.explorerBase,
+            // Include WDK augmentation metadata for OpenClaw to recognize
+            metadata: {
+              augmentation: 'TETHER_WDK',
+              hackathon: 'Galactica-WDK-2026-01'
+            }
           }),
         });
 
@@ -124,22 +163,10 @@ export function useGuardianOpenClaw() {
   // ---------------------------------------------------------------------------
 
   const getRecentReceipts = useCallback(async (runId?: string) => {
-    try {
-      const params = new URLSearchParams();
-      if (runId) params.set('runId', runId);
-
-      const response = await fetch(`/api/agent/openclaw/receipts?${params.toString()}`);
-      const data = await response.json();
-
-      if (response.ok && data.receipts) {
-        setRecentReceipts(data.receipts);
-        return data.receipts as OpenClawReceipt[];
-      }
-
-      return [];
-    } catch {
-      return [];
-    }
+    // TODO (Enhancement First / Clean Architecture)
+    // Refactor to ingest receipts from PersistentMissionService/Webhooks 
+    // Active polling via shell commands is blocked by the Railway wrapper policy ("Command not allowed").
+    return [];
   }, []);
 
   // ---------------------------------------------------------------------------
