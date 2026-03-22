@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import type { Region } from "@/hooks/use-user-region";
 import RegionalIconography from "../../regional/RegionalIconography";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
+import InlineOnboarding from "../../onboarding/InlineOnboarding";
 
 interface NotConnectedStateProps {
   userRegion: Region;
@@ -36,8 +37,17 @@ export function NotConnectedState({
     },
   ];
 
+  const [showOnboarding, setShowOnboarding] = useState(
+    typeof window !== "undefined" && !localStorage.getItem("inlineOnboardingDismissed")
+  );
+
   return (
     <div className="space-y-4">
+      {/* Inline Onboarding — first-time users only */}
+      {showOnboarding && (
+        <InlineOnboarding onComplete={() => setShowOnboarding(false)} />
+      )}
+
       {/* Hope-first: show value before fear */}
       <Card
         padding="p-0"

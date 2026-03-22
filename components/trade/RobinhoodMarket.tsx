@@ -65,18 +65,6 @@ interface RobinhoodMarketProps {
   isAdvanced: boolean;
   activeTab: "trade" | "earn" | "track";
   setActiveTab: (tab: "trade" | "earn" | "track") => void;
-  // Shared state from parent
-  liveRates: Record<Stock, string | null>;
-  liveRateMetadata: Record<Stock, { isLive: boolean; source: string }>;
-  basePrices: Record<"ETH" | "BTC", number>;
-  baseAsset: "ETH" | "BTC";
-  setBaseAsset: (asset: "ETH" | "BTC") => void;
-  realStockPrice: number | null;
-  synthForecast: { p10: number; p50: number; p90: number } | null;
-  intelligenceItems: IntelligenceItem[];
-  isLoadingIntelligence: boolean;
-  showAdvancedInsights: boolean;
-  setShowAdvancedInsights: (show: boolean) => void;
 }
 
 export default function RobinhoodMarket({
@@ -90,17 +78,6 @@ export default function RobinhoodMarket({
   isAdvanced,
   activeTab,
   setActiveTab,
-  liveRates,
-  liveRateMetadata,
-  basePrices,
-  baseAsset,
-  setBaseAsset,
-  realStockPrice,
-  synthForecast,
-  intelligenceItems,
-  isLoadingIntelligence,
-  showAdvancedInsights,
-  setShowAdvancedInsights,
 }: RobinhoodMarketProps) {
   const [selected, setSelected] = useState<Stock>("NVDA");
   const [mode, setMode] = useState<TradeMode>("buy");
@@ -117,6 +94,24 @@ export default function RobinhoodMarket({
   );
   const [showAllRobinhood, setShowAllRobinhood] = useState(false);
   const [showAllFictional, setShowAllFictional] = useState(false);
+  const [baseAsset, setBaseAsset] = useState<"ETH" | "BTC">("ETH");
+  const [basePrices, setBasePrices] = useState<Record<"ETH" | "BTC", number>>({ ETH: 3500, BTC: 67000 });
+  const [liveRates, setLiveRates] = useState<Record<Stock, string | null>>(
+    Object.fromEntries(STOCKS.map((s) => [s, null])) as Record<Stock, string | null>
+  );
+  const [liveRateMetadata, setLiveRateMetadata] = useState<Record<Stock, { isLive: boolean; source: string }>>({
+    ACME: { isLive: false, source: 'amm' }, SPACELY: { isLive: false, source: 'amm' },
+    WAYNE: { isLive: false, source: 'amm' }, OSCORP: { isLive: false, source: 'amm' },
+    STARK: { isLive: false, source: 'amm' }, NVDA: { isLive: false, source: 'none' },
+    GOOGL: { isLive: false, source: 'none' }, TSLA: { isLive: false, source: 'none' },
+    AAPL: { isLive: false, source: 'none' }, BTC: { isLive: false, source: 'none' },
+    ETH: { isLive: true, source: 'native' },
+  });
+  const [realStockPrice, setRealStockPrice] = useState<number | null>(null);
+  const [synthForecast, setSynthForecast] = useState<{ p10: number; p50: number; p90: number } | null>(null);
+  const [intelligenceItems, setIntelligenceItems] = useState<IntelligenceItem[]>([]);
+  const [isLoadingIntelligence, setIsLoadingIntelligence] = useState(true);
+  const [showAdvancedInsights, setShowAdvancedInsights] = useState(false);
 
   const { watchlist: robinhoodWatchlist, toggleWatchlist: toggleRobinhoodWatchlist, isInWatchlist: isInRobinhoodWatchlist } = useWatchlist();
 
@@ -154,11 +149,157 @@ export default function RobinhoodMarket({
     }
   }, [address, isOnRH]);
 
+  // --- Rate Fetching ---
+  const fetchRates = useCallback(async () => {
+    try {
+      const [ethResult, btcResult] = await Promise.all([
+        TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "ETH" }),
+        TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: "BTC" }),
+      ]);
+      const newBasePrices = {
+        ETH: ethResult.price || 3500,
+        BTC: btcResult.price || 67000,
+      };
+      setBasePrices(newBasePrices);
+
+      const currentBasePrice = newBasePrices[baseAsset];
+      const provider = (isConnected && isOnRH)
+        ? await ProviderFactoryService.getWeb3Provider()
+        : ProviderFactoryService.getProvider(RH_CHAIN_ID);
+
+      const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, provider);
+      const refETH = ethers.utils.parseEther("0.001");
+
+      const [res, realRes] = await Promise.all([
+        Promise.all(
+          FICTIONAL_STOCKS.map(async (s) => {
+            try {
+              const stockAddr = RH_TESTNET_TOKENS[s];
+              const [out] = await Promise.all([
+                amm.quoteSwapETH(refETH, stockAddr),
+              ]);
+              const perMilliETH = parseFloat(ethers.utils.formatEther(out));
+              let rate = perMilliETH * 1000;
+              if (baseAsset === "BTC") {
+                rate = rate * (newBasePrices.BTC / newBasePrices.ETH);
+              }
+              return {
+                symbol: s,
+                rate: rate.toLocaleString("en-US", { maximumFractionDigits: baseAsset === "BTC" ? 4 : 0 }),
+                isLive: false, source: 'amm',
+              };
+            } catch {
+              return { symbol: s, rate: null, isLive: false, source: 'error' };
+            }
+          }),
+        ),
+        Promise.all(
+          REAL_STOCKS.map(async (s) => {
+            try {
+              if (s === baseAsset) return { symbol: s, rate: "1", isLive: true, source: 'native' };
+              const result = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: s });
+              return {
+                symbol: s,
+                rate: result.price ? (currentBasePrice / result.price).toFixed(baseAsset === "BTC" ? 6 : 2) : null,
+                isLive: result.isLive, source: result.source,
+              };
+            } catch {
+              return { symbol: s, rate: null, isLive: false, source: 'error' };
+            }
+          }),
+        ),
+      ]);
+
+      const rates: Record<Stock, string | null> = Object.fromEntries(STOCKS.map((s) => [s, null])) as Record<Stock, string | null>;
+      const metadata: Record<Stock, { isLive: boolean; source: string }> = { ...liveRateMetadata };
+
+      res.forEach((item) => {
+        rates[item.symbol as Stock] = item.rate;
+        metadata[item.symbol as Stock] = { isLive: item.isLive, source: item.source };
+      });
+      realRes.forEach((item) => {
+        rates[item.symbol as Stock] = item.rate;
+        metadata[item.symbol as Stock] = { isLive: item.isLive, source: item.source };
+      });
+
+      setLiveRates(rates);
+      setLiveRateMetadata(metadata);
+    } catch (e) {
+      console.error("[Robinhood] Rate fetch error:", e);
+    }
+  }, [isConnected, isOnRH, baseAsset]);
+
+  // --- Synth Intelligence ---
+  const fetchSynthIntelligence = useCallback(async () => {
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      const response = await fetch(`${apiBase}/api/trading/stock-stats?stock=${selected}`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+      const priceResult = await TokenPriceService.getTokenUsdPrice({ chainId: 1, symbol: selected });
+      if (priceResult.price) {
+        setRealStockPrice(priceResult.price);
+        setLiveRateMetadata(prev => ({
+          ...prev,
+          [selected]: { isLive: priceResult.isLive, source: priceResult.source },
+        }));
+      }
+
+      if (data.success && data.synthData) {
+        const forecast = data.synthData;
+        const forecastVol = data.volatility?.forecast ? (data.volatility.forecast * 100).toFixed(2) : "0";
+        const realizedVol = data.volatility?.realized ? (data.volatility.realized * 100).toFixed(2) : "0";
+
+        const synthItem: IntelligenceItem = {
+          id: `synth-${selected}`,
+          type: "impact",
+          title: `Synth Probabilistic Forecast: ${selected}`,
+          description: `SN50 models predict ${forecastVol}% annualized volatility. Realized volatility is currently ${realizedVol}%.`,
+          impact: parseFloat(forecastVol) > parseFloat(realizedVol) ? "negative" : "positive",
+          impactAsset: selected,
+          timestamp: "Live",
+        };
+
+        const price = forecast.current_price;
+        const forecastData = forecast.forecast_future || forecast["24H"];
+        const percentiles = forecastData?.percentiles?.[forecastData.percentiles.length - 1] || {};
+        setSynthForecast({
+          p10: percentiles["0.2"] || price,
+          p50: percentiles["0.5"] || price,
+          p90: percentiles["0.8"] || price,
+        });
+
+        setIntelligenceItems(prev => {
+          const filtered = prev.filter(item => item.id !== `synth-${selected}`);
+          return [synthItem, ...filtered];
+        });
+      }
+    } catch (e) {
+      console.warn("[Robinhood] Failed to fetch synth intelligence:", e);
+    }
+  }, [selected]);
+
   useEffect(() => {
     fetchBalances();
     const interval = setInterval(fetchBalances, 10000);
     return () => clearInterval(interval);
   }, [fetchBalances]);
+
+  useEffect(() => {
+    fetchRates();
+    const interval = setInterval(fetchRates, 30000);
+    return () => clearInterval(interval);
+  }, [fetchRates, baseAsset]);
+
+  useEffect(() => {
+    fetchSynthIntelligence();
+    const interval = setInterval(fetchSynthIntelligence, 300000);
+    return () => clearInterval(interval);
+  }, [fetchSynthIntelligence]);
+
+  // Reset real stock price when switching stocks
+  useEffect(() => { setRealStockPrice(null); }, [selected]);
 
   // --- Quoting ---
   useEffect(() => {

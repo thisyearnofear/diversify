@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useRouter } from "next/router";
 import SwapTab from "./SwapTab";
 import TradeTab from "./TradeTab";
+import { useNavigation } from "@/context/app/NavigationContext";
 import type { Region } from "@/hooks/use-user-region";
 import type { RegionalInflationData } from "@/hooks/use-inflation-data";
 
@@ -30,6 +32,40 @@ export default function ExchangeTab({
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved === "trade" ? "trade" : "swap";
   });
+
+  const router = useRouter();
+  const { setSwapPrefill } = useNavigation();
+
+  // PERFORMANT: Deep linking — parse URL params once on mount to restore user intent
+  // Supports: ?exchange=swap&from=USDm&to=KESm&amount=100
+  useEffect(() => {
+    if (!router.isReady) return;
+    const params = router.query;
+
+    // Restore mode from URL (overrides localStorage if present)
+    const urlMode = params.exchange as string;
+    if (urlMode === "swap" || urlMode === "trade") {
+      setMode(urlMode);
+    }
+
+    // Prefill swap params for shareable links
+    if (urlMode === "swap" || !urlMode) {
+      const from = params.from as string | undefined;
+      const to = params.to as string | undefined;
+      const amount = params.amount as string | undefined;
+      const reason = params.reason as string | undefined;
+
+      if (from || to || amount) {
+        setSwapPrefill({
+          fromToken: from || undefined,
+          toToken: to || undefined,
+          amount: amount || undefined,
+          reason: reason || undefined,
+        });
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
 
   // Persist mode selection across sessions
   useEffect(() => {
