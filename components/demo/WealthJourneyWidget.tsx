@@ -26,7 +26,7 @@ export default function WealthJourneyWidget({
   let title = 'Step 1: Accumulation';
   let description = 'Start by converting your local currency into digital dollars (stablecoins) to stop inflation loss.';
   let cta = 'Deposit USDm';
-  let action = () => setActiveTab('swap');
+  let action = () => setActiveTab('exchange');
   let icon = '🛡️';
   let progress = 33;
 
@@ -36,7 +36,7 @@ export default function WealthJourneyWidget({
       title = 'Step 2: Fortification';
       description = 'You have stablecoins! Now, move surplus funds to Arbitrum (RWAs) to earn yield on Gold & Treasuries.';
       cta = 'Bridge to RWAs';
-      action = () => setActiveTab('swap'); // In a real app, this might open a specific bridge modal
+      action = () => setActiveTab('exchange'); // In a real app, this might open a specific bridge modal
       icon = '🏰';
       progress = 66;
     } else if (isArbitrum) {

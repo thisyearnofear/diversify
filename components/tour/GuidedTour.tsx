@@ -26,7 +26,7 @@ const TOUR_STEPS: TourStep[] = [
         id: "swap",
         title: "Take Action in 2 Minutes",
         description: "Convert just $10-20 to a more stable currency. You'll see the difference immediately.",
-        tab: "swap",
+        tab: "exchange",
     },
     {
         id: "protect",

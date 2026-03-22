@@ -51,7 +51,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const navigateToSwap = useCallback((prefill: SwapPrefill) => {
-    setState((prev) => ({ ...prev, activeTab: 'swap', swapPrefill: prefill }));
+    setState((prev) => ({ ...prev, activeTab: 'exchange', swapPrefill: prefill }));
   }, []);
 
   const clearSwapPrefill = useCallback(() => {

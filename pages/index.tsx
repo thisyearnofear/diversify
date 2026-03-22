@@ -16,14 +16,13 @@ import ErrorBoundary from "../components/ui/ErrorBoundary";
 import TabNavigation from "../components/ui/TabNavigation";
 import OverviewTab from "../components/tabs/OverviewTab";
 import ProtectionTab from "../components/tabs/ProtectionTab";
-import SwapTab from "../components/tabs/SwapTab";
-const TradeTab = dynamic(() => import("../components/tabs/TradeTab"), {
+const ExchangeTab = dynamic(() => import("../components/tabs/ExchangeTab"), {
   ssr: false,
   loading: () => (
     <div className="animate-pulse space-y-4 pt-4">
+      <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-xl" />
       <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl w-3/4" />
       <div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
-      <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
     </div>
   ),
 });
@@ -42,7 +41,6 @@ import WalletButton from "../components/wallet/WalletButton";
 import FarcasterWalletButton from "../components/wallet/FarcasterWalletButton";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial, WalletTutorial } from "../components/wallet/WalletTutorial";
-import ThemeToggle from "../components/ui/ThemeToggle";
 import VoiceButton from "../components/ui/VoiceButton";
 import { useToast } from "../components/ui/Toast";
 import GuidedTour from "../components/tour/GuidedTour";
@@ -57,7 +55,7 @@ import { useProtectionProfile } from "../hooks/use-protection-profile";
 
 
 // Tab display order — single source of truth for swipe navigation
-const TAB_DISPLAY_ORDER = ["overview", "swap", "trade", "agent", "protect", "info"] as const;
+const TAB_DISPLAY_ORDER = ["overview", "exchange", "agent", "protect", "info"] as const;
 type TabId = typeof TAB_DISPLAY_ORDER[number];
 
 // Reusable animated tab wrapper — eliminates repeated motion.div boilerplate
@@ -121,6 +119,16 @@ export default function DiversiFiPage() {
 
   // Mutual exclusion for header hints: only one tooltip/panel open at a time
   const [activeHint, setActiveHint] = useState<'mode' | 'voice' | null>(null);
+
+  // One-time mode toggle discoverability tip — shown only on first visit
+  const [showModeTip, setShowModeTip] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('seenModeTip');
+  });
+  const dismissModeTip = () => {
+    setShowModeTip(false);
+    if (typeof window !== 'undefined') localStorage.setItem('seenModeTip', '1');
+  };
 
   const { region: detectedRegion, isLoading: isRegionLoading } =
     useUserRegion();
@@ -257,6 +265,7 @@ export default function DiversiFiPage() {
                       experienceMode === "intermediate" ? "advanced" : "beginner";
                   setExperienceMode(next);
                   setActiveHint(null);
+                  dismissModeTip();
                   showToast(
                     next === "beginner" ? "Simple mode 🌱 — focused view" :
                       next === "intermediate" ? "Standard mode 🚀 — full features unlocked" :
@@ -273,13 +282,29 @@ export default function DiversiFiPage() {
                       : "Switch to Simple mode — hide advanced panels"
                 }
               >
-                <span className="w-10 h-8 text-sm rounded-xl transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg">
+                <span className="relative w-10 h-8 text-sm rounded-xl transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg">
                   {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
+                  {/* First-visit pulse ring */}
+                  {showModeTip && (
+                    <span className="absolute inset-0 rounded-xl ring-2 ring-emerald-400 animate-ping opacity-75 pointer-events-none" />
+                  )}
                 </span>
                 <span className="text-xs text-gray-500 dark:text-gray-400 leading-none">
                   {experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}
                 </span>
               </button>
+              {/* First-visit nudge tooltip — auto-dismisses on any interaction */}
+              {showModeTip && activeHint !== 'mode' && (
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-emerald-700 text-white rounded-xl px-3 py-2 shadow-xl z-50">
+                  <button
+                    onClick={dismissModeTip}
+                    className="absolute top-1.5 right-2 text-emerald-300 hover:text-white text-xs leading-none"
+                    aria-label="Dismiss"
+                  >✕</button>
+                  <p className="text-xs font-black leading-snug pr-4">Tap to unlock more features →</p>
+                  <div className="absolute -top-1.5 right-3 w-3 h-3 bg-emerald-700 rotate-45 rounded-sm" />
+                </div>
+              )}
               {/* Tooltip — state-driven so only one hint shows at a time */}
               {activeHint === 'mode' && (
                 <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50">
@@ -317,27 +342,6 @@ export default function DiversiFiPage() {
               onTranscription={handleTranscription}
             />
 
-            {/* Oracle — persistent AI entry point with unread badge */}
-            <button
-              onClick={openOracle}
-              className="flex flex-col items-center gap-0.5"
-              aria-label="AI Chat"
-            >
-              <span className="relative w-10 h-8 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-md">
-                <span className="text-sm">🤖</span>
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 leading-none">AI Chat</span>
-            </button>
-
-            {/* Theme toggle - hidden on mobile to save space */}
-            <div className="hidden sm:block">
-              <ThemeToggle />
-            </div>
             {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
           </div>
         </div>
@@ -402,24 +406,16 @@ export default function DiversiFiPage() {
                 </TabPane>
               )}
 
-              {activeTab === "swap" && (
-                <TabPane id="swap">
+              {activeTab === "exchange" && (
+                <TabPane id="exchange">
                   <ErrorBoundary>
-                    <SwapTab
+                    <ExchangeTab
                       userRegion={userRegion}
                       inflationData={inflationData as Record<string, RegionalInflationData>}
                       refreshBalances={refresh}
                       refreshChainId={async () => walletChainId}
                       isBalancesLoading={isMultichainLoading}
                     />
-                  </ErrorBoundary>
-                </TabPane>
-              )}
-
-              {activeTab === "trade" && (
-                <TabPane id="trade">
-                  <ErrorBoundary>
-                    <TradeTab />
                   </ErrorBoundary>
                 </TabPane>
               )}
@@ -444,6 +440,20 @@ export default function DiversiFiPage() {
               )}
             </AnimatePresence>
         </motion.div>
+
+        {/* AI Chat FAB — floats above bottom nav, visible on all tabs */}
+        <button
+          onClick={openOracle}
+          aria-label="AI Chat"
+          className="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-lg shadow-blue-600/30 flex items-center justify-center transition-all"
+        >
+          <span className="text-lg leading-none">🤖</span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
 
         <WalletTutorial
           isOpen={isTutorialOpen}

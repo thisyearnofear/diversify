@@ -371,10 +371,10 @@ export default function ProtectionTab({
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-xl font-black uppercase tracking-tight">
-                  Shield Engine
+                  Protection Engine
                 </h3>
                 <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-                  {isComplete ? "Your Shield is Active" : "Set up your shield"}
+                  {isComplete ? "Your Protection is Active" : "Set up your protection"}
                 </p>
               </div>
               <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">

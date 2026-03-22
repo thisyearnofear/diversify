@@ -28,20 +28,11 @@ const TABS: TabItem[] = [
     ),
   },
   {
-    id: "swap",
-    label: "Swap",
+    id: "exchange",
+    label: "Exchange",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-      </svg>
-    ),
-  },
-  {
-    id: "trade",
-    label: "Trade",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
       </svg>
     ),
   },
@@ -75,10 +66,10 @@ const TABS: TabItem[] = [
 ];
 
 // Tabs shown in beginner mode (primary tabs only)
-const BEGINNER_TAB_IDS: TabId[] = ["overview", "swap", "protect"];
+const BEGINNER_TAB_IDS: TabId[] = ["overview", "exchange", "protect"];
 
 // Tabs only available in advanced mode
-const ADVANCED_ONLY_TAB_IDS: TabId[] = ["trade"];
+const ADVANCED_ONLY_TAB_IDS: TabId[] = [];
 
 export default function TabNavigation({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
   const isBeginner = experienceMode === 'beginner';
@@ -127,10 +118,10 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
                   {tab.icon}
                 </div>
                 {hasBadge && (
-                  <motion.span 
+                  <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
+                    className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
                   >
                     {badgeCount > 99 ? "99+" : badgeCount}
                   </motion.span>

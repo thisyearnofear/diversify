@@ -1063,7 +1063,7 @@ export function detectGuidedTour(
           action: "highlight",
         },
         {
-          tab: "swap",
+          tab: "exchange",
           message: topOpp
             ? `Ready to protect? Swap ${topOpp.fromToken} → ${topOpp.toToken}`
             : "Execute your protection strategy",
@@ -1128,7 +1128,7 @@ export function detectGuidedTour(
           action: "scroll",
         },
         {
-          tab: "swap",
+          tab: "exchange",
           message: missingRegion
             ? `Start by adding exposure to ${missingRegion}`
             : "Begin diversifying",
@@ -1161,7 +1161,7 @@ export function detectGuidedTour(
           action: "highlight",
         },
         {
-          tab: "swap",
+          tab: "exchange",
           message: "Ready to earn yield? Start with a small allocation",
           action: "prefill",
           prefill: {

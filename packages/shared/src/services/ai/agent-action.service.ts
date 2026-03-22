@@ -67,18 +67,18 @@ export class AgentActionService {
                         fromChainId: 42220,
                         toChainId: 42220
                     });
-                    callbacks.onNavigate?.('swap');
+                    callbacks.onNavigate?.('exchange');
                     callbacks.onToast?.(`Found SocialConnect identity for ${intent.phoneNumber}`, 'success');
                 } catch (err) {
                     console.error('[AgentActionService] SocialConnect prefill failed:', err);
-                    // Fallback: still open swap but without recipient resolution
+                    // Fallback: still open exchange but without recipient resolution
                     callbacks.onSwapPrefill?.({
                         toToken: intent.token,
                         amount: intent.amount,
                         reason: `Manual: Send to ${intent.phoneNumber}`,
                         phoneNumber: intent.phoneNumber
                     });
-                    callbacks.onNavigate?.('swap');
+                    callbacks.onNavigate?.('exchange');
                 }
                 break;
 
@@ -90,7 +90,7 @@ export class AgentActionService {
                     amount: intent.amount,
                     reason: `AI Shortcut: "${originalText}"`,
                 });
-                callbacks.onNavigate?.('swap');
+                callbacks.onNavigate?.('exchange');
                 break;
 
             case 'GOODDOLLAR':

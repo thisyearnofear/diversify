@@ -1211,7 +1211,7 @@ export const HeroValue = ({
               {label}
             </motion.span>
             {trend && (
-              <motion.span 
+              <motion.span
                 className={`text-xs font-bold ${trend.positive ? 'text-green-600' : 'text-red-600'}`}
                 initial={{ opacity: 0, x: -5 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1223,6 +1223,58 @@ export const HeroValue = ({
           </>
         )}
       </div>
+    </div>
+  );
+};
+
+/**
+ * DataError - Consistent error state for data fetch failures.
+ * Shows a human-readable message and an optional retry action.
+ * Use this wherever loading data can fail (chain RPC, API, etc.)
+ */
+export const DataError = ({
+  message = "Couldn't load data",
+  onRetry,
+  compact = false,
+}: {
+  message?: string;
+  onRetry?: () => void;
+  compact?: boolean;
+}) => {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl text-xs">
+        <span className="text-orange-500">⚠</span>
+        <span className="text-orange-700 dark:text-orange-300 font-medium flex-1">{message}</span>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="font-black text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 transition-colors underline underline-offset-2 whitespace-nowrap"
+          >
+            Retry
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-6 px-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-2xl text-center">
+      <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/40 rounded-full flex items-center justify-center text-lg">
+        ⚠️
+      </div>
+      <div>
+        <p className="text-sm font-black text-orange-800 dark:text-orange-200">{message}</p>
+        <p className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">Check your connection and try again.</p>
+      </div>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-black rounded-xl transition-colors"
+        >
+          Retry
+        </button>
+      )}
     </div>
   );
 };

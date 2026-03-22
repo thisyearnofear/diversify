@@ -14,7 +14,7 @@ import { StreakRewardsCard, RewardsStats } from "../../rewards/StreakRewardsCard
 import SimplePieChart from "../../portfolio/SimplePieChart";
 import { NetworkOptimizedOnramp } from "../../onramp";
 import { AssetInventory } from "../../portfolio/AssetInventory";
-import { Card, EmptyState, HeroValue } from "../../shared/TabComponents";
+import { Card, DataError, EmptyState, HeroValue } from "../../shared/TabComponents";
 import DashboardCard from "../../shared/DashboardCard";
 import { AgentTierStatus } from "../../agent/AgentTierStatus";
 import { GoalAlignmentBanner } from "./GoalAlignmentBanner";
@@ -148,8 +148,19 @@ export function ConnectedOverview({
 
   const tips = buildTips();
 
+  const chainErrors = activePortfolio.errors ?? [];
+
   return (
     <div className="space-y-6">
+      {/* Chain RPC errors — compact inline banner, one per failed chain */}
+      {chainErrors.length > 0 && (
+        <div className="space-y-1">
+          {chainErrors.map((err, i) => (
+            <DataError key={i} message={err} onRetry={refreshBalances} compact />
+          ))}
+        </div>
+      )}
+
       {/* 1. HERO SCORE */}
       <Card
         padding="p-6"
@@ -188,7 +199,7 @@ export function ConnectedOverview({
           riskTolerance={profileConfig.riskTolerance}
           timeHorizon={profileConfig.timeHorizon}
           goalScores={activePortfolio.goalScores}
-          onAction={() => setActiveTab("swap")}
+          onAction={() => setActiveTab("exchange")}
         />
       )}
 
@@ -364,7 +375,7 @@ export function ConnectedOverview({
             diversificationScore={diversificationScore}
             diversificationRating={diversificationRating}
             onOptimize={() => setActiveTab("protect")}
-            onSwap={() => setActiveTab("swap")}
+            onSwap={() => setActiveTab("exchange")}
             chainId={chainId}
             onNetworkChange={refreshChainId ? handleRefresh : undefined}
             refreshBalances={refreshBalances}
@@ -376,7 +387,7 @@ export function ConnectedOverview({
       {/* 3. REWARDS */}
       {hasHoldings && (
         <div className="space-y-4">
-          <StreakRewardsCard onSaveClick={() => setActiveTab("swap")} />
+          <StreakRewardsCard onSaveClick={() => setActiveTab("exchange")} />
           <RewardsStats />
         </div>
       )}
@@ -552,7 +563,7 @@ export function ConnectedOverview({
             }
             action={{
               label: isBeginner ? "Convert Money Now" : "Start Swapping",
-              onClick: () => setActiveTab("swap"),
+              onClick: () => setActiveTab("exchange"),
               icon: <span>→</span>,
             }}
           />
@@ -596,7 +607,7 @@ export function ConnectedOverview({
                     Try testnet first — free tokens, same experience, no risk.
                   </p>
                   <button
-                    onClick={() => setActiveTab("swap")}
+                    onClick={() => setActiveTab("exchange")}
                     className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
                   >
                     Explore Test Drive →

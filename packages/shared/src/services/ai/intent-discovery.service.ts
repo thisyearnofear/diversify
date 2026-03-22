@@ -5,7 +5,7 @@
  * Centralizes intent parsing logic for both Voice and Text inputs.
  */
 
-export type AppTab = 'overview' | 'protect' | 'swap' | 'info' | 'trade' | 'agent';
+export type AppTab = 'overview' | 'protect' | 'exchange' | 'info' | 'agent';
 
 export type AppIntent =
     | { type: 'NAVIGATE'; tab: AppTab }
@@ -89,7 +89,7 @@ export class IntentDiscoveryService {
                     amount: amountMatch?.[0]
                 };
             }
-            return { type: 'NAVIGATE', tab: 'swap' };
+            return { type: 'NAVIGATE', tab: 'exchange' };
         }
 
         if (r.includes("protect") || r.includes("analyze") || r.includes("score") || r.includes("advice")) {
