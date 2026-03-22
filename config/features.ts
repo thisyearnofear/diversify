@@ -49,6 +49,15 @@ export const AUTONOMOUS_FEATURES = {
    */
   PREMIUM_DATA: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true' &&
     process.env.ENABLE_AUTONOMOUS_MODE === 'true',
+
+  /**
+   * OpenClaw integration - External autonomous agent
+   * Requires: OPENCLAW_ENABLED=true + gateway credentials
+   * Status: Experimental
+   */
+  OPENCLAW: process.env.OPENCLAW_ENABLED === 'true' && 
+    !!process.env.OPENCLAW_GATEWAY_URL && 
+    !!process.env.OPENCLAW_GATEWAY_TOKEN,
 } as const;
 
 // UI/UX features
@@ -61,6 +70,9 @@ export const UI_FEATURES = {
 
   /** Show autonomous mode toggle (only if available) */
   AUTONOMOUS_UI: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
+
+  /** Show OpenClaw agent panel (only if available) */
+  OPENCLAW_UI: AUTONOMOUS_FEATURES.OPENCLAW,
 } as const;
 
 // Wallet UX features (web onboarding + wallet connection)
@@ -90,6 +102,11 @@ export const FEATURE_DESCRIPTIONS = {
     title: 'Autonomous Mode (Beta)',
     description: 'AI pays for its own premium data access via x402 protocol',
     warning: 'Experimental - Testnet only',
+  },
+  openclaw: {
+    title: 'OpenClaw Agent',
+    description: 'External autonomous agent for portfolio diversification and trading',
+    warning: 'Experimental - Requires configuration',
   },
 } as const;
 

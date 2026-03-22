@@ -7,7 +7,7 @@
  * - MINIMAL: Only essential UI, no bloat
  */
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { AgentTierStatus } from '../agent/AgentTierStatus';
 import AutomationSettings from '../agent/AutomationSettings';
 import ActionableRecommendation from '../agent/ActionableRecommendation';
@@ -23,6 +23,7 @@ import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import { AUTONOMOUS_FEATURES } from '../../config/features';
 import { Skeleton } from '../shared/TabComponents';
 import ErrorBoundary from '../ui/ErrorBoundary';
+import AgentQuickActions from '../agent/AgentQuickActions';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -49,6 +50,7 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
   const { experienceMode } = useExperience();
   const { ask } = useAIOracle();
   const { navigateToSwap } = useNavigation();
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
   const handleAskAgent = () => {
     ask('Give me a summary of my portfolio protection status and any recommended actions.');
@@ -59,9 +61,9 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
     ask('Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.');
   };
 
-  // Assistant: Quick actions / voice intent
+  // Assistant: Show quick action menu instead of opening chat
   const handleAssistantClick = () => {
-    ask('What quick actions can I take right now? Show me the best swap opportunities and any pending recommendations.');
+    setShowQuickActions(true);
   };
 
   return (
@@ -150,6 +152,12 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
         <span>💬</span>
         <span>Ask your Agent</span>
       </button>
+
+      {/* Quick Actions Modal */}
+      <AgentQuickActions 
+        isOpen={showQuickActions} 
+        onClose={() => setShowQuickActions(false)} 
+      />
 
     </div>
   );

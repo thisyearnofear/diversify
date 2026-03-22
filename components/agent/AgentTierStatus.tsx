@@ -23,6 +23,8 @@ import { motion } from 'framer-motion';
 import { agentEventBus } from '../../hooks/agent-event-bus';
 import { AUTONOMOUS_FEATURES } from '../../config/features';
 import AgentFuelGauge from './AgentFuelGauge';
+import OracleMetrics from './OracleMetrics';
+import OpenClawPanel from './OpenClawPanel';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -59,6 +61,7 @@ export const AgentTierStatus: React.FC<{
   const thinkingStep = isAnalysisRunning ? analysisThinkingStep : chatThinkingStep;
   const { experienceMode } = useExperience();
   const [expandedTier, setExpandedTier] = useState<'oracle' | 'assistant' | 'guardian' | null>(null);
+  const [showOpenClaw, setShowOpenClaw] = useState(false);
 
   const isBeginner = experienceMode === 'beginner';
 
@@ -237,6 +240,8 @@ export const AgentTierStatus: React.FC<{
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 relative z-10">
             {isBeginner ? "Explains the market to you." : "High-fidelity macro reasoning engine."}
           </p>
+          {/* Oracle Metrics — real-time market data */}
+          <OracleMetrics compact={true} />
           {isAnalyzing && (
               <motion.div 
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }}
@@ -420,8 +425,26 @@ export const AgentTierStatus: React.FC<{
               hasWallet={!!address}
             />
           )}
+          {/* OpenClaw Integration Button */}
+          {expandedTier === 'guardian' && (
+            <div className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => setShowOpenClaw(true)}
+                className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-xs font-bold transition-all"
+              >
+                <span>🦞</span>
+                <span>Open OpenClaw Agent</span>
+              </button>
+            </div>
+          )}
         </motion.div>
       </div>
+
+      {/* OpenClaw Panel */}
+      <OpenClawPanel 
+        isOpen={showOpenClaw} 
+        onClose={() => setShowOpenClaw(false)} 
+      />
     </div>
   );
 };

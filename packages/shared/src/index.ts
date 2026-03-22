@@ -11,6 +11,7 @@ import { AutomationService } from './services/automation-service';
 import { GoodDollarService } from './services/gooddollar-service';
 import { emergingMarketsPriceService, getEmergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 import { hyperliquidService, HyperliquidService } from './services/hyperliquid.service';
+import { openClawService, OpenClawService } from './services/openclaw-service';
 
 export {
   circleService,
@@ -31,7 +32,9 @@ export {
   getEmergingMarketsPriceService,
   EmergingMarketsPriceService,
   hyperliquidService,
-  HyperliquidService
+  HyperliquidService,
+  openClawService,
+  OpenClawService
 };
 
 // Export AI Services
