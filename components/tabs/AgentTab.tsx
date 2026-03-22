@@ -83,11 +83,12 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
             <Skeleton className="h-20 w-full" variant="rect" />
           </div>
         ) : (
-          <AgentTierStatus 
-            isMiniPay={isMiniPay} 
-            isFarcaster={isFarcaster}
-            showActivityFeed={true}
-          />
+        <AgentTierStatus 
+          isMiniPay={isMiniPay} 
+          isFarcaster={isFarcaster}
+          showActivityFeed={true}
+          onNavigateToAgent={handleAskAgent}
+        />
         )}
       </ErrorBoundary>
 
