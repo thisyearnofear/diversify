@@ -31,7 +31,9 @@ export const AgentTierStatus: React.FC<{
   isFarcaster?: boolean;
   showActivityFeed?: boolean;
   onNavigateToAgent?: () => void;
-}> = ({ isMiniPay, isFarcaster: _isFarcaster, showActivityFeed = false, onNavigateToAgent }) => {
+  onOracleClick?: () => void;
+  onAssistantClick?: () => void;
+}> = ({ isMiniPay, isFarcaster: _isFarcaster, showActivityFeed = false, onNavigateToAgent, onOracleClick, onAssistantClick }) => {
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { activities, addActivity } = useAgentActivities();
   const { config } = useAgentConfig();
@@ -219,7 +221,7 @@ export const AgentTierStatus: React.FC<{
         <motion.div 
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-blue-100 dark:border-blue-900 shadow-sm relative overflow-hidden cursor-pointer"
-          onClick={() => { setExpandedTier(expandedTier === 'oracle' ? null : 'oracle'); onNavigateToAgent?.(); }}
+          onClick={() => { setExpandedTier(expandedTier === 'oracle' ? null : 'oracle'); (onOracleClick ?? onNavigateToAgent)?.(); }}
         >
           <div className="flex justify-between items-start mb-2 relative z-10">
             <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-xl">
@@ -261,7 +263,7 @@ export const AgentTierStatus: React.FC<{
         <motion.div 
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-green-100 dark:border-green-900 shadow-sm cursor-pointer"
-          onClick={() => { setExpandedTier(expandedTier === 'assistant' ? null : 'assistant'); onNavigateToAgent?.(); }}
+          onClick={() => { setExpandedTier(expandedTier === 'assistant' ? null : 'assistant'); (onAssistantClick ?? onNavigateToAgent)?.(); }}
         >
           <div className="flex justify-between items-start mb-2">
             <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-xl">

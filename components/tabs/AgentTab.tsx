@@ -54,6 +54,16 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
     ask('Give me a summary of my portfolio protection status and any recommended actions.');
   };
 
+  // Oracle: Market analysis prompt
+  const handleOracleClick = () => {
+    ask('Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.');
+  };
+
+  // Assistant: Quick actions / voice intent
+  const handleAssistantClick = () => {
+    ask('What quick actions can I take right now? Show me the best swap opportunities and any pending recommendations.');
+  };
+
   return (
     <div className="space-y-4 pb-6">
       {/* Header */}
@@ -88,6 +98,8 @@ export default function AgentTab({ isMiniPay, isFarcaster, portfolio }: AgentTab
           isFarcaster={isFarcaster}
           showActivityFeed={true}
           onNavigateToAgent={handleAskAgent}
+          onOracleClick={handleOracleClick}
+          onAssistantClick={handleAssistantClick}
         />
         )}
       </ErrorBoundary>
