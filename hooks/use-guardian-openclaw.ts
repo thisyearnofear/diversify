@@ -62,22 +62,25 @@ export function useGuardianOpenClaw() {
 
   const triggerHeartbeat = useCallback(async () => {
     try {
-      const response = await fetch('/api/agent/openclaw/receipts?type=identity');
-      const data = await response.json();
+      const [idResponse, receiptResponse] = await Promise.all([
+        fetch('/api/agent/openclaw/receipts?type=identity'),
+        fetch('/api/agent/openclaw/receipts?type=latest')
+      ]);
+      
+      const idData = await idResponse.json();
+      const receiptData = await receiptResponse.json();
 
-      if (!response.ok) {
-        const isDisabled = data.error === 'OpenClaw integration is not enabled';
-        setAgentStatus(isDisabled ? 'unavailable' : 'offline');
-        setAgentIdentity(null);
-        return;
-      }
-
-      if (data.identity) {
-        setAgentIdentity(data.identity);
+      if (idResponse.ok && idData.identity) {
+        setAgentIdentity(idData.identity);
         setAgentStatus('online');
       } else {
-        setAgentStatus('offline');
+        const isDisabled = idData.error === 'OpenClaw integration is not enabled';
+        setAgentStatus(isDisabled ? 'unavailable' : 'offline');
         setAgentIdentity(null);
+      }
+
+      if (receiptResponse.ok && receiptData.receipts) {
+        setRecentReceipts(receiptData.receipts);
       }
 
       setLastHeartbeat(new Date());

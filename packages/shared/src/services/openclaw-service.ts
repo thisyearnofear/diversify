@@ -306,6 +306,19 @@ export class OpenClawService {
   }
 
   /**
+   * Get latest receipts across ALL runs for general telemetry
+   */
+  async getLatestReceipts(): Promise<OpenClawReceipt[]> {
+    const all: OpenClawReceipt[] = [];
+    this.inMemoryReceipts.forEach(receipts => all.push(...receipts));
+    
+    // Return last 100 sorted by timestamp
+    return all.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    ).slice(0, 100);
+  }
+
+  /**
    * Get run summary
    */
   async getRunSummary(runId: string): Promise<OpenClawRunSummary | null> {

@@ -102,48 +102,10 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
         </div>
       </div>
 
-      {/* Recent WDK Actions */}
-      {visibleReceipts.length > 0 && (
-        <>
-          <div className="border-t border-green-200 dark:border-green-800" />
-          <div className="space-y-1.5">
-            <span className="text-xs font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider">
-              Settlement Receipts
-            </span>
-            <AnimatePresence initial={false}>
-              {visibleReceipts.map((receipt) => (
-                <motion.div
-                  key={receipt.id}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="flex items-center gap-1.5 text-[11px]"
-                >
-                  <span className="flex-shrink-0">
-                    {receiptIcon[receipt.status] ?? "•"}
-                  </span>
-                  <span className="text-gray-700 dark:text-gray-300 truncate">
-                    {receipt.action} {receipt.amount} {receipt.asset}
-                  </span>
-                  {receipt.txHash && (
-                    <>
-                      <span className="text-gray-400 dark:text-gray-500">
-                        ·
-                      </span>
-                      <span className="text-blue-500 font-mono flex-shrink-0">
-                        {truncateHash(receipt.txHash)}
-                      </span>
-                    </>
-                  )}
-                  <span className="text-gray-400 dark:text-gray-500 ml-auto flex-shrink-0">
-                    {formatTimeAgo(receipt.timestamp)}
-                  </span>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </>
-      )}
+      {/* Management / Config Info */}
+      <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
+        Settlement agent is {agentStatus === "online" ? "active and scanning" : "waiting for connection"}.
+      </div>
 
       {/* Trigger Heartbeat / WDK Ping */}
       <div className="border-t border-green-200 dark:border-green-800 pt-2">

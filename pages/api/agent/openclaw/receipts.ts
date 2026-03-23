@@ -49,6 +49,16 @@ export default async function handler(
       });
     }
 
+    if (type === 'latest') {
+      // Get all recent receipts from the webhook cache (last 50)
+      // Since our service has an in-memory cache, we return its collective state.
+      const receipts = await openClawService.getLatestReceipts();
+      return res.status(200).json({
+        success: true,
+        receipts,
+      });
+    }
+
     if (runId) {
       // Get receipts for specific run
       const receipts = await openClawService.getReceipts(runId as string);

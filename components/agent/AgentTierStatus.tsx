@@ -400,7 +400,7 @@ export const AgentTierStatus: React.FC<{
           <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight">
             The Guardian
           </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {isBeginner
               ? guardianState === "monitoring"
                 ? "Actively protecting your savings."
@@ -410,189 +410,226 @@ export const AgentTierStatus: React.FC<{
                     ? "Fund your agent to activate."
                     : "Sign a permission to get started."
               : guardianState === "monitoring"
-                ? "Autonomous rebalancing & Nanopayments active."
+                ? "Autonomous protection active."
                 : guardianState === "funded"
-                  ? "Fuel loaded — awaiting autonomous enablement."
+                  ? "Fuel loaded — awaiting enablement."
                   : guardianState === "authorized"
-                    ? "Permission granted — deposit USDC to fund."
-                    : "Grant a scoped session key or fund an Agent Wallet."}
+                    ? "Permission granted — deposit USDC."
+                    : "Grant a session key to start."}
           </p>
+          {/* High-level summary of latest activity */}
           {guardianActive && (
-            <div className="absolute top-2 right-2">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-sm text-purple-600 dark:text-purple-400 font-bold">
+                {openClawReceipts.length + wdkReceipts.length || 0} actions recorded
               </span>
-            </div>
-          )}
-          {/* 2026 Agent Fuel / Session Key Panel — shown when expanded (non-beginner only) */}
-          {!isBeginner && expandedTier === "guardian" && (
-            <div
-              className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800 space-y-3"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Scenario 1: User-Specific Agent Fuel (MPC) */}
-              {autonomousStatus?.walletType === "agent-fuel" ? (
-                <AgentFuelGauge status={autonomousStatus} />
-              ) : /* Scenario 2: Traditional Session Key (ERC-7715) Fallback */
-              hasValidPermission ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
-                    <span className="text-xs text-gray-700 dark:text-gray-300">
-                      Session key active · expires {permissionExpiry}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    ${dailyLimit}/day limit · Scoped to allowlisted tokens only
-                  </div>
-                  {permissionSummary && (
-                    <div className="text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2">
-                      {permissionSummary}
-                    </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      revokePermission();
-                      addActivity({
-                        type: "execution",
-                        tier: "GUARDIAN",
-                        description:
-                          "Autonomous Mode revoked — session key cleared",
-                        status: "success",
-                      });
-                    }}
-                    className="w-full text-xs text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-1.5 mt-1 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  >
-                    Revoke Permission
-                  </button>
-                </>
-              ) : (
-                <>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Enable Autonomous Mode by granting a scoped session key — no
-                    master key required.
-                  </p>
-                  <button
-                    onClick={() => setShowPermissionModal(true)}
-                    disabled={isRequesting}
-                    className="w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-xl py-2 mt-1 transition-colors"
-                  >
-                    {isRequesting
-                      ? "Waiting for wallet…"
-                      : "🔐 Enable Autonomous Mode"}
-                  </button>
-                  {/* Pre-sign confirmation modal */}
-                  {showPermissionModal && (
-                    <div
-                      className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
-                      onClick={() => setShowPermissionModal(false)}
-                    >
-                      <div
-                        className="bg-white dark:bg-gray-900 rounded-t-3xl w-full max-w-md p-6 space-y-4"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <h3 className="text-base font-black text-gray-900 dark:text-gray-100">
-                          🔐 Proof of Protection
-                        </h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          You are granting a scoped session key. The Guardian
-                          can only act within these limits:
-                        </p>
-                        <div className="space-y-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4">
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Daily spending limit
-                            </span>
-                            <span className="font-bold text-gray-900 dark:text-gray-100">
-                              $10 / day
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Permission expires
-                            </span>
-                            <span className="font-bold text-gray-900 dark:text-gray-100">
-                              7 days
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Allowed actions
-                            </span>
-                            <span className="font-bold text-gray-900 dark:text-gray-100">
-                              swap, rebalance
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Allowed tokens
-                            </span>
-                            <span className="font-bold text-gray-900 dark:text-gray-100">
-                              USDC, PAXG, ETH, USDm
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-xs text-purple-600 dark:text-purple-400">
-                          Your wallet remains the owner. The Guardian cannot
-                          send funds outside these constraints.
-                        </p>
-                        <div className="flex gap-3">
-                          <button
-                            onClick={() => setShowPermissionModal(false)}
-                            className="flex-1 text-xs border border-gray-200 dark:border-gray-700 rounded-xl py-2.5 text-gray-600 dark:text-gray-400"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            onClick={handleRequestPermission}
-                            className="flex-1 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-2.5 transition-colors"
-                          >
-                            Sign in Wallet
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-          {showActivityFeed && expandedTier === "guardian" && (
-            <ActivityFeed
-              activities={getActivitiesForTier("GUARDIAN")}
-              onNavigateToSwap={onNavigateToAgent}
-              hasWallet={!!address}
-            />
-          )}
-          {/* OpenClaw Guardian Status — inline agent status + receipts */}
-          {expandedTier === "guardian" && (
-            <div
-              className="mt-3 pt-3 border-t border-purple-200 dark:border-purple-800"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {isWDK ? (
-                <GuardianWDKStatus
-                  agentStatus={wdkStatus}
-                  agentIdentity={wdkIdentity}
-                  recentReceipts={wdkReceipts}
-                  isExecuting={wdkExecuting}
-                  onTriggerHeartbeat={wdkHeartbeat}
-                />
-              ) : (
-                <GuardianOpenClawStatus
-                  agentStatus={openClawStatus}
-                  agentIdentity={openClawIdentity}
-                  recentReceipts={openClawReceipts}
-                  lastHeartbeat={openClawLastHeartbeat}
-                  isExecuting={openClawExecuting}
-                  onTriggerHeartbeat={openClawHeartbeat}
-                />
-              )}
+              <span className="text-xs text-gray-400">· Tap to view journal</span>
             </div>
           )}
         </motion.div>
       </div>
+
+      {/* Expanded Guardian Journal View - Premium Timeline Layout */}
+      {expandedTier === "guardian" && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="mt-6 bg-white dark:bg-gray-900 rounded-3xl p-4 md:p-6 border-2 border-purple-100 dark:border-purple-900 shadow-xl overflow-hidden"
+        >
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">Guardian Journal</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Real-time autonomous execution log</p>
+            </div>
+            <div className="flex items-center gap-3">
+              {/* Quick Status Pill */}
+              <div className="flex items-center gap-2 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded-full border border-purple-100 dark:border-purple-800">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                  <span className="relative rounded-full h-2 w-2 bg-purple-500"></span>
+                </span>
+                <span className="text-xs font-bold text-purple-700 dark:text-purple-300">Live Feedback</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column: Management & Permissions */}
+            <div className="space-y-6">
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-4">Agent Configuration</h4>
+                
+                {isWDK ? (
+                  <GuardianWDKStatus
+                    agentStatus={wdkStatus}
+                    agentIdentity={wdkIdentity}
+                    recentReceipts={[]} // Pass empty, we handle the list below
+                    isExecuting={wdkExecuting}
+                    onTriggerHeartbeat={wdkHeartbeat}
+                  />
+                ) : (
+                  <GuardianOpenClawStatus
+                    agentStatus={openClawStatus}
+                    agentIdentity={openClawIdentity}
+                    recentReceipts={[]} // Pass empty
+                    lastHeartbeat={openClawLastHeartbeat}
+                    isExecuting={openClawExecuting}
+                    onTriggerHeartbeat={openClawHeartbeat}
+                  />
+                )}
+
+                <div className="mt-6">
+                  {autonomousStatus?.walletType === "agent-fuel" ? (
+                    <AgentFuelGauge status={autonomousStatus} />
+                  ) : hasValidPermission ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Session Limit</span>
+                        <span className="font-bold">${dailyLimit}/day</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-500">Expires</span>
+                        <span className="font-bold">{permissionExpiry}</span>
+                      </div>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); revokePermission(); }}
+                        className="w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-2 mt-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      >
+                        Revoke Guardian Access
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowPermissionModal(true); }}
+                      className="w-full text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-3 transition-colors shadow-lg shadow-purple-200 dark:shadow-purple-900/20"
+                    >
+                      🔐 Enable Autonomous Mode
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: High-End Activity Timeline */}
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider">Proof of Work</h4>
+                <span className="text-xs text-gray-400 italic">Sorted by Recency</span>
+              </div>
+              
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {/* Unified Activity Stream */}
+                {[...openClawReceipts, ...wdkReceipts].length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
+                    <span className="text-3xl block mb-2">🔭</span>
+                    <p className="text-sm text-gray-500">Scanning for agent actions...</p>
+                  </div>
+                ) : (
+                  [...openClawReceipts, ...wdkReceipts]
+                    .sort((a, b) => {
+                      const timeA = 'timestamp' in a && typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp as string).getTime();
+                      const timeB = 'timestamp' in b && typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp as string).getTime();
+                      return timeB - timeA;
+                    })
+                    .map((receipt, index) => (
+                      <div key={'event_id' in receipt ? receipt.event_id : (receipt as any).id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
+                        <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
+                          {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
+                        </div>
+                        <div className={`bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border ${index === 0 ? 'border-green-100 dark:border-green-900/50 ring-1 ring-green-50 dark:ring-green-900/20' : 'border-gray-100 dark:border-gray-700'} hover:shadow-md transition-shadow relative overflow-hidden`}>
+                          {/* Source Watermark/Icon */}
+                          <div className="absolute top-3 right-3 opacity-20 text-xl grayscale pointer-events-none">
+                            {'event_id' in receipt ? '🦞' : '🌌'}
+                          </div>
+
+                          <div className="flex justify-between items-start mb-1 pr-8">
+                            <span className="text-sm font-black text-gray-900 dark:text-gray-100">
+                              {'action' in receipt ? receipt.action : (receipt as any).action_type}
+                            </span>
+                            <span className="text-xs text-gray-400 whitespace-nowrap">
+                              {new Date('timestamp' in receipt && typeof receipt.timestamp === 'number' ? receipt.timestamp : (receipt as any).timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+                            {'asset' in receipt ? `${receipt.amount} ${receipt.asset}` : (receipt as any).tool}
+                          </p>
+                          {'onchain' in receipt && receipt.onchain && (
+                            <div className="mt-3 flex items-center justify-between gap-2">
+                              <a 
+                                href={(receipt as any).onchain.explorer_url} 
+                                target="_blank" 
+                                className="text-xs font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md border border-blue-100 dark:border-blue-800 transition-colors whitespace-nowrap"
+                              >
+                                View Evidence
+                              </a>
+                              <span className="text-[10px] uppercase font-black text-green-500 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded italic flex items-center gap-1">
+                                <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
+                                Onchain
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Legacy/Oracle Modal Logic (unaffected) */}
+      {showPermissionModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowPermissionModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center space-y-2">
+              <span className="text-4xl">🔐</span>
+              <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
+                Grant Guardian Permission
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                You are granting a scoped session key. The Guardian can only act within these limits:
+              </p>
+            </div>
+
+            <div className="space-y-3 bg-purple-50 dark:bg-purple-900/20 rounded-3xl p-5 border border-purple-100 dark:border-purple-800">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Daily limit</span>
+                <span className="font-black text-gray-900 dark:text-gray-100">$10 / day</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Expires</span>
+                <span className="font-black text-gray-900 dark:text-gray-100">7 days</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 dark:text-gray-400">Strategy</span>
+                <span className="font-black text-purple-600 dark:text-purple-400 underline decoration-dotted">Base Aggregator</span>
+              </div>
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowPermissionModal(false)}
+                className="flex-1 text-sm font-bold text-gray-500 py-4"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRequestPermission}
+                className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 text-white rounded-2xl py-4 shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-all active:scale-95"
+              >
+                Sign Wallet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

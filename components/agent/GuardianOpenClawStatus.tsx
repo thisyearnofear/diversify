@@ -104,50 +104,10 @@ const GuardianOpenClawStatus: React.FC<GuardianOpenClawStatusProps> = ({
         )}
       </div>
 
-      {/* Recent Actions */}
-      {visibleReceipts.length > 0 && (
-        <>
-          <div className="border-t border-purple-200 dark:border-purple-800" />
-          <div className="space-y-1.5">
-            <span className="text-xs font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider">
-              Recent Actions
-            </span>
-            <AnimatePresence initial={false}>
-              {visibleReceipts.map((receipt) => (
-                <motion.div
-                  key={receipt.event_id}
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  className="flex items-center gap-1.5 text-xs"
-                >
-                  <span className="flex-shrink-0">{receiptIcon[receipt.status] ?? '•'}</span>
-                  <span className="text-gray-700 dark:text-gray-300 truncate">
-                    {receipt.action_type}
-                  </span>
-                  {receipt.onchain && (
-                    <>
-                      <span className="text-gray-400 dark:text-gray-500">·</span>
-                      <a
-                        href={receipt.onchain.explorer_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:underline flex-shrink-0"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {truncateHash(receipt.onchain.tx_hash)}
-                      </a>
-                    </>
-                  )}
-                  <span className="text-gray-400 dark:text-gray-500 ml-auto flex-shrink-0">
-                    {formatTimeAgo(receipt.timestamp)}
-                  </span>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        </>
-      )}
+      {/* Agent Activity Status Info */}
+      <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
+        Autonomous monitoring is {agentStatus === 'online' ? 'active in the background' : 'temporarily paused'}.
+      </div>
 
       {/* Trigger Heartbeat */}
       <div className="border-t border-purple-200 dark:border-purple-800 pt-2">
