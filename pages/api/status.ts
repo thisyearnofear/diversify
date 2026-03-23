@@ -44,13 +44,24 @@ export default async function handler(
   };
 
   // Check Celo / Mento
+  const agentKeySet = !!(process.env.PRIVATE_KEY || process.env.WALLET_PRIVATE_KEY);
   checks.celo = {
     status: "live",
-    detail: "Mento Protocol quotes + swap execution on Celo mainnet",
+    detail: agentKeySet
+      ? "Mento Protocol quotes + agent swap execution on Celo mainnet"
+      : "Mento Protocol quotes live; agent swap needs PRIVATE_KEY env var",
+  };
+
+  // Check OpenClaw receipt logging
+  checks.openclaw = {
+    status: process.env.OPENCLAW_BOT_URL ? "connected" : "not-configured",
+    detail: process.env.OPENCLAW_BOT_URL
+      ? "Receipt logging to OpenClaw active"
+      : "OPENCLAW_BOT_URL not set — receipts not logged",
   };
 
   const liveCount = Object.values(checks).filter(
-    (c) => c.status === "live" || c.status === "configured"
+    (c) => c.status === "live" || c.status === "configured" || c.status === "connected"
   ).length;
 
   return res.status(200).json({
