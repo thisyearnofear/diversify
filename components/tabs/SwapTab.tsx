@@ -31,6 +31,8 @@ import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
 import { TestnetSimulationBanner } from "../swap/TestnetSimulationBanner";
 import { StreakRewardsSection } from "../rewards/StreakRewardsCard";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
+import { MobileCollapsible } from "../ui/MobileCollapsible";
+import { useMobile } from "../../hooks/use-mobile";
 import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import YieldBridgePrompt from "../swap/YieldBridgePrompt";
@@ -73,6 +75,7 @@ export default function SwapTab({
 
   const isBeginner = experienceMode === "beginner";
   const isDemo = demoMode.isActive;
+  const isMobile = useMobile();
 
   const {
     swap: performSwap,
@@ -376,8 +379,11 @@ export default function SwapTab({
     }));
   }, [chains, walletChainId]);
 
+  // Add bottom padding on mobile beginner mode to account for sticky CTA
+  const containerPadding = isMobile && isBeginner ? "pb-24" : "";
+
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${containerPadding}`}>
       <Card>
         {/* DEMO MODE BANNER */}
         {isDemo && (
@@ -527,11 +533,16 @@ export default function SwapTab({
               />
             </ErrorBoundary>
 
-            {/* GoodDollar UBI Streak — gated by StreakRewardsSection so hook only runs when visible */}
+            {/* GoodDollar UBI Streak — collapsible on mobile */}
             <ErrorBoundary moduleName="Streak Rewards">
-              <div className="mb-4">
+              <MobileCollapsible 
+                title="Daily Rewards" 
+                icon="🔥" 
+                className="mb-4"
+                defaultCollapsedOnMobile={true}
+              >
                 <StreakRewardsSection />
-              </div>
+              </MobileCollapsible>
             </ErrorBoundary>
 
             {showAiRecommendation && (
@@ -586,12 +597,12 @@ export default function SwapTab({
               )}
             </ErrorBoundary>
 
-            {/* Social Contact Picker - Send to phone/email */}
-            {!isBeginner && address && (
+            {/* Social Contact Picker - Send to phone/email (hidden on mobile beginner) */}
+            {!isBeginner && address && !isMobile && (
               <div className="mt-4">
                 <button
                   onClick={() => setShowSocialPicker(!showSocialPicker)}
-                  className="w-full flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                  className="w-full flex items-center justify-between p-3 min-h-[48px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <span>👥</span>
@@ -639,29 +650,41 @@ export default function SwapTab({
         )}
       </Card>
 
-      {/* Yield bridge prompt — self-contained, owns its own dismissed state */}
+      {/* Yield bridge prompt — collapsible on mobile */}
       {!isArbitrum && address && (
-        <YieldBridgePrompt
-          onBridgeCTA={() => {
-            if (swapInterfaceRef.current?.setTokens) {
-              swapInterfaceRef.current.setTokens(
-                "USDm",
-                "USDY",
-                "",
-                NETWORKS.CELO_MAINNET.chainId,
-                NETWORKS.ARBITRUM_ONE.chainId,
-              );
-            }
-          }}
-        />
-      )}
+        <MobileCollapsible 
+          title="Yield Opportunities" 
+          icon="🌉" 
+          defaultCollapsedOnMobile={true}
+        >
+          <YieldBridgePrompt
+            onBridgeCTA={() => {
+              if (swapInterfaceRef.current?.setTokens) {
+                swapInterfaceRef.current.setTokens(
+                  "USDm",
+                  "USDY",
+                  "",
+                  NETWORKS.CELO_MAINNET.chainId,
+                  NETWORKS.ARBITRUM_ONE.chainId,
+                );
+              }
+            }}
+          />
+        </MobileCollapsible>
+      )
 
-      {/* Advanced: Regional Hedge & Action Guidance */}
+      {/* Advanced: Regional Hedge & Action Guidance (collapsible on mobile) */}
       {!isArbitrum && address && !isBeginner && (
-        <SwapInsightsPanel
-          userRegion={userRegion}
-          inflationData={inflationData}
-        />
+        <MobileCollapsible 
+          title="Market Insights" 
+          icon="📊" 
+          defaultCollapsedOnMobile={true}
+        >
+          <SwapInsightsPanel
+            userRegion={userRegion}
+            inflationData={inflationData}
+          />
+        </MobileCollapsible>
       )}
 
       {/* Success Celebration Modal — passes user goal and live goal score for personalised display */}

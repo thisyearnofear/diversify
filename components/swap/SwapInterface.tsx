@@ -12,6 +12,7 @@ import { RegionalPattern } from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useStrategy } from "@/context/app/StrategyContext";
+import { useMobile } from "@/hooks/use-mobile";
 
 interface Token {
   symbol: string;
@@ -69,6 +70,7 @@ const SwapInterface = forwardRef<
   const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useExperience();
   const { financialStrategy } = useStrategy();
   const isBeginner = experienceMode === "beginner";
+  const isMobile = useMobile();
 
   const {
     fromToken,
@@ -383,6 +385,7 @@ const SwapInterface = forwardRef<
               parseFloat(amount) > parseFloat(tokenBalances[fromToken]?.formattedBalance || "0")
             }
             onClick={() => executeSwap(onSwap)}
+            stickyMobile={isMobile && isBeginner}
           />
         </div>
       </div>

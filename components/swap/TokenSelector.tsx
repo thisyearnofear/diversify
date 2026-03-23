@@ -227,7 +227,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           <button
             type="button"
             onClick={() => setShowWhySwapTooltip(!showWhySwapTooltip)}
-            className="ml-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-0.5 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+            className="ml-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-1 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors min-h-[44px] flex items-center"
             title="Why should I swap?"
           >
             💡 Why swap?
@@ -283,7 +283,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           type="button"
           onClick={setMaxAmount}
           disabled={disabled || !hasBalance || Boolean(isCrossChain)}
-          className={`text-xs font-bold px-2 py-0.5 rounded-md flex items-center transition-all ${isCrossChain && !hasBalance
+          className={`text-xs font-bold px-3 py-2 rounded-md flex items-center transition-all min-h-[44px] ${isCrossChain && !hasBalance
             ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
             : hasBalance
               ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 border border-blue-100 dark:border-blue-800'
