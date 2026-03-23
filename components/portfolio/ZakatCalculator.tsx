@@ -77,6 +77,7 @@ export default function ZakatCalculator({ totalPortfolioValue = 0, onClose }: Za
             onChange={(e) => setHoldings(parseFloat(e.target.value) || 0)}
             className="w-full px-3 py-2 rounded-lg border-2 border-emerald-200 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-emerald-900 dark:text-emerald-100 font-bold focus:border-emerald-500 outline-none"
             placeholder="Enter total portfolio value"
+            inputMode="decimal"
           />
         </div>
         <div>
@@ -89,6 +90,7 @@ export default function ZakatCalculator({ totalPortfolioValue = 0, onClose }: Za
             onChange={(e) => setLiabilities(parseFloat(e.target.value) || 0)}
             className="w-full px-3 py-2 rounded-lg border-2 border-emerald-200 dark:border-emerald-700 bg-white dark:bg-emerald-900 text-emerald-900 dark:text-emerald-100 font-bold focus:border-emerald-500 outline-none"
             placeholder="Enter any outstanding debts"
+            inputMode="decimal"
           />
         </div>
       </div>

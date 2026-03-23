@@ -643,6 +643,7 @@ export default function AutomationSettings({
                   })
                 }
                 className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                inputMode="decimal"
                 min="0"
                 step="5"
               />

@@ -473,6 +473,7 @@ export default function CommodityTrading({ address, signer, onTrade, chainId }: 
                                 onChange={e => setTradeAmount(e.target.value)}
                                 placeholder="Min $10"
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                inputMode="decimal"
                                 autoFocus
                             />
                         </div>
@@ -581,6 +582,7 @@ export default function CommodityTrading({ address, signer, onTrade, chainId }: 
                                 onChange={e => setWithdrawAmount(e.target.value)}
                                 placeholder="Min $1"
                                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                                inputMode="decimal"
                             />
                         </div>
 

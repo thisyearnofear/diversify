@@ -112,6 +112,7 @@ export function BacktestPanel() {
                 onChange={(e) => updateScenario(index, 'amount', e.target.value)}
                 className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded px-2 py-1 w-16"
                 placeholder="Amount"
+                inputMode="decimal"
               />
               <button
                 onClick={() => removeScenario(index)}

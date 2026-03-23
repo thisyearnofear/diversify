@@ -370,6 +370,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               min="0"
               step="0.01"
               disabled={disabled}
+              inputMode="decimal"
             />
             <button
               type="button"

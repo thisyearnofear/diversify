@@ -132,6 +132,7 @@ export const TradeWidget: React.FC<TradeWidgetProps> = ({
               value={inputAmount}
               onChange={(e) => setInputAmount(e.target.value)}
               className="flex-1 bg-transparent text-xl font-bold outline-none placeholder-gray-300 dark:placeholder-gray-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              inputMode="decimal"
             />
             <span className="text-gray-500 dark:text-gray-400 font-bold">
               {inputLabel}

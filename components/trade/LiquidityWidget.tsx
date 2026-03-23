@@ -281,6 +281,7 @@ export const LiquidityWidget: React.FC<LiquidityWidgetProps> = ({
                   value={inputAmount}
                   onChange={(e) => setInputAmount(e.target.value)}
                   className="bg-transparent text-lg font-bold outline-none w-full"
+                  inputMode="decimal"
                 />
                 <span className="font-bold text-sm text-gray-400">ETH</span>
               </div>

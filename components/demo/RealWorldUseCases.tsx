@@ -419,6 +419,7 @@ export default function RealWorldUseCases({
                                   value={goalAmount}
                                   onChange={(e) => setGoalAmount(Number(e.target.value))}
                                   className="w-full pl-6 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-black outline-none focus:border-purple-400 transition-all"
+                                  inputMode="decimal"
                                 />
                               </div>
                             </div>

@@ -88,6 +88,7 @@ export default function InflationVisualizerEnhanced({
                                     className="w-24 text-xl font-black text-gray-900 dark:text-white bg-transparent border-b-2 border-blue-500 focus:border-blue-600 outline-none"
                                     min="1"
                                     max="1000000"
+                                    inputMode="decimal"
                                 />
                             </div>
                         </div>
