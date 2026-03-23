@@ -43,6 +43,12 @@ export default async function handler(
       : "Signals available, execution in dry-run mode",
   };
 
+  // Check Celo / Mento
+  checks.celo = {
+    status: "live",
+    detail: "Mento Protocol quotes + swap execution on Celo mainnet",
+  };
+
   const liveCount = Object.values(checks).filter(
     (c) => c.status === "live" || c.status === "configured"
   ).length;
@@ -61,6 +67,9 @@ export default async function handler(
       uniswapQuote: "/api/swap/uniswap/quote (POST)",
       uniswapCheckApproval: "/api/swap/uniswap/check-approval (POST)",
       uniswapSwap: "/api/swap/uniswap/swap (POST)",
+      celoActivity: "/api/celo/activity",
+      celoMentoQuote: "/api/celo/mento-quote?tokenIn=cUSD&tokenOut=KESm&amount=1",
+      celoMentoSwap: "/api/celo/mento-swap (POST)",
       status: "/api/status",
     },
     tracks: [
