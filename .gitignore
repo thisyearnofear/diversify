@@ -64,7 +64,6 @@ out/
 .env
 .vercel
 .vscode
-.well-known
 .env*.local
 debug.log
 # logs

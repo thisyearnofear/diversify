@@ -1,0 +1,73 @@
+{
+  "protocol_version": "1.0",
+  "name": "DiversiFi",
+  "tagline": "Protecting global wealth through culturally-aware AI Agents and Celo-native liquidity.",
+  "description": "DiversiFi is an autonomous AI-powered financial guardian designed to protect wealth for users in volatile economies. It leverages Celo's Mento stablecoins and multi-chain RWAs to hedge against local inflation using culturally-aligned financial strategies like Africapitalism and Islamic Finance.",
+  "author": "thisyearnofear",
+  "version": "1.0.0",
+  "homepage": "https://diversifiapp.vercel.app",
+  "icon": "https://diversifiapp.vercel.app/icon.png",
+  "banner": "https://diversifiapp.vercel.app/preview.png",
+  "category": "DeFi / AI Agents",
+  "agent_type": "autonomous-guardian",
+  "capabilities": [
+    {
+      "id": "inflation_hedging",
+      "name": "Inflation Hedging",
+      "description": "Monitors macro-economic data and local inflation rates to recommend swaps into stable assets."
+    },
+    {
+      "id": "mento_integration",
+      "name": "Mento Native Liquidity",
+      "description": "Deep integration with Celo Mento for regional stablecoins (cUSD, cEUR, cKES, cGHS, cBRL, cREAL)."
+    },
+    {
+      "id": "agent_fuel_model",
+      "name": "Agent Fuel (Circle MPC)",
+      "description": "Autonomous gas management using USDC-funded sub-wallets, removing the need for users to hold native gas tokens."
+    },
+    {
+      "id": "cultural_strategies",
+      "name": "Cultural Financial Strategies",
+      "description": "Portfolio rebalancing based on 7 unique cultural philosophies including Africapitalism and Buen Vivir."
+    },
+    {
+      "id": "cross_chain_rwa",
+      "name": "Cross-Chain RWA Access",
+      "description": "Automated access to tokenized Gold, Treasury yields, and Commodities across Celo and Arbitrum."
+    }
+  ],
+  "api": {
+    "base_url": "https://diversifiapp.vercel.app/api/agent",
+    "endpoints": {
+      "chat": "/chat",
+      "status": "/status",
+      "activities": "/activities",
+      "analyze": "/analyze",
+      "yield_monitor": "/yield-monitor"
+    }
+  },
+  "networks": [
+    {
+      "chainId": 42220,
+      "name": "Celo Mainnet",
+      "role": "primary"
+    },
+    {
+      "chainId": 44787,
+      "name": "Celo Sepolia",
+      "role": "testing"
+    },
+    {
+      "chainId": 42161,
+      "name": "Arbitrum One",
+      "role": "rwa-spoke"
+    }
+  ],
+  "platforms": {
+    "web": "https://diversifiapp.vercel.app",
+    "minipay": "https://diversifiapp.vercel.app",
+    "farcaster": "https://diversifiapp.vercel.app"
+  },
+  "license": "MIT"
+}
