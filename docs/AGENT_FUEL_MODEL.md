@@ -29,18 +29,31 @@ When the Agent identifies an opportunity (e.g., higher yield on Arbitrum or loca
 *   **Step 1**: Agent identifies yield spike via Proactive Indexer (e.g., cEUR on Celo).
 *   **Step 2**: Agent prompts user via the interactive `RwaActionWidget`.
 *   **Step 3**: Agent burns/teleports USDC using Circle CCTP to the target Spoke (Celo/Arbitrum).
-*   **Step 4**: Agent executes the swap/deposit, covering gas directly from the Fuel Tank.
+*   **Step 4**: Agent submits transaction to **OpenClaw Gateway** (Hetzner-hosted).
+*   **Step 5**: OpenClaw executes the swap/deposit on-chain, covering gas directly from the Fuel Tank.
+*   **Step 6**: OpenClaw pushes receipt webhook with tx hash, chain, status, and duration.
 
 ### 3. Autonomy Leases (The "Allowance")
 The user sets a **Daily Spending Limit** (e.g., $10/day).
 *   The Agent *cannot* spend more than this limit without explicit user approval.
 *   This creates a "Sandbox" where the AI can be aggressive with small amounts (searching for alpha) without risking the user's life savings.
 
+### 4. OpenClaw Execution Tracks
+OpenClaw supports multiple execution "tracks" for different agent behaviors:
+*   **base-autonomous-trading** — Standard yield farming and rebalancing
+*   **tether-galactica-wdk** — Tether WDK settlement with USD₮/XAU₮ across chains
+*   **status-l2-gasless** — Gas-optimized L2 executions
+*   **open-track** — Custom user-defined strategies
+
+Each track has its own receipt stream and audit trail for transparent accounting.
+
 ## User Experience (UI)
 
 *   **The Gauge**: A visual "Fuel Tank" showing the remaining USDC balance.
 *   **The Top-Up**: A simple QR code / Address copy to send funds.
 *   **The Receipt**: A real-time feed of "What did my Agent spend money on?" (e.g., "Paid $0.02 for Real-Time Inflation Data").
+*   **Execution Status**: OpenClaw receipts show transaction hash, chain, status, duration, and explorer link for full transparency.
+*   **Track Selection**: Users can view which execution track their agent is using (e.g., "Tether WDK" for Galactica hackathon).
 
 ## Why Arc L1?
 *   **Native USDC Gas**: The single biggest friction point in Web3 (gas tokens) is removed.

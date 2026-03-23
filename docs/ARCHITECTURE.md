@@ -5,15 +5,24 @@ Technical system design and technology stack for DiversiFi (2026 Edition).
 ## System Overview
 
 ```
-┌─────────────────────────┐         ┌─────────────────────────┐
-│ Static Web Frontend     │         │ Long-running AI API    │
-│ (CDN-hosted)            │ ──────► │ (Arc Agent Hub)        │
-└─────────────────────────┘         └─────────────────────────┘
+┌─────────────────────────┐         ┌──────────────────────────────────────┐
+│ Static Web Frontend     │         │ Long-running AI API                  │
+│ (CDN-hosted)            │ ──────► │ (Arc Agent Hub + OpenClaw Gateway)   │
+└─────────────────────────┘         └──────────────────────────────────────┘
+                                              │
+                                              ▼
+                                   ┌─────────────────────────┐
+                                   │ External OpenClaw       │
+                                   │ (Hetzner-hosted)        │
+                                   │ - On-chain execution    │
+                                   │ - Receipt tracking      │
+                                   └─────────────────────────┘
 ```
 
 **Why hybrid?**
 - Static hosting: Fast global delivery, simple scaling
 - Separate API: Handles autonomous AI operations and cross-chain orchestration
+- OpenClaw Gateway: External execution layer for secure transaction submission with full audit trails
 
 ## Autonomous Agent Architecture (2026 "Hub & Spoke")
 
@@ -36,12 +45,29 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
   Yield & RWA                 Hedging & Risk
 - USDY (Ondo)               - 1x Short Hedges
 - Uniswap V3                - Perps Trading
+                │
+                ▼
+       [ EXECUTION: OPENCLAW ]
+    External Gateway (Hetzner)
+  ┌───────────────────────────┐
+  │ - Transaction Submission  │
+  │ - Receipt Tracking        │
+  │ - Webhook Notifications   │
+  │ - Multi-Track Support     │
+  └───────────────────────────┘
 ```
+
+### Agent Layers: Brain + Hands
+
+**Arc Agent (Brain)** — Lives on Arc L1, handles reasoning, data purchases (x402), proactive monitoring, and cross-chain orchestration.
+
+**OpenClaw (Hands)** — External execution gateway that submits transactions to chains, tracks receipts, and pushes completion webhooks. Separated for security and auditability.
 
 ### The "Agent Fuel" Model & Proactive Execution
 *   **Custody**: User-funded, Developer-controlled (via Circle MPC).
 *   **Gas**: Native USDC on Arc L1. The agent pays for its own compute and Oracle data fees (x402) using its internal balance.
 *   **Proactive Listening**: `useProactiveAgent` continuously monitors Envio/Celo indexers. When yield spikes (e.g., Mento cEUR), it pushes an interactive `RwaActionWidget` to the UI.
+*   **Execution**: Transactions submitted via OpenClaw gateway with full receipt tracking (tx hash, chain, status, duration).
 *   **Lease**: Users grant permissions via **ERC-6900** modules (e.g., "Spend max $10/day on yield strategies").
 
 ## Technology Stack
@@ -53,7 +79,8 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
 - **Farcaster SDK** - Social integration
 
 ### Backend & AI
-- **Arc Agent**: Autonomous "Guardian" living on Arc L1
+- **Arc Agent**: Autonomous "Guardian" living on Arc L1 (reasoning, orchestration)
+- **OpenClaw**: External execution gateway (Hetzner-hosted) for on-chain transaction submission
 - **Circle MPC**: User-scoped sub-wallets for agent autonomy
 - **Venice AI**: Primary reasoning engine (privacy-focused)
 - **Gemini 2.0**: Fallback high-speed reasoning
@@ -63,6 +90,7 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
 - **Celo (Spoke)**: Social payments (MiniPay), Stablecoin swaps (Mento)
 - **Arbitrum (Spoke)**: RWA (Ondo), DeFi Yield
 - **Hyperliquid (Spoke)**: Risk hedging (Perps)
+- **OpenClaw (Execution)**: External gateway for transaction submission & receipt tracking
 - **Cross-chain**: Circle CCTP (Bridge), LiFi (Aggregator)
 
 ## Multi-Chain Architecture
@@ -85,6 +113,18 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
 │  │  - Risk Models                                          │   │
 │  │  - Data Purchasing (x402)                               │   │
 │  │  - Cross-Chain Orchestration                            │   │
+│  └─────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    OpenClaw Gateway                             │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Execution Layer (Hetzner)                              │   │
+│  │  - Transaction Submission                               │   │
+│  │  - Receipt Tracking                                     │   │
+│  │  - Webhook Notifications                                │   │
+│  │  - Multi-Track Support (WDK, Trading, etc.)             │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```

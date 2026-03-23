@@ -55,8 +55,15 @@ DiversiFi introduces a revolutionary **User-Funded Autonomous Economy** powered 
 ### Deployment
 - **Frontend**: Static hosting (e.g., Netlify)
 - **AI API**: Separate API service for long-running AI operations (extended timeouts)
+- **OpenClaw Gateway**: External execution layer (Hetzner-hosted) for secure transaction submission
 
-Deployment/runbook details are intentionally kept out of the public repo. If you’re a maintainer, see `docs/internal/DEPLOYMENT_RUNBOOK.md` (not committed) or your team’s internal documentation.
+Deployment/runbook details are intentionally kept out of the public repo. If you're a maintainer, see `docs/internal/DEPLOYMENT_RUNBOOK.md` (not committed) or your team's internal documentation.
+
+### Agent Architecture: Brain + Hands
+
+**Arc Agent (Brain)** — Autonomous agent living on Arc L1 that handles reasoning, data purchases (x402), proactive monitoring, and cross-chain orchestration.
+
+**OpenClaw (Hands)** — External execution gateway that submits transactions to chains, tracks receipts with full audit trails, and pushes completion webhooks. Supports multiple execution tracks (trading, Tether WDK settlement, etc.).
 
 ### Financial Strategies (New!)
 Choose from 7 cultural approaches to wealth:
@@ -103,6 +110,7 @@ Each strategy shapes:
 |----------|------------|
 | **Frontend** | Next.js 15, React 19, Tailwind CSS |
 | **AI** | Google Gemini 3.0, Venice AI |
+| **Agent** | Arc Agent (reasoning), OpenClaw (execution) |
 | **Swaps & Execution** | Mento (Celo), LiFi (cross-chain), 1inch (Arbitrum), Hyperliquid Perps (commodities) |
 | **Market Intelligence** | SynthData probabilistic forecasts + volatility/risk endpoints |
 | **Wallet** | Reown AppKit (WalletConnect), Farcaster Mini App SDK, Circle Programmable Wallets |
