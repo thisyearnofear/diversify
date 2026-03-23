@@ -94,3 +94,4 @@ script/
 !scripts/deploy-hetzner.sh.example
 !scripts/nginx-diversifi-api.conf.example
 .synthesis-credentials
+.blackboxcli/

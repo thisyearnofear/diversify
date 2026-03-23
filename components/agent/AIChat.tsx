@@ -225,7 +225,7 @@ export default function AIChat() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
-          className="absolute inset-0 flex items-center justify-center pointer-events-auto z-10"
+          className="absolute inset-0 flex items-center justify-center pointer-events-auto z-50"
         >
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 max-w-[280px] mx-4 border border-gray-200 dark:border-gray-700">
             <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">

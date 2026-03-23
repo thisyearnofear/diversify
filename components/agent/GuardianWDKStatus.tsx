@@ -1,9 +1,12 @@
 /**
  * GuardianWDKStatus - Inline status for the Tether WDK settlement agent.
+ * On mobile, shows compact summary with option to open full wizard.
  */
 
-import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useState } from "react";
+import { motion } from "framer-motion";
+import { useMobile } from "@/hooks/use-mobile";
+import GuardianMobileWizard from "./GuardianMobileWizard";
 
 interface GuardianWDKStatusProps {
   agentStatus: "online" | "offline" | "uninitialized" | "loading";
@@ -36,29 +39,6 @@ const statusIndicator: Record<
   loading: { color: "bg-amber-500", label: "Connecting…" },
 };
 
-const receiptIcon: Record<string, string> = {
-  success: "✅",
-  error: "❌",
-  pending: "🔄",
-};
-
-function formatTimeAgo(timestamp: number): string {
-  const now = Date.now();
-  const diffMs = now - timestamp;
-  const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  return `${Math.floor(diffHr / 24)}d ago`;
-}
-
-function truncateHash(hash: string): string {
-  if (hash.length <= 12) return hash;
-  return `${hash.slice(0, 6)}…${hash.slice(-4)}`;
-}
-
 const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
   agentStatus,
   agentIdentity,
@@ -68,8 +48,55 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
 }) => {
   const { color, label } = statusIndicator[agentStatus];
   const displayName = agentIdentity?.name ?? "Settlement Agent";
-  const visibleReceipts = recentReceipts.slice(0, 3);
+  const isMobile = useMobile();
+  const [showWizard, setShowWizard] = useState(false);
 
+  // Show mobile wizard when triggered
+  if (showWizard) {
+    return (
+      <GuardianMobileWizard
+        onComplete={() => setShowWizard(false)}
+        onCancel={() => setShowWizard(false)}
+      />
+    );
+  }
+
+  // Mobile: Compact view with wizard trigger
+  if (isMobile) {
+    return (
+      <div className="bg-green-50/60 dark:bg-green-900/20 rounded-xl p-3 border border-green-100 dark:border-green-800/50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-lg">🌌</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-xs font-black text-gray-900 dark:text-gray-100 truncate">
+                Guardian {agentStatus === "online" ? "Active" : "Inactive"}
+              </span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                {agentIdentity?.chains.join(", ") ?? "Not configured"}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              {agentStatus === "online" && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${color}`} />
+            </span>
+            <button
+              onClick={() => setShowWizard(true)}
+              className="px-3 py-2 min-h-[44px] bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors"
+            >
+              Configure
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop: Full view
   return (
     <div className="bg-green-50/60 dark:bg-green-900/20 rounded-xl p-3 space-y-2 border border-green-100 dark:border-green-800/50">
       {/* Status Bar */}
@@ -91,13 +118,9 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
               {agentStatus === "online" && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
               )}
-              <span
-                className={`relative inline-flex rounded-full h-2 w-2 ${color}`}
-              />
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${color}`} />
             </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {label}
-            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
           </span>
         </div>
       </div>
@@ -112,7 +135,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
         <button
           onClick={onTriggerHeartbeat}
           disabled={isExecuting || agentStatus === "offline"}
-          className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-colors"
+          className="w-full flex items-center justify-center gap-1.5 py-3 px-3 min-h-[44px] rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-colors"
         >
           {isExecuting ? (
             <motion.span

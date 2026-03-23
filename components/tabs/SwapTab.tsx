@@ -33,6 +33,8 @@ import { StreakRewardsSection } from "../rewards/StreakRewardsCard";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { MobileCollapsible } from "../ui/MobileCollapsible";
 import { useMobile } from "../../hooks/use-mobile";
+import { useInView } from "../../hooks/use-in-view";
+import { Skeleton } from "../shared/TabComponents";
 import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import YieldBridgePrompt from "../swap/YieldBridgePrompt";
@@ -76,6 +78,10 @@ export default function SwapTab({
   const isBeginner = experienceMode === "beginner";
   const isDemo = demoMode.isActive;
   const isMobile = useMobile();
+
+  // Lazy loading refs for below-the-fold sections
+  const insightsInViewRef = useInView<HTMLDivElement>({ rootMargin: '100px', triggerOnce: true });
+  const yieldInViewRef = useInView<HTMLDivElement>({ rootMargin: '100px', triggerOnce: true });
 
   const {
     swap: performSwap,
@@ -202,6 +208,21 @@ export default function SwapTab({
         t.region.toLowerCase().includes(query),
     );
   }, [tradeableTokens, searchQuery]);
+
+  // Memoize handlers to prevent unnecessary re-renders in child components
+  const handleSwapSuccess = useCallback(() => {
+    setShowCelebration(false);
+    setCelebrationData(null);
+    setPreviousGoalScore(undefined);
+  }, []);
+
+  const handleClaimG = useCallback(() => {
+    setShowClaimFlow(true);
+  }, []);
+
+  const handleCloseClaimFlow = useCallback(() => {
+    setShowClaimFlow(false);
+  }, []);
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId ?? null);
 
@@ -650,52 +671,63 @@ export default function SwapTab({
         )}
       </Card>
 
-      {/* Yield bridge prompt — collapsible on mobile */}
+      {/* Yield bridge prompt — collapsible on mobile, lazy-loaded */}
       {!isArbitrum && address && (
-        <MobileCollapsible 
-          title="Yield Opportunities" 
-          icon="🌉" 
-          defaultCollapsedOnMobile={true}
-        >
-          <YieldBridgePrompt
-            onBridgeCTA={() => {
-              if (swapInterfaceRef.current?.setTokens) {
-                swapInterfaceRef.current.setTokens(
-                  "USDm",
-                  "USDY",
-                  "",
-                  NETWORKS.CELO_MAINNET.chainId,
-                  NETWORKS.ARBITRUM_ONE.chainId,
-                );
-              }
-            }}
-          />
-        </MobileCollapsible>
-      )
+        <div ref={yieldInViewRef.ref}>
+          {yieldInViewRef.inView ? (
+            <MobileCollapsible 
+              title="Yield Opportunities" 
+              icon="🌉" 
+              defaultCollapsedOnMobile={true}
+            >
+              <YieldBridgePrompt
+                onBridgeCTA={() => {
+                  if (swapInterfaceRef.current?.setTokens) {
+                    swapInterfaceRef.current.setTokens(
+                      "USDm",
+                      "USDY",
+                      "",
+                      NETWORKS.CELO_MAINNET.chainId,
+                      NETWORKS.ARBITRUM_ONE.chainId,
+                    );
+                  }
+                }}
+              />
+            </MobileCollapsible>
+          ) : (
+            <Skeleton className="h-24 w-full" variant="rect" />
+          )}
+        </div>
+      )}
 
-      {/* Advanced: Regional Hedge & Action Guidance (collapsible on mobile) */}
+      {/* Advanced: Regional Hedge & Action Guidance (collapsible on mobile, lazy-loaded) */}
       {!isArbitrum && address && !isBeginner && (
-        <MobileCollapsible 
-          title="Market Insights" 
-          icon="📊" 
-          defaultCollapsedOnMobile={true}
-        >
-          <SwapInsightsPanel
-            userRegion={userRegion}
-            inflationData={inflationData}
-          />
-        </MobileCollapsible>
+        <div ref={insightsInViewRef.ref}>
+          {insightsInViewRef.inView ? (
+            <MobileCollapsible 
+              title="Market Insights" 
+              icon="📊" 
+              defaultCollapsedOnMobile={true}
+            >
+              <SwapInsightsPanel
+                userRegion={userRegion}
+                inflationData={inflationData}
+              />
+            </MobileCollapsible>
+          ) : (
+            <div className="space-y-4">
+              <Skeleton className="h-32 w-full" variant="rect" />
+              <Skeleton className="h-48 w-full" variant="rect" />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Success Celebration Modal — passes user goal and live goal score for personalised display */}
       {celebrationData && (
         <SwapSuccessCelebration
           isVisible={showCelebration}
-          onClose={() => {
-            setShowCelebration(false);
-            setCelebrationData(null);
-            setPreviousGoalScore(undefined);
-          }}
+          onClose={handleSwapSuccess}
           fromToken={celebrationData.fromToken}
           toToken={celebrationData.toToken}
           amount={celebrationData.amount}
@@ -722,16 +754,16 @@ export default function SwapTab({
               : undefined
           }
           previousGoalScore={previousGoalScore}
-          onClaimG={() => setShowClaimFlow(true)}
+          onClaimG={handleClaimG}
         />
       )}
 
       {showClaimFlow && (
         <GoodDollarClaimFlow
-          onClose={() => setShowClaimFlow(false)}
-          onClaimSuccess={() => setShowClaimFlow(false)}
+          onClose={handleCloseClaimFlow}
+          onClaimSuccess={handleCloseClaimFlow}
         />
-      )}
+      )}}
     </div>
   );
 }
