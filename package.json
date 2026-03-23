@@ -21,7 +21,8 @@
     "create-wallet": "npx tsx --env-file=.env.local scripts/create-circle-wallet.ts",
     "test-x402": "node scripts/test-x402-hub.mjs",
     "test-x402-comprehensive": "node scripts/test-x402-comprehensive.mjs",
-    "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\""
+    "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\"",
+    "register-agent": "npx tsx scripts/register-on-agentscan.ts"
   },
   "dependencies": {
     "@celo/blind-threshold-bls": "1.0.0-beta",

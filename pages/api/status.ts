@@ -52,6 +52,12 @@ export default async function handler(
       : "Mento Protocol quotes live; agent swap needs PRIVATE_KEY env var",
   };
 
+  // Guardian autonomous execution
+  checks.guardian = {
+    status: "live",
+    detail: "Session key auth, inflation-driven rebalance strategy, autonomous execution loop",
+  };
+
   // Check OpenClaw receipt logging
   checks.openclaw = {
     status: process.env.OPENCLAW_BOT_URL ? "connected" : "not-configured",

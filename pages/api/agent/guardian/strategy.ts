@@ -16,9 +16,9 @@ import { getSession, getAllSessions } from './session';
  */
 
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org';
-const APP_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.VERCEL_URL
-  ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000';
+const APP_BASE = process.env.NEXT_PUBLIC_API_BASE_URL
+  || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null)
+  || 'http://localhost:3000';
 
 const TOKENS: Record<string, { address: `0x${string}`; decimals: number; stablecoin: boolean; region?: string }> = {
   CELO:  { address: '0x471EcE3750Da237f93B8E339c536989b8978a438', decimals: 18, stablecoin: false },
@@ -102,7 +102,7 @@ async function getInflationRates(): Promise<Record<string, number>> {
   try {
     const url = APP_BASE.startsWith('http') ? APP_BASE : `https://${APP_BASE}`;
     const resp = await fetch(`${url}/api/inflation`, { signal: AbortSignal.timeout(5000) });
-    if (!resp.ok) return {};
+    if (!resp.ok) throw new Error(`Inflation API returned ${resp.status}`);
     const data = await resp.json();
     const rates: Record<string, number> = {};
     for (const entry of data.countries || []) {
@@ -110,7 +110,8 @@ async function getInflationRates(): Promise<Record<string, number>> {
         rates[entry.countryCode] = entry.value;
       }
     }
-    return rates;
+    if (Object.keys(rates).length > 0) return rates;
+    throw new Error('No inflation data parsed');
   } catch {
     // Fallback static rates for demo
     return { US: 3.2, KE: 6.9, CO: 9.3, BR: 4.5, PH: 5.8, EU: 2.4 };
@@ -199,34 +200,35 @@ function findBestTarget(inflationRates: Record<string, number>, excludeRegion: s
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
-    // Single user analysis
-    const { userAddress } = req.query;
-    if (!userAddress || typeof userAddress !== 'string') {
-      return res.status(400).json({ error: 'Missing userAddress' });
+  try {
+    if (req.method === 'GET') {
+      // Single user analysis
+      const { userAddress } = req.query;
+      if (!userAddress || typeof userAddress !== 'string') {
+        return res.status(400).json({ error: 'Missing userAddress' });
+      }
+
+      const session = getSession(userAddress);
+      const [balances, inflationRates] = await Promise.all([
+        getPortfolio(userAddress),
+        getInflationRates(),
+      ]);
+
+      const dailyLimit = session?.signedPermission.permission.dailyLimitUSD ?? 10;
+      const spentToday = session?.spentTodayUSD ?? 0;
+
+      const recommendations = analyzePortfolio(balances, inflationRates, dailyLimit, spentToday);
+
+      return res.status(200).json({
+        userAddress,
+        hasActiveSession: !!session,
+        portfolio: balances,
+        inflationRates,
+        recommendations,
+        budget: { dailyLimitUSD: dailyLimit, spentTodayUSD: spentToday, remainingUSD: dailyLimit - spentToday },
+        timestamp: new Date().toISOString(),
+      });
     }
-
-    const session = getSession(userAddress);
-    const [balances, inflationRates] = await Promise.all([
-      getPortfolio(userAddress),
-      getInflationRates(),
-    ]);
-
-    const dailyLimit = session?.signedPermission.permission.dailyLimitUSD ?? 10;
-    const spentToday = session?.spentTodayUSD ?? 0;
-
-    const recommendations = analyzePortfolio(balances, inflationRates, dailyLimit, spentToday);
-
-    return res.status(200).json({
-      userAddress,
-      hasActiveSession: !!session,
-      portfolio: balances,
-      inflationRates,
-      recommendations,
-      budget: { dailyLimitUSD: dailyLimit, spentTodayUSD: spentToday, remainingUSD: dailyLimit - spentToday },
-      timestamp: new Date().toISOString(),
-    });
-  }
 
   if (req.method === 'POST') {
     // Batch analysis for all active sessions — the autonomous loop calls this
@@ -263,5 +265,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  return res.status(405).json({ error: `Method ${req.method} not allowed` });
+    return res.status(405).json({ error: `Method ${req.method} not allowed` });
+  } catch (err) {
+    console.error('Guardian strategy error:', err);
+    return res.status(500).json({ error: 'Strategy analysis failed', detail: String(err) });
+  }
 }
