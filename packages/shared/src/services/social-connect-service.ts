@@ -1,8 +1,8 @@
 /**
  * SocialConnect Service
- * 
+ *
  * @ts-nocheck
- * 
+ *
  * Core Principles:
  * - CLEAN: Explicit dependencies on viem and @celo/identity
  * - MODULAR: Independent service for identifier resolution
@@ -11,22 +11,16 @@
  */
 
 import { OdisUtils } from '@celo/identity';
-import { 
-    createPublicClient, 
-    http, 
-    getContract, 
-    Address, 
-    PublicClient,
-    parseUnits 
+import {
+    createPublicClient,
+    http,
+    getContract,
+    Address
 } from 'viem';
 import { celo, celoSepolia } from 'viem/chains';
 
-// Define required ODIS types manually if needed or import from @celo/identity
-type OdisContextName = 'mainnet' | 'alfajores' | 'asv-poc';
-
 // SocialConnect Contract Addresses (Official Celo deployment)
 const FEDERATED_ATTESTATIONS_ADDRESS = '0x0aD5bCCCD69e4f3393BC214950730d17F8674E06'; // Mainnet & Alfajores use same address for this proxy
-const ODIS_PAYMENTS_ADDRESS = '0xae4F987D0E5A359051069C4596d1D4D7969E9623';
 
 // Trusted Issuers (Entity that verified the phone/handle)
 // For Celo Hackathon, we often trust the Libera or Valora issuers
@@ -53,9 +47,9 @@ const FEDERATED_ATTESTATIONS_ABI = [
 ] as const;
 
 export enum IdentifierPrefix {
-    PHONE_NUMBER = 'tel:',
-    EMAIL = 'mailto:',
-    TWITTER = 'tw:'
+    PHONE_NUMBER = 'tel',
+    EMAIL = 'mailto',
+    TWITTER = 'tw'
 }
 
 export class SocialConnectService {
@@ -63,8 +57,8 @@ export class SocialConnectService {
     private isTestnet: boolean;
     private issuerAddress: Address;
 
-    constructor(options: { 
-        rpcUrl?: string; 
+    constructor(options: {
+        rpcUrl?: string;
         isTestnet?: boolean;
         issuerAddress?: Address;
     }) {
@@ -83,7 +77,7 @@ export class SocialConnectService {
     async resolveIdentifier(
         plaintextIdentifier: string,
         prefix: IdentifierPrefix = IdentifierPrefix.PHONE_NUMBER,
-        authSigner: any // authSigner from @celo/identity
+        authSigner: any
     ): Promise<Address | null> {
         try {
             console.log(`[SocialConnect] Resolving ${prefix}${plaintextIdentifier}...`);
@@ -93,7 +87,7 @@ export class SocialConnectService {
                 (this.isTestnet ? 'alfajores' : 'mainnet') as any
             );
 
-            // Note: ODIS requires an authSigner which proves the requester has some CELO/cUSD 
+            // Note: ODIS requires an authSigner which proves the requester has some CELO/cUSD
             // to prevent spam. In MiniPay/Valora, this is handled by the wallet.
             const { obfuscatedIdentifier } = await OdisUtils.Identifier.getObfuscatedIdentifier(
                 plaintextIdentifier,
@@ -104,7 +98,6 @@ export class SocialConnectService {
             );
 
             // 2. Lookup on FederatedAttestations contract
-            // @ts-ignore - Viem type mismatch in monorepo
             const contract = getContract({
                 address: FEDERATED_ATTESTATIONS_ADDRESS,
                 abi: FEDERATED_ATTESTATIONS_ABI,
@@ -135,9 +128,9 @@ export class SocialConnectService {
     static createViemAuthSigner(walletClient: any, account: Address): any {
         return {
             authenticationMethod: OdisUtils.Query.AuthenticationMethod.WALLET_KEY,
-            sign191: (message: string) => walletClient.signMessage({ 
-                message, 
-                account 
+            sign191: (message: string) => walletClient.signMessage({
+                message,
+                account
             }),
         };
     }
