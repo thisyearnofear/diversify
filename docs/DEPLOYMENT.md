@@ -136,7 +136,7 @@ pnpm start
 
 # Or deploy as Docker container
 docker build -t diversifi-api .
-docker run -p 3000:3000 diversifi-api
+docker run -p 3042:3042 diversifi-api
 ```
 
 ## Troubleshooting

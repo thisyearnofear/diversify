@@ -9,9 +9,9 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "next dev -p 3005",
+    "dev": "next dev -p 3042",
     "build": "turbo run build --filter=@diversifi/shared --filter=@stable-station/mento-utils && next build",
-    "start": "next start",
+    "start": "next start -p 3042",
     "lint": "turbo lint",
     "test": "vitest run",
     "test:watch": "vitest",

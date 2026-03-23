@@ -84,14 +84,15 @@ packages/*/pnpm-lock.yaml
 .cache/
 script/
 
-# Deployment scripts with server-specific details
-!scripts/deploy-hetzner.sh
-!scripts/deploy-env-to-server.sh
-!scripts/nginx-diversifi-api.conf
-!scripts/setup-mongodb.sh
+# Deployment scripts with server-specific details (KEEP IGNORED for security)
+scripts/deploy-hetzner.sh
+scripts/deploy-env-to-server.sh
+scripts/nginx-diversifi-api.conf
+scripts/setup-mongodb.sh
 
-# Keep example/template versions instead
+# Keep example/template versions (safe to commit)
 !scripts/deploy-hetzner.sh.example
+!scripts/deploy-env-to-server.sh.example
 !scripts/nginx-diversifi-api.conf.example
 .synthesis-credentials
 .blackboxcli/

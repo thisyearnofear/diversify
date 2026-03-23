@@ -1,5 +1,5 @@
 # DiversiFi AI API — nginx reverse proxy (EXAMPLE)
-# Domain: api.yourdomain.com → localhost:YOUR_PORT
+# Domain: api.yourdomain.com → localhost:3042
 #
 # Copy this file and customize with your domain and port:
 #   cp scripts/nginx-diversifi-api.conf.example scripts/nginx-diversifi-api.conf
@@ -11,15 +11,19 @@
 #   sudo nginx -t && sudo systemctl reload nginx
 #   sudo certbot --nginx -d api.yourdomain.com
 
+# CUSTOMIZE: Set these environment variables or edit directly
+# DEPLOY_API_DOMAIN=api.yourdomain.com
+# DEPLOY_API_PORT=3042
+
 upstream diversifi_api {
-    server 127.0.0.1:YOUR_PORT;  # Change to your port
+    server 127.0.0.1:${DEPLOY_API_PORT:-3042};
     keepalive 16;
 }
 
 server {
     listen 80;
     listen [::]:80;
-    server_name api.yourdomain.com;  # Change to your domain
+    server_name ${DEPLOY_API_DOMAIN:-api.yourdomain.com};
 
     # Let certbot handle ACME challenges
     location /.well-known/acme-challenge/ {
@@ -34,11 +38,11 @@ server {
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name api.yourdomain.com;  # Change to your domain
+    server_name ${DEPLOY_API_DOMAIN:-api.yourdomain.com};
 
     # SSL — managed by certbot; placeholders replaced on first run
-    ssl_certificate     /etc/letsencrypt/live/api.yourdomain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.yourdomain.com/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/${DEPLOY_API_DOMAIN:-api.yourdomain.com}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DEPLOY_API_DOMAIN:-api.yourdomain.com}/privkey.pem;
     include             /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -88,6 +92,6 @@ server {
         return 404;
     }
 
-    access_log /var/log/nginx/your-app.access.log;
-    error_log  /var/log/nginx/your-app.error.log;
+    access_log /var/log/nginx/${DEPLOY_APP_NAME:-diversifi-api}.access.log;
+    error_log  /var/log/nginx/${DEPLOY_APP_NAME:-diversifi-api}.error.log;
 }

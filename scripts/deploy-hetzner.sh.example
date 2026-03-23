@@ -13,12 +13,12 @@
 # =============================================================================
 set -euo pipefail
 
-# CUSTOMIZE THESE VALUES
-DEPLOY_DIR="/opt/your-app-name"
-APP_NAME="your-app-name"
-PORT=3000
-REPO="https://github.com/your-username/your-repo.git"
-BRANCH="main"
+# CUSTOMIZE THESE VALUES - USE ENVIRONMENT VARIABLES OR EDIT DIRECTLY
+DEPLOY_DIR="${DEPLOY_DIR:-/opt/your-app-name}"
+APP_NAME="${DEPLOY_APP_NAME:-your-app-name}"
+PORT="${DEPLOY_PORT:-3042}"
+REPO="${DEPLOY_REPO:-https://github.com/your-username/your-repo.git}"
+BRANCH="${DEPLOY_BRANCH:-main}"
 
 echo "🚀 DiversiFi Hetzner Deploy — $(date)"
 

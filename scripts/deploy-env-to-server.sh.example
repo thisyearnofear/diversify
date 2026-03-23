@@ -14,13 +14,16 @@
 
 set -euo pipefail
 
-# CUSTOMIZE THESE VALUES
-SERVER="your-server-hostname"
-REMOTE_PATH="/opt/your-app-name/.env"
+# CUSTOMIZE THESE VALUES - USE ENVIRONMENT VARIABLES OR EDIT DIRECTLY
+SERVER="${DEPLOY_SSH_ALIAS:-snel-bot}"
+REMOTE_PATH="${DEPLOY_REMOTE_PATH:-/opt/diversifi-api/.env}"
+APP_NAME="${DEPLOY_APP_NAME:-diversifi-api}"
+API_URL="${DEPLOY_API_URL:-https://api.diversifi.famile.xyz}"
 
 echo "🚀 Deploying environment variables to server..."
 echo "   Server: $SERVER"
 echo "   Remote path: $REMOTE_PATH"
+echo "   App name: $APP_NAME"
 echo ""
 
 # Check if .env.local exists locally
@@ -90,8 +93,8 @@ echo "🎉 Environment deployment completed successfully!"
 echo ""
 echo "📋 Next steps:"
 echo "   1. Restart your app service on the server:"
-echo "      ssh $SERVER 'pm2 restart your-app-name'"
+echo "      ssh $SERVER 'pm2 restart $APP_NAME'"
 echo "   2. Test your API endpoint:"
-echo "      curl https://api.yourdomain.com/api/your-endpoint"
+echo "      curl $API_URL/api/trading/market-pulse"
 echo ""
 echo "💡 The server now has access to all configured API keys"

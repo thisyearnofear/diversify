@@ -1,0 +1,114 @@
+#!/bin/bash
+
+# MongoDB Atlas Setup Script for DiversiFi
+# This script helps set up MongoDB Atlas cluster, user, and IP access list
+#
+# SECURITY: This script should NOT be committed to git!
+# Copy setup-mongodb.sh.example and customize with your details.
+
+echo "Setting up MongoDB Atlas for DiversiFi..."
+
+# Check if atlas CLI is installed
+if ! command -v atlas &> /dev/null; then
+    echo "MongoDB Atlas CLI is not installed. Please install it first:"
+    echo "https://www.mongodb.com/docs/atlas/cli/stable/install-atlas-cli/"
+    exit 1
+fi
+
+# Check if user is logged in
+if ! atlas auth status &> /dev/null; then
+    echo "You are not logged in to MongoDB Atlas. Please run:"
+    echo "atlas auth login"
+    exit 1
+fi
+
+echo "✓ MongoDB Atlas CLI is installed and you are logged in"
+
+# Get project ID
+PROJECT_NAME="${MONGODB_PROJECT_NAME:-Diversifi}"
+PROJECT_ID=$(atlas project list --output json | jq -r ".results[] | select(.name == \"$PROJECT_NAME\") | .id")
+
+if [ -z "$PROJECT_ID" ]; then
+    echo "Creating new project '$PROJECT_NAME'..."
+    PROJECT_ID=$(atlas projects create "$PROJECT_NAME" --output json | jq -r '.id')
+    echo "Created project with ID: $PROJECT_ID"
+else
+    echo "Using existing project with ID: $PROJECT_ID"
+fi
+
+# Check if cluster already exists
+CLUSTER_NAME="${MONGODB_CLUSTER_NAME:-DiversiFiCluster}"
+if atlas clusters describe "$CLUSTER_NAME" --projectId "$PROJECT_ID" &> /dev/null; then
+    echo "✓ Cluster '$CLUSTER_NAME' already exists"
+else
+    echo "Creating cluster '$CLUSTER_NAME'..."
+    atlas clusters create "$CLUSTER_NAME" --projectId "$PROJECT_ID" --provider AWS --region US_EAST_1 --tier M0
+    echo "✓ Cluster '$CLUSTER_NAME' created"
+fi
+
+# Wait for cluster to be ready
+echo "Waiting for cluster to be ready..."
+atlas clusters watch "$CLUSTER_NAME" --projectId "$PROJECT_ID"
+
+# Check if database user already exists
+DB_USER="${MONGODB_DB_USER:-diversifi-user}"
+if atlas dbusers describe "$DB_USER" --projectId "$PROJECT_ID" &> /dev/null; then
+    echo "✓ Database user '$DB_USER' already exists"
+else
+    echo "Creating database user '$DB_USER'..."
+    # Generate a random password
+    DB_PASSWORD=$(openssl rand -base64 12 | tr -d "=+/" | cut -c1-12)
+    atlas dbusers create readWriteAnyDatabase --username "$DB_USER" --projectId "$PROJECT_ID" --password "$DB_PASSWORD"
+    echo "✓ Database user '$DB_USER' created"
+    
+    # Update .env.local with the new credentials
+    if [ -f ".env.local" ]; then
+        sed -i.bak "s|MONGODB_URI=.*|MONGODB_URI=mongodb+srv://$DB_USER:$DB_PASSWORD@${CLUSTER_NAME,,}.*\.mongodb\.net/$CLUSTER_NAME?retryWrites=true\&w=majority|" .env.local
+        echo "Updated .env.local with new credentials"
+    fi
+fi
+
+# SECURITY FIX: Check if IP access list already has the entry
+# WARNING: 0.0.0.0/0 allows ALL IPs - this is a security risk!
+# Instead, whitelist specific IPs or use MongoDB Atlas Private Endpoint
+echo ""
+echo "⚠️  SECURITY WARNING:"
+echo "   The previous script allowed 0.0.0.0/0 (all IPs) access."
+echo "   This is a security risk and should be avoided!"
+echo ""
+echo "   Recommended approaches:"
+echo "   1. Whitelist only your server IP: atlas accessList create <YOUR_SERVER_IP>/32"
+echo "   2. Use MongoDB Atlas Private Endpoint (most secure)"
+echo "   3. Use VPC Peering if on AWS"
+echo ""
+
+read -p "Do you want to whitelist a specific IP address? (recommended): " SERVER_IP
+if [ -n "$SERVER_IP" ]; then
+    # Validate IP format
+    if [[ $SERVER_IP =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        echo "Adding IP access list entry for $SERVER_IP..."
+        atlas accessList create "$SERVER_IP/32" --type cidrBlock --projectId "$PROJECT_ID" --comment "Production server IP"
+        echo "✓ IP access list updated for $SERVER_IP"
+    else
+        echo "❌ Invalid IP address format. Skipping IP whitelist."
+        echo "   You can add it later with: atlas accessList create <IP>/32 --projectId $PROJECT_ID"
+    fi
+else
+    echo "⚠️  No IP address provided. Skipping IP whitelist."
+    echo "   IMPORTANT: Add your server IP later with:"
+    echo "   atlas accessList create <YOUR_SERVER_IP>/32 --projectId $PROJECT_ID"
+fi
+
+echo ""
+echo "MongoDB Atlas setup complete!"
+echo ""
+echo "Connection string:"
+echo "mongodb+srv://$DB_USER:<password>@${CLUSTER_NAME,,}.*.mongodb.net/$CLUSTER_NAME?retryWrites=true&w=majority"
+echo ""
+echo "Make sure your .env.local file has the correct MONGODB_URI"
+echo ""
+echo "🔒 Security Checklist:"
+echo "   ✓ Database user created with strong password"
+echo "   ⚠️  Review IP whitelist (avoid 0.0.0.0/0)"
+echo "   ⚠️  Enable MongoDB Atlas audit logging"
+echo "   ⚠️  Use MongoDB Atlas Private Endpoint for production"
