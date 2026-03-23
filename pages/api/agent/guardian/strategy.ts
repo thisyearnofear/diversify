@@ -51,7 +51,7 @@ export interface RebalanceRecommendation {
 interface PortfolioBalance {
   token: string;
   balance: string;
-  balanceRaw: bigint;
+  balanceRaw: string;
   estimatedUSD: number;
 }
 
@@ -66,7 +66,7 @@ async function getPortfolio(userAddress: string): Promise<PortfolioBalance[]> {
     balances.push({
       token: 'CELO',
       balance: formatted.toFixed(4),
-      balanceRaw: celoBalance,
+      balanceRaw: celoBalance.toString(),
       estimatedUSD: formatted * 0.5, // rough CELO price estimate
     });
   }
@@ -86,7 +86,7 @@ async function getPortfolio(userAddress: string): Promise<PortfolioBalance[]> {
         balances.push({
           token: symbol,
           balance: formatted.toFixed(4),
-          balanceRaw: bal,
+          balanceRaw: bal.toString(),
           estimatedUSD: info.stablecoin ? formatted : formatted * 0.5,
         });
       }
