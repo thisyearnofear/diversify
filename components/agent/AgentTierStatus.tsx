@@ -112,6 +112,8 @@ export const AgentTierStatus: React.FC<{
     requestPermission,
     revokePermission,
     isPermissionValid,
+    sessionInfo,
+    triggerExecutionLoop,
   } = useSessionKey();
   const hasValidPermission = isPermissionValid();
   const isRequesting = sessionStatus === "requesting";
@@ -121,6 +123,8 @@ export const AgentTierStatus: React.FC<{
       ).toLocaleDateString()
     : null;
   const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
+  const [isRunningLoop, setIsRunningLoop] = useState(false);
+  const [loopResult, setLoopResult] = useState<any>(null);
 
   // Tier 3: The Guardian (Autonomous) — Real State Machine
   // Phase 2B: Derive honest state from actual system conditions
@@ -487,10 +491,79 @@ export const AgentTierStatus: React.FC<{
                         <span className="text-gray-500">Session Limit</span>
                         <span className="font-bold">${dailyLimit}/day</span>
                       </div>
+                      {sessionInfo && (
+                        <>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Spent Today</span>
+                            <span className="font-bold text-amber-600">${sessionInfo.spentTodayUSD.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Remaining</span>
+                            <span className="font-bold text-green-600">${sessionInfo.remainingTodayUSD.toFixed(2)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Executions</span>
+                            <span className="font-bold">{sessionInfo.executionCount}</span>
+                          </div>
+                        </>
+                      )}
                       <div className="flex justify-between items-center text-sm">
                         <span className="text-gray-500">Expires</span>
                         <span className="font-bold">{permissionExpiry}</span>
                       </div>
+                      <div className="flex gap-2 mt-2">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setIsRunningLoop(true);
+                            try {
+                              const result = await triggerExecutionLoop(true);
+                              setLoopResult(result);
+                            } finally {
+                              setIsRunningLoop(false);
+                            }
+                          }}
+                          disabled={isRunningLoop}
+                          className="flex-1 text-xs font-bold text-purple-600 border border-purple-200 dark:border-purple-800 rounded-xl py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50"
+                        >
+                          {isRunningLoop ? "Analyzing..." : "🔍 Dry Run"}
+                        </button>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setIsRunningLoop(true);
+                            try {
+                              const result = await triggerExecutionLoop(false);
+                              setLoopResult(result);
+                            } finally {
+                              setIsRunningLoop(false);
+                            }
+                          }}
+                          disabled={isRunningLoop}
+                          className="flex-1 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-2 transition-colors disabled:opacity-50"
+                        >
+                          {isRunningLoop ? "Executing..." : "⚡ Execute Now"}
+                        </button>
+                      </div>
+                      {loopResult && (
+                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs space-y-1">
+                          <div className="font-bold text-gray-700 dark:text-gray-300">
+                            Guardian Analysis: {loopResult.summary?.total || 0} recommendation(s)
+                          </div>
+                          {loopResult.results?.map((r: any, i: number) => (
+                            <div key={i} className={`flex items-center gap-2 ${r.status === 'executed' ? 'text-green-600' : r.status === 'dry-run' ? 'text-blue-600' : r.status === 'skipped' ? 'text-amber-600' : 'text-red-600'}`}>
+                              <span>{r.status === 'executed' ? '✅' : r.status === 'dry-run' ? '🔍' : r.status === 'skipped' ? '⏭️' : '❌'}</span>
+                              <span>{r.recommendation?.reason?.slice(0, 80) || r.error}</span>
+                              {r.txHash && (
+                                <a href={r.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline ml-auto" onClick={(e) => e.stopPropagation()}>tx</a>
+                              )}
+                            </div>
+                          ))}
+                          {loopResult.summary?.total === 0 && (
+                            <div className="text-gray-500">No rebalance needed — portfolio looks healthy ✨</div>
+                          )}
+                        </div>
+                      )}
                       <button
                         onClick={(e) => { e.stopPropagation(); revokePermission(); }}
                         className="w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-2 mt-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"

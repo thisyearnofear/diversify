@@ -81,6 +81,9 @@ export default async function handler(
       celoActivity: "/api/celo/activity",
       celoMentoQuote: "/api/celo/mento-quote?tokenIn=cUSD&tokenOut=KESm&amount=1",
       celoMentoSwap: "/api/celo/mento-swap (POST)",
+      guardianSession: "/api/agent/guardian/session (GET/POST/DELETE)",
+      guardianStrategy: "/api/agent/guardian/strategy?userAddress=0x... (GET)",
+      guardianExecuteLoop: "/api/agent/guardian/execute-loop (POST)",
       status: "/api/status",
     },
     tracks: [
