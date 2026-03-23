@@ -1,21 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import {
   createPublicClient,
-  createWalletClient,
   http,
   formatUnits,
   parseUnits,
   parseAbi,
+  encodeFunctionData,
 } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || "https://forno.celo.org";
-const PRIVATE_KEY = process.env.PRIVATE_KEY || process.env.WALLET_PRIVATE_KEY;
 
 // OpenClaw receipt logging
-const OPENCLAW_BOT_URL = process.env.NEXT_PUBLIC_OPENCLAW_GATEWAY_URL || process.env.OPENCLAW_BOT_URL;
-const OPENCLAW_PASSWORD = process.env.OPENCLAW_SETUP_PASSWORD || process.env.SETUP_PASSWORD;
+const OPENCLAW_BOT_URL =
+  process.env.NEXT_PUBLIC_OPENCLAW_GATEWAY_URL || process.env.OPENCLAW_BOT_URL;
+const OPENCLAW_PASSWORD =
+  process.env.OPENCLAW_SETUP_PASSWORD || process.env.SETUP_PASSWORD;
 
 const MENTO_BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad" as const;
 
@@ -45,6 +45,24 @@ const erc20Abi = parseAbi([
   "function allowance(address owner, address spender) view returns (uint256)",
 ]);
 
+/**
+ * Mento Swap API — builds unsigned transactions for the user to sign.
+ *
+ * POST /api/celo/mento-swap
+ *
+ * Body:
+ *   tokenIn   - token symbol (e.g. "CELO")
+ *   tokenOut  - token symbol (e.g. "cUSD")
+ *   amount    - human-readable amount (e.g. "1.5")
+ *   slippage  - optional, percentage (default 1)
+ *   userAddress - the user's wallet address (required)
+ *
+ * Returns unsigned transaction(s) the user signs client-side.
+ * If an approval is needed, returns both approve + swap txs.
+ *
+ * POST /api/celo/mento-swap with { ..., txHash, logReceipt: true }
+ *   Logs a completed swap receipt to OpenClaw for hackathon proof.
+ */
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -53,16 +71,25 @@ export default async function handler(
     return res.status(405).json({ error: "POST only" });
   }
 
-  if (!PRIVATE_KEY) {
-    return res.status(500).json({ error: "PRIVATE_KEY not configured" });
+  const { tokenIn, tokenOut, amount, slippage, userAddress, txHash, logReceipt } =
+    req.body;
+
+  // Receipt logging mode — after user has executed the swap
+  if (logReceipt && txHash) {
+    return logSwapReceipt(req.body, res);
   }
 
-  const { tokenIn, tokenOut, amount, slippage } = req.body;
-
+  // Transaction builder mode — prepare unsigned txs for user to sign
   if (!tokenIn || !tokenOut || !amount) {
     return res.status(400).json({
       error: "Missing tokenIn, tokenOut, or amount",
       supportedTokens: Object.keys(TOKENS),
+    });
+  }
+
+  if (!userAddress) {
+    return res.status(400).json({
+      error: "Missing userAddress — the user's wallet address is required",
     });
   }
 
@@ -75,13 +102,7 @@ export default async function handler(
     });
   }
 
-  const account = privateKeyToAccount(PRIVATE_KEY as `0x${string}`);
   const publicClient = createPublicClient({
-    chain: celo,
-    transport: http(CELO_RPC),
-  });
-  const walletClient = createWalletClient({
-    account,
     chain: celo,
     transport: http(CELO_RPC),
   });
@@ -138,44 +159,55 @@ export default async function handler(
     const slippageBps = BigInt(Math.floor((slippage || 1) * 100));
     const minAmountOut = expectedOut - (expectedOut * slippageBps) / 10000n;
 
-    // Check and set approval
+    // Build transactions for the user to sign
+    const transactions: Array<{
+      to: `0x${string}`;
+      data: `0x${string}`;
+      value: string;
+      description: string;
+    }> = [];
+
+    // Check if approval is needed
     const currentAllowance = await publicClient.readContract({
       address: tokenInAddr,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [account.address, MENTO_BROKER],
+      args: [userAddress as `0x${string}`, MENTO_BROKER],
     });
 
     if (currentAllowance < amountIn) {
-      const approveHash = await walletClient.writeContract({
-        address: tokenInAddr,
-        abi: erc20Abi,
-        functionName: "approve",
-        args: [MENTO_BROKER, amountIn],
+      transactions.push({
+        to: tokenInAddr,
+        data: encodeFunctionData({
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [MENTO_BROKER, amountIn],
+        }),
+        value: "0",
+        description: `Approve ${amount} ${tokenIn} for Mento Broker`,
       });
-      await publicClient.waitForTransactionReceipt({ hash: approveHash });
     }
 
-    // Execute swap
-    const swapHash = await walletClient.writeContract({
-      address: MENTO_BROKER,
-      abi: brokerAbi,
-      functionName: "swapIn",
-      args: [
-        foundProvider,
-        foundExchangeId,
-        tokenInAddr,
-        tokenOutAddr,
-        amountIn,
-        minAmountOut,
-      ],
+    // Build swap transaction
+    transactions.push({
+      to: MENTO_BROKER,
+      data: encodeFunctionData({
+        abi: brokerAbi,
+        functionName: "swapIn",
+        args: [
+          foundProvider,
+          foundExchangeId,
+          tokenInAddr,
+          tokenOutAddr,
+          amountIn,
+          minAmountOut,
+        ],
+      }),
+      value: "0",
+      description: `Swap ${amount} ${tokenIn} → ${tokenOut} via Mento`,
     });
 
-    const receipt = await publicClient.waitForTransactionReceipt({
-      hash: swapHash,
-    });
-
-    const result = {
+    return res.status(200).json({
       success: true,
       protocol: "mento",
       chain: "celo",
@@ -185,49 +217,65 @@ export default async function handler(
       amountIn: formatUnits(amountIn, 18),
       expectedOut: formatUnits(expectedOut, 18),
       minAmountOut: formatUnits(minAmountOut, 18),
-      txHash: swapHash,
-      blockNumber: receipt.blockNumber.toString(),
-      explorerUrl: `https://celoscan.io/tx/${swapHash}`,
-      wallet: account.address,
+      rate: Number(formatUnits(expectedOut, 18)) / Number(amount),
+      needsApproval: currentAllowance < amountIn,
+      transactions,
+      userAddress,
       timestamp: new Date().toISOString(),
-    };
-
-    // Log receipt to OpenClaw for hackathon proof (fire-and-forget)
-    if (OPENCLAW_BOT_URL && OPENCLAW_PASSWORD) {
-      try {
-        const auth = Buffer.from(`user:${OPENCLAW_PASSWORD}`).toString("base64");
-        await fetch(
-          `${OPENCLAW_BOT_URL}/setup/api/receipts/action`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Basic ${auth}`,
-            },
-            body: JSON.stringify({
-              run_id: `celo-mento-${Date.now()}`,
-              track: "celo-mento",
-              action: "swap",
-              tx_hash: swapHash,
-              explorer_url: result.explorerUrl,
-              metadata: {
-                tokenIn,
-                tokenOut,
-                amountIn: result.amountIn,
-                expectedOut: result.expectedOut,
-                wallet: account.address,
-              },
-            }),
-          }
-        );
-      } catch {
-        // Non-critical — don't fail the swap if receipt logging fails
-      }
-    }
-
-    res.status(200).json(result);
+    });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    res.status(500).json({ success: false, error: message });
+    return res.status(500).json({
+      error: "Failed to build Mento swap transactions",
+      details: message,
+    });
+  }
+}
+
+/**
+ * Log a completed swap receipt to OpenClaw (fire-and-forget).
+ * Called after the user has signed and executed the swap.
+ */
+async function logSwapReceipt(
+  body: Record<string, unknown>,
+  res: NextApiResponse
+) {
+  const { tokenIn, tokenOut, amountIn, expectedOut, txHash, userAddress } = body;
+
+  if (!OPENCLAW_BOT_URL || !OPENCLAW_PASSWORD) {
+    return res.status(200).json({
+      logged: false,
+      reason: "OpenClaw not configured",
+    });
+  }
+
+  try {
+    const auth = Buffer.from(`user:${OPENCLAW_PASSWORD}`).toString("base64");
+    await fetch(`${OPENCLAW_BOT_URL}/setup/api/receipts/action`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${auth}`,
+      },
+      body: JSON.stringify({
+        run_id: `celo-mento-${Date.now()}`,
+        track: "celo-mento",
+        action: "swap",
+        tx_hash: txHash,
+        explorer_url: `https://celoscan.io/tx/${txHash}`,
+        metadata: {
+          tokenIn,
+          tokenOut,
+          amountIn,
+          expectedOut,
+          wallet: userAddress,
+          signedBy: "user",
+        },
+      }),
+    });
+
+    return res.status(200).json({ logged: true, txHash });
+  } catch {
+    return res.status(200).json({ logged: false, reason: "OpenClaw unreachable" });
   }
 }
