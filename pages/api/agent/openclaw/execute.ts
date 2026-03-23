@@ -42,7 +42,7 @@ export default async function handler(
     }
 
     // Validate track
-    const validTracks = ['base-autonomous-trading', 'status-l2-gasless', 'open-track', 'tether-galactica-wdk'];
+    const validTracks = ['base-autonomous-trading', 'status-l2-gasless', 'open-track', 'tether-galactica-wdk', 'celo-mento', 'uniswap-agentic-finance'];
     if (!validTracks.includes(track)) {
       return res.status(400).json({ 
         error: `Invalid track. Must be one of: ${validTracks.join(', ')}` 

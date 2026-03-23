@@ -11,7 +11,11 @@ import { privateKeyToAccount } from "viem/accounts";
 import { celo } from "viem/chains";
 
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || "https://forno.celo.org";
-const PRIVATE_KEY = process.env.PRIVATE_KEY;
+const PRIVATE_KEY = process.env.PRIVATE_KEY || process.env.WALLET_PRIVATE_KEY;
+
+// OpenClaw receipt logging
+const OPENCLAW_BOT_URL = process.env.NEXT_PUBLIC_OPENCLAW_GATEWAY_URL || process.env.OPENCLAW_BOT_URL;
+const OPENCLAW_PASSWORD = process.env.OPENCLAW_SETUP_PASSWORD || process.env.SETUP_PASSWORD;
 
 const MENTO_BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad" as const;
 
@@ -171,7 +175,7 @@ export default async function handler(
       hash: swapHash,
     });
 
-    res.status(200).json({
+    const result = {
       success: true,
       protocol: "mento",
       chain: "celo",
@@ -186,7 +190,42 @@ export default async function handler(
       explorerUrl: `https://celoscan.io/tx/${swapHash}`,
       wallet: account.address,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Log receipt to OpenClaw for hackathon proof (fire-and-forget)
+    if (OPENCLAW_BOT_URL && OPENCLAW_PASSWORD) {
+      try {
+        const auth = Buffer.from(`user:${OPENCLAW_PASSWORD}`).toString("base64");
+        await fetch(
+          `${OPENCLAW_BOT_URL}/setup/api/receipts/action`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Basic ${auth}`,
+            },
+            body: JSON.stringify({
+              run_id: `celo-mento-${Date.now()}`,
+              track: "celo-mento",
+              action: "swap",
+              tx_hash: swapHash,
+              explorer_url: result.explorerUrl,
+              metadata: {
+                tokenIn,
+                tokenOut,
+                amountIn: result.amountIn,
+                expectedOut: result.expectedOut,
+                wallet: account.address,
+              },
+            }),
+          }
+        );
+      } catch {
+        // Non-critical — don't fail the swap if receipt logging fails
+      }
+    }
+
+    res.status(200).json(result);
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     res.status(500).json({ success: false, error: message });
