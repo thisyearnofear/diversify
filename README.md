@@ -1,129 +1,116 @@
-# 🧠 DiversiFi - Multi-Chain AI Wealth Protection
+# DiversiFi — AI Wealth Protection
 
-**AI-powered wealth protection across Celo, Arbitrum, and Hyperliquid. Smart stablecoin diversification, commodities exposure, inflation hedging, and real-world asset access.**
+AI-powered stablecoin diversification across Celo. Protect your purchasing power from inflation and currency volatility.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
-![Network](https://img.shields.io/badge/network-Multi_Chain-blue.svg)
-![AI](https://img.shields.io/badge/AI-Gemini_3.0-orange.svg)
+## What It Does
 
-## 🌟 What It Does
+- **Regional Stablecoins** — Diversify across cUSD (US), cEUR (EU), KESm (Kenya), COPm (Colombia), PHPm (Philippines), cREAL (Brazil)
+- **Inflation-Aware Rebalancing** — Agent monitors inflation rates per region and recommends swaps when conditions change
+- **Financial Strategies** — Choose from 7 cultural philosophies (Africapitalism, Islamic Finance, Global Diversification, etc.)
+- **Non-Custodial** — Your funds stay in your Safe smart account. Agent transacts only within your permission limits
+- **Transparent Fees** — 1% annual management + 10% performance above high-water mark + 0.10% swap spread
 
-DiversiFi helps you protect wealth from inflation and currency volatility through:
+## Architecture
 
-- **Cultural Financial Strategies** - Choose from 7 authentic philosophies (Africapitalism, Buen Vivir, Islamic Finance, etc.) that shape AI recommendations and asset filtering
-- **Smart Stablecoin Swaps** - Exchange between global (USDC) and local stablecoins using strategy-aware AI recommendations
-- **Cross-Chain Bridging** - Move assets seamlessly between Celo and Arbitrum via [LiFi](https://li.fi/)
-- **Inflation Protection** - Real-time economic data analysis to hedge against currency devaluation
-- **RWA Access** - Exposure to tokenized real-world assets (treasury yields, gold) on Arbitrum
-- **Strategy-Aligned Asset Filtering** - Automatic compliance checking (e.g., Islamic Finance excludes interest-bearing assets)
-- **GoodDollar UBI** - Earn free G$ tokens daily by maintaining saving streaks ($0.50+ minimum)
-- **Mobile-Optimized Claims** - Seamless in-app G$ claiming with guided bottom-sheet interface
+```
+User connects → Privy creates Safe smart account
+User picks strategy → signs spending permission ($50/day, 7 days)
+User deposits stablecoins → agent diversifies per strategy
+User monitors → real-time receipts, allocations, P&L
+User withdraws anytime → fees settled at withdrawal
+```
 
-## 🚀 Quick Start
+### Key Components
+
+| Layer | Component | Purpose |
+|-------|-----------|---------|
+| **Smart Account** | Privy + Safe | User funds, session signer, policy enforcement |
+| **Business Logic** | `vault.service.ts` | Permission checks, fee calculation, rebalance orchestration |
+| **Execution** | `_executor.ts` | Bridges service → chain (Privy smart account or direct signing) |
+| **Persistence** | MongoDB models | Vault, Transaction, Permission records |
+| **Intelligence** | Strategy engine | Inflation analysis, allocation targets, rebalance recommendations |
+| **Frontend** | React + hooks | `useVault`, `useSessionKey`, `AgentTierStatus` |
+
+### Security Model
+
+- **No private key on server** — Signing happens in Privy's secure enclave (production) or VAULT_PRIVATE_KEY (dev fallback)
+- **Policy-enforced** — Privy session signer policies limit spending, allowed contracts, time bounds
+- **Non-custodial** — User always controls their Safe smart account; agent can only swap within policy
+- **Audited primitives** — Safe contracts, Privy SDK, OpenZeppelin — no custom Solidity
+
+## Quick Start
 
 ```bash
-# Install dependencies
 pnpm install
-
-# Setup environment
 cp .env.example .env.local
-
-# Add your API keys to .env.local:
-# - GOOGLE_AI_API_KEY (get from https://aistudio.google.com/)
-# - VENICE_API_KEY (optional, from https://venice.ai/api)
-# - SYNTH_API_KEY (for market predictions, from https://docs.synthdata.co)
-# - NEXT_PUBLIC_REOWN_PROJECT_ID (or NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID, from https://cloud.walletconnect.com/)
-
-# Run dev server
+# Set required keys in .env.local
 pnpm dev
 ```
 
-## ⛽ The Agent Fuel Model (2026 Architecture)
+### Required Environment Variables
 
-DiversiFi introduces a revolutionary **User-Funded Autonomous Economy** powered by **Arc L1** and **Circle MPC**.
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_PRIVY_APP_ID` | Privy app (social login + smart accounts) |
+| `PRIVY_APP_SECRET` | Privy server SDK (session signer execution) |
+| `OPENCLAW_BOT_URL` | OpenClaw wrapper (receipt logging) |
+| `OPENCLAW_SETUP_PASSWORD` | OpenClaw auth |
 
-*   **Agent Fuel**: Users top up their dedicated AI Agent with **USDC**.
-*   **Native Gas**: The Agent uses this USDC to pay for its own compute, data access (x402), and execution fees.
-*   **Invisible Complexity**: No need for ETH, MATIC, or CELO. Just "Fuel" (USDC).
-*   **Safety**: Scoped by **ERC-6900** permissions (e.g., "Spend max $10/day").
+### Optional
 
-[**📖 Read the Full Agent Fuel Documentation**](./docs/AGENT_FUEL_MODEL.md)
+| Variable | Purpose |
+|----------|---------|
+| `VAULT_PRIVATE_KEY` | Dev fallback when Privy smart account not configured |
+| `GEMINI_API_KEY` | AI fallback (Venice AI is primary) |
 
-## 🏗️ Architecture
+## Setup: Privy Smart Accounts
 
-### Deployment
-- **Frontend**: Static hosting (e.g., Netlify)
-- **AI API**: Separate API service for long-running AI operations (extended timeouts)
-- **OpenClaw Gateway**: External execution layer (Hetzner-hosted) for secure transaction submission
+1. **Privy Dashboard** → Enable smart wallets → Select "Safe"
+2. **Configure Celo chain** → Add bundler URL (Pimlico, Alchemy, etc.)
+3. **Enable session signers** → Create spending policy for the agent
+4. **Set env vars** → `PRIVY_APP_ID` + `PRIVY_APP_SECRET`
 
-Deployment/runbook details are intentionally kept out of the public repo. If you're a maintainer, see `docs/internal/DEPLOYMENT_RUNBOOK.md` (not committed) or your team's internal documentation.
+## Supported Chains
 
-### Agent Architecture: Brain + Hands
+- **Celo** — Mento Protocol DEX, regional stablecoins (cUSD, cEUR, cREAL, KESm, COPm, PHPm)
 
-**Arc Agent (Brain)** — Autonomous agent living on Arc L1 that handles reasoning, data purchases (x402), proactive monitoring, and cross-chain orchestration.
+## Financial Strategies
 
-**OpenClaw (Hands)** — External execution gateway that submits transactions to chains, tracks receipts with full audit trails, and pushes completion webhooks. Supports multiple execution tracks (trading, Tether WDK settlement, etc.).
+| Strategy | Focus |
+|----------|-------|
+| Africapitalism | Keep wealth in African economies |
+| Buen Vivir | Balance material wealth with community (LatAm) |
+| Islamic Finance | Sharia-compliant, no interest-bearing assets |
+| Global Diversification | Maximum geographic spread |
+| Custom | Define your own allocation targets |
 
-### Financial Strategies (New!)
-Choose from 7 cultural approaches to wealth:
-- **Africapitalism** 🌍 - Keep wealth in African economies
-- **Buen Vivir** 🌎 - Balance material wealth with community well-being (LatAm)
-- **Confucian/Family Wealth** 🏮 - Multi-generational stability (East Asia)
-- **Gotong Royong** 🤝 - Mutual aid and remittances (Southeast Asia)
-- **Islamic Finance** ☪️ - Sharia-compliant, no interest-bearing assets
-- **Global Diversification** 🌐 - Maximum geographic spread
-- **Custom** 🎯 - Define your own approach
+Each strategy shapes rebalancing recommendations and asset filtering.
 
-Each strategy shapes:
-- AI recommendations (prioritizes aligned assets)
-- Asset filtering (blocks violations for Islamic Finance)
-- Success metrics (strategy-specific diversification scoring)
-- Positive reinforcement (badges for recommended assets)
+## API Endpoints
 
-### Supported Chains
-- **Celo** - Local stablecoin access (cUSD, cEUR, cREAL) via Mento
-- **Arbitrum** - RWA yield tokens (USDY, PAXG, SYRUPUSDC) via LiFi/Uniswap
-- **Hyperliquid (Virtual Chain ID 998)** - Commodity perpetual exposure (GOLD, SILVER, OIL, COPPER) with EIP-712 typed-data signing
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/vault/create` | POST/GET | Create or check vault |
+| `/api/vault/deposit` | POST | Record deposit |
+| `/api/vault/withdraw` | POST | Withdraw with fee settlement |
+| `/api/vault/balance` | GET | Vault summary (holdings, P&L, fees) |
+| `/api/vault/permission` | POST/GET/DELETE | ERC-7715 permission CRUD |
+| `/api/vault/rebalance` | POST | Agent-triggered rebalance |
+| `/api/vault/transactions` | GET | Transaction history |
+| `/api/vault/fees` | GET | Fee summary |
+| `/api/status` | GET | System health check |
 
-### AI Intelligence
-- **Venice AI** (primary) - Web search, private inference, no data retention
-- **Gemini 3.0 Flash** (fallback) - Portfolio analysis and recommendations
-- **SynthData** - Probabilistic market intelligence (`prediction-percentiles`, `volatility`, `option-pricing`, `liquidation`) with cache + deterministic fallback
-- **Real-time Data** - Inflation rates, exchange rates, macro indicators
-
-### Cross-Chain Infrastructure
-- **LiFi SDK** - Cross-chain swaps and bridging (primary)
-- **Circle Programmable Wallets** - Enterprise wallet infrastructure
-- **1inch** - Arbitrum DEX aggregation
-
-## 📂 Documentation
-
-- [**Getting Started**](docs/GETTING_STARTED.md) - Quick start, user guide, test drive
-- [**Architecture**](docs/ARCHITECTURE.md) - System design, tech stack, contracts
-- [**Integration**](docs/INTEGRATION.md) - APIs, third-party services, adding chains
-- [**Deployment**](docs/DEPLOYMENT.md) - Contract deployment, faucets, production
-
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Category | Technology |
 |----------|------------|
-| **Frontend** | Next.js 15, React 19, Tailwind CSS |
-| **AI** | Google Gemini 3.0, Venice AI |
-| **Agent** | Arc Agent (reasoning), OpenClaw (execution) |
-| **Swaps & Execution** | Mento (Celo), LiFi (cross-chain), 1inch (Arbitrum), Hyperliquid Perps (commodities) |
-| **Market Intelligence** | SynthData probabilistic forecasts + volatility/risk endpoints |
-| **Wallet** | Reown AppKit (WalletConnect), Farcaster Mini App SDK, Circle Programmable Wallets |
-| **Voice** | OpenAI Whisper, ElevenLabs TTS |
+| Frontend | Next.js 15, React 19, Tailwind CSS |
+| Smart Accounts | Privy + Safe (ERC-4337) |
+| AI | Venice AI (primary), Gemini 3.0 (fallback) |
+| Swaps | Mento Protocol (Celo stablecoins) |
+| Data | World Bank inflation, exchange rates |
+| Wallet | Privy social login, MetaMask, Farcaster |
 
-## 🔮 Roadmap
+## License
 
-- **Enhanced Strategy Features** - More granular controls for custom strategies
-- **Multi-Agent System** - Specialized agents for yield vs protection strategies
-- **Additional Chains** - Base, Optimism support via LiFi
-- **Enhanced Automation** - Zapier MCP integration (in development)
-- **Community Strategies** - User-created and shared financial philosophies
-
-## 📄 License
-
-MIT License
+MIT

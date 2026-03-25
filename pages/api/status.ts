@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { openClawService } from "@diversifi/shared";
+import { openClawService, isPrivySmartAccountEnabled } from "@diversifi/shared";
 
 export default async function handler(
   req: NextApiRequest,
@@ -36,27 +36,22 @@ export default async function handler(
     checks.macro = { status: "error", detail: "Failed to reach" };
   }
 
-  // Check trading signals
-  checks.trading = {
-    status: process.env.TRADE_AGENT_PRIVATE_KEY ? "live" : "dry-run",
-    detail: process.env.TRADE_AGENT_PRIVATE_KEY
-      ? "Trading agent active"
-      : "Signals available, execution in dry-run mode",
-  };
-
   // Check Celo / Mento
-  const agentKeySet = !!(process.env.PRIVATE_KEY || process.env.WALLET_PRIVATE_KEY);
   checks.celo = {
     status: "live",
-    detail: agentKeySet
-      ? "Mento Protocol quotes + agent swap execution on Celo mainnet"
-      : "Mento Protocol quotes live; agent swap needs PRIVATE_KEY env var",
+    detail: "Mento Protocol quotes + stablecoin swaps on Celo mainnet",
   };
 
-  // Guardian autonomous execution (vault-based)
-  checks.guardian = {
-    status: "live",
-    detail: "Vault-based diversification with ERC-7715 permissions, Circle MPC signing, fee engine",
+  // Check vault execution layer
+  const hasPrivySmartAccount = isPrivySmartAccountEnabled();
+  const hasDirectKey = !!process.env.VAULT_PRIVATE_KEY;
+  checks.vault = {
+    status: hasPrivySmartAccount ? "smart-account" : hasDirectKey ? "direct-signing" : "not-configured",
+    detail: hasPrivySmartAccount
+      ? "Privy Safe smart account — no private key on server"
+      : hasDirectKey
+        ? "Direct signing (Phase 1) — upgrade to Privy smart account for production"
+        : "Neither PRIVY_APP_ID+SECRET nor VAULT_PRIVATE_KEY configured",
   };
 
   // Check OpenClaw receipt logging
@@ -68,13 +63,13 @@ export default async function handler(
   };
 
   const liveCount = Object.values(checks).filter(
-    (c) => c.status === "live" || c.status === "configured" || c.status === "connected"
+    (c) => c.status === "live" || c.status === "configured" || c.status === "connected" || c.status === "smart-account"
   ).length;
 
   return res.status(200).json({
     name: "DiversiFi - Multi-Chain AI Wealth Protection",
     version: "1.0.0",
-    chains: ["ethereum", "base", "celo", "arbitrum", "polygon"],
+    chains: ["celo", "ethereum", "arbitrum"],
     integrations: checks,
     summary: `${liveCount}/${Object.keys(checks).length} integrations active`,
     endpoints: {
@@ -82,23 +77,18 @@ export default async function handler(
       macro: "/api/macro",
       exchangeRates: "/api/exchange-rates?from=USD&to=EUR",
       tradingSignals: "/api/trading/signals",
-      uniswapQuote: "/api/swap/uniswap/quote (POST)",
-      uniswapCheckApproval: "/api/swap/uniswap/check-approval (POST)",
-      uniswapSwap: "/api/swap/uniswap/swap (POST)",
-      celoActivity: "/api/celo/activity",
       celoMentoQuote: "/api/celo/mento-quote?tokenIn=cUSD&tokenOut=KESm&amount=1",
       celoMentoSwap: "/api/celo/mento-swap (POST)",
-      guardianSession: "/api/vault/permission (GET/POST/DELETE)",
-      guardianStrategy: "/api/vault/balance?userAddress=0x... (GET)",
-      guardianExecuteLoop: "/api/vault/rebalance (POST)",
+      vaultCreate: "/api/vault/create (POST/GET)",
+      vaultBalance: "/api/vault/balance?userAddress=0x... (GET)",
+      vaultDeposit: "/api/vault/deposit (POST)",
+      vaultWithdraw: "/api/vault/withdraw (POST)",
+      vaultPermission: "/api/vault/permission (POST/GET/DELETE)",
+      vaultRebalance: "/api/vault/rebalance (POST)",
+      vaultTransactions: "/api/vault/transactions (GET)",
+      vaultFees: "/api/vault/fees (GET)",
       status: "/api/status",
     },
-    tracks: [
-      "Autonomous Trading Agent (Base)",
-      "Best Agent on Celo",
-      "Agentic Finance (Uniswap)",
-      "Synthesis Open Track",
-    ],
     deployedAt: new Date().toISOString(),
   });
 }

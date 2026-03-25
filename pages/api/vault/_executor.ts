@@ -179,6 +179,8 @@ export const circleExecutor: VaultExecutor = {
     if (!VAULT_KEY) throw new Error('Neither Privy smart account nor VAULT_PRIVATE_KEY configured');
 
     const signer = new ethers.Wallet(VAULT_KEY, provider);
+    const exchange = await findMentoExchange(provider, tokenInAddress, tokenOutAddress);
+    if (!exchange) throw new Error(`No Mento exchange for ${tokenInAddress}/${tokenOutAddress}`);
 
     // Approve if needed
     const tokenIn = new ethers.Contract(tokenInAddress, erc20Abi, signer);
@@ -191,11 +193,8 @@ export const circleExecutor: VaultExecutor = {
     // Swap
     const brokerWithSigner = new ethers.Contract(MENTO_BROKER, brokerAbi, signer);
     const swapTx = await brokerWithSigner.swapIn(
-      ...(await findMentoExchange(provider, tokenInAddress, tokenOutAddress))
-        ? [((await findMentoExchange(provider, tokenInAddress, tokenOutAddress))!).provider,
-           ((await findMentoExchange(provider, tokenInAddress, tokenOutAddress))!).exchangeId,
-           tokenInAddress, tokenOutAddress, amountIn, minAmountOut]
-        : (() => { throw new Error('No exchange found'); })()
+      exchange.provider, exchange.exchangeId,
+      tokenInAddress, tokenOutAddress, amountIn, minAmountOut
     );
     const receipt = await swapTx.wait();
 
