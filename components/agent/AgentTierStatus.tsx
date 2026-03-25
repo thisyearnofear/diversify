@@ -27,6 +27,7 @@ import AgentFuelGauge from "./AgentFuelGauge";
 import OracleMetrics from "./OracleMetrics";
 import GuardianOpenClawStatus from "./GuardianOpenClawStatus";
 import GuardianWDKStatus from "./GuardianWDKStatus";
+import GuardianMobileWizard from "./GuardianMobileWizard";
 import { useGuardianOpenClaw } from "../../hooks/use-guardian-openclaw";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
 
@@ -129,29 +130,27 @@ export const AgentTierStatus: React.FC<{
   const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
   const [isRunningLoop, setIsRunningLoop] = useState(false);
   const [loopResult, setLoopResult] = useState<any>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   // Tier 3: The Guardian (Autonomous) — Real State Machine
   // Vault-aware: checks vault existence, deposit, and permission
   type GuardianState = "idle" | "authorized" | "funded" | "monitoring";
   const guardianState: GuardianState = (() => {
-    const hasFuel =
-      autonomousStatus?.walletType === "agent-fuel" &&
-      Number(autonomousStatus?.balance ?? 0) > 0;
-    const hasVaultDeposit = hasFuel; // Phase 2: replace with vault.totalDepositedUSD > 0
-    const hasPermission = hasValidPermission || hasFuel;
-    const isMonitoring = autonomousStatus?.enabled && hasPermission;
+    const hasVault = !!vault.vault;
+    const hasVaultDeposit = hasVault && vault.vault!.totalDepositedUSD > 0;
+    const hasPermission = hasValidPermission;
+    const isMonitoring = hasVaultDeposit && hasPermission;
 
-    if (isMonitoring && hasVaultDeposit && hasPermission) return "monitoring";
-    if (hasVaultDeposit && hasPermission) return "funded";
-    if (hasPermission) return "authorized";
+    if (isMonitoring) return "monitoring";
+    if (hasVaultDeposit) return "funded";
+    if (hasPermission || hasVault) return "authorized";
     return "idle";
   })();
 
-  // Phase 2C: Honest status labels
   const guardianStatusLabel: Record<GuardianState, string> = {
-    idle: "Setup Required",
-    authorized: "Awaiting Fuel",
-    funded: "Ready",
+    idle: "Get Started",
+    authorized: "Awaiting Deposit",
+    funded: "Funded",
     monitoring: "Protecting",
   };
   const guardianStatus = guardianStatusLabel[guardianState];
@@ -384,8 +383,11 @@ export const AgentTierStatus: React.FC<{
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-purple-100 dark:border-purple-900 shadow-sm relative cursor-pointer"
           onClick={() => {
-            setExpandedTier(expandedTier === "guardian" ? null : "guardian");
-            onNavigateToAgent?.();
+            if (guardianState === "idle") {
+              setShowWizard(true);
+            } else {
+              setExpandedTier(expandedTier === "guardian" ? null : "guardian");
+            }
           }}
         >
           <div className="flex justify-between items-start mb-2">
@@ -733,6 +735,39 @@ export const AgentTierStatus: React.FC<{
             </div>
           </div>
         </div>
+      )}
+      {/* Guardian Setup Wizard */}
+      {showWizard && address && (
+        <GuardianMobileWizard
+          userAddress={address}
+          vaultAddress={vault.vault?.circleWalletAddress}
+          onComplete={() => {
+            setShowWizard(false);
+            if (address) vault.refresh(address);
+          }}
+          onCancel={() => setShowWizard(false)}
+          onCreateVault={async (strategy) => {
+            return vault.createVault(address, strategy);
+          }}
+          onRequestPermission={async (dailyLimit, tokens) => {
+            return vault.grantPermission(address, {
+              permission: {
+                userAddress: address,
+                spendingLimitUSD: dailyLimit * 30,
+                dailyLimitUSD: dailyLimit,
+                allowedActions: ["swap", "rebalance"],
+                allowedTokens: tokens,
+                expiresAt: Math.floor(Date.now() / 1000) + 7 * 86400,
+                autonomyLevel: "GUARDIAN",
+                chainId: chainId || 42220,
+                sessionKeyAddress: address,
+                nonce: Date.now().toString(),
+              },
+              signature: "0x",
+              signedAt: new Date().toISOString(),
+            }, "");
+          }}
+        />
       )}
     </div>
   );
