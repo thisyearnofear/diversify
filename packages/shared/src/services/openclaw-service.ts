@@ -92,12 +92,25 @@ interface OpenClawConfig {
 }
 
 function getConfig(): OpenClawConfig {
+  // Support both canonical env vars and legacy/execute-loop env var names.
+  // The Railway OpenClaw instance uses SETUP_PASSWORD for Basic auth on wrapper endpoints.
+  // OPENCLAW_BOT_URL is the legacy name used by execute-loop.ts and mento-swap.ts.
+  const wrapperUrl =
+    process.env.OPENCLAW_WRAPPER_URL ||
+    process.env.OPENCLAW_BOT_URL ||
+    '';
+  const wrapperPass =
+    process.env.OPENCLAW_WRAPPER_PASS ||
+    process.env.OPENCLAW_SETUP_PASSWORD ||
+    process.env.SETUP_PASSWORD ||
+    '';
+
   return {
     gatewayUrl: process.env.OPENCLAW_GATEWAY_URL || '',
     gatewayToken: process.env.OPENCLAW_GATEWAY_TOKEN || '',
-    wrapperUrl: process.env.OPENCLAW_WRAPPER_URL || '',
+    wrapperUrl,
     wrapperUser: process.env.OPENCLAW_WRAPPER_USER || 'user',
-    wrapperPass: process.env.OPENCLAW_WRAPPER_PASS || '',
+    wrapperPass,
     enabled: process.env.OPENCLAW_ENABLED === 'true',
   };
 }
@@ -214,12 +227,14 @@ export class OpenClawService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Check if OpenClaw integration is enabled and configured
+   * Check if OpenClaw integration is enabled and configured.
+   * Accepts either gateway credentials (Bearer token) or wrapper credentials (Basic auth).
    */
   isEnabled(): boolean {
-    return this.config.enabled && 
-           !!this.config.gatewayUrl && 
-           !!this.config.gatewayToken;
+    if (!this.config.enabled) return false;
+    const hasGateway = !!this.config.gatewayUrl && !!this.config.gatewayToken;
+    const hasWrapper = !!this.config.wrapperUrl && !!this.config.wrapperPass;
+    return hasGateway || hasWrapper;
   }
 
   /**
@@ -396,6 +411,53 @@ export class OpenClawService {
     );
 
     return response.json();
+  }
+
+  /**
+   * Store a receipt locally (called after successful OpenClaw execution).
+   * This ensures the receipt pipeline has data even without webhook push.
+   */
+  storeReceipt(receipt: OpenClawReceipt): void {
+    const current = this.inMemoryReceipts.get(receipt.run_id) || [];
+    if (!current.some(r => r.event_id === receipt.event_id)) {
+      this.inMemoryReceipts.set(receipt.run_id, [...current, receipt].sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      ).slice(0, 50));
+    }
+  }
+
+  /**
+   * Log an action receipt to the OpenClaw wrapper's action log.
+   * POSTs to /setup/api/receipts/action which appends to the JSONL action log.
+   */
+  async logActionReceipt(data: {
+    run_id: string;
+    track: string;
+    action: string;
+    tx_hash: string;
+    explorer_url: string;
+    metadata?: Record<string, any>;
+  }): Promise<{ ok: boolean; error?: string }> {
+    if (!this.config.wrapperUrl || !this.config.wrapperPass) {
+      return { ok: false, error: 'Wrapper not configured' };
+    }
+
+    try {
+      const response = await fetch(`${this.config.wrapperUrl}/setup/api/receipts/action`, {
+        method: 'POST',
+        headers: this.getWrapperHeaders(),
+        body: JSON.stringify(data),
+        signal: AbortSignal.timeout(15000),
+      });
+
+      if (!response.ok) {
+        return { ok: false, error: `HTTP ${response.status}` };
+      }
+
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: String(err) };
+    }
   }
 
   /**

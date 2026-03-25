@@ -166,10 +166,17 @@ export function useGuardianOpenClaw() {
   // ---------------------------------------------------------------------------
 
   const getRecentReceipts = useCallback(async (runId?: string) => {
-    // TODO (Enhancement First / Clean Architecture)
-    // Refactor to ingest receipts from PersistentMissionService/Webhooks 
-    // Active polling via shell commands is blocked by the Railway wrapper policy ("Command not allowed").
-    return [];
+    try {
+      const url = runId
+        ? `/api/agent/openclaw/receipts?runId=${encodeURIComponent(runId)}`
+        : '/api/agent/openclaw/receipts?type=latest';
+      const resp = await fetch(url);
+      if (!resp.ok) return [];
+      const data = await resp.json();
+      return data.receipts || [];
+    } catch {
+      return [];
+    }
   }, []);
 
   // ---------------------------------------------------------------------------

@@ -5,7 +5,7 @@
  *   1. Call requestPermission(autonomyLevel, userAddress, signer) to prompt the
  *      user's wallet for a one-time EIP-712 signature.
  *   2. The resulting SignedSessionPermission is stored in state and registered
- *      server-side at /api/agent/guardian/session (with the disposable private key).
+ *      server-side at /api/vault/permission (with the disposable private key).
  *   3. The server uses the session key to autonomously execute rebalances within
  *      the user's approved bounds (daily limit, allowed tokens, expiry).
  *   4. Call revokePermission() to clear the stored permission at any time
@@ -75,7 +75,7 @@ export function useSessionKey(): UseSessionKeyReturn {
     // Poll server for session status + execution receipts when active
     const pollSession = useCallback(async (userAddress: string) => {
         try {
-            const resp = await fetch(`${API_BASE}/api/agent/guardian/session?userAddress=${userAddress}`);
+            const resp = await fetch(`${API_BASE}/api/vault/permission?userAddress=${userAddress}`);
             if (resp.ok) {
                 const data = await resp.json();
                 setSessionInfo(data);
@@ -132,7 +132,7 @@ export function useSessionKey(): UseSessionKeyReturn {
             const signed = await service.signPermission(permission, signer);
 
             // Register the session server-side so the Guardian can execute autonomously
-            const regResp = await fetch(`${API_BASE}/api/agent/guardian/session`, {
+            const regResp = await fetch(`${API_BASE}/api/vault/permission`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -165,7 +165,7 @@ export function useSessionKey(): UseSessionKeyReturn {
         // Revoke server-side
         if (signedPermission) {
             const userAddress = signedPermission.permission.userAddress;
-            fetch(`${API_BASE}/api/agent/guardian/session?userAddress=${userAddress}`, {
+            fetch(`${API_BASE}/api/vault/permission?userAddress=${userAddress}`, {
                 method: 'DELETE',
             }).catch(() => {});
         }
@@ -186,7 +186,7 @@ export function useSessionKey(): UseSessionKeyReturn {
     }, [signedPermission, status]);
 
     const triggerExecutionLoopInternal = async (userAddress: string, dryRun = false) => {
-        const resp = await fetch(`${API_BASE}/api/agent/guardian/execute-loop`, {
+        const resp = await fetch(`${API_BASE}/api/vault/rebalance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userAddress, dryRun }),

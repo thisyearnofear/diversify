@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { openClawService } from "@diversifi/shared";
 
 export default async function handler(
   req: NextApiRequest,
@@ -52,18 +53,18 @@ export default async function handler(
       : "Mento Protocol quotes live; agent swap needs PRIVATE_KEY env var",
   };
 
-  // Guardian autonomous execution
+  // Guardian autonomous execution (vault-based)
   checks.guardian = {
     status: "live",
-    detail: "Session key auth, inflation-driven rebalance strategy, autonomous execution loop",
+    detail: "Vault-based diversification with ERC-7715 permissions, Circle MPC signing, fee engine",
   };
 
   // Check OpenClaw receipt logging
   checks.openclaw = {
-    status: process.env.OPENCLAW_BOT_URL ? "connected" : "not-configured",
-    detail: process.env.OPENCLAW_BOT_URL
-      ? "Receipt logging to OpenClaw active"
-      : "OPENCLAW_BOT_URL not set — receipts not logged",
+    status: openClawService.isEnabled() ? "connected" : "not-configured",
+    detail: openClawService.isEnabled()
+      ? "Execution delegation + receipt logging via OpenClaw active"
+      : "OPENCLAW_ENABLED or wrapper credentials not set",
   };
 
   const liveCount = Object.values(checks).filter(
@@ -87,9 +88,9 @@ export default async function handler(
       celoActivity: "/api/celo/activity",
       celoMentoQuote: "/api/celo/mento-quote?tokenIn=cUSD&tokenOut=KESm&amount=1",
       celoMentoSwap: "/api/celo/mento-swap (POST)",
-      guardianSession: "/api/agent/guardian/session (GET/POST/DELETE)",
-      guardianStrategy: "/api/agent/guardian/strategy?userAddress=0x... (GET)",
-      guardianExecuteLoop: "/api/agent/guardian/execute-loop (POST)",
+      guardianSession: "/api/vault/permission (GET/POST/DELETE)",
+      guardianStrategy: "/api/vault/balance?userAddress=0x... (GET)",
+      guardianExecuteLoop: "/api/vault/rebalance (POST)",
       status: "/api/status",
     },
     tracks: [

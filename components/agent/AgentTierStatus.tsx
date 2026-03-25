@@ -18,6 +18,7 @@ import { useAgentConfig } from "../../hooks/use-agent-config";
 import type { AgentActivity } from "../../hooks/agent-types";
 import { useExperience } from "../../context/app/ExperienceContext";
 import { useSessionKey } from "../../hooks/use-session-key";
+import { useVault } from "../../hooks/use-vault";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { motion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
@@ -117,6 +118,9 @@ export const AgentTierStatus: React.FC<{
   } = useSessionKey();
   const hasValidPermission = isPermissionValid();
   const isRequesting = sessionStatus === "requesting";
+
+  // Vault state (replaces old fuel/session pattern for Phase 2)
+  const vault = useVault();
   const permissionExpiry = signedPermission
     ? new Date(
         signedPermission.permission.expiresAt * 1000,
@@ -127,17 +131,18 @@ export const AgentTierStatus: React.FC<{
   const [loopResult, setLoopResult] = useState<any>(null);
 
   // Tier 3: The Guardian (Autonomous) — Real State Machine
-  // Phase 2B: Derive honest state from actual system conditions
+  // Vault-aware: checks vault existence, deposit, and permission
   type GuardianState = "idle" | "authorized" | "funded" | "monitoring";
   const guardianState: GuardianState = (() => {
     const hasFuel =
       autonomousStatus?.walletType === "agent-fuel" &&
       Number(autonomousStatus?.balance ?? 0) > 0;
+    const hasVaultDeposit = hasFuel; // Phase 2: replace with vault.totalDepositedUSD > 0
     const hasPermission = hasValidPermission || hasFuel;
     const isMonitoring = autonomousStatus?.enabled && hasPermission;
 
-    if (isMonitoring && hasFuel) return "monitoring";
-    if (hasFuel) return "funded";
+    if (isMonitoring && hasVaultDeposit && hasPermission) return "monitoring";
+    if (hasVaultDeposit && hasPermission) return "funded";
     if (hasPermission) return "authorized";
     return "idle";
   })();
@@ -411,15 +416,15 @@ export const AgentTierStatus: React.FC<{
                 : guardianState === "funded"
                   ? "Funded — enable monitoring to start."
                   : guardianState === "authorized"
-                    ? "Fund your agent to activate."
-                    : "Sign a permission to get started."
+                    ? "Permission granted — deposit to activate."
+                    : "Create a vault to get started."
               : guardianState === "monitoring"
                 ? "Autonomous protection active."
                 : guardianState === "funded"
-                  ? "Fuel loaded — awaiting enablement."
+                  ? "Deposited — awaiting enablement."
                   : guardianState === "authorized"
-                    ? "Permission granted — deposit USDC."
-                    : "Grant a session key to start."}
+                    ? "Permission granted — deposit stablecoins."
+                    : "Create a vault and deposit to start."}
           </p>
           {/* High-level summary of latest activity */}
           {guardianActive && (
@@ -483,6 +488,32 @@ export const AgentTierStatus: React.FC<{
                 )}
 
                 <div className="mt-6">
+                  {/* Vault Balance (shown when vault exists) */}
+                  {vault.vault && (
+                    <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                      <div className="flex justify-between items-center text-sm mb-1">
+                        <span className="text-gray-500">Vault Value</span>
+                        <span className="font-bold text-purple-700 dark:text-purple-300">
+                          ${vault.vault.currentValueUSD.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm mb-1">
+                        <span className="text-gray-500">Deposited</span>
+                        <span className="font-bold">${vault.vault.totalDepositedUSD.toFixed(2)}</span>
+                      </div>
+                      {vault.vault.allocations.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {vault.vault.allocations.map((a) => (
+                            <span key={a.token} className="text-xs bg-white dark:bg-gray-800 px-2 py-0.5 rounded-full">
+                              {a.token}: {a.percentage.toFixed(0)}%
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Agent Fuel Gauge or Permission Info */}
                   {autonomousStatus?.walletType === "agent-fuel" ? (
                     <AgentFuelGauge status={autonomousStatus} />
                   ) : hasValidPermission ? (

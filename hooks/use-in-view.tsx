@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 interface UseInViewOptions {
   /** Root margin for intersection observer (default: '200px' for early loading) */

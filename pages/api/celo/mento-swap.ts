@@ -8,14 +8,9 @@ import {
   encodeFunctionData,
 } from "viem";
 import { celo } from "viem/chains";
+import { openClawService } from "@diversifi/shared";
 
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || "https://forno.celo.org";
-
-// OpenClaw receipt logging
-const OPENCLAW_BOT_URL =
-  process.env.NEXT_PUBLIC_OPENCLAW_GATEWAY_URL || process.env.OPENCLAW_BOT_URL;
-const OPENCLAW_PASSWORD =
-  process.env.OPENCLAW_SETUP_PASSWORD || process.env.SETUP_PASSWORD;
 
 const MENTO_BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad" as const;
 
@@ -242,7 +237,7 @@ async function logSwapReceipt(
 ) {
   const { tokenIn, tokenOut, amountIn, expectedOut, txHash, userAddress } = body;
 
-  if (!OPENCLAW_BOT_URL || !OPENCLAW_PASSWORD) {
+  if (!openClawService.isEnabled()) {
     return res.status(200).json({
       logged: false,
       reason: "OpenClaw not configured",
@@ -250,31 +245,23 @@ async function logSwapReceipt(
   }
 
   try {
-    const auth = Buffer.from(`user:${OPENCLAW_PASSWORD}`).toString("base64");
-    await fetch(`${OPENCLAW_BOT_URL}/setup/api/receipts/action`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${auth}`,
+    const result = await openClawService.logActionReceipt({
+      run_id: `celo-mento-${Date.now()}`,
+      track: "celo-mento",
+      action: "swap",
+      tx_hash: String(txHash),
+      explorer_url: `https://celoscan.io/tx/${txHash}`,
+      metadata: {
+        tokenIn,
+        tokenOut,
+        amountIn,
+        expectedOut,
+        wallet: userAddress,
+        signedBy: "user",
       },
-      body: JSON.stringify({
-        run_id: `celo-mento-${Date.now()}`,
-        track: "celo-mento",
-        action: "swap",
-        tx_hash: txHash,
-        explorer_url: `https://celoscan.io/tx/${txHash}`,
-        metadata: {
-          tokenIn,
-          tokenOut,
-          amountIn,
-          expectedOut,
-          wallet: userAddress,
-          signedBy: "user",
-        },
-      }),
     });
 
-    return res.status(200).json({ logged: true, txHash });
+    return res.status(200).json({ logged: result.ok, txHash, error: result.error });
   } catch {
     return res.status(200).json({ logged: false, reason: "OpenClaw unreachable" });
   }

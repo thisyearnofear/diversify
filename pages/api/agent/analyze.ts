@@ -112,22 +112,61 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (analysis) {
             portfolioAnalysis = analysis;
         } else if (portfolio) {
-            portfolioAnalysis = analyzePortfolio(portfolio, inflationData || {}, config?.userGoal);
+            // Normalize portfolio data to expected format
+            let normalizedPortfolio: { chains: ChainBalance[]; totalValue: number };
+            
+            if (portfolio.chains && Array.isArray(portfolio.chains)) {
+                // Already in correct format
+                normalizedPortfolio = portfolio;
+            } else {
+                // Transform from simplified format { balance, holdings }
+                const totalValue = portfolio.balance || portfolio.totalValue || 0;
+                const holdings = portfolio.holdings || currentHoldings || [];
+                const perTokenValue = holdings.length > 0 ? totalValue / holdings.length : 0;
+                
+                normalizedPortfolio = {
+                    chains: [{
+                        chainId: networkContext?.chainId || 42220,
+                        chainName: networkContext?.name || 'Celo',
+                        totalValue: totalValue,
+                        tokenCount: holdings.length,
+                        isLoading: false,
+                        error: null,
+                        balances: holdings.map((h: string) => ({
+                            symbol: h,
+                            name: h,
+                            balance: "0",
+                            formattedBalance: "0",
+                            value: perTokenValue,
+                            region: 'Global',
+                            chainId: networkContext?.chainId || 42220,
+                            chainName: networkContext?.name || 'Celo'
+                        })),
+                    }],
+                    totalValue: totalValue
+                };
+            }
+            
+            portfolioAnalysis = analyzePortfolio(normalizedPortfolio, inflationData || {}, config?.userGoal);
         } else {
             // Fallback: create minimal portfolio from holdings
+            const totalValue = userBalance || 0;
+            const holdings = currentHoldings || [];
+            const perTokenValue = holdings.length > 0 ? totalValue / holdings.length : 0;
+            
             const chains: ChainBalance[] = [{
                 chainId: networkContext?.chainId || 42220,
                 chainName: networkContext?.name || 'Celo',
-                totalValue: userBalance || 0,
-                tokenCount: (currentHoldings || []).length,
+                totalValue: totalValue,
+                tokenCount: holdings.length,
                 isLoading: false,
                 error: null,
-                balances: (currentHoldings || []).map((h: string) => ({
+                balances: holdings.map((h: string) => ({
                     symbol: h,
                     name: h,
                     balance: "0",
                     formattedBalance: "0",
-                    value: (userBalance || 0) / (currentHoldings.length || 1),
+                    value: perTokenValue,
                     region: 'Global',
                     chainId: networkContext?.chainId || 42220,
                     chainName: networkContext?.name || 'Celo'
@@ -135,7 +174,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }];
 
             portfolioAnalysis = analyzePortfolio(
-                { chains, totalValue: userBalance || 0 },
+                { chains, totalValue: totalValue },
                 inflationData || {},
                 config?.userGoal
             );

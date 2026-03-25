@@ -4,7 +4,6 @@ import { ArcAgent, SessionKeyProvider } from './services/arc-agent';
 import { SocialConnectService } from './services/social-connect-service';
 import { RWAService, rwaService } from './services/rwa-service';
 import { SynthDataService } from './services/synth-data-service';
-import { TradeAgent } from './services/trade-agent';
 import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
 import { StrategyService } from './services/strategy/strategy.service';
 import { AutomationService } from './services/automation-service';
@@ -12,6 +11,8 @@ import { GoodDollarService } from './services/gooddollar-service';
 import { emergingMarketsPriceService, getEmergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 import { hyperliquidService, HyperliquidService } from './services/hyperliquid.service';
 import { openClawService, OpenClawService } from './services/openclaw-service';
+import { VaultService } from './services/vault/vault.service';
+import { FeeEngine, feeEngine } from './services/vault/fee-engine';
 
 export {
   circleService,
@@ -22,7 +23,6 @@ export {
   RWAService,
   rwaService,
   SynthDataService,
-  TradeAgent,
   ZapierMCPService,
   zapierMCPService,
   StrategyService,
@@ -34,7 +34,10 @@ export {
   hyperliquidService,
   HyperliquidService,
   openClawService,
-  OpenClawService
+  OpenClawService,
+  VaultService,
+  FeeEngine,
+  feeEngine
 };
 
 // Export AI Services

@@ -34,7 +34,6 @@ import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { MobileCollapsible } from "../ui/MobileCollapsible";
 import { useMobile } from "../../hooks/use-mobile";
 import { useInView } from "../../hooks/use-in-view";
-import { Skeleton } from "../shared/TabComponents";
 import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import YieldBridgePrompt from "../swap/YieldBridgePrompt";
@@ -763,7 +762,7 @@ export default function SwapTab({
           onClose={handleCloseClaimFlow}
           onClaimSuccess={handleCloseClaimFlow}
         />
-      )}}
+      )}
     </div>
   );
 }
