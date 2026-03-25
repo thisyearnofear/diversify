@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { openClawService, isPrivySmartAccountEnabled } from "@diversifi/shared";
+import { openClawService, getSmartAccountProvider } from "@diversifi/shared";
 
 export default async function handler(
   req: NextApiRequest,
@@ -43,15 +43,25 @@ export default async function handler(
   };
 
   // Check vault execution layer
-  const hasPrivySmartAccount = isPrivySmartAccountEnabled();
-  const hasDirectKey = !!process.env.VAULT_PRIVATE_KEY;
+  let providerName = 'none';
+  let providerDetail = 'Set SMART_ACCOUNT_PROVIDER or VAULT_PRIVATE_KEY';
+  try {
+    const provider = getSmartAccountProvider();
+    if (provider.isConfigured()) {
+      providerName = provider.name;
+      providerDetail = `${provider.name} smart account — policy-enforced execution`;
+    }
+  } catch {}
+
+  const hasDirectKey = !!(process.env.VAULT_PRIVATE_KEY && providerName === 'none');
+  if (hasDirectKey) {
+    providerName = 'direct';
+    providerDetail = 'Direct signing (Phase 1) — upgrade to smart account for production';
+  }
+
   checks.vault = {
-    status: hasPrivySmartAccount ? "smart-account" : hasDirectKey ? "direct-signing" : "not-configured",
-    detail: hasPrivySmartAccount
-      ? "Privy Safe smart account — no private key on server"
-      : hasDirectKey
-        ? "Direct signing (Phase 1) — upgrade to Privy smart account for production"
-        : "Neither PRIVY_APP_ID+SECRET nor VAULT_PRIVATE_KEY configured",
+    status: providerName !== 'none' ? providerName : 'not-configured',
+    detail: providerDetail,
   };
 
   // Check OpenClaw receipt logging

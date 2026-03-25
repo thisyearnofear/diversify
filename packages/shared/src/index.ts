@@ -17,6 +17,12 @@ import {
   sendSmartAccountTransaction,
   isPrivySmartAccountEnabled,
 } from './services/vault/privy-smart-account';
+import {
+  getSmartAccountProvider,
+  type SmartAccountProvider,
+  type SmartAccountCall,
+  type SmartAccountTxResult,
+} from './services/vault/smart-account-provider';
 
 export {
   circleService,
@@ -43,7 +49,11 @@ export {
   FeeEngine,
   feeEngine,
   sendSmartAccountTransaction,
-  isPrivySmartAccountEnabled
+  isPrivySmartAccountEnabled,
+  getSmartAccountProvider,
+  SmartAccountProvider,
+  SmartAccountCall,
+  SmartAccountTxResult
 };
 
 // Export AI Services

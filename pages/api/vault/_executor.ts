@@ -1,21 +1,17 @@
 /**
- * Vault API Executor — Bridges vault operations to execution layers.
+ * Vault API Executor — Bridges vault operations to the chain.
  *
- * Two execution modes:
- *   1. Privy Smart Account (PRIVY_APP_ID + PRIVY_APP_SECRET set):
- *      Agent sends transactions via Privy session signer.
- *      User's funds stay in their Safe smart account.
- *      No private key on our server — signing in Privy's secure enclave.
- *      Policy enforced by Privy (spending limits, allowed contracts, time bounds).
+ * Uses the SmartAccountProvider interface for all transactions.
+ * The provider is selected via SMART_ACCOUNT_PROVIDER env var:
+ *   - 'privy' (default): Privy Safe smart accounts (production)
+ *   - 'safe4337': Generic Safe + any signer (self-hosted/dev)
  *
- *   2. Direct signing fallback (VAULT_PRIVATE_KEY set):
- *      For backwards compatibility and local development.
- *      Permission validation happens in VaultService.rebalance().
+ * Falls back to direct signing (VAULT_PRIVATE_KEY) when no smart account provider is configured.
  *
  * Follows Core Principles:
- *   - ENHANCEMENT FIRST: Reuses existing Mento broker contract patterns
- *   - CLEAN: Mode detection at runtime, single VaultExecutor interface
- *   - MODULAR: Execution layer can be swapped without changing VaultService
+ *   - CLEAN: Executor doesn't know about Privy, Pimlico, or any vendor
+ *   - MODULAR: Provider is swappable via one env var
+ *   - DRY: Mento swap logic shared across all execution modes
  */
 
 import { ethers } from 'ethers';
@@ -25,9 +21,12 @@ import type {
   VaultAllocation,
 } from '../../../packages/shared/src/services/vault/vault.service';
 import {
-  sendSmartAccountTransaction,
-  isPrivySmartAccountEnabled,
-} from '../../../packages/shared/src/services/vault/privy-smart-account';
+  getSmartAccountProvider,
+  type SmartAccountProvider,
+} from '../../../packages/shared/src/services/vault/smart-account-provider';
+
+// Register providers (ensures they're available)
+import '../../../packages/shared/src/services/vault/providers';
 
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org';
 const VAULT_KEY = process.env.VAULT_PRIVATE_KEY;
@@ -64,6 +63,8 @@ const erc20Abi = [
 function getProvider(): ethers.providers.JsonRpcProvider {
   return new ethers.providers.JsonRpcProvider(CELO_RPC);
 }
+
+// ─── Chain Helpers ─────────────────────────────────────────────────────────
 
 async function getCeloBalances(address: string): Promise<VaultAllocation[]> {
   const provider = getProvider();
@@ -117,15 +118,12 @@ async function findMentoExchange(
   return null;
 }
 
-/**
- * Build Mento swap calldata and calculate slippage.
- */
 async function buildSwapParams(
   provider: ethers.providers.JsonRpcProvider,
   tokenIn: string,
   tokenOut: string,
   amountIn: string
-): Promise<{ data: string; minAmountOut: ethers.BigNumber; exchange: { provider: string; exchangeId: string } }> {
+): Promise<{ data: string; minAmountOut: ethers.BigNumber }> {
   const exchange = await findMentoExchange(provider, tokenIn, tokenOut);
   if (!exchange) throw new Error(`No Mento exchange for ${tokenIn}/${tokenOut}`);
 
@@ -133,14 +131,27 @@ async function buildSwapParams(
   const expectedOut = await broker.getAmountOut(
     exchange.provider, exchange.exchangeId, tokenIn, tokenOut, amountIn
   );
-  const minAmountOut = expectedOut.sub(expectedOut.mul(100).div(10000)); // 1% slippage
+  const minAmountOut = expectedOut.sub(expectedOut.mul(100).div(10000));
 
   const data = new ethers.utils.Interface(brokerAbi).encodeFunctionData('swapIn', [
     exchange.provider, exchange.exchangeId, tokenIn, tokenOut, amountIn, minAmountOut,
   ]);
 
-  return { data, minAmountOut, exchange };
+  return { data, minAmountOut };
 }
+
+// ─── Execution Mode Detection ──────────────────────────────────────────────
+
+function getActiveProvider(): SmartAccountProvider | null {
+  try {
+    const provider = getSmartAccountProvider();
+    return provider.isConfigured() ? provider : null;
+  } catch {
+    return null;
+  }
+}
+
+// ─── Executor ──────────────────────────────────────────────────────────────
 
 export const circleExecutor: VaultExecutor = {
   async getHoldings(vault: Vault): Promise<VaultAllocation[]> {
@@ -159,44 +170,34 @@ export const circleExecutor: VaultExecutor = {
     const provider = getProvider();
     const { data, minAmountOut } = await buildSwapParams(provider, tokenInAddress, tokenOutAddress, amountIn);
 
-    if (isPrivySmartAccountEnabled() && vault.circleWalletAddress) {
-      // ─── Mode 1: Privy Smart Account ───────────────────────────────
-      // Agent sends transaction via Privy session signer.
-      // Policy enforced on-chain by the smart account (Safe contract).
-      // No private key on our server.
-      const result = await sendSmartAccountTransaction(
-        vault.circleWalletAddress, // This is now the Privy wallet ID
-        {
-          to: MENTO_BROKER,
-          data,
-          chainId,
-        }
+    const smartAccount = getActiveProvider();
+    if (smartAccount) {
+      // ─── Smart Account Mode (Privy, Safe4337, etc.) ─────────────────
+      const userId = vault.circleWalletAddress || vault.userAddress;
+      const result = await smartAccount.sendTransaction(
+        userId,
+        { to: MENTO_BROKER, data },
+        chainId
       );
       return { txHash: result.hash, amountOut: minAmountOut.toString() };
     }
 
-    // ─── Mode 2: Direct signing fallback ─────────────────────────────
-    if (!VAULT_KEY) throw new Error('Neither Privy smart account nor VAULT_PRIVATE_KEY configured');
+    // ─── Direct Signing Fallback ──────────────────────────────────────
+    if (!VAULT_KEY) throw new Error('No execution method configured. Set SMART_ACCOUNT_PROVIDER or VAULT_PRIVATE_KEY.');
 
     const signer = new ethers.Wallet(VAULT_KEY, provider);
     const exchange = await findMentoExchange(provider, tokenInAddress, tokenOutAddress);
     if (!exchange) throw new Error(`No Mento exchange for ${tokenInAddress}/${tokenOutAddress}`);
 
-    // Approve if needed
     const tokenIn = new ethers.Contract(tokenInAddress, erc20Abi, signer);
-    const allowance = await tokenIn.allowance(signer.address, MENTO_BROKER);
-    if (allowance.lt(amountIn)) {
-      const approveTx = await tokenIn.approve(MENTO_BROKER, amountIn);
-      await approveTx.wait();
+    if ((await tokenIn.allowance(signer.address, MENTO_BROKER)).lt(amountIn)) {
+      await (await tokenIn.approve(MENTO_BROKER, amountIn)).wait();
     }
 
-    // Swap
-    const brokerWithSigner = new ethers.Contract(MENTO_BROKER, brokerAbi, signer);
-    const swapTx = await brokerWithSigner.swapIn(
-      exchange.provider, exchange.exchangeId,
-      tokenInAddress, tokenOutAddress, amountIn, minAmountOut
-    );
-    const receipt = await swapTx.wait();
+    const broker = new ethers.Contract(MENTO_BROKER, brokerAbi, signer);
+    const receipt = await (await broker.swapIn(
+      exchange.provider, exchange.exchangeId, tokenInAddress, tokenOutAddress, amountIn, minAmountOut
+    )).wait();
 
     return { txHash: receipt.transactionHash, amountOut: minAmountOut.toString() };
   },
@@ -206,30 +207,29 @@ export const circleExecutor: VaultExecutor = {
     destinationAddress: string,
     amountUSD: number
   ): Promise<{ txHash: string; amountReceived: number }> {
-    if (isPrivySmartAccountEnabled() && vault.circleWalletAddress) {
-      // Withdraw via Privy smart account
-      const cUSD = TOKENS.cUSD;
-      const amountWei = ethers.utils.parseUnits(amountUSD.toString(), cUSD.decimals);
+    const cUSD = TOKENS.cUSD;
+    const transferData = new ethers.utils.Interface(erc20Abi).encodeFunctionData('transfer', [
+      destinationAddress, ethers.utils.parseUnits(amountUSD.toString(), cUSD.decimals),
+    ]);
 
-      const transferData = new ethers.utils.Interface(erc20Abi).encodeFunctionData('transfer', [
-        destinationAddress, amountWei,
-      ]);
-
-      const result = await sendSmartAccountTransaction(
-        vault.circleWalletAddress,
-        { to: cUSD.address, data: transferData, chainId: 42220 }
+    const smartAccount = getActiveProvider();
+    if (smartAccount) {
+      const userId = vault.circleWalletAddress || vault.userAddress;
+      const result = await smartAccount.sendTransaction(
+        userId,
+        { to: cUSD.address, data: transferData },
+        42220
       );
       return { txHash: result.hash, amountReceived: amountUSD };
     }
 
-    // Fallback: direct signing
-    if (!VAULT_KEY) throw new Error('Neither Privy smart account nor VAULT_PRIVATE_KEY configured');
-
+    if (!VAULT_KEY) throw new Error('No execution method configured');
     const signer = new ethers.Wallet(VAULT_KEY, getProvider());
-    const cUSD = TOKENS.cUSD;
     const cUSDContract = new ethers.Contract(cUSD.address, erc20Abi, signer);
-    const amountWei = ethers.utils.parseUnits(amountUSD.toString(), cUSD.decimals);
-    const tx = await cUSDContract.transfer(destinationAddress, amountWei);
+    const tx = await cUSDContract.transfer(
+      destinationAddress,
+      ethers.utils.parseUnits(amountUSD.toString(), cUSD.decimals)
+    );
     const receipt = await tx.wait();
     return { txHash: receipt.transactionHash, amountReceived: amountUSD };
   },
