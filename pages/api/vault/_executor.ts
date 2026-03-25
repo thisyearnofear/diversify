@@ -1,18 +1,21 @@
 /**
  * Vault API Executor — Bridges vault operations to real execution layers.
  *
- * Architecture:
- *   - Vault key (VAULT_PRIVATE_KEY) signs transactions — separate from the agent key
- *   - The agent key (PRIVATE_KEY) is only used for agent-level operations (not vault)
- *   - Every swap is validated against the permission before signing
- *   - Every action produces a Transaction record (audit trail)
+ * Two execution modes:
+ *   1. Contract-mediated (VAULT_CONTRACT_ADDRESS set): Calls vault.executeSwap()
+ *      On-chain enforcement: token allowlist, daily limit, fee extraction.
+ *      The vault key only has REBALANCER_ROLE — cannot withdraw.
  *
- * Phase 1: Celo native stablecoins via Mento DEX
- * Phase 2: ERC-4626 smart contract vault (replaces direct signing)
+ *   2. Direct signing (fallback): Signs Mento swaps directly.
+ *      Permission validation happens in VaultService.rebalance().
+ *      Used until the contract is deployed.
+ *
+ * Phase 1: Direct signing with VAULT_PRIVATE_KEY
+ * Phase 2: Contract-mediated with REBALANCER_ROLE
  *
  * Follows Core Principles:
- *   - ENHANCEMENT FIRST: Reuses existing Mento broker contracts and ethers patterns
- *   - CLEAN: Clear separation — this executor only handles Celo swaps
+ *   - ENHANCEMENT FIRST: Reuses existing Mento broker patterns
+ *   - CLEAN: Clear mode detection, single executor interface
  *   - MODULAR: VaultExecutor interface allows swapping execution layers
  */
 
@@ -25,10 +28,12 @@ import type {
 
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org';
 
-// The vault key is the key that signs transactions for the vault.
-// In Phase 1: a dedicated keypair (VAULT_PRIVATE_KEY)
-// In Phase 2: the ERC-4626 contract's REBALANCER_ROLE key
-// NEVER use the agent's PRIVATE_KEY — that's for agent operations only.
+// Phase 2: Contract address. When set, all swaps go through the vault contract.
+const VAULT_CONTRACT = process.env.VAULT_CONTRACT_ADDRESS;
+
+// Phase 1 fallback: Direct signing key.
+// In production, this should be in a KMS, not an env var.
+// Once the contract is deployed, this key only needs REBALANCER_ROLE (limited scope).
 const VAULT_KEY = process.env.VAULT_PRIVATE_KEY;
 
 const TOKENS: Record<string, { address: `0x${string}`; decimals: number; stablecoin: boolean; region?: string }> = {
@@ -60,23 +65,21 @@ const erc20Abi = [
   'function allowance(address owner, address spender) view returns (uint256)',
 ];
 
+const vaultAbi = [
+  'function executeSwap(address tokenIn, address tokenOut, uint256 amountIn, uint256 minAmountOut, address router, bytes swapData)',
+  'function allowedTokens(address) view returns (bool)',
+  'function remainingDailyCapacity() view returns (uint256)',
+];
+
 function getProvider(): ethers.providers.JsonRpcProvider {
   return new ethers.providers.JsonRpcProvider(CELO_RPC);
 }
 
-function getVaultSigner(): ethers.Wallet {
-  if (!VAULT_KEY) {
-    throw new Error(
-      'VAULT_PRIVATE_KEY not configured. ' +
-      'Set VAULT_PRIVATE_KEY (separate from PRIVATE_KEY) for vault operations.'
-    );
-  }
+function getSigner(): ethers.Wallet {
+  if (!VAULT_KEY) throw new Error('VAULT_PRIVATE_KEY not configured');
   return new ethers.Wallet(VAULT_KEY, getProvider());
 }
 
-/**
- * Get all Celo stablecoin balances for a wallet address.
- */
 async function getCeloBalances(address: string): Promise<VaultAllocation[]> {
   const provider = getProvider();
   const allocations: VaultAllocation[] = [];
@@ -98,24 +101,17 @@ async function getCeloBalances(address: string): Promise<VaultAllocation[]> {
         });
       }
     } catch {
-      // Skip tokens that fail
+      // Skip
     }
   }
 
-  // Calculate percentages
   const totalUSD = allocations.reduce((sum, a) => sum + a.valueUSD, 0);
   if (totalUSD > 0) {
-    for (const alloc of allocations) {
-      alloc.percentage = (alloc.valueUSD / totalUSD) * 100;
-    }
+    for (const alloc of allocations) alloc.percentage = (alloc.valueUSD / totalUSD) * 100;
   }
-
   return allocations;
 }
 
-/**
- * Find a Mento exchange for a token pair.
- */
 async function findMentoExchange(
   provider: ethers.providers.JsonRpcProvider,
   tokenInAddr: string,
@@ -123,11 +119,9 @@ async function findMentoExchange(
 ): Promise<{ provider: string; exchangeId: string } | null> {
   const broker = new ethers.Contract(MENTO_BROKER, brokerAbi, provider);
   const providers = await broker.getExchangeProviders();
-
   for (const prov of providers) {
-    const exchangeContract = new ethers.Contract(prov, exchangeAbi, provider);
-    const exchanges = await exchangeContract.getExchanges();
-
+    const ex = new ethers.Contract(prov, exchangeAbi, provider);
+    const exchanges = await ex.getExchanges();
     for (const exchange of exchanges) {
       const assets = exchange.assets.map((a: string) => a.toLowerCase());
       if (assets.includes(tokenInAddr.toLowerCase()) && assets.includes(tokenOutAddr.toLowerCase())) {
@@ -136,6 +130,31 @@ async function findMentoExchange(
     }
   }
   return null;
+}
+
+/**
+ * Build the Mento swapIn calldata for encoding into the vault contract call.
+ */
+async function buildMentoSwapData(
+  provider: ethers.providers.JsonRpcProvider,
+  tokenIn: string,
+  tokenOut: string,
+  amountIn: string
+): Promise<{ swapData: string; minAmountOut: ethers.BigNumber; exchange: { provider: string; exchangeId: string } }> {
+  const exchange = await findMentoExchange(provider, tokenIn, tokenOut);
+  if (!exchange) throw new Error(`No Mento exchange for ${tokenIn}/${tokenOut}`);
+
+  const broker = new ethers.Contract(MENTO_BROKER, brokerAbi, provider);
+  const expectedOut = await broker.getAmountOut(
+    exchange.provider, exchange.exchangeId, tokenIn, tokenOut, amountIn
+  );
+  const minAmountOut = expectedOut.sub(expectedOut.mul(100).div(10000)); // 1% slippage
+
+  const swapData = new ethers.utils.Interface(brokerAbi).encodeFunctionData('swapIn', [
+    exchange.provider, exchange.exchangeId, tokenIn, tokenOut, amountIn, minAmountOut,
+  ]);
+
+  return { swapData, minAmountOut, exchange };
 }
 
 export const circleExecutor: VaultExecutor = {
@@ -152,27 +171,45 @@ export const circleExecutor: VaultExecutor = {
     amountIn: string,
     chainId: number
   ): Promise<{ txHash: string; amountOut?: string }> {
-    const signer = getVaultSigner();
-    const provider = signer.provider as ethers.providers.JsonRpcProvider;
+    const provider = getProvider();
 
-    // Find Mento exchange
-    const exchange = await findMentoExchange(provider, tokenInAddress, tokenOutAddress);
-    if (!exchange) {
-      throw new Error(`No Mento exchange found for ${tokenInAddress}/${tokenOutAddress}`);
+    if (VAULT_CONTRACT) {
+      // ─── Phase 2: Contract-mediated ───────────────────────────────────
+      // The vault contract enforces: token allowlist, router allowlist, daily limit, fees.
+      // The signer only has REBALANCER_ROLE — can't withdraw.
+      const signer = getSigner();
+      const vaultContract = new ethers.Contract(VAULT_CONTRACT, vaultAbi, signer);
+
+      const { swapData, minAmountOut } = await buildMentoSwapData(
+        provider, tokenInAddress, tokenOutAddress, amountIn
+      );
+
+      const tx = await vaultContract.executeSwap(
+        tokenInAddress,
+        tokenOutAddress,
+        amountIn,
+        minAmountOut,
+        MENTO_BROKER,
+        swapData
+      );
+      const receipt = await tx.wait();
+
+      return { txHash: receipt.transactionHash, amountOut: minAmountOut.toString() };
     }
 
-    // Get expected output for slippage calculation
+    // ─── Phase 1: Direct signing (fallback) ─────────────────────────────
+    const signer = getSigner();
+
+    const exchange = await findMentoExchange(provider, tokenInAddress, tokenOutAddress);
+    if (!exchange) throw new Error(`No Mento exchange for ${tokenInAddress}/${tokenOutAddress}`);
+
     const broker = new ethers.Contract(MENTO_BROKER, brokerAbi, provider);
     const expectedOut = await broker.getAmountOut(
-      exchange.provider,
-      exchange.exchangeId,
-      tokenInAddress,
-      tokenOutAddress,
-      amountIn
+      exchange.provider, exchange.exchangeId, tokenInAddress, tokenOutAddress, amountIn
     );
-    const minAmountOut = expectedOut.sub(expectedOut.mul(100).div(10000)); // 1% slippage
+    const minAmountOut = expectedOut.sub(expectedOut.mul(100).div(10000));
 
-    // Check and approve if needed
+    // Approve if needed
     const tokenIn = new ethers.Contract(tokenInAddress, erc20Abi, signer);
     const allowance = await tokenIn.allowance(signer.address, MENTO_BROKER);
     if (allowance.lt(amountIn)) {
@@ -180,22 +217,14 @@ export const circleExecutor: VaultExecutor = {
       await approveTx.wait();
     }
 
-    // Execute swap via Mento broker
+    // Swap
     const brokerWithSigner = new ethers.Contract(MENTO_BROKER, brokerAbi, signer);
     const swapTx = await brokerWithSigner.swapIn(
-      exchange.provider,
-      exchange.exchangeId,
-      tokenInAddress,
-      tokenOutAddress,
-      amountIn,
-      minAmountOut
+      exchange.provider, exchange.exchangeId, tokenInAddress, tokenOutAddress, amountIn, minAmountOut
     );
     const receipt = await swapTx.wait();
 
-    return {
-      txHash: receipt.transactionHash,
-      amountOut: expectedOut.toString(),
-    };
+    return { txHash: receipt.transactionHash, amountOut: expectedOut.toString() };
   },
 
   async withdraw(
@@ -203,30 +232,23 @@ export const circleExecutor: VaultExecutor = {
     destinationAddress: string,
     amountUSD: number
   ): Promise<{ txHash: string; amountReceived: number }> {
-    const signer = getVaultSigner();
-
-    // Prefer cUSD for withdrawals
+    const signer = getSigner();
     const cUSD = TOKENS.cUSD;
     const cUSDContract = new ethers.Contract(cUSD.address, erc20Abi, signer);
     const cUSDBalance = await cUSDContract.balanceOf(signer.address);
     const cUSDFormatted = Number(ethers.utils.formatUnits(cUSDBalance, cUSD.decimals));
 
     if (cUSDFormatted >= amountUSD) {
-      // Sufficient cUSD — direct transfer
       const amountWei = ethers.utils.parseUnits(amountUSD.toString(), cUSD.decimals);
       const tx = await cUSDContract.transfer(destinationAddress, amountWei);
       const receipt = await tx.wait();
       return { txHash: receipt.transactionHash, amountReceived: amountUSD };
     }
 
-    // Transfer whatever cUSD is available
     if (cUSDBalance.gt(0)) {
       const tx = await cUSDContract.transfer(destinationAddress, cUSDBalance);
       const receipt = await tx.wait();
-      return {
-        txHash: receipt.transactionHash,
-        amountReceived: cUSDFormatted,
-      };
+      return { txHash: receipt.transactionHash, amountReceived: cUSDFormatted };
     }
 
     throw new Error('Insufficient cUSD balance for withdrawal');

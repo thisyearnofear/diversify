@@ -9,3 +9,5 @@ optimizer_runs = 200
 
 [rpc_endpoints]
 rh_testnet = "https://rpc.testnet.chain.robinhood.com"
+celo = "${CELO_RPC_URL}"
+celo_sepolia = "${CELO_SEPOLIA_RPC_URL}"
