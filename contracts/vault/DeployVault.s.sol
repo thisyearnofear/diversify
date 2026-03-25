@@ -2,7 +2,8 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Script.sol";
-import "../contracts/vault/DiversiFiVault.sol";
+import "./DiversiFiVault.sol";
+import "./DiversiFiVaultFactory.sol";
 
 /**
  * Deploy script for DiversiFiVault on Celo.
@@ -26,7 +27,7 @@ import "../contracts/vault/DiversiFiVault.sol";
 contract DeployVault is Script {
     // Celo mainnet addresses
     address constant CUSD = 0x765DE816845861e75A25fCA122bb6898B8B1282a;
-    address constant MENTO_BROKER = 0x777a8255ca72412f0d706dc03c9d1987306b4cad;
+    address constant MENTO_BROKER = 0x777A8255cA72412f0d706dc03C9D1987306B4CaD;
 
     // Celo stablecoin addresses (allowlisted by default)
     address constant CEUR = 0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73;
@@ -40,7 +41,7 @@ contract DeployVault is Script {
         address admin = vm.envAddress("VAULT_ADMIN");
         address rebalancer = vm.envAddress("VAULT_REBALANCER");
         address feeRecipient = vm.envAddress("VAULT_FEE_RECIPIENT");
-        uint256 dailyLimit = vm.envOr("VAULT_DAILY_LIMIT", 100_000 ether);
+        uint256 dailyLimit = vm.envOr("VAULT_DAILY_LIMIT", uint256(100_000 ether));
 
         vm.startBroadcast(deployerKey);
 
