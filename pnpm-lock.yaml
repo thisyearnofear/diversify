@@ -32,6 +32,9 @@ importers:
       '@lifi/sdk':
         specifier: 3.15.3
         version: 3.15.3(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)))(@solana/web3.js@1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(@types/react@18.3.27)(bufferutil@4.1.0)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(utf-8-validate@5.0.10)(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))(zod@4.3.5)
+      '@privy-io/node':
+        specifier: 0.11.0
+        version: 0.11.0(@solana/kit@5.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))
       '@privy-io/react-auth':
         specifier: 3.13.1
         version: 3.13.1(@react-native-async-storage/async-storage@1.24.0(react-native@0.84.0(@babel/core@7.29.0)(@types/react@18.3.27)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@5.0.10)))(@solana-program/system@0.10.0(@solana/kit@5.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)))(@solana-program/token@0.9.0(@solana/kit@5.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)))(@solana/kit@5.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(@solana/sysvars@5.4.0(typescript@5.9.3))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.3))(@types/react@18.3.27)(bufferutil@4.1.0)(encoding@0.1.13)(react-dom@19.2.3(react@19.2.3))(react-native@0.84.0(@babel/core@7.29.0)(@types/react@18.3.27)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@5.0.10))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(utf-8-validate@5.0.10)(zod@4.3.5)
@@ -899,6 +902,18 @@ packages:
     peerDependencies:
       react: '>= 16 || ^19.0.0-rc'
 
+  '@hpke/chacha20poly1305@1.8.0':
+    resolution: {integrity: sha512-FcBfAQ+Y99vMNJP2yrZ9wpL8V0GOwp1+zMyzvc6alasrBygfFjFm1yeUtyADJCu/27C3Lm5mJzx6u7pwg+cX5w==}
+    engines: {node: '>=16.0.0'}
+
+  '@hpke/common@1.10.1':
+    resolution: {integrity: sha512-moJwhmtLtuxiUzzNp1jpfBfx8yefKoO9D/RCR9dmwrnc7qjJqId1rEtQz+lSlU5cabX8daToMSx/7HayXOiaFw==}
+    engines: {node: '>=16.0.0'}
+
+  '@hpke/core@1.9.0':
+    resolution: {integrity: sha512-pFxWl1nNJeQCSUFs7+GAblHvXBCjn9EPN65vdKlYQil2aURaRxfGMO6vBKGqm1YHTKwiAxJQNEI70PbSowMP9Q==}
+    engines: {node: '>=16.0.0'}
+
   '@humanwhocodes/config-array@0.13.0':
     resolution: {integrity: sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw==}
     engines: {node: '>=10.10.0'}
@@ -1412,6 +1427,26 @@ packages:
       viem: ^2.44.2
     peerDependenciesMeta:
       permissionless:
+        optional: true
+      viem:
+        optional: true
+
+  '@privy-io/node@0.11.0':
+    resolution: {integrity: sha512-xhttvpuAYEIAmLhDuqko5x5fhBG96sK4g0pEixudQwHHyawHelAOPEh7+G94RaqQ8AAIISc8XjW1pqs4HEnaqQ==}
+    peerDependencies:
+      '@solana/kit': ^5.1.0
+      '@x402/evm': ^2.3.0
+      '@x402/fetch': ^2.3.0
+      '@x402/svm': ^2.3.0
+      viem: ^2.24.1
+    peerDependenciesMeta:
+      '@solana/kit':
+        optional: true
+      '@x402/evm':
+        optional: true
+      '@x402/fetch':
+        optional: true
+      '@x402/svm':
         optional: true
       viem:
         optional: true
@@ -2246,6 +2281,9 @@ packages:
 
   '@solana/web3.js@1.98.4':
     resolution: {integrity: sha512-vv9lfnvjUsRiq//+j5pBdXig0IQdtzA0BRZ3bXEP4KaIyF1CcaydWqgyzQgfZMNIsWNWmG+AUHwPy4AHOD6gpw==}
+
+  '@stablelib/base64@1.0.1':
+    resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
 
   '@swc/helpers@0.5.15':
     resolution: {integrity: sha512-JQ5TuMi45Owi4/BIMAJBoSQoOJu12oOk/gADqlcUL9JEdHB8vyjUSsxqeNXnmXHjYKMi2WcYtezGEEhqUI/E2g==}
@@ -4068,6 +4106,9 @@ packages:
 
   fast-safe-stringify@2.1.1:
     resolution: {integrity: sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA==}
+
+  fast-sha256@1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
 
   fast-stable-stringify@1.0.0:
     resolution: {integrity: sha512-wpYMUmFu5f00Sm0cj2pfivpmawLZ0NKdviQ4w9zJeR8JVtOpOxHmLaJuj0vxvGqMJQWyP/COUkF75/57OKyRag==}
@@ -6227,6 +6268,9 @@ packages:
     resolution: {integrity: sha512-WjlahMgHmCJpqzU8bIBy4qtsZdU9lRlcZE3Lvyej6t4tuOuv1vk57OW3MBrj6hXBFx/nNoC9MPMTcr5YA7NQbg==}
     engines: {node: '>=6'}
 
+  standardwebhooks@1.0.0:
+    resolution: {integrity: sha512-BbHGOQK9olHPMvQNHWul6MYlrRTAOKn03rOe4A8O3CLWhNf4YHBqq2HJKKC+sfqpxiBY52pNeesD6jIiLDz8jg==}
+
   statuses@1.5.0:
     resolution: {integrity: sha512-OpZ3zP+jT1PI7I8nemJX4AKmAX070ZkYPVWV/AaKTJl+tXCTGyVdC1a4SL8RUQYEwk/f34ZX8UTykN68FwrqAA==}
     engines: {node: '>= 0.6'}
@@ -6365,6 +6409,9 @@ packages:
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
+
+  svix@1.89.0:
+    resolution: {integrity: sha512-Yg/5OtdjN3zjWoQSoX+mkauUtLKiW/+DQWKcG2VaEfWoBBB9NmZoKMw7rQQVU5Nn/Wko3kNbo4cvo/ms48d2KQ==}
 
   swarm-js@0.1.42:
     resolution: {integrity: sha512-BV7c/dVlA3R6ya1lMlSSNPLYrntt0LUq4YMgy3iwpCIc6rZnS5W2wUoctarZ5pXlpKtxDDf9hNziEkcfrxdhqQ==}
@@ -6757,6 +6804,10 @@ packages:
   utils-merge@1.0.1:
     resolution: {integrity: sha512-pMZTvIkT1d+TFGvDOqodOclx0QWkkgi6Tdoa8gC8ffGAAqz9pzPTZWAybbsHHoED/ztMtkv/VoYTYyShUn81hA==}
     engines: {node: '>= 0.4.0'}
+
+  uuid@10.0.0:
+    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    hasBin: true
 
   uuid@3.4.0:
     resolution: {integrity: sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==}
@@ -8553,6 +8604,16 @@ snapshots:
     dependencies:
       react: 19.2.3
 
+  '@hpke/chacha20poly1305@1.8.0':
+    dependencies:
+      '@hpke/common': 1.10.1
+
+  '@hpke/common@1.10.1': {}
+
+  '@hpke/core@1.9.0':
+    dependencies:
+      '@hpke/common': 1.10.1
+
   '@humanwhocodes/config-array@0.13.0':
     dependencies:
       '@humanwhocodes/object-schema': 2.0.3
@@ -9212,6 +9273,21 @@ snapshots:
       set-cookie-parser: 2.7.2
       uuid: 9.0.1
     optionalDependencies:
+      viem: 2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
+
+  '@privy-io/node@0.11.0(@solana/kit@5.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10))(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))':
+    dependencies:
+      '@hpke/chacha20poly1305': 1.8.0
+      '@hpke/core': 1.9.0
+      '@noble/curves': 1.9.7
+      '@noble/hashes': 1.8.0
+      '@scure/base': 1.2.6
+      canonicalize: 2.1.0
+      jose: 6.1.3
+      lru-cache: 11.2.7
+      svix: 1.89.0
+    optionalDependencies:
+      '@solana/kit': 5.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)
       viem: 2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
 
   '@privy-io/popup@0.0.2': {}
@@ -10914,6 +10990,8 @@ snapshots:
       - encoding
       - typescript
       - utf-8-validate
+
+  '@stablelib/base64@1.0.1': {}
 
   '@swc/helpers@0.5.15':
     dependencies:
@@ -14459,6 +14537,8 @@ snapshots:
 
   fast-safe-stringify@2.1.1: {}
 
+  fast-sha256@1.3.0: {}
+
   fast-stable-stringify@1.0.0: {}
 
   fastq@1.20.1:
@@ -17127,6 +17207,11 @@ snapshots:
       type-fest: 0.7.1
     optional: true
 
+  standardwebhooks@1.0.0:
+    dependencies:
+      '@stablelib/base64': 1.0.1
+      fast-sha256: 1.3.0
+
   statuses@1.5.0:
     optional: true
 
@@ -17281,6 +17366,11 @@ snapshots:
     optional: true
 
   supports-preserve-symlinks-flag@1.0.0: {}
+
+  svix@1.89.0:
+    dependencies:
+      standardwebhooks: 1.0.0
+      uuid: 10.0.0
 
   swarm-js@0.1.42(bufferutil@4.1.0)(utf-8-validate@5.0.10):
     dependencies:
@@ -17671,6 +17761,8 @@ snapshots:
       which-typed-array: 1.1.19
 
   utils-merge@1.0.1: {}
+
+  uuid@10.0.0: {}
 
   uuid@3.4.0: {}
 

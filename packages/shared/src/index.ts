@@ -13,6 +13,10 @@ import { hyperliquidService, HyperliquidService } from './services/hyperliquid.s
 import { openClawService, OpenClawService } from './services/openclaw-service';
 import { VaultService } from './services/vault/vault.service';
 import { FeeEngine, feeEngine } from './services/vault/fee-engine';
+import {
+  sendSmartAccountTransaction,
+  isPrivySmartAccountEnabled,
+} from './services/vault/privy-smart-account';
 
 export {
   circleService,
@@ -37,7 +41,9 @@ export {
   OpenClawService,
   VaultService,
   FeeEngine,
-  feeEngine
+  feeEngine,
+  sendSmartAccountTransaction,
+  isPrivySmartAccountEnabled
 };
 
 // Export AI Services

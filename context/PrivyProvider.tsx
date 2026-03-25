@@ -60,6 +60,18 @@ export function PrivyProvider({ children }: { children: ReactNode }) {
                     accentColor: '#3B82F6',
                     logo: 'https://diversifiapp.vercel.app/icon.png',
                 },
+                // Smart wallets: Safe accounts on Celo + configured L2s
+                // Each user gets a Safe smart contract account controlled by their Privy embedded signer.
+                // The agent uses Privy session signers to transact within policy-enforced limits.
+                // Dashboard must also have smart wallets enabled + chains configured with bundler URLs.
+                embeddedWallets: {
+                    createOnLogin: 'users-without-wallets',
+                },
+                smartWallets: {
+                    // Use Safe for battle-tested multi-sig + module support
+                    // Safe4337Module enables ERC-4337 UserOp submission
+                    // Privy defaults to Pimlico public bundler; override in dashboard for production
+                },
             }}
         >
             <QueryClientProvider client={queryClient}>
