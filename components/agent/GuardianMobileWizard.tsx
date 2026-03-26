@@ -308,11 +308,30 @@ export function GuardianMobileWizard({
   const DepositStep = () => (
     <div className="space-y-4">
       <div className="text-center mb-4">
-        <span className="text-4xl">🎉</span>
-        <h3 className="text-lg font-bold mt-2 text-gray-900 dark:text-white">Guardian Active</h3>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+        <motion.span
+          className="text-5xl inline-block"
+          initial={{ scale: 0 }}
+          animate={{ scale: 1, rotate: [0, -10, 10, -10, 0] }}
+          transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.1 }}
+        >
+          🎉
+        </motion.span>
+        <motion.h3
+          className="text-lg font-bold mt-2 text-gray-900 dark:text-white"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          Guardian Active
+        </motion.h3>
+        <motion.p
+          className="text-sm text-gray-500 dark:text-gray-400 mt-1"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+        >
           Send stablecoins to your smart account to start diversifying
-        </p>
+        </motion.p>
       </div>
 
       {vaultAddress && (
