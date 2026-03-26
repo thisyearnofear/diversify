@@ -30,19 +30,18 @@ const arcTestnet = {
     },
 } as const
 
-const wagmiConfig = createConfig({
-    chains: [celo, celoSepolia, arbitrum, arcTestnet],
-    transports: {
-        [celo.id]: http(),
-        [celoSepolia.id]: http(),
-        [arbitrum.id]: http(),
-        [arcTestnet.id]: http(),
-    },
-})
-
 export function PrivyProvider({ children }: { children: ReactNode }) {
     const appId = WALLET_FEATURES.PRIVY_APP_ID
     const queryClient = useMemo(() => new QueryClient(), [])
+    const wagmiConfig = useMemo(() => createConfig({
+        chains: [celo, celoSepolia, arbitrum, arcTestnet],
+        transports: {
+            [celo.id]: http(),
+            [celoSepolia.id]: http(),
+            [arbitrum.id]: http(),
+            [arcTestnet.id]: http(),
+        },
+    }), [])
 
     if (!appId) {
         console.warn('[Privy] Missing NEXT_PUBLIC_PRIVY_APP_ID - social login disabled')

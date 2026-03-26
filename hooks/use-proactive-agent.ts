@@ -86,7 +86,7 @@ export function useProactiveAgent() {
             type: 'alert'
           });
           
-          setDrawerOpen(true);
+          // Add as passive chat message — don't auto-open drawer
           addMessage({
             role: 'assistant',
             content: volMessage,
@@ -117,18 +117,13 @@ export function useProactiveAgent() {
                 const best = spikes[0];
                 const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: $${(best.tvl / 1e6).toFixed(1)}M). This exceeds your ${yieldThreshold}% alert threshold. Should I rebalance idle USDC into this pool?`;
                 
-                setDrawerOpen(true);
+                // Add as passive chat message — don't auto-open drawer
                 addMessage({
                   role: 'assistant',
                   content: yieldMessage,
                   type: 'recommendation',
                   timestamp: new Date(),
-                  action: {
-                    type: 'execute_rwa',
-                    amount: '500',
-                    network: 'celo',
-                    targetAsset: best.symbol,
-                  }
+                  // No action widget — user navigates to Guardian/Agent tab to execute
                 });
                 
                 if (capabilities.voiceOutput) {
@@ -147,7 +142,7 @@ export function useProactiveAgent() {
       } catch (err) {
         console.warn('[ProactiveAgent] Monitoring loop error:', err);
       }
-    }, 60000); // Check every minute
+    }, 300000); // Check every 5 minutes (was 60s — too noisy)
 
     return () => {
       clearInterval(monitoringInterval);

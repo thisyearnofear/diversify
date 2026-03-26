@@ -754,7 +754,6 @@ export const AgentTierStatus: React.FC<{
             // requestPermission handles EIP-712 signing + server registration
             if (!address || !chainId) return false;
             try {
-              // Get the signer from the connected wallet
               const provider = (window as any).ethereum;
               if (!provider) return false;
               const ethersProvider = new ethers.providers.Web3Provider(provider);
@@ -770,7 +769,12 @@ export const AgentTierStatus: React.FC<{
                   dailyLimitUSD: dailyLimit,
                 }
               );
-              return !!result;
+              if (result) {
+                // Refresh vault data so the permission shows immediately
+                await vault.refresh(address);
+                return true;
+              }
+              return false;
             } catch {
               return false;
             }
