@@ -191,7 +191,7 @@ export function useVault(): UseVaultReturn {
       const resp = await fetch(`${API_BASE}/api/vault/permission`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress, signedPermission, sessionPrivateKey }),
+        body: JSON.stringify({ userAddress, permission: signedPermission }),
       });
 
       if (!resp.ok) {

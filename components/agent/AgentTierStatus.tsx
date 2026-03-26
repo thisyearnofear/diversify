@@ -751,20 +751,15 @@ export const AgentTierStatus: React.FC<{
           }}
           onRequestPermission={async (dailyLimit, tokens) => {
             return vault.grantPermission(address, {
-              permission: {
-                userAddress: address,
-                spendingLimitUSD: dailyLimit * 30,
-                dailyLimitUSD: dailyLimit,
-                allowedActions: ["swap", "rebalance"],
-                allowedTokens: tokens,
-                expiresAt: Math.floor(Date.now() / 1000) + 7 * 86400,
-                autonomyLevel: "GUARDIAN",
-                chainId: chainId || 42220,
-                sessionKeyAddress: address,
-                nonce: Date.now().toString(),
-              },
-              signature: "0x",
-              signedAt: new Date().toISOString(),
+              dailyLimitUSD: dailyLimit,
+              spendingLimitUSD: dailyLimit * 30,
+              allowedActions: ["swap", "rebalance"],
+              allowedTokens: tokens,
+              expiresAt: Math.floor(Date.now() / 1000) + 7 * 86400,
+              autonomyLevel: "GUARDIAN",
+              chainId: chainId || 42220,
+              sessionKeyAddress: address,
+              nonce: Date.now().toString(),
             }, "");
           }}
         />

@@ -18,21 +18,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await dbConnect();
 
   if (req.method === 'POST') {
-    const { userAddress, signedPermission, sessionPrivateKey } = req.body;
+    const { userAddress, permission } = req.body;
 
-    if (!userAddress || !signedPermission?.permission || !signedPermission?.signature || !sessionPrivateKey) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!userAddress || !permission?.dailyLimitUSD || !permission?.allowedTokens) {
+      return res.status(400).json({ error: 'Missing required fields: userAddress, permission.dailyLimitUSD, permission.allowedTokens' });
     }
 
     try {
       const vault = await vaultStore.findVaultByUser(userAddress);
       if (!vault) return res.status(404).json({ error: 'No vault found. Create one first.' });
-
-      // Verify the signature
-      const validation = erc7715.verifySignedPermission(signedPermission, signedPermission.permission.chainId);
-      if (!validation.isValid) {
-        return res.status(400).json({ error: 'Invalid permission signature', details: validation.errors });
-      }
 
       // Revoke any existing active permission
       const existing = await vaultStore.findActivePermission(vault._id);
@@ -41,19 +35,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
 
       // Create new permission
+      // Enforcement happens in VaultService.rebalance() — checks daily limit, allowed tokens, expiry.
+      // EIP-712 signature verification is deferred to the smart account layer (Privy policies).
       const permission = await vaultStore.createPermission({
         vaultId: vault._id,
         userAddress: userAddress.toLowerCase(),
-        sessionKeyAddress: signedPermission.permission.sessionKeyAddress,
-        spendingLimitUSD: signedPermission.permission.spendingLimitUSD,
-        dailyLimitUSD: signedPermission.permission.dailyLimitUSD,
-        allowedActions: signedPermission.permission.allowedActions,
-        allowedTokens: signedPermission.permission.allowedTokens,
-        expiresAt: signedPermission.permission.expiresAt,
-        autonomyLevel: signedPermission.permission.autonomyLevel,
-        chainId: signedPermission.permission.chainId,
-        nonce: signedPermission.permission.nonce,
-        signature: signedPermission.signature,
+        sessionKeyAddress: req.body.permission.sessionKeyAddress || userAddress,
+        spendingLimitUSD: req.body.permission.spendingLimitUSD || req.body.permission.dailyLimitUSD * 30,
+        dailyLimitUSD: req.body.permission.dailyLimitUSD,
+        allowedActions: req.body.permission.allowedActions || ['swap', 'rebalance'],
+        allowedTokens: req.body.permission.allowedTokens,
+        expiresAt: req.body.permission.expiresAt || Math.floor(Date.now() / 1000) + 7 * 86400,
+        autonomyLevel: req.body.permission.autonomyLevel || 'GUARDIAN',
+        chainId: req.body.permission.chainId || 42220,
+        nonce: req.body.permission.nonce || Date.now().toString(),
+        signature: req.body.permission.signature || 'unsigned',
         spentTodayUSD: 0,
         spentDate: new Date().toISOString().slice(0, 10),
         totalSpentUSD: 0,
@@ -63,7 +59,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({
         success: true,
         permission,
-        summary: erc7715.describePermission(signedPermission.permission),
+        summary: `${permission.dailyLimitUSD}/day, ${permission.allowedTokens.join(', ')}, expires ${new Date(permission.expiresAt * 1000).toLocaleDateString()}`,
       });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });

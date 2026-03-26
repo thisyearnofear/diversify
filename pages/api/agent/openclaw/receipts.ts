@@ -16,16 +16,19 @@ export default async function handler(
 
   // Check if OpenClaw is enabled
   if (!openClawService.isEnabled()) {
-    return res.status(503).json({ 
-      error: 'OpenClaw integration is not enabled'
-    });
+    // Return empty data instead of 503 — frontend shouldn't crash
+    if (req.query.type === 'identity') {
+      return res.status(200).json({ success: true, identity: { agent_id: 'not-configured' } });
+    }
+    return res.status(200).json({ success: true, receipts: [], summary: null });
   }
 
   // Check circuit breaker
   if (openClawService.isUnavailable()) {
-    return res.status(503).json({ 
-      error: 'OpenClaw service is temporarily unavailable'
-    });
+    if (req.query.type === 'identity') {
+      return res.status(200).json({ success: true, identity: { agent_id: 'unavailable' } });
+    }
+    return res.status(200).json({ success: true, receipts: [], summary: null });
   }
 
   try {
