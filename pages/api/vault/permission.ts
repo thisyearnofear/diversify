@@ -50,6 +50,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         chainId: req.body.permission.chainId || 42220,
         nonce: req.body.permission.nonce || Date.now().toString(),
         signature: req.body.permission.signature || 'unsigned',
+        signedAt: req.body.permission.signedAt || new Date().toISOString(),
         spentTodayUSD: 0,
         spentDate: new Date().toISOString().slice(0, 10),
         totalSpentUSD: 0,
