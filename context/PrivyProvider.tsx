@@ -3,12 +3,10 @@
 import { PrivyProvider as BasePrivyProvider } from '@privy-io/react-auth'
 import { WagmiProvider } from '@privy-io/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 import { celo, celoSepolia, arbitrum } from 'viem/chains'
 import { createConfig, http } from 'wagmi'
 import { WALLET_FEATURES } from '../config/features'
-
-const queryClient = new QueryClient()
 
 // Custom Arc Testnet chain
 const arcTestnet = {
@@ -44,6 +42,7 @@ const wagmiConfig = createConfig({
 
 export function PrivyProvider({ children }: { children: ReactNode }) {
     const appId = WALLET_FEATURES.PRIVY_APP_ID
+    const queryClient = useMemo(() => new QueryClient(), [])
 
     if (!appId) {
         console.warn('[Privy] Missing NEXT_PUBLIC_PRIVY_APP_ID - social login disabled')
