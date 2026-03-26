@@ -8,6 +8,7 @@ import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
 import { useProactiveAgent } from "../../hooks/use-proactive-agent";
+import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";
 import dynamic from "next/dynamic";
@@ -27,16 +28,82 @@ function useUserMessageCount(messages: { role: string }[]) {
   return messages.filter(m => m.role === "user").length;
 }
 
-const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: () => void }) => {
-  const [status, setStatus] = useState<'idle' | 'executing' | 'success'>('idle');
+const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (result: any) => void }) => {
+  const [status, setStatus] = useState<'idle' | 'executing' | 'success' | 'error'>('idle');
+  const [txHash, setTxHash] = useState<string | null>(null);
+  const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleExecute = () => {
+  const handleExecute = async () => {
     setStatus('executing');
-    // Simulate real-world execution via Celo Agent Fuel
-    setTimeout(() => {
-      setStatus('success');
-      setTimeout(onComplete, 1500);
-    }, 3000);
+    setErrorMessage(null);
+
+    try {
+      const userAddress = action.userAddress;
+      if (!userAddress || userAddress === '0x0000000000000000000000000000000000000000') {
+        throw new Error('Connect your wallet first');
+      }
+
+      // Parse target asset (e.g., "cEUR" → swap some base stablecoin to cEUR)
+      const assetParts = action.targetAsset?.split('-') || [];
+      const tokenIn = assetParts.length > 1 ? assetParts[1] : 'cUSD';
+      const tokenOut = assetParts[0] || action.targetAsset || 'cUSD';
+
+      const TOKEN_ADDRESSES: Record<string, string> = {
+        cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
+        cEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
+        cREAL: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787',
+        KESm: '0x456a3D042C0DbD3db53D5489e98dFb038553B0d0',
+        COPm: '0x8A567e2aE79CA692Bd748aB832081C45de4041eA',
+        PHPm: '0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B',
+      };
+
+      const amountIn = action.amount?.toString() || '500';
+
+      // Route through vault system: permission check → fee calc → smart account execution
+      const response = await fetch('/api/vault/rebalance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userAddress,
+          recommendations: [{
+            action: 'swap',
+            urgency: 'high',
+            tokenIn,
+            tokenInAddress: TOKEN_ADDRESSES[tokenIn] || TOKEN_ADDRESSES.cUSD,
+            tokenOut,
+            tokenOutAddress: TOKEN_ADDRESSES[tokenOut] || TOKEN_ADDRESSES.cUSD,
+            amountIn: (parseFloat(amountIn) * 1e18).toString(),
+            reason: action.reason || `AI-recommended rebalance to ${tokenOut}`,
+            estimatedAmountUSD: parseFloat(amountIn),
+          }],
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.executed > 0) {
+        const tx = result.transactions?.[0];
+        setTxHash(tx?.txHash || null);
+        setExplorerUrl(tx?.explorerUrl || null);
+        setStatus('success');
+        onComplete({ txHash: tx?.txHash, explorerUrl: tx?.explorerUrl });
+      } else if (result.success && result.skipped > 0) {
+        throw new Error('Rebalance skipped — check vault permissions or daily limit');
+      } else {
+        throw new Error(result.error || result.transactions?.[0]?.error || 'Execution failed');
+      }
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Transaction failed');
+      setStatus('error');
+    }
+  };
+
+  const handleRetry = () => {
+    setStatus('idle');
+    setErrorMessage(null);
+    setTxHash(null);
+    setExplorerUrl(null);
   };
 
   return (
@@ -63,11 +130,12 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: () =
       </div>
 
       <button
-        onClick={handleExecute}
-        disabled={status !== 'idle'}
+        onClick={status === 'error' ? handleRetry : handleExecute}
+        disabled={status === 'executing' || status === 'success'}
         className={`w-full py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
           status === 'success' ? 'bg-green-500 text-white' :
           status === 'executing' ? 'bg-blue-400 text-white cursor-wait' :
+          status === 'error' ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20' :
           'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20'
         }`}
       >
@@ -79,7 +147,34 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: () =
           </span>
         )}
         {status === 'success' && '✓ Executed'}
+        {status === 'error' && 'Retry'}
       </button>
+
+      {/* Error message */}
+      {status === 'error' && errorMessage && (
+        <p className="text-[9px] text-center text-red-500 mt-2 font-medium">
+          ⚠ {errorMessage}
+        </p>
+      )}
+
+      {/* Success with tx hash */}
+      {status === 'success' && txHash && (
+        <div className="mt-2 text-center">
+          <p className="text-[9px] text-gray-400 font-medium">
+            Tx: {txHash.slice(0, 10)}...{txHash.slice(-8)}
+          </p>
+          {explorerUrl && (
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-blue-500 hover:text-blue-600 underline mt-0.5 inline-block"
+            >
+              View on Explorer →
+            </a>
+          )}
+        </div>
+      )}
 
       {status === 'idle' && (
         <p className="text-[9px] text-center text-gray-400 mt-2 font-medium">
@@ -114,6 +209,7 @@ export default function AIChat() {
   });
   const { claimReward } = useCredits();
   const { setActiveTab } = useNavigation();
+  const { address } = useWalletContext();
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
@@ -423,9 +519,13 @@ export default function AIChat() {
 
                       {msg.action?.type === 'execute_rwa' && (
                         <RwaActionWidget 
-                          action={msg.action} 
-                          onComplete={() => {
-                            addUserMessage(`Execution successful! Rebalanced $${msg.action?.amount} to ${msg.action?.targetAsset} on ${msg.action?.network}.`);
+                          action={{ ...msg.action, userAddress: address || '0x0000000000000000000000000000000000000000' }} 
+                          onComplete={(result) => {
+                            if (result.txHash) {
+                              addUserMessage(`✓ Rebalanced $${msg.action?.amount} to ${msg.action?.targetAsset} on ${msg.action?.network}. Tx: ${result.txHash}${result.explorerUrl ? ` — ${result.explorerUrl}` : ''}`);
+                            } else {
+                              addUserMessage(`✓ Rebalanced $${msg.action?.amount} to ${msg.action?.targetAsset} on ${msg.action?.network}.`);
+                            }
                           }} 
                         />
                       )}
