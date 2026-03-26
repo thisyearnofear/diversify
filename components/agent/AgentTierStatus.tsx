@@ -10,6 +10,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { ethers } from "ethers";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentActivities } from "../../hooks/use-agent-activities";
 import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
@@ -750,17 +751,29 @@ export const AgentTierStatus: React.FC<{
             return vault.createVault(address, strategy);
           }}
           onRequestPermission={async (dailyLimit, tokens) => {
-            return vault.grantPermission(address, {
-              dailyLimitUSD: dailyLimit,
-              spendingLimitUSD: dailyLimit * 30,
-              allowedActions: ["swap", "rebalance"],
-              allowedTokens: tokens,
-              expiresAt: Math.floor(Date.now() / 1000) + 7 * 86400,
-              autonomyLevel: "GUARDIAN",
-              chainId: chainId || 42220,
-              sessionKeyAddress: address,
-              nonce: Date.now().toString(),
-            }, "");
+            // requestPermission handles EIP-712 signing + server registration
+            if (!address || !chainId) return false;
+            try {
+              // Get the signer from the connected wallet
+              const provider = (window as any).ethereum;
+              if (!provider) return false;
+              const ethersProvider = new ethers.providers.Web3Provider(provider);
+              const signer = ethersProvider.getSigner();
+
+              const result = await requestPermission(
+                "GUARDIAN",
+                address,
+                signer,
+                chainId,
+                {
+                  spendingLimitUSD: dailyLimit * 30,
+                  dailyLimitUSD: dailyLimit,
+                }
+              );
+              return !!result;
+            } catch {
+              return false;
+            }
           }}
         />
       )}

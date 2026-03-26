@@ -136,8 +136,11 @@ export function useSessionKey(): UseSessionKeyReturn {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    signedPermission: signed,
-                    sessionPrivateKey: sessionKeyPair.privateKey,
+                    userAddress,
+                    permission: {
+                        ...permission,
+                        signature: signed.signature,
+                    },
                 }),
             });
 
