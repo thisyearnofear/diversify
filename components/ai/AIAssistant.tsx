@@ -983,7 +983,7 @@ export default function AIAssistant({
             </div>
             <div>
               <h3 className="text-white font-black text-sm tracking-tight uppercase leading-none">
-                AI Assistant
+                Advisor
               </h3>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
@@ -992,7 +992,7 @@ export default function AIAssistant({
                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-black/20 border border-white/10">
                   <div className="w-1 h-1 rounded-full bg-blue-400 animate-pulse" />
                   <span className="text-xs font-mono text-blue-100">
-                    AI Assistant
+                    Advisor
                   </span>
                 </div>
               </div>

@@ -27,7 +27,7 @@ export class VoiceInsightsService {
         }
 
         const prompt = `
-            You are DiversiFi Voice Oracle. 
+            You are DiversiFi Voice Advisor. 
             Analyze the following text and provide structured insights.
             
             TEXT: "${transcription}"

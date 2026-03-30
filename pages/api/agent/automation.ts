@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AutomationService } from '@diversifi/shared';
+import * as path from 'path';
+import { readJsonFile, writeJsonFile } from './_json-store';
 
 /**
  * Agent Automation API
@@ -30,9 +32,36 @@ interface AutomationPreferences {
     };
 }
 
+type AutomationPreferenceStore = Record<string, AutomationPreferences>;
+
+const STORAGE_PATH =
+    process.env.AGENT_AUTOMATION_PATH || path.join(process.cwd(), '.data', 'agent-automation-preferences.json');
+
+function normalizeUserAddress(userAddress: string | string[] | undefined): string | null {
+    if (!userAddress) return null;
+    const value = Array.isArray(userAddress) ? userAddress[0] : userAddress;
+    return typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+}
+
+async function loadPreferenceStore(): Promise<AutomationPreferenceStore> {
+    return readJsonFile<AutomationPreferenceStore>(STORAGE_PATH, {});
+}
+
+async function getStoredPreferences(userAddress: string): Promise<AutomationPreferences | null> {
+    const store = await loadPreferenceStore();
+    return store[userAddress] || null;
+}
+
+async function saveStoredPreferences(userAddress: string, preferences: AutomationPreferences): Promise<void> {
+    const store = await loadPreferenceStore();
+    store[userAddress] = preferences;
+    await writeJsonFile(STORAGE_PATH, store);
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
     const { method } = req;
-    const { userAddress, email } = req.query;
+    const { userAddress: userAddressQuery, email } = req.query;
+    const userAddress = normalizeUserAddress(userAddressQuery);
 
     if (!userAddress) {
         return res.status(400).json({ error: 'User address required' });
@@ -40,8 +69,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     switch (method) {
         case 'GET': {
-            // Stateless: client owns preferences in localStorage; return defaults only
-            return res.status(200).json({ preferences: getDefaultPreferences(email as string) });
+            const stored = await getStoredPreferences(userAddress);
+            return res.status(200).json({ preferences: stored || getDefaultPreferences(email as string) });
         }
 
         case 'POST':
@@ -125,7 +154,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 }
             }
 
-            // Stateless: client owns preferences in localStorage; just validate and ack
             try {
                 const newPreferences: AutomationPreferences = req.body;
 
@@ -133,9 +161,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                     return res.status(400).json({ error: 'Email address required when email notifications are enabled' });
                 }
 
+                await saveStoredPreferences(userAddress, newPreferences);
+
                 return res.status(200).json({
                     success: true,
-                    message: 'Automation preferences acknowledged',
+                    message: 'Automation preferences saved',
                     preferences: newPreferences
                 });
             } catch (error) {

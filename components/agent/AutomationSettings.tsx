@@ -102,11 +102,30 @@ export default function AutomationSettings({
   const [saving, setSaving] = useState(false);
   const [testingAutomation, setTestingAutomation] = useState(false);
 
-  const loadPreferences = useCallback(() => {
+  const loadPreferences = useCallback(async () => {
     if (!address) return;
-    const stored = loadPrefsFromStorage(address);
-    setPreferences(stored || getDefaultPreferences());
-    setLoading(false);
+
+    const localFallback = loadPrefsFromStorage(address) || getDefaultPreferences();
+    setPreferences(localFallback);
+
+    try {
+      const response = await fetch(
+        `/api/agent/automation?userAddress=${encodeURIComponent(address)}`,
+      );
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const nextPreferences = payload?.preferences || localFallback;
+      setPreferences(nextPreferences);
+      savePrefsToStorage(address, nextPreferences);
+    } catch (error) {
+      console.warn("Failed to load automation preferences from server:", error);
+      setPreferences(localFallback);
+    } finally {
+      setLoading(false);
+    }
   }, [address]);
 
   useEffect(() => {
@@ -115,10 +134,24 @@ export default function AutomationSettings({
     }
   }, [address, loadPreferences]);
 
-  const savePreferences = () => {
+  const savePreferences = async () => {
     if (!preferences || !address) return;
     setSaving(true);
     try {
+      const response = await fetch(
+        `/api/agent/automation?userAddress=${encodeURIComponent(address)}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(preferences),
+        },
+      );
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => null);
+        throw new Error(payload?.error || `HTTP ${response.status}`);
+      }
+
       savePrefsToStorage(address, preferences);
       showToast("✅ Automation preferences saved successfully", "success");
     } catch (error) {
@@ -281,11 +314,11 @@ export default function AutomationSettings({
               <span className="text-xl">🔮</span>
             </div>
             <div>
-              <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm">
-                AI Strategy Core
-              </h3>
+                <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm">
+                  AI Strategy Core
+                </h3>
               <p className="text-xs sm:text-xs text-gray-600 dark:text-gray-400">
-                Configure how the Oracle analyzes your wealth
+                Configure how the Advisor analyzes your wealth
               </p>
             </div>
           </div>

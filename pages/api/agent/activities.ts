@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import fs from 'fs/promises';
-import path from 'path';
+import * as path from 'path';
+import { readJsonFile, writeJsonFile } from './_json-store';
 
 interface AgentActivityRecord {
   id: string;
@@ -13,7 +13,7 @@ interface AgentActivityRecord {
 }
 
 const MAX_ACTIVITIES = 200;
-const STORAGE_PATH = process.env.AGENT_ACTIVITY_PATH || '/tmp/diversifi-agent-activities.json';
+const STORAGE_PATH = process.env.AGENT_ACTIVITY_PATH || path.join(process.cwd(), '.data', 'agent-activities.json');
 
 let cachedActivities: AgentActivityRecord[] = [];
 let loaded = false;
@@ -32,25 +32,16 @@ const normalizeActivities = (items: AgentActivityRecord[]): AgentActivityRecord[
 const hydrateFromDisk = async () => {
   if (loaded) return;
   loaded = true;
-  try {
-    const raw = await fs.readFile(STORAGE_PATH, 'utf8');
-    if (!raw) return;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return;
-    cachedActivities = normalizeActivities(parsed)
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, MAX_ACTIVITIES);
-  } catch (error: any) {
-    if (error?.code !== 'ENOENT') {
-      console.warn('[Agent Activities] Failed to load from disk:', error);
-    }
-  }
+  const parsed = await readJsonFile<AgentActivityRecord[]>(STORAGE_PATH, []);
+  if (!Array.isArray(parsed)) return;
+  cachedActivities = normalizeActivities(parsed)
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .slice(0, MAX_ACTIVITIES);
 };
 
 const persistToDisk = async () => {
   try {
-    await fs.mkdir(path.dirname(STORAGE_PATH), { recursive: true });
-    await fs.writeFile(STORAGE_PATH, JSON.stringify(cachedActivities), 'utf8');
+    await writeJsonFile(STORAGE_PATH, cachedActivities);
   } catch (error) {
     console.warn('[Agent Activities] Failed to persist to disk:', error);
   }

@@ -115,7 +115,7 @@ export class AgentActionService {
                 break;
 
             case 'QUERY':
-                // Direct queries always go to the Oracle
+                // Direct queries always go to the Advisor
                 callbacks.onAskAI?.(originalText);
                 callbacks.onOpenAIChat?.();
                 break;

@@ -82,7 +82,7 @@ export default function AgentTab({
       <div className="text-center">
         <h2 className="text-2xl font-black text-gray-900 dark:text-white">
           {experienceMode === "beginner"
-            ? "Your AI Assistant"
+            ? "Your Advisor"
             : "Agent Command Center"}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

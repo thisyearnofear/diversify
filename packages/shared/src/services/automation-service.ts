@@ -306,7 +306,7 @@ export class AutomationService {
         const html = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center;">
-                    <h1>🧠 DiversiFi Oracle</h1>
+                    <h1>🧠 DiversiFi Advisor</h1>
                     <p>AI-Powered Wealth Protection</p>
                 </div>
                 
@@ -358,7 +358,7 @@ export class AutomationService {
         `;
 
         const text = `
-DiversiFi Oracle - ${analysis.action} Recommendation
+DiversiFi Advisor - ${analysis.action} Recommendation
 
 Expected Protection: $${analysis.expectedSavings} saved over ${analysis.timeHorizon}
 
