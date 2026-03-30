@@ -308,7 +308,15 @@ export const AgentTierStatus: React.FC<{
               {advisorStatus}
             </span>
           </div>
-          <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight relative z-10">
+          <div className="mt-1 flex items-center gap-2 relative z-10">
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+              Think
+            </span>
+            <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
+              Recommends and explains
+            </span>
+          </div>
+          <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight relative z-10 mt-2">
             The Advisor
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 relative z-10">
@@ -317,7 +325,18 @@ export const AgentTierStatus: React.FC<{
               : "Unified analysis, chat, and quick actions."}
           </p>
           <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 relative z-10">
-            Market reasoning, portfolio analysis, and guided actions now share one surface.
+            Produces the recommendation, rationale, and next action for the user or Guardian.
+          </div>
+          <div className="mt-3 flex flex-wrap gap-1.5 relative z-10">
+            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+              Analysis
+            </span>
+            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+              Conversation
+            </span>
+            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+              Quick Actions
+            </span>
           </div>
           <OracleMetrics compact={true} />
           {isAnalyzing && (
@@ -373,7 +392,15 @@ export const AgentTierStatus: React.FC<{
               {guardianStatus}
             </span>
           </div>
-          <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight">
+          <div className="mt-1 flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-full">
+              Act
+            </span>
+            <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
+              Executes and verifies
+            </span>
+          </div>
+          <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight mt-2">
             The Guardian
           </h4>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -393,6 +420,17 @@ export const AgentTierStatus: React.FC<{
                     ? "Permission granted — deposit stablecoins."
                     : "Create a vault and deposit to start."}
           </p>
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
+              Policy Checks
+            </span>
+            <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
+              On-chain Actions
+            </span>
+            <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
+              Receipts
+            </span>
+          </div>
           {/* High-level summary of latest activity */}
           {guardianActive && (
             <div className="mt-3 flex items-center gap-2">
@@ -405,6 +443,30 @@ export const AgentTierStatus: React.FC<{
         </motion.div>
       </div>
 
+      <div className="bg-gradient-to-r from-blue-50 via-white to-purple-50 dark:from-blue-900/20 dark:via-gray-900 dark:to-purple-900/20 rounded-2xl border border-blue-100 dark:border-purple-900 px-4 py-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300">
+            <span className="w-2 h-2 rounded-full bg-blue-500" />
+            Advisor recommends
+          </div>
+          <span className="text-xs text-gray-400">→</span>
+          <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-300">
+            <span className="w-2 h-2 rounded-full bg-amber-500" />
+            User or policy authorizes
+          </div>
+          <span className="text-xs text-gray-400">→</span>
+          <div className="flex items-center gap-2 text-xs font-bold text-purple-700 dark:text-purple-300">
+            <span className="w-2 h-2 rounded-full bg-purple-500" />
+            Guardian executes
+          </div>
+          <span className="text-xs text-gray-400">→</span>
+          <div className="flex items-center gap-2 text-xs font-bold text-green-700 dark:text-green-300">
+            <span className="w-2 h-2 rounded-full bg-green-500" />
+            Receipt proves outcome
+          </div>
+        </div>
+      </div>
+
       {/* Expanded Guardian Journal View - Premium Timeline Layout */}
       {expandedTier === "guardian" && (
         <motion.div
@@ -415,7 +477,7 @@ export const AgentTierStatus: React.FC<{
           <div className="flex items-center justify-between mb-6">
             <div>
               <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">Guardian Journal</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Real-time autonomous execution log</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Recommendation handoff, execution, and verifiable evidence</p>
             </div>
             <div className="flex items-center gap-3">
               {/* Quick Status Pill */}
@@ -424,7 +486,7 @@ export const AgentTierStatus: React.FC<{
                   <span className="animate-ping absolute h-full w-full rounded-full bg-purple-400 opacity-75"></span>
                   <span className="relative rounded-full h-2 w-2 bg-purple-500"></span>
                 </span>
-                <span className="text-xs font-bold text-purple-700 dark:text-purple-300">Live Feedback</span>
+                <span className="text-xs font-bold text-purple-700 dark:text-purple-300">Execution + Evidence</span>
               </div>
             </div>
           </div>
@@ -433,7 +495,7 @@ export const AgentTierStatus: React.FC<{
             {/* Left Column: Management & Permissions */}
             <div className="space-y-6">
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
-                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-4">Agent Configuration</h4>
+                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-4">Guardian Controls</h4>
                 
                 {isWDK ? (
                   <GuardianWDKStatus
@@ -584,7 +646,7 @@ export const AgentTierStatus: React.FC<{
             {/* Right Column: High-End Activity Timeline */}
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider">Proof of Work</h4>
+                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider">Proof of Execution</h4>
                 <span className="text-xs text-gray-400 italic">Sorted by Recency</span>
               </div>
               

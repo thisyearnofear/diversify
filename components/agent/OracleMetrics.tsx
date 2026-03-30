@@ -1,5 +1,5 @@
 /**
- * OracleMetrics — Real-time market metrics for the Oracle card.
+ * OracleMetrics — Real-time market metrics for the Advisor card.
  * Shows inflation rate, diversification score, and top opportunity.
  * 
  * CLEAN: Single-purpose component for displaying market data.

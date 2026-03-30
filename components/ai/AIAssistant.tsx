@@ -638,7 +638,7 @@ export default function AIAssistant({
                     <div className="flex items-center gap-3 p-3 bg-emerald-50 rounded-xl border border-emerald-100">
                       <TierBadge level="GUARDIAN" />
                       <span className="text-sm font-bold text-emerald-800">
-                        Portfolio well-protected by Guardian
+                        Guardian standing by with no action needed
                       </span>
                     </div>
                   )}
@@ -655,7 +655,7 @@ export default function AIAssistant({
                         )}
                       </div>
                       <p className="text-xs text-purple-800 dark:text-purple-200 font-medium">
-                        Autonomous checking enabled. Strategy: <span className="font-bold">{advice.autonomous.strategyId}</span>
+                        Guardian is authorized to act on Advisor output. Strategy: <span className="font-bold">{advice.autonomous.strategyId}</span>
                       </p>
                       {advice.autonomous.x402Evidence && (
                         <a 
@@ -987,12 +987,12 @@ export default function AIAssistant({
               </h3>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="bg-white/20 text-white text-xs px-1.5 py-0.5 rounded-md font-bold uppercase tracking-wider">
-                  AI
+                  Think Layer
                 </span>
                 <div className="flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-black/20 border border-white/10">
                   <div className="w-1 h-1 rounded-full bg-blue-400 animate-pulse" />
                   <span className="text-xs font-mono text-blue-100">
-                    Advisor
+                    Recommends
                   </span>
                 </div>
               </div>
@@ -1009,11 +1009,18 @@ export default function AIAssistant({
             {autonomousStatus?.enabled && (
               <div className="flex flex-col items-end hidden md:flex">
                 <span className="text-xs text-blue-100 font-bold uppercase tracking-tighter opacity-80 underline">
-                  On-Chain Verified
+                  Feeds Guardian Execution
                 </span>
               </div>
             )}
           </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-blue-100/90">
+          <span className="bg-white/15 px-2 py-1 rounded-full">Analyze</span>
+          <span>→</span>
+          <span className="bg-white/15 px-2 py-1 rounded-full">Explain</span>
+          <span>→</span>
+          <span className="bg-white/15 px-2 py-1 rounded-full">Route to Guardian</span>
         </div>
       </div>
 

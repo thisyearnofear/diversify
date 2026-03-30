@@ -86,7 +86,7 @@ export default function AgentQuickActions({ isOpen, onClose }: AgentQuickActions
                   <div className="flex items-center gap-2">
                     <span className="text-xl">🎙️</span>
                     <h3 className="text-sm font-black text-gray-900 dark:text-white">
-                      Quick Actions
+                      Advisor Actions
                     </h3>
                   </div>
                   <button
@@ -97,7 +97,7 @@ export default function AgentQuickActions({ isOpen, onClose }: AgentQuickActions
                   </button>
                 </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  What would you like to do?
+                  Shortcut into the Advisor workflow.
                 </p>
               </div>
 
