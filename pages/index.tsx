@@ -50,7 +50,7 @@ import PullToRefresh from "../components/ui/PullToRefresh";
 
 import { useVoiceIntent } from "../hooks/use-voice-intent";
 import { useAnalytics } from "../hooks/use-analytics";
-import { useAIOracle } from "../hooks/use-ai-oracle";
+import { useAdvisor } from "../hooks/use-advisor";
 import { useStreakRewards } from "../hooks/use-streak-rewards";
 import { useProtectionProfile } from "../hooks/use-protection-profile";
 
@@ -78,7 +78,7 @@ export default function DiversiFiPage() {
   const { activeTab, setActiveTab } = useNavigation();
   const { experienceMode, setExperienceMode } = useExperience();
   const { showToast } = useToast();
-  const { openOracle, unreadCount } = useAIOracle();
+  const { openAdvisor, unreadCount } = useAdvisor();
 
   // Static OG image for consistent social sharing
   const ogImageUrl = 'https://diversifiapp.vercel.app/embed-image.png';
@@ -449,7 +449,7 @@ export default function DiversiFiPage() {
 
         {/* AI Chat FAB — floats above bottom nav, visible on all tabs */}
         <button
-          onClick={openOracle}
+          onClick={openAdvisor}
           aria-label="AI Chat"
           className="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white shadow-lg shadow-blue-600/30 flex items-center justify-center transition-all"
         >

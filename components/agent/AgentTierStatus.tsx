@@ -2,7 +2,7 @@
  * AgentTierStatus - The unified Smart Command Center
  *
  * Core Principles:
- * - CLEAN: Explicit separation of Oracle, Assistant, and Guardian tiers.
+ * - CLEAN: Explicit separation of Advisor and Guardian tiers.
  * - ORGANIZED: Domain-driven design for status and action.
  * - PERFORMANT: Only re-renders when agent status changes.
  * - MULTI-ENV: Responsive for Web, MiniPay, and Farcaster.
@@ -39,15 +39,13 @@ export const AgentTierStatus: React.FC<{
   isFarcaster?: boolean;
   showActivityFeed?: boolean;
   onNavigateToAgent?: () => void;
-  onOracleClick?: () => void;
-  onAssistantClick?: () => void;
+  onAdvisorClick?: () => void;
 }> = ({
   isMiniPay,
   isFarcaster: _isFarcaster,
   showActivityFeed = false,
   onNavigateToAgent,
-  onOracleClick,
-  onAssistantClick,
+  onAdvisorClick,
 }) => {
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { activities, addActivity } = useAgentActivities();
@@ -76,9 +74,7 @@ export const AgentTierStatus: React.FC<{
     ? analysisThinkingStep
     : chatThinkingStep;
   const { experienceMode } = useExperience();
-  const [expandedTier, setExpandedTier] = useState<
-    "oracle" | "assistant" | "guardian" | null
-  >(null);
+  const [expandedTier, setExpandedTier] = useState<"advisor" | "guardian" | null>(null);
   const {
     agentStatus: openClawStatus,
     agentIdentity: openClawIdentity,
@@ -100,11 +96,11 @@ export const AgentTierStatus: React.FC<{
 
   const isBeginner = experienceMode === "beginner";
 
-  // Tier 1: The Oracle (Reasoning)
-  const oracleStatus = capabilities.analysis ? "Online" : "Unavailable";
-
-  // Tier 2: The Assistant (Intents)
-  const assistantStatus = capabilities.voiceInput ? "Listening" : "Ready";
+  const advisorStatus = capabilities.analysis
+    ? capabilities.voiceInput
+      ? "Online"
+      : "Ready"
+    : "Unavailable";
 
   // Session Key (ERC-7715) for non-custodial Guardian — declared BEFORE guardian state so it can reference hasValidPermission
   const { address, chainId } = useWalletContext();
@@ -159,7 +155,7 @@ export const AgentTierStatus: React.FC<{
 
   useEffect(() => {
     const unsubscribe = agentEventBus.on<{ advice: any; timestamp: number }>(
-      "oracle:analysis",
+      "advisor:analysis",
       ({ advice }) => {
         if (!guardianActive) return;
 
@@ -172,8 +168,8 @@ export const AgentTierStatus: React.FC<{
           description: hasExecuted
             ? `Autonomous execution: Swapped USDC to ${advice?.targetToken || "target asset"}`
             : hasOpenClaw
-              ? `Guardian received Oracle signal — OpenClaw agent ready for execution`
-              : "Guardian received Oracle signal for follow-up review",
+              ? `Guardian received Advisor signal — OpenClaw agent ready for execution`
+              : "Guardian received Advisor signal for follow-up review",
           status: hasExecuted ? "success" : "pending",
           details: {
             action: advice?.action,
@@ -241,7 +237,7 @@ export const AgentTierStatus: React.FC<{
   }, [activities]);
 
   // Filter activities by tier
-  const getActivitiesForTier = (tier: "ORACLE" | "ASSISTANT" | "GUARDIAN") => {
+  const getActivitiesForTier = (tier: "ADVISOR" | "GUARDIAN") => {
     return activities.filter((a) => a.tier === tier).slice(0, 5);
   };
 
@@ -291,15 +287,15 @@ export const AgentTierStatus: React.FC<{
 
       {/* Tier Cards */}
       <div
-        className={`grid grid-cols-1 md:grid-cols-3 gap-3 ${isMiniPay ? "px-1" : ""}`}
+        className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${isMiniPay ? "px-1" : ""}`}
       >
-        {/* Tier 1: The Oracle */}
+        {/* Tier 1: The Advisor */}
         <motion.div
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-blue-100 dark:border-blue-900 shadow-sm relative overflow-hidden cursor-pointer"
           onClick={() => {
-            setExpandedTier(expandedTier === "oracle" ? null : "oracle");
-            (onOracleClick ?? onNavigateToAgent)?.();
+            setExpandedTier(expandedTier === "advisor" ? null : "advisor");
+            (onAdvisorClick ?? onNavigateToAgent)?.();
           }}
         >
           <div className="flex justify-between items-start mb-2 relative z-10">
@@ -307,20 +303,22 @@ export const AgentTierStatus: React.FC<{
               <span className="text-xl">🔮</span>
             </div>
             <span
-              className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${oracleStatus === "Online" ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"}`}
+              className={`text-xs font-bold px-2 py-0.5 rounded-full uppercase ${advisorStatus === "Unavailable" ? "bg-gray-100 text-gray-500" : "bg-green-100 text-green-700"}`}
             >
-              {oracleStatus}
+              {advisorStatus}
             </span>
           </div>
           <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight relative z-10">
-            The Oracle
+            The Advisor
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 relative z-10">
             {isBeginner
-              ? "Explains the market to you."
-              : "High-fidelity macro reasoning engine."}
+              ? "Explains risk and helps you act."
+              : "Unified analysis, chat, and quick actions."}
           </p>
-          {/* Oracle Metrics — real-time market data */}
+          <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 relative z-10">
+            Market reasoning, portfolio analysis, and guided actions now share one surface.
+          </div>
           <OracleMetrics compact={true} />
           {isAnalyzing && (
             <motion.div
@@ -336,43 +334,9 @@ export const AgentTierStatus: React.FC<{
               </div>
             </motion.div>
           )}
-          {showActivityFeed && expandedTier === "oracle" && (
+          {showActivityFeed && expandedTier === "advisor" && (
             <ActivityFeed
-              activities={getActivitiesForTier("ORACLE")}
-              onNavigateToSwap={onNavigateToAgent}
-              hasWallet={!!address}
-            />
-          )}
-        </motion.div>
-
-        {/* Tier 2: The Assistant */}
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-green-100 dark:border-green-900 shadow-sm cursor-pointer"
-          onClick={() => {
-            setExpandedTier(expandedTier === "assistant" ? null : "assistant");
-            (onAssistantClick ?? onNavigateToAgent)?.();
-          }}
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-xl">
-              <span className="text-xl">🎙️</span>
-            </div>
-            <span className="text-xs font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase">
-              {assistantStatus}
-            </span>
-          </div>
-          <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight">
-            The Assistant
-          </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            {isBeginner
-              ? "Helps you move money fast."
-              : "Intent-based SocialConnect execution."}
-          </p>
-          {showActivityFeed && expandedTier === "assistant" && (
-            <ActivityFeed
-              activities={getActivitiesForTier("ASSISTANT")}
+              activities={getActivitiesForTier("ADVISOR")}
               onNavigateToSwap={onNavigateToAgent}
               hasWallet={!!address}
             />
@@ -685,7 +649,7 @@ export const AgentTierStatus: React.FC<{
         </motion.div>
       )}
 
-      {/* Legacy/Oracle Modal Logic (unaffected) */}
+      {/* Advisor permission modal */}
       {showPermissionModal && (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"

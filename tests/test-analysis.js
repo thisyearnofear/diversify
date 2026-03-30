@@ -84,12 +84,13 @@ async function runAnalysisTest() {
         console.log(`   Risk: ${config.riskTolerance}, Horizon: ${config.timeHorizon}`);
 
         try {
-            const response = await fetch('http://localhost:3001/api/agent/analyze', {
+            const response = await fetch('http://localhost:3001/api/agent/advisor', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    mode: 'analysis',
                     portfolio: TEST_PORTFOLIO,
                     inflationData: TEST_INFLATION_DATA,
                     config: config

@@ -18,7 +18,7 @@ import {
   useProtectionProfile,
   USER_GOALS,
 } from "@/hooks/use-protection-profile";
-import { useAIOracle } from "@/hooks/use-ai-oracle";
+import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
 import { StrategyService } from "@diversifi/shared";
 import { useToast } from "@/components/ui/Toast";
@@ -60,7 +60,7 @@ export default function ProtectionTab({
   const { navigateToSwap } = useNavigation();
   const { demoMode } = useDemoMode();
   const { experienceMode } = useExperience();
-  const { ask: askOracle } = useAIOracle();
+  const { askAdvisor } = useAdvisor();
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";
 
@@ -548,7 +548,7 @@ export default function ProtectionTab({
           label: "Analyze My Portfolio",
           onClick: () => {
             const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
-            askOracle(`Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
+            askAdvisor(`Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
           },
         }}
       />

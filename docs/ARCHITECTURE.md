@@ -24,6 +24,15 @@ Technical system design and technology stack for DiversiFi (2026 Edition).
 - Separate API: Handles autonomous AI operations and cross-chain orchestration
 - OpenClaw Gateway: External execution layer for secure transaction submission with full audit trails
 
+## Agent Architecture (2026)
+
+DiversiFi now has two product-facing agent tiers:
+
+- **Advisor**: Unified reasoning layer for portfolio analysis, conversation, and quick actions.
+- **Guardian**: Autonomous execution layer for wallet-scoped actions, on-chain execution, receipts, and automation.
+
+This replaces the older Oracle + Assistant split. Analysis and conversation still use different workflows, but they now share one Advisor surface, one API contract, and one frontend state model.
+
 ## Autonomous Agent Architecture (2026 "Hub & Spoke")
 
 We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and orchestrates actions across other chains.
@@ -57,18 +66,20 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
   └───────────────────────────┘
 ```
 
-### Agent Layers: Brain + Hands
+### Agent Layers: Advisor + Guardian + Hands
 
-**Arc Agent (Brain)** — Lives on Arc L1, handles reasoning, data purchases (x402), proactive monitoring, and cross-chain orchestration.
+**Advisor** — User-facing reasoning layer. Handles conversation, portfolio analysis, quick actions, and structured recommendations through a unified `/api/agent/advisor` contract.
+
+**Guardian / Arc Agent** — Autonomous execution layer. Handles wallet-scoped autonomy, premium data access, policy checks, cross-chain orchestration, execution, receipts, and automation triggers.
 
 **OpenClaw (Hands)** — External execution gateway that submits transactions to chains, tracks receipts, and pushes completion webhooks. Separated for security and auditability.
 
 ### The "Agent Fuel" Model & Proactive Execution
 *   **Custody**: User-funded, Developer-controlled (via Circle MPC).
-*   **Gas**: Native USDC on Arc L1. The agent pays for its own compute and Oracle data fees (x402) using its internal balance.
+*   **Gas**: Native USDC on Arc L1. The Guardian pays for its own compute and premium data fees (x402) using its internal balance.
 *   **Proactive Listening**: `useProactiveAgent` continuously monitors Envio/Celo indexers. When yield spikes (e.g., Mento cEUR), it pushes an interactive `RwaActionWidget` to the UI.
 *   **Execution**: Transactions submitted via OpenClaw gateway with full receipt tracking (tx hash, chain, status, duration).
-*   **Lease**: Users grant permissions via **ERC-6900** modules (e.g., "Spend max $10/day on yield strategies").
+*   **Lease**: Users grant scoped permissions via **ERC-7715 session keys** (for example, "Spend max $10/day on yield strategies").
 
 ## Technology Stack
 
@@ -79,7 +90,8 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
 - **Farcaster SDK** - Social integration
 
 ### Backend & AI
-- **Arc Agent**: Autonomous "Guardian" living on Arc L1 (reasoning, orchestration)
+- **Advisor API**: Unified conversation + analysis entry point for the Advisor tier
+- **Arc Agent / Guardian**: Autonomous wallet-scoped execution orchestrator
 - **OpenClaw**: External execution gateway (Hetzner-hosted) for on-chain transaction submission
 - **Circle MPC**: User-scoped sub-wallets for agent autonomy
 - **Venice AI**: Primary reasoning engine (privacy-focused)
@@ -109,10 +121,10 @@ We utilize a **Hub and Spoke** model where the AI Agent "lives" on Arc L1 and or
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Arc L1 (Agent Hub)                           │
 │  ┌─────────────────────────────────────────────────────────┐   │
-│  │  Autonomous Agent Logic                                 │   │
-│  │  - Risk Models                                          │   │
-│  │  - Data Purchasing (x402)                               │   │
-│  │  - Cross-Chain Orchestration                            │   │
+│  │  Guardian Orchestration                                 │   │
+│  │  - Policy + execution services                          │   │
+│  │  - Data purchasing (x402)                               │   │
+│  │  - Cross-chain orchestration                            │   │
 │  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -213,7 +225,7 @@ export const NETWORKS = {
 ## Security Measures
 
 - **Agent Isolation**: Each user gets a dedicated MPC sub-wallet; no shared liquidity.
-- **Spending Limits**: Strict daily caps enforced by ERC-6900 logic.
+- **Spending Limits**: Strict daily caps enforced by Guardian policy checks and ERC-7715 session scopes.
 - **Client-side**: Standard wallet integration (no private keys stored).
 - **Transaction validation**: Slippage protection & Rate limiting.
 
@@ -230,14 +242,15 @@ export const NETWORKS = {
 diversifi/
 ├── components/          # Reusable UI
 ├── config/             # Chain configs
-├── hooks/              # Custom React hooks
+├── hooks/              # Custom React hooks (including Advisor / Guardian state)
 ├── pages/              # Next.js pages
 │   ├── api/            # API routes
 │   └── trade.tsx       # Stock trading
-├── services/           # Business logic
-│   ├── ai/             # AI integration
+├── packages/shared/src/services/
+│   ├── ai/             # Shared LLM infrastructure
+│   ├── guardian/       # Guardian domain services
 │   ├── swap/           # Swap strategies
-│   └── data/           # Data providers
+│   └── ...             # Wallet, automation, and chain services
 ├── lib/                # Third-party libs
 └── scripts/            # Deployment
 ```

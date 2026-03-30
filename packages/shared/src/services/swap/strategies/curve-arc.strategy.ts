@@ -180,7 +180,7 @@ export class CurveArcStrategy extends BaseSwapStrategy {
     }
 
     private async executeCurveSwap(params: SwapParams, callbacks?: SwapCallbacks): Promise<SwapResult> {
-        const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
+        const signer = params.signer || await ProviderFactoryService.getSignerForChain(params.fromChainId);
 
         // Use JsonRpcProvider for read-only discovery (works with Farcaster)
         const readProvider = ProviderFactoryService.getProvider(params.fromChainId);

@@ -12,6 +12,7 @@ export interface SwapParams {
     fromChainId: number;
     toChainId: number;
     userAddress: string;
+    signer?: ethers.Signer;
     slippageTolerance?: number;
     recipientAddress?: string; // For SocialConnect / Send to friend
     phoneNumber?: string; // For SocialConnect tracking

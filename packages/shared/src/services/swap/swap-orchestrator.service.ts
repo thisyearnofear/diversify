@@ -106,7 +106,7 @@ export class SwapOrchestratorService {
                         // Though strategy.execute should have already waited for confirmation
                         
                         try {
-                            const signer = (strategy as any).signer || await require('./provider-factory.service').ProviderFactoryService.getSignerForChain(params.toChainId);
+                            const signer = params.signer || await require('./provider-factory.service').ProviderFactoryService.getSignerForChain(params.toChainId);
                             const { getTokenAddresses, ABIS } = require('../../config');
                             const toTokens = getTokenAddresses(params.toChainId);
                             const toTokenAddress = toTokens[params.toToken as keyof typeof toTokens];

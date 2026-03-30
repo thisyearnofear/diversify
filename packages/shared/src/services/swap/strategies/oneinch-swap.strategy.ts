@@ -131,7 +131,7 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
             await this.validate(params);
 
             // Get signer
-            const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
+            const signer = params.signer || await ProviderFactoryService.getSignerForChain(params.fromChainId);
 
             // Get configuration
             const tokens = getTokenAddresses(params.fromChainId);

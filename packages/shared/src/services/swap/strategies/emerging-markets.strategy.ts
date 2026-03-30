@@ -185,7 +185,7 @@ export class EmergingMarketsStrategy extends BaseSwapStrategy {
         try {
             await this.validate(params);
 
-            const signer = await ProviderFactoryService.getSigner();
+            const signer = params.signer || await ProviderFactoryService.getSigner();
             const userAddress = await signer.getAddress();
             const amm = new ethers.Contract(this.AMM_ADDRESS, AMM_ABI, signer);
 

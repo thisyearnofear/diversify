@@ -5,7 +5,7 @@ export interface AgentActivity {
   id: string;
   timestamp: number;
   type: "analysis" | "recommendation" | "execution" | "payment";
-  tier: "ORACLE" | "ASSISTANT" | "GUARDIAN";
+  tier: "ADVISOR" | "GUARDIAN";
   description: string;
   status: "success" | "pending" | "failed";
   details?: {
@@ -21,7 +21,7 @@ export interface AgentActivity {
 
 export interface AIAdvice {
   // Level-based classification
-  level: "ORACLE" | "ASSISTANT" | "GUARDIAN";
+  level: "ADVISOR" | "GUARDIAN";
 
   action:
     | "SWAP"

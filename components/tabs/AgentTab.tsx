@@ -17,7 +17,7 @@ import { useAgentConfig } from "../../hooks/use-agent-config";
 import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
 import { useAgentActivities } from "../../hooks/use-agent-activities";
 import { useExperience } from "../../context/app/ExperienceContext";
-import { useAIOracle } from "../../hooks/use-ai-oracle";
+import { useAdvisor } from "../../hooks/use-advisor";
 import { useNavigation } from "../../context/app/NavigationContext";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
@@ -59,26 +59,21 @@ export default function AgentTab({
     autonomousEnabled: AUTONOMOUS_FEATURES.AUTONOMOUS_MODE,
   });
   const { experienceMode } = useExperience();
-  const { ask } = useAIOracle();
+  const { askAdvisor } = useAdvisor();
   const { navigateToSwap } = useNavigation();
   const [showQuickActions, setShowQuickActions] = useState(false);
 
   const handleAskAgent = () => {
-    ask(
+    askAdvisor(
       "Give me a summary of my portfolio protection status and any recommended actions.",
     );
   };
 
-  // Oracle: Market analysis prompt
-  const handleOracleClick = () => {
-    ask(
+  // Advisor: Market analysis prompt
+  const handleAdvisorClick = () => {
+    askAdvisor(
       "Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.",
     );
-  };
-
-  // Assistant: Show quick action menu instead of opening chat
-  const handleAssistantClick = () => {
-    setShowQuickActions(true);
   };
 
   return (
@@ -116,8 +111,7 @@ export default function AgentTab({
             isFarcaster={isFarcaster}
             showActivityFeed={true}
             onNavigateToAgent={handleAskAgent}
-            onOracleClick={handleOracleClick}
-            onAssistantClick={handleAssistantClick}
+            onAdvisorClick={handleAdvisorClick}
           />
         )}
       </ErrorBoundary>
@@ -157,8 +151,8 @@ export default function AgentTab({
               }
 
               // Fallback to manual/standard flow
-              ask(
-                `I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ""} based on Oracle recommendation${reason ? `: ${reason}` : ""}. Please confirm this aligns with my strategy.`,
+              askAdvisor(
+                `I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ""} based on Advisor recommendation${reason ? `: ${reason}` : ""}. Please confirm this aligns with my strategy.`,
               );
               addActivity({
                 type: "execution",
@@ -198,6 +192,14 @@ export default function AgentTab({
       >
         <span>💬</span>
         <span>Ask your Agent</span>
+      </button>
+
+      <button
+        onClick={() => setShowQuickActions(true)}
+        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-semibold text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      >
+        <span>⚡</span>
+        <span>Open Quick Actions</span>
       </button>
 
       {/* Quick Actions Modal */}

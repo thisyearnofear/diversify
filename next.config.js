@@ -47,9 +47,8 @@ const nextConfig = {
     const hetznerBase = process.env.HETZNER_API_URL;
     if (!hetznerBase) return [];
     return [
-      { source: '/api/agent/analyze', destination: `${hetznerBase}/api/agent/analyze` },
+      { source: '/api/agent/advisor', destination: `${hetznerBase}/api/agent/advisor` },
       { source: '/api/agent/deep-analyze', destination: `${hetznerBase}/api/agent/deep-analyze` },
-      { source: '/api/agent/chat', destination: `${hetznerBase}/api/agent/chat` },
       { source: '/api/agent/x402-gateway', destination: `${hetznerBase}/api/agent/x402-gateway` },
       // OpenClaw routes (proxy to Hetzner where credentials live)
       { source: '/api/agent/openclaw/:path*', destination: `${hetznerBase}/api/agent/openclaw/:path*` },

@@ -164,7 +164,7 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
             await this.validate(params);
 
             // Get signer for transactions
-            const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
+            const signer = params.signer || await ProviderFactoryService.getSignerForChain(params.fromChainId);
 
             // Use JsonRpcProvider for read-only calls (works with Farcaster)
             const readProvider = ProviderFactoryService.getProvider(params.fromChainId);

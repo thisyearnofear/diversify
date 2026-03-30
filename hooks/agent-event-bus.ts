@@ -27,11 +27,11 @@ class AgentEventBus {
 
 export const agentEventBus = new AgentEventBus();
 
-export type OracleAnalysisEvent = {
+export type AdvisorAnalysisEvent = {
   advice: unknown;
   timestamp: number;
 };
 
 export type AgentEventMap = {
-  "oracle:analysis": OracleAnalysisEvent;
+  "advisor:analysis": AdvisorAnalysisEvent;
 };

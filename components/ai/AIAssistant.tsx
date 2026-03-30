@@ -21,7 +21,7 @@ import { useTour } from "../../context/app/TourContext";
 import { useStrategy } from "../../context/app/StrategyContext";
 import { useAIConversationOptional } from "../../context/AIConversationContext";
 import VoiceButton from "../ui/VoiceButton";
-import { useAIOracle } from "../../hooks/use-ai-oracle";
+import { useAdvisor } from "../../hooks/use-advisor";
 import { REGIONS, type Region } from "../../hooks/use-user-region";
 import InteractiveAdviceCard from "../agent/InteractiveAdviceCard";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
@@ -32,10 +32,9 @@ import sdk from "@farcaster/miniapp-sdk";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
-const TierBadge = ({ level }: { level: 'ORACLE' | 'ASSISTANT' | 'GUARDIAN' }) => {
+const TierBadge = ({ level }: { level: 'ADVISOR' | 'GUARDIAN' }) => {
   const configs = {
-    ORACLE: { icon: '🔮', label: 'Oracle', bg: 'bg-blue-100 text-blue-700', border: 'border-blue-200' },
-    ASSISTANT: { icon: '🎙️', label: 'Assistant', bg: 'bg-green-100 text-green-700', border: 'border-green-200' },
+    ADVISOR: { icon: '🧭', label: 'Advisor', bg: 'bg-blue-100 text-blue-700', border: 'border-blue-200' },
     GUARDIAN: { icon: '🛡️', label: 'Guardian', bg: 'bg-purple-100 text-purple-700', border: 'border-purple-200' },
   };
   const config = configs[level];
@@ -149,7 +148,7 @@ export default function AIAssistant({
 
   const { stats: networkActivityStats } = useNetworkActivity();
   const { inflationData: liveInflationData } = useInflationData();
-  const { ask } = useAIOracle();
+  const { askAdvisor } = useAdvisor();
   const { showToast } = useToast();
   const { startTour, dismissTour, isTourDismissed } = useTour();
   const { financialStrategy } = useStrategy();
@@ -183,14 +182,14 @@ export default function AIAssistant({
     e?.preventDefault();
     if (!chatInput.trim() || isAnalyzing) return;
 
-    ask(chatInput.trim());
+    askAdvisor(chatInput.trim());
 
     setChatInput("");
     setShowChatInput(false);
   };
 
   const handleQuickAsk = (prompt: string) => {
-    ask(prompt);
+    askAdvisor(prompt);
   };
 
   // Milestone haptics for Farcaster
@@ -313,14 +312,14 @@ export default function AIAssistant({
       ).hapticFeedback({ type: "selection" });
     } catch { }
 
-    ask(transcription);
+    askAdvisor(transcription);
   };
 
   // Listen for voice queries from main page
   useEffect(() => {
     const handleVoiceQuery = (event: CustomEvent) => {
       const transcription = event.detail;
-      ask(transcription);
+      askAdvisor(transcription);
     };
 
     window.addEventListener("voiceQuery", handleVoiceQuery as EventListener);
@@ -1125,7 +1124,7 @@ export default function AIAssistant({
                             : "Simulation Advice"}
                         </h3>
                         <div className="mt-1">
-                            <TierBadge level={advice.level || 'ORACLE'} />
+                            <TierBadge level={advice.level || 'ADVISOR'} />
                         </div>
                     </div>
                   </div>

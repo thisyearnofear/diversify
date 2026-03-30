@@ -11,9 +11,12 @@ import { RealCircleWalletProvider } from './circle-wallet-provider-real';
 import { hyperliquidService } from './hyperliquid.service';
 import { SynthDataService } from './synth-data-service';
 import { HYPERLIQUID_CONFIG } from '../config/index';
-import { AIService } from './ai/ai-service';
-import { marketPulseService } from '../utils/market-pulse-service';
-import { inflationService } from '../utils/improved-data-services';
+import { GuardianPolicyService } from './guardian/guardian-policy.service';
+import { GuardianExecutionService } from './guardian/guardian-execution.service';
+import { GuardianAnalysisDataService } from './guardian/guardian-analysis-data.service';
+import { GuardianRecommendationService } from './guardian/guardian-recommendation.service';
+import { GuardianDataAccessService } from './guardian/guardian-data-access.service';
+import { GuardianPostAnalysisService } from './guardian/guardian-post-analysis.service';
 
 export interface Payment {
     amount: string;
@@ -144,6 +147,7 @@ const DATA_SOURCES: DataSource[] = [
 export interface AgentWalletProvider {
     getAddress(): string;
     initialize?: () => Promise<void>;
+    getExecutionSigner?(): ethers.Signer | null;
     signTransaction(tx: any): Promise<string>;
     sendTransaction(tx: any): Promise<any>;
     balanceOf(tokenAddress: string): Promise<number>;
@@ -161,6 +165,7 @@ export class EthersWalletProvider implements AgentWalletProvider {
     }
 
     getAddress() { return this.wallet.address; }
+    getExecutionSigner() { return this.wallet; }
     signTransaction(tx: any) { return this.wallet.signTransaction(tx); }
     sendTransaction(tx: any) { return this.wallet.sendTransaction(tx); }
     async balanceOf(tokenAddress: string) {
@@ -208,6 +213,7 @@ export class SessionKeyProvider implements AgentWalletProvider {
     }
 
     getAddress() { return this.wallet.address; }
+    getExecutionSigner() { return this.wallet; }
     signTransaction(tx: any) { return this.wallet.signTransaction(tx); }
 
     async sendTransaction(tx: any) {
@@ -378,158 +384,70 @@ export class ArcAgent {
 
         try {
             await this.ensureInitialized();
-            // Step 1: Check USDC balance and optimize location
-            steps.push("Analyzing capital efficiency across chains...");
-            const unifiedBalance = await this.getUnifiedUSDCBalance();
-            const balance = parseFloat(unifiedBalance.arcBalance || '0');
-            console.log(`[Arc Agent] Capital efficiency check: Total ${unifiedBalance.totalUSDC} USDC`);
-
-            if (balance < this.spendingLimit) {
-                if (parseFloat(unifiedBalance.totalUSDC) >= this.spendingLimit) {
-                    steps.push("Optimizing capital location via BridgeService...");
-
-                    // Determine best bridge strategy: LI.FI for optimal routing, Circle for Native USDC
-                    // This satisfies LI.FI hackathon's "Capital Efficiency" track
-                    const sourceChain = unifiedBalance.chainBalances?.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount))[0];
-
-                    if (sourceChain) {
-                        steps.push(`Moving capital from ${sourceChain.chainName} using LI.FI optimal route...`);
-
-                        // We use LI.FI here because it can handle swaps if the source asset is not USDC, 
-                        // ensuring the agent never gets stuck.
-                        try {
-                            const bridgeResult = await this.executeAutonomousBridge({
-                                fromChainId: sourceChain.chainId,
-                                toChainId: 5042002, // Arc
-                                fromToken: 'USDC',
-                                toToken: 'USDC',
-                                amount: this.spendingLimit.toString()
-                            });
-
-                            steps.push(`✓ Capital optimized: ${bridgeResult.txHash}`);
-                            return this.getFallbackRecommendation();
-                        } catch (bridgeError) {
-                            console.error('LI.FI bridge failed, falling back to Circle Native:', bridgeError);
-                            // Circle Native Fallback (Consolidation)
-                            const transferHash = await this.transferUSDCViaGateway(
-                                sourceChain.chainId, 5042002, this.spendingLimit.toString()
-                            );
-                            steps.push(`✓ Circle Native transfer: ${transferHash}`);
-                            return this.getFallbackRecommendation();
-                        }
-                    }
-                } else {
-                    throw new Error(`Insufficient USDC balance across all chains.`);
-                }
-            }
-
-            // Step 2: High-frequency data acquisition via Nanopayments (Circle/Arc)
-            // Demonstrates Circle's latest "Nanopayments" vision on Arc
-            steps.push("Purchasing market intelligence via Nanopayments...");
-            const macroResult = await this.fetchWithNanopayment(
-                '/api/agent/x402-gateway?source=macro-regime',
-                { amount: '0.001', currency: 'USDC' } // Nanopayment amount
-            );
-            const macroData = await macroResult.json();
-            if (macroResult.headers.get('x-payment-proof')) {
-                paymentHashes['Macro Aggregator'] = macroResult.headers.get('x-payment-proof')!;
-            }
-            dataSources.push("Macro Aggregator");
-
-            // ... (rest of analysis)
-            // Step 3: Fetch inflation data from real sources
-            steps.push("Fetching real-time inflation data...");
-            const inflationResult = await this.fetchInflationData(steps, dataSources);
-            Object.assign(paymentHashes, inflationResult.hashes);
-
-            // Step 4: Get real-time economic indicators (Proxied Alpha Vantage)
-            steps.push("Accessing premium economic indicators...");
-            const economicResult = await this.fetchEconomicData(steps, dataSources);
-            Object.assign(paymentHashes, economicResult.hashes);
-
-            // Step 5: Get yield opportunities
-            steps.push("Scanning DeFi yield opportunities...");
-            const yieldResult = await this.fetchYieldData(steps, dataSources);
-            Object.assign(paymentHashes, yieldResult.hashes);
-
-            // Step 6: Get high-fidelity price forecasts from SynthData 
-            steps.push("Analyzing probabilistic price forecasts (SynthData)...");
-            const synthPredictions: Record<string, any> = {};
-            const assetsToAnalyze = ['BTC', 'ETH', 'NVDAX', 'SPYX'];
-            await Promise.all(assetsToAnalyze.map(async (asset) => {
-                const pred = await SynthDataService.getPredictions(asset);
-                if (pred) synthPredictions[asset] = pred;
-            }));
-
-            // --- 2026 Autonomous Hedging Spoke ---
-            // If risk is high, open a hedge on Hyperliquid autonomously
-            const riskStatus = await this.monitorRiskExposure(steps, parseFloat(unifiedBalance.totalUSDC));
-            if (riskStatus.status === 'PROTECTED') {
-                paymentHashes['Hyperliquid Risk Hedge'] = riskStatus.hedgeTx!;
-            }
-
-            // Step 7: Final AI Reasoning with all premium data
-            steps.push("Synthesizing multi-source intelligence...");
-            const pulse = await marketPulseService.getMarketPulse();
-
-            const prompt = `
-                You are ArcAgent, an autonomous AI financial analyst with access to premium verified data.
-                Analyze the following data and provide a portfolio recommendation.
-
-                PORTFOLIO:
-                - Balance: ${unifiedBalance.totalUSDC} USDC
-                - Holdings: ${portfolioData.holdings.join(', ')}
-
-                MARKET PULSE:
-                - Sentiment: ${pulse.sentiment}
-                - AI Momentum: ${pulse.aiMomentum}
-                - War Risk: ${pulse.warRisk}
-                - Liquidation Risk: ${pulse.liquidationRisk}%
-
-                TRUFLATION / MACRO:
-                ${JSON.stringify(inflationResult.data, null, 2)}
-                ${JSON.stringify(economicResult.data, null, 2)}
-
-                SYNTHDATA FORECASTS:
-                ${JSON.stringify(synthPredictions, null, 2)}
-
-                YIELD OPPORTUNITIES:
-                ${JSON.stringify(yieldResult.data, null, 2)}
-
-                TASK:
-                Provide a JSON response with:
-                - action: 'SWAP', 'REBALANCE', 'HOLD', or 'BRIDGE'
-                - targetToken: (if applicable)
-                - targetNetwork: 'Arc' | 'Arbitrum' | 'Celo'
-                - confidence: 0-1
-                - reasoning: A detailed explanation leveraging the data above
-                - riskLevel: 'LOW', 'MEDIUM', 'HIGH'
-                - expectedSavings: Estimated alpha generated
-            `;
-
-            const aiResponse = await AIService.chat({
-                messages: [{ role: 'system', content: prompt }],
-                responseMimeType: 'application/json'
+            const dataAccess = new GuardianDataAccessService({
+                ensureInitialized: () => this.ensureInitialized(),
+                wallet: this.wallet,
+                circleService: this.circleService,
+                agentAddress: this.agentAddress,
+                spendingLimit: () => this.spendingLimit,
+                getSpentToday: () => this.spentToday,
+                setSpentToday: (next) => { this.spentToday = next; },
+                dataSourceFailures: this.dataSourceFailures,
+                appBaseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+                dataSourceFailureWindowMs: ArcAgent.DATA_SOURCE_FAILURE_WINDOW_MS,
+                dataSourceCooldownMs: ArcAgent.DATA_SOURCE_COOLDOWN_MS,
+                dataSourceMaxFailures: ArcAgent.DATA_SOURCE_MAX_FAILURES,
+            });
+            const analysisData = await GuardianAnalysisDataService.gatherContext({
+                portfolioData,
+                spendingLimit: this.spendingLimit,
+                steps,
+                dataSources,
+                paymentHashes,
+                getUnifiedUSDCBalance: () => this.getUnifiedUSDCBalance(),
+                executeAutonomousBridge: (params) => this.executeAutonomousBridge(params),
+                transferUSDCViaGateway: (fromChainId, toChainId, amount) => this.transferUSDCViaGateway(fromChainId, toChainId, amount),
+                fetchWithNanopayment: (url, payment) => dataAccess.fetchWithNanopayment(url, payment),
+                fetchInflationData: (analysisSteps, sources) => dataAccess.fetchInflationData(analysisSteps, sources, DATA_SOURCES),
+                fetchEconomicData: (analysisSteps, sources) => dataAccess.fetchEconomicData(analysisSteps, sources, DATA_SOURCES),
+                fetchYieldData: (analysisSteps, sources) => dataAccess.fetchYieldData(analysisSteps, sources, DATA_SOURCES),
+                monitorRiskExposure: (analysisSteps, portfolioUsd) => this.monitorRiskExposure(analysisSteps, portfolioUsd),
+                getFallbackRecommendation: () => this.getFallbackRecommendation(),
             });
 
-            const recommendation = this.parseRecommendation(aiResponse.content);
+            if (analysisData.earlyResult) {
+                return analysisData.earlyResult;
+            }
+
+            const context = analysisData.context!;
+            steps.push("Synthesizing multi-source intelligence...");
+            const recommendation = await GuardianRecommendationService.generateRecommendation(
+                context,
+                (content) => this.parseRecommendation(content)
+            );
             const action = this.normalizeAction(recommendation.action);
             
             // --- 2026 Autonomous Execution Block ---
             let executionTxHash: string | undefined = undefined;
 
+            const executionPolicy = GuardianPolicyService.canExecuteAutonomously({
+                action,
+                targetToken: recommendation.targetToken,
+                targetNetwork: recommendation.targetNetwork,
+            }, this.spendingLimit);
+
             // 1) Teleportation to Arbitrum
-            if (action === 'BRIDGE' && recommendation.targetNetwork === 'Arbitrum' && this.spendingLimit > 0) {
+            if (executionPolicy.allowed && action === 'BRIDGE' && recommendation.targetNetwork === 'Arbitrum') {
                 steps.push(`🚀 Autonomous Opportunity: Teleporting fuel to Arbitrum for yield...`);
                 
                 try {
-                    const bridgeAmount = (parseFloat(unifiedBalance.arcBalance) * 0.5).toFixed(2);
-                    const bridgeTxId = await this.bridgeToArbitrum(bridgeAmount);
-                    steps.push(`✓ CCTP V2 Transfer Initiated: ${bridgeTxId}`);
-                    steps.push(`✓ Target: USDY (Ondo) Yield Vault`);
-                    
-                    recommendation.reasoning += ` [AUTONOMOUS ACTION TAKEN: Bridged ${bridgeAmount} USDC to Arbitrum via CCTP]`;
-                    executionTxHash = bridgeTxId;
+                    const execution = await GuardianExecutionService.executeBridgeToArbitrum({
+                        arcBalance: context.unifiedBalance.arcBalance,
+                        bridgeToArbitrum: (amount) => this.bridgeToArbitrum(amount),
+                        steps,
+                    });
+                    recommendation.reasoning += execution.reasoningSuffix || '';
+                    executionTxHash = execution.executionTxHash;
                 } catch (bridgeError: any) {
                     console.error('[Arc Agent] Autonomous bridge failed:', bridgeError.message);
                     steps.push(`⚠ Autonomous action failed: ${bridgeError.message}`);
@@ -537,82 +455,54 @@ export class ArcAgent {
             }
 
             // 2) Swapping USDC target tokens (Phase 5B)
-            if (action === 'SWAP' && recommendation.targetToken && this.spendingLimit > 0) {
+            if (executionPolicy.allowed && action === 'SWAP' && recommendation.targetToken) {
                 steps.push(`🚀 Autonomous Opportunity: Swapping USDC to ${recommendation.targetToken} for stable yield...`);
                 try {
-                    const swapAmount = '0.1'; // Use small real test amount
-                    
-                    const { SwapOrchestratorService } = await import('./swap/swap-orchestrator.service');
-                    const { ProviderFactoryService } = await import('./swap/provider-factory.service');
-                    
-                    // Hackathon Bypass: Inject our agent's MPC/Session wallet as the default signer for the duration of this swap
-                    // This allows the SwapOrchestrator to use non-custodial execution transparently
-                    const originalGetSigner = ProviderFactoryService.getSignerForChain;
-                    ProviderFactoryService.getSignerForChain = async () => this.wallet as any;
-
-                    try {
-                        const swapResult = await SwapOrchestratorService.executeSwap({
-                            fromToken: 'USDC',
-                            toToken: recommendation.targetToken,
-                            amount: swapAmount,
-                            fromChainId: networkInfo.chainId,
-                            toChainId: networkInfo.chainId, // Same-chain swap assumption for EURC/etc
-                            userAddress: this.agentAddress
-                        });
-
-                        if (swapResult.success && swapResult.txHash) {
-                            executionTxHash = swapResult.txHash;
-                            steps.push(`✓ Real DEX Swap Executed: ${executionTxHash}`);
-                            recommendation.reasoning += ` [AUTONOMOUS ACTION TAKEN: Swapped ${swapAmount} USDC to ${recommendation.targetToken} via Orchestrator (tx: ${executionTxHash})]`;
-                        } else {
-                            throw new Error(swapResult.error || 'SwapOrchestrator returned failure');
-                        }
-                    } finally {
-                        // Restore factory to prevent leaking the MPC signer to the UI
-                        ProviderFactoryService.getSignerForChain = originalGetSigner;
-                    }
+                    const execution = await GuardianExecutionService.executeSwap({
+                        wallet: this.wallet,
+                        targetToken: recommendation.targetToken,
+                        networkInfo,
+                        agentAddress: this.agentAddress,
+                        steps,
+                    });
+                    executionTxHash = execution.executionTxHash;
+                    recommendation.reasoning += execution.reasoningSuffix || '';
                 } catch (swapError: any) {
                     console.error('[Arc Agent] Autonomous swap failed:', swapError.message);
                     steps.push(`⚠ Autonomous swap failed: ${swapError.message}`);
-                    
-                    // Fallback to demo 0-value tx if real swap fails (e.g. no liquidity on testnet)
-                    steps.push(`⚠ Falling back to simulated on-chain payload for testnet demonstration...`);
-                    const tx = await this.wallet.sendTransaction({ to: this.agentAddress, value: 0, data: '0x' });
-                    const receipt = await tx.wait ? await tx.wait() : tx;
-                    executionTxHash = receipt.transactionHash || tx.hash || '0x_simulated_swap_hash_12345';
-                    steps.push(`✓ Simulated Execution payload complete: ${executionTxHash}`);
+
+                    // Fallback to demo payload if real swap fails (e.g. no signer or no liquidity on testnet)
+                    executionTxHash = await GuardianExecutionService.executeSimulatedFallback({
+                        wallet: this.wallet,
+                        agentAddress: this.agentAddress,
+                        steps,
+                    });
                 }
             }
 
-            const confidence = this.normalizeNumber(recommendation.confidence, 0.8, 0, 1);
-            const expectedSavings = this.normalizeNumber(recommendation.expectedSavings, 0, 0);
-            const riskLevel = this.normalizeRiskLevel(recommendation.riskLevel);
-            const portfolioValue = this.normalizeNumber(unifiedBalance.totalUSDC, portfolioData.balance || 0, 0);
-            const urgencyLevel = this.determineUrgency({ action, expectedSavings }, portfolioValue);
-            const actionSteps = Array.isArray(recommendation.actionSteps)
-                ? recommendation.actionSteps
-                : [];
-
-            const finalResult: AnalysisResult = {
-                action,
-                targetToken: recommendation.targetToken,
-                confidence,
-                reasoning: recommendation.reasoning || "Balanced hold strategy based on current macro stability.",
-                expectedSavings,
-                timeHorizon: '7D',
-                riskLevel,
+            const portfolioValue = this.normalizeNumber(context.unifiedBalance.totalUSDC, portfolioData.balance || 0, 0);
+            const finalResult = GuardianRecommendationService.buildFinalResult({
+                recommendation,
+                normalizedAction: action,
+                normalizeNumber: (value, fallback, min, max) => this.normalizeNumber(value, fallback, min, max),
+                normalizeRiskLevel: (value) => this.normalizeRiskLevel(value),
+                determineUrgency: (analysis, currentPortfolioValue) => this.determineUrgency(analysis, currentPortfolioValue),
+                portfolioValue,
                 dataSources,
                 paymentHashes,
-                executionMode: executionTxHash ? 'MAINNET_READY' : 'ADVISORY',
-                actionSteps: steps.concat(actionSteps),
-                urgencyLevel,
-                arcTxHash: executionTxHash
-            };
+                steps,
+                executionTxHash,
+            });
 
             // Phase 5C: Execution Receipts — Record successful autonomous analysis on-chain
             if (executionTxHash) {
                 try {
-                    const receiptHash = await this.recordAnalysisOnChain(finalResult);
+                    const receiptHash = await GuardianPostAnalysisService.recordAnalysisOnChain({
+                        ensureInitialized: () => this.ensureInitialized(),
+                        wallet: this.wallet,
+                        agentAddress: this.agentAddress,
+                        analysis: finalResult,
+                    });
                     finalResult.actionSteps.push(`✓ Immutable execution receipt recorded: ${receiptHash}`);
                 } catch (err) {
                     console.warn('[Arc Agent] Failed to record analysis execution receipt on-chain:', err);
@@ -623,7 +513,12 @@ export class ArcAgent {
             this.lastAnalysisResult = finalResult;
 
             // Phase 5D: Fire all Zapier/Web3 automations dynamically (passing the new macro/execution fields)
-            this.triggerAutomations(finalResult, userPreferences, portfolioData).catch(err => {
+            GuardianPostAnalysisService.triggerAutomations({
+                analysis: finalResult,
+                userPreferences,
+                portfolioData,
+                userId: this.userId,
+            }).catch(err => {
                 console.error('[Arc Agent] Failed to trigger final automations:', err);
             });
 
@@ -702,19 +597,6 @@ export class ArcAgent {
             slippageTolerance: 0.5,
             signer: this.wallet // Pass the agent's signer directly
         } as any);
-    }
-
-    /**
-     * Execute HTTP request with Circle Nanopayments (semantic update to x402)
-     */
-    private async fetchWithNanopayment(
-        url: string,
-        payment: Payment,
-        headers: Record<string, string> = {}
-    ): Promise<Response> {
-        console.log(`[Arc Agent] Initiating Nanopayment for ${url} (Amount: ${payment.amount} USDC)`);
-        // Under the hood, this uses the same x402 mechanism but optimized for Arc Nanopayments
-        return this.fetchWithX402Payment(url, payment, headers);
     }
 
     /**
@@ -798,393 +680,7 @@ export class ArcAgent {
         return await this.circleService.getBridgeKitStatus();
     }
 
-    /**
-     * Fetch inflation data from real premium sources
-     */
-    private async fetchInflationData(steps: string[], sources: string[]) {
-        const inflationSources = DATA_SOURCES.filter(s => s.dataType === 'inflation')
-            .sort((a, b) => a.priority - b.priority);
-
-        const data: any = {};
-        const hashes: Record<string, string> = {};
-
-        for (const source of inflationSources.slice(0, 1)) {
-            if (this.isCircuitOpen(source.name)) {
-                steps.push(`⚠ ${source.name} temporarily unavailable (circuit open)`);
-                continue;
-            }
-            try {
-                steps.push(`Accessing ${source.name}...`);
-                const response = await this.fetchWithRetry(async () => {
-                    if (source.x402Enabled) {
-                        return await this.fetchWithX402Payment(source.url, source.cost, source.headers, 1);
-                    }
-                    return await fetch(source.url, { headers: source.headers });
-                });
-
-                if (response && response.ok) {
-                    data[source.name] = await response.json();
-                    sources.push(source.name);
-                    steps.push(`✓ Retrieved data from ${source.name}`);
-                    if (response.headers.get('x-payment-proof')) {
-                        hashes[source.name] = response.headers.get('x-payment-proof')!;
-                    }
-                    this.recordSourceSuccess(source.name);
-                } else {
-                    throw new Error(`HTTP ${response?.status || 'unknown'} from ${source.name}`);
-                }
-            } catch (error) {
-                console.warn(`Failed to fetch from ${source.name}:`, error);
-                steps.push(`⚠ ${source.name} unavailable`);
-                this.recordSourceFailure(source.name);
-            }
-        }
-        return { data, hashes };
-    }
-
-    // exchange rates are now handled as part of the unified macro-regime or proxied economic data
-
-    /**
-     * Fetch economic indicators from x402-enabled sources
-     */
-    private async fetchEconomicData(steps: string[], sources: string[]) {
-        const economicSources = DATA_SOURCES.filter(s => s.dataType === 'economic')
-            .sort((a, b) => a.priority - b.priority);
-
-        const data: any = {};
-        const hashes: Record<string, string> = {};
-
-        for (const source of economicSources.slice(0, 1)) {
-            if (this.isCircuitOpen(source.name)) {
-                steps.push(`⚠ ${source.name} temporarily unavailable (circuit open)`);
-                continue;
-            }
-            try {
-                steps.push(`Purchasing data from ${source.name} via x402...`);
-                const response = await this.fetchWithRetry(async () => {
-                    if (source.x402Enabled) {
-                        return await this.fetchWithX402Payment(source.url, source.cost, source.headers, 1);
-                    }
-                    return await fetch(source.url, { headers: source.headers });
-                });
-
-                if (response.ok) {
-                    data[source.name] = await response.json();
-                    sources.push(source.name);
-                    steps.push(`✓ Purchased data from ${source.name} for ${source.cost.amount} USDC`);
-                    if (response.headers.get('x-payment-proof')) {
-                        hashes[source.name] = response.headers.get('x-payment-proof')!;
-                    }
-                    this.recordSourceSuccess(source.name);
-                } else {
-                    throw new Error(`HTTP ${response?.status || 'unknown'} from ${source.name}`);
-                }
-            } catch (error) {
-                console.warn(`Failed to fetch economic data from ${source.name}:`, error);
-                steps.push(`⚠ ${source.name} payment failed`);
-                this.recordSourceFailure(source.name);
-            }
-        }
-        return { data, hashes };
-    }
-
-    /**
-     * Fetch yield opportunities from DeFi protocols
-     */
-    private async fetchYieldData(steps: string[], sources: string[]) {
-        const yieldSources = DATA_SOURCES.filter(s => s.dataType === 'yield');
-        const data: any = {};
-        const hashes: Record<string, string> = {};
-
-        for (const source of yieldSources.slice(0, 1)) {
-            if (this.isCircuitOpen(source.name)) {
-                steps.push(`⚠ ${source.name} temporarily unavailable (circuit open)`);
-                continue;
-            }
-            try {
-                steps.push(`Accessing ${source.name}...`);
-                const response = await this.fetchWithRetry(async () => {
-                    if (source.x402Enabled) {
-                        return await this.fetchWithX402Payment(source.url, source.cost, source.headers, 1);
-                    }
-                    return await fetch(`${source.url}/pools`);
-                });
-
-                if (response && response.ok) {
-                    data[source.name] = await response.json();
-                    sources.push(source.name);
-                    steps.push(`✓ Retrieved yield data from ${source.name}`);
-                    if (response.headers.get('x-payment-proof')) {
-                        hashes[source.name] = response.headers.get('x-payment-proof')!;
-                    }
-                    this.recordSourceSuccess(source.name);
-                } else {
-                    throw new Error(`HTTP ${response?.status || 'unknown'} from ${source.name}`);
-                }
-            } catch (error) {
-                console.warn(`Failed to fetch yield data from ${source.name}:`, error);
-                steps.push(`⚠ ${source.name} unavailable`);
-                this.recordSourceFailure(source.name);
-            }
-        }
-        return { data, hashes };
-    }
-
-    /**
-     * Execute HTTP request with real x402 payment and Nanopayment Mandate (EIP-3009)
-     */
-    private async fetchWithX402Payment(
-        url: string,
-        payment: Payment,
-        headers: Record<string, string> = {},
-        retries: number = 3
-    ): Promise<Response> {
-        await this.ensureInitialized();
-        // Check spending limit
-        if (this.spentToday + parseFloat(payment.amount) > this.spendingLimit) {
-            throw new Error('Daily spending limit exceeded');
-        }
-
-        let lastError: Error | null = null;
-
-        for (let attempt = 1; attempt <= retries; attempt++) {
-            try {
-                console.log(`[Arc Agent] x402 payment attempt ${attempt}/${retries} to ${url}`);
-
-                const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-                const initialUrl = url.startsWith('/') ? `${baseUrl}${url}` : url;
-
-                const initialResponse = await fetch(initialUrl, {
-                    headers: { ...headers, 'Accept': 'application/json' }
-                });
-
-                if (initialResponse.status === 402) {
-                    const challenge: X402Challenge = await initialResponse.json();
-
-                    if (!challenge.recipient || !challenge.nonce) {
-                        throw new Error('Invalid x402 challenge');
-                    }
-
-                    // --- Nanopayment Flow (EIP-3009) ---
-                    console.log(`[Arc Agent] Creating gas-free Nanopayment Mandate for ${url}`);
-
-                    const mandate = await this.circleService.createNanopaymentMandate(
-                        this.wallet,
-                        {
-                            recipient: challenge.recipient,
-                            amount: challenge.amount || payment.amount,
-                            nonce: challenge.nonce,
-                            validAfter: 0,
-                            validBefore: Math.floor(Date.now() / 1000) + 3600 // 1 hour
-                        }
-                    );
-
-                    // Retry with the signed mandate (Zero Gas!)
-                    const retryResponse = await fetch(initialUrl, {
-                        headers: {
-                            ...headers,
-                            'Accept': 'application/json',
-                            'X-Payment-Mandate': JSON.stringify(mandate),
-                            'X-Payment-Sender': this.agentAddress
-                        }
-                    });
-
-                    if (retryResponse.ok) {
-                        this.spentToday += parseFloat(payment.amount);
-                        console.log(`[Arc Agent] Nanopayment successful (gas-free signature)`);
-
-                        const finalHeaders = new Headers(retryResponse.headers);
-                        finalHeaders.set('x-payment-proof', `nanopay_${mandate.signature.slice(2, 10)}`);
-
-                        return new Response(retryResponse.body, {
-                            status: retryResponse.status,
-                            statusText: retryResponse.statusText,
-                            headers: finalHeaders
-                        });
-                    } else if (retryResponse.status === 401) {
-                        // If mandate fails, fall back to on-chain payment (Legacy mode)
-                        console.log(`[Arc Agent] Mandate rejected, falling back to on-chain payment...`);
-                        const paymentTx = await this.executeUSDCPayment(challenge.recipient, challenge.amount || payment.amount);
-
-                        const legacyRetryResponse = await fetch(initialUrl, {
-                            headers: {
-                                ...headers,
-                                'Accept': 'application/json',
-                                'X-Payment-Proof': paymentTx.hash,
-                                'X-Payment-Sender': this.agentAddress,
-                                'X-Payment-Nonce': challenge.nonce
-                            }
-                        });
-
-                        if (legacyRetryResponse.ok) {
-                            this.spentToday += parseFloat(payment.amount);
-                            return legacyRetryResponse;
-                        }
-                    }
-
-                    throw new Error(`Payment failed: ${retryResponse.status}`);
-                }
-
-                return initialResponse;
-
-            } catch (error: any) {
-                lastError = error;
-                console.error(`[Arc Agent] x402 attempt ${attempt} failed:`, error.message);
-
-                if (attempt < retries) {
-                    await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-                }
-            }
-        }
-
-        throw lastError || new Error('x402 payment failed');
-    }
-
     // fetchWithAPIKey is deprecated in favor of x402-proxied gateway calls
-
-    /**
-     * Execute USDC payment on Arc network
-     */
-    private async executeUSDCPayment(recipient: string, amount: string): Promise<any> {
-        try {
-            await this.ensureInitialized();
-            console.log(`[Arc Agent] Initiating USDC transfer: ${amount} to ${recipient}`);
-            return await this.wallet.transfer(recipient, amount, ARC_CONFIG.USDC_TESTNET);
-        } catch (error) {
-            console.error('USDC payment failed:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Run comprehensive AI analysis with real data
-     * Enhanced to support Arc testnet diversification strategies
-     */
-    private async runAIAnalysis(data: any, networkInfo: { chainId: number, name: string }): Promise<Partial<AnalysisResult>> {
-        const isArcTestnet = networkInfo.chainId === 5042002;
-
-        const prompt = `
-    You are an expert DeFi wealth protection agent operating on ${networkInfo.name}.
-    
-    ${isArcTestnet ? `
-    SPECIAL: You are on Arc Testnet with access to real diversification:
-    - USDC (native gas token): USD exposure, 4.2% inflation risk
-    - EURC: Euro exposure, 2.3% inflation (better protection)
-    
-    Users can get free testnet funds from https://faucet.circle.com to test strategies risk-free.
-    ` : `
-    You are providing advisory recommendations for mainnet assets.
-    `}
-    
-    Portfolio Data: ${JSON.stringify(data.portfolio)}
-    Market Data: ${JSON.stringify({
-            macro: data.macro,
-            inflation: data.inflation,
-            economic: data.economic,
-            yields: data.yields
-        })}
-    ${isArcTestnet ? `Diversification Options: ${JSON.stringify(data.diversification)}` : `RWA Options: ${JSON.stringify(data.diversification)}`}
-    User Preferences: ${JSON.stringify(data.preferences)}
-    
-    Provide a JSON response with:
-    - action: "SWAP" | "HOLD" | "REBALANCE"
-    - targetToken: string (${isArcTestnet ? 'EURC for EUR diversification' : 'PAXG, GLP for RWA'})
-    - targetNetwork: "${networkInfo.name}"
-    - confidence: number (0-1)
-    - reasoning: string (focus on ${isArcTestnet ? 'testnet diversification benefits' : 'wealth protection vs inflation'})
-    - expectedSavings: number (USD)
-    - timeHorizon: string
-    - riskLevel: "LOW" | "MEDIUM" | "HIGH"
-    - actionSteps: array of specific steps user can take
-    - urgencyLevel: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL"
-    
-    ${isArcTestnet ? `
-    TESTNET STRATEGY GUIDANCE:
-    1. If user has >80% USDC, recommend EURC diversification (lower EUR inflation)
-    2. Always mention this is risk-free testing with faucet funds
-    3. Provide specific swap amounts and steps
-    4. Focus on geographic diversification benefits (USD vs EUR inflation)
-    ` : `
-    MAINNET STRATEGY GUIDANCE:
-    1. If inflation data is high (>4%), prioritize PAXG (gold hedge) or USDY (treasury yield) on Arbitrum
-    2. If macro sentiment is bearish, recommend PAXG (Gold) as safe haven
-    3. For conservative yield seekers: USDY (~5% APY, auto-accruing, treasury-backed)
-    4. For DeFi-native users: SYRUPUSDC (~4.5% APY, Morpho protocol, instant liquidity)
-    5. Consider gas efficiency - if amount <$500, optimize for lower fees
-    
-    RWA DIFFERENTIATION:
-    - USDY: Best for users wanting US Treasury yield without KYC. Auto-accruing, no claiming needed.
-    - SYRUPUSDC: Best for users familiar with Morpho. Auto-compounding yield, highly liquid.
-    - PAXG: Best for users wanting gold exposure. No yield, pure store of value.
-    `}
-    `;
-
-        try {
-            const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-            const response = await fetch(`${baseUrl}/api/agent/analyze`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt,
-                    model: 'gemini-3-flash-preview', // Use latest frontier model
-                    maxTokens: 1000,
-                    realData: data,
-                    networkContext: networkInfo,
-                    userBalance: data.portfolio.balance,
-                    currentHoldings: data.portfolio.holdings,
-                    inflationData: data.inflation,
-                    config: data.preferences
-                })
-            });
-
-            const result = await response.json();
-
-            try {
-                return JSON.parse(result.text);
-            } catch (parseError) {
-                return {
-                    action: 'HOLD',
-                    reasoning: result.text || 'Analysis completed with real market data',
-                    confidence: 0.75,
-                    riskLevel: 'MEDIUM'
-                };
-            }
-        } catch (error) {
-            console.error('AI analysis failed:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * Record analysis on Arc blockchain for transparency
-     */
-    private async recordAnalysisOnChain(analysis: Partial<AnalysisResult>): Promise<string> {
-        try {
-            await this.ensureInitialized();
-            // Create analysis hash for on-chain record
-            const analysisHash = utils.keccak256(
-                utils.toUtf8Bytes(JSON.stringify(analysis))
-            );
-
-            console.log(`[Arc Agent] Recording analysis hash on-chain: ${analysisHash}`);
-
-            // In production, this would call a deployed agent contract
-            // For now, we'll create a simple transaction with the hash in data
-            const tx = await this.wallet.sendTransaction({
-                to: this.agentAddress,
-                value: 0,
-                data: analysisHash
-            });
-
-            const receipt = await tx.wait();
-            console.log(`[Arc Agent] Analysis recorded on-chain: ${receipt.transactionHash}`);
-
-            return receipt.transactionHash;
-        } catch (error) {
-            console.error('Failed to record analysis on-chain:', error);
-            throw error;
-        }
-    }
 
     /**
      * Fallback recommendation if analysis fails
@@ -1205,60 +701,6 @@ export class ArcAgent {
     }
 
     /**
-     * Determine execution mode based on network and portfolio
-     */
-    private determineExecutionMode(
-        networkInfo: { chainId: number, name: string },
-        portfolioData: { balance: number; holdings: string[] }
-    ): 'ADVISORY' | 'TESTNET_DEMO' | 'MAINNET_READY' {
-        // If on Arc testnet, we can do testnet demos
-        if (networkInfo.chainId === 5042002) {
-            return 'TESTNET_DEMO';
-        }
-
-        // If on mainnet chains but Arc agent can't execute directly
-        if ([1, 42161, 42220].includes(networkInfo.chainId)) {
-            // For now, Arc agent is advisory-only for mainnet
-            // In future, could support mainnet execution via Circle CCTP
-            return 'ADVISORY';
-        }
-
-        return 'ADVISORY';
-    }
-
-    /**
-     * Generate action steps based on analysis and execution mode
-     */
-    private generateActionSteps(analysis: any, executionMode: 'ADVISORY' | 'TESTNET_DEMO' | 'MAINNET_READY'): string[] {
-        const baseSteps = [];
-
-        if (executionMode === 'TESTNET_DEMO') {
-            baseSteps.push('Go to Swap tab in DiversiFi app');
-            if (analysis.targetToken) {
-                baseSteps.push(`Select ${analysis.targetToken} as target asset`);
-            }
-            if (analysis.targetNetwork && analysis.targetNetwork !== 'Celo') {
-                baseSteps.push(`Bridge to ${analysis.targetNetwork} network`);
-            }
-            baseSteps.push('Review transaction details and confirm');
-        } else {
-            // Advisory mode - provide manual steps
-            baseSteps.push('Open your preferred DeFi platform or exchange');
-            if (analysis.targetToken) {
-                baseSteps.push(`Search for ${analysis.targetToken} trading pair`);
-                baseSteps.push(`Consider swapping to ${analysis.targetToken}`);
-            }
-            if (analysis.targetNetwork) {
-                baseSteps.push(`Consider bridging assets to ${analysis.targetNetwork}`);
-            }
-            baseSteps.push('Review gas fees and slippage before executing');
-            baseSteps.push('Monitor position after execution');
-        }
-
-        return baseSteps;
-    }
-
-    /**
      * Determine urgency level based on analysis
      */
     private determineUrgency(
@@ -1273,100 +715,6 @@ export class ArcAgent {
         if (ratio >= 0.02) return 'HIGH';
         if (ratio >= 0.005 || (analysis.action && analysis.action !== 'HOLD')) return 'MEDIUM';
         return 'LOW';
-    }
-
-    /**
-     * Generate automation triggers based on analysis
-     */
-    private generateAutomationTriggers(
-        analysis: any,
-        userEmail?: string,
-        executionMode: 'ADVISORY' | 'TESTNET_DEMO' | 'MAINNET_READY' = 'ADVISORY',
-        portfolioValue?: number
-    ): AnalysisResult['automationTriggers'] {
-        if (!userEmail) return undefined;
-
-        const urgency = this.determineUrgency(analysis, portfolioValue);
-
-        return {
-            email: {
-                enabled: true,
-                recipient: userEmail,
-                template: urgency === 'CRITICAL' ? 'urgent_action' :
-                    analysis.action !== 'HOLD' ? 'rebalance_alert' : 'weekly_summary'
-            },
-            webhook: {
-                enabled: urgency !== 'LOW',
-                url: process.env.WEBHOOK_URL || '',
-                payload: {
-                    action: analysis.action,
-                    urgency,
-                    expectedSavings: analysis.expectedSavings,
-                    executionMode
-                }
-            },
-            zapier: {
-                enabled: ['HIGH', 'CRITICAL'].includes(urgency),
-                zapId: process.env.ZAPIER_ZAP_ID || '',
-                triggerData: {
-                    recommendation: analysis.action,
-                    target_token: analysis.targetToken,
-                    expected_savings: analysis.expectedSavings,
-                    urgency_level: urgency,
-                    execution_mode: executionMode
-                }
-            }
-        };
-    }
-
-    /**
-     * Trigger automations using the automation service
-     */
-    private async triggerAutomations(
-        analysis: AnalysisResult,
-        userPreferences: any, // Contains config.zapier etc
-        portfolioData: any
-    ): Promise<void> {
-        try {
-            // Import and use automation service
-            const { AutomationService } = await import('./automation-service');
-            
-            const userEmail = this.userId || 'anonymous@agent.user';
-
-            const automationConfig = {
-                email: {
-                    enabled: true,
-                    provider: (process.env.EMAIL_PROVIDER as 'sendgrid' | 'resend') || 'sendgrid',
-                    apiKey: process.env.SENDGRID_API_KEY || process.env.RESEND_API_KEY,
-                    fromEmail: process.env.FROM_EMAIL || 'agent@diversifi.app',
-                    templates: {
-                        rebalance_alert: 'rebalance',
-                        urgent_action: 'urgent',
-                        weekly_summary: 'summary'
-                    }
-                },
-                zapier: {
-                    enabled: !!(userPreferences?.zapier?.webhookUrl || process.env.ZAPIER_WEBHOOK_URL),
-                    webhookUrl: userPreferences?.zapier?.webhookUrl || process.env.ZAPIER_WEBHOOK_URL
-                },
-                make: {
-                    enabled: !!process.env.MAKE_WEBHOOK_URL,
-                    webhookUrl: process.env.MAKE_WEBHOOK_URL
-                },
-                slack: {
-                    enabled: !!process.env.SLACK_WEBHOOK_URL,
-                    webhookUrl: process.env.SLACK_WEBHOOK_URL,
-                    channel: '#diversifi-alerts'
-                }
-            };
-
-            const automationService = new AutomationService(automationConfig);
-            await automationService.processAnalysis(analysis, userEmail, portfolioData);
-
-            console.log(`[Arc Agent] Automations triggered for ${userEmail}`);
-        } catch (error) {
-            console.error('[Arc Agent] Automation trigger failed:', error);
-        }
     }
 
     /**
@@ -1734,68 +1082,6 @@ export class ArcAgent {
             console.error('Failed to get network status:', error);
             return null;
         }
-    }
-
-    private isCircuitOpen(sourceName: string): boolean {
-        const state = this.dataSourceFailures.get(sourceName);
-        if (!state) return false;
-        if (state.openUntil && Date.now() < state.openUntil) {
-            return true;
-        }
-        return false;
-    }
-
-    private recordSourceFailure(sourceName: string) {
-        const now = Date.now();
-        const existing = this.dataSourceFailures.get(sourceName);
-
-        if (!existing || now - existing.lastFailure > ArcAgent.DATA_SOURCE_FAILURE_WINDOW_MS) {
-            this.dataSourceFailures.set(sourceName, {
-                count: 1,
-                lastFailure: now
-            });
-            return;
-        }
-
-        const nextCount = existing.count + 1;
-        const updated = {
-            count: nextCount,
-            lastFailure: now,
-            openUntil: existing.openUntil
-        };
-
-        if (nextCount >= ArcAgent.DATA_SOURCE_MAX_FAILURES) {
-            updated.openUntil = now + ArcAgent.DATA_SOURCE_COOLDOWN_MS;
-        }
-
-        this.dataSourceFailures.set(sourceName, updated);
-    }
-
-    private recordSourceSuccess(sourceName: string) {
-        this.dataSourceFailures.delete(sourceName);
-    }
-
-    private async fetchWithRetry<T>(
-        action: () => Promise<T>,
-        options: { retries?: number; baseDelayMs?: number } = {}
-    ): Promise<T> {
-        const retries = options.retries ?? 2;
-        const baseDelayMs = options.baseDelayMs ?? 750;
-        let lastError: unknown = null;
-
-        for (let attempt = 0; attempt <= retries; attempt++) {
-            try {
-                return await action();
-            } catch (error) {
-                lastError = error;
-                if (attempt >= retries) break;
-                const backoff = baseDelayMs * Math.pow(2, attempt);
-                const jitter = Math.floor(Math.random() * 150);
-                await new Promise(resolve => setTimeout(resolve, backoff + jitter));
-            }
-        }
-
-        throw lastError;
     }
 
     private parseRecommendation(content: unknown): any {

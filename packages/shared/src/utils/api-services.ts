@@ -665,10 +665,11 @@ export const GeminiService = {
   }> => {
     try {
       // Delegate to the new API endpoint which uses portfolio-analysis.ts
-      const response = await fetch(`${API_BASE}/api/agent/analyze`, {
+      const response = await fetch(`${API_BASE}/api/agent/advisor`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          mode: 'analysis',
           inflationData,
           userBalance,
           currentHoldings,

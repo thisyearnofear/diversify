@@ -1,5 +1,5 @@
 /**
- * AgentQuickActions — Quick action menu for the Assistant card.
+ * AgentQuickActions — Quick action menu for the Advisor surface.
  * Shows a modal with Swap, Send, Check Balance actions instead of opening chat.
  *
  * CLEAN: Single-purpose component for quick actions.

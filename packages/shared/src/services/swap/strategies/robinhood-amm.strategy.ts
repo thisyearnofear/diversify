@@ -122,7 +122,7 @@ export class RobinhoodAMMStrategy extends BaseSwapStrategy {
         try {
             await this.validate(params);
 
-            const signer = await ProviderFactoryService.getSigner();
+            const signer = params.signer || await ProviderFactoryService.getSigner();
             const userAddress = await signer.getAddress();
             const amm = new ethers.Contract(AMM_ADDRESS, AMM_ABI, signer);
             const tokens = getTokenAddresses(params.fromChainId);

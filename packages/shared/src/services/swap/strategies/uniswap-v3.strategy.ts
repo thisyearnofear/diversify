@@ -146,7 +146,7 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
             await this.validate(params);
 
             // Get signer for transactions
-            const signer = await ProviderFactoryService.getSignerForChain(params.fromChainId);
+            const signer = params.signer || await ProviderFactoryService.getSignerForChain(params.fromChainId);
 
             // Get configuration
             const tokens = getTokenAddresses(params.fromChainId);

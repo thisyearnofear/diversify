@@ -166,11 +166,12 @@ export function useAgentAnalysis({
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-        const response = await fetch(`${apiBase}/api/agent/analyze`, {
+        const response = await fetch(`${apiBase}/api/agent/advisor`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
+            mode: "analysis",
             portfolio,
             inflationData,
             macroData,
@@ -202,7 +203,7 @@ export function useAgentAnalysis({
             thinkingStep: "Analysis complete!",
             advice: result.advice,
           });
-          agentEventBus.emit("oracle:analysis", {
+          agentEventBus.emit("advisor:analysis", {
             advice: result.advice,
             timestamp: Date.now(),
           });
@@ -216,7 +217,7 @@ export function useAgentAnalysis({
 
           addActivity({
             type: "analysis",
-            tier: "ORACLE",
+            tier: "ADVISOR",
             description: `Analyzed portfolio: ${result.advice?.oneLiner || "Portfolio analysis complete"}`,
             status: "success",
             details: {
@@ -398,7 +399,7 @@ export function useAgentAnalysis({
           updateState({ advice: result.advice });
           
           // Phase 5B & 5C: Emit event for Guardian Activity Feed to show execution receipts
-          agentEventBus.emit("oracle:analysis", { 
+          agentEventBus.emit("advisor:analysis", { 
             advice: result.advice, 
             timestamp: Date.now() 
           });

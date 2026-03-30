@@ -13,7 +13,7 @@
 import { useCallback } from 'react';
 import { useNavigation } from '../context/app/NavigationContext';
 import { useDemoMode } from '../context/app/DemoModeContext';
-import { useAIOracle } from './use-ai-oracle';
+import { useAdvisor } from './use-advisor';
 import { useToast } from '../components/ui/Toast';
 import { IntentDiscoveryService, AgentActionService } from '@diversifi/shared';
 
@@ -25,7 +25,7 @@ interface VoiceIntentOptions {
 export function useVoiceIntent(options: VoiceIntentOptions = {}) {
   const { setActiveTab, setSwapPrefill } = useNavigation();
   const { enableDemoMode } = useDemoMode();
-  const { ask, openOracle } = useAIOracle();
+  const { askAdvisor, openAdvisor } = useAdvisor();
   const { showToast } = useToast();
 
   const handleTranscription = useCallback(
@@ -39,11 +39,11 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
         onToast: showToast,
         onOpenWalletTutorial: options.onOpenWalletTutorial,
         onEnableDemoMode: enableDemoMode,
-        onAskAI: ask,
-        onOpenAIChat: openOracle,
+        onAskAI: askAdvisor,
+        onOpenAIChat: openAdvisor,
       });
     },
-    [ask, enableDemoMode, openOracle, options, setActiveTab, setSwapPrefill, showToast],
+    [askAdvisor, enableDemoMode, openAdvisor, options, setActiveTab, setSwapPrefill, showToast],
   );
 
   return { handleTranscription };

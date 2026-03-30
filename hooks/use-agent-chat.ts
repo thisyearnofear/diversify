@@ -172,7 +172,7 @@ export function useAgentChat({
 
       updateChatState({
         isChatting: true,
-        thinkingStep: "Consulting Oracle...",
+        thinkingStep: "Consulting Advisor...",
       });
 
       const CHAT_THINKING_MESSAGES = [
@@ -191,10 +191,11 @@ export function useAgentChat({
       }, 3000);
 
       try {
-        const response = await fetch(`${apiBase}/api/agent/chat`, {
+        const response = await fetch(`${apiBase}/api/agent/advisor`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            mode: "conversation",
             message: content,
             history: messages,
             chainId,

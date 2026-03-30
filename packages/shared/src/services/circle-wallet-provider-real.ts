@@ -94,6 +94,11 @@ export class RealCircleWalletProvider implements AgentWalletProvider {
         return this.walletAddress;
     }
 
+    getExecutionSigner(): ethers.Signer | null {
+        // Circle developer-controlled wallets do not expose a reusable ethers Signer.
+        return null;
+    }
+
     /**
      * Sign a transaction using Circle's signing API
      * Note: Circle handles signing internally for developer-controlled wallets
