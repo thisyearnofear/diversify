@@ -109,21 +109,25 @@ export interface AIServiceStatus {
 // CONFIGURATION
 // ============================================================================
 
-const DEFAULT_CONFIG: AIProviderConfig = {
-  veniceApiKey: process.env.VENICE_API_KEY,
-  geminiApiKey: process.env.GEMINI_API_KEY,
-  elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
-  elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID || "pNInz6obpg8ndclKuzWf",
-  openaiApiKey: process.env.OPENAI_API_KEY,
-};
+function getCurrentConfig(): AIProviderConfig {
+  return {
+    veniceApiKey: process.env.VENICE_API_KEY,
+    geminiApiKey: process.env.GEMINI_API_KEY,
+    elevenLabsApiKey: process.env.ELEVENLABS_API_KEY,
+    elevenLabsVoiceId:
+      process.env.ELEVENLABS_VOICE_ID || "pNInz6obpg8ndclKuzWf",
+    openaiApiKey: process.env.OPENAI_API_KEY,
+  };
+}
 
 // Debug logging for environment variables (only in development)
 if (process.env.NODE_ENV === 'development') {
+  const currentConfig = getCurrentConfig();
   console.log('[AI Service] Configuration check:', {
-    hasVeniceKey: !!DEFAULT_CONFIG.veniceApiKey,
-    hasGeminiKey: !!DEFAULT_CONFIG.geminiApiKey,
-    hasElevenLabsKey: !!DEFAULT_CONFIG.elevenLabsApiKey,
-    hasOpenAIKey: !!DEFAULT_CONFIG.openaiApiKey,
+    hasVeniceKey: !!currentConfig.veniceApiKey,
+    hasGeminiKey: !!currentConfig.geminiApiKey,
+    hasElevenLabsKey: !!currentConfig.elevenLabsApiKey,
+    hasOpenAIKey: !!currentConfig.openaiApiKey,
   });
 }
 
@@ -187,29 +191,50 @@ const openaiCircuitBreaker = circuitBreakerManager.getCircuit("openai-api", {
 let veniceClient: OpenAI | null = null;
 let geminiClient: GoogleGenerativeAI | null = null;
 let openaiClient: OpenAI | null = null;
+let veniceClientApiKey: string | undefined;
+let geminiClientApiKey: string | undefined;
+let openaiClientApiKey: string | undefined;
 
 function getVeniceClient(): OpenAI | null {
-  if (!veniceClient && DEFAULT_CONFIG.veniceApiKey) {
+  const config = getCurrentConfig();
+
+  if (
+    config.veniceApiKey &&
+    (!veniceClient || veniceClientApiKey !== config.veniceApiKey)
+  ) {
     veniceClient = new OpenAI({
-      apiKey: DEFAULT_CONFIG.veniceApiKey,
+      apiKey: config.veniceApiKey,
       baseURL: "https://api.venice.ai/api/v1",
     });
+    veniceClientApiKey = config.veniceApiKey;
   }
   return veniceClient;
 }
 
 function getGeminiClient(): GoogleGenerativeAI | null {
-  if (!geminiClient && DEFAULT_CONFIG.geminiApiKey) {
-    geminiClient = new GoogleGenerativeAI(DEFAULT_CONFIG.geminiApiKey);
+  const config = getCurrentConfig();
+
+  if (
+    config.geminiApiKey &&
+    (!geminiClient || geminiClientApiKey !== config.geminiApiKey)
+  ) {
+    geminiClient = new GoogleGenerativeAI(config.geminiApiKey);
+    geminiClientApiKey = config.geminiApiKey;
   }
   return geminiClient;
 }
 
 function getOpenAIClient(): OpenAI | null {
-  if (!openaiClient && DEFAULT_CONFIG.openaiApiKey) {
+  const config = getCurrentConfig();
+
+  if (
+    config.openaiApiKey &&
+    (!openaiClient || openaiClientApiKey !== config.openaiApiKey)
+  ) {
     openaiClient = new OpenAI({
-      apiKey: DEFAULT_CONFIG.openaiApiKey,
+      apiKey: config.openaiApiKey,
     });
+    openaiClientApiKey = config.openaiApiKey;
   }
   return openaiClient;
 }
@@ -232,27 +257,31 @@ export async function generateChatCompletion(
   const result = await unifiedCache.getOrFetch(
     cacheKey,
     async () => {
+      const config = getCurrentConfig();
       const errors: Array<{ provider: string; error: string }> = [];
 
       // Determine execution order
-      // Venice is faster and more reliable, so prefer it over Gemini
+      // JSON-heavy analysis is more reliable on Gemini, while conversational
+      // text remains Venice-first for web search and latency.
       let providerOrder: Array<"gemini" | "venice">;
 
       if (preferredProvider === "venice") {
         providerOrder = ["venice", "gemini"];
       } else if (preferredProvider === "gemini") {
         providerOrder = ["gemini", "venice"];
+      } else if (options.responseMimeType === "application/json") {
+        providerOrder = config.geminiApiKey
+          ? ["gemini", "venice"]
+          : ["venice", "gemini"];
       } else {
-        // Auto: Prefer Venice (faster, better JSON support, no rate limits)
-        // Gemini as fallback due to free tier limitations
-        providerOrder = DEFAULT_CONFIG.veniceApiKey
+        providerOrder = config.veniceApiKey
           ? ["venice", "gemini"]
           : ["gemini", "venice"];
       }
 
       for (const provider of providerOrder) {
         try {
-          if (provider === "venice" && DEFAULT_CONFIG.veniceApiKey) {
+          if (provider === "venice" && config.veniceApiKey) {
             const result = await veniceCircuitBreaker.call(() =>
               withTimeout(
                 callVeniceChat(options),
@@ -277,7 +306,7 @@ export async function generateChatCompletion(
             }
 
             return { data: result, source: "venice" };
-          } else if (provider === "gemini" && DEFAULT_CONFIG.geminiApiKey) {
+          } else if (provider === "gemini" && config.geminiApiKey) {
             const result = await geminiCircuitBreaker.call(() =>
               withTimeout(
                 callGeminiChat(options),
@@ -302,6 +331,11 @@ export async function generateChatCompletion(
             }
 
             return { data: result, source: "gemini" };
+          } else {
+            errors.push({
+              provider,
+              error: `Provider skipped: missing ${provider} API key`,
+            });
           }
         } catch (error) {
           const errorMessage =
@@ -562,12 +596,13 @@ export async function generateSpeech(
   const result = await unifiedCache.getOrFetch(
     cacheKey,
     async () => {
+      const config = getCurrentConfig();
       const errors: Array<{ provider: string; error: string }> = [];
 
       // Try Venice first (if preferred or auto)
       if (
         (preferredProvider === "venice" || preferredProvider === "auto") &&
-        DEFAULT_CONFIG.veniceApiKey
+        config.veniceApiKey
       ) {
         try {
           const result = await veniceCircuitBreaker.call(() =>
@@ -586,7 +621,7 @@ export async function generateSpeech(
       // Fallback to ElevenLabs
       if (
         (preferredProvider === "elevenlabs" || preferredProvider === "auto") &&
-        DEFAULT_CONFIG.elevenLabsApiKey
+        config.elevenLabsApiKey
       ) {
         try {
           const result = await elevenLabsCircuitBreaker.call(() =>
@@ -616,13 +651,14 @@ export async function generateSpeech(
  * Call Venice TTS API
  */
 async function callVeniceTTS(options: TTSOptions): Promise<TTSResult> {
+  const config = getCurrentConfig();
   const voice = options.voice || VENICE_VOICES.professional;
   const format = options.format || "mp3";
 
   const response = await fetch("https://api.venice.ai/api/v1/audio/speech", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${DEFAULT_CONFIG.veniceApiKey}`,
+      Authorization: `Bearer ${config.veniceApiKey}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
@@ -651,7 +687,8 @@ async function callVeniceTTS(options: TTSOptions): Promise<TTSResult> {
  * Call ElevenLabs TTS API
  */
 async function callElevenLabsTTS(options: TTSOptions): Promise<TTSResult> {
-  const voiceId = DEFAULT_CONFIG.elevenLabsVoiceId || "pNInz6obpg8ndclKuzWf";
+  const config = getCurrentConfig();
+  const voiceId = config.elevenLabsVoiceId || "pNInz6obpg8ndclKuzWf";
 
   const response = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
@@ -659,7 +696,7 @@ async function callElevenLabsTTS(options: TTSOptions): Promise<TTSResult> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "xi-api-key": DEFAULT_CONFIG.elevenLabsApiKey!,
+        "xi-api-key": config.elevenLabsApiKey!,
       },
       body: JSON.stringify({
         text: options.text,
@@ -699,12 +736,13 @@ export async function transcribeAudio(
   filePath: string,
   preferredProvider: "openai" | "elevenlabs" | "auto" = "auto",
 ): Promise<TranscriptionResult> {
+  const config = getCurrentConfig();
   const errors: Array<{ provider: string; error: string }> = [];
 
   // Try OpenAI first (if preferred or auto)
   if (
     (preferredProvider === "openai" || preferredProvider === "auto") &&
-    DEFAULT_CONFIG.openaiApiKey
+    config.openaiApiKey
   ) {
     try {
       const result = await openaiCircuitBreaker.call(() =>
@@ -723,7 +761,7 @@ export async function transcribeAudio(
   // Fallback to ElevenLabs Scribe
   if (
     (preferredProvider === "elevenlabs" || preferredProvider === "auto") &&
-    DEFAULT_CONFIG.elevenLabsApiKey
+    config.elevenLabsApiKey
   ) {
     try {
       const result = await elevenLabsCircuitBreaker.call(() =>
@@ -765,7 +803,9 @@ async function callOpenAITranscribe(filePath: string): Promise<string> {
 }
 
 async function callElevenLabsTranscribe(filePath: string): Promise<string> {
-  if (!DEFAULT_CONFIG.elevenLabsApiKey) {
+  const config = getCurrentConfig();
+
+  if (!config.elevenLabsApiKey) {
     throw new Error("ElevenLabs API key not configured");
   }
 
@@ -784,7 +824,7 @@ async function callElevenLabsTranscribe(filePath: string): Promise<string> {
   const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
     method: "POST",
     headers: {
-      "xi-api-key": DEFAULT_CONFIG.elevenLabsApiKey,
+      "xi-api-key": config.elevenLabsApiKey,
     },
     body: formData,
   });
@@ -997,9 +1037,10 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
     elevenLabs: { available: false },
     openai: { available: false },
   };
+  const config = getCurrentConfig();
 
   // Check Venice
-  if (DEFAULT_CONFIG.veniceApiKey) {
+  if (config.veniceApiKey) {
     try {
       const client = getVeniceClient();
       if (client) {
@@ -1012,7 +1053,7 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
   }
 
   // Check Gemini
-  if (DEFAULT_CONFIG.geminiApiKey) {
+  if (config.geminiApiKey) {
     try {
       const client = getGeminiClient();
       if (client) {
@@ -1026,10 +1067,10 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
   }
 
   // Check ElevenLabs
-  if (DEFAULT_CONFIG.elevenLabsApiKey) {
+  if (config.elevenLabsApiKey) {
     try {
       const response = await fetch("https://api.elevenlabs.io/v1/voices", {
-        headers: { "xi-api-key": DEFAULT_CONFIG.elevenLabsApiKey },
+        headers: { "xi-api-key": config.elevenLabsApiKey },
       });
       status.elevenLabs.available = response.ok;
     } catch (error) {
@@ -1038,7 +1079,7 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
   }
 
   // Check OpenAI
-  if (DEFAULT_CONFIG.openaiApiKey) {
+  if (config.openaiApiKey) {
     try {
       const client = getOpenAIClient();
       if (client) {
