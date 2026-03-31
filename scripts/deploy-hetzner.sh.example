@@ -75,6 +75,9 @@ rsync -a --delete "$DEPLOY_DIR/.next/standalone/" "$RUNTIME_DIR/"
 rsync -a --delete "$DEPLOY_DIR/.next/static/" "$RUNTIME_DIR/.next/static/"
 rsync -a --delete "$DEPLOY_DIR/public/" "$RUNTIME_DIR/public/"
 cp "$DEPLOY_DIR/.env" "$RUNTIME_DIR/.env"
+if [ -f "$DEPLOY_DIR/.env.local" ]; then
+  cp "$DEPLOY_DIR/.env.local" "$RUNTIME_DIR/.env.local"
+fi
 cp "$DEPLOY_DIR/scripts/start-runtime.sh.example" "$RUNTIME_DIR/start-runtime.sh"
 chmod +x "$RUNTIME_DIR/start-runtime.sh"
 

@@ -15,14 +15,16 @@ NODE_ENV="${NODE_ENV:-production}"
 
 cd "$APP_DIR"
 
-if [ -f ".env" ]; then
-  while IFS= read -r line; do
-    case "$line" in
-      ''|\#*) continue ;;
-      [A-Za-z_][A-Za-z0-9_]*=*) export "$line" ;;
-    esac
-  done < .env
-fi
+for env_file in .env.local .env; do
+  if [ -f "$env_file" ]; then
+    while IFS= read -r line; do
+      case "$line" in
+        ''|\#*) continue ;;
+        [A-Za-z_][A-Za-z0-9_]*=*) export "$line" ;;
+      esac
+    done < "$env_file"
+  fi
+done
 
 if [ -f "server.js" ]; then
   if [ ! -f ".next/prerender-manifest.json" ] || [ ! -f ".next/BUILD_ID" ]; then
