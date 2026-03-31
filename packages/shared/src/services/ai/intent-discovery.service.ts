@@ -24,6 +24,8 @@ export class IntentDiscoveryService {
      */
     static discover(text: string): AppIntent {
         const r = text.toLowerCase();
+        const wordCount = r.trim().split(/\s+/).filter(Boolean).length;
+        const isLongFormPrompt = wordCount >= 8 || r.includes('?') || r.includes(',');
 
         // 0. GoodDollar (UBI) Actions
         if (r.includes("ubi") || r.includes("gooddollar") || r.includes("$g") || r.includes("free money")) {
@@ -104,8 +106,26 @@ export class IntentDiscoveryService {
             return { type: 'NAVIGATE', tab: 'exchange' };
         }
 
-        if (r.includes("protect") || r.includes("analyze") || r.includes("score") || r.includes("advice")) {
+        if (
+            !isLongFormPrompt &&
+            (r.includes("go to protect") ||
+             r.includes("open protect") ||
+             r.includes("show protect") ||
+             r === "protect")
+        ) {
             return { type: 'NAVIGATE', tab: 'protect' };
+        }
+
+        if (
+            r.includes("analyze") ||
+            r.includes("analysis") ||
+            r.includes("score") ||
+            r.includes("advice") ||
+            r.includes("inflation trend") ||
+            r.includes("currency devaluation") ||
+            r.includes("protective action")
+        ) {
+            return { type: 'ANALYZE_REQUEST', goal: text };
         }
 
         if (r.includes("balance") || r.includes("portfolio") || r.includes("holding") || r.includes("asset") || r.includes("station")) {

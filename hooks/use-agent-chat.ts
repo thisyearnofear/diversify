@@ -83,39 +83,44 @@ export function useAgentChat({
       if (!capabilities.chat) return;
 
       const intent = IntentDiscoveryService.discover(content);
+      const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+      const allowFastPath = wordCount <= 6;
+      const effectiveIntent: AppIntent = allowFastPath
+        ? intent
+        : { type: "QUERY", context: "general" };
       // 1. Fast-path routing for immediate UI feedback (Navigation, Demo, etc.)
       let fastPathResponse: string | undefined;
 
-      switch (intent.type) {
+      switch (effectiveIntent.type) {
         case 'NAVIGATE':
-          fastPathResponse = `Taking you to ${intent.tab.toUpperCase()}... 🚀`;
+          fastPathResponse = `Taking you to ${effectiveIntent.tab.toUpperCase()}... 🚀`;
           break;
         case 'SWAP_SHORTCUT':
           fastPathResponse = "Preparing your swap hub... 💱";
           break;
         case 'SEND_TO_PHONE':
-          fastPathResponse = `Resolving ${intent.phoneNumber} via SocialConnect... 📱`;
+          fastPathResponse = `Resolving ${effectiveIntent.phoneNumber} via SocialConnect... 📱`;
           break;
         case 'GOODDOLLAR':
-          fastPathResponse = intent.topic === 'claim' ? "Checking G$ UBI eligibility... 🪙" : "Starting verification... 🛡️";
+          fastPathResponse = effectiveIntent.topic === 'claim' ? "Checking G$ UBI eligibility... 🪙" : "Starting verification... 🛡️";
           break;
         case 'WDK_ACTION':
-          if (intent.topic === 'switch') {
+          if (effectiveIntent.topic === 'switch') {
             fastPathResponse = "Switching your Guardian infrastructure to WDK settlement... 🌌";
-          } else if (intent.topic === 'status') {
+          } else if (effectiveIntent.topic === 'status') {
             fastPathResponse = "Checking WDK settlement agent status... 🛰️";
           } else {
             fastPathResponse = "The WDK (Wallet Development Kit) enables self-custodial agentic wallets with native USD₮ and XAU₮ support for multi-chain settlement. 🌌";
           }
           break;
         case 'ONBOARDING':
-          if (intent.topic === 'demo') {
+          if (effectiveIntent.topic === 'demo') {
             fastPathResponse = "Entering Demo Mode... 🎮";
-          } else if (intent.topic === 'what-is-this') {
+          } else if (effectiveIntent.topic === 'what-is-this') {
             fastPathResponse = "DiversiFi is a wealth protection protocol that helps you hedge against inflation by diversifying your stablecoin savings across multiple regions and real-world assets (RWAs).";
-          } else if (intent.topic === 'how-to-start') {
+          } else if (effectiveIntent.topic === 'how-to-start') {
             fastPathResponse = "It's simple: 1. Connect your wallet. 2. Choose a protection strategy in the 'Protect' tab. 3. Swap your funds into diversified assets.";
-          } else if (intent.topic === 'is-safe') {
+          } else if (effectiveIntent.topic === 'is-safe') {
             fastPathResponse = "DiversiFi is non-custodial. We never store your private keys. All transactions are executed on-chain via secure smart contracts.";
           }
           break;
@@ -154,11 +159,13 @@ export function useAgentChat({
           // Handle auto-speech if enabled
           if (capabilities.voiceOutput && generateSpeech) {
             try {
-              const speechBlob = await generateSpeech(fastPathResponse!);
+                const speechBlob = await generateSpeech(fastPathResponse!);
               if (speechBlob) {
                 const url = URL.createObjectURL(speechBlob);
                 const audio = new Audio(url);
-                audio.play();
+                audio.play().catch((playError) => {
+                  console.warn("[useAgentChat] Fast-path audio playback failed:", playError);
+                });
               }
             } catch (e) {
               console.warn("[useAgentChat] Fast-path speech failed:", e);
@@ -221,7 +228,9 @@ export function useAgentChat({
               if (speechBlob) {
                 const url = URL.createObjectURL(speechBlob);
                 const audio = new Audio(url);
-                audio.play();
+                audio.play().catch((playError) => {
+                  console.warn("[useAgentChat] Audio playback failed:", playError);
+                });
               }
             } catch (speechError) {
               console.warn("[useAgentChat] Auto-speech failed:", speechError);

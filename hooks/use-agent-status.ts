@@ -32,11 +32,15 @@ export function useAgentStatus() {
   const [state, setState] = useState<StatusState>(defaultState);
 
   const fetchStatus = useCallback(async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
     try {
       setState(prev => ({ ...prev, isLoading: true }));
       
       const userId = user?.id ? encodeURIComponent(user.id) : '';
-      const response = await fetch(`${API_BASE}/api/agent/status${userId ? `?userId=${userId}` : ''}`);
+      const response = await fetch(`${API_BASE}/api/agent/status${userId ? `?userId=${userId}` : ''}`, {
+        signal: controller.signal,
+      });
       
       if (response.ok) {
         const status = await response.json();
@@ -83,10 +87,22 @@ export function useAgentStatus() {
           initialized: true,
           isLoading: false,
         });
+      } else {
+        setState(prev => ({
+          ...prev,
+          initialized: true,
+          isLoading: false,
+        }));
       }
     } catch (error) {
       console.error("[useAgentStatus] Failed to initialize:", error);
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState(prev => ({
+        ...prev,
+        initialized: true,
+        isLoading: false,
+      }));
+    } finally {
+      clearTimeout(timeout);
     }
   }, [user?.id]);
 

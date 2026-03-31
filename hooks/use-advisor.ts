@@ -87,7 +87,9 @@ export function useAdvisor() {
           if (speechBlob) {
             const url = URL.createObjectURL(speechBlob);
             const audio = new Audio(url);
-            audio.play();
+            audio.play().catch((playError) => {
+              console.warn("[useAdvisor] Audio playback failed:", playError);
+            });
           }
         } catch (err) {
           console.warn("[useAdvisor] Failed to generate proactive speech:", err);
