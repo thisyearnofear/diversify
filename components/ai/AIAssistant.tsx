@@ -56,6 +56,11 @@ const KineticSavings = ({ value }: { value: number }) => {
   return <span>${formattedValue}</span>;
 };
 
+function getAdvisorPathValue(advice: AIAdvice): number | undefined {
+  return advice.comparisonProjection?.advisorPathValue
+    ?? advice.comparisonProjection?.oraclePathValue;
+}
+
 interface AIAssistantProps {
   amount: number;
   holdings: string[];
@@ -145,6 +150,7 @@ export default function AIAssistant({
   });
   const isAnalyzing = isAnalysisRunning || isChatting;
   const thinkingStep = isAnalysisRunning ? analysisThinkingStep : chatThinkingStep;
+  const advisorPathValue = advice ? getAdvisorPathValue(advice) : undefined;
 
   const { stats: networkActivityStats } = useNetworkActivity();
   const { inflationData: liveInflationData } = useInflationData();
@@ -424,7 +430,7 @@ export default function AIAssistant({
                             thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
                               thinkingStep.toLowerCase().includes('momentum') ? 'ALTERNATIVE_ME_FNG' :
                                 thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' :
-                                  thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
+                                  thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ADVISOR_v2' : 'DIVERSIFI_ANALYTICS'}
                       </motion.span>
                     </AnimatePresence>
                   </div>
@@ -521,8 +527,8 @@ export default function AIAssistant({
                           />
                         </div>
                         <span className="text-xs text-emerald-600 font-bold w-16 text-right">
-                          +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
-                            ? advice.comparisonProjection.oraclePathValue -
+                          +<KineticSavings value={advice.expectedSavings || (advisorPathValue
+                            ? advisorPathValue -
                             (advice.comparisonProjection.currentPathValue || amount)
                             : amount * 0.2)} />
                         </span>
@@ -1093,7 +1099,7 @@ export default function AIAssistant({
                             thinkingStep.toLowerCase().includes('yield') ? 'DEFILLAMA_TVL_v2' :
                               thinkingStep.toLowerCase().includes('momentum') ? 'ALTERNATIVE_ME_FNG' :
                                 thinkingStep.toLowerCase().includes('market') ? 'ALPHA_VANTAGE_v1' :
-                                  thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ORACLE_v2' : 'DIVERSIFI_ANALYTICS'}
+                                  thinkingStep.toLowerCase().includes('liquidity') ? 'DIVERSIFI_ADVISOR_v2' : 'DIVERSIFI_ANALYTICS'}
                       </motion.span>
                     </AnimatePresence>
                   </div>
@@ -1216,8 +1222,8 @@ export default function AIAssistant({
                         <div className="flex justify-between text-xs font-bold">
                           <span className="text-blue-600">Optimized Path</span>
                           <span className="text-green-600">
-                            +<KineticSavings value={advice.expectedSavings || (advice.comparisonProjection?.oraclePathValue
-                              ? advice.comparisonProjection.oraclePathValue -
+                            +<KineticSavings value={advice.expectedSavings || (advisorPathValue
+                              ? advisorPathValue -
                               (advice.comparisonProjection.currentPathValue || amount)
                               : amount * 0.2)} />
                           </span>
@@ -1226,9 +1232,8 @@ export default function AIAssistant({
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{
-                              width: `${advice.comparisonProjection?.oraclePathValue
-                                ? (advice.comparisonProjection
-                                  .oraclePathValue /
+                              width: `${advisorPathValue
+                                ? (advisorPathValue /
                                   amount) *
                                 100
                                 : 100
@@ -1239,7 +1244,7 @@ export default function AIAssistant({
                         </div>
                         <div className="text-xs text-gray-400">
                           Value: $
-                          {advice.comparisonProjection?.oraclePathValue?.toFixed(
+                          {advisorPathValue?.toFixed(
                             2,
                           ) || amount.toFixed(2)}
                         </div>

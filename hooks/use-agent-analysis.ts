@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePrivy } from "@privy-io/react-auth";
+import { useWalletContext } from "../components/wallet/WalletProvider";
 import {
   analyzePortfolio,
   type PortfolioAnalysis,
@@ -60,6 +61,7 @@ export function useAgentAnalysis({
   autonomousEnabled = false,
 }: AgentAnalysisDependencies): AgentAnalysisState & AgentAnalysisActions {
   const { user } = usePrivy();
+  const { address } = useWalletContext();
   const { showToast } = useToast();
   const [state, setState] = useState<AnalysisStoreState>(cachedState);
 
@@ -207,6 +209,26 @@ export function useAgentAnalysis({
             advice: result.advice,
             timestamp: Date.now(),
           });
+          if (address && result.advice) {
+            fetch(`${apiBase}/api/vault/guardian-state`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                userAddress: address,
+                latestRecommendation: {
+                  capturedAt: new Date().toISOString(),
+                  source: "advisor-analysis",
+                  action: result.advice.action,
+                  targetToken: result.advice.targetToken || result.advice.token,
+                  oneLiner: result.advice.oneLiner,
+                  reasoning: result.advice.reasoning,
+                  expectedSavings: result.advice.expectedSavings,
+                  confidence: result.advice.confidence,
+                  riskLevel: result.advice.riskLevel,
+                },
+              }),
+            }).catch(() => {});
+          }
           setTimeout(() => {
             updateState({
               isAnalyzing: false,
@@ -276,7 +298,7 @@ export function useAgentAnalysis({
         }
       }
     },
-    [apiBase, capabilities.analysis, config, addActivity, addMessage, showToast],
+    [apiBase, capabilities.analysis, config, addActivity, addMessage, showToast, address],
   );
 
   const analyze = useCallback(

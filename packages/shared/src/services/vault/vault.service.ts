@@ -93,6 +93,7 @@ export interface VaultTransaction {
   feeUSD: number;
   feePercentage: number;
   error?: string;
+  createdAt?: string;
 }
 
 export interface VaultSummary {
@@ -122,6 +123,16 @@ export interface RebalanceResult {
   failed: number;
   transactions: VaultTransaction[];
   totalFeesUSD: number;
+  results: Array<{
+    status: 'executed' | 'skipped' | 'failed';
+    tokenIn: string;
+    tokenOut: string;
+    amountUSD: number;
+    reason?: string;
+    txHash?: string;
+    explorerUrl?: string;
+    error?: string;
+  }>;
 }
 
 // ─── Database Bridge Interface ──────────────────────────────────────────
@@ -311,19 +322,20 @@ export class VaultService {
 
     const permission = await this.store.findActivePermission(vaultId);
     if (!permission || permission.status !== 'active') {
-      return { vaultId, executed: 0, skipped: recommendations.length, failed: 0, transactions: [], totalFeesUSD: 0 };
+      return { vaultId, executed: 0, skipped: recommendations.length, failed: 0, transactions: [], totalFeesUSD: 0, results: [] };
     }
 
     // Check permission expiry
     const now = Math.floor(Date.now() / 1000);
     if (permission.expiresAt > 0 && permission.expiresAt < now) {
-      return { vaultId, executed: 0, skipped: recommendations.length, failed: 0, transactions: [], totalFeesUSD: 0 };
+      return { vaultId, executed: 0, skipped: recommendations.length, failed: 0, transactions: [], totalFeesUSD: 0, results: [] };
     }
 
     let executed = 0;
     let skipped = 0;
     let failed = 0;
     const transactions: VaultTransaction[] = [];
+    const results: RebalanceResult['results'] = [];
     let totalFeesUSD = 0;
 
     // Reset daily counter if new day
@@ -338,6 +350,13 @@ export class VaultService {
       const validation = this.validateSwap(permission, rec);
       if (!validation.allowed) {
         skipped++;
+        results.push({
+          status: 'skipped',
+          tokenIn: rec.tokenIn,
+          tokenOut: rec.tokenOut,
+          amountUSD: rec.estimatedAmountUSD,
+          reason: validation.reason,
+        });
         continue;
       }
 
@@ -374,6 +393,15 @@ export class VaultService {
 
         await this.store.createTransaction(tx);
         transactions.push(tx);
+        results.push({
+          status: 'executed',
+          tokenIn: rec.tokenIn,
+          tokenOut: rec.tokenOut,
+          amountUSD: rec.estimatedAmountUSD,
+          reason: rec.reason,
+          txHash: tx.txHash,
+          explorerUrl: tx.explorerUrl,
+        });
 
         // Update permission spending
         permission.spentTodayUSD += rec.estimatedAmountUSD;
@@ -383,7 +411,7 @@ export class VaultService {
         totalFeesUSD += swapFee;
       } catch (error) {
         failed++;
-        await this.store.createTransaction({
+        const failedTx = await this.store.createTransaction({
           vaultId,
           userAddress: vault.userAddress,
           type: 'swap',
@@ -397,6 +425,17 @@ export class VaultService {
           feeUSD: 0,
           feePercentage: 0,
           error: error instanceof Error ? error.message : 'Unknown error',
+        });
+        transactions.push(failedTx);
+        results.push({
+          status: 'failed',
+          tokenIn: rec.tokenIn,
+          tokenOut: rec.tokenOut,
+          amountUSD: rec.estimatedAmountUSD,
+          reason: rec.reason,
+          txHash: failedTx.txHash,
+          explorerUrl: failedTx.explorerUrl,
+          error: failedTx.error,
         });
       }
     }
@@ -416,7 +455,7 @@ export class VaultService {
       });
     }
 
-    return { vaultId, executed, skipped, failed, transactions, totalFeesUSD };
+    return { vaultId, executed, skipped, failed, transactions, totalFeesUSD, results };
   }
 
   /**

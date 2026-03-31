@@ -18,14 +18,14 @@ import { useAgentChat } from "../../hooks/use-agent-chat";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import type { AgentActivity } from "../../hooks/agent-types";
 import { useExperience } from "../../context/app/ExperienceContext";
-import { useSessionKey } from "../../hooks/use-session-key";
+import { useSessionKey, type GuardianLoopResult } from "../../hooks/use-session-key";
 import { useVault } from "../../hooks/use-vault";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { motion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
 import AgentFuelGauge from "./AgentFuelGauge";
-import OracleMetrics from "./OracleMetrics";
+import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianOpenClawStatus from "./GuardianOpenClawStatus";
 import GuardianWDKStatus from "./GuardianWDKStatus";
 import GuardianMobileWizard from "./GuardianMobileWizard";
@@ -126,7 +126,7 @@ export const AgentTierStatus: React.FC<{
     : null;
   const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
   const [isRunningLoop, setIsRunningLoop] = useState(false);
-  const [loopResult, setLoopResult] = useState<any>(null);
+  const [loopResult, setLoopResult] = useState<GuardianLoopResult | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
   // Tier 3: The Guardian (Autonomous) — Real State Machine
@@ -236,6 +236,73 @@ export const AgentTierStatus: React.FC<{
     return { totalSavings, totalActions, successRate, totalCost };
   }, [activities]);
 
+  const guardianProofEvents = useMemo(() => {
+    const latestLoopEvent = sessionInfo?.latestLoop
+      ? [{
+        id: `loop-${sessionInfo.latestLoop.capturedAt}`,
+        source: "vault" as const,
+        title: `Guardian ${sessionInfo.latestLoop.status}`,
+        subtitle: sessionInfo.latestLoop.message,
+        timestamp: new Date(sessionInfo.latestLoop.capturedAt).getTime(),
+        status:
+          sessionInfo.latestLoop.status === "executed"
+            ? "confirmed"
+            : sessionInfo.latestLoop.status === "failed" || sessionInfo.latestLoop.status === "blocked"
+              ? "failed"
+              : "pending",
+      }]
+      : [];
+
+    const liveEvents = [
+      ...openClawReceipts.map((receipt) => ({
+        id: `openclaw-${receipt.event_id}`,
+        source: "openclaw" as const,
+        title: receipt.action_type,
+        subtitle: receipt.tool,
+        timestamp: new Date(receipt.timestamp).getTime(),
+        status: receipt.status === "success" ? "confirmed" : receipt.status === "error" ? "failed" : "pending",
+        explorerUrl: receipt.onchain?.explorer_url,
+        txHash: receipt.onchain?.tx_hash,
+      })),
+      ...wdkReceipts.map((receipt) => ({
+        id: `wdk-${receipt.id}`,
+        source: "wdk" as const,
+        title: receipt.action,
+        subtitle: `${receipt.amount} ${receipt.asset}`,
+        timestamp: receipt.timestamp,
+        status: receipt.status === "success" ? "confirmed" : receipt.status === "error" ? "failed" : "pending",
+        explorerUrl: receipt.txHash ? `https://celoscan.io/tx/${receipt.txHash}` : undefined,
+        txHash: receipt.txHash,
+      })),
+    ];
+
+    const liveHashes = new Set(
+      liveEvents
+        .map((event) => event.txHash?.toLowerCase())
+        .filter(Boolean) as string[],
+    );
+
+    const persistedEvents = (sessionInfo?.recentExecutions || [])
+      .filter((execution) => !execution.txHash || !liveHashes.has(execution.txHash.toLowerCase()))
+      .map((execution) => ({
+        id: `vault-${execution.txHash || execution.timestamp}`,
+        source: "vault" as const,
+        title: execution.action === "rebalance" ? "Guardian rebalance" : "Guardian swap",
+        subtitle: execution.tokenIn && execution.tokenOut
+          ? `${execution.tokenIn} -> ${execution.tokenOut} · $${execution.amountUSD}`
+          : `$${execution.amountUSD}`,
+        timestamp: execution.timestamp,
+        status: execution.status || "confirmed",
+        explorerUrl: execution.explorerUrl,
+        txHash: execution.txHash,
+        error: execution.error,
+      }));
+
+    return [...latestLoopEvent, ...persistedEvents, ...liveEvents]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 10);
+  }, [openClawReceipts, wdkReceipts, sessionInfo?.latestLoop, sessionInfo?.recentExecutions]);
+
   // Filter activities by tier
   const getActivitiesForTier = (tier: "ADVISOR" | "GUARDIAN") => {
     return activities.filter((a) => a.tier === tier).slice(0, 5);
@@ -338,7 +405,7 @@ export const AgentTierStatus: React.FC<{
               Quick Actions
             </span>
           </div>
-          <OracleMetrics compact={true} />
+          <AdvisorMetrics compact={true} />
           {isAnalyzing && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -435,7 +502,7 @@ export const AgentTierStatus: React.FC<{
           {guardianActive && (
             <div className="mt-3 flex items-center gap-2">
               <span className="text-sm text-purple-600 dark:text-purple-400 font-bold">
-                {openClawReceipts.length + wdkReceipts.length || 0} actions recorded
+                {guardianProofEvents.length || 0} actions recorded
               </span>
               <span className="text-xs text-gray-400">· Tap to view journal</span>
             </div>
@@ -516,6 +583,28 @@ export const AgentTierStatus: React.FC<{
                   />
                 )}
 
+                {sessionInfo?.latestRecommendation && (
+                  <div className="mt-6 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-blue-100 dark:border-blue-900/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-xs font-black uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">
+                        Advisor Intent
+                      </h5>
+                      <span className="text-[10px] text-gray-400">
+                        {new Date(sessionInfo.latestRecommendation.capturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                    <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                      {sessionInfo.latestRecommendation.action || "HOLD"}
+                      {sessionInfo.latestRecommendation.targetToken
+                        ? ` -> ${sessionInfo.latestRecommendation.targetToken}`
+                        : ""}
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      {sessionInfo.latestRecommendation.oneLiner || sessionInfo.latestRecommendation.reasoning}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-6">
                   {/* Vault Balance (shown when vault exists) */}
                   {vault.vault && (
@@ -571,6 +660,51 @@ export const AgentTierStatus: React.FC<{
                         <span className="text-gray-500">Expires</span>
                         <span className="font-bold">{permissionExpiry}</span>
                       </div>
+                      {sessionInfo?.latestLoop && (
+                        <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
+                          <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 dark:text-purple-300">
+                            <span>Latest Guardian Outcome</span>
+                            <span className={`px-2 py-0.5 rounded-full border ${
+                              sessionInfo.latestLoop.status === "executed"
+                                ? "bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:border-green-800"
+                                : sessionInfo.latestLoop.status === "partial"
+                                  ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
+                                  : sessionInfo.latestLoop.status === "ready"
+                                    ? "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+                                    : sessionInfo.latestLoop.status === "noop"
+                                      ? "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/40 dark:border-gray-700"
+                                      : "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+                            }`}>
+                              {sessionInfo.latestLoop.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 dark:text-purple-300 mt-2">
+                            <span>{sessionInfo.latestLoop.dryRun ? "Dry Run" : "Execution"}</span>
+                          </div>
+                          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                            {sessionInfo.latestLoop.message}
+                          </p>
+                          <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
+                            <div className="bg-white/80 dark:bg-gray-900/40 rounded-lg px-2 py-1">
+                              <div className="text-gray-400 uppercase">Total</div>
+                              <div className="font-bold">{sessionInfo.latestLoop.summary.total}</div>
+                            </div>
+                            <div className="bg-white/80 dark:bg-gray-900/40 rounded-lg px-2 py-1">
+                              <div className="text-gray-400 uppercase">Exec</div>
+                              <div className="font-bold text-green-600">{sessionInfo.latestLoop.summary.executed}</div>
+                            </div>
+                            <div className="bg-white/80 dark:bg-gray-900/40 rounded-lg px-2 py-1">
+                              <div className="text-gray-400 uppercase">Skip</div>
+                              <div className="font-bold text-amber-600">{sessionInfo.latestLoop.summary.skipped}</div>
+                            </div>
+                          </div>
+                          {sessionInfo.latestLoop.summary.failed > 0 && (
+                            <div className="mt-2 text-[11px] font-bold text-red-600">
+                              Failed: {sessionInfo.latestLoop.summary.failed}
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <div className="flex gap-2 mt-2">
                         <button
                           onClick={async (e) => {
@@ -608,18 +742,51 @@ export const AgentTierStatus: React.FC<{
                       {loopResult && (
                         <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs space-y-1">
                           <div className="font-bold text-gray-700 dark:text-gray-300">
-                            Guardian Analysis: {loopResult.summary?.total || 0} recommendation(s)
+                            Guardian: {loopResult.status || "ready"} {loopResult.recommendations?.length || loopResult.summary?.total || 0} recommendation(s)
                           </div>
-                          {loopResult.results?.map((r: any, i: number) => (
-                            <div key={i} className={`flex items-center gap-2 ${r.status === 'executed' ? 'text-green-600' : r.status === 'dry-run' ? 'text-blue-600' : r.status === 'skipped' ? 'text-amber-600' : 'text-red-600'}`}>
-                              <span>{r.status === 'executed' ? '✅' : r.status === 'dry-run' ? '🔍' : r.status === 'skipped' ? '⏭️' : '❌'}</span>
-                              <span>{r.recommendation?.reason?.slice(0, 80) || r.error}</span>
-                              {r.txHash && (
-                                <a href={r.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline ml-auto" onClick={(e) => e.stopPropagation()}>tx</a>
+                          {loopResult.message && (
+                            <div className="text-gray-600 dark:text-gray-400">
+                              {loopResult.message}
+                            </div>
+                          )}
+                          {loopResult.recommendations?.map((rec, i: number) => (
+                            <div key={`${rec.tokenIn}-${rec.tokenOut}-${i}`} className="flex items-center gap-2 text-blue-600">
+                              <span>🔍</span>
+                              <span>
+                                {rec.tokenIn} {"->"} {rec.tokenOut} {" · $"}{rec.estimatedAmountUSD || rec.amountUSD || 0} {" · "}{rec.reason?.slice(0, 70)}
+                              </span>
+                            </div>
+                          ))}
+                          {loopResult.results?.map((item, i: number) => (
+                            <div key={`${item.status}-${item.tokenIn}-${item.tokenOut}-${i}`} className={`flex items-center gap-2 ${
+                              item.status === 'executed'
+                                ? 'text-green-600'
+                                : item.status === 'failed'
+                                  ? 'text-red-600'
+                                  : 'text-amber-600'
+                            }`}>
+                              <span>{item.status === 'executed' ? '✅' : item.status === 'failed' ? '❌' : '⏭️'}</span>
+                              <span>
+                                {item.tokenIn} {"->"} {item.tokenOut} {" · $"}{item.amountUSD} {" · "}{item.reason || item.error || item.status}
+                              </span>
+                              {item.txHash && (
+                                <a href={item.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline ml-auto" onClick={(e) => e.stopPropagation()}>tx</a>
                               )}
                             </div>
                           ))}
-                          {loopResult.summary?.total === 0 && (
+                          {loopResult.transactions?.map((tx, i: number) => (
+                            <div key={`${tx.txHash || tx.error || i}`} className={`flex items-center gap-2 ${tx.status === 'confirmed' ? 'text-green-600' : tx.status === 'failed' ? 'text-red-600' : 'text-amber-600'}`}>
+                              <span>{tx.status === 'confirmed' ? '✅' : tx.status === 'failed' ? '❌' : '⏳'}</span>
+                              <span>
+                                {(tx.tokenIn || 'asset')} {"->"} {(tx.tokenOut || 'asset')} {" · $"}{tx.amountUSD || 0}
+                              </span>
+                              {tx.txHash && (
+                                <a href={tx.explorerUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline ml-auto" onClick={(e) => e.stopPropagation()}>tx</a>
+                              )}
+                            </div>
+                          ))}
+                          {(!loopResult.recommendations || loopResult.recommendations.length === 0) &&
+                            (!loopResult.summary || loopResult.summary.total === 0) && (
                             <div className="text-gray-500">No rebalance needed — portfolio looks healthy ✨</div>
                           )}
                         </div>
@@ -645,6 +812,33 @@ export const AgentTierStatus: React.FC<{
 
             {/* Right Column: High-End Activity Timeline */}
             <div className="space-y-6">
+              {sessionInfo?.latestLoop?.recommendations && sessionInfo.latestLoop.recommendations.length > 0 && (
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl border border-blue-100 dark:border-purple-900 p-4">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 mb-2">
+                    Proof Chain
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    <div>
+                      <span className="font-bold text-blue-700 dark:text-blue-300">1. Advisor:</span>{" "}
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {sessionInfo.latestRecommendation?.oneLiner || "Produced a rebalance recommendation"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-amber-700 dark:text-amber-300">2. Permission:</span>{" "}
+                      <span className="text-gray-700 dark:text-gray-300">
+                        ${dailyLimit}/day, {permissionExpiry || "active session"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="font-bold text-purple-700 dark:text-purple-300">3. Guardian:</span>{" "}
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {sessionInfo.latestLoop.message}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider">Proof of Execution</h4>
                 <span className="text-xs text-gray-400 italic">Sorted by Recency</span>
@@ -652,52 +846,69 @@ export const AgentTierStatus: React.FC<{
               
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {/* Unified Activity Stream */}
-                {[...openClawReceipts, ...wdkReceipts].length === 0 ? (
+                {guardianProofEvents.length === 0 ? (
                   <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
                     <span className="text-3xl block mb-2">🔭</span>
                     <p className="text-sm text-gray-500">Scanning for agent actions...</p>
                   </div>
                 ) : (
-                  [...openClawReceipts, ...wdkReceipts]
-                    .sort((a, b) => {
-                      const timeA = 'timestamp' in a && typeof a.timestamp === 'number' ? a.timestamp : new Date(a.timestamp as string).getTime();
-                      const timeB = 'timestamp' in b && typeof b.timestamp === 'number' ? b.timestamp : new Date(b.timestamp as string).getTime();
-                      return timeB - timeA;
-                    })
-                    .map((receipt, index) => (
-                      <div key={'event_id' in receipt ? receipt.event_id : (receipt as any).id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
+                  guardianProofEvents.map((event, index) => (
+                      <div key={event.id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
                         <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
                           {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
                         </div>
                         <div className={`bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border ${index === 0 ? 'border-green-100 dark:border-green-900/50 ring-1 ring-green-50 dark:ring-green-900/20' : 'border-gray-100 dark:border-gray-700'} hover:shadow-md transition-shadow relative overflow-hidden`}>
                           {/* Source Watermark/Icon */}
                           <div className="absolute top-3 right-3 opacity-20 text-xl grayscale pointer-events-none">
-                            {'event_id' in receipt ? '🦞' : '🌌'}
+                            {event.source === "openclaw" ? "🦞" : event.source === "wdk" ? "🌌" : "🛡️"}
                           </div>
 
                           <div className="flex justify-between items-start mb-1 pr-8">
                             <span className="text-sm font-black text-gray-900 dark:text-gray-100">
-                              {'action' in receipt ? receipt.action : (receipt as any).action_type}
+                              {event.title}
                             </span>
                             <span className="text-xs text-gray-400 whitespace-nowrap">
-                              {new Date('timestamp' in receipt && typeof receipt.timestamp === 'number' ? receipt.timestamp : (receipt as any).timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
                           <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                            {'asset' in receipt ? `${receipt.amount} ${receipt.asset}` : (receipt as any).tool}
+                            {event.subtitle}
                           </p>
-                          {'onchain' in receipt && receipt.onchain && (
+                          {event.error && (
+                            <p className="mt-2 text-xs text-red-500">
+                              {event.error}
+                            </p>
+                          )}
+                          {(event.explorerUrl || event.status) && (
                             <div className="mt-3 flex items-center justify-between gap-2">
-                              <a 
-                                href={(receipt as any).onchain.explorer_url} 
+                              {event.explorerUrl ? (
+                              <a
+                                href={event.explorerUrl}
                                 target="_blank" 
                                 className="text-xs font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md border border-blue-100 dark:border-blue-800 transition-colors whitespace-nowrap"
                               >
                                 View Evidence
                               </a>
-                              <span className="text-[10px] uppercase font-black text-green-500 bg-green-50 dark:bg-green-900/20 px-1.5 py-0.5 rounded italic flex items-center gap-1">
-                                <span className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-                                Onchain
+                              ) : (
+                                <span className="text-xs font-bold text-gray-400">
+                                  No explorer receipt
+                                </span>
+                              )}
+                              <span className={`text-[10px] uppercase font-black px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
+                                event.status === "confirmed"
+                                  ? "text-green-500 bg-green-50 dark:bg-green-900/20"
+                                  : event.status === "failed"
+                                    ? "text-red-500 bg-red-50 dark:bg-red-900/20"
+                                    : "text-amber-500 bg-amber-50 dark:bg-amber-900/20"
+                              }`}>
+                                <span className={`w-1 h-1 rounded-full ${
+                                  event.status === "confirmed"
+                                    ? "bg-green-500 animate-pulse"
+                                    : event.status === "failed"
+                                      ? "bg-red-500"
+                                      : "bg-amber-500"
+                                }`} />
+                                {event.status}
                               </span>
                             </div>
                           )}

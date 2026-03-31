@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from './_store';
 import { ERC7715Service } from '../../../packages/shared/src/services/erc7715-service';
+import { getGuardianState } from './_guardian-state';
 
 const erc7715 = new ERC7715Service();
 
@@ -80,7 +81,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const permission = await vaultStore.findActivePermission(vault._id);
       if (!permission) return res.status(200).json({ hasPermission: false });
 
-      return res.status(200).json({ hasPermission: true, permission });
+      const recentTransactions = await vaultStore.findTransactions(vault._id, 10);
+      const now = Math.floor(Date.now() / 1000);
+      const active = permission.status === 'active' && (permission.expiresAt <= 0 || permission.expiresAt >= now);
+      const recentExecutions = recentTransactions
+        .filter((tx) => tx.type === 'swap' || tx.type === 'rebalance')
+        .slice(0, 5)
+        .map((tx) => ({
+          txHash: tx.txHash || '',
+          action: tx.type,
+          tokenIn: tx.tokenIn || '',
+          tokenOut: tx.tokenOut || '',
+          amountUSD: tx.amountUSD,
+          timestamp: tx.createdAt ? new Date(tx.createdAt).getTime() : Date.now(),
+          status: tx.status,
+          explorerUrl: tx.explorerUrl,
+          error: tx.error,
+        }));
+
+      const guardianState = await getGuardianState(userAddress);
+      const remainingTodayUSD = Math.max(0, permission.dailyLimitUSD - permission.spentTodayUSD);
+
+      return res.status(200).json({
+        hasPermission: active,
+        active,
+        expired: !active && permission.expiresAt > 0 && permission.expiresAt < now,
+        permission,
+        dailyLimitUSD: permission.dailyLimitUSD,
+        spentTodayUSD: permission.spentTodayUSD,
+        remainingTodayUSD,
+        executionCount: recentExecutions.length,
+        recentExecutions,
+        latestRecommendation: guardianState?.latestRecommendation || null,
+        latestLoop: guardianState?.latestLoop || null,
+      });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }

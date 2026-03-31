@@ -36,6 +36,60 @@ export interface GuardianExecution {
     tokenOut: string;
     amountUSD: number;
     timestamp: number;
+    status?: string;
+    explorerUrl?: string;
+    error?: string;
+}
+
+export type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' | 'failed';
+
+export interface GuardianLoopRecommendation {
+    tokenIn: string;
+    tokenOut: string;
+    amountUSD: number;
+    urgency: string;
+    reason: string;
+}
+
+export interface GuardianLoopTransaction {
+    txHash?: string;
+    explorerUrl?: string;
+    tokenIn?: string;
+    tokenOut?: string;
+    amountUSD: number;
+    status: string;
+    error?: string;
+}
+
+export interface GuardianLoopItemResult {
+    status: 'executed' | 'skipped' | 'failed';
+    tokenIn: string;
+    tokenOut: string;
+    amountUSD: number;
+    reason?: string;
+    txHash?: string;
+    explorerUrl?: string;
+    error?: string;
+}
+
+export interface GuardianLoopResult {
+    success?: boolean;
+    dryRun: boolean;
+    status: GuardianLoopStatus;
+    reasonCode?: string;
+    message: string;
+    timestamp?: string;
+    summary: {
+        total: number;
+        executed: number;
+        skipped: number;
+        failed: number;
+    };
+    recommendationCount?: number;
+    recommendations?: GuardianLoopRecommendation[];
+    transactions?: GuardianLoopTransaction[];
+    results?: GuardianLoopItemResult[];
+    error?: string;
 }
 
 export interface GuardianSessionInfo {
@@ -45,6 +99,35 @@ export interface GuardianSessionInfo {
     remainingTodayUSD: number;
     executionCount: number;
     recentExecutions: GuardianExecution[];
+    latestRecommendation?: {
+        capturedAt: string;
+        source: string;
+        action?: string;
+        targetToken?: string;
+        oneLiner?: string;
+        reasoning?: string;
+        expectedSavings?: number;
+        confidence?: number;
+        riskLevel?: string;
+    } | null;
+    latestLoop?: {
+        capturedAt: string;
+        dryRun: boolean;
+        source: string;
+        status: GuardianLoopStatus;
+        message: string;
+        reasonCode?: string;
+        summary: {
+            total: number;
+            executed: number;
+            skipped: number;
+            failed: number;
+        };
+        recommendationCount: number;
+        recommendations?: GuardianLoopRecommendation[];
+        transactions?: GuardianLoopTransaction[];
+        results?: GuardianLoopItemResult[];
+    } | null;
 }
 
 export interface UseSessionKeyReturn {
@@ -62,7 +145,7 @@ export interface UseSessionKeyReturn {
     ) => Promise<SignedSessionPermission | null>;
     revokePermission: () => void;
     isPermissionValid: () => boolean;
-    triggerExecutionLoop: (dryRun?: boolean) => Promise<any>;
+    triggerExecutionLoop: (dryRun?: boolean) => Promise<GuardianLoopResult>;
 }
 
 export function useSessionKey(): UseSessionKeyReturn {
@@ -188,19 +271,32 @@ export function useSessionKey(): UseSessionKeyReturn {
         return status === 'active';
     }, [signedPermission, status]);
 
-    const triggerExecutionLoopInternal = async (userAddress: string, dryRun = false) => {
+    const triggerExecutionLoopInternal = async (userAddress: string, dryRun = false): Promise<GuardianLoopResult> => {
         const resp = await fetch(`${API_BASE}/api/vault/rebalance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userAddress, dryRun }),
         });
-        return resp.json();
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            return {
+                dryRun,
+                status: 'failed',
+                message: data.error || 'Guardian request failed',
+                summary: { total: 0, executed: 0, skipped: 0, failed: 0 },
+                ...data,
+            };
+        }
+        return data as GuardianLoopResult;
     };
 
     const triggerExecutionLoop = useCallback(async (dryRun = false) => {
         if (!signedPermission) return { error: 'No active session' };
-        return triggerExecutionLoopInternal(signedPermission.permission.userAddress, dryRun);
-    }, [signedPermission]);
+        const userAddress = signedPermission.permission.userAddress;
+        const result = await triggerExecutionLoopInternal(userAddress, dryRun);
+        await pollSession(userAddress);
+        return result;
+    }, [signedPermission, pollSession]);
 
     const permissionSummary = signedPermission
         ? service.describePermission(signedPermission.permission)

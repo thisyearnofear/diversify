@@ -124,7 +124,8 @@ export interface AIAdvice {
     timeHorizon: string;
     improvement: number;
     currentPathValue?: number;
-    oraclePathValue?: number;
+    advisorPathValue?: number;
+    oraclePathValue?: number; // Legacy compatibility for older saved analyses.
   };
 
   // Guided tour steps

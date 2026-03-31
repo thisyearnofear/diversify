@@ -126,6 +126,7 @@ export const vaultStore: VaultStore = {
       feeUSD: d.feeUSD,
       feePercentage: d.feePercentage,
       error: d.error,
+      createdAt: d.createdAt?.toISOString?.() || new Date().toISOString(),
     })) as VaultTransaction[];
   },
 };

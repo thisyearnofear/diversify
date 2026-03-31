@@ -1,5 +1,5 @@
 /**
- * OracleMetrics — Real-time market metrics for the Advisor card.
+ * AdvisorMetrics — Real-time market metrics for the Advisor card.
  * Shows inflation rate, diversification score, and top opportunity.
  * 
  * CLEAN: Single-purpose component for displaying market data.
@@ -10,11 +10,11 @@ import { useInflationData } from '../../hooks/use-inflation-data';
 import { useStablecoinPortfolio } from '../../hooks/use-stablecoin-portfolio';
 import { useWalletContext } from '../wallet/WalletProvider';
 
-interface OracleMetricsProps {
+interface AdvisorMetricsProps {
   compact?: boolean;
 }
 
-export default function OracleMetrics({ compact = false }: OracleMetricsProps) {
+export default function AdvisorMetrics({ compact = false }: AdvisorMetricsProps) {
   const { inflationData, dataSource } = useInflationData();
   const { address } = useWalletContext();
   const { metrics: portfolioMetrics } = useStablecoinPortfolio(address ?? undefined);
