@@ -20,10 +20,19 @@ export function useAdvisor() {
   });
 
   const askAdvisor = useCallback(
-    async (message: string) => {
+    async (
+      message: string,
+      options?: {
+        includeVoiceInsights?: boolean;
+      },
+    ) => {
       addUserMessage(message);
       setDrawerOpen(true);
       sendChatMessage(message);
+
+      if (!options?.includeVoiceInsights) {
+        return;
+      }
 
       try {
         const response = await fetch(`${API_BASE}/api/agent/voice-insights`, {

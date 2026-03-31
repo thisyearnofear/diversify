@@ -24,6 +24,7 @@ import VoiceButton from "../ui/VoiceButton";
 import { useAdvisor } from "../../hooks/use-advisor";
 import { REGIONS, type Region } from "../../hooks/use-user-region";
 import InteractiveAdviceCard from "../agent/InteractiveAdviceCard";
+import SimpleMarkdown from "../shared/SimpleMarkdown";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
@@ -319,14 +320,14 @@ export default function AIAssistant({
       ).hapticFeedback({ type: "selection" });
     } catch { }
 
-    askAdvisor(transcription);
+    askAdvisor(transcription, { includeVoiceInsights: true });
   };
 
   // Listen for voice queries from main page
   useEffect(() => {
     const handleVoiceQuery = (event: CustomEvent) => {
       const transcription = event.detail;
-      askAdvisor(transcription);
+      askAdvisor(transcription, { includeVoiceInsights: true });
     };
 
     window.addEventListener("voiceQuery", handleVoiceQuery as EventListener);
@@ -706,7 +707,7 @@ export default function AIAssistant({
                       className="mb-2"
                     >
                       <div className="bg-gray-50 rounded-xl p-2.5 text-xs text-gray-700 leading-relaxed">
-                        {messages[messages.length - 1]?.content}
+                        <SimpleMarkdown content={messages[messages.length - 1]?.content || ""} />
                       </div>
                       {messages.length > 1 && (
                         <button
@@ -898,9 +899,13 @@ export default function AIAssistant({
                           : "bg-gray-100 text-gray-800 rounded-bl-md"
                           }`}
                       >
-                        {msg.content.length > 120
-                          ? msg.content.slice(0, 120) + "..."
-                          : msg.content}
+                        <SimpleMarkdown
+                          content={
+                            msg.content.length > 120
+                              ? msg.content.slice(0, 120) + "..."
+                              : msg.content
+                          }
+                        />
                       </div>
                     </motion.div>
                   ))}
@@ -1577,7 +1582,7 @@ export default function AIAssistant({
                           : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-md"
                           }`}
                       >
-                        {msg.content}
+                        <SimpleMarkdown content={msg.content} />
                       </div>
                     </motion.div>
                   ))}

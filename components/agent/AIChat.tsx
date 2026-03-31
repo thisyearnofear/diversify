@@ -12,6 +12,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";
 import dynamic from "next/dynamic";
+import SimpleMarkdown from "../shared/SimpleMarkdown";
 
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
   ssr: false,
@@ -514,7 +515,7 @@ export default function AIChat() {
                           </div>
                         </div>
                       ) : (
-                        <div className="relative z-10 whitespace-pre-wrap">{msg.content}</div>
+                        <SimpleMarkdown className="relative z-10" content={msg.content} />
                       )}
 
                       {msg.action?.type === 'execute_rwa' && (
