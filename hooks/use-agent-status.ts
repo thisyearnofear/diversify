@@ -28,7 +28,7 @@ const defaultState: StatusState = {
 };
 
 export function useAgentStatus() {
-  const { user, ready } = usePrivy();
+  const { user } = usePrivy();
   const [state, setState] = useState<StatusState>(defaultState);
 
   const fetchStatus = useCallback(async () => {
@@ -107,10 +107,8 @@ export function useAgentStatus() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (ready) {
-      void fetchStatus();
-    }
-  }, [fetchStatus, ready]);
+    void fetchStatus();
+  }, [fetchStatus]);
 
   return {
     capabilities: state.capabilities,
