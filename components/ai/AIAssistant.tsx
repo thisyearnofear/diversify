@@ -151,6 +151,7 @@ export default function AIAssistant({
   const isAnalyzing = isAnalysisRunning || isChatting;
   const thinkingStep = isAnalysisRunning ? analysisThinkingStep : chatThinkingStep;
   const advisorPathValue = advice ? getAdvisorPathValue(advice) : undefined;
+  const currentPathValue = advice?.comparisonProjection?.currentPathValue;
 
   const { stats: networkActivityStats } = useNetworkActivity();
   const { inflationData: liveInflationData } = useInflationData();
@@ -529,7 +530,7 @@ export default function AIAssistant({
                         <span className="text-xs text-emerald-600 font-bold w-16 text-right">
                           +<KineticSavings value={advice.expectedSavings || (advisorPathValue
                             ? advisorPathValue -
-                            (advice.comparisonProjection.currentPathValue || amount)
+                            (currentPathValue || amount)
                             : amount * 0.2)} />
                         </span>
                       </div>
@@ -1224,7 +1225,7 @@ export default function AIAssistant({
                           <span className="text-green-600">
                             +<KineticSavings value={advice.expectedSavings || (advisorPathValue
                               ? advisorPathValue -
-                              (advice.comparisonProjection.currentPathValue || amount)
+                              (currentPathValue || amount)
                               : amount * 0.2)} />
                           </span>
                         </div>

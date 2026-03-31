@@ -69,6 +69,7 @@ export interface VaultPermission {
   chainId: number;
   nonce: string;
   signature: string;
+  signedAt?: string;
   spentTodayUSD: number;
   spentDate: string;
   totalSpentUSD: number;

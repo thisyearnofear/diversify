@@ -291,7 +291,18 @@ export function useSessionKey(): UseSessionKeyReturn {
     };
 
     const triggerExecutionLoop = useCallback(async (dryRun = false) => {
-        if (!signedPermission) return { error: 'No active session' };
+        if (!signedPermission) {
+            return {
+                dryRun,
+                status: 'blocked',
+                reasonCode: 'missing_permission',
+                message: 'No active Guardian session.',
+                summary: { total: 0, executed: 0, skipped: 0, failed: 0 },
+                recommendations: [],
+                transactions: [],
+                results: [],
+            } satisfies GuardianLoopResult;
+        }
         const userAddress = signedPermission.permission.userAddress;
         const result = await triggerExecutionLoopInternal(userAddress, dryRun);
         await pollSession(userAddress);

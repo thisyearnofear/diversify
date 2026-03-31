@@ -47,6 +47,18 @@ export const AgentTierStatus: React.FC<{
   onNavigateToAgent,
   onAdvisorClick,
 }) => {
+  type GuardianProofEvent = {
+    id: string;
+    source: "vault" | "openclaw" | "wdk";
+    title: string;
+    subtitle: string;
+    timestamp: number;
+    status: string;
+    explorerUrl?: string;
+    txHash?: string;
+    error?: string;
+  };
+
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { activities, addActivity } = useAgentActivities();
   const { config } = useAgentConfig();
@@ -236,7 +248,7 @@ export const AgentTierStatus: React.FC<{
     return { totalSavings, totalActions, successRate, totalCost };
   }, [activities]);
 
-  const guardianProofEvents = useMemo(() => {
+  const guardianProofEvents = useMemo<GuardianProofEvent[]>(() => {
     const latestLoopEvent = sessionInfo?.latestLoop
       ? [{
         id: `loop-${sessionInfo.latestLoop.capturedAt}`,
@@ -753,7 +765,7 @@ export const AgentTierStatus: React.FC<{
                             <div key={`${rec.tokenIn}-${rec.tokenOut}-${i}`} className="flex items-center gap-2 text-blue-600">
                               <span>🔍</span>
                               <span>
-                                {rec.tokenIn} {"->"} {rec.tokenOut} {" · $"}{rec.estimatedAmountUSD || rec.amountUSD || 0} {" · "}{rec.reason?.slice(0, 70)}
+                                {rec.tokenIn} {"->"} {rec.tokenOut} {" · $"}{rec.amountUSD || 0} {" · "}{rec.reason?.slice(0, 70)}
                               </span>
                             </div>
                           ))}

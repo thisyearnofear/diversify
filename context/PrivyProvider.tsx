@@ -63,12 +63,9 @@ export function PrivyProvider({ children }: { children: ReactNode }) {
                 // The agent uses Privy session signers to transact within policy-enforced limits.
                 // Dashboard must also have smart wallets enabled + chains configured with bundler URLs.
                 embeddedWallets: {
-                    createOnLogin: 'users-without-wallets',
-                },
-                smartWallets: {
-                    // Use Safe for battle-tested multi-sig + module support
-                    // Safe4337Module enables ERC-4337 UserOp submission
-                    // Privy defaults to Pimlico public bundler; override in dashboard for production
+                    ethereum: {
+                        createOnLogin: 'users-without-wallets',
+                    },
                 },
             }}
         >

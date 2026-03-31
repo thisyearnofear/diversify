@@ -4,6 +4,7 @@ import { useAgentChat } from './use-agent-chat';
 import { useAgentStatus } from './use-agent-status';
 import { useAgentVoice } from './use-agent-voice';
 import { IntelligenceService } from '@diversifi/shared';
+import type { AIMessage } from './agent-types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -54,6 +55,48 @@ export function useAdvisor() {
     [addMessage, addUserMessage, sendChatMessage, setDrawerOpen],
   );
 
+  const publishAdvisorUpdate = useCallback(
+    async ({
+      content,
+      type = 'text',
+      action,
+      openDrawer = false,
+      speak = false,
+    }: {
+      content: string;
+      type?: AIMessage['type'];
+      action?: AIMessage['action'];
+      openDrawer?: boolean;
+      speak?: boolean;
+    }) => {
+      if (openDrawer) {
+        setDrawerOpen(true);
+      }
+
+      addMessage({
+        role: 'assistant',
+        content,
+        timestamp: new Date(),
+        type,
+        action,
+      });
+
+      if (speak && capabilities.voiceOutput && generateSpeech) {
+        try {
+          const speechBlob = await generateSpeech(content);
+          if (speechBlob) {
+            const url = URL.createObjectURL(speechBlob);
+            const audio = new Audio(url);
+            audio.play();
+          }
+        } catch (err) {
+          console.warn("[useAdvisor] Failed to generate proactive speech:", err);
+        }
+      }
+    },
+    [addMessage, capabilities.voiceOutput, generateSpeech, setDrawerOpen],
+  );
+
   const openAdvisor = useCallback(() => {
     setDrawerOpen(true);
     markAsRead();
@@ -62,6 +105,7 @@ export function useAdvisor() {
   return {
     askAdvisor,
     openAdvisor,
+    publishAdvisorUpdate,
     unreadCount,
     ask: askAdvisor,
   };

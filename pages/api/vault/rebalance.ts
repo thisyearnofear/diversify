@@ -9,6 +9,8 @@ import {
   type GuardianLoopSnapshot,
 } from './_guardian-state';
 
+type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' | 'failed';
+
 const TOKEN_ADDRESSES: Record<string, string> = {
   cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
   cEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
@@ -148,7 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
         capturedAt: timestamp,
         dryRun,
-        status: payload.status,
+        status: 'blocked',
         reasonCode: payload.reasonCode,
         message: payload.message,
         summary: payload.summary,
@@ -173,7 +175,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
         capturedAt: timestamp,
         dryRun,
-        status: payload.status,
+        status: 'blocked',
         reasonCode: payload.reasonCode,
         message: payload.message,
         summary: payload.summary,
@@ -203,7 +205,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
         capturedAt: timestamp,
         dryRun,
-        status: payload.status,
+        status: 'noop',
         reasonCode: payload.reasonCode,
         message: payload.message,
         summary: payload.summary,
@@ -236,7 +238,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
         capturedAt: payload.timestamp,
         dryRun: true,
-        status: payload.status,
+        status: 'ready',
         reasonCode: payload.reasonCode,
         message: payload.message,
         summary: payload.summary,
@@ -254,7 +256,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       skipped: result.skipped,
       failed: result.failed,
     };
-    const status =
+    const status: GuardianLoopStatus =
       result.executed === resolvedRecommendations.length ? 'executed'
         : result.executed > 0 ? 'partial'
           : result.failed > 0 ? 'failed'

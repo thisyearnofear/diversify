@@ -55,8 +55,11 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
   if (showWizard) {
     return (
       <GuardianMobileWizard
+        userAddress=""
         onComplete={() => setShowWizard(false)}
         onCancel={() => setShowWizard(false)}
+        onCreateVault={async () => true}
+        onRequestPermission={async () => true}
       />
     );
   }

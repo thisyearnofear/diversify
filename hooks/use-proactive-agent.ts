@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { agentEventBus } from './agent-event-bus';
 import { marketPulseService } from '@diversifi/shared';
-import { useAIConversation } from '../context/AIConversationContext';
-import { useAgentVoice } from './use-agent-voice';
-import { useAgentStatus } from './use-agent-status';
 import { useStreakRewards } from './use-streak-rewards';
 import { useAgentConfig } from './use-agent-config';
+import { useAdvisor } from './use-advisor';
 
 /**
  * useProactiveAgent
@@ -21,11 +19,9 @@ import { useAgentConfig } from './use-agent-config';
  * 3. DeFi yield spikes (via /api/agent/yield-monitor — DeFiLlama data)
  */
 export function useProactiveAgent() {
-  const { addMessage, setDrawerOpen } = useAIConversation();
-  const { capabilities } = useAgentStatus();
   const { config } = useAgentConfig();
+  const { publishAdvisorUpdate } = useAdvisor();
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-  const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
 
   // GoodDollar Integration
   const { canClaim, estimatedReward, alreadyClaimedOnChain } = useStreakRewards();
@@ -47,26 +43,21 @@ export function useProactiveAgent() {
         const ubiInsight = `✨ Good news! I've been monitoring your on-chain status, and your daily Universal Basic Income of ${estimatedReward} is ready to claim on Celo.`;
         
         const triggerUbiAlert = () => {
-             setDrawerOpen(true);
-             addMessage({
-               role: 'assistant',
+             publishAdvisorUpdate({
                content: ubiInsight,
                type: 'recommendation',
-               timestamp: new Date(),
+               openDrawer: true,
+               speak: true,
                action: {
                  type: 'claim_ubi',
                  delay: 3500,
                }
-             });
-             
-             if (capabilities.voiceOutput) {
-                 generateSpeech(ubiInsight);
-             }
+             }).catch(() => {});
         };
 
         setTimeout(triggerUbiAlert, 4000); 
     }
-  }, [canClaim, alreadyClaimedOnChain, estimatedReward, addMessage, setDrawerOpen, capabilities.voiceOutput, generateSpeech]);
+  }, [canClaim, alreadyClaimedOnChain, estimatedReward, publishAdvisorUpdate]);
 
   // Real Market & Yield Monitoring Loop
   useEffect(() => {
@@ -86,17 +77,12 @@ export function useProactiveAgent() {
             type: 'alert'
           });
           
-          // Add as passive chat message — don't auto-open drawer
-          addMessage({
-            role: 'assistant',
+          publishAdvisorUpdate({
             content: volMessage,
             type: 'recommendation',
-            timestamp: new Date(),
-          });
-          
-          if (capabilities.voiceOutput) {
-            generateSpeech(volMessage);
-          }
+            openDrawer: false,
+            speak: true,
+          }).catch(() => {});
           
           // Reset alert after 30 minutes so it can fire again
           setTimeout(() => { volatilityAlerted.current = false; }, 30 * 60 * 1000);
@@ -117,18 +103,12 @@ export function useProactiveAgent() {
                 const best = spikes[0];
                 const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: $${(best.tvl / 1e6).toFixed(1)}M). This exceeds your ${yieldThreshold}% alert threshold. Should I rebalance idle USDC into this pool?`;
                 
-                // Add as passive chat message — don't auto-open drawer
-                addMessage({
-                  role: 'assistant',
+                publishAdvisorUpdate({
                   content: yieldMessage,
                   type: 'recommendation',
-                  timestamp: new Date(),
-                  // No action widget — user navigates to Guardian/Agent tab to execute
-                });
-                
-                if (capabilities.voiceOutput) {
-                  generateSpeech(yieldMessage);
-                }
+                  openDrawer: false,
+                  speak: true,
+                }).catch(() => {});
                 
                 // Reset after 1 hour
                 setTimeout(() => { yieldAlerted.current = false; }, 60 * 60 * 1000);
@@ -147,5 +127,5 @@ export function useProactiveAgent() {
     return () => {
       clearInterval(monitoringInterval);
     };
-  }, [addMessage, setDrawerOpen, capabilities.voiceOutput, generateSpeech, API_BASE, volatilityThreshold, yieldThreshold]);
+  }, [API_BASE, publishAdvisorUpdate, volatilityThreshold, yieldThreshold]);
 }

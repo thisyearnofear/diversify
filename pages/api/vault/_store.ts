@@ -50,6 +50,7 @@ function toPermissionType(doc: IPermission): VaultPermission {
     chainId: doc.chainId,
     nonce: doc.nonce,
     signature: doc.signature,
+    signedAt: doc.signedAt,
     spentTodayUSD: doc.spentTodayUSD,
     spentDate: doc.spentDate,
     totalSpentUSD: doc.totalSpentUSD,
