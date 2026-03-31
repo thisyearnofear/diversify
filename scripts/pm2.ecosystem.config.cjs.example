@@ -16,6 +16,7 @@ module.exports = {
         PORT: process.env.PORT || "6174",
         HOSTNAME: process.env.HOSTNAME || "0.0.0.0",
         APP_DIR: process.env.APP_DIR || "/opt/your-app-name",
+        RUNTIME_BOOTSTRAP: process.env.RUNTIME_BOOTSTRAP || "./start-runtime.sh",
       },
     },
   ],

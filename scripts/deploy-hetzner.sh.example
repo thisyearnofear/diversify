@@ -15,6 +15,7 @@ set -euo pipefail
 
 # CUSTOMIZE THESE VALUES - USE ENVIRONMENT VARIABLES OR EDIT DIRECTLY
 DEPLOY_DIR="${DEPLOY_DIR:-/opt/your-app-name}"
+RUNTIME_DIR="${RUNTIME_DIR:-/opt/your-app-name-runtime}"
 APP_NAME="${DEPLOY_APP_NAME:-your-app-name}"
 PORT="${DEPLOY_PORT:-3042}"
 REPO="${DEPLOY_REPO:-https://github.com/your-username/your-repo.git}"
@@ -65,33 +66,32 @@ PORT=$PORT timeout 900s npm run build
 echo "✅ Verifying Next runtime artifacts..."
 test -f "$DEPLOY_DIR/.next/prerender-manifest.json"
 test -f "$DEPLOY_DIR/.next/BUILD_ID"
+test -f "$DEPLOY_DIR/.next/standalone/server.js"
 
-echo "🧹 Removing unnecessary Next build cache..."
-rm -rf "$DEPLOY_DIR/.next/cache"
+echo "📦 Preparing lean runtime directory..."
+rm -rf "$RUNTIME_DIR"
+mkdir -p "$RUNTIME_DIR/.next" "$RUNTIME_DIR/public"
+rsync -a --delete "$DEPLOY_DIR/.next/standalone/" "$RUNTIME_DIR/"
+rsync -a --delete "$DEPLOY_DIR/.next/static/" "$RUNTIME_DIR/.next/static/"
+rsync -a --delete "$DEPLOY_DIR/public/" "$RUNTIME_DIR/public/"
+cp "$DEPLOY_DIR/.env" "$RUNTIME_DIR/.env"
+cp "$DEPLOY_DIR/scripts/start-runtime.sh.example" "$RUNTIME_DIR/start-runtime.sh"
+chmod +x "$RUNTIME_DIR/start-runtime.sh"
+
+echo "🧹 Pruning build-only source artifacts..."
+rm -rf "$DEPLOY_DIR/.next" "$DEPLOY_DIR/node_modules" "$DEPLOY_DIR/.turbo"
 
 # ── 6. Start/reload server ──────────────────────────────────────────────────
 echo "⚙️  Starting server..."
-# Kill any existing next-server processes on our port
-pkill -f "next-server.*$PORT" || true
-sleep 2
-
-# Start Next.js directly with proper env variables
-cd "$DEPLOY_DIR"
-nohup sh -c "PORT=$PORT HOSTNAME=127.0.0.1 NODE_ENV=production node_modules/.bin/next start > /var/log/$APP_NAME.log 2>&1" &
-
-# Wait for server to start
-echo "⏳ Waiting for server to start..."
-sleep 12
-
-# Verify it's running
-if ss -tlnp | grep -q ":$PORT "; then
-  echo "✅ Server running on port $PORT"
-else
-  echo "⚠️  Server may not have started correctly. Check /var/log/$APP_NAME.log"
-fi
+export APP_DIR="$RUNTIME_DIR"
+export RUNTIME_BOOTSTRAP="$RUNTIME_DIR/start-runtime.sh"
+pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
+pm2 start "$DEPLOY_DIR/scripts/pm2.ecosystem.config.cjs.example" --only "$APP_NAME"
+sleep 8
+pm2 status "$APP_NAME"
 
 echo ""
 echo "✅ Deploy complete!"
 echo "   API running on http://127.0.0.1:$PORT"
-echo "   Configure nginx to proxy your domain → port $PORT"
-echo "   .next/cache removed to keep disk usage down after successful builds"
+echo "   Runtime directory: $RUNTIME_DIR"
+echo "   Source checkout kept slim after deploy"

@@ -153,8 +153,10 @@ That script now:
 - pulls the latest code on `snel-bot`
 - runs `pnpm install --frozen-lockfile`
 - builds the runtime on the server
-- verifies `.next/prerender-manifest.json` and `.next/BUILD_ID`
-- deletes `.next/cache` after a successful build
+- verifies `.next/prerender-manifest.json`, `.next/BUILD_ID`, and `.next/standalone/server.js`
+- creates a lean standalone runtime directory
+- restarts `pm2` against that runtime directory
+- prunes build-only artifacts from the source checkout after a successful deploy
 - restarts `pm2`
 
 Recommended PM2 bootstrap:
@@ -165,13 +167,19 @@ pm2 start scripts/pm2.ecosystem.config.cjs
 
 The runtime bootstrap should:
 - load secrets from the server environment or `.env`
-- refuse to start if required `.next` runtime artifacts are missing
-- run `next start` only after a verified build
+- refuse to start if required runtime artifacts are missing
+- prefer `server.js` from a standalone runtime directory when available
+- only fall back to `next start` when a standalone runtime is not present
 
 Why the cache cleanup matters:
 - `.next/cache` is build-time cache only
 - it is not required for `next start`
 - on Hetzner it can consume more than 1 GB of disk space if left behind
+
+Why the runtime split matters:
+- the standalone runtime can be far smaller than the full source checkout
+- PM2 should run from the lean runtime directory, not from the build workspace
+- the source checkout can safely drop `node_modules` and `.next` after runtime extraction
 
 Safe cleanup command:
 

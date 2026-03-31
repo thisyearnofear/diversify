@@ -24,14 +24,26 @@ if [ -f ".env" ]; then
   done < .env
 fi
 
+if [ -f "server.js" ]; then
+  if [ ! -f ".next/prerender-manifest.json" ] || [ ! -f ".next/BUILD_ID" ]; then
+    echo "Missing required standalone runtime artifacts in $APP_DIR/.next" >&2
+    exit 1
+  fi
+  exec node server.js
+fi
+
+if [ -f ".next/standalone/server.js" ]; then
+  if [ ! -f ".next/prerender-manifest.json" ] || [ ! -f ".next/BUILD_ID" ]; then
+    echo "Missing required Next runtime artifacts in $APP_DIR/.next" >&2
+    exit 1
+  fi
+  exec node .next/standalone/server.js
+fi
+
 if [ ! -f ".next/prerender-manifest.json" ] || [ ! -f ".next/BUILD_ID" ]; then
   echo "Missing required Next runtime artifacts in $APP_DIR/.next" >&2
   echo "Run a successful production build before starting the runtime." >&2
   exit 1
-fi
-
-if [ -f ".next/standalone/server.js" ]; then
-  exec node .next/standalone/server.js
 fi
 
 exec ./node_modules/.bin/next start -H "$HOSTNAME" -p "$PORT"

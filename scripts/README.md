@@ -58,3 +58,8 @@ Hetzner does not accumulate unnecessary Next build cache over time.
 Use `start-runtime.sh.example` and `pm2.ecosystem.config.cjs.example` as the
 canonical tracked templates for bootstrapping the Hetzner runtime without
 committing server-specific paths or secrets.
+
+The intended Hetzner shape is:
+- source/build checkout in one directory
+- standalone runtime extracted into a separate runtime directory
+- PM2 pointed at the runtime directory, not the source checkout
