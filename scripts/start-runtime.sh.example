@@ -15,10 +15,23 @@ NODE_ENV="${NODE_ENV:-production}"
 
 cd "$APP_DIR"
 
+if [ -f ".env" ]; then
+  while IFS= read -r line; do
+    case "$line" in
+      ''|\#*) continue ;;
+      [A-Za-z_][A-Za-z0-9_]*=*) export "$line" ;;
+    esac
+  done < .env
+fi
+
 if [ ! -f ".next/prerender-manifest.json" ] || [ ! -f ".next/BUILD_ID" ]; then
   echo "Missing required Next runtime artifacts in $APP_DIR/.next" >&2
   echo "Run a successful production build before starting the runtime." >&2
   exit 1
+fi
+
+if [ -f ".next/standalone/server.js" ]; then
+  exec node .next/standalone/server.js
 fi
 
 exec ./node_modules/.bin/next start -H "$HOSTNAME" -p "$PORT"
