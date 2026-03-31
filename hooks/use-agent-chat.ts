@@ -3,6 +3,7 @@ import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useAgentConfig } from "./use-agent-config";
+import { useMultichainBalances } from "./use-multichain-balances";
 import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@diversifi/shared";
 import type {
   AgentChatActions,
@@ -45,6 +46,7 @@ export function useAgentChat({
   const globalConversation = useAIConversationOptional();
   const { chainId, address } = useWalletContext();
   const { config } = useAgentConfig();
+  const portfolio = useMultichainBalances(address, config.goal);
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
@@ -267,6 +269,27 @@ export function useAgentChat({
       }, 3000);
 
       try {
+        const portfolioSnapshot =
+          address && (portfolio.totalValue > 0 || portfolio.allTokens.length > 0)
+            ? {
+                totalValue: portfolio.totalValue,
+                chainCount: portfolio.chainCount,
+                tokenCount: portfolio.allTokens.length,
+                holdings: portfolio.allTokens.slice(0, 8).map((token) => ({
+                  symbol: token.symbol,
+                  value: token.value,
+                  chainName: token.chainName,
+                  region: token.region,
+                })),
+                chains: portfolio.chains.map((chain) => ({
+                  chainId: chain.chainId,
+                  chainName: chain.chainName,
+                  totalValue: chain.totalValue,
+                  tokenCount: chain.tokenCount,
+                })),
+              }
+            : undefined;
+
         const response = await fetch(`${apiBase}/api/agent/advisor`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -276,6 +299,7 @@ export function useAgentChat({
             history: messages,
             chainId,
             address,
+            portfolio: portfolioSnapshot,
             financialStrategy: getPersistedStrategy(),
           }),
         });
@@ -350,6 +374,10 @@ export function useAgentChat({
       chainId,
       config.voiceResponsesEnabled,
       generateSpeech,
+      portfolio.allTokens,
+      portfolio.chainCount,
+      portfolio.chains,
+      portfolio.totalValue,
       messages,
       addMessage,
     ],

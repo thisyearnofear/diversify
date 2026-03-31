@@ -6,6 +6,23 @@ type ConversationRequest = {
   history?: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
   chainId?: number;
   address?: string;
+  portfolio?: {
+    totalValue?: number;
+    chainCount?: number;
+    tokenCount?: number;
+    holdings?: Array<{
+      symbol?: string;
+      value?: number;
+      chainName?: string;
+      region?: string;
+    }>;
+    chains?: Array<{
+      chainId?: number;
+      chainName?: string;
+      totalValue?: number;
+      tokenCount?: number;
+    }>;
+  };
   financialStrategy?: FinancialStrategy;
 };
 
@@ -183,17 +200,58 @@ CURRENT CHAIN: Chain ID ${chainId}
 `;
 }
 
+function getPortfolioContext(portfolio?: ConversationRequest['portfolio']): string {
+  if (!portfolio) return '';
+
+  const totalValue = portfolio.totalValue || 0;
+  const holdings = portfolio.holdings || [];
+  const chains = portfolio.chains || [];
+
+  if (totalValue <= 0 && holdings.length === 0) {
+    return `
+CONNECTED PORTFOLIO SNAPSHOT:
+- Wallet connected, but no tracked balances were found yet on supported chains.
+- Supported tracked chains in chat context are currently Celo and Arbitrum.
+`;
+  }
+
+  const holdingLines = holdings.length > 0
+    ? holdings
+        .map((holding) => `- ${holding.symbol || 'Unknown'}: $${(holding.value || 0).toFixed(2)} on ${holding.chainName || 'Unknown chain'}${holding.region ? ` (${holding.region})` : ''}`)
+        .join('\n')
+    : '- Holdings still loading.';
+
+  const chainLines = chains.length > 0
+    ? chains
+        .map((chain) => `- ${chain.chainName || chain.chainId || 'Unknown chain'}: $${(chain.totalValue || 0).toFixed(2)} across ${chain.tokenCount || 0} tracked assets`)
+        .join('\n')
+    : '- No supported-chain balances detected.';
+
+  return `
+CONNECTED PORTFOLIO SNAPSHOT:
+- Total tracked value: $${totalValue.toFixed(2)}
+- Tracked chains: ${portfolio.chainCount || chains.length}
+- Tracked assets: ${portfolio.tokenCount || holdings.length}
+${chainLines}
+
+TOP HOLDINGS:
+${holdingLines}
+`;
+}
+
 export async function runAdvisorConversation(input: ConversationRequest) {
-  const { message, history = [], chainId, address, financialStrategy } = input;
+  const { message, history = [], chainId, address, portfolio, financialStrategy } = input;
   const gdContext = await getGoodDollarContext(address);
   const strategyContext = financialStrategy
     ? `\nUSER'S FINANCIAL STRATEGY: ${financialStrategy}\n${StrategyService.getAIPrompt(financialStrategy)}\nAlways reference this strategy explicitly when giving portfolio advice, asset suggestions, or rebalancing recommendations.\n`
     : '';
+  const portfolioContext = getPortfolioContext(portfolio);
   const contextPrompt =
     ADVISOR_SYSTEM_PROMPT +
     getTestDriveContext(chainId) +
     getMainnetChainContext(chainId) +
     gdContext +
+    portfolioContext +
     strategyContext;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [

@@ -276,7 +276,6 @@ export default function AIChat() {
       } else if (type === "verify_identity") {
         const timer = setTimeout(() => {
           setActiveTab("protect");
-          setDrawerOpen(false);
         }, delay);
         return () => clearTimeout(timer);
       }
