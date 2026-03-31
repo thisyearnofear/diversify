@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
+import { useAgentConfig } from "./use-agent-config";
 import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@diversifi/shared";
 import type {
   AgentChatActions,
@@ -43,6 +44,7 @@ export function useAgentChat({
 }: AgentChatDependencies): AgentChatState & AgentChatActions {
   const globalConversation = useAIConversationOptional();
   const { chainId, address } = useWalletContext();
+  const { config } = useAgentConfig();
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
@@ -81,6 +83,73 @@ export function useAgentChat({
   const sendChatMessage = useCallback(
     async (content: string) => {
       if (!capabilities.chat) return;
+
+      const normalizedContent = content.trim().toLowerCase();
+      const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
+      const isAffirmative = /^(yes|yeah|yep|sure|ok|okay|do it|go ahead|please do|confirm)$/i.test(normalizedContent);
+
+      if (isAffirmative && lastAssistantMessage?.action?.type === "guardian_review") {
+        updateChatState({
+          isChatting: true,
+          thinkingStep: "Reviewing with Guardian...",
+        });
+
+        try {
+          if (!address) {
+            addMessage({
+              role: "assistant",
+              content: "Connect your wallet first so Guardian can review the latest opportunity against your permissions and portfolio.",
+              timestamp: new Date(),
+              type: "text",
+            });
+            return;
+          }
+
+          const response = await fetch(`${apiBase}/api/vault/rebalance`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userAddress: address,
+              dryRun: true,
+            }),
+          });
+
+          const result = await response.json().catch(() => ({}));
+          const recommendationCount = result.recommendationCount ?? result.recommendations?.length ?? 0;
+          let guardianReply = result.message || "Guardian reviewed the latest Advisor recommendation.";
+
+          if (!response.ok) {
+            guardianReply = result.error || "Guardian could not review the latest opportunity right now.";
+          } else if (result.status === "ready") {
+            guardianReply = `${guardianReply}\n\nGuardian prepared ${recommendationCount} dry-run action${recommendationCount === 1 ? "" : "s"}. Approve Guardian access to execute them.`;
+          } else if (result.status === "blocked") {
+            guardianReply = `${guardianReply}\n\nSet up or renew Guardian permissions before execution.`;
+          } else if (result.status === "noop") {
+            guardianReply = `${guardianReply}\n\nThis opportunity is not currently executable through Guardian.`;
+          }
+
+          addMessage({
+            role: "assistant",
+            content: guardianReply,
+            timestamp: new Date(),
+            type: "text",
+          });
+        } catch (error) {
+          console.error("[useAgentChat] Guardian handoff failed:", error);
+          addMessage({
+            role: "assistant",
+            content: "Guardian could not review that opportunity right now. Please try again in a moment.",
+            timestamp: new Date(),
+            type: "text",
+          });
+        } finally {
+          updateChatState({
+            isChatting: false,
+            thinkingStep: "",
+          });
+        }
+        return;
+      }
 
       const intent = IntentDiscoveryService.discover(content);
       const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
@@ -157,7 +226,7 @@ export function useAgentChat({
           addMessage(assistantMessage);
 
           // Handle auto-speech if enabled
-          if (capabilities.voiceOutput && generateSpeech) {
+          if (config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
             try {
                 const speechBlob = await generateSpeech(fastPathResponse!);
               if (speechBlob) {
@@ -222,7 +291,7 @@ export function useAgentChat({
           };
           addMessage(assistantMessage);
 
-          if (capabilities.voiceOutput && generateSpeech) {
+          if (config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
             try {
               const speechBlob = await generateSpeech(result.response);
               if (speechBlob) {
@@ -279,6 +348,7 @@ export function useAgentChat({
       capabilities.chat,
       capabilities.voiceOutput,
       chainId,
+      config.voiceResponsesEnabled,
       generateSpeech,
       messages,
       addMessage,

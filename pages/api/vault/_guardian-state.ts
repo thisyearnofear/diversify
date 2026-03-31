@@ -3,7 +3,7 @@ import { readJsonFile, writeJsonFile } from '../agent/_json-store';
 
 export interface GuardianRecommendationSnapshot {
   capturedAt: string;
-  source: 'advisor-analysis';
+  source: 'advisor-analysis' | 'proactive-yield';
   action?: string;
   targetToken?: string;
   oneLiner?: string;
@@ -11,6 +11,11 @@ export interface GuardianRecommendationSnapshot {
   expectedSavings?: number;
   confidence?: number;
   riskLevel?: string;
+  protocol?: string;
+  chain?: string;
+  marketSymbol?: string;
+  apy?: number;
+  tvl?: number;
 }
 
 export interface GuardianLoopSnapshot {

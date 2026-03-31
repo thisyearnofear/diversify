@@ -199,7 +199,7 @@ export interface AIMessage {
     actionItems: string[];
   };
   action?: {
-    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa";
+    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review";
     tab?: string;
     delay?: number;
     amount?: string;
@@ -232,6 +232,7 @@ export interface AIConfig {
   goal: "Inflation Hedge" | "Growth" | "Income";
   timeHorizon: string;
   spendingLimit: number;
+  voiceResponsesEnabled?: boolean;
   // Proactive Agent Alert Thresholds (Phase 4C)
   volatilityAlertThreshold?: number; // Implied volatility %, default 80
   yieldAlertThreshold?: number;      // APY %, default 10

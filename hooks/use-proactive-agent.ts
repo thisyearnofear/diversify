@@ -4,6 +4,26 @@ import { marketPulseService } from '@diversifi/shared';
 import { useStreakRewards } from './use-streak-rewards';
 import { useAgentConfig } from './use-agent-config';
 import { useAdvisor } from './use-advisor';
+import { useWalletContext } from '../components/wallet/WalletProvider';
+
+type YieldOpportunity = {
+  protocol: string;
+  chain: string;
+  symbol: string;
+  apy: number;
+  tvl: number;
+  pool: string;
+};
+
+const EXECUTABLE_YIELD_TOKENS = new Set(['USDY', 'PAXG', 'SYRUPUSDC', 'CUSD', 'CEUR', 'USDC', 'USDT']);
+
+function getExecutableTargetToken(symbol: string): string | null {
+  const normalized = symbol.trim().toUpperCase();
+  if (!normalized || normalized.includes('-') || normalized.includes('/')) {
+    return null;
+  }
+  return EXECUTABLE_YIELD_TOKENS.has(normalized) ? normalized : null;
+}
 
 /**
  * useProactiveAgent
@@ -21,6 +41,7 @@ import { useAdvisor } from './use-advisor';
 export function useProactiveAgent() {
   const { config } = useAgentConfig();
   const { publishAdvisorUpdate } = useAdvisor();
+  const { address } = useWalletContext();
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
   // GoodDollar Integration
@@ -47,7 +68,6 @@ export function useProactiveAgent() {
                content: ubiInsight,
                type: 'recommendation',
                openDrawer: true,
-               speak: true,
                action: {
                  type: 'claim_ubi',
                  delay: 3500,
@@ -81,7 +101,6 @@ export function useProactiveAgent() {
             content: volMessage,
             type: 'recommendation',
             openDrawer: false,
-            speak: true,
           }).catch(() => {});
           
           // Reset alert after 30 minutes so it can fire again
@@ -95,20 +114,61 @@ export function useProactiveAgent() {
             if (yieldRes.ok) {
               const yieldData = await yieldRes.json();
               const spikes = yieldData.opportunities?.filter(
-                (o: any) => o.apy > yieldThreshold && o.chain?.toLowerCase().includes('celo')
+                (o: YieldOpportunity) => o.apy > yieldThreshold && o.chain?.toLowerCase().includes('celo')
               ) || [];
               
               if (spikes.length > 0) {
                 yieldAlerted.current = true;
-                const best = spikes[0];
-                const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: $${(best.tvl / 1e6).toFixed(1)}M). This exceeds your ${yieldThreshold}% alert threshold. Should I rebalance idle USDC into this pool?`;
-                
-                publishAdvisorUpdate({
-                  content: yieldMessage,
-                  type: 'recommendation',
-                  openDrawer: false,
-                  speak: true,
-                }).catch(() => {});
+                const best = spikes[0] as YieldOpportunity;
+                const targetToken = getExecutableTargetToken(best.symbol);
+                const formattedTvl = best.tvl >= 1_000_000
+                  ? `$${(best.tvl / 1e6).toFixed(1)}M`
+                  : `$${(best.tvl / 1e3).toFixed(0)}k`;
+
+                if (targetToken && address) {
+                  fetch(`${API_BASE}/api/vault/guardian-state`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userAddress: address,
+                      latestRecommendation: {
+                        capturedAt: new Date().toISOString(),
+                        source: 'proactive-yield',
+                        action: 'REBALANCE',
+                        targetToken,
+                        oneLiner: `Review moving idle stablecoins toward ${targetToken} yield.`,
+                        reasoning: `${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} with TVL ${formattedTvl}.`,
+                        confidence: best.tvl >= 1_000_000 ? 0.72 : 0.55,
+                        riskLevel: best.tvl >= 1_000_000 ? 'MEDIUM' : 'HIGH',
+                        protocol: best.protocol,
+                        chain: best.chain,
+                        marketSymbol: best.symbol,
+                        apy: best.apy,
+                        tvl: best.tvl,
+                        expectedSavings: Math.max(25, Math.round(best.apy)),
+                      },
+                    }),
+                  }).catch(() => {});
+
+                  const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold. Should I have Guardian review a dry-run rebalance for this opportunity?`;
+
+                  publishAdvisorUpdate({
+                    content: yieldMessage,
+                    type: 'recommendation',
+                    openDrawer: false,
+                    action: {
+                      type: 'guardian_review',
+                    },
+                  }).catch(() => {});
+                } else {
+                  const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold, but Guardian does not currently open LP or unsupported yield positions automatically. Treat this as a research alert, not an executable action.`;
+
+                  publishAdvisorUpdate({
+                    content: yieldMessage,
+                    type: 'recommendation',
+                    openDrawer: false,
+                  }).catch(() => {});
+                }
                 
                 // Reset after 1 hour
                 setTimeout(() => { yieldAlerted.current = false; }, 60 * 60 * 1000);
@@ -127,5 +187,5 @@ export function useProactiveAgent() {
     return () => {
       clearInterval(monitoringInterval);
     };
-  }, [API_BASE, publishAdvisorUpdate, volatilityThreshold, yieldThreshold]);
+  }, [API_BASE, address, publishAdvisorUpdate, volatilityThreshold, yieldThreshold]);
 }

@@ -70,6 +70,7 @@ interface AutomationSettingsProps {
     goal: string;
     timeHorizon: string;
     spendingLimit: number;
+    voiceResponsesEnabled?: boolean;
     walletProvider?: "CIRCLE_MPC" | "TETHER_WDK";
   };
   onConfigChange?: (config: any) => void;
@@ -471,6 +472,44 @@ export default function AutomationSettings({
           )}
         </div>
       </motion.div>
+
+      {config && onConfigChange && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🔊</span>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">
+                  Voice Responses
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Read Advisor messages aloud after they arrive
+                </p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={Boolean(config.voiceResponsesEnabled)}
+                onChange={(e) =>
+                  onConfigChange({ ...config, voiceResponsesEnabled: e.target.checked })
+                }
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          <div className="pl-11 space-y-2 text-sm text-gray-600 dark:text-gray-400">
+            <p>Disabled by default so Advisor stays quiet unless you opt in.</p>
+            <p>Applies to normal replies and proactive alerts.</p>
+          </div>
+        </motion.div>
+      )}
 
       {/* Email Notifications */}
       <motion.div

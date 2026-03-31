@@ -3,6 +3,7 @@ import { useAIConversation } from '../context/AIConversationContext';
 import { useAgentChat } from './use-agent-chat';
 import { useAgentStatus } from './use-agent-status';
 import { useAgentVoice } from './use-agent-voice';
+import { useAgentConfig } from './use-agent-config';
 import { IntelligenceService } from '@diversifi/shared';
 import type { AIMessage } from './agent-types';
 
@@ -11,6 +12,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 export function useAdvisor() {
   const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount } = useAIConversation();
   const { capabilities } = useAgentStatus();
+  const { config } = useAgentConfig();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
   const { sendChatMessage } = useAgentChat({
     apiBase: API_BASE,
@@ -90,7 +92,7 @@ export function useAdvisor() {
         action,
       });
 
-      if (speak && capabilities.voiceOutput && generateSpeech) {
+      if (speak && config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
         try {
           const speechBlob = await generateSpeech(content);
           if (speechBlob) {
@@ -105,7 +107,7 @@ export function useAdvisor() {
         }
       }
     },
-    [addMessage, capabilities.voiceOutput, generateSpeech, setDrawerOpen],
+    [addMessage, capabilities.voiceOutput, config.voiceResponsesEnabled, generateSpeech, setDrawerOpen],
   );
 
   const openAdvisor = useCallback(() => {
