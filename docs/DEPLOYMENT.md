@@ -130,6 +130,17 @@ Static hosting recommended:
 Frontend delivery is handled by Vercel. The Hetzner box should only be used
 for the long-running runtime/API path.
 
+Recommended runtime files:
+
+```bash
+cp scripts/start-runtime.sh.example scripts/start-runtime.sh
+cp scripts/pm2.ecosystem.config.cjs.example scripts/pm2.ecosystem.config.cjs
+chmod +x scripts/start-runtime.sh
+```
+
+Keep the customized files ignored. Only the `.example` templates should be
+tracked in git.
+
 Use the tracked deploy helper:
 
 ```bash
@@ -145,6 +156,17 @@ That script now:
 - verifies `.next/prerender-manifest.json` and `.next/BUILD_ID`
 - deletes `.next/cache` after a successful build
 - restarts `pm2`
+
+Recommended PM2 bootstrap:
+
+```bash
+pm2 start scripts/pm2.ecosystem.config.cjs
+```
+
+The runtime bootstrap should:
+- load secrets from the server environment or `.env`
+- refuse to start if required `.next` runtime artifacts are missing
+- run `next start` only after a verified build
 
 Why the cache cleanup matters:
 - `.next/cache` is build-time cache only

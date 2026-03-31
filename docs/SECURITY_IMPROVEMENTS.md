@@ -21,12 +21,16 @@ This document outlines the security improvements made to the DiversiFi repositor
 ```gitignore
 # Deployment scripts with server-specific details (KEEP IGNORED for security)
 scripts/deploy-hetzner.sh
+scripts/start-runtime.sh
+scripts/pm2.ecosystem.config.cjs
 scripts/deploy-env-to-server.sh
 scripts/nginx-diversifi-api.conf
 scripts/setup-mongodb.sh
 
 # Keep example/template versions (safe to commit)
 !scripts/deploy-hetzner.sh.example
+!scripts/start-runtime.sh.example
+!scripts/pm2.ecosystem.config.cjs.example
 !scripts/deploy-env-to-server.sh.example
 !scripts/nginx-diversifi-api.conf.example
 ```
@@ -35,6 +39,8 @@ scripts/setup-mongodb.sh
 
 The following files were removed from git tracking:
 - `scripts/deploy-hetzner.sh`
+- `scripts/start-runtime.sh`
+- `scripts/pm2.ecosystem.config.cjs`
 - `scripts/deploy-env-to-server.sh`
 - `scripts/nginx-diversifi-api.conf`
 - `scripts/setup-mongodb.sh`
@@ -51,6 +57,16 @@ All example files now use environment variables for sensitive configuration:
 - Uses `${DEPLOY_APP_NAME:-your-app-name}` for app name
 - Uses `${DEPLOY_PORT:-3042}` for port
 - Uses `${DEPLOY_REPO:-https://github.com/your-username/your-repo.git}` for repo URL
+
+#### `scripts/start-runtime.sh.example`
+- Uses `${APP_DIR:-/opt/your-app-name}` for runtime location
+- Uses `${PORT:-6174}` and `${HOSTNAME:-0.0.0.0}` for startup
+- Refuses to start if required `.next` runtime artifacts are missing
+
+#### `scripts/pm2.ecosystem.config.cjs.example`
+- Uses `${DEPLOY_APP_NAME:-diversifi-api}` for PM2 naming
+- Uses `${APP_DIR:-/opt/your-app-name}` for runtime cwd
+- Uses `${RUNTIME_BOOTSTRAP:-./start-runtime.sh}` instead of embedding server commands
 
 #### `scripts/deploy-env-to-server.sh.example`
 - Uses `${DEPLOY_SSH_ALIAS:-snel-bot}` for SSH connection
@@ -115,6 +131,8 @@ The updated script now:
 1. **Copy example files:**
    ```bash
    cp scripts/deploy-hetzner.sh.example scripts/deploy-hetzner.sh
+   cp scripts/start-runtime.sh.example scripts/start-runtime.sh
+   cp scripts/pm2.ecosystem.config.cjs.example scripts/pm2.ecosystem.config.cjs
    cp scripts/deploy-env-to-server.sh.example scripts/deploy-env-to-server.sh
    cp scripts/nginx-diversifi-api.conf.example scripts/nginx-diversifi-api.conf
    cp scripts/setup-mongodb.sh.example scripts/setup-mongodb.sh

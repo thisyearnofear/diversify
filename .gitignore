@@ -86,12 +86,16 @@ script/
 
 # Deployment scripts with server-specific details (KEEP IGNORED for security)
 scripts/deploy-hetzner.sh
+scripts/start-runtime.sh
+scripts/pm2.ecosystem.config.cjs
 scripts/deploy-env-to-server.sh
 scripts/nginx-diversifi-api.conf
 scripts/setup-mongodb.sh
 
 # Keep example/template versions (safe to commit)
 !scripts/deploy-hetzner.sh.example
+!scripts/start-runtime.sh.example
+!scripts/pm2.ecosystem.config.cjs.example
 !scripts/deploy-env-to-server.sh.example
 !scripts/nginx-diversifi-api.conf.example
 .synthesis-credentials

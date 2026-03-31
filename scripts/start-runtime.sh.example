@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# =============================================================================
+# DiversiFi Runtime Bootstrap (EXAMPLE)
+#
+# Copy this file to start-runtime.sh and customize only the non-secret defaults
+# if needed. Load secrets from /opt/diversifi-api/.env or your process manager.
+# DO NOT commit the customized version to git.
+# =============================================================================
+set -euo pipefail
+
+APP_DIR="${APP_DIR:-/opt/your-app-name}"
+PORT="${PORT:-6174}"
+HOSTNAME="${HOSTNAME:-0.0.0.0}"
+NODE_ENV="${NODE_ENV:-production}"
+
+cd "$APP_DIR"
+
+if [ ! -f ".next/prerender-manifest.json" ] || [ ! -f ".next/BUILD_ID" ]; then
+  echo "Missing required Next runtime artifacts in $APP_DIR/.next" >&2
+  echo "Run a successful production build before starting the runtime." >&2
+  exit 1
+fi
+
+exec ./node_modules/.bin/next start -H "$HOSTNAME" -p "$PORT"

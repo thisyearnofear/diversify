@@ -1,0 +1,22 @@
+module.exports = {
+  apps: [
+    {
+      name: process.env.DEPLOY_APP_NAME || "diversifi-api",
+      script: process.env.RUNTIME_BOOTSTRAP || "./start-runtime.sh",
+      cwd: process.env.APP_DIR || "/opt/your-app-name",
+      interpreter: "/bin/bash",
+      exec_mode: "fork",
+      autorestart: true,
+      watch: false,
+      max_restarts: 10,
+      min_uptime: "10s",
+      kill_timeout: 5000,
+      env: {
+        NODE_ENV: "production",
+        PORT: process.env.PORT || "6174",
+        HOSTNAME: process.env.HOSTNAME || "0.0.0.0",
+        APP_DIR: process.env.APP_DIR || "/opt/your-app-name",
+      },
+    },
+  ],
+};

@@ -11,6 +11,8 @@ Files ending in `.example` are templates that should be copied and customized:
 ```bash
 # Copy example files and customize with your server details
 cp deploy-hetzner.sh.example deploy-hetzner.sh
+cp start-runtime.sh.example start-runtime.sh
+cp pm2.ecosystem.config.cjs.example pm2.ecosystem.config.cjs
 cp nginx-diversifi-api.conf.example nginx-diversifi-api.conf
 cp deploy-env-to-server.sh.example deploy-env-to-server.sh
 
@@ -23,6 +25,8 @@ cp deploy-env-to-server.sh.example deploy-env-to-server.sh
 These files contain server-specific details and should NOT be committed:
 
 - `deploy-hetzner.sh` - Server deployment script copied from the example template
+- `start-runtime.sh` - Runtime bootstrap script copied from the example template
+- `pm2.ecosystem.config.cjs` - PM2 app definition copied from the example template
 - `deploy-env-to-server.sh` - Environment variable deployment
 - `nginx-diversifi-api.conf` - Nginx configuration
 - `setup-mongodb.sh` - MongoDB setup script
@@ -50,3 +54,7 @@ Instead, we provide `.example` templates that can be customized per environment.
 The `deploy-hetzner.sh.example` template is the canonical tracked version.
 It includes runtime checks and removes `.next/cache` after successful builds so
 Hetzner does not accumulate unnecessary Next build cache over time.
+
+Use `start-runtime.sh.example` and `pm2.ecosystem.config.cjs.example` as the
+canonical tracked templates for bootstrapping the Hetzner runtime without
+committing server-specific paths or secrets.
