@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# DiversiFi AI API — Server Deployment Script (EXAMPLE)
+# DiversiFi Hetzner Runtime Deployment Script (EXAMPLE)
 #
 # Copy this file to deploy-hetzner.sh and customize with your server details.
 # DO NOT commit the customized version to git!
@@ -21,6 +21,9 @@ REPO="${DEPLOY_REPO:-https://github.com/your-username/your-repo.git}"
 BRANCH="${DEPLOY_BRANCH:-main}"
 
 echo "🚀 DiversiFi Hetzner Deploy — $(date)"
+
+# Frontend delivery is handled by Vercel. This script is for the Hetzner
+# runtime/API deployment only.
 
 # ── 1. Ensure pnpm is available ────────────────────────────────────────────
 if ! command -v pnpm &>/dev/null; then
@@ -57,7 +60,14 @@ pnpm install --frozen-lockfile
 
 # ── 5. Build ─────────────────────────────────────────────────────────────────
 echo "🔨 Building..."
-PORT=$PORT pnpm build
+PORT=$PORT timeout 900s npm run build
+
+echo "✅ Verifying Next runtime artifacts..."
+test -f "$DEPLOY_DIR/.next/prerender-manifest.json"
+test -f "$DEPLOY_DIR/.next/BUILD_ID"
+
+echo "🧹 Removing unnecessary Next build cache..."
+rm -rf "$DEPLOY_DIR/.next/cache"
 
 # ── 6. Start/reload server ──────────────────────────────────────────────────
 echo "⚙️  Starting server..."
@@ -84,3 +94,4 @@ echo ""
 echo "✅ Deploy complete!"
 echo "   API running on http://127.0.0.1:$PORT"
 echo "   Configure nginx to proxy your domain → port $PORT"
+echo "   .next/cache removed to keep disk usage down after successful builds"

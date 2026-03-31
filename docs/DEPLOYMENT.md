@@ -125,6 +125,38 @@ Static hosting recommended:
 - **Vercel**: Automatic via Next.js
 - **Cloudflare Pages**: `pnpm pages:build`
 
+### Hetzner Runtime
+
+Frontend delivery is handled by Vercel. The Hetzner box should only be used
+for the long-running runtime/API path.
+
+Use the tracked deploy helper:
+
+```bash
+cp scripts/deploy-hetzner.sh.example scripts/deploy-hetzner.sh
+chmod +x scripts/deploy-hetzner.sh
+./scripts/deploy-hetzner.sh
+```
+
+That script now:
+- pulls the latest code on `snel-bot`
+- runs `pnpm install --frozen-lockfile`
+- builds the runtime on the server
+- verifies `.next/prerender-manifest.json` and `.next/BUILD_ID`
+- deletes `.next/cache` after a successful build
+- restarts `pm2`
+
+Why the cache cleanup matters:
+- `.next/cache` is build-time cache only
+- it is not required for `next start`
+- on Hetzner it can consume more than 1 GB of disk space if left behind
+
+Safe cleanup command:
+
+```bash
+ssh snel-bot "rm -rf /opt/diversifi-api/.next/cache"
+```
+
 ### AI API Service
 
 For long-running AI operations:
