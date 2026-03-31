@@ -153,10 +153,11 @@ That script now:
 - pulls the latest code on `snel-bot`
 - runs `pnpm install --frozen-lockfile`
 - builds the runtime on the server
-- verifies `.next/prerender-manifest.json`, `.next/BUILD_ID`, and `.next/standalone/server.js`
-- creates a lean standalone runtime directory
-- restarts `pm2` against that runtime directory
-- prunes build-only artifacts from the source checkout after a successful deploy
+- verifies `.next/prerender-manifest.json` and `.next/BUILD_ID`
+- prefers a lean standalone runtime directory when `.next/standalone/server.js` exists
+- falls back to running from the source build when standalone output is unavailable
+- restarts `pm2` against whichever runtime path is actually valid
+- only prunes build-only artifacts from the source checkout after a successful standalone extraction
 - restarts `pm2`
 
 Recommended PM2 bootstrap:
@@ -180,6 +181,11 @@ Why the runtime split matters:
 - the standalone runtime can be far smaller than the full source checkout
 - PM2 should run from the lean runtime directory, not from the build workspace
 - the source checkout can safely drop `node_modules` and `.next` after runtime extraction
+
+Fallback behavior:
+- if Next does not emit `.next/standalone/server.js`, the deploy should not leave the runtime half-updated
+- in that case, run `pm2` from the fresh source build in `/opt/...` instead
+- keep the source checkout intact until a later deploy successfully restores standalone extraction
 
 Safe cleanup command:
 

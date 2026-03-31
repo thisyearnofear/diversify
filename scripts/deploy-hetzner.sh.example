@@ -66,28 +66,37 @@ PORT=$PORT timeout 900s npm run build
 echo "✅ Verifying Next runtime artifacts..."
 test -f "$DEPLOY_DIR/.next/prerender-manifest.json"
 test -f "$DEPLOY_DIR/.next/BUILD_ID"
-test -f "$DEPLOY_DIR/.next/standalone/server.js"
 
-echo "📦 Preparing lean runtime directory..."
-rm -rf "$RUNTIME_DIR"
-mkdir -p "$RUNTIME_DIR/.next" "$RUNTIME_DIR/public"
-rsync -a --delete "$DEPLOY_DIR/.next/standalone/" "$RUNTIME_DIR/"
-rsync -a --delete "$DEPLOY_DIR/.next/static/" "$RUNTIME_DIR/.next/static/"
-rsync -a --delete "$DEPLOY_DIR/public/" "$RUNTIME_DIR/public/"
-cp "$DEPLOY_DIR/.env" "$RUNTIME_DIR/.env"
-if [ -f "$DEPLOY_DIR/.env.local" ]; then
-  cp "$DEPLOY_DIR/.env.local" "$RUNTIME_DIR/.env.local"
+APP_DIR="$DEPLOY_DIR"
+RUNTIME_BOOTSTRAP="$DEPLOY_DIR/start-runtime.sh"
+
+if [ -f "$DEPLOY_DIR/.next/standalone/server.js" ]; then
+  echo "📦 Preparing lean runtime directory..."
+  rm -rf "$RUNTIME_DIR"
+  mkdir -p "$RUNTIME_DIR/.next" "$RUNTIME_DIR/public"
+  rsync -a --delete "$DEPLOY_DIR/.next/standalone/" "$RUNTIME_DIR/"
+  rsync -a --delete "$DEPLOY_DIR/.next/static/" "$RUNTIME_DIR/.next/static/"
+  rsync -a --delete "$DEPLOY_DIR/public/" "$RUNTIME_DIR/public/"
+  cp "$DEPLOY_DIR/.env" "$RUNTIME_DIR/.env"
+  if [ -f "$DEPLOY_DIR/.env.local" ]; then
+    cp "$DEPLOY_DIR/.env.local" "$RUNTIME_DIR/.env.local"
+  fi
+  cp "$DEPLOY_DIR/scripts/start-runtime.sh.example" "$RUNTIME_DIR/start-runtime.sh"
+  chmod +x "$RUNTIME_DIR/start-runtime.sh"
+
+  APP_DIR="$RUNTIME_DIR"
+  RUNTIME_BOOTSTRAP="$RUNTIME_DIR/start-runtime.sh"
+
+  echo "🧹 Pruning build-only source artifacts..."
+  rm -rf "$DEPLOY_DIR/.next" "$DEPLOY_DIR/node_modules" "$DEPLOY_DIR/.turbo"
+else
+  echo "⚠️ Standalone output missing; falling back to source-build runtime from $DEPLOY_DIR"
 fi
-cp "$DEPLOY_DIR/scripts/start-runtime.sh.example" "$RUNTIME_DIR/start-runtime.sh"
-chmod +x "$RUNTIME_DIR/start-runtime.sh"
-
-echo "🧹 Pruning build-only source artifacts..."
-rm -rf "$DEPLOY_DIR/.next" "$DEPLOY_DIR/node_modules" "$DEPLOY_DIR/.turbo"
 
 # ── 6. Start/reload server ──────────────────────────────────────────────────
 echo "⚙️  Starting server..."
-export APP_DIR="$RUNTIME_DIR"
-export RUNTIME_BOOTSTRAP="$RUNTIME_DIR/start-runtime.sh"
+export APP_DIR
+export RUNTIME_BOOTSTRAP
 pm2 delete "$APP_NAME" >/dev/null 2>&1 || true
 pm2 start "$DEPLOY_DIR/scripts/pm2.ecosystem.config.cjs.example" --only "$APP_NAME"
 sleep 8
@@ -96,5 +105,4 @@ pm2 status "$APP_NAME"
 echo ""
 echo "✅ Deploy complete!"
 echo "   API running on http://127.0.0.1:$PORT"
-echo "   Runtime directory: $RUNTIME_DIR"
-echo "   Source checkout kept slim after deploy"
+echo "   Active runtime directory: $APP_DIR"

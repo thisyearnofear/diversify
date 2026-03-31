@@ -63,3 +63,7 @@ The intended Hetzner shape is:
 - source/build checkout in one directory
 - standalone runtime extracted into a separate runtime directory
 - PM2 pointed at the runtime directory, not the source checkout
+
+If a build does not emit `.next/standalone/server.js`, the deploy helper should
+fall back to running PM2 from the fresh source build instead of leaving the
+runtime on an older extracted bundle.
