@@ -413,10 +413,10 @@ export default function SwapTab({
                 <span className="text-lg">🎮</span>
                 <div>
                   <p className="text-xs font-bold text-blue-900 dark:text-blue-100">
-                    Demo Mode
+                    Preview Mode
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Connect wallet to execute real swaps
+                    Connect your wallet to make real protection moves
                   </p>
                 </div>
               </div>
@@ -441,10 +441,10 @@ export default function SwapTab({
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Convert Your Money
+                Protect Your Savings
               </h2>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Protect your savings by converting to more stable currencies
+                Move into more stable currencies with a guided protection flow
               </p>
             </div>
             {/* Compact chain selector — same control as advanced mode, incl. Test Drive networks */}
@@ -509,8 +509,8 @@ export default function SwapTab({
           <ConnectWalletPrompt
             message={
               isDemo
-                ? "Connect your wallet to execute real swaps with live prices."
-                : "Connect your wallet to swap tokens."
+                ? "Connect your wallet to make real protection moves with live pricing."
+                : "Connect your wallet to start protecting your savings."
             }
             WalletButtonComponent={<WalletButton variant="inline" />}
             userRegion={userRegion}

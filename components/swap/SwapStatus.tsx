@@ -46,7 +46,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             />
                         </svg>
-                        <span>Approving token transfer...</span>
+                        <span>Preparing your protection move...</span>
                     </>
                 )}
 
@@ -72,7 +72,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             />
                         </svg>
-                        <span>Executing swap transaction...</span>
+                        <span>Completing your protection move...</span>
                     </>
                 )}
 
@@ -91,7 +91,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                             />
                         </svg>
                         <span>
-                            {error || "An error occurred during the swap"}
+                            {error || "Something went wrong while trying to protect your savings"}
                         </span>
                     </>
                 )}
@@ -101,7 +101,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                 <div className="mt-2 text-sm border-t border-gray-200 pt-2">
                     <div className="flex items-center justify-between mb-1">
                         <span className="font-medium text-gray-700 dark:text-gray-300">
-                            Transaction Hash:
+                            Transaction ID:
                         </span>
                         <button
                             onClick={() => {
