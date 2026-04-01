@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import SwapTab from "./SwapTab";
 import TradeTab from "./TradeTab";
 import { useNavigation } from "@/context/app/NavigationContext";
+import { useExperience } from "@/context/app/ExperienceContext";
 import type { Region } from "@/hooks/use-user-region";
 import type { RegionalInflationData } from "@/hooks/use-inflation-data";
 
@@ -26,6 +27,9 @@ export default function ExchangeTab({
   refreshChainId,
   isBalancesLoading,
 }: ExchangeTabProps) {
+  const { experienceMode } = useExperience();
+  const isBeginner = experienceMode === "beginner";
+
   // DRY: Single source of truth for persisted mode — restore from localStorage on mount
   const [mode, setMode] = useState<ExchangeMode>(() => {
     if (typeof window === "undefined") return "swap";
@@ -44,7 +48,7 @@ export default function ExchangeTab({
 
     // Restore mode from URL (overrides localStorage if present)
     const urlMode = params.exchange as string;
-    if (urlMode === "swap" || urlMode === "trade") {
+    if (urlMode === "swap" || (urlMode === "trade" && !isBeginner)) {
       setMode(urlMode);
     }
 
@@ -65,7 +69,13 @@ export default function ExchangeTab({
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady]);
+  }, [router.isReady, isBeginner]);
+
+  useEffect(() => {
+    if (isBeginner && mode !== "swap") {
+      setMode("swap");
+    }
+  }, [isBeginner, mode]);
 
   // Persist mode selection across sessions
   useEffect(() => {
@@ -74,41 +84,84 @@ export default function ExchangeTab({
 
   return (
     <div className="space-y-4">
-      {/* Segment Control — single source of truth for Swap vs Trade */}
-      <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
-        <button
-          onClick={() => setMode("swap")}
-          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
-            mode === "swap"
-              ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
-              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-          }`}
-        >
-          <span className="flex items-center justify-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-            </svg>
-            Swap
-          </span>
-          <span className="block text-[10px] font-medium opacity-60 mt-0.5">Stablecoins</span>
-        </button>
-        <button
-          onClick={() => setMode("trade")}
-          className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
-            mode === "trade"
-              ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
-              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-          }`}
-        >
-          <span className="flex items-center justify-center gap-1.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
-            </svg>
-            Trade
-          </span>
-          <span className="block text-[10px] font-medium opacity-60 mt-0.5">Stocks & Commodities</span>
-        </button>
+      <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/20 dark:via-gray-900 dark:to-indigo-900/20 border border-blue-100 dark:border-blue-800 rounded-3xl p-5 shadow-[0_18px_40px_-24px_rgba(37,99,235,0.35)]">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 shadow-sm">
+              <span className="size-1.5 rounded-full bg-blue-500" />
+              Protect Flow
+            </div>
+            <h2 className="text-lg font-black text-gray-900 dark:text-white">
+              Protect your savings
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 max-w-md leading-relaxed">
+              Use stablecoin swaps to reduce inflation exposure and move toward your protection plan.
+            </p>
+          </div>
+          <div className="shrink-0 rounded-2xl bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 p-3 shadow-sm">
+            <span className="text-xl" aria-hidden="true">🛡️</span>
+          </div>
+        </div>
       </div>
+
+      {isBeginner ? (
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            Beginner mode keeps this flow focused on protection.
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Advanced markets stay hidden until you are ready for a more complex experience.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-2xl p-1.5 shadow-inner">
+            <button
+              onClick={() => setMode("swap")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
+                mode === "swap"
+                  ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
+                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Protect
+              </span>
+              <span className="block text-[10px] font-medium opacity-60 mt-0.5">Stablecoin swaps</span>
+            </button>
+            <button
+              onClick={() => setMode("trade")}
+              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-bold transition-all ${
+                mode === "trade"
+                  ? "bg-white dark:bg-gray-700 shadow-sm text-blue-600 dark:text-blue-400"
+                  : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              <span className="flex items-center justify-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                </svg>
+                Advanced
+              </span>
+              <span className="block text-[10px] font-medium opacity-60 mt-0.5">Stocks & commodities</span>
+            </button>
+          </div>
+
+          {mode === "trade" && (
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl p-4 shadow-sm">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                Advanced markets are separate from your core protection flow.
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300 mt-1">
+                DiversiFi&apos;s main job is protecting savings through stablecoin diversification. Use advanced markets only if you want extra complexity.
+              </p>
+            </div>
+          )}
+        </>
+      )}
 
       {/* Mode Content */}
       <AnimatePresence mode="wait">

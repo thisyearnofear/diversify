@@ -21,19 +21,19 @@ export function NotConnectedState({
 
   const HOW_IT_WORKS = [
     {
-      icon: "🌍",
-      title: "Connect Your Wallet",
-      text: "Link MetaMask, Coinbase, or any Web3 wallet in seconds.",
+      icon: "👛",
+      title: "Connect in Seconds",
+      text: "Link your wallet and see your starting point right away.",
     },
     {
       icon: "📊",
-      title: "See Your Exposure",
-      text: "Instantly see how much inflation is eating your savings.",
+      title: "See Your Inflation Risk",
+      text: "Understand how much local inflation is reducing your purchasing power.",
     },
     {
       icon: "🛡️",
-      title: "Diversify & Protect",
-      text: "Swap into stable currencies across 5 global regions.",
+      title: "Move Into Protection",
+      text: "Follow a simple plan to spread savings across stronger stable currencies.",
     },
   ];
 
@@ -63,7 +63,7 @@ export function NotConnectedState({
                 </h3>
               </div>
               <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-                Smart diversification for {userRegion} (
+                A calmer way to protect savings in {userRegion} (
                 {regionalInflation.toFixed(1)}% inflation)
               </p>
             </div>
@@ -73,7 +73,7 @@ export function NotConnectedState({
           <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-emerald-100 dark:border-emerald-900">
             <div className="text-center mb-3">
               <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold">
-                Protect $1,000 →
+                If you protect $1,000 →
               </div>
               <div className="text-3xl font-black text-emerald-900 dark:text-emerald-100">
                 Save ${yearlyLoss}/year
@@ -88,7 +88,7 @@ export function NotConnectedState({
                   ${monthlyLoss}
                 </div>
                 <div className="text-xs text-emerald-600 dark:text-emerald-400">
-                  currently lost
+                  lost to inflation
                 </div>
               </div>
               <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-lg border border-teal-100 dark:border-teal-800">
@@ -99,13 +99,18 @@ export function NotConnectedState({
                   ${yearlyLoss}
                 </div>
                 <div className="text-xs text-teal-600 dark:text-teal-400">
-                  you could save
+                  protected value
                 </div>
               </div>
             </div>
           </div>
 
-          <WalletButton variant="primary" className="w-full" />
+          <div className="space-y-2">
+            <WalletButton variant="primary" className="w-full" />
+            <p className="text-center text-xs text-emerald-700 dark:text-emerald-300">
+              Start with your own wallet or explore in demo mode first.
+            </p>
+          </div>
         </div>
       </Card>
 
@@ -114,10 +119,10 @@ export function NotConnectedState({
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-black text-gray-900 dark:text-white">
-              🎮 Try Demo Mode
+              🎮 Explore Demo Mode
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Explore with sample data — no wallet needed
+              See how protection works with sample data — no wallet needed
             </p>
           </div>
           <button
@@ -132,7 +137,7 @@ export function NotConnectedState({
       {/* How it works */}
       <Card padding="p-4">
         <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest mb-3">
-          How It Works
+          Your First Three Steps
         </h3>
         <div className="space-y-3">
           {HOW_IT_WORKS.map((item, i) => (

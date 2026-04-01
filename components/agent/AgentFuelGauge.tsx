@@ -95,7 +95,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
     if (status.address) {
       navigator.clipboard.writeText(status.address);
       setIsCopying(true);
-      showToast('Agent address copied to clipboard', 'info');
+      showToast('Protection wallet address copied', 'info');
       
       // Record activity for gamification
       await recordActivity({
@@ -133,7 +133,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
           </div>
           <div>
             <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest leading-none">
-              Agent Fuel
+              Protection Balance
             </h4>
             <div className="text-lg font-black text-gray-900 dark:text-white mt-1">
               ${balance.toFixed(2)} <span className="text-[10px] text-gray-400 font-bold uppercase">USDC</span>
@@ -144,7 +144,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
           onClick={handleTopUp}
           className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${showDepositGuide ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'}`}
         >
-          {showDepositGuide ? 'Close' : 'Top Up'}
+          {showDepositGuide ? 'Close' : 'Add Funds'}
         </button>
       </div>
 
@@ -160,7 +160,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
           >
             <div className="mt-4 p-4 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-xl border border-blue-100 dark:border-blue-800/50">
               <h5 className="text-xs font-black text-blue-700 dark:text-blue-300 uppercase tracking-widest mb-3">
-                💳 Deposit USDC Guide
+                💳 Add Funds Guide
               </h5>
               
               {/* Prominent Address Display with QR */}
@@ -175,7 +175,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">
-                      Send USDC to this address:
+                      Send USDC to this wallet:
                     </div>
                     <code className="text-[11px] font-mono text-gray-800 dark:text-gray-200 break-all">
                       {status.address || 'Pending...'}
@@ -202,7 +202,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="font-black text-blue-500">3.</span>
-                  <span>Fuel balance updates automatically</span>
+                  <span>Your protection balance updates automatically</span>
                 </div>
               </div>
 
@@ -221,7 +221,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
       {/* Fuel Tank Visualizer */}
       <div className="space-y-2 mb-4">
         <div className="flex justify-between text-[10px] font-bold text-gray-500">
-          <span>TANK LEVEL</span>
+          <span>BALANCE LEVEL</span>
           <span>{fuelPercentage.toFixed(0)}%</span>
         </div>
         <div className="h-3 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden border border-gray-200/50 dark:border-gray-600/50 p-0.5">
@@ -253,7 +253,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
         </div>
       </div>
 
-      {/* Invisible Insurance Status (Hyperliquid Spoke) */}
+      {/* Protection Hedge Status */}
       <AnimatePresence>
         {isHedgeActive && (
           <motion.div 
@@ -269,7 +269,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                   <div className="w-2 h-2 rounded-full bg-purple-600 relative" />
                 </div>
                 <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 uppercase tracking-widest">
-                  Invisible Insurance Active
+                  Protection Hedge Active
                 </span>
               </div>
               <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-white dark:bg-purple-900/40 px-2 py-0.5 rounded-full shadow-sm">
@@ -277,17 +277,17 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
               </span>
             </div>
             <p className="text-[9px] text-purple-600/70 dark:text-purple-400/70 mt-1 italic font-medium">
-              Agent has opened a 1x short hedge on Hyperliquid to stabilize your portfolio value.
+              A protective hedge is helping stabilize your portfolio value in the background.
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Agent Identity - Prominent Address Display */}
+      {/* Protection Wallet Address */}
       <div className="mt-4 p-3 bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-900/50 dark:to-slate-900/50 rounded-xl border border-gray-200 dark:border-gray-700">
         <div className="flex justify-between items-center">
           <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter">Your Agent ID (MPC)</span>
+            <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter">Your Protection Wallet</span>
             <span className="text-[11px] font-mono text-gray-600 dark:text-gray-300 truncate max-w-[130px]">
               {status.address || 'Pending...'}
             </span>
@@ -315,7 +315,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
       <div className="mt-3 flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
         <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">
-            Arc L1 Native USDC Gas Active
+            Automatic protection funding is active
         </span>
       </div>
     </div>

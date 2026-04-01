@@ -37,7 +37,7 @@ export default function ProtectHeroCard({
             <div className="flex justify-between items-start mb-6">
                 <div>
                     <h3 className="text-xl font-black uppercase tracking-tight">
-                        Protection Engine
+                        Protection Plan
                     </h3>
                     <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
                         {isComplete ? "Personalized protection active" : "Set your protection profile"}

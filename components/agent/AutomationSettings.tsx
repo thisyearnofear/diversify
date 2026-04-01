@@ -232,7 +232,7 @@ export default function AutomationSettings({
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
       <div className="text-center mb-6 sm:mb-8">
         <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
-          🤖 Agent Command Center
+          🤖 Protection Settings
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Monitor and control your AI wealth protection agents

@@ -125,6 +125,7 @@ diversifi/
 
 ## Next Steps
 
+- Read [PRODUCT_FOCUS_PLAN.md](./PRODUCT_FOCUS_PLAN.md) for the current product direction
 - Read [ARCHITECTURE.md](./ARCHITECTURE.md) for system design
 - Read [INTEGRATION.md](./INTEGRATION.md) for API details
 - Read [DEPLOYMENT.md](./DEPLOYMENT.md) for deploying contracts

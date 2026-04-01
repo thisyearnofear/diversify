@@ -47,7 +47,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
   onTriggerHeartbeat,
 }) => {
   const { color, label } = statusIndicator[agentStatus];
-  const displayName = agentIdentity?.name ?? "Settlement Agent";
+  const displayName = agentIdentity?.name ?? "Execution Service";
   const isMobile = useMobile();
   const [showWizard, setShowWizard] = useState(false);
 
@@ -73,7 +73,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
             <span className="text-lg">🌌</span>
             <div className="flex flex-col min-w-0">
               <span className="text-xs font-black text-gray-900 dark:text-gray-100 truncate">
-                Guardian {agentStatus === "online" ? "Active" : "Inactive"}
+                Automatic Protection {agentStatus === "online" ? "Active" : "Inactive"}
               </span>
               <span className="text-[10px] text-gray-500 dark:text-gray-400">
                 {agentIdentity?.chains.join(", ") ?? "Not configured"}
@@ -130,7 +130,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
 
       {/* Management / Config Info */}
       <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
-        Settlement agent is {agentStatus === "online" ? "active and scanning" : "waiting for connection"}.
+        Execution service is {agentStatus === "online" ? "active and scanning" : "waiting for connection"}.
       </div>
 
       {/* Trigger Heartbeat / WDK Ping */}
@@ -151,7 +151,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
           ) : (
             <span>🛸</span>
           )}
-          <span>{isExecuting ? "Executing Settlement…" : "Ping Settlement Agent"}</span>
+          <span>{isExecuting ? "Checking Status…" : "Check Execution Service"}</span>
         </button>
       </div>
     </div>

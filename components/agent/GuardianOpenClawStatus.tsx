@@ -75,7 +75,7 @@ const GuardianOpenClawStatus: React.FC<GuardianOpenClawStatusProps> = ({
   onTriggerHeartbeat,
 }) => {
   const { color, label } = statusIndicator[agentStatus];
-  const displayName = agentIdentity?.name ?? 'OpenClaw Agent';
+  const displayName = agentIdentity?.name ?? 'Execution Service';
   const visibleReceipts = recentReceipts.slice(0, 3);
 
   return (
@@ -104,7 +104,7 @@ const GuardianOpenClawStatus: React.FC<GuardianOpenClawStatusProps> = ({
         )}
       </div>
 
-      {/* Agent Activity Status Info */}
+      {/* Background Status Info */}
       <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
         Autonomous monitoring is {agentStatus === 'online' ? 'active in the background' : 'temporarily paused'}.
       </div>

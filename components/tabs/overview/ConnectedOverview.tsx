@@ -140,13 +140,11 @@ export function ConnectedOverview({
       tips = diversificationTips;
     }
 
-    if (!tips.some((t) => t.includes("Robinhood"))) {
-      tips.push("🎮 Explore: Practice your trading strategies risk-free on the Robinhood Stock Testnet. Visit /trade to get started.");
-    }
     return tips;
   };
 
   const tips = buildTips();
+  const primaryTip = tips[0];
 
   const chainErrors = activePortfolio.errors ?? [];
 
@@ -163,16 +161,20 @@ export function ConnectedOverview({
 
       {/* 1. HERO SCORE */}
       <Card
-        padding="p-6"
-        className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10"
+        padding="p-0"
+        className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/10 dark:via-gray-900 dark:to-indigo-900/10 border border-blue-100/80 dark:border-blue-900/60 shadow-[0_20px_50px_-20px_rgba(37,99,235,0.25)]"
       >
-        <div className="relative z-10">
+        <div className="relative z-10 p-7 sm:p-8">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 shadow-sm">
+            <span className="size-1.5 rounded-full bg-blue-500" />
+            Home Overview
+          </div>
           <HeroValue
             value={isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
-            label={isBeginner ? "Health Score" : "Total Value"}
+            label={isBeginner ? "Protection Score" : "Total Value"}
           />
           <div
-            className={`mt-2 text-sm font-bold px-4 py-1.5 rounded-full inline-block ${
+            className={`mt-3 text-sm font-bold px-4 py-1.5 rounded-full inline-block shadow-sm ${
               diversificationScore >= 80
                 ? "bg-green-100 text-green-800"
                 : diversificationScore >= 60
@@ -183,13 +185,42 @@ export function ConnectedOverview({
             {diversificationRating}
           </div>
           {isBeginner && (
-            <p className="text-xs text-gray-500 mt-3 max-w-[200px] mx-auto leading-relaxed">
-              Your money is currently{" "}
+            <p className="text-sm text-gray-500 mt-4 max-w-xs mx-auto leading-relaxed">
+              Your savings are currently{" "}
               <strong>{diversificationScore}% protected</strong> from local inflation.
             </p>
           )}
+
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={() => setActiveTab(hasHoldings ? "exchange" : "protect")}
+              className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
+            >
+              {hasHoldings ? "Review My Protection" : "Set Up My Plan"}
+            </button>
+            {hasHoldings && (
+              <button
+                onClick={() => setActiveTab("protect")}
+                className="px-5 py-3 rounded-2xl bg-white/90 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 text-sm font-bold transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:translate-y-[-1px]"
+              >
+                Adjust My Plan
+              </button>
+            )}
+          </div>
+
+          {isBeginner && primaryTip && hasHoldings && (
+            <div className="mt-5 p-4 rounded-2xl bg-white/85 dark:bg-gray-900/85 border border-blue-100 dark:border-blue-900 text-left max-w-md mx-auto shadow-sm backdrop-blur-sm">
+              <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1">
+                Next Best Move
+              </div>
+              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                {primaryTip}
+              </p>
+            </div>
+          )}
         </div>
-        <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/5 rounded-full blur-3xl" />
+        <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-[-25%] left-[-10%] w-48 h-48 bg-indigo-500/8 rounded-full blur-3xl" />
       </Card>
 
       {/* 1b. GOAL ALIGNMENT */}
@@ -214,7 +245,7 @@ export function ConnectedOverview({
             <span className="text-2xl animate-bounce">🎁</span>
             <div className="text-left">
               <div className="text-xs font-black uppercase tracking-widest">
-                Daily G$ Reward Ready!
+                Daily Reward Ready
               </div>
               <div className="text-xs text-emerald-100 font-medium">
                 {streak?.daysActive ? `${streak.daysActive} day streak` : "Start your streak"}{" "}
@@ -236,7 +267,7 @@ export function ConnectedOverview({
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🎮</span>
                 <div>
-                  <h3 className="text-sm font-black text-white">Demo Mode Active</h3>
+                  <h3 className="text-sm font-black text-white">Preview Mode Active</h3>
                   <p className="text-xs text-blue-100">
                     Exploring with sample data • Connect wallet for real portfolio
                   </p>
@@ -264,7 +295,7 @@ export function ConnectedOverview({
               <span className="text-2xl">👋</span>
               <div>
                 <h3 className="text-lg font-black text-amber-900 dark:text-amber-100">
-                  Welcome! Let&apos;s Add Some Funds
+                  Welcome! Fund Your Protection
                 </h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mt-1">
                   Your wallet is connected but empty. Add crypto to start protecting your savings.
@@ -291,7 +322,7 @@ export function ConnectedOverview({
               </div>
               <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
                 <p className="text-xs text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">
-                  Transfer from exchange
+                  Transfer from another wallet or exchange
                 </p>
                 <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-inner">
                   <code className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
@@ -329,10 +360,10 @@ export function ConnectedOverview({
       {/* 2. PROTECTION ANALYSIS */}
       {hasHoldings && (
         isBeginner ? (
-          <Card>
+          <Card className="border border-gray-100 dark:border-gray-800 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.35)]">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest">
-                Global Spread
+                Your Protection Mix
               </h3>
               <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
             </div>
@@ -349,20 +380,24 @@ export function ConnectedOverview({
               ))}
             </div>
             <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
-              <button
-                onClick={() => setShowAssetDetails(!showAssetDetails)}
-                className="w-full flex items-center justify-between py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
-              >
-                <span>{showAssetDetails ? "Hide" : "View"} Asset Inventory</span>
-                <span>{showAssetDetails ? "↑" : "↓"}</span>
-              </button>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setActiveTab("exchange")}
+                  className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+                >
+                  Improve My Protection
+                </button>
+                <button
+                  onClick={() => setShowAssetDetails(!showAssetDetails)}
+                  className="w-full flex items-center justify-between py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
+                >
+                  <span>{showAssetDetails ? "Hide" : "View"} Asset Details</span>
+                  <span>{showAssetDetails ? "↑" : "↓"}</span>
+                </button>
+              </div>
               {showAssetDetails && (
                 <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
                   <AssetInventory tokens={activePortfolio.allTokens || []} />
-                  <p className="mt-4 text-xs text-gray-400 font-bold text-center uppercase tracking-tighter">
-                    Tired of toggling? Switch to{" "}
-                    <span className="text-blue-500">Standard Mode</span> in the header to unlock full details.
-                  </p>
                 </div>
               )}
             </div>
@@ -385,71 +420,42 @@ export function ConnectedOverview({
       )}
 
       {/* 3. REWARDS */}
-      {hasHoldings && (
+      {hasHoldings && !isBeginner && (
         <div className="space-y-4">
           <StreakRewardsCard onSaveClick={() => setActiveTab("exchange")} />
           <RewardsStats />
         </div>
       )}
 
-      {/* YIELD OPPORTUNITY CARD */}
-      {hasHoldings && (
-        <div
-          onClick={() => setActiveTab("protect")}
-          className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl p-4 text-white cursor-pointer hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]"
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-2xl">💰</span>
-                <span className="text-xs font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
-                  Earn Yield
-                </span>
+      {!isBeginner && (
+        <div className="bg-gradient-to-r from-yellow-500 via-orange-500 to-blue-600 p-0.5 rounded-2xl">
+          <div className="bg-white dark:bg-gray-900 rounded-[14px] p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex -space-x-2">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white text-lg z-10 border-2 border-white dark:border-gray-900">
+                    🌍
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg border-2 border-white dark:border-gray-900">
+                    💰
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-black">Two Chains, One Mission</h3>
+                  <p className="text-xs text-gray-500">Celo for regional diversity • Arbitrum for yield</p>
+                </div>
               </div>
-              <h3 className="text-lg font-black mt-2">Up to 5% APY</h3>
-              <p className="text-sm text-blue-100 mt-1">Tokenized treasuries on Arbitrum</p>
+              <div className="text-right hidden sm:block">
+                <div className="text-xs font-bold text-gray-400">Powered by</div>
+                <div className="text-xs font-black">LiFi</div>
+              </div>
             </div>
-            <div className="bg-white/10 p-2 rounded-xl">
-              <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 mt-3 text-xs text-blue-200">
-            <span className="bg-green-500/30 px-2 py-0.5 rounded-full">USDY 5%</span>
-            <span className="bg-purple-500/30 px-2 py-0.5 rounded-full">SYRUP 4.5%</span>
-            <span>→</span>
           </div>
         </div>
       )}
 
-      {/* MULTICHAIN IDENTITY BANNER */}
-      <div className="bg-gradient-to-r from-yellow-500 via-orange-500 to-blue-600 p-0.5 rounded-2xl">
-        <div className="bg-white dark:bg-gray-900 rounded-[14px] p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex -space-x-2">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white text-lg z-10 border-2 border-white dark:border-gray-900">
-                  🌍
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg border-2 border-white dark:border-gray-900">
-                  💰
-                </div>
-              </div>
-              <div>
-                <h3 className="text-sm font-black">Two Chains, One Mission</h3>
-                <p className="text-xs text-gray-500">Celo for regional diversity • Arbitrum for yield</p>
-              </div>
-            </div>
-            <div className="text-right hidden sm:block">
-              <div className="text-xs font-bold text-gray-400">Powered by</div>
-              <div className="text-xs font-black">LiFi</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 4. MARKET INTELLIGENCE */}
+      {!isBeginner && (
       <DashboardCard
         title={isBeginner ? "Global Opportunities" : "Market Intelligence"}
         icon={<span>🌍</span>}
@@ -504,9 +510,10 @@ export function ConnectedOverview({
           </div>
         )}
       </DashboardCard>
+      )}
 
       {/* 5. SMART RECOMMENDATIONS */}
-      {tips.length > 0 && (
+      {tips.length > 0 && !isBeginner && (
         <DashboardCard title="Smart Recommendations" icon={<span>💡</span>} color="amber" size="md">
           <div className="space-y-2">
             {tips.slice(0, 3).map((tip, idx) => (
@@ -555,14 +562,14 @@ export function ConnectedOverview({
         >
           <EmptyState
             icon="🛡️"
-            title={isBeginner ? "Ready to Protect Your Money?" : "Start Building Protection"}
+            title={isBeginner ? "Ready to Protect Your Savings?" : "Start Your Protection"}
             description={
               isBeginner
-                ? "Your money loses value every day due to inflation. Let&apos;s fix that by converting it to more stable currencies."
+                ? "Your savings lose value every day due to inflation. Let&apos;s fix that by moving into more stable currencies."
                 : "Convert your local currency into diversified stablecoins to protect against inflation and currency debasement."
             }
             action={{
-              label: isBeginner ? "Convert Money Now" : "Start Swapping",
+              label: isBeginner ? "Protect My Savings" : "Open Protect Flow",
               onClick: () => setActiveTab("exchange"),
               icon: <span>→</span>,
             }}
@@ -589,7 +596,7 @@ export function ConnectedOverview({
               <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400">3</div>
               <div className="flex-1">
                 <p className="text-xs font-bold text-gray-900 dark:text-white">Make first swap</p>
-                <p className="text-xs text-gray-500">Convert to stable currency</p>
+                <p className="text-xs text-gray-500">Make your first protection move</p>
               </div>
             </div>
           </div>
@@ -610,7 +617,7 @@ export function ConnectedOverview({
                     onClick={() => setActiveTab("exchange")}
                     className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
                   >
-                    Explore Test Drive →
+                    Try Test Drive →
                   </button>
                 </div>
               </div>
@@ -620,7 +627,7 @@ export function ConnectedOverview({
       )}
 
       {/* AGENT COMMAND CENTER (Standard/Advanced only) */}
-      {!isBeginner && (
+      {isAdvanced && (
         <AgentTierStatus
           showActivityFeed={true}
           onNavigateToAgent={() => setActiveTab("agent")}

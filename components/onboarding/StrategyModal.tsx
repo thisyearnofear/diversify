@@ -176,7 +176,7 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
                         {step === 'goal' && (
                             <OnboardingSelectionScreen
                                 title="What's your wealth goal?"
-                                subtitle="DiversiFi will tailor its strategy to your primary objective."
+                                subtitle="DiversiFi will tailor its protection plan to your primary objective."
                                 options={GOAL_OPTIONS}
                                 selectedId={selectedGoal}
                                 onSelect={setSelectedGoal}

@@ -10,6 +10,12 @@ AI-powered stablecoin diversification across Celo. Protect your purchasing power
 - **Non-Custodial** — Your funds stay in your Safe smart account. Agent transacts only within your permission limits
 - **Transparent Fees** — 1% annual management + 10% performance above high-water mark + 0.10% swap spread
 
+## Product Focus
+
+DiversiFi's current product direction is documented in `docs/PRODUCT_FOCUS_PLAN.md`.
+
+The short version: DiversiFi is a savings protection app for people in volatile economies. Product and engineering work should simplify the experience around inflation protection, guided stablecoin diversification, and trust.
+
 ## Architecture
 
 ```

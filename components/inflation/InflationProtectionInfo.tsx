@@ -166,7 +166,7 @@ export default function InflationProtectionInfo({
         <div className="flex items-center">
           <RegionalIconography region={homeRegion} size="sm" className="mr-2" />
           <h2 className="text-lg font-semibold text-text-primary">
-            Protect Your Money
+            Protect Your Savings
           </h2>
         </div>
         <div className="flex items-center">

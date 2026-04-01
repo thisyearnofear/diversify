@@ -164,7 +164,7 @@ const SwapInterface = forwardRef<
       <div className="relative">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
-            {isBeginner ? "Convert Money" : title}
+            {isBeginner ? "Protect Your Savings" : title}
           </h3>
           {!isBeginner && inflationDataSource === "api" && (
             <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
@@ -173,16 +173,27 @@ const SwapInterface = forwardRef<
           )}
         </div>
 
+        {isBeginner && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
+              Choose what you have and what you want to move into.
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              DiversiFi helps you shift savings toward more stable currencies with a simple, guided protection flow.
+            </p>
+          </div>
+        )}
+
         {enableCrossChain && shouldShowIntermediateFeatures() && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-blue-600 dark:text-blue-400">🌉</span>
               <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                Cross-Chain Bridge
+                Cross-Chain Transfer
               </span>
               {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
                 <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
-                  Bridge Required
+                  Transfer Needed
                 </span>
               )}
             </div>
@@ -190,7 +201,7 @@ const SwapInterface = forwardRef<
               <ChainSelector
                 selectedChainId={fromChainId}
                 onChainSelect={setFromChainId}
-                label="From Chain"
+                label="From Network"
                 disabled={isLoading}
                 otherChainId={toChainId}
                 isBridgeMode={enableCrossChain}
@@ -198,7 +209,7 @@ const SwapInterface = forwardRef<
               <ChainSelector
                 selectedChainId={toChainId}
                 onChainSelect={setToChainId}
-                label="To Chain"
+                label="To Network"
                 disabled={isLoading}
                 otherChainId={fromChainId}
                 isBridgeMode={enableCrossChain}
@@ -206,7 +217,7 @@ const SwapInterface = forwardRef<
             </div>
             {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
               <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                ⚠️ Cross-chain swaps may take longer and have higher fees
+                ⚠️ Cross-network moves may take longer and may cost more
               </div>
             )}
           </div>
@@ -377,6 +388,7 @@ const SwapInterface = forwardRef<
             toToken={toToken}
             fromTokenRegion={fromTokenRegion}
             toTokenRegion={toTokenRegion}
+            isBeginner={isBeginner}
             disabled={
               !address ||
               fromToken === toToken ||

@@ -45,11 +45,11 @@ export default function StrategySelector({ onSelect, currentStrategy, onSkip }: 
             {/* Header */}
             <div className="text-center mb-8">
                 <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">
-                    What&apos;s Your Wealth Philosophy?
+                    Choose Your Protection Plan
                 </h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-                    Different cultures have different approaches to wealth. Choose the philosophy that aligns with your values and goals.
-                    There&apos;s no &quot;right&quot; answer - just what&apos;s authentic to you.
+                    Different cultures have different approaches to protecting wealth. Choose the plan that best aligns with your values and goals.
+                    There&apos;s no &quot;right&quot; answer - just what fits you best.
                 </p>
             </div>
 
@@ -166,7 +166,7 @@ export default function StrategySelector({ onSelect, currentStrategy, onSkip }: 
                     whileHover={selected ? { scale: 1.05 } : {}}
                     whileTap={selected ? { scale: 0.95 } : {}}
                 >
-                    Continue with {selected ? STRATEGIES?.find(s => s.id === selected)?.name : 'Strategy'}
+                    Continue with {selected ? STRATEGIES?.find(s => s.id === selected)?.name : 'Plan'}
                 </motion.button>
             </div>
 
@@ -175,8 +175,8 @@ export default function StrategySelector({ onSelect, currentStrategy, onSkip }: 
                 <div className="flex items-start gap-3">
                     <span className="text-xl">💡</span>
                     <div className="text-xs text-amber-900 dark:text-amber-100 leading-relaxed">
-                        <strong>Note:</strong> Your strategy choice helps us provide relevant recommendations and metrics.
-                        You can change it anytime in settings. We respect all approaches equally - there&apos;s no &quot;best&quot; strategy.
+                        <strong>Note:</strong> Your plan choice helps us provide relevant recommendations and metrics.
+                        You can change it anytime in settings. We respect all approaches equally - there&apos;s no single &quot;best&quot; plan.
                     </div>
                 </div>
             </div>

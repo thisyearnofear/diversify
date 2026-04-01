@@ -260,7 +260,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             <span className="text-lg">🛡️</span>
             <div className="flex-1">
               <p className="text-xs font-bold text-blue-900 dark:text-blue-100 mb-1">
-                Protect Your Money
+                Protect Your Savings
               </p>
               <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
                 Different currencies lose value at different rates. By swapping to more stable currencies, 

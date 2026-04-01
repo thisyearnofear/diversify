@@ -326,7 +326,7 @@ export const AgentTierStatus: React.FC<{
       {showActivityFeed && metrics.totalActions > 0 && (
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800">
           <h3 className="text-xs font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider mb-3">
-            Agent Performance
+            Protection Performance
           </h3>
           <div className="grid grid-cols-3 gap-3">
             <div className="text-center">

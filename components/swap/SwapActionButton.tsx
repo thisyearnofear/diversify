@@ -13,6 +13,7 @@ interface SwapActionButtonProps {
     toTokenRegion?: string;
     disabled: boolean;
     onClick: () => void;
+    isBeginner?: boolean;
     /** When true, renders as a fixed bottom button on mobile for always-visible CTA */
     stickyMobile?: boolean;
 }
@@ -26,6 +27,7 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
     toTokenRegion,
     disabled,
     onClick,
+    isBeginner = false,
     stickyMobile = false,
 }) => {
     // Common button content
@@ -113,7 +115,7 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
                                 </div>
                             </div>
                         )}
-                        <span className="font-bold text-lg">Swap Tokens</span>
+                        <span className="font-bold text-lg">{isBeginner ? "Protect My Savings" : "Swap Tokens"}</span>
                         {fromToken && toToken && fromToken !== toToken && (
                             <span className="ml-3 text-sm bg-white px-3 py-1 rounded-full font-bold shadow-sm text-blue-700">
                                 {fromToken} → {toToken}

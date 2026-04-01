@@ -112,7 +112,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
            <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">⛽</span>
-           <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Agent Fuel</span>
+           <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Protection Balance</span>
         </div>
         <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
           {action.network}

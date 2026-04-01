@@ -60,7 +60,7 @@ export default function Layout({
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
             {/* Logo row - hidden on small screens to give wallet more space */}
             <h1 className="text-xl font-bold text-gray-900 dark:text-white transition-colors duration-300 hidden lg:block">
-              {isBeginner ? "💰 Protect Your Money" : "DiversiFi"}
+              {isBeginner ? "💰 Protect Your Savings" : "DiversiFi"}
               {isInMiniPay && (
                 <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded ml-2">
                   MiniPay

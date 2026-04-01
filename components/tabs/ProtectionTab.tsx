@@ -55,6 +55,7 @@ export default function ProtectionTab({
   userRegion,
   portfolio,
   onSelectStrategy,
+  setActiveTab,
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
   const { navigateToSwap } = useNavigation();
@@ -126,7 +127,7 @@ export default function ProtectionTab({
   // HANDLERS
   // ============================================================================
 
-  const handleExecuteSwap = (
+  const openProtectionFlow = (
     targetToken: string,
     fromToken?: string,
     amount?: string,
@@ -179,11 +180,13 @@ export default function ProtectionTab({
       }
     }
 
+    setActiveTab?.("exchange");
+
     navigateToSwap({
       fromToken: sourceToken,
       toToken: targetToken,
       amount: swapAmount,
-      reason: `Swap to ${targetToken} for ${currentGoalLabel}`,
+      reason: `Review protection move to ${targetToken} for ${currentGoalLabel}`,
       fromChainId,
       toChainId,
     });
@@ -322,10 +325,10 @@ export default function ProtectionTab({
           <div className="flex items-start justify-between mb-4">
             <div>
               <h3 className="text-xl font-black uppercase tracking-tight">
-                Protection Engine
+                Protection Plan
               </h3>
               <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-                Multi-chain inflation protection
+                Build your inflation protection plan
               </p>
             </div>
             <span className="text-3xl">🤖</span>
@@ -399,31 +402,36 @@ export default function ProtectionTab({
           ===================================================================== */}
       {isBeginner ? (
         // Beginner: Simple hero with protection level
-        <Card padding="p-0" className="overflow-hidden shadow-xl">
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white">
+        <Card padding="p-0" className="overflow-hidden shadow-[0_20px_50px_-24px_rgba(79,70,229,0.45)] border border-indigo-200/40 dark:border-indigo-900/40">
+          <div className="bg-gradient-to-br from-indigo-600 via-indigo-600 to-purple-700 p-6 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-3xl" />
             <div className="flex justify-between items-start mb-6">
               <div>
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-50 backdrop-blur-sm">
+                  <span className="size-1.5 rounded-full bg-white" />
+                  Plan Setup
+                </div>
                 <h3 className="text-xl font-black uppercase tracking-tight">
-                  Protection Engine
+                  Protection Plan
                 </h3>
-                <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-                  {isComplete ? "Your Protection is Active" : "Set up your protection"}
+                <p className="text-indigo-100 text-sm font-semibold opacity-90 mt-2 max-w-[220px] leading-relaxed">
+                  {isComplete ? "Your plan is ready" : "Set up your protection plan"}
                 </p>
               </div>
-              <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">
+              <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl border border-white/30 shadow-sm">
                 <span className="text-2xl">🤖</span>
               </div>
             </div>
-            <div className="text-center">
-              <div className="text-3xl font-black">
+            <div className="text-center relative z-10">
+              <div className="text-4xl font-black tracking-tight">
                 {protectionScore}%
               </div>
-              <div className="text-xs text-indigo-200 font-medium mt-1">
+              <div className="text-sm text-indigo-100 font-semibold mt-1">
                 Protection Level
               </div>
             </div>
           </div>
-          <div className="p-4">
+          <div className="p-5 bg-white dark:bg-gray-900">
             <ProfileWizard
               mode={profileMode}
               currentStep={currentStep}
@@ -446,8 +454,8 @@ export default function ProtectionTab({
       ) : (
         // Non-beginner: Full ProtectionDashboard
         <ProtectionDashboard
-          title="Protection Engine"
-          subtitle={isComplete ? "Personalized protection active" : "Set your protection profile"}
+          title="Protection Plan"
+          subtitle={isComplete ? "Your protection profile is ready" : "Set your protection profile"}
           icon={<span>🤖</span>}
           totalValue={`$${displayTotalValue.toFixed(0)}`}
           chainCount={displayChainCount}
@@ -518,10 +526,10 @@ export default function ProtectionTab({
             config.userGoal === 'geographic_diversification'
               ? `Expand ${topOpportunity.toRegion} Presence`
               : config.userGoal === 'rwa_access'
-              ? `Add ${topOpportunity.toToken} to Portfolio`
+              ? `Add ${topOpportunity.toToken} to Your Plan`
               : config.userGoal === 'inflation_protection'
               ? `Reduce ${topOpportunity.fromRegion} Inflation Exposure`
-              : `Optimize Your Portfolio`
+              : `Improve Your Protection Plan`
           }
           description={
             config.userGoal === 'geographic_diversification'
@@ -537,9 +545,9 @@ export default function ProtectionTab({
           impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
           variant={topOpportunity.priority === "HIGH" ? "urgent" : "default"}
           action={{
-            label: `Swap ${topOpportunity.fromToken} → ${topOpportunity.toToken}`,
+            label: `Review ${topOpportunity.fromToken} → ${topOpportunity.toToken} in Protect`,
             onClick: () =>
-              handleExecuteSwap(
+              openProtectionFlow(
                 topOpportunity.toToken,
                 topOpportunity.fromToken,
                 topOpportunity.suggestedAmount.toFixed(2),
@@ -563,7 +571,7 @@ export default function ProtectionTab({
                 fromToken: opp.fromToken,
                 toToken: opp.toToken,
                 annualSavings: opp.annualSavings,
-                onClick: () => handleExecuteSwap(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))
+                onClick: () => openProtectionFlow(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))
               }))
           }
         />
@@ -574,14 +582,14 @@ export default function ProtectionTab({
           ================================================================= */}
       <InsightCard
         icon="🤖"
-        title="AI Portfolio Analysis"
-        description="Get personalized recommendations based on your holdings, inflation data, and market conditions."
+        title="Advisor Plan Review"
+        description="Ask the Advisor to review your holdings, inflation exposure, and protection plan."
         variant="default"
         action={{
-          label: "Analyze My Portfolio",
+          label: "Ask Advisor About My Plan",
           onClick: () => {
             const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
-            askAdvisor(`Analyze my portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
+            askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
           },
         }}
       />
@@ -592,7 +600,7 @@ export default function ProtectionTab({
           chains={chains}
           userGoal={config.userGoal}
           chainId={chainId}
-          onSwap={handleExecuteSwap}
+          onSwap={openProtectionFlow}
           onShowModal={setShowAssetModal}
           experienceMode={experienceMode}
         />
@@ -658,11 +666,12 @@ export default function ProtectionTab({
               if (gapUsd > 1) swapAmount = gapUsd.toFixed(2);
             }
 
+            setActiveTab?.("exchange");
             navigateToSwap({
               fromToken,
               toToken,
               amount: swapAmount,
-              reason: `Apply ${strategy} strategy — rebalancing toward ${toToken}`,
+              reason: `Review ${strategy} plan adjustments toward ${toToken}`,
             });
           }}
         />
@@ -673,7 +682,7 @@ export default function ProtectionTab({
       <AssetModal
         assetSymbol={showAssetModal}
         onClose={() => setShowAssetModal(null)}
-        onSwap={handleExecuteSwap}
+        onSwap={openProtectionFlow}
       />
 
       {/* GoodDollar streak now integrated into ProtectionDashboard header */}

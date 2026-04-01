@@ -83,12 +83,12 @@ export default function AgentTab({
         <h2 className="text-2xl font-black text-gray-900 dark:text-white">
           {experienceMode === "beginner"
             ? "Your Advisor"
-            : "Agent Command Center"}
+            : "Advisor"}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {experienceMode === "beginner"
             ? "See what your AI is doing to protect your savings"
-            : "Monitor and control your autonomous wealth protection agents"}
+            : "Understand recommendations and manage your protection settings"}
         </p>
       </div>
 
@@ -191,7 +191,7 @@ export default function AgentTab({
         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
       >
         <span>💬</span>
-        <span>Ask your Agent</span>
+        <span>Ask your Advisor</span>
       </button>
 
       <button
