@@ -132,7 +132,11 @@ export default function AutomationSettings({
   useEffect(() => {
     if (address) {
       loadPreferences();
+      return;
     }
+
+    setPreferences(getDefaultPreferences());
+    setLoading(false);
   }, [address, loadPreferences]);
 
   const savePreferences = async () => {
@@ -219,6 +223,24 @@ export default function AutomationSettings({
     return (
       <div className="p-8 text-center">
         <p className="text-gray-600">Failed to load automation preferences</p>
+      </div>
+    );
+  }
+
+  if (!address) {
+    return (
+      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
+            <span className="text-2xl">🔐</span>
+          </div>
+          <h3 className="text-lg font-black text-gray-900 dark:text-white">
+            Connect a wallet to manage protection settings
+          </h3>
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+            Advanced notifications and automatic protection controls appear here once a wallet is connected.
+          </p>
+        </div>
       </div>
     );
   }
