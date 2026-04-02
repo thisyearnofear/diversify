@@ -13,9 +13,13 @@ type YieldOpportunity = {
   apy: number;
   tvl: number;
   pool: string;
+  executableTargetToken?: string | null;
+  isExecutable?: boolean;
 };
 
 const EXECUTABLE_YIELD_TOKENS = new Set(['USDY', 'PAXG', 'SYRUPUSDC', 'CUSD', 'CEUR', 'USDC', 'USDT']);
+const YIELD_ALERT_STORAGE_KEY = 'diversifi-proactive-yield-alerts';
+const YIELD_ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 function getExecutableTargetToken(symbol: string): string | null {
   const normalized = symbol.trim().toUpperCase();
@@ -23,6 +27,47 @@ function getExecutableTargetToken(symbol: string): string | null {
     return null;
   }
   return EXECUTABLE_YIELD_TOKENS.has(normalized) ? normalized : null;
+}
+
+function getYieldAlertMap(): Record<string, number> {
+  if (typeof window === 'undefined') return {};
+
+  try {
+    const raw = localStorage.getItem(YIELD_ALERT_STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
+
+function setYieldAlertMap(alerts: Record<string, number>) {
+  if (typeof window === 'undefined') return;
+
+  try {
+    localStorage.setItem(YIELD_ALERT_STORAGE_KEY, JSON.stringify(alerts));
+  } catch {
+    // Best-effort only.
+  }
+}
+
+function shouldSendYieldAlert(alertId: string): boolean {
+  const alerts = getYieldAlertMap();
+  const lastSentAt = alerts[alertId];
+
+  if (!lastSentAt) return true;
+  return Date.now() - lastSentAt > YIELD_ALERT_COOLDOWN_MS;
+}
+
+function markYieldAlertSent(alertId: string) {
+  const alerts = getYieldAlertMap();
+  alerts[alertId] = Date.now();
+
+  const pruned = Object.fromEntries(
+    Object.entries(alerts).filter(([, timestamp]) => Date.now() - timestamp <= YIELD_ALERT_COOLDOWN_MS * 4)
+  );
+
+  setYieldAlertMap(pruned);
 }
 
 /**
@@ -113,14 +158,33 @@ export function useProactiveAgent() {
             const yieldRes = await fetch(`${API_BASE}/api/agent/yield-monitor`);
             if (yieldRes.ok) {
               const yieldData = await yieldRes.json();
+              if (yieldData._stale) {
+                return;
+              }
+
               const spikes = yieldData.opportunities?.filter(
                 (o: YieldOpportunity) => o.apy > yieldThreshold && o.chain?.toLowerCase().includes('celo')
               ) || [];
               
               if (spikes.length > 0) {
+                const sortedSpikes = [...spikes].sort((a: YieldOpportunity, b: YieldOpportunity) => {
+                  const aExecutable = a.isExecutable ? 1 : 0;
+                  const bExecutable = b.isExecutable ? 1 : 0;
+
+                  if (aExecutable !== bExecutable) return bExecutable - aExecutable;
+                  if (a.tvl !== b.tvl) return b.tvl - a.tvl;
+                  return b.apy - a.apy;
+                });
+
+                const best = sortedSpikes[0] as YieldOpportunity;
+                const targetToken = best.executableTargetToken ?? getExecutableTargetToken(best.symbol);
+                const alertId = `yield:${best.pool}:${Math.round(best.apy)}`;
+
+                if (!shouldSendYieldAlert(alertId)) {
+                  return;
+                }
+
                 yieldAlerted.current = true;
-                const best = spikes[0] as YieldOpportunity;
-                const targetToken = getExecutableTargetToken(best.symbol);
                 const formattedTvl = best.tvl >= 1_000_000
                   ? `$${(best.tvl / 1e6).toFixed(1)}M`
                   : `$${(best.tvl / 1e3).toFixed(0)}k`;
@@ -160,14 +224,16 @@ export function useProactiveAgent() {
                       type: 'guardian_review',
                     },
                   }).catch(() => {});
+                  markYieldAlertSent(alertId);
                 } else {
-                  const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold, but Guardian does not currently open LP or unsupported yield positions automatically. Treat this as a research alert, not an executable action.`;
+                  const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold, but it is not currently supported as an automatic protection action. Treat this as a research alert, not an executable action.`;
 
                   publishAdvisorUpdate({
                     content: yieldMessage,
                     type: 'recommendation',
                     openDrawer: false,
                   }).catch(() => {});
+                  markYieldAlertSent(alertId);
                 }
                 
                 // Reset after 1 hour

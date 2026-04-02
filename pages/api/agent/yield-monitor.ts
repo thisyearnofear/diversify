@@ -19,6 +19,29 @@ interface YieldOpportunity {
     apy: number;
     tvl: number;
     pool: string;
+    executableTargetToken: string | null;
+    isExecutable: boolean;
+}
+
+const EXECUTABLE_YIELD_TOKENS = new Set(['USDY', 'PAXG', 'SYRUPUSDC', 'CUSD', 'CEUR', 'USDC', 'USDT', 'EURC']);
+const MIN_TVL_USD = 100_000;
+
+function normalizeSymbol(symbol: unknown): string {
+    return typeof symbol === 'string' ? symbol.trim().toUpperCase() : '';
+}
+
+function isLpLikeSymbol(symbol: string): boolean {
+    return symbol.includes('-') || symbol.includes('/') || symbol.includes(' LP') || symbol.includes('CLP');
+}
+
+function getExecutableTargetToken(symbol: string): string | null {
+    if (!symbol || isLpLikeSymbol(symbol)) return null;
+    return EXECUTABLE_YIELD_TOKENS.has(symbol) ? symbol : null;
+}
+
+function isStableYieldCandidate(symbol: string): boolean {
+    if (!symbol || isLpLikeSymbol(symbol)) return false;
+    return /USDC|USDT|CUSD|CEUR|EURC|DAI|G\$|USDY|PAXG|SYRUP/i.test(symbol);
 }
 
 // Simple in-memory cache
@@ -50,23 +73,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             .filter((pool: any) =>
                 // Celo chain pools
                 (pool.chain === 'Celo' || pool.chain === 'celo') &&
-                // Stablecoins and known tokens
-                (pool.symbol?.match(/USDC|USDT|cUSD|cEUR|EURC|DAI|G\$/i)) &&
+                // Stablecoins and known single-asset yield tokens only
+                isStableYieldCandidate(normalizeSymbol(pool.symbol)) &&
                 // Minimum TVL to filter noise
-                pool.tvlUsd > 10000 &&
+                pool.tvlUsd > MIN_TVL_USD &&
                 // Must have positive APY
                 pool.apy > 0
             )
-            .sort((a: any, b: any) => b.apy - a.apy)
+            .sort((a: any, b: any) => {
+                const aSymbol = normalizeSymbol(a.symbol);
+                const bSymbol = normalizeSymbol(b.symbol);
+                const aExecutable = getExecutableTargetToken(aSymbol) ? 1 : 0;
+                const bExecutable = getExecutableTargetToken(bSymbol) ? 1 : 0;
+
+                if (aExecutable !== bExecutable) return bExecutable - aExecutable;
+                if (a.tvlUsd !== b.tvlUsd) return b.tvlUsd - a.tvlUsd;
+                return b.apy - a.apy;
+            })
             .slice(0, 20)
-            .map((pool: any) => ({
+            .map((pool: any) => {
+                const symbol = normalizeSymbol(pool.symbol);
+                const executableTargetToken = getExecutableTargetToken(symbol);
+
+                return {
                 protocol: pool.project,
                 chain: pool.chain,
-                symbol: pool.symbol,
+                symbol,
                 apy: pool.apy,
                 tvl: pool.tvlUsd,
                 pool: pool.pool,
-            }));
+                executableTargetToken,
+                isExecutable: Boolean(executableTargetToken),
+            };
+            });
 
         cachedData = {
             opportunities: celoOpportunities,
