@@ -10,6 +10,7 @@ export interface ZapierMCPConfig {
     embedId?: string;
     embedSecret?: string;
     webhookUrl?: string;
+    accessToken?: string;
     enabled: boolean;
 }
 
@@ -206,8 +207,10 @@ export class ZapierMCPService {
                 'Content-Type': 'application/json'
             };
 
-            // Add Auth header if secret is available (for Secure Webhooks)
-            if (this.config.embedSecret) {
+            // Add Auth header if secret or access token is available
+            if (this.config.accessToken) {
+                headers['Authorization'] = `Bearer ${this.config.accessToken}`;
+            } else if (this.config.embedSecret) {
                 headers['Authorization'] = `Bearer ${this.config.embedSecret}`;
             }
 

@@ -5,8 +5,10 @@
  */
 
 import { AnalysisResult } from './arc-agent';
+import { TokenVaultClient, TokenVaultConfig } from './auth0-token-vault';
 
 export interface AutomationConfig {
+    tokenVault?: TokenVaultConfig;
     email: {
         enabled: boolean;
         provider: 'sendgrid' | 'resend' | 'smtp';
@@ -33,6 +35,12 @@ export interface AutomationConfig {
         webhookUrl?: string;
         channel?: string;
     };
+    google: {
+        enabled: boolean;
+        gmailEnabled: boolean;
+        sheetsEnabled: boolean;
+        spreadsheetId?: string;
+    };
 }
 
 export interface NotificationPayload {
@@ -55,9 +63,13 @@ export interface NotificationPayload {
 
 export class AutomationService {
     private config: AutomationConfig;
+    private tokenVault?: TokenVaultClient;
 
     constructor(config: AutomationConfig) {
         this.config = config;
+        if (config.tokenVault) {
+            this.tokenVault = new TokenVaultClient(config.tokenVault);
+        }
     }
 
     /**
@@ -98,6 +110,15 @@ export class AutomationService {
             automationPromises.push(this.sendSlackNotification(payload));
         }
 
+        if (this.config.google.enabled) {
+            if (this.config.google.gmailEnabled) {
+                automationPromises.push(this.sendGmailNotification(payload));
+            }
+            if (this.config.google.sheetsEnabled) {
+                automationPromises.push(this.appendToGoogleSheet(payload));
+            }
+        }
+
         try {
             await Promise.allSettled(automationPromises);
             console.log(`[Automation] Processed ${automationPromises.length} automations for ${userEmail}`);
@@ -130,6 +151,92 @@ export class AutomationService {
     }
 
     /**
+     * Send Gmail notification using user-delegated token from Vault
+     */
+    private async sendGmailNotification(payload: NotificationPayload): Promise<void> {
+        if (!this.tokenVault || !payload.user.email) return;
+
+        try {
+            const authToken = await this.tokenVault.getToken(payload.user.email, 'google');
+            if (!authToken) {
+                console.warn('[Automation] Gmail skipped: no user-delegated Google token');
+                return;
+            }
+
+            const emailContent = this.generateEmailContent(payload);
+            const encodedEmail = Buffer.from(
+                `To: ${payload.user.email}\n` +
+                `Subject: ${emailContent.subject}\n` +
+                `Content-Type: text/html; charset=utf-8\n\n` +
+                `${emailContent.html}`
+            ).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+            const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${authToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ raw: encodedEmail })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Gmail API failed: ${response.status}`);
+            }
+
+            console.log('[Automation] Gmail notification sent successfully via Token Vault');
+        } catch (error) {
+            console.error('[Automation] Gmail notification failed:', error);
+        }
+    }
+
+    /**
+     * Append analysis to Google Sheet using user-delegated token from Vault
+     */
+    private async appendToGoogleSheet(payload: NotificationPayload): Promise<void> {
+        if (!this.tokenVault || !payload.user.email || !this.config.google.spreadsheetId) return;
+
+        try {
+            const authToken = await this.tokenVault.getToken(payload.user.email, 'google');
+            if (!authToken) {
+                console.warn('[Automation] Google Sheets skipped: no user-delegated Google token');
+                return;
+            }
+
+            const values = [
+                [
+                    payload.metadata.timestamp,
+                    payload.analysis.action,
+                    payload.analysis.targetToken || 'N/A',
+                    payload.analysis.expectedSavings,
+                    payload.analysis.urgencyLevel,
+                    payload.analysis.reasoning
+                ]
+            ];
+
+            const response = await fetch(
+                `https://sheets.googleapis.com/v4/spreadsheets/${this.config.google.spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ values })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(`Google Sheets API failed: ${response.status}`);
+            }
+
+            console.log('[Automation] Analysis appended to Google Sheet via Token Vault');
+        } catch (error) {
+            console.error('[Automation] Google Sheets append failed:', error);
+        }
+    }
+
+    /**
      * Trigger Zapier webhook for advanced automation
      */
     private async triggerZapierWebhook(payload: NotificationPayload): Promise<void> {
@@ -138,11 +245,19 @@ export class AutomationService {
             // This ensures user-provided Webhook URLs from the UI are respected
             const { ZapierMCPService } = await import('./zapier-mcp-service');
             
+            // Check for user-delegated Zapier token
+            let zapierAuthToken: string | null = null;
+            if (this.tokenVault && payload.user.email) {
+                zapierAuthToken = await this.tokenVault.getToken(payload.user.email, 'zapier');
+            }
+
             const scopedZapierService = new ZapierMCPService({
                 enabled: this.config.zapier.enabled,
                 webhookUrl: this.config.zapier.webhookUrl || process.env.ZAPIER_WEBHOOK_URL,
                 embedId: process.env.ZAPIER_EMBED_ID,
-                embedSecret: process.env.ZAPIER_EMBED_SECRET
+                embedSecret: process.env.ZAPIER_EMBED_SECRET,
+                // Pass the delegated token if we have it
+                accessToken: zapierAuthToken || undefined
             });
 
             if (scopedZapierService.isConfigured()) {
@@ -155,10 +270,10 @@ export class AutomationService {
                 );
 
                 if (success) {
-                    console.log('[Automation] Zapier automation triggered successfully via scoped Service');
+                    console.log(`[Automation] Zapier automation triggered successfully via ${zapierAuthToken ? 'delegated token' : 'webhook'}`);
                     return;
                 } else {
-                    console.warn('[Automation] Zapier automation failed to trigger via scoped Service');
+                    console.warn('[Automation] Zapier automation failed to trigger');
                 }
             } else {
                 console.warn('[Automation] Zapier Service not configured (missing Webhook URL or Embed Creds)');
@@ -222,8 +337,21 @@ export class AutomationService {
      * Send Slack notification for urgent alerts
      */
     private async sendSlackNotification(payload: NotificationPayload): Promise<void> {
-        if (!this.config.slack.webhookUrl) {
-            console.warn('[Automation] Slack webhook URL not configured');
+        let webhookUrl = this.config.slack.webhookUrl;
+        let authToken: string | null = null;
+
+        // If no webhook URL, try to get a delegated token from the vault
+        if (!webhookUrl && this.tokenVault && payload.user.email) {
+            authToken = await this.tokenVault.getToken(payload.user.email, 'slack');
+            if (authToken) {
+                // In a real Slack app, we might use the chat.postMessage API instead of a webhook
+                // For this demo, we'll simulate using the token to authorize a generic Slack endpoint
+                webhookUrl = 'https://slack.com/api/chat.postMessage';
+            }
+        }
+
+        if (!webhookUrl) {
+            console.warn('[Automation] Slack notification skipped: no webhook or delegated token');
             return;
         }
 
@@ -276,10 +404,16 @@ export class AutomationService {
                 ]
             };
 
-            const response = await fetch(this.config.slack.webhookUrl, {
+            const response = await fetch(webhookUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(slackMessage)
+                headers: { 
+                    'Content-Type': 'application/json',
+                    ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+                },
+                body: JSON.stringify(authToken ? { 
+                    channel: this.config.slack.channel || '#general',
+                    ...slackMessage 
+                } : slackMessage)
             });
 
             if (!response.ok) {

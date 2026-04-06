@@ -35,6 +35,12 @@ export class GuardianPostAnalysisService {
 
       const userEmail = params.userId || 'anonymous@agent.user';
       const automationConfig = {
+        tokenVault: process.env.AUTH0_DOMAIN ? {
+          domain: process.env.AUTH0_DOMAIN,
+          clientId: process.env.AUTH0_CLIENT_ID || '',
+          clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
+          audience: process.env.AUTH0_AUDIENCE
+        } : undefined,
         email: {
           enabled: true,
           provider: (process.env.EMAIL_PROVIDER as 'sendgrid' | 'resend') || 'sendgrid',
@@ -58,12 +64,18 @@ export class GuardianPostAnalysisService {
           enabled: !!process.env.SLACK_WEBHOOK_URL,
           webhookUrl: process.env.SLACK_WEBHOOK_URL,
           channel: '#diversifi-alerts'
+        },
+        google: {
+          enabled: !!params.userPreferences?.google?.enabled,
+          gmailEnabled: !!params.userPreferences?.google?.gmailEnabled,
+          sheetsEnabled: !!params.userPreferences?.google?.sheetsEnabled,
+          spreadsheetId: params.userPreferences?.google?.spreadsheetId
         }
       };
 
       const automationService = new AutomationService(automationConfig);
       await automationService.processAnalysis(params.analysis, userEmail, params.portfolioData);
-      console.log(`[Arc Agent] Automations triggered for ${userEmail}`);
+      console.log(`[Arc Agent] Automations triggered for ${userEmail} (ID: ${params.userId || 'anonymous'})`);
     } catch (error) {
       console.error('[Arc Agent] Automation trigger failed:', error);
     }

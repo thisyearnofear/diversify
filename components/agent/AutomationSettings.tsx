@@ -36,6 +36,7 @@ function getDefaultPreferences(): AutomationPreferences {
     },
     zapier: { enabled: false, triggers: ["high_urgency", "critical_urgency"] },
     slack: { enabled: false, urgencyThreshold: "HIGH" },
+    google: { enabled: false, gmailEnabled: false, sheetsEnabled: false },
     thresholds: { minSavings: 25, urgencyLevel: "MEDIUM" },
   };
 }
@@ -57,6 +58,12 @@ interface AutomationPreferences {
     webhookUrl?: string;
     channel?: string;
     urgencyThreshold: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  };
+  google: {
+    enabled: boolean;
+    gmailEnabled: boolean;
+    sheetsEnabled: boolean;
+    spreadsheetId?: string;
   };
   thresholds: {
     minSavings: number;
@@ -247,8 +254,7 @@ export default function AutomationSettings({
 
   const isSaveDisabled =
     saving ||
-    (preferences.email.enabled && !preferences.email.address?.trim()) ||
-    (preferences.zapier.enabled && !preferences.zapier.webhookUrl?.trim());
+    (preferences.email.enabled && !preferences.email.address?.trim());
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
@@ -664,24 +670,41 @@ export default function AutomationSettings({
               </p>
             </div>
           </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={preferences.zapier.enabled}
-              onChange={(e) =>
-                updatePreferences("zapier", { enabled: e.target.checked })
-              }
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
+          <div className="flex items-center gap-4">
+            {!preferences.zapier.enabled && process.env.NEXT_PUBLIC_AUTH0_DOMAIN && (
+              <a
+                href={`https://${process.env.NEXT_PUBLIC_AUTH0_DOMAIN}/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID}&connection=zapier&redirect_uri=${encodeURIComponent(window.location.origin + '/api/auth/callback')}&scope=openid%20profile%20email&state=${address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-orange-600 hover:text-orange-700 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg transition-colors border border-orange-100 dark:border-orange-800"
+              >
+                CONNECT ZAPIER
+              </a>
+            )}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={preferences.zapier.enabled}
+                onChange={(e) =>
+                  updatePreferences("zapier", { enabled: e.target.checked })
+                }
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
         </div>
 
         {preferences.zapier.enabled && (
           <div className="space-y-4 pl-11">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
+              <p className="text-xs text-green-800 dark:text-green-300">
+                ✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Zapier account.
+              </p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Webhook URL
+                Webhook URL (Optional)
               </label>
               <input
                 type="url"
@@ -693,8 +716,106 @@ export default function AutomationSettings({
                 placeholder="https://hooks.zapier.com/hooks/catch/..."
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Create a webhook trigger in Zapier and paste the URL here
+                If provided, Agent will trigger this webhook in addition to the Vault integration.
               </p>
+            </div>
+          </div>
+        )}
+      </motion.div>
+
+      {/* Google Integration (Gmail & Sheets) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+        className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📊</span>
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">
+                Google Workspace
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Connect Gmail and Google Sheets
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            {!preferences.google.enabled && process.env.NEXT_PUBLIC_AUTH0_DOMAIN && (
+              <a
+                href={`https://${process.env.NEXT_PUBLIC_AUTH0_DOMAIN}/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID}&connection=google-oauth2&redirect_uri=${encodeURIComponent(window.location.origin + '/api/auth/callback')}&scope=openid%20profile%20email&state=${address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 dark:border-blue-800"
+              >
+                CONNECT GOOGLE
+              </a>
+            )}
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={preferences.google.enabled}
+                onChange={(e) =>
+                  updatePreferences("google", { enabled: e.target.checked })
+                }
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+
+        {preferences.google.enabled && (
+          <div className="space-y-4 pl-11">
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
+              <p className="text-xs text-green-800 dark:text-green-300">
+                ✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Google account.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={preferences.google.gmailEnabled}
+                  onChange={(e) => updatePreferences("google", { gmailEnabled: e.target.checked })}
+                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">Gmail Integration</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Allow agent to send notifications via your Gmail</div>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={preferences.google.sheetsEnabled}
+                  onChange={(e) => updatePreferences("google", { sheetsEnabled: e.target.checked })}
+                  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">Google Sheets Logging</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Append analysis results to a spreadsheet</div>
+                </div>
+              </label>
+
+              {preferences.google.sheetsEnabled && (
+                <div className="mt-2">
+                  <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
+                    SPREADSHEET ID
+                  </label>
+                  <input
+                    type="text"
+                    value={preferences.google.spreadsheetId || ""}
+                    onChange={(e) => updatePreferences("google", { spreadsheetId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="1aBcD...eFgH"
+                  />
+                </div>
+              )}
             </div>
           </div>
         )}

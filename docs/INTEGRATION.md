@@ -208,6 +208,87 @@ export const CIRCLE_CONFIG = {
 3. Register swap strategy in `services/swap/swap-orchestrator.service.ts`
 4. Add to SWAP_CONFIG.STRATEGY_SCORES
 
+## Auth0 Token Vault (Agent Credential Delegation)
+
+Auth0 Token Vault manages OAuth tokens for services the agent accesses **on behalf of the user**. This replaces app-owned API keys/webhooks with user-delegated, scoped, revocable credentials.
+
+### Why Token Vault
+
+The Zapier MCP service, Slack alerts, and Google Sheets logging currently rely on app-level credentials (webhook URLs, embed secrets). Token Vault upgrades this to per-user OAuth:
+
+- User connects their own Slack/Sheets/Gmail via Auth0 Universal Login
+- Token Vault stores, rotates, and refreshes OAuth tokens
+- Agent requests a short-lived token at execution time — never stores it
+- User revokes access anytime; agent immediately loses the token
+
+### Environment Variables
+
+```bash
+# Server-side (Management API — keeps tokens secure)
+AUTH0_DOMAIN=              # Auth0 tenant domain (e.g. diversifi.us.auth0.com)
+AUTH0_CLIENT_ID=           # Auth0 M2M application client ID
+AUTH0_CLIENT_SECRET=       # Auth0 M2M application client secret
+AUTH0_AUDIENCE=            # Management API audience (https://<domain>/api/v2/)
+
+# Client-side (connect buttons in UI)
+NEXT_PUBLIC_AUTH0_DOMAIN=  # Same as AUTH0_DOMAIN
+NEXT_PUBLIC_AUTH0_CLIENT_ID= # Auth0 SPA/Regular Web App client ID
+```
+
+Connection names are mapped internally: `google` → `google-oauth2`, `slack` → `slack`, `zapier` → `zapier`. Configure these as Social/Enterprise connections in the Auth0 dashboard.
+
+### Supported Connections
+
+| Service | OAuth Scopes | Agent Use Case |
+|---------|-------------|----------------|
+| Slack | `chat:write`, `channels:read` | Post rebalance receipts, inflation alerts to user's channel |
+| Google Sheets | `spreadsheets`, `drive.file` | Log rebalance history, P&L, fee accounting to user's sheet |
+| Gmail | `gmail.send` | Weekly protection summaries, urgent devaluation alerts |
+| Zapier | Zapier OAuth | Trigger user-defined automations on agent events |
+
+### Integration Pattern
+
+```typescript
+import { TokenVaultClient } from '../services/auth0-token-vault';
+
+const vault = new TokenVaultClient({
+  domain: process.env.AUTH0_DOMAIN!,
+  clientId: process.env.AUTH0_CLIENT_ID!,
+  clientSecret: process.env.AUTH0_CLIENT_SECRET!,
+});
+
+// Retrieve user's IDP token via Management API (GET /api/v2/users/{id})
+// Tokens come from user.identities[].access_token for the matching connection
+const googleToken = await vault.getToken(userId, 'google'); // maps to 'google-oauth2'
+if (googleToken) {
+  await appendToSheet(googleToken, spreadsheetId, rebalanceRow);
+}
+
+// Check if a connection exists without fetching the token
+const hasSlack = await vault.hasConnection(userId, 'slack');
+
+// Build an Auth0 authorize URL for the connect button
+const connectUrl = vault.getAuthorizationUrl('google', redirectUri, walletAddress);
+```
+
+Management API tokens are cached internally (with 60s buffer before expiry) to avoid redundant client_credentials calls.
+
+### Async Authorization Flow
+
+When the agent needs a service the user hasn't connected:
+
+1. Agent detects missing token for the required service
+2. Returns an `authorization_pending` status with an Auth0 authorization URL
+3. Frontend shows prompt: _"Your advisor wants to send receipts to Slack. Connect?"_
+4. User completes OAuth consent via Auth0 Universal Login
+5. Token Vault stores the token; agent resumes on next execution cycle
+
+### Relationship to Existing Auth
+
+Token Vault handles **off-chain** service credentials (Slack, Sheets, etc.).
+Privy + ERC-7715 session keys handle **on-chain** transaction permissions.
+Both layers are user-initiated, scoped, and independently revocable.
+
 ## Rate Limits
 
 - Gemini: Standard API limits (cached responses)

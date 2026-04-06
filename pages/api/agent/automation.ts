@@ -26,6 +26,12 @@ interface AutomationPreferences {
         channel?: string;
         urgencyThreshold: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
     };
+    google: {
+        enabled: boolean;
+        gmailEnabled: boolean;
+        sheetsEnabled: boolean;
+        spreadsheetId?: string;
+    };
     thresholds: {
         minSavings: number; // Minimum expected savings to trigger automation
         urgencyLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -132,6 +138,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                             enabled: testPreferences.slack.enabled,
                             webhookUrl: testPreferences.slack.webhookUrl,
                             channel: testPreferences.slack.channel
+                        },
+                        google: {
+                            enabled: testPreferences.google?.enabled || false,
+                            gmailEnabled: testPreferences.google?.gmailEnabled || false,
+                            sheetsEnabled: testPreferences.google?.sheetsEnabled || false,
+                            spreadsheetId: testPreferences.google?.spreadsheetId
                         }
                     };
 
@@ -194,6 +206,11 @@ function getDefaultPreferences(email?: string): AutomationPreferences {
         slack: {
             enabled: false,
             urgencyThreshold: 'HIGH'
+        },
+        google: {
+            enabled: false,
+            gmailEnabled: false,
+            sheetsEnabled: false
         },
         thresholds: {
             minSavings: 25, // Only trigger for savings >= $25

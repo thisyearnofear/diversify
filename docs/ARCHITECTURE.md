@@ -229,6 +229,37 @@ export const NETWORKS = {
 - **Client-side**: Standard wallet integration (no private keys stored).
 - **Transaction validation**: Slippage protection & Rate limiting.
 
+### Dual Permission Model (On-chain + Off-chain)
+
+DiversiFi enforces two independent authorization layers:
+
+**On-chain (ERC-7715 Session Keys):**
+- User signs a scoped permission: spending limit, allowed tokens, time window
+- Enforced by smart contract policy — agent cannot exceed bounds
+- Revocable by the user at any time
+
+**Off-chain (Auth0 Token Vault):**
+- User connects external services (Slack, Google Sheets, Gmail, Zapier) via OAuth
+- Token Vault stores, rotates, and refreshes tokens — DiversiFi never persists them
+- Agent requests short-lived tokens at execution time only
+- Scoped to minimal permissions (e.g., Slack `chat:write` only, Sheets single-file)
+- Step-up authentication for high-value rebalances (>$500) or new service connections
+- User revokes any connection independently from the Connected Services panel
+
+Both layers are user-initiated, explicitly scoped, and independently revocable.
+
+### Agent Notification & Logging Flow
+
+```
+Guardian detects rebalance opportunity
+  → Executes swap via ERC-7715 session key (on-chain permission)
+  → Requests user's Slack token from Token Vault (off-chain permission)
+  → Posts receipt to user's #diversifi-alerts channel
+  → Requests user's Google token from Token Vault
+  → Appends rebalance row to user's spreadsheet
+  → If service not connected: queues notification, prompts user to connect
+```
+
 ## Performance
 
 - **Native USDC Gas**: Eliminates swap-for-gas steps on Arc L1.
