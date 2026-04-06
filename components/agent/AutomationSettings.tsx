@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
+import { usePrivy } from "@privy-io/react-auth";
 import { useVoiceEnabled } from "../ui/VoiceButton";
 import { useToast } from "../ui/Toast";
 
@@ -53,6 +54,8 @@ interface AutomationPreferences {
     webhookUrl?: string;
     triggers: ("high_urgency" | "critical_urgency" | "all_recommendations")[];
   };
+  auth0UserId?: string;
+  auth0RefreshToken?: string;
   slack: {
     enabled: boolean;
     webhookUrl?: string;
@@ -97,6 +100,9 @@ export default function AutomationSettings({
   autonomousStatus,
 }: AutomationSettingsProps) {
   const { address } = useWalletContext();
+  const { user } = usePrivy();
+  const stableUserId = user?.id || address;
+
   const {
     isEnabled: voiceEnabled,
     enable: enableVoice,
@@ -111,14 +117,28 @@ export default function AutomationSettings({
   const [testingAutomation, setTestingAutomation] = useState(false);
 
   const loadPreferences = useCallback(async () => {
-    if (!address) return;
+    if (!stableUserId) return;
 
-    const localFallback = loadPrefsFromStorage(address) || getDefaultPreferences();
+    const localFallback = loadPrefsFromStorage(stableUserId) || getDefaultPreferences();
     setPreferences(localFallback);
+
+    // Check for "connected" or "error" in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const connected = urlParams.get('connected');
+    const authError = urlParams.get('error');
+
+    if (connected === 'true') {
+      showToast("✅ Successfully connected to Auth0 Token Vault", "success");
+      // Remove params from URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (authError) {
+      showToast(`❌ Connection failed: ${authError}`, "error");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
     try {
       const response = await fetch(
-        `/api/agent/automation?userAddress=${encodeURIComponent(address)}`,
+        `/api/agent/automation?userAddress=${encodeURIComponent(stableUserId)}`,
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -127,31 +147,31 @@ export default function AutomationSettings({
       const payload = await response.json();
       const nextPreferences = payload?.preferences || localFallback;
       setPreferences(nextPreferences);
-      savePrefsToStorage(address, nextPreferences);
+      savePrefsToStorage(stableUserId, nextPreferences);
     } catch (error) {
       console.warn("Failed to load automation preferences from server:", error);
       setPreferences(localFallback);
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [stableUserId]);
 
   useEffect(() => {
-    if (address) {
+    if (stableUserId) {
       loadPreferences();
       return;
     }
 
     setPreferences(getDefaultPreferences());
     setLoading(false);
-  }, [address, loadPreferences]);
+  }, [stableUserId, loadPreferences]);
 
   const savePreferences = async () => {
-    if (!preferences || !address) return;
+    if (!preferences || !stableUserId) return;
     setSaving(true);
     try {
       const response = await fetch(
-        `/api/agent/automation?userAddress=${encodeURIComponent(address)}`,
+        `/api/agent/automation?userAddress=${encodeURIComponent(stableUserId)}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -164,7 +184,7 @@ export default function AutomationSettings({
         throw new Error(payload?.error || `HTTP ${response.status}`);
       }
 
-      savePrefsToStorage(address, preferences);
+      savePrefsToStorage(stableUserId, preferences);
       showToast("✅ Automation preferences saved successfully", "success");
     } catch (error) {
       console.error("Failed to save automation preferences:", error);
@@ -673,7 +693,7 @@ export default function AutomationSettings({
           <div className="flex items-center gap-4">
             {!preferences.zapier.enabled && process.env.NEXT_PUBLIC_AUTH0_DOMAIN && (
               <a
-                href={`https://${process.env.NEXT_PUBLIC_AUTH0_DOMAIN}/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID}&connection=zapier&redirect_uri=${encodeURIComponent(window.location.origin + '/api/auth/callback')}&scope=openid%20profile%20email&state=${address}`}
+                href={`https://${process.env.NEXT_PUBLIC_AUTH0_DOMAIN}/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID}&connection=zapier&redirect_uri=${encodeURIComponent(window.location.origin + '/api/auth/callback')}&scope=openid%20profile%20email%20offline_access&access_type=offline&prompt=consent&state=${stableUserId}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-bold text-orange-600 hover:text-orange-700 bg-orange-50 dark:bg-orange-900/20 px-3 py-1.5 rounded-lg transition-colors border border-orange-100 dark:border-orange-800"
@@ -699,7 +719,11 @@ export default function AutomationSettings({
           <div className="space-y-4 pl-11">
             <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
               <p className="text-xs text-green-800 dark:text-green-300">
-                ✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Zapier account.
+                {preferences.auth0RefreshToken ? (
+                  <>✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Zapier account.</>
+                ) : (
+                  <>⚠️ <strong>Setup Required.</strong> Please use the CONNECT button above to authorize the agent.</>
+                )}
               </p>
             </div>
             <div>
@@ -745,7 +769,7 @@ export default function AutomationSettings({
           <div className="flex items-center gap-4">
             {!preferences.google.enabled && process.env.NEXT_PUBLIC_AUTH0_DOMAIN && (
               <a
-                href={`https://${process.env.NEXT_PUBLIC_AUTH0_DOMAIN}/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID}&connection=google-oauth2&redirect_uri=${encodeURIComponent(window.location.origin + '/api/auth/callback')}&scope=openid%20profile%20email&state=${address}`}
+                href={`https://${process.env.NEXT_PUBLIC_AUTH0_DOMAIN}/authorize?response_type=code&client_id=${process.env.NEXT_PUBLIC_AUTH0_CLIENT_ID}&connection=google-oauth2&redirect_uri=${encodeURIComponent(window.location.origin + '/api/auth/callback')}&scope=openid%20profile%20email%20offline_access&access_type=offline&prompt=consent&state=${stableUserId}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 dark:bg-blue-900/20 px-3 py-1.5 rounded-lg transition-colors border border-blue-100 dark:border-blue-800"

@@ -33,7 +33,8 @@ export class GuardianPostAnalysisService {
     try {
       const { AutomationService } = await import('../automation-service');
 
-      const userEmail = params.userId || 'anonymous@agent.user';
+      const userStableId = params.userId || 'anonymous';
+      const userEmail = params.userPreferences?.email?.address || 'anonymous@agent.user';
       const automationConfig = {
         tokenVault: process.env.AUTH0_DOMAIN ? {
           domain: process.env.AUTH0_DOMAIN,
@@ -41,6 +42,7 @@ export class GuardianPostAnalysisService {
           clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
           audience: process.env.AUTH0_AUDIENCE
         } : undefined,
+        auth0RefreshToken: params.userPreferences?.auth0RefreshToken,
         email: {
           enabled: true,
           provider: (process.env.EMAIL_PROVIDER as 'sendgrid' | 'resend') || 'sendgrid',
@@ -75,7 +77,7 @@ export class GuardianPostAnalysisService {
 
       const automationService = new AutomationService(automationConfig);
       await automationService.processAnalysis(params.analysis, userEmail, params.portfolioData);
-      console.log(`[Arc Agent] Automations triggered for ${userEmail} (ID: ${params.userId || 'anonymous'})`);
+      console.log(`[Arc Agent] Automations triggered for ${userStableId} (Email: ${userEmail})`);
     } catch (error) {
       console.error('[Arc Agent] Automation trigger failed:', error);
     }

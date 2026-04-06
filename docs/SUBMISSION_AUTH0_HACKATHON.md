@@ -47,10 +47,26 @@ User connects Slack via Auth0 Universal Login
 | Principle | Implementation |
 |-----------|---------------|
 | **Explicit permission boundaries** | Agent can only access services the user has connected. On-chain actions bounded by ERC-7715 session keys (spending limit + time). Off-chain actions bounded by OAuth scopes via Token Vault. |
-| **Credential protection** | No OAuth tokens stored in our database. Token Vault handles storage, rotation, and refresh. Agent receives short-lived tokens at execution time only. |
+| **Credential protection** | No third-party provider tokens stored in our database. Auth0 refresh tokens are stored in an encrypted format at rest (AES-256-GCM), keyed by the user's stable Privy ID. Agent receives short-lived provider tokens at execution time only via the Token Vault exchange grant. |
 | **Scoped access** | Slack: write-only to a specific channel. Sheets: single spreadsheet. Gmail: send-only. No read access to messages, contacts, or files. |
 | **Step-up authentication** | High-value rebalances (>$500) or new service connections trigger step-up auth via Auth0. |
 | **User control & transparency** | Dashboard shows all connected services, what scopes are granted, when tokens were last used, and one-click revocation. |
+
+## Judging Criteria & How We Met Them
+
+### 1. Quality of Idea (Creativity & Originality)
+DiversiFi tackles a critical problem for users in volatile economies—savings protection—using a creative combination of AI agents and decentralized finance. The originality lies in the **Dual Permission Model**, which treats agent authorization as both an on-chain (ERC-7715) and off-chain (OAuth via Token Vault) requirement, giving users unparalleled control.
+
+### 2. Implementation & Use of Auth0 Token Vault
+We didn't just use Auth0 for login; we implemented the core **Token Vault token-exchange flow**. Our agent uses the `urn:auth0:params:oauth:grant-type:token-exchange:federated-connection-access-token` grant to retrieve short-lived provider tokens just-in-time, ensuring we never store third-party credentials.
+
+### 3. Security & Privacy
+Security is at the heart of DiversiFi. We store **only encrypted Auth0 refresh tokens** at rest (using AES-256-GCM), keyed by the user's stable Privy ID. By delegating credential management to Auth0 Token Vault, we minimize our attack surface and ensure user privacy through scoped OAuth permissions.
+
+### 4. Potential Impact
+DiversiFi empowers users to protect their wealth autonomously while keeping them informed via the channels they already use (Slack, Sheets, Gmail). This model provides a blueprint for how financial AI agents can handle sensitive external integrations securely and transparently.
+
+---
 
 ## Architecture
 
@@ -136,6 +152,20 @@ This maps directly to Token Vault's async auth capability.
 | Execution | Mento Protocol, OpenClaw Gateway |
 | Frontend | Next.js 15, React 19, Tailwind CSS |
 | Data | World Bank, IMF, FRED (public APIs) |
+
+## Bonus Blog Post: My Journey with Auth0 Token Vault
+
+Building DiversiFi, an AI-powered savings protection agent, has been a journey of balancing two seemingly contradictory goals: absolute financial autonomy and radical user privacy. For an agent to be effective in volatile economies, it needs to be able to act on the user's behalf—swapping assets, sending alerts, and logging data. But giving an AI agent full access to your financial and digital life is a massive leap of faith.
+
+The biggest technical hurdle was the "Credential Sprawl." Initially, we considered having users paste webhook URLs or API keys directly into our settings. It worked, but it felt wrong. There was no standard consent, no way to easily revoke access, and most importantly, we were becoming custodians of sensitive third-party tokens.
+
+This is where **Auth0 Token Vault** became the cornerstone of our architecture. It allowed us to move from "App-owned" integrations to "User-delegated" connections. By leveraging the Token Vault's federated-connection-access-token exchange grant, we built a **Dual Permission Model**: on-chain actions are bounded by ERC-7715 session keys, while off-chain actions (like posting to Slack or logging to Sheets) are bounded by OAuth scopes managed by Auth0.
+
+The implementation wasn't without its challenges. Migrating from the legacy Management API "identities" pattern to the real Token Vault token-exchange flow required a deep dive into the `urn:auth0:params:oauth:grant-type:token-exchange` spec. But the result is a system where we store zero third-party provider tokens. Instead, we only keep an encrypted Auth0 refresh token, which we exchange just-in-time for ephemeral, short-lived provider access tokens. 
+
+This journey has taught us that for AI agents to truly become our delegates, the industry needs standardized, secure, and user-friendly identity layers like Token Vault. It’s not just about what the agent *can* do, but what the user *permits* it to do.
+
+---
 
 ## Links
 

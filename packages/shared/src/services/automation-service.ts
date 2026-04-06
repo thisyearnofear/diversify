@@ -9,6 +9,8 @@ import { TokenVaultClient, TokenVaultConfig } from './auth0-token-vault';
 
 export interface AutomationConfig {
     tokenVault?: TokenVaultConfig;
+    /** Auth0 refresh token for the current user — used for Token Vault exchanges */
+    auth0RefreshToken?: string;
     email: {
         enabled: boolean;
         provider: 'sendgrid' | 'resend' | 'smtp';
@@ -68,9 +70,12 @@ export class AutomationService {
     constructor(config: AutomationConfig) {
         this.config = config;
         if (config.tokenVault) {
-            this.tokenVault = new TokenVaultClient(config.tokenVault);
-        }
+      this.tokenVault = new TokenVaultClient({
+        ...config.tokenVault,
+        encryptionKey: process.env.TOKEN_VAULT_ENCRYPTION_KEY
+      });
     }
+  }
 
     /**
      * Process AI agent analysis and trigger appropriate automations
@@ -154,10 +159,10 @@ export class AutomationService {
      * Send Gmail notification using user-delegated token from Vault
      */
     private async sendGmailNotification(payload: NotificationPayload): Promise<void> {
-        if (!this.tokenVault || !payload.user.email) return;
+        if (!this.tokenVault || !this.config.auth0RefreshToken) return;
 
         try {
-            const authToken = await this.tokenVault.getToken(payload.user.email, 'google');
+            const authToken = await this.tokenVault.exchangeProviderToken(this.config.auth0RefreshToken, 'google');
             if (!authToken) {
                 console.warn('[Automation] Gmail skipped: no user-delegated Google token');
                 return;
@@ -194,10 +199,10 @@ export class AutomationService {
      * Append analysis to Google Sheet using user-delegated token from Vault
      */
     private async appendToGoogleSheet(payload: NotificationPayload): Promise<void> {
-        if (!this.tokenVault || !payload.user.email || !this.config.google.spreadsheetId) return;
+        if (!this.tokenVault || !this.config.auth0RefreshToken || !this.config.google.spreadsheetId) return;
 
         try {
-            const authToken = await this.tokenVault.getToken(payload.user.email, 'google');
+            const authToken = await this.tokenVault.exchangeProviderToken(this.config.auth0RefreshToken, 'google');
             if (!authToken) {
                 console.warn('[Automation] Google Sheets skipped: no user-delegated Google token');
                 return;
@@ -245,10 +250,10 @@ export class AutomationService {
             // This ensures user-provided Webhook URLs from the UI are respected
             const { ZapierMCPService } = await import('./zapier-mcp-service');
             
-            // Check for user-delegated Zapier token
+            // Check for user-delegated Zapier token via Token Vault
             let zapierAuthToken: string | null = null;
-            if (this.tokenVault && payload.user.email) {
-                zapierAuthToken = await this.tokenVault.getToken(payload.user.email, 'zapier');
+            if (this.tokenVault && this.config.auth0RefreshToken) {
+                zapierAuthToken = await this.tokenVault.getToken(this.config.auth0RefreshToken, 'zapier');
             }
 
             const scopedZapierService = new ZapierMCPService({
@@ -340,9 +345,9 @@ export class AutomationService {
         let webhookUrl = this.config.slack.webhookUrl;
         let authToken: string | null = null;
 
-        // If no webhook URL, try to get a delegated token from the vault
-        if (!webhookUrl && this.tokenVault && payload.user.email) {
-            authToken = await this.tokenVault.getToken(payload.user.email, 'slack');
+        // If no webhook URL, try to get a delegated token from Token Vault
+        if (!webhookUrl && this.tokenVault && this.config.auth0RefreshToken) {
+            authToken = await this.tokenVault.exchangeProviderToken(this.config.auth0RefreshToken, 'slack');
             if (authToken) {
                 // In a real Slack app, we might use the chat.postMessage API instead of a webhook
                 // For this demo, we'll simulate using the token to authorize a generic Slack endpoint

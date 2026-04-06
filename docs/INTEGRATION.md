@@ -217,8 +217,9 @@ Auth0 Token Vault manages OAuth tokens for services the agent accesses **on beha
 The Zapier MCP service, Slack alerts, and Google Sheets logging currently rely on app-level credentials (webhook URLs, embed secrets). Token Vault upgrades this to per-user OAuth:
 
 - User connects their own Slack/Sheets/Gmail via Auth0 Universal Login
-- Token Vault stores, rotates, and refreshes OAuth tokens
-- Agent requests a short-lived token at execution time — never stores it
+- DiversiFi stores the Auth0 refresh token (encrypted with AES-256-GCM at rest)
+- We do not store third-party provider tokens in our database
+- Agent requests a short-lived provider token via Token Vault at execution time — never stores it
 - User revokes access anytime; agent immediately loses the token
 
 ### Environment Variables

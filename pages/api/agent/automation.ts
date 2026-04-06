@@ -9,6 +9,7 @@ import { readJsonFile, writeJsonFile } from './_json-store';
  */
 
 interface AutomationPreferences {
+    auth0RefreshToken?: string;
     email: {
         enabled: boolean;
         address: string;
@@ -115,6 +116,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
                     // Create automation service with user preferences
                     const automationConfig = {
+                        tokenVault: process.env.AUTH0_DOMAIN ? {
+                            domain: process.env.AUTH0_DOMAIN,
+                            clientId: process.env.AUTH0_CLIENT_ID || '',
+                            clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
+                            audience: process.env.AUTH0_AUDIENCE
+                        } : undefined,
+                        auth0RefreshToken: testPreferences.auth0RefreshToken,
                         email: {
                             enabled: testPreferences.email.enabled,
                             provider: (process.env.EMAIL_PROVIDER as 'sendgrid' | 'resend') || 'sendgrid',
@@ -167,10 +175,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
 
             try {
-                const newPreferences: AutomationPreferences = req.body;
+                const incomingPreferences: AutomationPreferences = req.body;
 
-                if (!newPreferences.email?.address && newPreferences.email?.enabled) {
+                if (!incomingPreferences.email?.address && incomingPreferences.email?.enabled) {
                     return res.status(400).json({ error: 'Email address required when email notifications are enabled' });
+                }
+
+                // Load existing preferences to preserve Auth0 refresh token if not provided in update
+                const existingPreferences = await getStoredPreferences(userAddress);
+                const newPreferences: AutomationPreferences = {
+                    ...incomingPreferences,
+                    auth0RefreshToken: incomingPreferences.auth0RefreshToken || existingPreferences?.auth0RefreshToken,
+                    auth0UserId: (incomingPreferences as any).auth0UserId || (existingPreferences as any)?.auth0UserId
+                };
+
+                // Encrypt refresh token if present and not already encrypted
+                if (newPreferences.auth0RefreshToken && !newPreferences.auth0RefreshToken.includes(':')) {
+                    const { TokenVaultClient } = await import('@diversifi/shared');
+                    const client = new TokenVaultClient({
+                        domain: process.env.AUTH0_DOMAIN || '',
+                        clientId: process.env.AUTH0_CLIENT_ID || '',
+                        clientSecret: process.env.AUTH0_CLIENT_SECRET || '',
+                    });
+                    newPreferences.auth0RefreshToken = client.encryptToken(newPreferences.auth0RefreshToken);
                 }
 
                 await saveStoredPreferences(userAddress, newPreferences);

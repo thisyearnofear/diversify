@@ -240,8 +240,9 @@ DiversiFi enforces two independent authorization layers:
 
 **Off-chain (Auth0 Token Vault):**
 - User connects external services (Slack, Google Sheets, Gmail, Zapier) via OAuth
-- Token Vault stores, rotates, and refreshes tokens — DiversiFi never persists them
-- Agent requests short-lived tokens at execution time only
+- DiversiFi stores only the Auth0 refresh token (encrypted with AES-256-GCM at rest)
+- We do not store third-party provider tokens in our database
+- Agent exchanges Auth0 refresh token for short-lived provider access tokens via Token Vault at execution time
 - Scoped to minimal permissions (e.g., Slack `chat:write` only, Sheets single-file)
 - Step-up authentication for high-value rebalances (>$500) or new service connections
 - User revokes any connection independently from the Connected Services panel

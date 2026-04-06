@@ -1,12 +1,18 @@
 /**
  * Auth0 Token Vault Client — Agent Credential Delegation.
- * 
- * Manages retrieval of user-delegated OAuth tokens for external services
- * like Slack, Google Sheets, Gmail, and Zapier.
- * 
- * Uses Auth0's federated connection token exchange: the agent authenticates
- * via Client Credentials, then retrieves the user's stored identity provider
- * tokens through the Management API.
+ *
+ * Uses the real Token Vault token exchange grant to retrieve external provider
+ * access tokens on behalf of users.
+ *
+ * Flow:
+ *  1. User connects an external service (Google, Slack) via Auth0 Connected Accounts
+ *  2. Auth0 stores the provider's access + refresh tokens in Token Vault
+ *  3. Agent exchanges a stored Auth0 refresh token for the provider's access token
+ *     via POST /oauth/token with the Token Vault grant type
+ *
+ * Architecture:
+ *  - Privy = primary app auth (wallet, social login, smart account)
+ *  - Auth0 = secondary auth for off-chain service delegation only
  */
 
 export interface TokenVaultConfig {
@@ -16,173 +22,220 @@ export interface TokenVaultConfig {
   audience?: string;
 }
 
-interface CachedToken {
-  token: string;
-  expiresAt: number;
+export interface TokenVaultExchangeResult {
+  access_token: string;
+  expires_in: number;
+  scope: string;
+  token_type: string;
+  issued_token_type: string;
 }
 
 const CONNECTION_MAP: Record<string, string> = {
   google: 'google-oauth2',
   slack: 'slack',
-  zapier: 'zapier',
 };
+
+const TOKEN_VAULT_GRANT_TYPE =
+  'urn:auth0:params:oauth:grant-type:token-exchange:federated-connection-access-token';
+
+import * as crypto from 'crypto';
 
 export class TokenVaultClient {
   private domain: string;
   private clientId: string;
   private clientSecret: string;
-  private audience: string;
-  private managementTokenCache: CachedToken | null = null;
+  private encryptionKey: string;
 
-  constructor(config: TokenVaultConfig) {
+  constructor(config: TokenVaultConfig & { encryptionKey?: string }) {
     this.domain = config.domain;
     this.clientId = config.clientId;
     this.clientSecret = config.clientSecret;
-    this.audience = config.audience || `https://${config.domain}/api/v2/`;
+    this.encryptionKey = config.encryptionKey || process.env.TOKEN_VAULT_ENCRYPTION_KEY || '';
   }
 
   /**
-   * Get a Management API access token, reusing cached token if still valid.
+   * Encrypt a sensitive token (e.g., Auth0 refresh token) for storage at rest.
+   * Uses AES-256-GCM for authenticated encryption.
    */
-  private async getManagementToken(): Promise<string> {
-    if (this.managementTokenCache && Date.now() < this.managementTokenCache.expiresAt) {
-      return this.managementTokenCache.token;
+  encryptToken(token: string): string {
+    if (!token) return '';
+    if (!this.encryptionKey) {
+      console.warn('[Token Vault] No encryption key provided, returning plain token');
+      return token;
     }
 
+    try {
+      // Key must be 32 bytes for aes-256-gcm
+      const key = crypto.scryptSync(this.encryptionKey, 'salt', 32);
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+      
+      let encrypted = cipher.update(token, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      
+      const authTag = cipher.getAuthTag().toString('hex');
+      
+      // Format: iv:authTag:encrypted
+      return `${iv.toString('hex')}:${authTag}:${encrypted}`;
+    } catch (error) {
+      console.error('[Token Vault] Encryption failed:', error);
+      throw new Error('Token encryption failed');
+    }
+  }
+
+  /**
+   * Decrypt a token stored at rest.
+   */
+  decryptToken(encryptedData: string): string {
+    if (!encryptedData) return '';
+    if (!this.encryptionKey || !encryptedData.includes(':')) {
+      return encryptedData;
+    }
+
+    try {
+      const [ivHex, authTagHex, encrypted] = encryptedData.split(':');
+      const key = crypto.scryptSync(this.encryptionKey, 'salt', 32);
+      const iv = Buffer.from(ivHex, 'hex');
+      const authTag = Buffer.from(authTagHex, 'hex');
+      
+      const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+      decipher.setAuthTag(authTag);
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      console.error('[Token Vault] Decryption failed:', error);
+      throw new Error('Token decryption failed');
+    }
+  }
+
+  /**
+   * Exchange a user's Auth0 refresh token for an external provider's access token
+   * via the Token Vault token exchange grant.
+   */
+  async getToken(auth0RefreshToken: string, connection: string): Promise<string | null> {
+    return this.exchangeProviderToken(auth0RefreshToken, connection);
+  }
+
+  /**
+   * Exchange a user's Auth0 refresh token for an external provider's access token
+   * via the Token Vault token exchange grant.
+   *
+   * POST https://{domain}/oauth/token
+   * grant_type: urn:auth0:params:oauth:grant-type:token-exchange:federated-connection-access-token
+   *
+   * @param auth0RefreshToken The user's Auth0 refresh token (stored when they connected the service)
+   * @param connection Friendly name: 'google', 'slack'
+   * @returns The provider's access token and metadata, or null if exchange fails
+   */
+  async exchangeProviderToken(auth0RefreshToken: string, connection: string): Promise<string | null> {
+    if (!this.domain || !this.clientId || !this.clientSecret) {
+      console.warn('[Token Vault] Missing configuration');
+      return null;
+    }
+
+    if (!auth0RefreshToken) {
+      console.warn(`[Token Vault] No Auth0 refresh token available for ${connection} exchange`);
+      return null;
+    }
+
+    // Decrypt if it looks encrypted
+    const decryptedToken = this.decryptToken(auth0RefreshToken);
+    const auth0Connection = CONNECTION_MAP[connection] || connection;
+
+    try {
+      const result = await this.exchangeToken(decryptedToken, auth0Connection);
+      return result.access_token;
+    } catch (error) {
+      console.error(`[Token Vault] ${connection} token exchange failed:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if a user has a connection established.
+   * In the real Token Vault, this would check if we have a stored Auth0 refresh token
+   * and possibly verify it with Auth0.
+   */
+  hasConnection(auth0RefreshToken?: string): boolean {
+    return !!auth0RefreshToken;
+  }
+
+  /**
+   * Legacy/Social login token retrieval fallback.
+   * 
+   * Retrieves tokens stored on user.identities[] via Management API.
+   * @deprecated Use exchangeProviderToken (Token Vault) for better security and UX.
+   */
+  async getLegacyIdentityTokenViaManagementApi(auth0UserId: string, connection: string): Promise<string | null> {
+    console.warn('[Token Vault] Falling back to legacy Management API token retrieval');
+    // Implementation would use client credentials to get Management API token,
+    // then call GET /api/v2/users/{id} and read user.identities[].access_token
+    return null; 
+  }
+
+  /**
+   * Perform the Token Vault token exchange.
+   *
+   * Uses refresh_token as the subject token type — the backend exchanges
+   * the user's Auth0 refresh token for an external provider access token.
+   */
+  async exchangeToken(
+    auth0RefreshToken: string,
+    connection: string
+  ): Promise<TokenVaultExchangeResult> {
     const response = await fetch(`https://${this.domain}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         client_id: this.clientId,
         client_secret: this.clientSecret,
-        audience: this.audience,
-        grant_type: 'client_credentials'
-      })
+        grant_type: TOKEN_VAULT_GRANT_TYPE,
+        subject_token: auth0RefreshToken,
+        subject_token_type: 'urn:ietf:params:oauth:token-type:refresh_token',
+        requested_token_type:
+          'http://auth0.com/oauth/token-type/federated-connection-access-token',
+        connection,
+      }),
     });
 
     if (!response.ok) {
-      throw new Error(`Auth0 client credentials exchange failed: ${response.status} ${response.statusText}`);
+      const body = await response.text();
+      throw new Error(
+        `Token Vault exchange failed (${response.status}): ${body}`
+      );
     }
 
-    const data = await response.json();
-    this.managementTokenCache = {
-      token: data.access_token,
-      expiresAt: Date.now() + (data.expires_in - 60) * 1000
-    };
-
-    return data.access_token;
+    return response.json();
   }
 
   /**
-   * Retrieves the user's stored identity provider token for a given connection.
+   * Build the Auth0 authorization URL for the Connected Accounts flow.
+   *
+   * This initiates the secondary Auth0 login — the user authenticates with
+   * the external provider (e.g., Google) through Auth0, which stores the
+   * provider tokens in Token Vault.
    * 
-   * Uses the Management API GET /api/v2/users/{id}/identities endpoint,
-   * which returns the IDP access_token stored when the user linked
-   * the federated connection.
-   * 
-   * @param userId Auth0 user ID (e.g., "auth0|abc123" or wallet-derived identifier)
-   * @param connection Friendly connection name: 'google', 'slack', 'zapier'
-   * @returns The IDP access token, or null if not connected
+   * Note: For "Connected Accounts / My Account API", we ensure offline_access
+   * and access_type=offline are requested to obtain a long-lived refresh token.
    */
-  async getToken(userId: string, connection: string): Promise<string | null> {
-    if (!this.domain || !this.clientId || !this.clientSecret) {
-      console.warn('[Token Vault] Missing configuration, cannot retrieve token');
-      return null;
-    }
-
-    const auth0Connection = CONNECTION_MAP[connection] || connection;
-
-    try {
-      const managementToken = await this.getManagementToken();
-
-      // Fetch user identities from the Management API
-      const response = await fetch(
-        `https://${this.domain}/api/v2/users/${encodeURIComponent(userId)}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${managementToken}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
-
-      if (response.status === 404) {
-        console.warn(`[Token Vault] User ${userId} not found in Auth0`);
-        return null;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Management API request failed: ${response.status} ${response.statusText}`);
-      }
-
-      const user = await response.json();
-
-      // Find the identity matching the requested connection
-      const identity = user.identities?.find(
-        (id: { connection: string; access_token?: string }) =>
-          id.connection === auth0Connection
-      );
-
-      if (!identity?.access_token) {
-        console.warn(`[Token Vault] No ${connection} token found for user ${userId}`);
-        return null;
-      }
-
-      return identity.access_token;
-    } catch (error) {
-      console.error(`[Token Vault] Error retrieving ${connection} token:`, error);
-      
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('[Token Vault] Returning null in development — configure Auth0 to test');
-      }
-      
-      return null;
-    }
-  }
-
-  /**
-   * Checks if a user has a specific connection linked (without fetching the token).
-   */
-  async hasConnection(userId: string, connection: string): Promise<boolean> {
-    if (!this.domain || !this.clientId || !this.clientSecret) {
-      return false;
-    }
-
-    const auth0Connection = CONNECTION_MAP[connection] || connection;
-
-    try {
-      const managementToken = await this.getManagementToken();
-
-      const response = await fetch(
-        `https://${this.domain}/api/v2/users/${encodeURIComponent(userId)}?fields=identities&include_fields=true`,
-        {
-          headers: { 'Authorization': `Bearer ${managementToken}` }
-        }
-      );
-
-      if (!response.ok) return false;
-
-      const user = await response.json();
-      return user.identities?.some(
-        (id: { connection: string }) => id.connection === auth0Connection
-      ) ?? false;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Build the Auth0 authorization URL for a user to connect a new service.
-   */
-  getAuthorizationUrl(connection: string, redirectUri: string, state?: string): string {
+  getAuthorizationUrl(
+    connection: string,
+    redirectUri: string,
+    state?: string
+  ): string {
     const auth0Connection = CONNECTION_MAP[connection] || connection;
     const params = new URLSearchParams({
       response_type: 'code',
       client_id: this.clientId,
       connection: auth0Connection,
       redirect_uri: redirectUri,
-      scope: 'openid profile email',
-      ...(state && { state })
+      scope: 'openid profile email offline_access',
+      access_type: 'offline',
+      prompt: 'consent', // Ensure we get a refresh token
+      ...(state && { state }),
     });
 
     return `https://${this.domain}/authorize?${params.toString()}`;
