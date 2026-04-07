@@ -118,6 +118,7 @@ export interface ReserveInfo {
   currentPrice: string; // G$ price in reserve token (e.g., cUSDC)
   reserveBalance: string; // Total reserve backing
   reserveRatio: number; // Reserve ratio percentage
+  isAvailable: boolean;
 }
 
 export interface GovernanceInfo {
@@ -433,12 +434,24 @@ export class GoodDollarService {
    * Get Reserve information (price, backing, ratio)
    */
   async getReserveInfo(): Promise<ReserveInfo> {
+    const unavailable = {
+      currentPrice: '0',
+      reserveBalance: '0',
+      reserveRatio: 0,
+      isAvailable: false,
+    };
+
     try {
       const reserveContract = new ethers.Contract(
         GOODDOLLAR_ADDRESSES.RESERVE,
         RESERVE_ABI,
         this.provider
       );
+
+      const code = await this.provider.getCode(GOODDOLLAR_ADDRESSES.RESERVE);
+      if (!code || code === '0x') {
+        return unavailable;
+      }
 
       const [currentPrice, reserveBalance, reserveRatio] = await Promise.all([
         reserveContract.currentPrice(),
@@ -450,14 +463,15 @@ export class GoodDollarService {
         currentPrice: ethers.utils.formatUnits(currentPrice, 18),
         reserveBalance: ethers.utils.formatUnits(reserveBalance, 18),
         reserveRatio: reserveRatio / 10000, // Convert from basis points to percentage
+        isAvailable: true,
       };
     } catch (error) {
-      console.error('[GoodDollar] Error fetching reserve info:', error);
-      return {
-        currentPrice: '0',
-        reserveBalance: '0',
-        reserveRatio: 0,
-      };
+      // Some reserve deployments do not expose the view methods in RESERVE_ABI.
+      // Treat that as an unavailable optional metric rather than a runtime failure.
+      if ((error as { code?: string })?.code !== 'CALL_EXCEPTION') {
+        console.warn('[GoodDollar] Reserve info unavailable:', error);
+      }
+      return unavailable;
     }
   }
 

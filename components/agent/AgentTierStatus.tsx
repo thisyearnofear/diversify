@@ -10,7 +10,6 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { ethers } from "ethers";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentActivities } from "../../hooks/use-agent-activities";
 import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
@@ -103,14 +102,14 @@ export const AgentTierStatus: React.FC<{
     isExecuting: wdkExecuting,
     triggerHeartbeat: wdkHeartbeat,
   } = useWDKAgent();
+  const { address, chainId } = useWalletContext();
 
   const isWDK = config.walletProvider === "TETHER_WDK";
   const [hasTokenVault, setHasTokenVault] = useState(false);
 
   useEffect(() => {
     if (!address) return;
-    const stableId = user?.id || address;
-    fetch(`/api/agent/automation?userAddress=${encodeURIComponent(stableId)}`)
+    fetch(`/api/agent/automation?userAddress=${encodeURIComponent(address)}`)
       .then(res => res.json())
       .then(data => {
         if (data?.preferences?.auth0RefreshToken) {
@@ -118,7 +117,7 @@ export const AgentTierStatus: React.FC<{
         }
       })
       .catch(() => {});
-  }, [address, user]);
+  }, [address]);
 
   const isBeginner = experienceMode === "beginner";
 
@@ -129,7 +128,6 @@ export const AgentTierStatus: React.FC<{
     : "Unavailable";
 
   // Session Key (ERC-7715) for non-custodial Guardian — declared BEFORE guardian state so it can reference hasValidPermission
-  const { address, chainId } = useWalletContext();
   const {
     status: sessionStatus,
     signedPermission,
