@@ -105,6 +105,20 @@ export const AgentTierStatus: React.FC<{
   } = useWDKAgent();
 
   const isWDK = config.walletProvider === "TETHER_WDK";
+  const [hasTokenVault, setHasTokenVault] = useState(false);
+
+  useEffect(() => {
+    if (!address) return;
+    const stableId = user?.id || address;
+    fetch(`/api/agent/automation?userAddress=${encodeURIComponent(stableId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data?.preferences?.auth0RefreshToken) {
+          setHasTokenVault(true);
+        }
+      })
+      .catch(() => {});
+  }, [address, user]);
 
   const isBeginner = experienceMode === "beginner";
 
@@ -583,6 +597,7 @@ export const AgentTierStatus: React.FC<{
                     recentReceipts={[]} // Pass empty, we handle the list below
                     isExecuting={wdkExecuting}
                     onTriggerHeartbeat={wdkHeartbeat}
+                    hasTokenVault={hasTokenVault}
                   />
                 ) : (
                   <GuardianOpenClawStatus
@@ -592,6 +607,7 @@ export const AgentTierStatus: React.FC<{
                     lastHeartbeat={openClawLastHeartbeat}
                     isExecuting={openClawExecuting}
                     onTriggerHeartbeat={openClawHeartbeat}
+                    hasTokenVault={hasTokenVault}
                   />
                 )}
 

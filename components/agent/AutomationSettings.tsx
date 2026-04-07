@@ -115,6 +115,8 @@ export default function AutomationSettings({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testingAutomation, setTestingAutomation] = useState(false);
+  const [verifyingConnection, setVerifyingConnection] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<Record<string, { status: 'healthy' | 'error' | 'none', message?: string }>>({});
 
   const loadPreferences = useCallback(async () => {
     if (!stableUserId) return;
@@ -272,6 +274,43 @@ export default function AutomationSettings({
     );
   }
 
+  const verifyConnection = async (connection: string) => {
+    if (!stableUserId) return;
+    setVerifyingConnection(connection);
+    try {
+      const response = await fetch("/api/agent/check-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userAddress: stableUserId,
+          connection
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setConnectionStatus(prev => ({
+          ...prev,
+          [connection]: { status: 'healthy', message: result.message }
+        }));
+        showToast(`✅ ${connection} connection verified`, "success");
+      } else {
+        setConnectionStatus(prev => ({
+          ...prev,
+          [connection]: { status: 'error', message: result.error }
+        }));
+        showToast(`❌ ${connection} verification failed: ${result.error}`, "error");
+      }
+    } catch (error) {
+      setConnectionStatus(prev => ({
+        ...prev,
+        [connection]: { status: 'error', message: 'Failed to reach verification endpoint' }
+      }));
+    } finally {
+      setVerifyingConnection(null);
+    }
+  };
+
   const isSaveDisabled =
     saving ||
     (preferences.email.enabled && !preferences.email.address?.trim());
@@ -282,9 +321,34 @@ export default function AutomationSettings({
         <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
           🤖 Protection Settings
         </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           Monitor and control your AI wealth protection agents
         </p>
+
+        {/* Automation Hub Summary */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 p-4 rounded-2xl">
+            <div className="text-[10px] font-black uppercase text-blue-500 mb-1">Vault Status</div>
+            <div className="flex items-center gap-2">
+              <span className={`h-2 w-2 rounded-full ${preferences.auth0RefreshToken ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+              <span className="font-bold text-sm text-blue-900 dark:text-blue-100">
+                {preferences.auth0RefreshToken ? 'Connected' : 'Not Linked'}
+              </span>
+            </div>
+          </div>
+          <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 p-4 rounded-2xl">
+            <div className="text-[10px] font-black uppercase text-orange-500 mb-1">Active Integrations</div>
+            <div className="text-sm font-bold text-orange-900 dark:text-orange-100">
+              {[preferences.slack.enabled, preferences.zapier.enabled, preferences.google.enabled].filter(Boolean).length} / 3 Services
+            </div>
+          </div>
+          <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800 p-4 rounded-2xl">
+            <div className="text-[10px] font-black uppercase text-purple-500 mb-1">Delegated Identity</div>
+            <div className="text-[10px] font-mono text-purple-900 dark:text-purple-100 truncate">
+              {stableUserId}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Autonomous Guardian Wallet (if enabled) */}
@@ -718,13 +782,29 @@ export default function AutomationSettings({
         {preferences.zapier.enabled && (
           <div className="space-y-4 pl-11">
             <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
-              <p className="text-xs text-green-800 dark:text-green-300">
-                {preferences.auth0RefreshToken ? (
-                  <>✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Zapier account.</>
-                ) : (
-                  <>⚠️ <strong>Setup Required.</strong> Please use the CONNECT button above to authorize the agent.</>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-green-800 dark:text-green-300">
+                  {preferences.auth0RefreshToken ? (
+                    <>✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Zapier account.</>
+                  ) : (
+                    <>⚠️ <strong>Setup Required.</strong> Please use the CONNECT button above to authorize the agent.</>
+                  )}
+                </p>
+                {preferences.auth0RefreshToken && (
+                  <button
+                    onClick={() => verifyConnection('zapier')}
+                    disabled={verifyingConnection === 'zapier'}
+                    className="text-[10px] font-black uppercase text-green-700 dark:text-green-300 hover:underline disabled:opacity-50"
+                  >
+                    {verifyingConnection === 'zapier' ? 'Verifying...' : 'Test Connection'}
+                  </button>
                 )}
-              </p>
+              </div>
+              {connectionStatus['zapier']?.status === 'error' && (
+                <p className="mt-2 text-[10px] text-red-600 dark:text-red-400 font-bold uppercase">
+                  Error: {connectionStatus['zapier'].message}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -794,9 +874,29 @@ export default function AutomationSettings({
         {preferences.google.enabled && (
           <div className="space-y-4 pl-11">
             <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-800 rounded-xl">
-              <p className="text-xs text-green-800 dark:text-green-300">
-                ✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Google account.
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-green-800 dark:text-green-300">
+                  {preferences.auth0RefreshToken ? (
+                    <>✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Google account.</>
+                  ) : (
+                    <>⚠️ <strong>Setup Required.</strong> Please use the CONNECT button above to authorize the agent.</>
+                  )}
+                </p>
+                {preferences.auth0RefreshToken && (
+                  <button
+                    onClick={() => verifyConnection('google-oauth2')}
+                    disabled={verifyingConnection === 'google-oauth2'}
+                    className="text-[10px] font-black uppercase text-green-700 dark:text-green-300 hover:underline disabled:opacity-50"
+                  >
+                    {verifyingConnection === 'google-oauth2' ? 'Verifying...' : 'Test Connection'}
+                  </button>
+                )}
+              </div>
+              {connectionStatus['google-oauth2']?.status === 'error' && (
+                <p className="mt-2 text-[10px] text-red-600 dark:text-red-400 font-bold uppercase">
+                  Error: {connectionStatus['google-oauth2'].message}
+                </p>
+              )}
             </div>
 
             <div className="space-y-3">

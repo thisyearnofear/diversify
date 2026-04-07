@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 interface GuardianOpenClawStatusProps {
   agentStatus: 'online' | 'offline' | 'unavailable' | 'loading';
+  hasTokenVault?: boolean;
   agentIdentity: {
     agent_id: string;
     name: string;
@@ -73,6 +74,7 @@ const GuardianOpenClawStatus: React.FC<GuardianOpenClawStatusProps> = ({
   lastHeartbeat,
   isExecuting,
   onTriggerHeartbeat,
+  hasTokenVault = false,
 }) => {
   const { color, label } = statusIndicator[agentStatus];
   const displayName = agentIdentity?.name ?? 'Execution Service';
@@ -108,6 +110,14 @@ const GuardianOpenClawStatus: React.FC<GuardianOpenClawStatusProps> = ({
       <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
         Autonomous monitoring is {agentStatus === 'online' ? 'active in the background' : 'temporarily paused'}.
       </div>
+
+      {/* Token Vault Badge */}
+      {hasTokenVault && (
+        <div className="flex items-center gap-1.5 py-1 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
+          <span className="text-xs">🛡️</span>
+          <span>Token Vault Enabled</span>
+        </div>
+      )}
 
       {/* Trigger Heartbeat */}
       <div className="border-t border-purple-200 dark:border-purple-800 pt-2">

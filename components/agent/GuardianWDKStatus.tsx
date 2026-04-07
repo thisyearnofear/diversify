@@ -10,6 +10,7 @@ import GuardianMobileWizard from "./GuardianMobileWizard";
 
 interface GuardianWDKStatusProps {
   agentStatus: "online" | "offline" | "uninitialized" | "loading";
+  hasTokenVault?: boolean;
   agentIdentity: {
     agent_id: string;
     name: string;
@@ -45,6 +46,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
   recentReceipts,
   isExecuting,
   onTriggerHeartbeat,
+  hasTokenVault = false,
 }) => {
   const { color, label } = statusIndicator[agentStatus];
   const displayName = agentIdentity?.name ?? "Execution Service";
@@ -132,6 +134,14 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
       <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
         Execution service is {agentStatus === "online" ? "active and scanning" : "waiting for connection"}.
       </div>
+
+      {/* Token Vault Badge */}
+      {hasTokenVault && (
+        <div className="flex items-center gap-1.5 py-1 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
+          <span className="text-xs">🛡️</span>
+          <span>Token Vault Enabled</span>
+        </div>
+      )}
 
       {/* Trigger Heartbeat / WDK Ping */}
       <div className="border-t border-green-200 dark:border-green-800 pt-2">
