@@ -199,12 +199,15 @@ export interface AIMessage {
     actionItems: string[];
   };
   action?: {
-    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review";
+    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold";
     tab?: string;
     delay?: number;
     amount?: string;
     network?: string;
     targetAsset?: string;
+    fromToken?: string;
+    message?: string;
+    reason?: string;
   };
 }
 

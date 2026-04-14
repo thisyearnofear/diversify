@@ -186,6 +186,42 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
   );
 };
 
+const HoldActionWidget = ({ action }: { action: any }) => {
+  return (
+    <div className="mt-4 p-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl border-2 border-green-200 dark:border-green-700 shadow-inner w-full max-w-[280px]">
+      <div className="flex items-center gap-3 mb-3">
+        <motion.div
+          animate={{ scale: [1, 1.1, 1] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-xl shadow-lg"
+        >
+          ✓
+        </motion.div>
+        <div>
+          <p className="text-xs font-black uppercase text-green-700 dark:text-green-300 tracking-wider">
+            Portfolio Status
+          </p>
+          <p className="text-[10px] text-green-600 dark:text-green-400 font-medium">
+            Well-Balanced
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 mb-3">
+        <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+          {action.message || 'Your portfolio is well-diversified. No immediate action needed.'}
+        </p>
+      </div>
+
+      <div className="flex items-center justify-center gap-2 text-[10px] text-green-600 dark:text-green-400 font-bold">
+        <span>💎</span>
+        <span>HOLD STEADY</span>
+        <span>💎</span>
+      </div>
+    </div>
+  );
+};
+
 /**
  * AIChat - Global Bottom Sheet Drawer
  *
@@ -528,6 +564,10 @@ export default function AIChat() {
                             }
                           }} 
                         />
+                      )}
+                      
+                      {msg.action?.type === 'hold' && (
+                        <HoldActionWidget action={msg.action} />
                       )}
                       
                       <div className={`text-[10px] mt-1.5 opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>

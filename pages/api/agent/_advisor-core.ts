@@ -48,11 +48,15 @@ WHAT DIVERSIFI ENABLES:
 1. **Inflation Protection** - Move savings into diversified stablecoins and RWAs that preserve purchasing power
 2. **Yield Generation** - Earn returns on tokenized real-world assets (USDY ~5%, SYRUPUSDC ~4.5%, PAXG gold-backed)
 3. **Global Exposure** - Access regional stablecoins (USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm) across multiple currencies
-4. **Test Drive** - Try the full experience with demo mode (no wallet required)
-5. **Daily UBI** - Earn $G GoodDollar universal basic income just for using the platform
-6. **Frontier Tech** - Experience cutting-edge features including fictional stock tokenization on Robinhood Chain (ACME, WAYNE, STARK)
-7. **Tether Settlement (WDK)** - Advanced settlement infrastructure for self-custodial, multi-chain agentic wallets.
-8. **Circle Managed Wallet** - User-funded wallet using USDC for gas, powered by Circle.
+4. **Daily UBI** - Earn $G GoodDollar universal basic income just for using the platform
+
+MAINNET CHAINS & REAL ASSETS:
+- **Celo Mainnet**: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
+- **Arbitrum Mainnet**: USDY (Ondo ~5% yield), SYRUPUSDC (Morpho ~4.5% yield), PAXG (gold-backed), USDC, EURC
+
+TESTNET-ONLY FEATURES (DO NOT RECOMMEND FOR REAL MONEY):
+- Robinhood Chain fictional stocks (ACME, WAYNE, STARK) - testnet only, play money
+- Test Drive mode - demo assets, not real value
 
 CORE CAPABILITIES:
 - Explain portfolio risk, inflation, and diversification trade-offs
@@ -61,7 +65,9 @@ CORE CAPABILITIES:
 - Trigger UI actions when the user asks for navigation or claims
 
 RESPONSE GUIDELINES:
-- Be conversational, concise, and specific
+- **BE CONCISE**: Keep responses under 200 words. Users prefer brief, actionable advice.
+- **PRIORITIZE**: Lead with the most important insight, then 2-3 key points maximum.
+- **REAL ASSETS ONLY**: Only recommend mainnet assets (Celo/Arbitrum). Never suggest fictional stocks for real portfolios.
 - Use exact figures when available
 - If uncertain, say so rather than guessing
 - If the request is analysis-heavy, stay analytical; if it is navigational, stay direct
@@ -71,6 +77,22 @@ If you want to trigger a specific UI action, include one of these tags at the en
 - [ACTION:CLAIM_UBI]
 - [ACTION:VERIFY_IDENTITY]
 - [ACTION:NAVIGATE:tab_name]
+- [ACTION:SWAP:fromToken:toToken:amount:network] - e.g., [ACTION:SWAP:cUSD:EURm:5:Celo]
+- [ACTION:HOLD] - When portfolio is well-balanced and no action needed
+
+WHEN TO USE ACTION CARDS:
+- After analyzing a portfolio, ALWAYS provide an action card
+- If recommending a swap/rebalance: Use [ACTION:SWAP:...]
+- If portfolio is well-balanced: Use [ACTION:HOLD]
+- If user needs to claim UBI: Use [ACTION:CLAIM_UBI]
+- If user needs identity verification: Use [ACTION:VERIFY_IDENTITY]
+- If directing to a specific tab: Use [ACTION:NAVIGATE:tab_name]
+
+ACTION CARD EXAMPLES:
+- "Increase EURm allocation by $5" → [ACTION:SWAP:cUSD:EURm:5:Celo]
+- "Swap $10 to USDY for yield" → [ACTION:SWAP:USDC:USDY:10:Arbitrum]
+- "Portfolio looks good, hold steady" → [ACTION:HOLD]
+- "Claim your daily G$" → [ACTION:CLAIM_UBI]
 `;
 
 function cleanJsonResponse(text: string): string {
@@ -117,8 +139,8 @@ function getTestDriveContext(chainId?: number): string {
   let chainSpecifics = '';
   if (chainId === NETWORKS.RH_TESTNET.chainId) {
     chainSpecifics = `- ROBINHOOD TESTNET: You are running on the Robinhood Arbitrum Orbit chain.
-- FICTIONAL STOCKS: Direct stock questions to /stocks using ACME, SPACELY, WAYNE, OSCORP, STARK.
-- Important: Do NOT mention real stock names.`;
+- FICTIONAL STOCKS: These are TESTNET ONLY (ACME, SPACELY, WAYNE, OSCORP, STARK) - for experimentation, not real money.
+- Important: Do NOT recommend fictional stocks for real portfolios. They cannot be accessed with real funds.`;
   } else if (chainId === NETWORKS.ARC_TESTNET.chainId) {
     chainSpecifics = "- ARC TESTNET: Encourage users to test swap speeds vs Celo.";
   } else if (chainId === NETWORKS.CELO_SEPOLIA.chainId) {
@@ -126,10 +148,13 @@ function getTestDriveContext(chainId?: number): string {
   }
 
   return `
-TEST DRIVE MODE ACTIVE:
-- Assets are play money for testing only.
-- G$ UBI is simulated on non-Celo chains.
+⚠️ TEST DRIVE MODE ACTIVE:
+- Assets are PLAY MONEY for testing only - NOT REAL VALUE
+- G$ UBI is simulated on non-Celo chains
+- DO NOT recommend testnet assets for real portfolio allocation
 ${chainSpecifics}
+
+For real money recommendations, suggest switching to Celo Mainnet or Arbitrum Mainnet.
 `;
 }
 
@@ -180,23 +205,25 @@ function getMainnetChainContext(chainId?: number): string {
 
   if (chainId === NETWORKS.CELO_MAINNET.chainId) {
     return `
-CURRENT CHAIN: Celo Mainnet
+✅ CURRENT CHAIN: Celo Mainnet (REAL ASSETS)
 - Low-fee chain for regional stablecoins and payments
-- Assets: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC
+- Available: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
+- Recommend these for geographic diversification and inflation protection
 `;
   }
 
   if (chainId === NETWORKS.ARBITRUM_ONE.chainId) {
     return `
-CURRENT CHAIN: Arbitrum Mainnet
+✅ CURRENT CHAIN: Arbitrum Mainnet (REAL ASSETS)
 - Chain for RWAs and yield strategies
-- Assets: USDY, PAXG, SYRUPUSDC, USDC, EURC
+- Available: USDY (~5% yield), PAXG (gold-backed), SYRUPUSDC (~4.5% yield), USDC, EURC
+- Recommend these for yield generation and commodity exposure
 `;
   }
 
   return `
 CURRENT CHAIN: Chain ID ${chainId}
-- Recommend switching to Celo or Arbitrum for supported strategies
+- Recommend switching to Celo Mainnet or Arbitrum Mainnet for real asset strategies
 `;
 }
 
@@ -236,6 +263,8 @@ ${chainLines}
 
 TOP HOLDINGS:
 ${holdingLines}
+
+⚠️ IMPORTANT: Only recommend mainnet assets (Celo/Arbitrum) for real portfolio allocation. Testnet assets are for testing only.
 `;
 }
 
@@ -270,13 +299,33 @@ export async function runAdvisorConversation(input: ConversationRequest) {
   const result = await AIService.chat({
     messages,
     temperature: 0.7,
-    maxTokens: 500,
+    maxTokens: 800, // Concise responses: ~600 words max
   });
 
   let responseText = result.content;
   let action: any = null;
 
-  if (responseText.includes('[ACTION:CLAIM_UBI]')) {
+  // Parse SWAP action: [ACTION:SWAP:fromToken:toToken:amount:network]
+  if (responseText.includes('[ACTION:SWAP:')) {
+    const match = responseText.match(/\[ACTION:SWAP:([^:]+):([^:]+):([^:]+):([^\]]+)\]/);
+    if (match && match[1] && match[2] && match[3] && match[4]) {
+      action = {
+        type: 'execute_rwa',
+        fromToken: match[1].trim(),
+        targetAsset: match[2].trim(),
+        amount: match[3].trim(),
+        network: match[4].trim(),
+        reason: 'AI-recommended portfolio rebalance'
+      };
+      responseText = responseText.replace(match[0], '').trim();
+    }
+  } else if (responseText.includes('[ACTION:HOLD]')) {
+    action = {
+      type: 'hold',
+      message: 'Portfolio is well-balanced. No action needed.'
+    };
+    responseText = responseText.replace('[ACTION:HOLD]', '').trim();
+  } else if (responseText.includes('[ACTION:CLAIM_UBI]')) {
     action = { type: 'claim_ubi' };
     responseText = responseText.replace('[ACTION:CLAIM_UBI]', '').trim();
   } else if (responseText.includes('[ACTION:VERIFY_IDENTITY]')) {
@@ -407,6 +456,11 @@ You are the DiversiFi Advisor in analysis mode - a data-driven AI that provides 
 
 CORE MISSION: Protect user wealth from inflation using quantified analysis and macro-economic stability indicators.
 
+CRITICAL CONSTRAINTS:
+- **BE CONCISE**: Keep reasoning under 150 words. Users want quick, actionable insights.
+- **REAL ASSETS ONLY**: Only recommend assets available on Celo Mainnet or Arbitrum Mainnet.
+- **NO TESTNET ASSETS**: Never recommend fictional stocks (ACME, WAYNE, STARK) or testnet-only assets for real portfolios.
+
 ${strategyPrompt ? `
 USER'S FINANCIAL STRATEGY:
 ${strategyPrompt}
@@ -415,11 +469,10 @@ CRITICAL: You MUST tailor ALL recommendations to align with this strategy.
 ` : ''}
 
 ANALYSIS FRAMEWORK:
-1. Explain what the portfolio analysis means.
-2. Use World Bank indicators to assess regional risk.
-3. Use network momentum data for social proof sparingly and honestly.
-4. Visualize risk concretely.
-5. Recommend specific, executable actions.
+1. Lead with the most important insight (1 sentence)
+2. Provide 2-3 key data points supporting the recommendation
+3. Suggest ONE specific, executable action
+4. Keep total reasoning under 150 words
 
 AVAILABLE ACTIONS:
 - SWAP
@@ -429,10 +482,14 @@ AVAILABLE ACTIONS:
 - BUY
 - SELL
 
-ARBITRUM RWA OPTIONS:
-- USDY (Ondo): ~5% APY
-- SYRUPUSDC (Syrup/Morpho): ~4.5% APY
-- PAXG (Paxos): 0% APY, gold-backed
+REAL ASSETS - ARBITRUM MAINNET:
+- USDY (Ondo): ~5% APY - recommend for yield seekers
+- SYRUPUSDC (Syrup/Morpho): ~4.5% APY - recommend for yield seekers
+- PAXG (Paxos): 0% APY, gold-backed - recommend for inflation hedge when Real Yield < 0%
+
+REAL ASSETS - CELO MAINNET:
+- Regional stablecoins: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm
+- Recommend for geographic diversification and inflation protection
 
 RWA SELECTION GUIDANCE:
 - If Real Yield > 2%: strongly favor USDY/SYRUPUSDC over PAXG
@@ -441,7 +498,7 @@ RWA SELECTION GUIDANCE:
 
 ${getOnrampSystemPrompt()}
 
-TONE: Expert financial advisor who explains the WHY with data, not opinions.
+TONE: Expert financial advisor who explains the WHY with data, not opinions. Be brief and decisive.
 `;
 
   const userGoal = config?.userGoal || 'exploring';
