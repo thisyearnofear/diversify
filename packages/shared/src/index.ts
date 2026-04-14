@@ -67,7 +67,7 @@ export type {
 } from './services/earn-service';
 
 // Export AI Services
-export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
+export { AIService, generateChatCompletion, getAIServiceStatus, cacheSystemPrompt, getCachedSystemPrompt, getAdaptiveTokenLimit } from './services/ai/ai-service';
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export { IntelligenceService } from './services/ai/intelligence.service';
 export { IntentDiscoveryService, type AppIntent, type AppTab } from './services/ai/intent-discovery.service';

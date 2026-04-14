@@ -688,8 +688,50 @@ function getAllocationReason(
 // MAIN ANALYZER
 // ============================================================================
 
+// ============================================================================
+// PORTFOLIO ANALYSIS CACHING
+// ============================================================================
+
+const portfolioAnalysisCache = new Map<string, { analysis: PortfolioAnalysis; timestamp: number }>();
+const ANALYSIS_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getPortfolioCacheKey(portfolio: { chains: ChainBalance[]; totalValue: number } | null, goal: string): string {
+  if (!portfolio || portfolio.totalValue === 0) return 'empty';
+  const chainKey = portfolio.chains
+    .map(c => `${c.chainId}:${c.totalValue}`)
+    .sort()
+    .join(',');
+  return `${chainKey}:${goal}`;
+}
+
+function getCachedPortfolioAnalysis(
+  portfolio: { chains: ChainBalance[]; totalValue: number } | null,
+  goal: string,
+): PortfolioAnalysis | null {
+  const key = getPortfolioCacheKey(portfolio, goal);
+  const cached = portfolioAnalysisCache.get(key);
+  if (cached && Date.now() - cached.timestamp < ANALYSIS_CACHE_TTL_MS) {
+    return cached.analysis;
+  }
+  return null;
+}
+
+function setCachedPortfolioAnalysis(
+  portfolio: { chains: ChainBalance[]; totalValue: number } | null,
+  goal: string,
+  analysis: PortfolioAnalysis,
+): void {
+  const key = getPortfolioCacheKey(portfolio, goal);
+  portfolioAnalysisCache.set(key, { analysis, timestamp: Date.now() });
+}
+
+// ============================================================================
+// MAIN ANALYSIS FUNCTION
+// ============================================================================
+
 /**
  * Main function to perform comprehensive portfolio analysis
+ * Uses caching for repeated calls with same portfolio state
  */
 export function analyzePortfolio(
   portfolio: { chains: ChainBalance[]; totalValue: number } | null,
@@ -697,6 +739,12 @@ export function analyzePortfolio(
   currentGoal: string = "exploring",
   macroData?: Record<string, MacroIndicator>,
 ): PortfolioAnalysis {
+  // Check cache first
+  const cached = getCachedPortfolioAnalysis(portfolio, currentGoal);
+  if (cached) {
+    return cached;
+  }
+
   // Handle empty portfolio
   if (!portfolio || portfolio.totalValue === 0) {
     return {

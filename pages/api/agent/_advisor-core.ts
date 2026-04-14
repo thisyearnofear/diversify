@@ -1,4 +1,4 @@
-import { AIService, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
+import { AIService, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
 import { isTestnetChain, NETWORKS } from '../../../config';
 
 type ConversationRequest = {
@@ -299,7 +299,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
   const result = await AIService.chat({
     messages,
     temperature: 0.7,
-    maxTokens: 800, // Concise responses: ~600 words max
+    maxTokens: getAdaptiveTokenLimit('chat'),
   });
 
   let responseText = result.content;

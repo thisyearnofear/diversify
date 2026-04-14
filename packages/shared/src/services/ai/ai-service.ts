@@ -240,8 +240,41 @@ function getOpenAIClient(): OpenAI | null {
 }
 
 // ============================================================================
+// SYSTEM PROMPT CACHING
+// ============================================================================
+
+const systemPromptCache = new Map<string, string>();
+const SYSTEM_PROMPT_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+export function cacheSystemPrompt(key: string, prompt: string): void {
+  systemPromptCache.set(key, prompt);
+  // Auto-expire after TTL
+  setTimeout(() => systemPromptCache.delete(key), SYSTEM_PROMPT_TTL_MS);
+}
+
+export function getCachedSystemPrompt(key: string): string | undefined {
+  return systemPromptCache.get(key);
+}
+
+// ============================================================================
 // CHAT COMPLETIONS WITH FAILOVER
 // ============================================================================
+
+// Adaptive token limits based on request type
+const TOKEN_LIMITS = {
+  chat: 800,
+  analysis: 1200,
+  research: 2000,
+  simple: 400,
+  default: 800,
+} as const;
+
+/**
+ * Get adaptive token limit based on request type
+ */
+export function getAdaptiveTokenLimit(requestType: keyof typeof TOKEN_LIMITS = 'default'): number {
+  return TOKEN_LIMITS[requestType] || TOKEN_LIMITS.default;
+}
 
 /**
  * Generate chat completion with automatic provider failover
