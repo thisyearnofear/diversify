@@ -35,12 +35,20 @@ export default async function handler(
     const { runId, type } = req.query;
 
     if (type === 'identity') {
-      // Get agent identity
-      const identity = await openClawService.getIdentity();
-      return res.status(200).json({
-        success: true,
-        identity,
-      });
+      // Get agent identity - wrap in try/catch to prevent 500
+      try {
+        const identity = await openClawService.getIdentity();
+        return res.status(200).json({
+          success: true,
+          identity,
+        });
+      } catch (idError: any) {
+        console.warn('[OpenClaw Receipts] Identity fetch failed:', idError.message);
+        return res.status(200).json({
+          success: true,
+          identity: { agent_id: 'error', error: idError.message },
+        });
+      }
     }
 
     if (type === 'summary' && runId) {

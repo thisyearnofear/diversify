@@ -123,8 +123,8 @@ export class OpenClawService {
   private config: OpenClawConfig;
   private failureCount: number = 0;
   private lastFailureTime: number = 0;
-  private readonly CIRCUIT_BREAKER_THRESHOLD = 3;
-  private readonly CIRCUIT_BREAKER_RESET_MS = 10 * 60 * 1000; // 10 minutes
+  private readonly CIRCUIT_BREAKER_THRESHOLD = 5;
+  private readonly CIRCUIT_BREAKER_RESET_MS = 60 * 1000; // 1 minute (faster recovery)
 
   private inMemoryReceipts: Map<string, OpenClawReceipt[]> = new Map();
   private inMemorySummaries: Map<string, OpenClawRunSummary> = new Map();
@@ -141,6 +141,7 @@ export class OpenClawService {
     if (this.failureCount >= this.CIRCUIT_BREAKER_THRESHOLD) {
       const timeSinceLastFailure = Date.now() - this.lastFailureTime;
       if (timeSinceLastFailure < this.CIRCUIT_BREAKER_RESET_MS) {
+        console.warn(`[OpenClaw] Circuit breaker open. ${this.failureCount} failures. Reset in ${Math.round((this.CIRCUIT_BREAKER_RESET_MS - timeSinceLastFailure)/1000)}s`);
         return true;
       }
       // Reset circuit breaker after timeout
