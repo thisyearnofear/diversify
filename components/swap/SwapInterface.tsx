@@ -70,6 +70,7 @@ const SwapInterface = forwardRef<
     preferredToRegion,
     chainId,
     enableCrossChain = false,
+    zapMode = false,
   },
   ref,
 ) {
