@@ -3,6 +3,15 @@ import { EarnService, type EarnVault } from "@diversifi/shared";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "../shared/TabComponents";
 
+const CHAIN_NAMES: Record<number, string> = {
+  1: 'Ethereum',
+  10: 'Optimism',
+  42161: 'Arbitrum',
+  8453: 'Base',
+  42220: 'Celo',
+  11155111: 'Sepolia',
+};
+
 interface YieldDiscoverySectionProps {
   chainId?: number;
   onSelectVault: (vault: EarnVault) => void;
@@ -67,7 +76,7 @@ export default function YieldDiscoverySection({
     <div className={`space-y-3 ${className}`}>
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest">{title}</h4>
-        <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold">Powered by LI.FI</span>
+        <span className="text-[10px] bg-gradient-to-r from-blue-500 to-purple-500 text-white px-2 py-0.5 rounded-full font-black">⚡ LI.FI Earn</span>
       </div>
       
       <div className="grid gap-3">
@@ -82,23 +91,21 @@ export default function YieldDiscoverySection({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-800 flex items-center justify-center border border-gray-100 dark:border-gray-700">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center border border-blue-100 dark:border-blue-700">
                     {vault.asset.logoURI ? (
                       <img src={vault.asset.logoURI} alt={vault.asset.symbol} className="w-6 h-6 rounded-full" />
                     ) : (
-                      <span className="text-lg">💰</span>
+                      <span className="text-lg">📈</span>
                     )}
                   </div>
                   <div>
                     <h5 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
-                      {vault.protocol} {vault.asset.symbol}
+                      {vault.protocol}
                     </h5>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[10px] text-gray-400 font-bold uppercase">{vault.chainId === 42161 ? 'Arbitrum' : 'Celo'}</span>
-                      <span className="text-[10px] text-emerald-500 font-black">
-                        {typeof vault.tvl === "number"
-                          ? `TVL: $${(vault.tvl / 1000000).toFixed(1)}M`
-                          : "TVL on quote"}
+                      <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded font-bold">{vault.asset.symbol}</span>
+                      <span className="text-[10px] text-purple-500 font-black">
+                        {CHAIN_NAMES[vault.chainId] || `Chain ${vault.chainId}`}
                       </span>
                     </div>
                   </div>
@@ -116,9 +123,9 @@ export default function YieldDiscoverySection({
               
               <button
                 onClick={() => onSelectVault(vault)}
-                className="w-full mt-3 py-2 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
+                className="w-full mt-3 py-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-md hover:shadow-lg"
               >
-                One-Click Deposit
+                ⚡ Deposit via LI.FI
               </button>
             </motion.div>
           ))}
