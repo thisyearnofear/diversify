@@ -503,3 +503,101 @@ export function isTestnetChain(chainId: number | null | undefined): boolean {
 
 // Re-export features for convenience
 export { AI_FEATURES, AUTONOMOUS_FEATURES, UI_FEATURES, WALLET_FEATURES, hasAIFeatures, hasAutonomousFeatures } from './features';
+
+// =============================================================================
+// LIFI COMPOSER VAULTS (Curated List)
+// =============================================================================
+// LiFi Earn uses LiFi Composer - not a separate API.
+// Vaults are accessed via standard /quote endpoint with vault token address.
+// See: https://docs.li.fi/composer/reference/supported-protocols
+
+export interface VaultConfig {
+    address: string;
+    name: string;
+    protocol: string;
+    asset: { symbol: string; address: string; decimals: number };
+    category: string[];
+    risk: 'low' | 'medium' | 'high';
+    isActive: boolean;
+}
+
+export const LIFI_VAULTS: Record<number, VaultConfig[]> = {
+    // Base - LI.FI Composer supports Morpho, Aave, Seamless
+    8453: [
+        {
+            address: '0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A',
+            name: 'Morpho USDC',
+            protocol: 'morpho',
+            asset: { symbol: 'USDC', address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+            category: ['lending', 'stablecoin'],
+            risk: 'low',
+            isActive: true,
+        },
+        {
+            address: '0x4e65fE4DbA92790696d040ac24Aa414708F5c0AB',
+            name: 'Seamless USDC',
+            protocol: 'seamless',
+            asset: { symbol: 'USDC', address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', decimals: 6 },
+            category: ['lending', 'stablecoin'],
+            risk: 'low',
+            isActive: true,
+        },
+    ],
+    // Ethereum - LI.FI Composer supports Lido, Aave, Morpho, EtherFi
+    1: [
+        {
+            address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+            name: 'Lido stETH',
+            protocol: 'lido',
+            asset: { symbol: 'ETH', address: '0x0000000000000000000000000000000000000000', decimals: 18 },
+            category: ['liquid-staking', 'eth'],
+            risk: 'low',
+            isActive: true,
+        },
+        {
+            address: '0x35751007a407ca6FEFfE80b3cB397736D2cf4dbe',
+            name: 'EtherFi weETH',
+            protocol: 'etherfi',
+            asset: { symbol: 'ETH', address: '0x0000000000000000000000000000000000000000', decimals: 18 },
+            category: ['liquid-staking', 'restaking'],
+            risk: 'medium',
+            isActive: true,
+        },
+        {
+            address: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
+            name: 'Aave V3 USDC',
+            protocol: 'aave-v3',
+            asset: { symbol: 'USDC', address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
+            category: ['lending', 'stablecoin'],
+            risk: 'low',
+            isActive: true,
+        },
+    ],
+    // Arbitrum - LI.FI Composer supports Aave, Pendle
+    42161: [
+        {
+            address: '0x794a61358D6845594F94dc1DB02A252b5b4814aD',
+            name: 'Aave V3 USDC',
+            protocol: 'aave-v3',
+            asset: { symbol: 'USDC', address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', decimals: 6 },
+            category: ['lending', 'stablecoin'],
+            risk: 'low',
+            isActive: true,
+        },
+    ],
+    // Celo - Cross-chain deposits via LI.FI to other chains
+    // Direct Celo vaults can be added as LI.FI Composer expands support
+    42220: [],
+};
+
+export function getLiFiVaults(chainId: number, filters?: { protocol?: string; category?: string; risk?: 'low' | 'medium' | 'high' }): VaultConfig[] {
+    let vaults = LIFI_VAULTS[chainId]?.filter(v => v.isActive) || [];
+    if (filters?.protocol) vaults = vaults.filter(v => v.protocol === filters.protocol);
+    if (filters?.category) vaults = vaults.filter(v => v.category.includes(filters.category));
+    if (filters?.risk) vaults = vaults.filter(v => v.risk === filters.risk);
+    return vaults;
+}
+
+export function getLiFiVaultByAddress(chainId: number, address: string): VaultConfig | undefined {
+    return LIFI_VAULTS[chainId]?.find(v => v.address.toLowerCase() === address.toLowerCase());
+}

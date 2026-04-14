@@ -30,3 +30,29 @@ pnpm dev
 ## Tech Stack
 
 Next.js 15 · Privy + Safe · Venice AI · Mento Protocol · OpenClaw · Circle CCTP · Hyperliquid · LI.FI Composer
+
+## 🌉 Cross-Chain Infrastructure
+
+DiversiFi leverages **LI.FI Composer** for seamless multi-chain yield optimization:
+
+| Capability | Implementation |
+|------------|----------------|
+| **Chains** | Ethereum, Base, Arbitrum, Celo |
+| **Protocols** | Morpho, Aave V3, Lido, EtherFi, Seamless |
+| **Transactions** | Atomic swap + bridge + deposit in single tx |
+| **Routing** | Optimal path selection across 27 bridges, 31 DEXs |
+
+**Example Flow:**
+```
+User deposits USDC on Celo 
+  → LI.FI routes to Morpho vault on Base 
+  → Single transaction, optimal fees
+  → User receives yield-bearing vault tokens
+```
+
+### Why LI.FI Composer?
+
+- **One-Click Deposits**: Complex multi-step operations (swap → bridge → vault deposit) in a single user transaction
+- **Protocol Agnostic**: Access 15+ DeFi protocols without individual integrations
+- **Cost Optimized**: Automatic routing finds cheapest path across bridges and DEXs
+- **User Experience**: "DeFi Mullet" - simple front-end, powerful cross-chain orchestration in the back

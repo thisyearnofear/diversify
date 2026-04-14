@@ -114,8 +114,7 @@ export default function Layout({
         <footer className="bg-white dark:bg-gray-800 shadow-inner mt-auto transition-colors duration-300">
           <div className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 transition-colors duration-300">
-              &copy; {new Date().getFullYear()} DiversiFi - Powered by Celo and
-              Mento
+              &copy; {new Date().getFullYear()} DiversiFi · Built with Celo · Mento · LI.FI · Circle
             </p>
           </div>
         </footer>

@@ -29,7 +29,7 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
         try {
             const vaultId = params.toToken.replace('lifi-earn:', '');
             
-            callbacks?.onStatusUpdate?.('Fetching deposit quote from LI.FI Earn...');
+            callbacks?.onStatusUpdate?.('Routing via LI.FI Composer for optimal vault deposit...');
             
             const quote = await EarnService.getDepositQuote({
                 vaultId,
@@ -40,7 +40,7 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
                 integrator: 'diversifi-minipay'
             });
 
-            callbacks?.onStatusUpdate?.('Initiating vault deposit...');
+            callbacks?.onStatusUpdate?.('Executing atomic swap + deposit via LI.FI...');
             
             const signer = params.signer || await this.getSigner(params.fromChainId);
             const tx = await signer.sendTransaction({
@@ -49,7 +49,7 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
                 value: quote.transactionRequest.value,
             });
 
-            callbacks?.onStatusUpdate?.('Waiting for confirmation...');
+            callbacks?.onStatusUpdate?.('Confirming vault deposit...');
             const receipt = await tx.wait();
 
             return {
@@ -80,10 +80,10 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
         return {
             fromAmount: params.amount,
             toAmount: quote.estimate.toAmount,
-            priceImpact: 0, // LI.FI Earn doesn't provide explicit price impact in the same way
+            priceImpact: 0,
             feeUSD: parseFloat(quote.estimate.feeUSD),
-            estimatedTime: 120, // Typical cross-chain/vault deposit time
-            provider: 'LI.FI Earn',
+            estimatedTime: 120,
+            provider: 'LI.FI Composer',
         };
     }
 
