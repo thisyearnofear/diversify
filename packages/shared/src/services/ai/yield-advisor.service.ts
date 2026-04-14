@@ -32,7 +32,6 @@ export async function getYieldRecommendations(
 
         // 2. Fetch current yield opportunities from LI.FI Earn
         const vaults = await EarnService.fetchVaults({
-            minApy: 5, // Minimum 5% APY
             risk: ['low', 'medium'],
             categories: getPreferredCategories(strategy)
         });
@@ -50,19 +49,19 @@ export async function getYieldRecommendations(
                 id: `earn-vault-${vault.id}-${Date.now()}`,
                 type: 'opportunity',
                 title: `Yield Opportunity: ${vault.protocol.toUpperCase()}`,
-                description: `${vault.protocol} offering ${vault.apy.toFixed(2)}% APY on ${vault.asset.symbol}. ` +
-                    `TVL: $${vault.tvl.toLocaleString()}. ` +
+                description: `${vault.protocol} offering ${vault.apy?.toFixed(2) ?? 'N/A'}% APY on ${vault.asset.symbol}. ` +
+                    `TVL: ${vault.tvl?.toLocaleString() ?? 'N/A'}. ` +
                     `${existingPosition ? 'Current position exists. ' : ''}` +
                     `Consider diversifying into this emerging market yield opportunity.`,
-                impact: vault.apy > 15 ? 'positive' : 'neutral',
+                impact: (vault.apy ?? 0) > 15 ? 'positive' : 'neutral',
                 impactAsset: vault.asset.symbol,
                 timestamp: 'Autonomous',
                 metadata: {
                     vaultId: vault.id,
                     protocol: vault.protocol,
-                    apy: vault.apy,
+                    apy: vault.apy ?? 0,
                     risk: vault.risk,
-                    tvl: vault.tvl,
+                    tvl: vault.tvl ?? 0,
                     asset: vault.asset,
                     existingPosition: existingPosition ? existingPosition.amount : '0'
                 }

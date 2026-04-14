@@ -210,7 +210,7 @@ async function fetchChainBalances(
 
     calls.push({
       address: tokenAddress,
-      abi: ABIS.ERC20,
+      abi: ABIS.ERC20_JSON,
       method: "balanceOf",
       params: [address],
     });

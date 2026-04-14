@@ -363,6 +363,46 @@ export const ABIS = {
         'event Transfer(address indexed from, address indexed to, uint256 value)',
         'event Approval(address indexed owner, address indexed spender, uint256 value)',
     ],
+    // JSON ABI format for wagmi/viem compatibility
+    ERC20_JSON: [
+        {
+            inputs: [{ name: 'owner', type: 'address' }],
+            name: 'balanceOf',
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'view',
+            type: 'function',
+        },
+        {
+            inputs: [
+                { name: 'owner', type: 'address' },
+                { name: 'spender', type: 'address' },
+            ],
+            name: 'allowance',
+            outputs: [{ name: '', type: 'uint256' }],
+            stateMutability: 'view',
+            type: 'function',
+        },
+        {
+            inputs: [
+                { name: 'spender', type: 'address' },
+                { name: 'amount', type: 'uint256' },
+            ],
+            name: 'approve',
+            outputs: [{ name: '', type: 'bool' }],
+            stateMutability: 'nonpayable',
+            type: 'function',
+        },
+        {
+            inputs: [
+                { name: 'to', type: 'address' },
+                { name: 'amount', type: 'uint256' },
+            ],
+            name: 'transfer',
+            outputs: [{ name: '', type: 'bool' }],
+            stateMutability: 'nonpayable',
+            type: 'function',
+        },
+    ] as const,
     BROKER: {
         PROVIDERS: ['function getExchangeProviders() view returns (address[])'],
         RATE: ['function getAmountOut(address exchangeProvider, bytes32 exchangeId, address assetIn, address assetOut, uint256 amountIn) view returns (uint256)'],
@@ -593,7 +633,7 @@ export const LIFI_VAULTS: Record<number, VaultConfig[]> = {
 export function getLiFiVaults(chainId: number, filters?: { protocol?: string; category?: string; risk?: 'low' | 'medium' | 'high' }): VaultConfig[] {
     let vaults = LIFI_VAULTS[chainId]?.filter(v => v.isActive) || [];
     if (filters?.protocol) vaults = vaults.filter(v => v.protocol === filters.protocol);
-    if (filters?.category) vaults = vaults.filter(v => v.category.includes(filters.category));
+    if (filters?.category) vaults = vaults.filter(v => v.category.includes(filters.category!));
     if (filters?.risk) vaults = vaults.filter(v => v.risk === filters.risk);
     return vaults;
 }
