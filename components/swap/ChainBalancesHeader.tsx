@@ -44,6 +44,20 @@ const CHAIN_CONFIG: Record<number, {
     bgColor: 'bg-amber-50',
     description: 'RWA & Yield',
   },
+  [NETWORKS.BASE_MAINNET.chainId]: {
+    name: 'Base',
+    icon: '🔵',
+    color: '#0052FF',
+    bgColor: 'bg-blue-50',
+    description: 'High-Yield Vaults',
+  },
+  [NETWORKS.ETHEREUM_MAINNET.chainId]: {
+    name: 'Ethereum',
+    icon: '💎',
+    color: '#627EEA',
+    bgColor: 'bg-purple-50',
+    description: 'Mainnet DeFi',
+  },
 };
 
 export default function ChainBalancesHeader({
@@ -57,12 +71,14 @@ export default function ChainBalancesHeader({
     c => c.totalValue > 0 || c.chainId === currentChainId
   );
 
-  // If no chains have balance, show both as empty states
+  // If no chains have balance, show all supported chains as empty states
   const displayChains = relevantChains.length > 0
     ? relevantChains
     : [
       { chainId: NETWORKS.CELO_MAINNET.chainId, chainName: 'Celo', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.CELO_MAINNET.chainId },
       { chainId: NETWORKS.ARBITRUM_ONE.chainId, chainName: 'Arbitrum', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.ARBITRUM_ONE.chainId },
+      { chainId: NETWORKS.BASE_MAINNET.chainId, chainName: 'Base', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.BASE_MAINNET.chainId },
+      { chainId: NETWORKS.ETHEREUM_MAINNET.chainId, chainName: 'Ethereum', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.ETHEREUM_MAINNET.chainId },
     ];
 
   if (isLoading) {

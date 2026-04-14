@@ -31,6 +31,18 @@ export const NETWORKS = {
         rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
         explorerUrl: 'https://arbiscan.io',
     },
+    BASE_MAINNET: {
+        chainId: 8453,
+        name: 'Base',
+        rpcUrl: process.env.NEXT_PUBLIC_BASE_RPC || 'https://mainnet.base.org',
+        explorerUrl: 'https://basescan.org',
+    },
+    ETHEREUM_MAINNET: {
+        chainId: 1,
+        name: 'Ethereum',
+        rpcUrl: process.env.NEXT_PUBLIC_ETH_RPC || 'https://eth-mainnet.g.alchemy.com/v2/demo',
+        explorerUrl: 'https://etherscan.io',
+    },
     RH_TESTNET: {
         chainId: 46630,
         name: 'Robinhood Chain',

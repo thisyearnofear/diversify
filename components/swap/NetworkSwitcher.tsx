@@ -49,6 +49,20 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             color: 'blue',
         },
         {
+            ...NETWORKS.BASE_MAINNET,
+            label: `${NETWORKS.BASE_MAINNET.name} (Yield)`,
+            description: 'High-yield vaults',
+            icon: '🔵',
+            color: 'indigo',
+        },
+        {
+            ...NETWORKS.ETHEREUM_MAINNET,
+            label: `${NETWORKS.ETHEREUM_MAINNET.name}`,
+            description: 'Mainnet DeFi',
+            icon: '💎',
+            color: 'gray',
+        },
+        {
             ...NETWORKS.RH_TESTNET,
             label: `${NETWORKS.RH_TESTNET.name} (Stocks)`,
             description: 'Tokenized equities testnet',
@@ -149,6 +163,16 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                             bg: 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-200/50 dark:border-blue-800/50',
                             hover: 'hover:bg-blue-100/50 dark:hover:bg-blue-900/20',
                             text: 'text-blue-900 dark:text-blue-100',
+                        },
+                        indigo: {
+                            bg: 'bg-indigo-50/50 dark:bg-indigo-900/10 border-indigo-200/50 dark:border-indigo-800/50',
+                            hover: 'hover:bg-indigo-100/50 dark:hover:bg-indigo-900/20',
+                            text: 'text-indigo-900 dark:text-indigo-100',
+                        },
+                        gray: {
+                            bg: 'bg-gray-50/50 dark:bg-gray-900/10 border-gray-200/50 dark:border-gray-800/50',
+                            hover: 'hover:bg-gray-100/50 dark:hover:bg-gray-900/20',
+                            text: 'text-gray-900 dark:text-gray-100',
                         },
                     };
 
