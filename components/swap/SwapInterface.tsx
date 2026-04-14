@@ -38,6 +38,12 @@ interface SwapInterfaceProps {
   preferredToRegion?: string;
   chainId?: number | null;
   enableCrossChain?: boolean;
+  zapMode?: boolean;
+  contractCall?: {
+      toContractAddress: string;
+      toContractCallData: string;
+      toContractGasLimit: string;
+  };
 }
 
 const SwapInterface = forwardRef<
@@ -389,6 +395,7 @@ const SwapInterface = forwardRef<
             fromTokenRegion={fromTokenRegion}
             toTokenRegion={toTokenRegion}
             isBeginner={isBeginner}
+            zapMode={zapMode}
             disabled={
               !address ||
               fromToken === toToken ||
@@ -396,10 +403,9 @@ const SwapInterface = forwardRef<
               parseFloat(amount) <= 0 ||
               parseFloat(amount) > parseFloat(tokenBalances[fromToken]?.formattedBalance || "0")
             }
-            onClick={() => executeSwap(onSwap)}
+            onClick={() => executeSwap(onSwap, contractCall)}
             stickyMobile={isMobile && isBeginner}
-          />
-        </div>
+          />        </div>
       </div>
     </div>
   );

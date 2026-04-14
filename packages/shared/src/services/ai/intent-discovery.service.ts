@@ -5,11 +5,12 @@
  * Centralizes intent parsing logic for both Voice and Text inputs.
  */
 
-export type AppTab = 'overview' | 'protect' | 'exchange' | 'info' | 'agent';
+export type AppTab = 'overview' | 'protect' | 'exchange' | 'earn' | 'info' | 'agent';
 
 export type AppIntent =
     | { type: 'NAVIGATE'; tab: AppTab }
     | { type: 'SWAP_SHORTCUT'; fromToken?: string; toToken?: string; amount?: string }
+    | { type: 'YIELD_EARN'; topic: 'discovery' | 'best' | 'info' | 'vault'; vaultId?: string }
     | { type: 'SEND_TO_PHONE'; phoneNumber: string; amount?: string; token?: string }
     | { type: 'ANALYZE_REQUEST'; goal?: string }
     | { type: 'ONBOARDING'; topic: 'what-is-this' | 'how-to-start' | 'is-safe' | 'wallet-help' | 'demo' }
@@ -39,6 +40,17 @@ export class IntentDiscoveryService {
                 return { type: 'GOODDOLLAR', topic: 'status' };
             }
             return { type: 'GOODDOLLAR', topic: 'info' };
+        }
+
+        // 0. LI.FI Earn Actions (Yield Discovery)
+        if (r.includes("yield") || r.includes("earn") || r.includes("vault") || r.includes("apy") || r.includes("interest") || r.includes("passive income")) {
+            if (r.includes("best") || r.includes("highest") || r.includes("top") || r.includes("recommend")) {
+                return { type: 'YIELD_EARN', topic: 'best' };
+            }
+            if (r.includes("discovery") || r.includes("find") || r.includes("search") || r.includes("list")) {
+                return { type: 'YIELD_EARN', topic: 'discovery' };
+            }
+            return { type: 'YIELD_EARN', topic: 'info' };
         }
 
         // 0. SocialConnect / Send to Phone (Real-World Utility)

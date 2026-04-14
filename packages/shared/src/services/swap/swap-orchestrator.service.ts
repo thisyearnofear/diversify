@@ -15,6 +15,7 @@ import {
 import { MentoSwapStrategy } from './strategies/mento-swap.strategy';
 import { LiFiSwapStrategy } from './strategies/lifi-swap.strategy';
 import { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
+import { LiFiEarnStrategy } from './strategies/lifi-earn.strategy';
 import { OneInchSwapStrategy } from './strategies/oneinch-swap.strategy';
 import { UniswapV3Strategy } from './strategies/uniswap-v3.strategy';
 import { DirectRWAStrategy } from './strategies/direct-rwa.strategy';
@@ -45,6 +46,7 @@ export class SwapOrchestratorService {
         new HyperliquidPerpStrategy(),    // Hyperliquid commodity perps (GOLD, SILVER, OIL, COPPER)
         new OneInchSwapStrategy(),        // Multi-chain same-chain (best rates)
         new UniswapV3Strategy(),          // Direct Uniswap V3 (reliable fallback)
+        new LiFiEarnStrategy(),           // LiFi Earn (vault deposits)
         new LiFiSwapStrategy(),           // LiFi same-chain (fallback)
         new LiFiBridgeStrategy(),         // Cross-chain bridging
         new DirectRWAStrategy(),          // Direct RWA swaps (final fallback)

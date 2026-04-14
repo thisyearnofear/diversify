@@ -195,6 +195,9 @@ export function useAgentChat({
             fastPathResponse = "DiversiFi is non-custodial. We never store your private keys. All transactions are executed on-chain via secure smart contracts.";
           }
           break;
+        case 'YIELD_EARN':
+          fastPathResponse = "Scanning for high-yield opportunities... 📈";
+          break;
       }
 
       if (fastPathResponse) {
@@ -207,6 +210,8 @@ export function useAgentChat({
         let navAction: AIMessage["action"] | undefined;
         if (intent.type === "NAVIGATE") {
           navAction = { type: "navigate", tab: intent.tab, delay: 1500 };
+        } else if (intent.type === "YIELD_EARN") {
+          navAction = { type: "navigate", tab: "earn", delay: 1500 };
         } else if (intent.type === "GOODDOLLAR") {
           navAction = { 
             type: intent.topic === 'claim' ? 'claim_ubi' : 'verify_identity', 

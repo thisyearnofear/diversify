@@ -828,8 +828,8 @@ export class ArcAgent {
             return {
                 success: true,
                 estimate: {
-                    expectedOutput: estimate.expectedOutput,
-                    minimumOutput: estimate.minimumOutput,
+                    expectedOutput: estimate.expectedOutput || '0',
+                    minimumOutput: estimate.minimumOutput || '0',
                     priceImpact: estimate.priceImpact,
                 },
                 simulationId,

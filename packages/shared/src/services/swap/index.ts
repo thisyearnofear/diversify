@@ -15,6 +15,7 @@ export { BaseSwapStrategy } from './strategies/base-swap.strategy';
 export { MentoSwapStrategy } from './strategies/mento-swap.strategy';
 export { LiFiSwapStrategy } from './strategies/lifi-swap.strategy';
 export { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
+export { LiFiEarnStrategy } from './strategies/lifi-earn.strategy';
 export { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
 export { CurveArcStrategy } from './strategies/curve-arc.strategy';
 

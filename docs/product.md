@@ -2,10 +2,15 @@
 
 ## Core Story
 
-DiversiFi is a **savings protection app** for people in volatile economies. It protects purchasing power from inflation and currency devaluation through guided stablecoin diversification.
+DiversiFi is a **savings protection app** for people in volatile economies. It protects purchasing power from inflation and currency devaluation through guided stablecoin diversification using advanced cross-chain orchestration.
 
 **What it is**: A calm, simple savings protection experience.
 **What it is not**: A trading terminal, DeFi control panel, or yield farming dashboard.
+
+## Advanced Capabilities
+
+DiversiFi uses **LI.FI Composer** to execute atomic, multi-step DeFi workflows in a single user transaction. By abstracting complex cross-chain bridges, swaps, and contract interactions (such as vault deposits), we deliver a "DeFi Mullet" experience: consumer-grade simplicity in the front, and powerful cross-chain orchestration in the back.
+
 
 ## How It Works
 

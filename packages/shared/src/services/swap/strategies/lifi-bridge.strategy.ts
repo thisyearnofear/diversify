@@ -87,7 +87,7 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
         const amountInWei = this.parseAmount(params.amount, fromTokenMeta.decimals || 18);
 
         // Get routes from LiFi
-        const result = await getRoutes({
+        const routeRequest: any = {
             fromChainId: params.fromChainId,
             fromTokenAddress,
             fromAmount: amountInWei.toString(),
@@ -97,8 +97,19 @@ export class LiFiBridgeStrategy extends BaseSwapStrategy {
             options: {
                 slippage: (params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE) / 100,
                 order: 'CHEAPEST',
+                allowCrossChainRender: true,
+                integrator: 'diversifi',
             },
-        });
+        };
+
+        if (params.contractCall) {
+            routeRequest.container = {
+                type: 'CONTRACT_CALL',
+                ...params.contractCall
+            };
+        }
+
+        const result = await getRoutes(routeRequest);
 
         if (!result.routes || result.routes.length === 0) {
             throw new Error('No bridge routes found');

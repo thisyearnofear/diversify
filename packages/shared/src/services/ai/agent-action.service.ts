@@ -13,6 +13,7 @@ import { AppIntent, AppTab } from './intent-discovery.service';
 export interface ExecutionCallbacks {
     onNavigate?: (tab: AppTab) => void;
     onSwapPrefill?: (prefill: any) => void;
+    onEarnPrefill?: (prefill: any) => void;
     onToast?: (message: string, type: 'info' | 'success' | 'error' | 'ai') => void;
     onOpenWalletTutorial?: () => void;
     onEnableDemoMode?: () => void;
@@ -91,6 +92,17 @@ export class AgentActionService {
                     reason: `AI Shortcut: "${originalText}"`,
                 });
                 callbacks.onNavigate?.('exchange');
+                break;
+
+            case 'YIELD_EARN':
+                callbacks.onToast?.(`Finding best yield opportunities...`, 'ai');
+                if (intent.topic === 'vault' && (intent as any).vaultId) {
+                    callbacks.onEarnPrefill?.({
+                        vaultId: (intent as any).vaultId,
+                        reason: `AI Recommendation: "${originalText}"`,
+                    });
+                }
+                callbacks.onNavigate?.('earn');
                 break;
 
             case 'GOODDOLLAR':

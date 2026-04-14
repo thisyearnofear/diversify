@@ -29,4 +29,4 @@ pnpm dev
 
 ## Tech Stack
 
-Next.js 15 · Privy + Safe · Venice AI · Mento Protocol · OpenClaw · Circle CCTP · Hyperliquid
+Next.js 15 · Privy + Safe · Venice AI · Mento Protocol · OpenClaw · Circle CCTP · Hyperliquid · LI.FI Composer

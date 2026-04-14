@@ -29,6 +29,11 @@ interface HookSwapParams {
     toChainId?: number;
     slippageTolerance?: number;
     optimization?: 'speed' | 'cost'; // User preference for optimization
+    contractCall?: {
+        toContractAddress: string;
+        toContractCallData: string;
+        toContractGasLimit: string;
+    };
     onApprovalSubmitted?: (hash: string) => void;
     onApprovalConfirmed?: () => void;
     onSwapSubmitted?: (hash: string) => void;
@@ -128,6 +133,7 @@ export function useSwap() {
                 toChainId: params.toChainId || currentChainId,
                 userAddress,
                 slippageTolerance: params.slippageTolerance || (isMiniPay ? TX_CONFIG.MINIPAY_SLIPPAGE : TX_CONFIG.DEFAULT_SLIPPAGE),
+                contractCall: params.contractCall,
             };
 
             const estimate = await SwapOrchestratorService.getEstimate(swapParams);
@@ -212,6 +218,7 @@ export function useSwap() {
                 toChainId: params.toChainId || currentChainId,
                 userAddress,
                 slippageTolerance: finalSlippage,
+                contractCall: params.contractCall,
             };
 
             // Check if swap is supported

@@ -26,6 +26,7 @@ import { useToast } from "@/components/ui/Toast";
 import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
+import YieldDiscoverySection from "../earn/YieldDiscoverySection";
 import AssetModal from "./protect/AssetModal";
 import OptimizationInsight from "./protect/OptimizationInsight";
 import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
@@ -603,6 +604,20 @@ export default function ProtectionTab({
           onSwap={openProtectionFlow}
           onShowModal={setShowAssetModal}
           experienceMode={experienceMode}
+        />
+      )}
+
+      {/* LI.FI Earn Yield Discovery - Non-beginner only */}
+      {!isBeginner && (
+        <YieldDiscoverySection
+          chainId={chainId}
+          onSelectVault={(vault) => {
+            openProtectionFlow(
+              `lifi-earn:${vault.id}`,
+              vault.asset.symbol,
+              '10'
+            );
+          }}
         />
       )}
 

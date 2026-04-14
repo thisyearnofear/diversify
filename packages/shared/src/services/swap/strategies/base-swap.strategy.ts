@@ -16,12 +16,18 @@ export interface SwapParams {
     slippageTolerance?: number;
     recipientAddress?: string; // For SocialConnect / Send to friend
     phoneNumber?: string; // For SocialConnect tracking
+    contractCall?: {
+        toContractAddress: string;
+        toContractCallData: string;
+        toContractGasLimit: string;
+    }; // For LI.FI Composer execution
 }
 
 export interface SwapResult {
     success: boolean;
     txHash?: string;
     approvalTxHash?: string;
+    amountOut?: string; // Standardize output amount across strategies
     error?: string;
     steps?: any[];
 }
@@ -30,13 +36,19 @@ export interface SwapCallbacks {
     onApprovalSubmitted?: (hash: string) => void;
     onApprovalConfirmed?: () => void;
     onSwapSubmitted?: (hash: string) => void;
+    onStatusUpdate?: (status: string) => void; // Status updates for long processes
 }
 
 export interface SwapEstimate {
-    expectedOutput: string;
-    minimumOutput: string;
+    expectedOutput?: string;
+    minimumOutput?: string;
+    fromAmount?: string; // New: standardizes input across all strategies
+    toAmount?: string; // New: standardizes output across all strategies
     priceImpact: number;
-    gasCostEstimate: ethers.BigNumber;
+    gasCostEstimate?: ethers.BigNumber;
+    feeUSD?: number; // New: fee estimation in USD
+    estimatedTime?: number; // New: estimated execution time in seconds
+    provider?: string; // New: which provider is giving this estimate
 }
 
 /**

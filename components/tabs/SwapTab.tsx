@@ -36,6 +36,7 @@ import { useMobile } from "../../hooks/use-mobile";
 import { useInView } from "../../hooks/use-in-view";
 import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
+import YieldDiscoverySection from "../earn/YieldDiscoverySection";
 import YieldBridgePrompt from "../swap/YieldBridgePrompt";
 import SwapInsightsPanel from "../swap/SwapInsightsPanel";
 import { SocialContactPicker } from "../swap/SocialContactPicker";
@@ -670,24 +671,25 @@ export default function SwapTab({
         )}
       </Card>
 
-      {/* Yield bridge prompt — collapsible on mobile, lazy-loaded */}
+      {/* Yield opportunities — dynamic from LI.FI Earn */}
       {!isArbitrum && address && (
         <div ref={yieldInViewRef.ref}>
           {yieldInViewRef.inView ? (
             <MobileCollapsible 
               title="Yield Opportunities" 
-              icon="🌉" 
+              icon="📈" 
               defaultCollapsedOnMobile={true}
             >
-              <YieldBridgePrompt
-                onBridgeCTA={() => {
+              <YieldDiscoverySection
+                chainId={walletChainId || 42220}
+                onSelectVault={(vault) => {
                   if (swapInterfaceRef.current?.setTokens) {
                     swapInterfaceRef.current.setTokens(
-                      "USDm",
-                      "USDY",
-                      "",
-                      NETWORKS.CELO_MAINNET.chainId,
-                      NETWORKS.ARBITRUM_ONE.chainId,
+                      vault.asset.symbol,
+                      `lifi-earn:${vault.id}`,
+                      "10",
+                      walletChainId || 42220,
+                      vault.chainId
                     );
                   }
                 }}

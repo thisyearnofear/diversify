@@ -222,6 +222,11 @@ export function useSwapController({
         fromInflation: number,
         toInflation: number,
       ) => Promise<unknown>,
+      contractCall?: {
+        toContractAddress: string;
+        toContractCallData: string;
+        toContractGasLimit: string;
+      }
     ) => {
       if (
         !fromToken ||
@@ -266,6 +271,7 @@ export function useSwapController({
             fromChainId: enableCrossChain ? fromChainId : undefined,
             toChainId: enableCrossChain ? toChainId : undefined,
             slippageTolerance,
+            contractCall,
           });
           // Note: Hook state will be handled via useEffect tracking swapStep
         }
