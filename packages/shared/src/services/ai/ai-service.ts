@@ -70,7 +70,7 @@ export interface ChatCompletionOptions {
 export interface ChatCompletionResult {
   content: string;
   model: string;
-  provider: "venice" | "gemini";
+  provider: "venice" | "gemini" | "modal" | "openai";
   usage?: {
     promptTokens: number;
     completionTokens: number;
