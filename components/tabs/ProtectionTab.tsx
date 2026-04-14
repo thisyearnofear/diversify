@@ -651,7 +651,7 @@ export default function ProtectionTab({
       {/* LI.FI Earn Yield Discovery - Non-beginner only */}
       {!isBeginner && (
         <YieldDiscoverySection
-          chainId={chainId}
+          chainId={chainId ?? undefined}
           onSelectVault={(vault) => {
             openProtectionFlow(
               `lifi-earn:${vault.id}`,

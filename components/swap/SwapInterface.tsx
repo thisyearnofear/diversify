@@ -49,6 +49,7 @@ interface SwapInterfaceProps {
 const SwapInterface = forwardRef<
   {
     refreshBalances: () => void;
+    getSelectedTokens: () => { fromToken: string; toToken: string };
     setTokens: (
       from: string,
       to: string,
@@ -71,6 +72,7 @@ const SwapInterface = forwardRef<
     chainId,
     enableCrossChain = false,
     zapMode = false,
+    contractCall,
   },
   ref,
 ) {
@@ -130,6 +132,10 @@ const SwapInterface = forwardRef<
       console.log("Refreshing token balances from SwapInterface");
       refreshBalances();
     },
+    getSelectedTokens: () => ({
+      fromToken,
+      toToken,
+    }),
     setTokens: (
       from: string,
       to: string,

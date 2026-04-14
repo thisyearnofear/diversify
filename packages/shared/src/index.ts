@@ -59,6 +59,13 @@ export {
   SmartAccountTxResult
 };
 
+export type {
+  EarnVault,
+  EarnPosition,
+  EarnQuote,
+  EarnQuoteParams,
+} from './services/earn-service';
+
 // Export AI Services
 export { AIService, generateChatCompletion, getAIServiceStatus } from './services/ai/ai-service';
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';

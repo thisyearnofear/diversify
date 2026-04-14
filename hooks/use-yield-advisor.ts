@@ -39,12 +39,17 @@ export function useYieldAdvisor() {
             const recommendations: YieldRecommendation[] = vaults
                 .filter(v => v.status === 'active')
                 .map(v => {
-                    let score = v.apy * 10;
-                    if (v.tvl > 1000000) score += 20;
+                    const apy = v.apy ?? 0;
+                    const tvl = v.tvl ?? 0;
+
+                    let score = apy * 10;
+                    if (tvl > 1000000) score += 20;
                     if (v.protocol === 'aave' || v.protocol === 'morpho') score += 15;
                     
-                    let reason = `Offering ${v.apy.toFixed(2)}% APY on ${v.protocol}.`;
-                    if (v.tvl > 1000000) reason += " High liquidity and proven track record.";
+                    let reason = typeof v.apy === 'number'
+                      ? `Offering ${apy.toFixed(2)}% APY on ${v.protocol}.`
+                      : `Yield available via ${v.protocol}; confirm live APY before deposit.`;
+                    if (tvl > 1000000) reason += " High liquidity and proven track record.";
 
                     return { vault: v, reason, score };
                 })
@@ -61,11 +66,17 @@ export function useYieldAdvisor() {
 
             // 3. Format recommendation for the AI chat
             const topRec = recommendations[0];
+            const apyText = typeof topRec.vault.apy === 'number'
+              ? `${topRec.vault.apy.toFixed(2)}%`
+              : 'Available in live quote';
+            const tvlText = typeof topRec.vault.tvl === 'number'
+              ? `$${(topRec.vault.tvl / 1000000).toFixed(1)}M`
+              : 'Not surfaced in current feed';
             const content = `I've found a great yield opportunity for you! 
 
 **${topRec.vault.protocol.toUpperCase()} ${topRec.vault.asset.symbol} Vault** on ${topRec.vault.chainId === 42161 ? 'Arbitrum' : 'Celo'}
-*   **APY:** ${topRec.vault.apy.toFixed(2)}%
-*   **TVL:** $${(topRec.vault.tvl / 1000000).toFixed(1)}M
+*   **APY:** ${apyText}
+*   **TVL:** ${tvlText}
 *   **Strategy:** ${topRec.reason}
 
 Would you like me to help you deposit into this vault?`;

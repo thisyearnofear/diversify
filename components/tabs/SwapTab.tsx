@@ -123,6 +123,7 @@ export default function SwapTab({
 
   const swapInterfaceRef = useRef<{
     refreshBalances: () => void;
+    getSelectedTokens: () => { fromToken: string; toToken: string };
     setTokens: (
       from: string,
       to: string,
@@ -227,6 +228,13 @@ export default function SwapTab({
   }, []);
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId ?? null);
+  const activeNetworkName = useMemo(() => {
+    const activeChainId = walletChainId ?? NETWORKS.CELO_MAINNET.chainId;
+    return (
+      Object.values(NETWORKS).find((network) => network.chainId === activeChainId)
+        ?.name ?? "this chain"
+    );
+  }, [walletChainId]);
 
   // Goal-aware swap defaults: read protection profile to personalise the experience
   const { config: profileConfig, isComplete: profileComplete } =
@@ -534,7 +542,7 @@ export default function SwapTab({
             {hasZeroBalance && (
               <Card
                 className="mb-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800"
-                aiPrompt={() => `I have zero balance on ${NETWORKS[walletChainId || 42220]?.name || 'this chain'}. How do I add funds to start protecting my savings? What's the best onramp option for me in ${userRegion}?`}
+                aiPrompt={() => `I have zero balance on ${activeNetworkName}. How do I add funds to start protecting my savings? What's the best onramp option for me in ${userRegion}?`}
                 aiQuickQuestions={[
                   "What's the fastest way to add funds?",
                   "Which onramp should I use for my region?",
@@ -656,8 +664,9 @@ export default function SwapTab({
                   padding="p-0"
                   aiPrompt={() => {
                     // Dynamic prompt based on swap state
-                    const fromToken = swapInterfaceRef.current?.['fromToken'];
-                    const toToken = swapInterfaceRef.current?.['toToken'];
+                    const selectedTokens = swapInterfaceRef.current?.getSelectedTokens();
+                    const fromToken = selectedTokens?.fromToken;
+                    const toToken = selectedTokens?.toToken;
                     if (!fromToken || !toToken) {
                       return "Help me understand how to use the swap interface to protect my savings";
                     }

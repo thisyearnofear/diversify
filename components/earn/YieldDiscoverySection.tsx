@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { EarnService } from "@diversifi/shared";
+import { EarnService, type EarnVault } from "@diversifi/shared";
 import { motion, AnimatePresence } from "framer-motion";
 import { Skeleton } from "../shared/TabComponents";
 
 interface YieldDiscoverySectionProps {
   chainId?: number;
-  onSelectVault: (vault: any) => void;
+  onSelectVault: (vault: EarnVault) => void;
   limit?: number;
   title?: string;
   className?: string;
@@ -18,7 +18,7 @@ export default function YieldDiscoverySection({
   title = "High-Yield Protection",
   className = "",
 }: YieldDiscoverySectionProps) {
-  const [vaults, setVaults] = useState<any[]>([]);
+  const [vaults, setVaults] = useState<EarnVault[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +34,7 @@ export default function YieldDiscoverySection({
         // Filter and sort by APY
         const sorted = data
           .filter(v => v.status === 'active')
-          .sort((a, b) => b.apy - a.apy)
+          .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))
           .slice(0, limit);
           
         setVaults(sorted);
@@ -95,16 +95,22 @@ export default function YieldDiscoverySection({
                     </h5>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-[10px] text-gray-400 font-bold uppercase">{vault.chainId === 42161 ? 'Arbitrum' : 'Celo'}</span>
-                      <span className="text-[10px] text-emerald-500 font-black">TVL: ${(vault.tvl / 1000000).toFixed(1)}M</span>
+                      <span className="text-[10px] text-emerald-500 font-black">
+                        {typeof vault.tvl === "number"
+                          ? `TVL: $${(vault.tvl / 1000000).toFixed(1)}M`
+                          : "TVL on quote"}
+                      </span>
                     </div>
                   </div>
                 </div>
                 
                 <div className="text-right">
                   <div className="text-lg font-black text-emerald-500">
-                    {vault.apy.toFixed(2)}%
+                    {typeof vault.apy === "number" ? `${vault.apy.toFixed(2)}%` : "Live"}
                   </div>
-                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">APY</div>
+                  <div className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">
+                    {typeof vault.apy === "number" ? "APY" : "Quote"}
+                  </div>
                 </div>
               </div>
               
