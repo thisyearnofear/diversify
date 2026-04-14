@@ -339,6 +339,7 @@ export const CIRCLE_CONFIG = {
 
 // ABIs
 export const ABIS = {
+    // Human-readable format (for ethers.js)
     ERC20: [
         'function balanceOf(address owner) view returns (uint256)',
         'function allowance(address owner, address spender) view returns (uint256)',
@@ -347,6 +348,46 @@ export const ABIS = {
         'event Transfer(address indexed from, address indexed to, uint256 value)',
         'event Approval(address indexed owner, address indexed spender, uint256 value)',
     ],
+    // JSON format (for wagmi/viem)
+    ERC20_JSON: [
+        {
+            "constant": true,
+            "inputs": [{"name": "owner", "type": "address"}],
+            "name": "balanceOf",
+            "outputs": [{"name": "", "type": "uint256"}],
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [
+                {"name": "owner", "type": "address"},
+                {"name": "spender", "type": "address"}
+            ],
+            "name": "allowance",
+            "outputs": [{"name": "", "type": "uint256"}],
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {"name": "spender", "type": "address"},
+                {"name": "amount", "type": "uint256"}
+            ],
+            "name": "approve",
+            "outputs": [{"name": "", "type": "bool"}],
+            "type": "function"
+        },
+        {
+            "constant": false,
+            "inputs": [
+                {"name": "to", "type": "address"},
+                {"name": "amount", "type": "uint256"}
+            ],
+            "name": "transfer",
+            "outputs": [{"name": "", "type": "bool"}],
+            "type": "function"
+        }
+    ] as const,
     BROKER: {
         PROVIDERS: ['function getExchangeProviders() view returns (address[])'],
         RATE: ['function getAmountOut(address exchangeProvider, bytes32 exchangeId, address assetIn, address assetOut, uint256 amountIn) view returns (uint256)'],
