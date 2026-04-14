@@ -19,7 +19,7 @@ import { feeEngine, type FeeSummary } from './fee-engine';
 // The API routes bridge between these types and the Mongoose models.
 
 export type VaultStatus = 'active' | 'paused' | 'closed';
-export type VaultType = 'circle' | 'erc4626';
+export type VaultType = 'circle' | 'erc4626' | 'earn-vault';
 
 export interface VaultAllocation {
   token: string;
@@ -178,19 +178,21 @@ export class VaultService {
     this.executor = executor;
   }
 
-  /**
-   * Get or create a vault for a user.
-   */
+/**
+    * Get or create a vault for a user.
+    * Defaults to 'circle' type but supports 'earn-vault' for LI.FI Earn integration.
+    */
   async getOrCreateVault(
     userAddress: string,
-    strategy: string = 'global'
+    strategy: string = 'global',
+    vaultType: VaultType = 'circle'
   ): Promise<Vault> {
     const existing = await this.store.findVaultByUser(userAddress);
     if (existing) return existing;
 
     return this.store.createVault({
       userAddress: userAddress.toLowerCase(),
-      vaultType: 'circle',
+      vaultType,
       strategy,
       status: 'active',
       totalDepositedUSD: 0,

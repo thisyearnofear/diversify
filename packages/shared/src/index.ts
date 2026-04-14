@@ -10,6 +10,7 @@ import { AutomationService } from './services/automation-service';
 import { GoodDollarService } from './services/gooddollar-service';
 import { emergingMarketsPriceService, getEmergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 import { hyperliquidService, HyperliquidService } from './services/hyperliquid.service';
+import { earnService, EarnService } from './services/earn-service';
 import { openClawService, OpenClawService } from './services/openclaw-service';
 import { VaultService } from './services/vault/vault.service';
 import { FeeEngine, feeEngine } from './services/vault/fee-engine';
@@ -43,6 +44,8 @@ export {
   EmergingMarketsPriceService,
   hyperliquidService,
   HyperliquidService,
+  earnService,
+  EarnService,
   openClawService,
   OpenClawService,
   VaultService,
@@ -63,6 +66,7 @@ export { IntelligenceService } from './services/ai/intelligence.service';
 export { IntentDiscoveryService, type AppIntent, type AppTab } from './services/ai/intent-discovery.service';
 export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';
 export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent-action.service';
+export { getYieldRecommendations, yieldAdvisorService } from './services/ai/yield-advisor.service';
 
 // Export Utils
 export * from './utils/market-pulse-service';

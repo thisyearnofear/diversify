@@ -10,6 +10,7 @@ import { arbitrum, celo, celoSepolia } from 'viem/chains';
 import { getWalletProvider } from '../../utils/wallet-provider';
 
 let isConfigured = false;
+let isEarnConfigured = false;
 
 /**
  * Initialize LiFi SDK configuration
@@ -186,6 +187,49 @@ export function initializeLiFiConfig(): void {
     } catch (error) {
         console.error('[LiFi Config] Failed to initialize LiFi SDK:', error);
         // Don't throw here - let the strategies handle the error
+    }
+}
+
+/**
+ * Initialize LiFi Earn API configuration
+ */
+export function initializeLiFiEarn(): void {
+    if (isEarnConfigured) {
+        return;
+    }
+
+    try {
+        // LI.FI Earn uses the same base config but might need specific settings
+        // for some of its advanced features. We ensure base config is active.
+        initializeLiFiConfig();
+
+        isEarnConfigured = true;
+        console.log('[LiFi Config] Successfully initialized LiFi Earn');
+    } catch (error) {
+        console.error('[LiFi Config] Failed to initialize LiFi Earn:', error);
+    }
+}
+
+/**
+ * Initialize LiFi for Earn operations with specific Earn configuration
+ */
+export function initializeLiFiForEarn(): void {
+    if (isEarnConfigured) {
+        return;
+    }
+
+    try {
+        // Ensure base configuration is set up
+        initializeLiFiConfig();
+
+        // Additional Earn-specific configuration can be added here
+        // For example, setting Earn-specific API endpoints or headers
+
+        isEarnConfigured = true;
+        console.log('[LiFi Config] Successfully initialized LiFi for Earn operations');
+    } catch (error) {
+        console.error('[LiFi Config] Failed to initialize LiFi for Earn:', error);
+        // Don't throw - allow Earn operations to proceed with base configuration
     }
 }
 
