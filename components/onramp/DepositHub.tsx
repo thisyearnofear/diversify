@@ -3,7 +3,12 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { NetworkOptimizedOnramp } from "./NetworkOptimizedOnramp";
 import { useToast } from "../ui/Toast";
 
-export function DepositHub({ className = "" }: { className?: string }) {
+interface DepositHubProps {
+    className?: string;
+    compact?: boolean;
+}
+
+export function DepositHub({ className = "", compact = false }: DepositHubProps) {
     const { address, isMiniPay, isConnected, connect } = useWalletContext();
     const { showToast } = useToast();
 
@@ -16,7 +21,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
 
     if (!isConnected) {
         return (
-            <div className={`p-6 bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30 text-center ${className}`}>
+            <div className={`${compact ? "p-4" : "p-6"} bg-blue-50 dark:bg-blue-900/10 rounded-2xl border border-blue-100 dark:border-blue-900/30 text-center ${className}`}>
                 <h3 className="text-sm font-black text-blue-900 dark:text-blue-100 mb-2 uppercase">Ready to get started?</h3>
                 <p className="text-xs text-blue-700 dark:text-blue-300 mb-4 font-medium">Connect your wallet to see options for adding funds.</p>
                 <button
@@ -33,7 +38,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
         <div className={`space-y-4 ${className}`}>
             {/* Native MiniPay Promo */}
             {isMiniPay && (
-                <div className="p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl text-white shadow-lg">
+                <div className={`${compact ? "p-3" : "p-4"} bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl text-white shadow-lg`}>
                     <div className="flex items-start gap-3">
                         <span className="text-2xl mt-1">📱</span>
                         <div>
@@ -54,7 +59,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
 
             {/* Instant Buy - Integrated */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl overflow-hidden shadow-lg">
-                <div className="p-4 border-b border-gray-50 dark:border-gray-800 flex items-center justify-between">
+                <div className={`${compact ? "p-3" : "p-4"} border-b border-gray-50 dark:border-gray-800 flex items-center justify-between`}>
                     <div>
                         <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Instant Access</h3>
                         <p className="text-sm font-bold text-gray-900 dark:text-white">Buy with Card/Transfer</p>
@@ -63,7 +68,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
                         LOW KYC
                     </span>
                 </div>
-                <div className="p-4">
+                <div className={compact ? "p-3" : "p-4"}>
                     <NetworkOptimizedOnramp
                         showNetworkInfo={false}
                         variant="default"
@@ -76,7 +81,7 @@ export function DepositHub({ className = "" }: { className?: string }) {
             </div>
 
             {/* Manual Deposit */}
-            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-4 border border-dashed border-gray-300 dark:border-gray-700">
+            <div className={`bg-gray-50 dark:bg-gray-800/50 rounded-2xl ${compact ? "p-3" : "p-4"} border border-dashed border-gray-300 dark:border-gray-700`}>
                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 mb-3 text-center">Transfer from Exchange</h3>
                 <div className="flex flex-col items-center gap-3">
                     <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 w-full">
@@ -103,3 +108,5 @@ export function DepositHub({ className = "" }: { className?: string }) {
         </div>
     );
 }
+
+export default DepositHub;
