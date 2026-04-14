@@ -677,7 +677,8 @@ export default function SwapTab({
                     "Will this improve my diversification?",
                     "Are there better alternatives?",
                     "What are the risks of this swap?",
-                    "How does this align with my goal?"
+                    "How does this align with my goal?",
+                    "⚡ Browse Yield Vaults"
                   ]}
                 >
                   <SwapInterface
@@ -752,26 +753,28 @@ export default function SwapTab({
       {!isArbitrum && address && (
         <div ref={yieldInViewRef.ref}>
           {yieldInViewRef.inView ? (
-            <MobileCollapsible 
-              title="Yield Opportunities" 
-              icon="📈" 
-              defaultCollapsedOnMobile={true}
-            >
-              <YieldDiscoverySection
-                chainId={walletChainId || 42220}
-                onSelectVault={(vault) => {
-                  if (swapInterfaceRef.current?.setTokens) {
-                    swapInterfaceRef.current.setTokens(
-                      vault.asset.symbol,
-                      `lifi-earn:${vault.id}`,
-                      "10",
-                      walletChainId || 42220,
-                      vault.chainId
-                    );
-                  }
-                }}
-              />
-            </MobileCollapsible>
+            <div id="yield-opportunities">
+              <MobileCollapsible 
+                title="Yield Opportunities" 
+                icon="📈" 
+                defaultCollapsedOnMobile={true}
+              >
+                <YieldDiscoverySection
+                  chainId={walletChainId || 42220}
+                  onSelectVault={(vault) => {
+                    if (swapInterfaceRef.current?.setTokens) {
+                      swapInterfaceRef.current.setTokens(
+                        vault.asset.symbol,
+                        `lifi-earn:${vault.id}`,
+                        "10",
+                        walletChainId || 42220,
+                        vault.chainId
+                      );
+                    }
+                  }}
+                />
+              </MobileCollapsible>
+            </div>
           ) : (
             <Skeleton className="h-24 w-full" variant="rect" />
           )}

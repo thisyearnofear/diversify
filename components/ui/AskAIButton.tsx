@@ -86,6 +86,18 @@ export default function AskAIButton({
   };
 
   const handleQuickQuestion = (question: string) => {
+    // Special case: Browse Yield Vaults - skip AI and scroll to yield section
+    if (question.includes('Browse Yield Vaults')) {
+      setShowQuickQuestions(false);
+      // Find yield section and scroll to it
+      const yieldSection = document.getElementById('yield-opportunities');
+      if (yieldSection) {
+        yieldSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      onAsk?.(question);
+      return;
+    }
+    
     askAdvisor(question);
     onAsk?.(question);
     setShowQuickQuestions(false);
