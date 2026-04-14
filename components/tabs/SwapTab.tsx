@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
+import { motion } from "framer-motion";
 import SwapInterface from "../swap/SwapInterface";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
