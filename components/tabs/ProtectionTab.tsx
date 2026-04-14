@@ -484,7 +484,7 @@ export default function ProtectionTab({
             {
               label: "Inflation Risk",
               value: Math.max(0, 100 - (liveAnalysis?.weightedInflationRisk || 0) * 10),
-              status: `${(liveAnalysis?.weightedInflationRisk || 0).toFixed(1)}% weighted`,
+              status: `${Math.round(liveAnalysis?.weightedInflationRisk || 0)}% weighted`,
               icon: "🛡️",
             },
           ]}
@@ -537,7 +537,7 @@ export default function ProtectionTab({
               ? `Adding ${topOpportunity.toToken} gives you exposure to ${topOpportunity.toRegion} economy. Your current ${topOpportunity.fromToken} is mainly ${topOpportunity.fromRegion}-focused.`
               : config.userGoal === 'rwa_access'
               ? `${topOpportunity.toToken} provides ${topOpportunity.toToken === 'PAXG' ? 'gold-backed' : 'yield-bearing'} exposure that ${topOpportunity.fromToken} can't match.`
-              : `Your ${topOpportunity.fromToken} holdings face ${topOpportunity.fromInflation.toFixed(1)}% inflation. Swapping to ${topOpportunity.toToken} preserves purchasing power.`
+              : `Your ${topOpportunity.fromToken} holdings face ${Math.round(topOpportunity.fromInflation)}% inflation. Swapping to ${topOpportunity.toToken} preserves purchasing power.`
           }
           fromToken={topOpportunity.fromToken}
           toToken={topOpportunity.toToken}
