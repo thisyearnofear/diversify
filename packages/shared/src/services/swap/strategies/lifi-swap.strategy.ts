@@ -80,7 +80,7 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
                 slippage: (params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE) / 100,
                 order: 'CHEAPEST',
                 // Add additional options for better compatibility
-                integrator: 'diversifi-minipay',
+                integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay',
                 allowSwitchChain: false, // Prevent automatic chain switching
             },
         });
@@ -151,7 +151,7 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
                     slippage: (params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE) / 100,
                     order: 'CHEAPEST',
                     // Add additional options for better compatibility
-                    integrator: 'diversifi-minipay',
+                    integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay',
                     allowSwitchChain: false, // Prevent automatic chain switching
                 },
             });

@@ -37,7 +37,7 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
                 fromTokenAddress: await this.getTokenAddress(params.fromChainId, params.fromToken),
                 fromAddress: params.userAddress,
                 amount: params.amount,
-                integrator: 'diversifi-minipay'
+                integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay'
             });
 
             callbacks?.onStatusUpdate?.('Executing atomic swap + deposit via LI.FI...');

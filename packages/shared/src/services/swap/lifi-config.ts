@@ -26,7 +26,7 @@ export function initializeLiFiConfig(): void {
         const supportedChains = [arbitrum, celo, celoSepolia];
 
         createConfig({
-            integrator: 'diversifi-minipay',
+            integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay',
             apiUrl: 'https://li.quest/v1',
             providers: [
                 EVM({
@@ -244,7 +244,7 @@ export function initializeLiFiForQuotes(): void {
 
     try {
         createConfig({
-            integrator: 'diversifi-minipay',
+            integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay',
             apiUrl: 'https://li.quest/v1',
             // No providers needed for route discovery
         });

@@ -16,6 +16,8 @@ import { VaultType } from './vault/vault.service';
 import { LIFI_VAULTS, getLiFiVaults, getLiFiVaultByAddress, type VaultConfig } from '../config';
 
 const LIFI_API_BASE = 'https://li.quest/v1';
+const EARN_API_BASE = 'https://earn.li.fi/v1/earn';
+const LIFI_INTEGRATOR_ID = process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay';
 
 export interface EarnVault {
     id: string;
@@ -84,16 +86,77 @@ export class EarnService {
     }
 
     /**
-     * Fetch available vaults from curated list
-     * Uses LiFi Composer - vaults accessed via standard /quote endpoint
+     * Fetch live vaults from LI.FI Earn API
+     * Uses earn.li.fi for real-time vault data
+     */
+    static async fetchLiveVaults(params: {
+        chainId: number;
+        asset?: string;
+        sortBy?: 'apy' | 'tvl';
+        minTvlUsd?: number;
+        limit?: number;
+    }): Promise<any[]> {
+        const url = new URL(`${EARN_API_BASE}/vaults`);
+        url.searchParams.append('chainId', params.chainId.toString());
+        if (params.asset) url.searchParams.append('asset', params.asset);
+        if (params.sortBy) url.searchParams.append('sortBy', params.sortBy);
+        if (params.minTvlUsd) url.searchParams.append('minTvlUsd', params.minTvlUsd.toString());
+        if (params.limit) url.searchParams.append('limit', params.limit.toString());
+
+        const response = await fetch(url.toString(), {
+            headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch vaults: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        return result.data || [];
+    }
+
+    /**
+     * Fetch available vaults - live from LI.FI Earn API with fallback to curated
      */
     static async fetchVaults(params?: {
         chainIds?: number[];
         protocols?: string[];
         categories?: string[];
         risk?: ('low' | 'medium' | 'high')[];
+        useLive?: boolean;
     }): Promise<EarnVault[]> {
         this.ensureInitialized();
+
+        const useLive = params?.useLive ?? true;
+        
+        if (useLive && params?.chainIds?.length === 1) {
+            try {
+                const liveVaults = await this.fetchLiveVaults({
+                    chainId: params.chainIds[0],
+                    limit: 50,
+                });
+                return liveVaults.map(v => ({
+                    id: v.address,
+                    chainId: v.chainId,
+                    protocol: v.protocol?.name || 'unknown',
+                    vaultAddress: v.address,
+                    name: v.name,
+                    asset: {
+                        address: v.underlyingTokens?.[0]?.address || '',
+                        symbol: v.underlyingTokens?.[0]?.symbol || '',
+                        decimals: v.underlyingTokens?.[0]?.decimals || 6,
+                    },
+                    apy: v.analytics?.apy?.total,
+                    tvl: parseFloat(v.analytics?.tvl?.usd || '0'),
+                    status: v.isTransactional ? 'active' : 'deprecated',
+                    categories: v.tags || [],
+                    risk: 'medium',
+                    description: v.description || '',
+                }));
+            } catch (e) {
+                console.warn('[EarnService] Live fetch failed, using fallback:', e);
+            }
+        }
 
         const chainIds = params?.chainIds?.length ? params.chainIds : Object.keys(LIFI_VAULTS).map(Number);
         
@@ -149,9 +212,11 @@ export class EarnService {
         url.searchParams.append('fromAddress', params.fromAddress);
         url.searchParams.append('fromAmount', params.amount);
         if (params.slippage) url.searchParams.append('slippage', params.slippage.toString());
-        url.searchParams.append('integrator', params.integrator || 'diversifi-minipay');
+        url.searchParams.append('integrator', params.integrator || LIFI_INTEGRATOR_ID);
 
-        const response = await fetch(url.toString());
+        const response = await fetch(url.toString(), {
+            headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
+        });
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
@@ -189,9 +254,11 @@ export class EarnService {
         url.searchParams.append('fromAddress', params.fromAddress);
         url.searchParams.append('fromAmount', params.amount);
         if (params.slippage) url.searchParams.append('slippage', params.slippage.toString());
-        url.searchParams.append('integrator', params.integrator || 'diversifi-minipay');
+        url.searchParams.append('integrator', params.integrator || LIFI_INTEGRATOR_ID);
 
-        const response = await fetch(url.toString());
+        const response = await fetch(url.toString(), {
+            headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
+        });
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
