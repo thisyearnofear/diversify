@@ -240,6 +240,100 @@ function getOpenAIClient(): OpenAI | null {
 }
 
 // ============================================================================
+// MODAL (GLM) FALLBACK
+// ============================================================================
+
+const MODAL_API_URL = "https://api.us-west-2.modal.direct/v1/chat/completions";
+const MODAL_MODEL = "zai-org/GLM-5.1-FP8";
+const MODAL_TOKEN = process.env.MODAL_TOKEN; // Bearer token for Modal
+
+async function callModalChat(
+  options: ChatCompletionOptions,
+): Promise<ChatCompletionResult> {
+  if (!MODAL_TOKEN) {
+    throw new Error("Modal token not configured");
+  }
+
+  const conversationMessages = options.messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m) => ({ role: m.role, content: m.content }));
+
+  const response = await fetch(MODAL_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${MODAL_TOKEN}`,
+    },
+    body: JSON.stringify({
+      model: MODAL_MODEL,
+      messages: conversationMessages,
+      max_tokens: options.maxTokens || 800,
+      temperature: options.temperature || 0.7,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Modal API error: ${response.status} ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || "";
+
+  return {
+    content,
+    model: MODAL_MODEL,
+    provider: "modal",
+    usage: data.usage
+      ? {
+          promptTokens: data.usage.prompt_tokens,
+          completionTokens: data.usage.completion_tokens,
+          totalTokens: data.usage.total_tokens,
+        }
+      : undefined,
+  };
+}
+
+async function callOpenAIChat(
+  options: ChatCompletionOptions,
+): Promise<ChatCompletionResult> {
+  const client = getOpenAIClient();
+  if (!client) throw new Error("OpenAI client not initialized");
+
+  const systemMessages = options.messages.filter((m) => m.role === "system");
+  const conversationMessages = options.messages.filter(
+    (m) => m.role === "user" || m.role === "assistant",
+  );
+
+  const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    messages: [
+      ...systemMessages,
+      ...conversationMessages,
+    ] as any,
+    max_tokens: options.maxTokens || 800,
+    temperature: options.temperature || 0.7,
+    ...(options.responseMimeType === "application/json" && {
+      response_format: { type: "json_object" as const },
+    }),
+  });
+
+  const content = response.choices[0]?.message?.content || "";
+
+  return {
+    content,
+    model: response.model,
+    provider: "openai",
+    usage: response.usage
+      ? {
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+        }
+      : undefined,
+  };
+}
+
+// ============================================================================
 // SYSTEM PROMPT CACHING
 // ============================================================================
 
@@ -390,6 +484,16 @@ export async function generateChatCompletion(
               errorMessage,
             );
           }
+        }
+      }
+
+      // Try Modal as third fallback
+      if (MODAL_TOKEN) {
+        try {
+          const result = await callModalChat(options);
+          return { data: result, source: "modal" };
+        } catch (modalError: any) {
+          errors.push({ provider: "modal", error: modalError.message });
         }
       }
 
