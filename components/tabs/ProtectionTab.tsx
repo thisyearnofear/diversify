@@ -33,6 +33,7 @@ import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
+import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
@@ -454,7 +455,17 @@ export default function ProtectionTab({
         </Card>
       ) : (
         // Non-beginner: Full ProtectionDashboard
-        <ProtectionDashboard
+        <Card
+          aiPrompt={() => `Review my protection plan: $${displayTotalValue.toFixed(0)} across ${displayChainCount} chains. Goal: ${currentGoalLabel}. Region: ${userRegion}. What should I know?`}
+          aiQuickQuestions={[
+            "What's my biggest risk?",
+            "How can I improve my protection score?",
+            "Should I rebalance now?",
+            "What's my inflation exposure?",
+            "Am I diversified enough?"
+          ]}
+        >
+          <ProtectionDashboard
           title="Protection Plan"
           subtitle={isComplete ? "Your protection profile is ready" : "Set your protection profile"}
           icon={<span>🤖</span>}
@@ -515,12 +526,42 @@ export default function ProtectionTab({
             />
           </div>
         </ProtectionDashboard>
+        </Card>
       )}
 
       {/* =================================================================
           PRIMARY INSIGHT CARD - Dynamic based on selected goal
           ================================================================= */}
-      {liveAnalysis && topOpportunity && (
+      {displayTotalValue === 0 && address && (
+        <Card
+          className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800"
+          aiPrompt={() => `I want to start protecting my savings but have no funds yet. What should I do? Which onramp is best for ${userRegion}?`}
+          aiQuickQuestions={[
+            "How do I add funds?",
+            "What's the minimum to start?",
+            "Which payment methods are available?",
+            "Is it safe to deposit?"
+          ]}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">🚀</span>
+              <div>
+                <h3 className="font-bold text-purple-900 dark:text-purple-100">
+                  Ready to Protect Your Savings?
+                </h3>
+                <p className="text-sm text-purple-700 dark:text-purple-300">
+                  Add funds to activate your protection plan
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <DepositHub compact={true} />
+        </Card>
+      )}
+      
+      {liveAnalysis && topOpportunity && displayTotalValue > 0 && (
         <OptimizationInsight
           icon={config.userGoal === 'geographic_diversification' ? '🌍' : config.userGoal === 'rwa_access' ? '🥇' : config.userGoal === 'inflation_protection' ? '🛡️' : '⚡'}
           title={

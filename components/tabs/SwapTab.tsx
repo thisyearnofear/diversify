@@ -42,6 +42,7 @@ import SwapInsightsPanel from "../swap/SwapInsightsPanel";
 import { SocialContactPicker } from "../swap/SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
 import ErrorBoundary from "../ui/ErrorBoundary";
+import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 
 const GoodDollarClaimFlow = dynamic(
@@ -400,6 +401,11 @@ export default function SwapTab({
     }));
   }, [chains, walletChainId]);
 
+  // Zero balance detection for onramp prompt
+  const hasZeroBalance = useMemo(() => {
+    return chains.every(c => c.totalValue === 0);
+  }, [chains]);
+
   // Add bottom padding on mobile beginner mode to account for sticky CTA
   const containerPadding = isMobile && isBeginner ? "pb-24" : "";
 
@@ -523,6 +529,47 @@ export default function SwapTab({
           <>
             <ExperienceModeNotification />
 
+            {/* Zero Balance Onramp - Show before swap interface */}
+            {hasZeroBalance && (
+              <Card
+                className="mb-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800"
+                aiPrompt={() => `I have zero balance on ${NETWORKS[walletChainId || 42220]?.name || 'this chain'}. How do I add funds to start protecting my savings? What's the best onramp option for me in ${userRegion}?`}
+                aiQuickQuestions={[
+                  "What's the fastest way to add funds?",
+                  "Which onramp should I use for my region?",
+                  "How much should I deposit to start?",
+                  "Are there any fees I should know about?",
+                  "Can I use a credit card?"
+                ]}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <motion.div
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="text-3xl"
+                  >
+                    💰
+                  </motion.div>
+                  <div>
+                    <h3 className="font-bold text-green-900 dark:text-green-100 text-lg">
+                      Get Started
+                    </h3>
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      Add funds to start protecting your savings
+                    </p>
+                  </div>
+                </div>
+                
+                <DepositHub compact={true} />
+                
+                <div className="mt-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    💡 <strong>Tip:</strong> Start with $10-20 to test the platform, then add more once you're comfortable.
+                  </p>
+                </div>
+              </Card>
+            )}
+
             {/* Testnet simulation banner — shown on Arc/RH when contracts aren't deployed yet */}
             <ErrorBoundary moduleName="Testnet Banner">
               <TestnetSimulationBanner
@@ -604,17 +651,37 @@ export default function SwapTab({
                   <Skeleton className="h-14 w-full" variant="rect" />
                 </div>
               ) : (
-                <SwapInterface
-                  ref={swapInterfaceRef}
-                  availableTokens={filteredTokens}
-                  address={address}
-                  onSwap={handleSwap}
-                  preferredFromRegion={userRegion}
-                  preferredToRegion={targetRegion ?? undefined}
-                  title=""
-                  chainId={walletChainId}
-                  enableCrossChain={true}
-                />
+                <Card
+                  padding="p-0"
+                  aiPrompt={() => {
+                    // Dynamic prompt based on swap state
+                    const fromToken = swapInterfaceRef.current?.['fromToken'];
+                    const toToken = swapInterfaceRef.current?.['toToken'];
+                    if (!fromToken || !toToken) {
+                      return "Help me understand how to use the swap interface to protect my savings";
+                    }
+                    return `I'm about to swap ${fromToken} to ${toToken}. Is this a good move for my protection plan?`;
+                  }}
+                  aiQuickQuestions={[
+                    "What's the inflation difference between these tokens?",
+                    "Will this improve my diversification?",
+                    "Are there better alternatives?",
+                    "What are the risks of this swap?",
+                    "How does this align with my goal?"
+                  ]}
+                >
+                  <SwapInterface
+                    ref={swapInterfaceRef}
+                    availableTokens={filteredTokens}
+                    address={address}
+                    onSwap={handleSwap}
+                    preferredFromRegion={userRegion}
+                    preferredToRegion={targetRegion ?? undefined}
+                    title=""
+                    chainId={walletChainId}
+                    enableCrossChain={true}
+                  />
+                </Card>
               )}
             </ErrorBoundary>
 

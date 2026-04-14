@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useAnimatedNumber } from "../../hooks/use-animation";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "@diversifi/shared";
+import AskAIButton from "../ui/AskAIButton";
 
 // ============================================================================
 // NEW: Progressive Disclosure Components (following Core Principles)
@@ -733,18 +734,24 @@ export const TabHeader = ({
   );
 };
 
-// Card container with consistent styling
+// Card container with consistent styling + optional AI button
 export const Card = ({
   children,
   className = "",
   padding = "p-4",
   variant = "default",
+  aiPrompt,
+  aiQuickQuestions,
+  aiIconOnly = true,
   ...props
 }: {
   children: React.ReactNode;
   className?: string;
   padding?: string;
   variant?: "default" | "bordered" | "flat";
+  aiPrompt?: string | (() => string);
+  aiQuickQuestions?: string[];
+  aiIconOnly?: boolean;
 } & React.HTMLAttributes<HTMLDivElement>) => {
   const variants = {
     default: "bg-white dark:bg-gray-800 rounded-2xl shadow-lg",
@@ -754,10 +761,22 @@ export const Card = ({
   
   return (
     <div
-      className={`${variants[variant]} ${padding} ${className}`}
+      className={`relative ${variants[variant]} ${padding} ${className}`}
       {...props}
     >
       {children}
+      
+      {/* Optional AI button in top-right corner */}
+      {aiPrompt && (
+        <div className="absolute top-2 right-2">
+          <AskAIButton
+            prompt={aiPrompt}
+            quickQuestions={aiQuickQuestions}
+            iconOnly={aiIconOnly}
+            size="sm"
+          />
+        </div>
+      )}
     </div>
   );
 };

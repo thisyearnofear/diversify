@@ -17,6 +17,31 @@ pnpm dev
 - **Protection Plans** — 7 cultural philosophies (Africapitalism, Islamic Finance, Global Diversification, etc.)
 - **Non-Custodial** — Funds stay in your Safe smart account. Agent transacts only within permission limits
 - **Transparent Fees** — 1% management + 10% performance above high-water mark + 0.10% swap spread
+- **Contextual AI Help** — Ask AI button on every card for instant, context-aware assistance
+
+## Key Features
+
+### 🤖 Contextual AI Assistance
+Every card includes an "Ask AI" button that provides context-aware help:
+- **Zero Balance Detection** — Inline onramp with AI guidance when wallet is empty
+- **Protection Plan** — Ask about risks, diversification, and optimization
+- **Swap Interface** — Get advice on token swaps and inflation differences
+- **Quick Questions** — Pre-populated questions for common scenarios
+- **Custom Input** — Ask anything about the platform or your portfolio
+
+**Usage:**
+```tsx
+<Card
+  aiPrompt="Explain my protection plan"
+  aiQuickQuestions={[
+    "What's my biggest risk?",
+    "Should I rebalance?",
+    "How to improve?"
+  ]}
+>
+  {/* Your content */}
+</Card>
+```
 
 ## Documentation
 
