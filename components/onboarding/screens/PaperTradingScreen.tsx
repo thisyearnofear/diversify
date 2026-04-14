@@ -146,7 +146,7 @@ export function PaperTradingScreen({ onContinue, onBack, onSkip }: PaperTradingS
                     onClick={onContinue}
                     className="w-full px-8 py-4 md:py-5 rounded-[1.5rem] md:rounded-[2rem] font-black text-base md:text-lg bg-gray-900 dark:bg-white text-white dark:text-gray-900 shadow-xl active:scale-95 transition-all text-center"
                 >
-                    Start Trading →
+                    Start Saving →
                 </motion.button>
                 <div className="flex gap-2">
                     {onBack && (

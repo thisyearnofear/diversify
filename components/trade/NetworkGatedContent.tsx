@@ -55,8 +55,8 @@ export default function NetworkGatedContent({
             
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
               {currentChainId 
-                ? `You're on chain ${currentChainId}. Switch to ${requiredNetwork} (${requiredChainId}) to trade.`
-                : `Connect to ${requiredNetwork} to start trading.`
+                ? `You're on chain ${currentChainId}. Switch to ${requiredNetwork} (${requiredChainId}) to save.`
+                : `Connect to ${requiredNetwork} to start saving.`
               }
             </p>
 
