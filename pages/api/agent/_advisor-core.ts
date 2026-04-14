@@ -221,9 +221,30 @@ function getMainnetChainContext(chainId?: number): string {
 `;
   }
 
+  if (chainId === NETWORKS.BASE_MAINNET.chainId) {
+    return `
+✅ CURRENT CHAIN: Base Mainnet (HIGH YIELD)
+- Chain for DeFi yield vaults via LI.FI Earn
+- LI.FI Earn supports 20+ protocols: Morpho, Aave, yoUSD, Ethena, EtherFi, Pendle + more
+- Available: USDC vaults with up to 16%+ APY (yoUSD), Morpho RE7USDC (~6.9% APY)
+- HIGHEST YIELD: Use LI.FI Earn API for live vault discovery across 16 chains
+- ONE-CLICK DEPOSIT: Swap + deposit in single transaction via LI.FI Composer
+`;
+  }
+
+  if (chainId === NETWORKS.ETHEREUM_MAINNET.chainId) {
+    return `
+✅ CURRENT CHAIN: Ethereum Mainnet (LIQUIDITY)
+- Mainnet DeFi via LI.FI Earn
+- LI.FI Earn supports Lido, Rocket Pool, Morpho, Aave on Ethereum
+- Available: stETH, rETH, cbETH vaults with 3-8% APY
+- BEST FOR: Liquid staking and established yield strategies
+`;
+  }
+
   return `
 CURRENT CHAIN: Chain ID ${chainId}
-- Recommend switching to Celo Mainnet or Arbitrum Mainnet for real asset strategies
+- Recommend switching to Celo Mainnet, Arbitrum Mainnet, or Base Mainnet for real asset strategies
 `;
 }
 
@@ -264,7 +285,8 @@ ${chainLines}
 TOP HOLDINGS:
 ${holdingLines}
 
-⚠️ IMPORTANT: Only recommend mainnet assets (Celo/Arbitrum) for real portfolio allocation. Testnet assets are for testing only.
+⚠️ IMPORTANT: Only recommend mainnet assets (Celo/Arbitrum/Base/Ethereum) for real portfolio allocation. Testnet assets are for testing only.
+💡 YIELD TIP: Switch to Base chain for LI.FI Earn vaults with up to 16% APY!
 `;
 }
 
