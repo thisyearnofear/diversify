@@ -54,7 +54,7 @@ Every card includes an "Ask AI" button that provides context-aware help:
 
 ## Tech Stack
 
-Next.js 15 · Privy + Safe · Venice AI · Mento Protocol · OpenClaw · Circle CCTP · Hyperliquid · LI.FI Composer
+Next.js 15 · Privy + Safe · Venice AI · Mento Protocol · Circle CCTP · Hyperliquid · LI.FI Composer
 
 ## 🌉 Cross-Chain Infrastructure
 

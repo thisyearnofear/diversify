@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { openClawService, getSmartAccountProvider } from "@diversifi/shared";
+import { getSmartAccountProvider } from "@diversifi/shared";
 
 export default async function handler(
   req: NextApiRequest,
@@ -62,14 +62,6 @@ export default async function handler(
   checks.vault = {
     status: providerName !== 'none' ? providerName : 'not-configured',
     detail: providerDetail,
-  };
-
-  // Check OpenClaw receipt logging
-  checks.openclaw = {
-    status: openClawService.isEnabled() ? "connected" : "not-configured",
-    detail: openClawService.isEnabled()
-      ? "Execution delegation + receipt logging via OpenClaw active"
-      : "OPENCLAW_ENABLED or wrapper credentials not set",
   };
 
   const liveCount = Object.values(checks).filter(

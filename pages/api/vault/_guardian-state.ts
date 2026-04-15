@@ -18,51 +18,8 @@ export interface GuardianRecommendationSnapshot {
   tvl?: number;
 }
 
-export interface GuardianLoopSnapshot {
-  capturedAt: string;
-  dryRun: boolean;
-  source: 'vault-rebalance';
-  status: 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' | 'failed';
-  message: string;
-  reasonCode?: string;
-  summary: {
-    total: number;
-    executed: number;
-    skipped: number;
-    failed: number;
-  };
-  recommendationCount: number;
-  recommendations?: Array<{
-    tokenIn: string;
-    tokenOut: string;
-    amountUSD: number;
-    urgency: string;
-    reason: string;
-  }>;
-  transactions?: Array<{
-    txHash?: string;
-    explorerUrl?: string;
-    tokenIn?: string;
-    tokenOut?: string;
-    amountUSD: number;
-    status: string;
-    error?: string;
-  }>;
-  results?: Array<{
-    status: 'executed' | 'skipped' | 'failed';
-    tokenIn: string;
-    tokenOut: string;
-    amountUSD: number;
-    reason?: string;
-    txHash?: string;
-    explorerUrl?: string;
-    error?: string;
-  }>;
-}
-
 export interface GuardianStateRecord {
   latestRecommendation?: GuardianRecommendationSnapshot;
-  latestLoop?: GuardianLoopSnapshot;
 }
 
 type GuardianStateStore = Record<string, GuardianStateRecord>;

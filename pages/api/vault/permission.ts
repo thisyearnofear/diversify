@@ -113,7 +113,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         executionCount: recentExecutions.length,
         recentExecutions,
         latestRecommendation: guardianState?.latestRecommendation || null,
-        latestLoop: guardianState?.latestLoop || null,
       });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });

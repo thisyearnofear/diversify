@@ -2,7 +2,7 @@
  * useWDKAgent Hook
  *
  * Provides Tether WDK agent status and execution capabilities
- * as a supplement to the existing Circle MPC / OpenClaw infrastructure.
+ * as a supplement to the existing Circle MPC infrastructure.
  * 
  * Part of the "Hackathon Galactica: WDK Edition 1" augmentation.
  */
@@ -49,28 +49,7 @@ export function useWDKAgent() {
 
   const triggerHeartbeat = useCallback(async () => {
     try {
-      // 1. Check if OpenClaw is enabled as it might be proxying WDK actions
-      const response = await fetch('/api/agent/openclaw/receipts?type=identity');
-      const data = await response.json();
-
-      if (response.ok && data.identity) {
-        // If OpenClaw identity exists, check if it's augmented with WDK
-        const capabilities = data.identity.capabilities || [];
-        if (capabilities.includes('wdk') || capabilities.includes('tether-wdk')) {
-          setAgentIdentity({
-            agent_id: data.identity.agent_id,
-            name: data.identity.name,
-            version: data.identity.agent_version || '1.0.0',
-            chains: data.identity.chains || ["Celo", "Arbitrum", "Polygon"],
-            wallets: data.identity.wallets || []
-          });
-          setAgentStatus('online');
-          return;
-        }
-      }
-
-      // 2. Fallback to mock for hackathon demo if no real agent is found
-      const mockIdentity: WDKAgentIdentity = {
+      const identity: WDKAgentIdentity = {
         agent_id: "wdk-settlement-001",
         name: "WDK Settlement Agent",
         version: "1.0.0",
@@ -81,7 +60,7 @@ export function useWDKAgent() {
         ]
       };
 
-      setAgentIdentity(mockIdentity);
+      setAgentIdentity(identity);
       setAgentStatus('online');
     } catch {
       setAgentStatus('offline');

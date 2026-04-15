@@ -225,17 +225,17 @@ export default function AutomationSettings({
     }
   };
 
-  const updatePreferences = (
-    section: keyof AutomationPreferences,
-    updates: Partial<AutomationPreferences[keyof AutomationPreferences]>,
+  const updatePreferences = <K extends keyof AutomationPreferences>(
+    section: K,
+    updates: Partial<AutomationPreferences[K]>,
   ) => {
     if (!preferences) return;
 
     setPreferences({
       ...preferences,
       [section]: {
-        ...preferences[section],
-        ...updates,
+        ...(preferences[section] as object),
+        ...(updates as object),
       },
     });
   };

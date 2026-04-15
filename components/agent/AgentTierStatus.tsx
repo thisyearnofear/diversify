@@ -25,10 +25,8 @@ import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
-import GuardianOpenClawStatus from "./GuardianOpenClawStatus";
 import GuardianWDKStatus from "./GuardianWDKStatus";
 import GuardianMobileWizard from "./GuardianMobileWizard";
-import { useGuardianOpenClaw } from "../../hooks/use-guardian-openclaw";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -48,7 +46,7 @@ export const AgentTierStatus: React.FC<{
 }) => {
   type GuardianProofEvent = {
     id: string;
-    source: "vault" | "openclaw" | "wdk";
+    source: "vault" | "wdk";
     title: string;
     subtitle: string;
     timestamp: number;
@@ -86,15 +84,6 @@ export const AgentTierStatus: React.FC<{
     : chatThinkingStep;
   const { experienceMode } = useExperience();
   const [expandedTier, setExpandedTier] = useState<"advisor" | "guardian" | null>(null);
-  const {
-    agentStatus: openClawStatus,
-    agentIdentity: openClawIdentity,
-    recentReceipts: openClawReceipts,
-    lastHeartbeat: openClawLastHeartbeat,
-    isExecuting: openClawExecuting,
-    triggerHeartbeat: openClawHeartbeat,
-  } = useGuardianOpenClaw();
-
   const {
     agentStatus: wdkStatus,
     agentIdentity: wdkIdentity,
@@ -184,16 +173,13 @@ export const AgentTierStatus: React.FC<{
         if (!guardianActive) return;
 
         const hasExecuted = !!advice?.arcTxHash;
-        const hasOpenClaw = openClawStatus === "online";
 
         addActivity({
           type: hasExecuted ? "execution" : "recommendation",
           tier: "GUARDIAN",
           description: hasExecuted
             ? `Autonomous execution: Swapped USDC to ${advice?.targetToken || "target asset"}`
-            : hasOpenClaw
-              ? `Guardian received Advisor signal — OpenClaw agent ready for execution`
-              : "Guardian received Advisor signal for follow-up review",
+            : "Guardian received Advisor signal for follow-up review",
           status: hasExecuted ? "success" : "pending",
           details: {
             action: advice?.action,
@@ -207,7 +193,7 @@ export const AgentTierStatus: React.FC<{
     return () => {
       unsubscribe();
     };
-  }, [addActivity, guardianActive, openClawStatus]);
+  }, [addActivity, guardianActive]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
 
   const handleRequestPermission = useCallback(async () => {
@@ -261,33 +247,7 @@ export const AgentTierStatus: React.FC<{
   }, [activities]);
 
   const guardianProofEvents = useMemo<GuardianProofEvent[]>(() => {
-    const latestLoopEvent = sessionInfo?.latestLoop
-      ? [{
-        id: `loop-${sessionInfo.latestLoop.capturedAt}`,
-        source: "vault" as const,
-        title: `Guardian ${sessionInfo.latestLoop.status}`,
-        subtitle: sessionInfo.latestLoop.message,
-        timestamp: new Date(sessionInfo.latestLoop.capturedAt).getTime(),
-        status:
-          sessionInfo.latestLoop.status === "executed"
-            ? "confirmed"
-            : sessionInfo.latestLoop.status === "failed" || sessionInfo.latestLoop.status === "blocked"
-              ? "failed"
-              : "pending",
-      }]
-      : [];
-
     const liveEvents = [
-      ...openClawReceipts.map((receipt) => ({
-        id: `openclaw-${receipt.event_id}`,
-        source: "openclaw" as const,
-        title: receipt.action_type,
-        subtitle: receipt.tool,
-        timestamp: new Date(receipt.timestamp).getTime(),
-        status: receipt.status === "success" ? "confirmed" : receipt.status === "error" ? "failed" : "pending",
-        explorerUrl: receipt.onchain?.explorer_url,
-        txHash: receipt.onchain?.tx_hash,
-      })),
       ...wdkReceipts.map((receipt) => ({
         id: `wdk-${receipt.id}`,
         source: "wdk" as const,
@@ -322,10 +282,10 @@ export const AgentTierStatus: React.FC<{
         error: execution.error,
       }));
 
-    return [...latestLoopEvent, ...persistedEvents, ...liveEvents]
+    return [...persistedEvents, ...liveEvents]
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 10);
-  }, [openClawReceipts, wdkReceipts, sessionInfo?.latestLoop, sessionInfo?.recentExecutions]);
+  }, [wdkReceipts, sessionInfo?.recentExecutions]);
 
   // Filter activities by tier
   const getActivitiesForTier = (tier: "ADVISOR" | "GUARDIAN") => {
@@ -588,26 +548,14 @@ export const AgentTierStatus: React.FC<{
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
                 <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-4">Guardian Controls</h4>
                 
-                {isWDK ? (
-                  <GuardianWDKStatus
-                    agentStatus={wdkStatus}
-                    agentIdentity={wdkIdentity}
-                    recentReceipts={[]} // Pass empty, we handle the list below
-                    isExecuting={wdkExecuting}
-                    onTriggerHeartbeat={wdkHeartbeat}
-                    hasTokenVault={hasTokenVault}
-                  />
-                ) : (
-                  <GuardianOpenClawStatus
-                    agentStatus={openClawStatus}
-                    agentIdentity={openClawIdentity}
-                    recentReceipts={[]} // Pass empty
-                    lastHeartbeat={openClawLastHeartbeat}
-                    isExecuting={openClawExecuting}
-                    onTriggerHeartbeat={openClawHeartbeat}
-                    hasTokenVault={hasTokenVault}
-                  />
-                )}
+                <GuardianWDKStatus
+                  agentStatus={wdkStatus}
+                  agentIdentity={wdkIdentity}
+                  recentReceipts={[]}
+                  isExecuting={wdkExecuting}
+                  onTriggerHeartbeat={wdkHeartbeat}
+                  hasTokenVault={hasTokenVault}
+                />
 
                 {sessionInfo?.latestRecommendation && (
                   <div className="mt-6 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-blue-100 dark:border-blue-900/50">
@@ -686,49 +634,14 @@ export const AgentTierStatus: React.FC<{
                         <span className="text-gray-500">Expires</span>
                         <span className="font-bold">{permissionExpiry}</span>
                       </div>
-                      {sessionInfo?.latestLoop && (
+                      {sessionInfo && sessionInfo.recentExecutions.length > 0 && (
                         <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
-                          <div className="flex items-center justify-between gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 dark:text-purple-300">
-                            <span>Latest Guardian Outcome</span>
-                            <span className={`px-2 py-0.5 rounded-full border ${
-                              sessionInfo.latestLoop.status === "executed"
-                                ? "bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-                                : sessionInfo.latestLoop.status === "partial"
-                                  ? "bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800"
-                                  : sessionInfo.latestLoop.status === "ready"
-                                    ? "bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
-                                    : sessionInfo.latestLoop.status === "noop"
-                                      ? "bg-gray-50 text-gray-600 border-gray-200 dark:bg-gray-900/40 dark:border-gray-700"
-                                      : "bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:border-red-800"
-                            }`}>
-                              {sessionInfo.latestLoop.status}
-                            </span>
+                          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 dark:text-purple-300">
+                            Recent Executions
                           </div>
-                          <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 dark:text-purple-300 mt-2">
-                            <span>{sessionInfo.latestLoop.dryRun ? "Dry Run" : "Execution"}</span>
+                          <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                            {sessionInfo.recentExecutions.length} action{sessionInfo.recentExecutions.length === 1 ? '' : 's'} recorded
                           </div>
-                          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                            {sessionInfo.latestLoop.message}
-                          </p>
-                          <div className="mt-2 grid grid-cols-3 gap-2 text-[11px]">
-                            <div className="bg-white/80 dark:bg-gray-900/40 rounded-lg px-2 py-1">
-                              <div className="text-gray-400 uppercase">Total</div>
-                              <div className="font-bold">{sessionInfo.latestLoop.summary.total}</div>
-                            </div>
-                            <div className="bg-white/80 dark:bg-gray-900/40 rounded-lg px-2 py-1">
-                              <div className="text-gray-400 uppercase">Exec</div>
-                              <div className="font-bold text-green-600">{sessionInfo.latestLoop.summary.executed}</div>
-                            </div>
-                            <div className="bg-white/80 dark:bg-gray-900/40 rounded-lg px-2 py-1">
-                              <div className="text-gray-400 uppercase">Skip</div>
-                              <div className="font-bold text-amber-600">{sessionInfo.latestLoop.summary.skipped}</div>
-                            </div>
-                          </div>
-                          {sessionInfo.latestLoop.summary.failed > 0 && (
-                            <div className="mt-2 text-[11px] font-bold text-red-600">
-                              Failed: {sessionInfo.latestLoop.summary.failed}
-                            </div>
-                          )}
                         </div>
                       )}
                       <div className="flex gap-2 mt-2">
@@ -838,7 +751,7 @@ export const AgentTierStatus: React.FC<{
 
             {/* Right Column: High-End Activity Timeline */}
             <div className="space-y-6">
-              {sessionInfo?.latestLoop?.recommendations && sessionInfo.latestLoop.recommendations.length > 0 && (
+              {sessionInfo?.latestRecommendation && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl border border-blue-100 dark:border-purple-900 p-4">
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 mb-2">
                     Proof Chain
@@ -847,7 +760,7 @@ export const AgentTierStatus: React.FC<{
                     <div>
                       <span className="font-bold text-blue-700 dark:text-blue-300">1. Advisor:</span>{" "}
                       <span className="text-gray-700 dark:text-gray-300">
-                        {sessionInfo.latestRecommendation?.oneLiner || "Produced a rebalance recommendation"}
+                        {sessionInfo.latestRecommendation.oneLiner || "Produced a rebalance recommendation"}
                       </span>
                     </div>
                     <div>
@@ -859,7 +772,9 @@ export const AgentTierStatus: React.FC<{
                     <div>
                       <span className="font-bold text-purple-700 dark:text-purple-300">3. Guardian:</span>{" "}
                       <span className="text-gray-700 dark:text-gray-300">
-                        {sessionInfo.latestLoop.message}
+                        {sessionInfo.recentExecutions.length > 0
+                          ? `${sessionInfo.recentExecutions.length} execution${sessionInfo.recentExecutions.length === 1 ? '' : 's'} on record`
+                          : "Awaiting execution"}
                       </span>
                     </div>
                   </div>
@@ -886,7 +801,7 @@ export const AgentTierStatus: React.FC<{
                         <div className={`bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border ${index === 0 ? 'border-green-100 dark:border-green-900/50 ring-1 ring-green-50 dark:ring-green-900/20' : 'border-gray-100 dark:border-gray-700'} hover:shadow-md transition-shadow relative overflow-hidden`}>
                           {/* Source Watermark/Icon */}
                           <div className="absolute top-3 right-3 opacity-20 text-xl grayscale pointer-events-none">
-                            {event.source === "openclaw" ? "🦞" : event.source === "wdk" ? "🌌" : "🛡️"}
+                            {event.source === "wdk" ? "🌌" : "🛡️"}
                           </div>
 
                           <div className="flex justify-between items-start mb-1 pr-8">
@@ -1019,6 +934,7 @@ export const AgentTierStatus: React.FC<{
             try {
               const provider = (window as any).ethereum;
               if (!provider) return false;
+              const { ethers } = await import("ethers");
               const ethersProvider = new ethers.providers.Web3Provider(provider);
               const signer = ethersProvider.getSigner();
 

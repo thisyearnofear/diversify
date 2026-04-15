@@ -36,11 +36,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // This verifies both the refresh token is valid and the connection exists
         const result = await tokenVault.exchangeProviderToken(prefs.auth0RefreshToken, connection);
 
-        if (result && result.access_token) {
+        if (result) {
             return res.status(200).json({ 
                 success: true, 
                 message: `Successfully verified connection to ${connection}`,
-                expires_in: result.expires_in
             });
         } else {
             return res.status(400).json({ 

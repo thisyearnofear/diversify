@@ -110,24 +110,6 @@ export interface GuardianSessionInfo {
         confidence?: number;
         riskLevel?: string;
     } | null;
-    latestLoop?: {
-        capturedAt: string;
-        dryRun: boolean;
-        source: string;
-        status: GuardianLoopStatus;
-        message: string;
-        reasonCode?: string;
-        summary: {
-            total: number;
-            executed: number;
-            skipped: number;
-            failed: number;
-        };
-        recommendationCount: number;
-        recommendations?: GuardianLoopRecommendation[];
-        transactions?: GuardianLoopTransaction[];
-        results?: GuardianLoopItemResult[];
-    } | null;
 }
 
 export interface UseSessionKeyReturn {

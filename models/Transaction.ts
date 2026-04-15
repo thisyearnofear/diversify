@@ -5,14 +5,13 @@
  * a Transaction record. This is the source of truth for:
  * - User-facing transaction history
  * - Fee calculation and audit
- * - OpenClaw receipt correlation
  */
 
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type TransactionType = 'deposit' | 'withdraw' | 'swap' | 'rebalance' | 'fee_deduction' | 'approval';
 export type TransactionStatus = 'pending' | 'confirmed' | 'failed';
-export type ExecutionLayer = 'circle_sdk' | 'openclaw' | 'direct_rpc';
+export type ExecutionLayer = 'circle_sdk' | 'direct_rpc';
 
 export interface ITransaction extends Document {
   vaultId: mongoose.Types.ObjectId;
@@ -44,9 +43,6 @@ export interface ITransaction extends Document {
   // Fee
   feeUSD: number;
   feePercentage: number;
-
-  // OpenClaw correlation
-  openclawRunId?: string;
 
   // Error tracking
   error?: string;
@@ -86,7 +82,7 @@ const TransactionSchema = new Schema<ITransaction>(
 
     executionLayer: {
       type: String,
-      enum: ['circle_sdk', 'openclaw', 'direct_rpc'],
+      enum: ['circle_sdk', 'direct_rpc'],
       default: 'circle_sdk',
     },
     strategyUsed: { type: String },
@@ -94,8 +90,6 @@ const TransactionSchema = new Schema<ITransaction>(
 
     feeUSD: { type: Number, default: 0 },
     feePercentage: { type: Number, default: 0 },
-
-    openclawRunId: { type: String },
 
     error: { type: String },
 

@@ -34,7 +34,7 @@ export function useVoiceIntent(options: VoiceIntentOptions = {}) {
 
       // Unified action execution logic
       await AgentActionService.execute(intent, text, {
-        onNavigate: setActiveTab,
+        onNavigate: setActiveTab as (tab: string) => void,
         onSwapPrefill: setSwapPrefill,
         onToast: showToast,
         onOpenWalletTutorial: options.onOpenWalletTutorial,

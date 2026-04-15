@@ -13,7 +13,7 @@
 | `/api/vault/transactions` | GET | Transaction history |
 | `/api/vault/fees` | GET | Fee summary |
 | `/api/status` | GET | System health check |
-| `/api/agent/execute-swap` | POST | Execute swap via OpenClaw |
+| `/api/agent/execute-swap` | POST | Execute swap via agent |
 
 ## AI Providers
 
@@ -116,7 +116,6 @@ The following files are git-ignored and must be configured from `.example` templ
 | Swaps | Mento Protocol (Celo), 1inch/Uniswap (Arbitrum) |
 | Bridging | Circle CCTP, LiFi |
 | Hedging | Hyperliquid perps |
-| Orchestration | OpenClaw |
 | Data | World Bank, FRED, CoinGecko, DeFiLlama |
 | Database | MongoDB |
 | Hosting | Vercel/Netlify (frontend), Hetzner (agent runtime) |

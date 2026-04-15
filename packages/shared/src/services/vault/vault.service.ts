@@ -89,7 +89,7 @@ export interface VaultTransaction {
   amountIn?: string;
   amountOut?: string;
   amountUSD: number;
-  executionLayer: 'circle_sdk' | 'openclaw' | 'direct_rpc';
+  executionLayer: 'circle_sdk' | 'direct_rpc';
   strategyUsed?: string;
   feeUSD: number;
   feePercentage: number;
@@ -153,7 +153,7 @@ export interface VaultStore {
 }
 
 // ─── Execution Bridge Interface ─────────────────────────────────────────
-// Abstracts the execution layer (Circle SDK, OpenClaw, or smart contract).
+// Abstracts the execution layer (Circle SDK or smart contract).
 
 export interface VaultExecutor {
   getHoldings(vault: Vault): Promise<VaultAllocation[]>;

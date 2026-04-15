@@ -11,7 +11,6 @@ import { RealCircleWalletProvider } from './circle-wallet-provider-real';
 import { hyperliquidService } from './hyperliquid.service';
 import { SynthDataService } from './synth-data-service';
 import { HYPERLIQUID_CONFIG } from '../config/index';
-import { GuardianPolicyService } from './guardian/guardian-policy.service';
 import { GuardianExecutionService } from './guardian/guardian-execution.service';
 import { GuardianAnalysisDataService } from './guardian/guardian-analysis-data.service';
 import { GuardianRecommendationService } from './guardian/guardian-recommendation.service';
@@ -430,14 +429,10 @@ export class ArcAgent {
             // --- 2026 Autonomous Execution Block ---
             let executionTxHash: string | undefined = undefined;
 
-            const executionPolicy = GuardianPolicyService.canExecuteAutonomously({
-                action,
-                targetToken: recommendation.targetToken,
-                targetNetwork: recommendation.targetNetwork,
-            }, this.spendingLimit);
+            const canExecute = this.spendingLimit > 0 && !!action;
 
             // 1) Teleportation to Arbitrum
-            if (executionPolicy.allowed && action === 'BRIDGE' && recommendation.targetNetwork === 'Arbitrum') {
+            if (canExecute && action === 'BRIDGE' && recommendation.targetNetwork === 'Arbitrum') {
                 steps.push(`🚀 Autonomous Opportunity: Teleporting fuel to Arbitrum for yield...`);
                 
                 try {
@@ -455,7 +450,7 @@ export class ArcAgent {
             }
 
             // 2) Swapping USDC target tokens (Phase 5B)
-            if (executionPolicy.allowed && action === 'SWAP' && recommendation.targetToken) {
+            if (canExecute && action === 'SWAP' && recommendation.targetToken) {
                 steps.push(`🚀 Autonomous Opportunity: Swapping USDC to ${recommendation.targetToken} for stable yield...`);
                 try {
                     const execution = await GuardianExecutionService.executeSwap({

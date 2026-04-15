@@ -17,8 +17,6 @@ No wallet required — users can sign in via email, social login, or existing wa
 |----------|---------|
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Privy app (social login + smart accounts) |
 | `PRIVY_APP_SECRET` | Privy server SDK (session signer execution) |
-| `OPENCLAW_BOT_URL` | OpenClaw wrapper (receipt logging) |
-| `OPENCLAW_SETUP_PASSWORD` | OpenClaw auth |
 
 ## Optional Environment Variables
 
@@ -97,4 +95,4 @@ After deployment, update `config/contracts.ts` with new addresses and verify on 
 - **Insufficient funds**: Ensure deployer wallet has testnet tokens
 - **Nonce issues**: Reset wallet nonce or use `--nonce` flag
 - **Transaction reverts**: Check constructor args and contract dependencies
-- **Agent not executing**: Verify OpenClaw runtime is running (`pm2 status`)
+- **Agent not executing**: Verify agent runtime is running (`pm2 status`)

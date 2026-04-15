@@ -8,7 +8,6 @@ import {
   encodeFunctionData,
 } from "viem";
 import { celo } from "viem/chains";
-import { openClawService } from "@diversifi/shared";
 
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || "https://forno.celo.org";
 
@@ -55,8 +54,6 @@ const erc20Abi = parseAbi([
  * Returns unsigned transaction(s) the user signs client-side.
  * If an approval is needed, returns both approve + swap txs.
  *
- * POST /api/celo/mento-swap with { ..., txHash, logReceipt: true }
- *   Logs a completed swap receipt to OpenClaw for hackathon proof.
  */
 export default async function handler(
   req: NextApiRequest,
@@ -66,13 +63,7 @@ export default async function handler(
     return res.status(405).json({ error: "POST only" });
   }
 
-  const { tokenIn, tokenOut, amount, slippage, userAddress, txHash, logReceipt } =
-    req.body;
-
-  // Receipt logging mode — after user has executed the swap
-  if (logReceipt && txHash) {
-    return logSwapReceipt(req.body, res);
-  }
+  const { tokenIn, tokenOut, amount, slippage, userAddress } = req.body;
 
   // Transaction builder mode — prepare unsigned txs for user to sign
   if (!tokenIn || !tokenOut || !amount) {
@@ -224,45 +215,5 @@ export default async function handler(
       error: "Failed to build Mento swap transactions",
       details: message,
     });
-  }
-}
-
-/**
- * Log a completed swap receipt to OpenClaw (fire-and-forget).
- * Called after the user has signed and executed the swap.
- */
-async function logSwapReceipt(
-  body: Record<string, unknown>,
-  res: NextApiResponse
-) {
-  const { tokenIn, tokenOut, amountIn, expectedOut, txHash, userAddress } = body;
-
-  if (!openClawService.isEnabled()) {
-    return res.status(200).json({
-      logged: false,
-      reason: "OpenClaw not configured",
-    });
-  }
-
-  try {
-    const result = await openClawService.logActionReceipt({
-      run_id: `celo-mento-${Date.now()}`,
-      track: "celo-mento",
-      action: "swap",
-      tx_hash: String(txHash),
-      explorer_url: `https://celoscan.io/tx/${txHash}`,
-      metadata: {
-        tokenIn,
-        tokenOut,
-        amountIn,
-        expectedOut,
-        wallet: userAddress,
-        signedBy: "user",
-      },
-    });
-
-    return res.status(200).json({ logged: result.ok, txHash, error: result.error });
-  } catch {
-    return res.status(200).json({ logged: false, reason: "OpenClaw unreachable" });
   }
 }

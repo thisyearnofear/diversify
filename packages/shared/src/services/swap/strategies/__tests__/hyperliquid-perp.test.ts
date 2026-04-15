@@ -208,8 +208,8 @@ describe('HyperliquidPerpStrategy', () => {
 
             const estimate = await strategy.getEstimate(params);
             const expectedSize = 1000 / 2000.50;
-            expect(parseFloat(estimate.expectedOutput)).toBeCloseTo(expectedSize, 4);
-            expect(parseFloat(estimate.minimumOutput)).toBeLessThan(parseFloat(estimate.expectedOutput));
+            expect(parseFloat(estimate.expectedOutput!)).toBeCloseTo(expectedSize, 4);
+            expect(parseFloat(estimate.minimumOutput!)).toBeLessThan(parseFloat(estimate.expectedOutput!));
             expect(estimate.priceImpact).toBe(0.1);
         });
 
@@ -227,7 +227,7 @@ describe('HyperliquidPerpStrategy', () => {
 
             const estimate = await strategy.getEstimate(params);
             const expectedOutput = 10 * 25.30;
-            expect(parseFloat(estimate.expectedOutput)).toBeCloseTo(expectedOutput, 2);
+            expect(parseFloat(estimate.expectedOutput!)).toBeCloseTo(expectedOutput, 2);
         });
 
         it('applies custom slippage tolerance', async () => {
@@ -246,7 +246,7 @@ describe('HyperliquidPerpStrategy', () => {
             const estimate = await strategy.getEstimate(params);
             const expectedSize = 1000 / 2000;
             const minWithSlippage = expectedSize * (1 - 1.0 / 100);
-            expect(parseFloat(estimate.minimumOutput)).toBeCloseTo(minWithSlippage, 4);
+            expect(parseFloat(estimate.minimumOutput!)).toBeCloseTo(minWithSlippage, 4);
         });
     });
 

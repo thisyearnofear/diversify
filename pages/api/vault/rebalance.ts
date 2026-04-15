@@ -5,8 +5,6 @@ import { circleExecutor } from './_executor';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import {
   getGuardianState,
-  updateGuardianState,
-  type GuardianLoopSnapshot,
 } from './_guardian-state';
 
 type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' | 'failed';
@@ -61,31 +59,6 @@ async function resolveRecommendations(
   return buildDemoRecommendation(latestRecommendation.targetToken || 'cEUR', fallbackAmount, reason);
 }
 
-function summarizeRecommendations(recommendations: RebalanceRecommendation[]) {
-  return recommendations.map((rec) => ({
-    tokenIn: rec.tokenIn,
-    tokenOut: rec.tokenOut,
-    amountUSD: rec.estimatedAmountUSD,
-    urgency: rec.urgency,
-    reason: rec.reason,
-  }));
-}
-
-function buildLoopSnapshot(
-  base: Omit<GuardianLoopSnapshot, 'capturedAt' | 'source'> & { capturedAt?: string },
-): GuardianLoopSnapshot {
-  return {
-    source: 'vault-rebalance',
-    capturedAt: base.capturedAt || new Date().toISOString(),
-    ...base,
-  };
-}
-
-async function persistLoopSnapshot(userAddress: string | undefined, latestLoop: GuardianLoopSnapshot) {
-  if (!userAddress) return;
-  await updateGuardianState(userAddress, { latestLoop });
-}
-
 /**
  * POST /api/vault/rebalance — Agent-triggered rebalance.
  *
@@ -133,7 +106,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const permission = summary.permission;
     const now = Math.floor(Date.now() / 1000);
     const permissionExpired = Boolean(permission && permission.expiresAt > 0 && permission.expiresAt < now);
-    const recommendationSnapshots = summarizeRecommendations(resolvedRecommendations);
 
     if (!permission) {
       const payload = {
@@ -147,16 +119,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transactions: [],
         timestamp,
       };
-      await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
-        capturedAt: timestamp,
-        dryRun,
-        status: 'blocked',
-        reasonCode: payload.reasonCode,
-        message: payload.message,
-        summary: payload.summary,
-        recommendationCount: resolvedRecommendations.length,
-        recommendations: recommendationSnapshots,
-      }));
       return res.status(200).json(payload);
     }
 
@@ -172,16 +134,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transactions: [],
         timestamp,
       };
-      await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
-        capturedAt: timestamp,
-        dryRun,
-        status: 'blocked',
-        reasonCode: payload.reasonCode,
-        message: payload.message,
-        summary: payload.summary,
-        recommendationCount: resolvedRecommendations.length,
-        recommendations: recommendationSnapshots,
-      }));
       return res.status(200).json(payload);
     }
 
@@ -202,16 +154,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transactions: [],
         timestamp,
       };
-      await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
-        capturedAt: timestamp,
-        dryRun,
-        status: 'noop',
-        reasonCode: payload.reasonCode,
-        message: payload.message,
-        summary: payload.summary,
-        recommendationCount: 0,
-        recommendations: [],
-      }));
       return res.status(200).json(payload);
     }
 
@@ -235,17 +177,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transactions: [],
         timestamp,
       };
-      await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
-        capturedAt: payload.timestamp,
-        dryRun: true,
-        status: 'ready',
-        reasonCode: payload.reasonCode,
-        message: payload.message,
-        summary: payload.summary,
-        recommendationCount: resolvedRecommendations.length,
-        recommendations: recommendationSnapshots,
-      }));
-
       return res.status(200).json(payload);
     }
 
@@ -275,27 +206,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             ? 'Guardian could not complete the requested action. Review the latest failure details below.'
             : (result.results.find((item) => item.status === 'skipped')?.reason || 'Guardian was blocked by the current permission or policy limits.');
 
-    await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
-      capturedAt: timestamp,
-      dryRun: false,
-      status,
-      reasonCode,
-      message,
-      summary: executionSummary,
-      recommendationCount: resolvedRecommendations.length,
-      recommendations: recommendationSnapshots,
-      transactions: result.transactions.map((tx) => ({
-        txHash: tx.txHash,
-        explorerUrl: tx.explorerUrl,
-        tokenIn: tx.tokenIn,
-        tokenOut: tx.tokenOut,
-        amountUSD: tx.amountUSD,
-        status: tx.status,
-        error: tx.error,
-      })),
-      results: result.results,
-    }));
-
     return res.status(200).json({
       success: true,
       status,
@@ -307,22 +217,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timestamp,
     });
   } catch (error: any) {
-    const timestamp = new Date().toISOString();
-    await persistLoopSnapshot(typeof userAddress === 'string' ? userAddress : undefined, buildLoopSnapshot({
-      capturedAt: timestamp,
-      dryRun,
-      status: 'failed',
-      reasonCode: 'unexpected_error',
-      message: error.message || 'Guardian execution failed unexpectedly.',
-      summary: {
-        total: Array.isArray(recommendations) ? recommendations.length : 0,
-        executed: 0,
-        skipped: 0,
-        failed: Array.isArray(recommendations) ? recommendations.length : 0,
-      },
-      recommendationCount: Array.isArray(recommendations) ? recommendations.length : 0,
-      recommendations: [],
-    }));
     return res.status(500).json({ status: 'failed', message: error.message, error: error.message });
   }
 }

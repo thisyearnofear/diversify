@@ -140,8 +140,8 @@ export function useSwap() {
 
             // Convert to user-friendly format
             const userEstimate: SwapEstimate = {
-                expectedOutput: estimate.expectedOutput,
-                minimumOutput: estimate.minimumOutput,
+                expectedOutput: estimate.expectedOutput ?? '0',
+                minimumOutput: estimate.minimumOutput ?? '0',
                 estimatedTime: getEstimatedTime(swapParams),
                 networkFee: formatNetworkFee(estimate.gasCostEstimate),
                 priceImpact: `${estimate.priceImpact.toFixed(2)}%`,

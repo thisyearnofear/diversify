@@ -11,7 +11,6 @@ import { GoodDollarService } from './services/gooddollar-service';
 import { emergingMarketsPriceService, getEmergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 import { hyperliquidService, HyperliquidService } from './services/hyperliquid.service';
 import { earnService, EarnService } from './services/earn-service';
-import { openClawService, OpenClawService } from './services/openclaw-service';
 import { VaultService } from './services/vault/vault.service';
 import { FeeEngine, feeEngine } from './services/vault/fee-engine';
 import {
@@ -46,8 +45,6 @@ export {
   HyperliquidService,
   earnService,
   EarnService,
-  openClawService,
-  OpenClawService,
   VaultService,
   FeeEngine,
   feeEngine,
@@ -68,6 +65,7 @@ export type {
 
 // Export AI Services
 export { AIService, generateChatCompletion, getAIServiceStatus, cacheSystemPrompt, getCachedSystemPrompt, getAdaptiveTokenLimit } from './services/ai/ai-service';
+export { TokenVaultClient, type TokenVaultConfig } from './services/auth0-token-vault';
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export { IntelligenceService } from './services/ai/intelligence.service';
 export { IntentDiscoveryService, type AppIntent, type AppTab } from './services/ai/intent-discovery.service';

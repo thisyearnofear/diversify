@@ -9,6 +9,7 @@ import { readJsonFile, writeJsonFile } from './_json-store';
  */
 
 interface AutomationPreferences {
+    auth0UserId?: string;
     auth0RefreshToken?: string;
     email: {
         enabled: boolean;
