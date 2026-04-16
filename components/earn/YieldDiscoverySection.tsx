@@ -39,12 +39,13 @@ export default function YieldDiscoverySection({
         const data = await EarnService.fetchVaults({
           chainIds: chainId ? [chainId] : undefined,
         });
-        
-        // Filter and sort by APY
-        const sorted = data
-          .filter(v => v.status === 'active')
-          .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0))
-          .slice(0, limit);
+
+        // Reuse shared recommendation ranker for consistency with advisor flow
+        const sorted = EarnService.rankVaultsForRecommendation(data, {
+          maxResults: limit,
+          allowedRisk: ['low', 'medium'],
+          minTvlUsd: 25_000,
+        });
           
         setVaults(sorted);
         setError(null);

@@ -34,6 +34,7 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
             const quote = await EarnService.getDepositQuote({
                 vaultId,
                 fromChainId: params.fromChainId,
+                toChainId: params.toChainId,
                 fromTokenAddress: await this.getTokenAddress(params.fromChainId, params.fromToken),
                 fromAddress: params.userAddress,
                 amount: params.amount,
@@ -72,6 +73,7 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
         const quote = await EarnService.getDepositQuote({
             vaultId,
             fromChainId: params.fromChainId,
+            toChainId: params.toChainId,
             fromTokenAddress: await this.getTokenAddress(params.fromChainId, params.fromToken),
             fromAddress: params.userAddress,
             amount: params.amount,

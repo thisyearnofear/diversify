@@ -52,6 +52,7 @@ export interface EarnPosition {
 export interface EarnQuoteParams {
     vaultId: string;
     fromChainId: number;
+    toChainId?: number;
     fromTokenAddress: string;
     fromAddress: string;
     amount: string;
@@ -160,11 +161,19 @@ export class EarnService {
                     description: v.description || '',
                 }));
 
-                return normalizedLiveVaults
+                const filteredVaults = normalizedLiveVaults
                     .filter(v => !params?.protocols?.length || params.protocols.includes(v.protocol))
                     .filter(v => !params?.categories?.length || v.categories.some(category => params.categories?.includes(category)))
                     .filter(v => !params?.risk?.length || params.risk.includes(v.risk))
                     .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0));
+
+                console.info('[EarnService] Live vault fetch succeeded', {
+                    chainId: params.chainIds[0],
+                    total: liveVaults.length,
+                    filtered: filteredVaults.length,
+                });
+
+                return filteredVaults;
             } catch (e) {
                 console.warn('[EarnService] Live fetch failed, using fallback:', e);
             }
@@ -182,7 +191,12 @@ export class EarnService {
             results.push(...chainVaults.map(v => ({ ...v, chainId })));
         }
 
-        return results.map(v => this.vaultConfigToEarnVault(v));
+        const fallbackVaults = results.map(v => this.vaultConfigToEarnVault(v));
+        console.info('[EarnService] Using curated vault fallback', {
+            chainIds,
+            total: fallbackVaults.length,
+        });
+        return fallbackVaults;
     }
 
     /**
@@ -203,7 +217,7 @@ export class EarnService {
             high: 0.45,
         };
 
-        const scored = vaults
+        const scoredItems = vaults
             .filter(v => v.status === 'active')
             .filter(v => allowedRisk.includes(v.risk))
             .filter(v => Number.isFinite(v.apy) && (v.apy ?? 0) > 0)
@@ -214,7 +228,9 @@ export class EarnService {
                 const score = (apyComponent * 0.65 + tvlComponent * 0.35) * riskWeight[vault.risk];
 
                 return { vault, score };
-            })
+            });
+
+        const scored = scoredItems
             .sort((a, b) => {
                 if (b.score !== a.score) return b.score - a.score;
                 if ((b.vault.apy ?? 0) !== (a.vault.apy ?? 0)) return (b.vault.apy ?? 0) - (a.vault.apy ?? 0);
@@ -222,7 +238,34 @@ export class EarnService {
             })
             .map(item => item.vault);
 
-        return typeof maxResults === 'number' ? scored.slice(0, maxResults) : scored;
+        const selected = typeof maxResults === 'number' ? scored.slice(0, maxResults) : scored;
+
+        console.info('[EarnService] Ranked vault recommendations', {
+            input: vaults.length,
+            eligible: scoredItems.length,
+            selected: selected.length,
+            minTvlUsd,
+            allowedRisk,
+            topCandidates: scoredItems
+                .sort((a, b) => b.score - a.score)
+                .slice(0, 3)
+                .map(item => ({
+                    id: item.vault.id,
+                    protocol: item.vault.protocol,
+                    chainId: item.vault.chainId,
+                    apy: item.vault.apy ?? 0,
+                    tvl: item.vault.tvl ?? 0,
+                    risk: item.vault.risk,
+                    score: Number(item.score.toFixed(6)),
+                    components: {
+                        apy: Number((Math.min(item.vault.apy ?? 0, 40) / 40).toFixed(6)),
+                        tvl: Number((Math.min(Math.log10((item.vault.tvl ?? 0) + 1) / 9, 1)).toFixed(6)),
+                        riskWeight: riskWeight[item.vault.risk],
+                    },
+                })),
+        });
+
+        return selected;
     }
 
     /**
@@ -254,11 +297,13 @@ export class EarnService {
     static async getDepositQuote(params: EarnQuoteParams): Promise<EarnQuote> {
         this.ensureInitialized();
 
+        const toChainId = params.toChainId ?? (await this.resolveVaultChainId(params.vaultId)) ?? params.fromChainId;
+
         // Use LI.FI Composer via standard quote endpoint
         // The vaultId should be the vault token address
         const url = new URL(`${LIFI_API_BASE}/quote`);
         url.searchParams.append('fromChain', params.fromChainId.toString());
-        url.searchParams.append('toChain', params.fromChainId.toString()); // Same chain for now
+        url.searchParams.append('toChain', toChainId.toString());
         url.searchParams.append('fromToken', params.fromTokenAddress);
         url.searchParams.append('toToken', params.vaultId); // Vault token address
         url.searchParams.append('fromAddress', params.fromAddress);
@@ -272,10 +317,23 @@ export class EarnService {
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
+            console.warn('[EarnService] Deposit quote failed', {
+                vaultId: params.vaultId,
+                fromChainId: params.fromChainId,
+                toChainId,
+                fromTokenAddress: params.fromTokenAddress,
+                message: error.message || response.statusText,
+            });
             throw new Error(error.message || `Failed to fetch deposit quote: ${response.statusText}`);
         }
 
         const quote = await response.json();
+        console.info('[EarnService] Deposit quote succeeded', {
+            vaultId: params.vaultId,
+            fromChainId: params.fromChainId,
+            toChainId,
+            fromTokenAddress: params.fromTokenAddress,
+        });
         
         // Map LI.FI quote to EarnQuote format
         return {
@@ -333,14 +391,81 @@ export class EarnService {
     /**
      * Fetch user positions across LI.FI Earn vaults
      * 
-     * NOTE: Requires vaults.fyi API key
+     * Uses LI.FI Earn portfolio endpoint.
      */
     static async fetchUserPositions(userAddress: string): Promise<EarnPosition[]> {
         this.ensureInitialized();
+        const normalizedAddress = userAddress.trim();
+        if (!normalizedAddress) {
+            return [];
+        }
 
-        // TODO: Implement with vaults.fyi API
-        console.warn('[EarnService] User positions require vaults.fyi API key.');
-        return [];
+        try {
+            const response = await fetch(`${EARN_API_BASE}/portfolio/${normalizedAddress}/positions`, {
+                headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
+            });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                console.warn('[EarnService] Failed to fetch user positions', {
+                    userAddress: normalizedAddress,
+                    message: error.message || response.statusText,
+                });
+                return [];
+            }
+
+            const payload = await response.json();
+            const data = Array.isArray(payload?.data) ? payload.data : [];
+
+            return data
+                .map((position: any): EarnPosition | null => {
+                    const vaultAddress = position.vault?.address || position.vaultAddress || position.address;
+                    const chainId = Number(position.vault?.chainId ?? position.chainId);
+                    if (!vaultAddress || !Number.isFinite(chainId)) {
+                        return null;
+                    }
+
+                    return {
+                        vaultId: vaultAddress,
+                        chainId,
+                        userAddress: normalizedAddress,
+                        amount: position.balance?.amount ?? position.amount ?? '0',
+                        amountUSD: position.balance?.usd ?? position.amountUSD ?? '0',
+                        apy: Number(position.vault?.analytics?.apy?.total ?? position.apy ?? 0),
+                    };
+                })
+                .filter((position): position is EarnPosition => position !== null);
+        } catch (error) {
+            console.warn('[EarnService] Failed to fetch user positions', {
+                userAddress: normalizedAddress,
+                error,
+            });
+            return [];
+        }
+    }
+
+    private static async resolveVaultChainId(vaultId: string): Promise<number | undefined> {
+        for (const [cid, vaults] of Object.entries(LIFI_VAULTS)) {
+            if (vaults.some(v => v.address.toLowerCase() === vaultId.toLowerCase())) {
+                return Number(cid);
+            }
+        }
+
+        try {
+            const vaultResponse = await fetch(`${EARN_API_BASE}/vaults?address=${vaultId}&limit=1`, {
+                headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
+            });
+            if (!vaultResponse.ok) return undefined;
+
+            const payload = await vaultResponse.json();
+            const match = Array.isArray(payload?.data)
+                ? payload.data.find((vault: any) => vault.address?.toLowerCase() === vaultId.toLowerCase())
+                : undefined;
+
+            return match?.chainId ? Number(match.chainId) : undefined;
+        } catch {
+            return undefined;
+        }
     }
 
     /**

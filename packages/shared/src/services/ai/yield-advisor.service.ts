@@ -113,17 +113,16 @@ export async function getVaultQuote(
     fromChainId: number
 ): Promise<{ quote: any | null; vault: any | null }> {
     try {
-        const [vault, quote] = await Promise.all([
-            EarnService.getVaultDetails(vaultId),
-            EarnService.getDepositQuote({
-                vaultId,
-                fromChainId,
-                fromTokenAddress: getTokenAddress(fromToken, fromChainId),
-                fromAddress: userAddress,
-                amount: '100', // Default quote amount
-                slippage: 0.5
-            })
-        ]);
+        const vault = await EarnService.getVaultDetails(vaultId);
+        const quote = await EarnService.getDepositQuote({
+            vaultId,
+            fromChainId,
+            toChainId: vault.chainId,
+            fromTokenAddress: getTokenAddress(fromToken, fromChainId),
+            fromAddress: userAddress,
+            amount: '100', // Default quote amount
+            slippage: 0.5
+        });
 
         return { vault, quote };
     } catch (error) {

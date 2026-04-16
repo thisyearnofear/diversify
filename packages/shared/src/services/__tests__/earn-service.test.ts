@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EarnService, type EarnVault } from '../earn-service';
 
 const buildVault = (overrides: Partial<EarnVault>): EarnVault => ({
@@ -50,5 +50,93 @@ describe('EarnService.rankVaultsForRecommendation', () => {
     });
 
     expect(ranked.map(v => v.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('EarnService.getDepositQuote', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('uses explicit destination chain when provided for cross-chain deposit', async () => {
+    vi.spyOn(EarnService as any, 'ensureInitialized').mockImplementation(() => {});
+    const fetchMock = vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        transactionRequest: {
+          to: '0xrouter',
+          data: '0x',
+          value: '0',
+          from: '0xuser',
+          chainId: 8453,
+        },
+        action: { fromAmount: '1000000' },
+        estimate: { toAmount: '999000', feeCosts: [], gasCosts: [] },
+      }),
+    } as any);
+
+    await EarnService.getDepositQuote({
+      vaultId: '0xvault',
+      fromChainId: 42220,
+      toChainId: 8453,
+      fromTokenAddress: '0xasset',
+      fromAddress: '0xuser',
+      amount: '1000000',
+    });
+
+    const quoteCall = fetchMock.mock.calls.find(call => String(call[0]).includes('/quote'));
+    expect(quoteCall).toBeTruthy();
+    const calledUrl = new URL(quoteCall![0] as string);
+    expect(calledUrl.searchParams.get('fromChain')).toBe('42220');
+    expect(calledUrl.searchParams.get('toChain')).toBe('8453');
+  });
+});
+
+describe('EarnService.fetchUserPositions', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('normalizes portfolio positions from Earn endpoint', async () => {
+    vi.spyOn(EarnService as any, 'ensureInitialized').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [
+          {
+            chainId: 8453,
+            vaultAddress: '0xvault',
+            amountUSD: '150.50',
+            amount: '150000000',
+            apy: 6.2,
+          },
+        ],
+      }),
+    } as any);
+
+    const positions = await EarnService.fetchUserPositions('0xabc');
+
+    expect(positions).toEqual([
+      {
+        vaultId: '0xvault',
+        chainId: 8453,
+        userAddress: '0xabc',
+        amount: '150000000',
+        amountUSD: '150.50',
+        apy: 6.2,
+      },
+    ]);
+  });
+
+  it('returns empty array on endpoint failure', async () => {
+    vi.spyOn(EarnService as any, 'ensureInitialized').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
+      ok: false,
+      statusText: 'Bad Request',
+      json: async () => ({ message: 'bad request' }),
+    } as any);
+
+    const positions = await EarnService.fetchUserPositions('0xabc');
+    expect(positions).toEqual([]);
   });
 });
