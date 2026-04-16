@@ -35,14 +35,19 @@ export async function getYieldRecommendations(
             risk: ['low', 'medium'],
             categories: getPreferredCategories(strategy)
         });
+        const rankedVaults = EarnService.rankVaultsForRecommendation(vaults, {
+            minTvlUsd: 25_000,
+            allowedRisk: ['low', 'medium'],
+            maxResults,
+        });
 
         // 3. Get user's current positions
         const userPositions = await EarnService.fetchUserPositions(userAddress);
         const currentPositions = getCurrentPositionMap(userPositions);
 
         // 4. Generate intelligence items for top vaults
-        for (let i = 0; i < Math.min(vaults.length, maxResults); i++) {
-            const vault = vaults[i];
+        for (let i = 0; i < rankedVaults.length; i++) {
+            const vault = rankedVaults[i];
             const existingPosition = currentPositions.get(vault.id);
 
             recommendations.push({
@@ -170,8 +175,6 @@ function getCurrentPositionMap(positions: any[]): Map<string, any> {
  * Deduplicate recommendations based on content
  */
 function deduplicateRecommendations(recommendations: any[]): any[] {
-    if (typeof window === 'undefined') return recommendations;
-
     try {
         const seen = new Set<string>();
         return recommendations.filter(rec => {

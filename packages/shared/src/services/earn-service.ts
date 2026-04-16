@@ -75,6 +75,12 @@ export interface EarnQuote {
     };
 }
 
+export interface VaultRecommendationOptions {
+    minTvlUsd?: number;
+    allowedRisk?: Array<'low' | 'medium' | 'high'>;
+    maxResults?: number;
+}
+
 export class EarnService {
     private static isInitialized = false;
 
@@ -135,7 +141,7 @@ export class EarnService {
                     chainId: params.chainIds[0],
                     limit: 50,
                 });
-                return liveVaults.map(v => ({
+                const normalizedLiveVaults = liveVaults.map(v => ({
                     id: v.address,
                     chainId: v.chainId,
                     protocol: v.protocol?.name || 'unknown',
@@ -153,6 +159,12 @@ export class EarnService {
                     risk: 'medium',
                     description: v.description || '',
                 }));
+
+                return normalizedLiveVaults
+                    .filter(v => !params?.protocols?.length || params.protocols.includes(v.protocol))
+                    .filter(v => !params?.categories?.length || v.categories.some(category => params.categories?.includes(category)))
+                    .filter(v => !params?.risk?.length || params.risk.includes(v.risk))
+                    .sort((a, b) => (b.apy ?? 0) - (a.apy ?? 0));
             } catch (e) {
                 console.warn('[EarnService] Live fetch failed, using fallback:', e);
             }
@@ -171,6 +183,46 @@ export class EarnService {
         }
 
         return results.map(v => this.vaultConfigToEarnVault(v));
+    }
+
+    /**
+     * Rank vaults for deterministic recommendation quality.
+     * Balances APY, liquidity and risk while filtering out weak candidates.
+     */
+    static rankVaultsForRecommendation(
+        vaults: EarnVault[],
+        options?: VaultRecommendationOptions
+    ): EarnVault[] {
+        const minTvlUsd = options?.minTvlUsd ?? 10_000;
+        const allowedRisk = options?.allowedRisk ?? ['low', 'medium'];
+        const maxResults = options?.maxResults;
+
+        const riskWeight: Record<'low' | 'medium' | 'high', number> = {
+            low: 1,
+            medium: 0.8,
+            high: 0.45,
+        };
+
+        const scored = vaults
+            .filter(v => v.status === 'active')
+            .filter(v => allowedRisk.includes(v.risk))
+            .filter(v => Number.isFinite(v.apy) && (v.apy ?? 0) > 0)
+            .filter(v => (v.tvl ?? 0) >= minTvlUsd)
+            .map(vault => {
+                const apyComponent = Math.min(vault.apy ?? 0, 40) / 40;
+                const tvlComponent = Math.min(Math.log10((vault.tvl ?? 0) + 1) / 9, 1);
+                const score = (apyComponent * 0.65 + tvlComponent * 0.35) * riskWeight[vault.risk];
+
+                return { vault, score };
+            })
+            .sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                if ((b.vault.apy ?? 0) !== (a.vault.apy ?? 0)) return (b.vault.apy ?? 0) - (a.vault.apy ?? 0);
+                return (b.vault.tvl ?? 0) - (a.vault.tvl ?? 0);
+            })
+            .map(item => item.vault);
+
+        return typeof maxResults === 'number' ? scored.slice(0, maxResults) : scored;
     }
 
     /**
