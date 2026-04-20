@@ -11,6 +11,31 @@ import { getWalletProvider } from '../../utils/wallet-provider';
 
 let isConfigured = false;
 let isEarnConfigured = false;
+const LIFI_API_URL = 'https://li.quest/v1';
+const LIFI_DEFAULT_INTEGRATOR_ID = 'diversifi-minipay';
+
+export function getLiFiIntegratorId(): string {
+    return process.env.LIFI_INTEGRATOR_ID || LIFI_DEFAULT_INTEGRATOR_ID;
+}
+
+export function getLiFiApiKey(): string | undefined {
+    const apiKey = process.env.LIFI_API_KEY || process.env.NEXT_PUBLIC_LIFI_API_KEY;
+    const normalizedApiKey = apiKey?.trim();
+    return normalizedApiKey ? normalizedApiKey : undefined;
+}
+
+export function getLiFiRequestHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+        'x-integrator-id': getLiFiIntegratorId(),
+    };
+
+    const apiKey = getLiFiApiKey();
+    if (apiKey) {
+        headers['x-lifi-api-key'] = apiKey;
+    }
+
+    return headers;
+}
 
 /**
  * Initialize LiFi SDK configuration
@@ -26,8 +51,9 @@ export function initializeLiFiConfig(): void {
         const supportedChains = [arbitrum, celo, celoSepolia];
 
         createConfig({
-            integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay',
-            apiUrl: 'https://li.quest/v1',
+            integrator: getLiFiIntegratorId(),
+            apiKey: getLiFiApiKey(),
+            apiUrl: LIFI_API_URL,
             providers: [
                 EVM({
                     getWalletClient: async () => {
@@ -244,8 +270,9 @@ export function initializeLiFiForQuotes(): void {
 
     try {
         createConfig({
-            integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay',
-            apiUrl: 'https://li.quest/v1',
+            integrator: getLiFiIntegratorId(),
+            apiKey: getLiFiApiKey(),
+            apiUrl: LIFI_API_URL,
             // No providers needed for route discovery
         });
 

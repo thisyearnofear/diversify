@@ -10,6 +10,10 @@
 import { EarnService } from '../../services/earn-service';
 import { getTokenAddresses } from '../../config';
 
+function createCorrelationId(prefix: string): string {
+    return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
+}
+
 /**
  * Get AI-driven yield recommendations using LI.FI Earn
  *
@@ -22,7 +26,8 @@ export async function getYieldRecommendations(
     userAddress: string,
     currentVault?: any,
     strategy?: string,
-    maxResults: number = 5
+    maxResults: number = 5,
+    correlationId: string = createCorrelationId('yield-reco')
 ): Promise<any[]> {
     const recommendations: any[] = [];
 
@@ -40,10 +45,11 @@ export async function getYieldRecommendations(
             minTvlUsd: 25_000,
             allowedRisk: ['low', 'medium'],
             maxResults,
+            correlationId,
         });
 
         // 3. Get user's current positions
-        const userPositions = await EarnService.fetchUserPositions(userAddress);
+        const userPositions = await EarnService.fetchUserPositions(userAddress, { correlationId });
         const currentPositions = getCurrentPositionMap(userPositions);
 
         // 4. Generate intelligence items for top vaults
@@ -63,6 +69,7 @@ export async function getYieldRecommendations(
                 impactAsset: vault.asset.symbol,
                 timestamp: 'Autonomous',
                 metadata: {
+                    correlationId,
                     vaultId: vault.id,
                     protocol: vault.protocol,
                     apy: vault.apy ?? 0,
@@ -84,6 +91,7 @@ export async function getYieldRecommendations(
                 impact: 'neutral',
                 timestamp: 'Autonomous',
                 metadata: {
+                    correlationId,
                     action: 'discover_yield_opportunities',
                     recommendedChains: ['Celo', 'Arbitrum', 'Base']
                 }
@@ -111,19 +119,36 @@ export async function getVaultQuote(
     vaultId: string,
     userAddress: string,
     fromToken: string,
-    fromChainId: number
+    fromChainId: number,
+    correlationId: string = createCorrelationId('yield-quote')
 ): Promise<{ quote: any | null; vault: any | null }> {
     try {
         const vault = await EarnService.getVaultDetails(vaultId);
+        if (vault.status !== 'active') {
+            throw new Error(`Vault ${vault.name || vaultId} is not active. Please choose an active vault.`);
+        }
+
+        const fromTokenAddress = resolveTokenAddress(fromToken, fromChainId);
         const quote = await EarnService.getDepositQuote({
             vaultId,
             fromChainId,
             toChainId: vault.chainId,
-            fromTokenAddress: resolveTokenAddress(fromToken, fromChainId),
+            fromTokenAddress,
             fromAddress: userAddress,
             amount: '100', // Default quote amount
-            slippage: 0.5
+            slippage: 0.005,
+            correlationId,
         });
+
+        if (!quote?.transactionRequest?.to || !quote?.transactionRequest?.data) {
+            throw new Error('No executable transaction route was returned for this deposit. Try another token or amount.');
+        }
+
+        const expectedOut = Number(quote?.estimate?.toAmount ?? '0');
+        const inputAmount = Number(quote?.estimate?.fromAmount ?? '0');
+        if (!Number.isFinite(expectedOut) || expectedOut <= 0 || !Number.isFinite(inputAmount) || inputAmount <= 0) {
+            throw new Error('Quote output is invalid for this route. Please retry with a supported token and amount.');
+        }
 
         return { vault, quote };
     } catch (error) {

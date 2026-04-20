@@ -11,13 +11,12 @@
  * rather than creating new abstractions.
  */
 
-import { initializeLiFiEarn } from './swap/lifi-config';
+import { getLiFiIntegratorId, getLiFiRequestHeaders, initializeLiFiEarn } from './swap/lifi-config';
 import { VaultType } from './vault/vault.service';
 import { LIFI_VAULTS, getLiFiVaults, getLiFiVaultByAddress, type VaultConfig } from '../config';
 
 const LIFI_API_BASE = 'https://li.quest/v1';
-const EARN_API_BASE = 'https://earn.li.fi/v1/earn';
-const LIFI_INTEGRATOR_ID = process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay';
+const EARN_API_BASE = 'https://earn.li.fi/v1';
 
 export interface EarnVault {
     id: string;
@@ -58,6 +57,7 @@ export interface EarnQuoteParams {
     amount: string;
     slippage?: number;
     integrator?: string;
+    correlationId?: string;
 }
 
 export interface EarnQuote {
@@ -80,6 +80,11 @@ export interface VaultRecommendationOptions {
     minTvlUsd?: number;
     allowedRisk?: Array<'low' | 'medium' | 'high'>;
     maxResults?: number;
+    correlationId?: string;
+}
+
+export interface PositionFetchOptions {
+    correlationId?: string;
 }
 
 export class EarnService {
@@ -90,6 +95,35 @@ export class EarnService {
             initializeLiFiEarn();
             this.isInitialized = true;
         }
+    }
+
+    private static buildRequestUrl(target: 'earn' | 'quote', path: string): URL {
+        const normalizedPath = path.replace(/^\/+/, '');
+
+        if (typeof window !== 'undefined') {
+            const proxyPath = target === 'earn'
+                ? `/api/lifi/earn/${normalizedPath}`
+                : `/api/lifi/${normalizedPath}`;
+            return new URL(proxyPath, window.location.origin);
+        }
+
+        const baseUrl = target === 'earn' ? EARN_API_BASE : LIFI_API_BASE;
+        return new URL(`${baseUrl}/${normalizedPath}`);
+    }
+
+    private static getRequestInit(target: 'earn' | 'quote'): RequestInit | undefined {
+        if (typeof window !== 'undefined') {
+            return undefined;
+        }
+
+        const headers = getLiFiRequestHeaders();
+        if (target === 'earn' && !headers['x-lifi-api-key']) {
+            throw new Error('LI.FI API key is required. Set LIFI_API_KEY on the server.');
+        }
+
+        return {
+            headers,
+        };
     }
 
     /**
@@ -103,16 +137,14 @@ export class EarnService {
         minTvlUsd?: number;
         limit?: number;
     }): Promise<any[]> {
-        const url = new URL(`${EARN_API_BASE}/vaults`);
+        const url = this.buildRequestUrl('earn', 'vaults');
         url.searchParams.append('chainId', params.chainId.toString());
         if (params.asset) url.searchParams.append('asset', params.asset);
         if (params.sortBy) url.searchParams.append('sortBy', params.sortBy);
         if (params.minTvlUsd) url.searchParams.append('minTvlUsd', params.minTvlUsd.toString());
         if (params.limit) url.searchParams.append('limit', params.limit.toString());
 
-        const response = await fetch(url.toString(), {
-            headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
-        });
+        const response = await fetch(url.toString(), this.getRequestInit('earn'));
 
         if (!response.ok) {
             throw new Error(`Failed to fetch vaults: ${response.statusText}`);
@@ -142,7 +174,7 @@ export class EarnService {
                     chainId: params.chainIds[0],
                     limit: 50,
                 });
-                const normalizedLiveVaults = liveVaults.map(v => ({
+                const normalizedLiveVaults: EarnVault[] = liveVaults.map((v): EarnVault => ({
                     id: v.address,
                     chainId: v.chainId,
                     protocol: v.protocol?.name || 'unknown',
@@ -156,7 +188,7 @@ export class EarnService {
                     apy: v.analytics?.apy?.total,
                     tvl: parseFloat(v.analytics?.tvl?.usd || '0'),
                     status: v.isTransactional ? 'active' : 'deprecated',
-                    categories: v.tags || [],
+                    categories: Array.isArray(v.tags) ? v.tags : [],
                     risk: 'medium',
                     description: v.description || '',
                 }));
@@ -241,6 +273,7 @@ export class EarnService {
         const selected = typeof maxResults === 'number' ? scored.slice(0, maxResults) : scored;
 
         console.info('[EarnService] Ranked vault recommendations', {
+            correlationId: options?.correlationId,
             input: vaults.length,
             eligible: scoredItems.length,
             selected: selected.length,
@@ -301,7 +334,7 @@ export class EarnService {
 
         // Use LI.FI Composer via standard quote endpoint
         // The vaultId should be the vault token address
-        const url = new URL(`${LIFI_API_BASE}/quote`);
+        const url = this.buildRequestUrl('quote', 'quote');
         url.searchParams.append('fromChain', params.fromChainId.toString());
         url.searchParams.append('toChain', toChainId.toString());
         url.searchParams.append('fromToken', params.fromTokenAddress);
@@ -309,15 +342,14 @@ export class EarnService {
         url.searchParams.append('fromAddress', params.fromAddress);
         url.searchParams.append('fromAmount', params.amount);
         if (params.slippage) url.searchParams.append('slippage', params.slippage.toString());
-        url.searchParams.append('integrator', params.integrator || LIFI_INTEGRATOR_ID);
+        url.searchParams.append('integrator', params.integrator || getLiFiIntegratorId());
 
-        const response = await fetch(url.toString(), {
-            headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
-        });
+        const response = await fetch(url.toString(), this.getRequestInit('quote'));
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
             console.warn('[EarnService] Deposit quote failed', {
+                correlationId: params.correlationId,
                 vaultId: params.vaultId,
                 fromChainId: params.fromChainId,
                 toChainId,
@@ -329,6 +361,7 @@ export class EarnService {
 
         const quote = await response.json();
         console.info('[EarnService] Deposit quote succeeded', {
+            correlationId: params.correlationId,
             vaultId: params.vaultId,
             fromChainId: params.fromChainId,
             toChainId,
@@ -356,7 +389,7 @@ export class EarnService {
         this.ensureInitialized();
 
         // Use LI.FI Composer via standard quote endpoint
-        const url = new URL(`${LIFI_API_BASE}/quote`);
+        const url = this.buildRequestUrl('quote', 'quote');
         url.searchParams.append('fromChain', params.fromChainId.toString());
         url.searchParams.append('toChain', params.fromChainId.toString());
         url.searchParams.append('fromToken', params.vaultId); // Vault token address
@@ -364,11 +397,9 @@ export class EarnService {
         url.searchParams.append('fromAddress', params.fromAddress);
         url.searchParams.append('fromAmount', params.amount);
         if (params.slippage) url.searchParams.append('slippage', params.slippage.toString());
-        url.searchParams.append('integrator', params.integrator || LIFI_INTEGRATOR_ID);
+        url.searchParams.append('integrator', params.integrator || getLiFiIntegratorId());
 
-        const response = await fetch(url.toString(), {
-            headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
-        });
+        const response = await fetch(url.toString(), this.getRequestInit('quote'));
 
         if (!response.ok) {
             const error = await response.json().catch(() => ({}));
@@ -393,21 +424,28 @@ export class EarnService {
      * 
      * Uses LI.FI Earn portfolio endpoint.
      */
-    static async fetchUserPositions(userAddress: string): Promise<EarnPosition[]> {
+    static async fetchUserPositions(userAddress: string, options?: PositionFetchOptions): Promise<EarnPosition[]> {
         this.ensureInitialized();
         const normalizedAddress = userAddress.trim();
         if (!normalizedAddress) {
             return [];
         }
 
+        console.info('[EarnService] Refreshing user positions', {
+            correlationId: options?.correlationId,
+            userAddress: normalizedAddress,
+        });
+
         try {
-            const response = await fetch(`${EARN_API_BASE}/portfolio/${normalizedAddress}/positions`, {
-                headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
-            });
+            const response = await fetch(
+                this.buildRequestUrl('earn', `portfolio/${normalizedAddress}/positions`).toString(),
+                this.getRequestInit('earn')
+            );
 
             if (!response.ok) {
                 const error = await response.json().catch(() => ({}));
                 console.warn('[EarnService] Failed to fetch user positions', {
+                    correlationId: options?.correlationId,
                     userAddress: normalizedAddress,
                     message: error.message || response.statusText,
                 });
@@ -416,6 +454,12 @@ export class EarnService {
 
             const payload = await response.json();
             const data = Array.isArray(payload?.data) ? payload.data : [];
+
+            console.info('[EarnService] User positions refresh succeeded', {
+                correlationId: options?.correlationId,
+                userAddress: normalizedAddress,
+                count: data.length,
+            });
 
             return data
                 .map((position: any): EarnPosition | null => {
@@ -437,6 +481,7 @@ export class EarnService {
                 .filter((position): position is EarnPosition => position !== null);
         } catch (error) {
             console.warn('[EarnService] Failed to fetch user positions', {
+                correlationId: options?.correlationId,
                 userAddress: normalizedAddress,
                 error,
             });
@@ -452,9 +497,11 @@ export class EarnService {
         }
 
         try {
-            const vaultResponse = await fetch(`${EARN_API_BASE}/vaults?address=${vaultId}&limit=1`, {
-                headers: { 'x-integrator-id': LIFI_INTEGRATOR_ID },
-            });
+            const vaultLookupUrl = this.buildRequestUrl('earn', 'vaults');
+            vaultLookupUrl.searchParams.append('address', vaultId);
+            vaultLookupUrl.searchParams.append('limit', '1');
+
+            const vaultResponse = await fetch(vaultLookupUrl.toString(), this.getRequestInit('earn'));
             if (!vaultResponse.ok) return undefined;
 
             const payload = await vaultResponse.json();

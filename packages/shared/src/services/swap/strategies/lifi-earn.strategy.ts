@@ -11,7 +11,6 @@ import {
     SwapEstimate,
 } from './base-swap.strategy';
 import { EarnService } from '../../earn-service';
-import { ChainDetectionService } from '../chain-detection.service';
 
 export class LiFiEarnStrategy extends BaseSwapStrategy {
     getName(): string {
@@ -28,17 +27,48 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
     async execute(params: SwapParams, callbacks?: SwapCallbacks): Promise<SwapResult> {
         try {
             const vaultId = params.toToken.replace('lifi-earn:', '');
+            const correlationId = this.getCorrelationId();
             
             callbacks?.onStatusUpdate?.('Routing via LI.FI Composer for optimal vault deposit...');
+
+            const vault = await EarnService.getVaultDetails(vaultId);
+            if (vault.status !== 'active') {
+                return {
+                    success: false,
+                    error: `Selected vault is not active: ${vault.name || vaultId}.`,
+                };
+            }
+
+            const fromTokenAddress = await this.getTokenAddress(params.fromChainId, params.fromToken);
             
             const quote = await EarnService.getDepositQuote({
                 vaultId,
                 fromChainId: params.fromChainId,
                 toChainId: params.toChainId,
-                fromTokenAddress: await this.getTokenAddress(params.fromChainId, params.fromToken),
+                fromTokenAddress,
                 fromAddress: params.userAddress,
                 amount: params.amount,
-                integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay'
+                integrator: process.env.LIFI_INTEGRATOR_ID || 'diversifi-minipay',
+                slippage: typeof params.slippageTolerance === 'number'
+                    ? params.slippageTolerance / 100
+                    : undefined,
+                correlationId,
+            });
+
+            const preflightError = this.getQuotePreflightError(quote);
+            if (preflightError) {
+                return {
+                    success: false,
+                    error: preflightError,
+                };
+            }
+
+            console.info('[LiFiEarnStrategy] Quote preflight passed', {
+                correlationId,
+                vaultId,
+                fromChainId: params.fromChainId,
+                toChainId: params.toChainId,
+                fromTokenAddress,
             });
 
             callbacks?.onStatusUpdate?.('Executing atomic swap + deposit via LI.FI...');
@@ -52,6 +82,13 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
 
             callbacks?.onStatusUpdate?.('Confirming vault deposit...');
             const receipt = await tx.wait();
+
+            console.info('[LiFiEarnStrategy] Execution result', {
+                correlationId,
+                vaultId,
+                success: receipt.status === 1,
+                txHash: receipt.transactionHash,
+            });
 
             return {
                 success: receipt.status === 1,
@@ -105,6 +142,24 @@ export class LiFiEarnStrategy extends BaseSwapStrategy {
             throw new Error(`Token ${symbol} not found on chain ${chainId}`);
         }
         return address;
+    }
+
+    private getQuotePreflightError(quote: any): string | null {
+        if (!quote?.transactionRequest?.to || !quote?.transactionRequest?.data) {
+            return 'Quote did not return a valid transaction route. Please try a different token or amount.';
+        }
+
+        const fromAmount = Number(quote?.estimate?.fromAmount ?? '0');
+        const toAmount = Number(quote?.estimate?.toAmount ?? '0');
+        if (!Number.isFinite(fromAmount) || fromAmount <= 0 || !Number.isFinite(toAmount) || toAmount <= 0) {
+            return 'Quote output is invalid. Please retry with a supported source token and amount.';
+        }
+
+        return null;
+    }
+
+    private getCorrelationId(): string {
+        return `earn-exec-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
     }
 
     private async getSigner(chainId: number): Promise<any> {

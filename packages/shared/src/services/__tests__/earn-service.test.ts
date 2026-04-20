@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EarnService, type EarnVault } from '../earn-service';
 
+const originalLiFiApiKey = process.env.LIFI_API_KEY;
+
 const buildVault = (overrides: Partial<EarnVault>): EarnVault => ({
   id: overrides.id || 'vault-1',
   chainId: overrides.chainId || 8453,
@@ -55,10 +57,12 @@ describe('EarnService.rankVaultsForRecommendation', () => {
 
 describe('EarnService.getDepositQuote', () => {
   afterEach(() => {
+    process.env.LIFI_API_KEY = originalLiFiApiKey;
     vi.restoreAllMocks();
   });
 
   it('uses explicit destination chain when provided for cross-chain deposit', async () => {
+    process.env.LIFI_API_KEY = 'test-lifi-key';
     vi.spyOn(EarnService as any, 'ensureInitialized').mockImplementation(() => {});
     const fetchMock = vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
       ok: true,
@@ -89,17 +93,25 @@ describe('EarnService.getDepositQuote', () => {
     const calledUrl = new URL(quoteCall![0] as string);
     expect(calledUrl.searchParams.get('fromChain')).toBe('42220');
     expect(calledUrl.searchParams.get('toChain')).toBe('8453');
+    expect(quoteCall![1]).toMatchObject({
+      headers: expect.objectContaining({
+        'x-integrator-id': 'diversifi-minipay',
+        'x-lifi-api-key': 'test-lifi-key',
+      }),
+    });
   });
 });
 
 describe('EarnService.fetchUserPositions', () => {
   afterEach(() => {
+    process.env.LIFI_API_KEY = originalLiFiApiKey;
     vi.restoreAllMocks();
   });
 
   it('normalizes portfolio positions from Earn endpoint', async () => {
+    process.env.LIFI_API_KEY = 'test-lifi-key';
     vi.spyOn(EarnService as any, 'ensureInitialized').mockImplementation(() => {});
-    vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
+    const fetchMock = vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
       ok: true,
       json: async () => ({
         data: [
@@ -116,6 +128,16 @@ describe('EarnService.fetchUserPositions', () => {
 
     const positions = await EarnService.fetchUserPositions('0xabc');
 
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/v1/portfolio/0xabc/positions'),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          'x-lifi-api-key': 'test-lifi-key',
+        }),
+      })
+    );
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain('/v1/earn/');
+
     expect(positions).toEqual([
       {
         vaultId: '0xvault',
@@ -129,6 +151,7 @@ describe('EarnService.fetchUserPositions', () => {
   });
 
   it('returns empty array on endpoint failure', async () => {
+    process.env.LIFI_API_KEY = 'test-lifi-key';
     vi.spyOn(EarnService as any, 'ensureInitialized').mockImplementation(() => {});
     vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
       ok: false,
