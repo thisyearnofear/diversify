@@ -1,7 +1,17 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
-import { ARC_DATA_HUB_CONFIG, x402Analytics, circleService } from '@diversifi/shared';
+import {
+    ARC_DATA_HUB_CONFIG,
+    buildArcResearchBundle,
+    circleService,
+    getArcResearchSource,
+    normalizeArcResearchSource,
+    type ArcResearchCategory,
+    type ArcResearchDataType,
+    type ArcResearchSourceDefinition,
+    x402Analytics
+} from '@diversifi/shared';
 
 /**
  * Arc Data Hub - Production Gateway (v2)
@@ -93,16 +103,86 @@ class UserManager {
     }
 }
 
-// Alias map: The agent's DATA_SOURCES use descriptive names (macro-regime, truflation, etc.)
-// but the gateway's data functions use different keys. This bridges both naming conventions.
-const SOURCE_ALIASES: Record<string, string> = {
-    'macro-regime': 'macro_analysis',
-    'truflation': 'world_bank_analytics',     // Best available inflation proxy
-    'glassnode': 'coingecko_analytics',        // Best available on-chain proxy
-    'defi-yields': 'defillama_realtime',
-    'rwa-markets': 'portfolio_optimization',
-    // Direct keys pass through unchanged
+type SourcePlan = {
+    requestedSource: string;
+    sourceId: string;
+    source: ArcResearchSourceDefinition;
+    currentUsage: number;
+    freeLimit: number;
+    isFreeEligible: boolean;
+    cost: number;
 };
+
+type SourcePayload = {
+    sourceId: string;
+    label: string;
+    dataType: ArcResearchDataType;
+    category: ArcResearchCategory;
+    cost: number;
+    tier: 'free' | 'paid';
+    freshnessMinutes: number;
+    reputation: number;
+    data: Record<string, unknown>;
+};
+
+function parseRequestedSources(sourceParam: NextApiRequest['query']['source'], sourcesParam: NextApiRequest['query']['sources']): string[] {
+    const values = [sourceParam, sourcesParam].flatMap((value) => {
+        if (!value) return [];
+        if (Array.isArray(value)) return value;
+        return [value];
+    });
+
+    return values
+        .flatMap((value) => value.split(','))
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .filter((value, index, array) => array.indexOf(value) === index);
+}
+
+function resolveSourcePlan(user: UserState, requestedSource: string): SourcePlan {
+    const resolvedSource = normalizeArcResearchSource(requestedSource);
+    const source = getArcResearchSource(resolvedSource);
+
+    if (!source) {
+        throw new Error(`Unknown data source: ${requestedSource}`);
+    }
+
+    const currentUsage = UserManager.getUsage(user, source.id);
+    const isFreeEligible = source.category === 'basic' && currentUsage < source.freeLimit;
+    const cost = isFreeEligible ? 0 : parseFloat(source.price);
+
+    return {
+        requestedSource,
+        sourceId: source.id,
+        source,
+        currentUsage,
+        freeLimit: source.freeLimit,
+        isFreeEligible,
+        cost
+    };
+}
+
+function estimateFreshnessMinutes(payload: Record<string, unknown>, fallbackMinutes: number): number {
+    const candidates = [
+        payload.last_updated,
+        payload.lastUpdated,
+        payload.updated_at,
+        payload.timestamp,
+        payload.date
+    ].filter(Boolean);
+
+    const candidate = candidates[0];
+    if (typeof candidate !== 'string') {
+        return fallbackMinutes;
+    }
+
+    const parsed = Date.parse(candidate);
+    if (Number.isNaN(parsed)) {
+        return fallbackMinutes;
+    }
+
+    return Math.max(0, Math.round((Date.now() - parsed) / 60000));
+}
 
 // --- Handler ---
 export default async function handler(
@@ -110,52 +190,51 @@ export default async function handler(
     res: NextApiResponse
 ) {
     const start = Date.now();
-    const { source } = req.query;
+    const requestedSources = parseRequestedSources(req.query.source, req.query.sources);
     const paymentProof = req.headers['x-payment-proof'] as string;
     const paymentMandate = req.headers['x-payment-mandate'] as string;
-    
+
     const clientIP = (req.headers['x-forwarded-for'] as string) || req.connection.remoteAddress || 'unknown';
     const clientKey = Array.isArray(clientIP) ? clientIP[0] : clientIP;
 
-    if (!source || typeof source !== 'string') {
+    if (requestedSources.length === 0) {
         x402Analytics.recordFailure('unknown', 'Missing source parameter');
         return res.status(400).json({ error: 'Missing source parameter' });
     }
 
     const user = UserManager.getUser(clientKey);
 
-    // 1. Rate Limiting
+    let sourcePlans: SourcePlan[];
+    try {
+        sourcePlans = requestedSources.map((requestedSource) => resolveSourcePlan(user, requestedSource));
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Invalid source parameter';
+        x402Analytics.recordFailure(requestedSources[0] || 'unknown', errorMessage);
+        return res.status(400).json({ error: errorMessage });
+    }
+
     const rateLimit = UserManager.checkRateLimit(user);
     if (!rateLimit.allowed) {
-        x402Analytics.recordFailure(source, 'Rate limit exceeded');
+        x402Analytics.recordFailure(requestedSources[0], 'Rate limit exceeded');
         return res.status(429).json({ error: 'Rate limit exceeded', retryAfter: rateLimit.retryAfter });
     }
 
-    // 2. Pricing & Category Logic
-    const { CATEGORIES, PRICING, FREE_LIMITS } = ARC_DATA_HUB_CONFIG;
-    // Resolve aliases FIRST so agent source names (macro-regime, etc.) map to pricing keys
-    const resolvedSource = SOURCE_ALIASES[source] || source;
-    const baseSource = resolvedSource.replace(/(_enhanced|_analytics|_realtime|_optimizer|_insights)$/, '') as keyof typeof PRICING;
-    
-    const isPremiumSource = CATEGORIES.PREMIUM.includes(baseSource as string);
-    const cost = parseFloat(PRICING[baseSource] || '0.01');
-    const freeLimit = (FREE_LIMITS as any)[baseSource] || 0;
-    const currentUsage = UserManager.getUsage(user, baseSource as string);
-    
-    // Logic: Free if it's a BASIC source AND under the limit
-    const isFreeEligible = !isPremiumSource && currentUsage < freeLimit;
+    const bundleRequested = sourcePlans.length > 1;
+    const requestedSourceLabel = bundleRequested
+        ? sourcePlans.map((plan) => plan.source.label).join(', ')
+        : sourcePlans[0].source.label;
+    const totalCost = sourcePlans.reduce((sum, plan) => sum + plan.cost, 0);
 
-    // 3. Nanopayment Processing (EIP-3009 Mandate) - High Priority, Gas-Free
     if (paymentMandate) {
         try {
             const mandate = JSON.parse(paymentMandate);
             const isValid = await circleService.verifyNanopaymentMandate(mandate);
-            
+
             if (isValid) {
                 const amount = parseFloat(mandate.amount);
                 UserManager.addCredit(user, amount);
                 console.log(`[Data Hub] Nanopayment Mandate verified: $${amount}`);
-                x402Analytics.recordPayment(source, amount, Date.now() - start, 'CIRCLE_NANOPAYMENT');
+                x402Analytics.recordPayment(requestedSourceLabel, amount, Date.now() - start, 'CIRCLE_NANOPAYMENT');
             } else {
                 return res.status(401).json({ error: 'Invalid Nanopayment Mandate signature' });
             }
@@ -164,67 +243,115 @@ export default async function handler(
         }
     }
 
-    // 4. Legacy Payment Processing (On-chain txHash)
     if (paymentProof) {
         try {
             const amountCredited = await verifyCircleGatewayPayment(paymentProof);
             if (amountCredited > 0) {
                 UserManager.addCredit(user, amountCredited);
                 const paymentMethod = paymentProof.startsWith('circle-gateway-') ? 'CIRCLE_GATEWAY' : 'ON_CHAIN';
-                x402Analytics.recordPayment('USDC_DEPOSIT', amountCredited, Date.now() - start, paymentMethod);
+                x402Analytics.recordPayment(requestedSourceLabel, amountCredited, Date.now() - start, paymentMethod);
             }
         } catch (error: unknown) {
             return res.status(401).json({ error: `Payment verification failed` });
         }
     }
 
-    // 5. Fulfillment Logic
-    if (isFreeEligible) {
-        console.log(`[Data Hub] Free access: ${source} (${currentUsage + 1}/${freeLimit})`);
-        UserManager.trackUsage(user, baseSource as string);
-        const data = await getActualPremiumData(source, true);
-        return res.status(200).json({
-            ...data,
-            _billing: {
-                status: 'Free Tier',
-                remaining_free: freeLimit - (currentUsage + 1),
-                reason: 'Basic data sources include a generous free tier'
-            }
-        });
+    if (totalCost > 0 && !UserManager.deductCredit(user, totalCost)) {
+        return sendPaymentRequired(res, user, sourcePlans, totalCost, bundleRequested);
     }
 
-    // Paid Tier Logic (Credit Drawdown)
-    if (UserManager.deductCredit(user, cost)) {
-        console.log(`[Data Hub] Paid access: ${source} - Deducted $${cost}`);
-        x402Analytics.recordPayment(source, cost, Date.now() - start);
-        const data = await getActualPremiumData(source, false);
+    const payloads: SourcePayload[] = [];
+    for (const plan of sourcePlans) {
+        if (plan.isFreeEligible) {
+            console.log(`[Data Hub] Free access: ${plan.source.id} (${plan.currentUsage + 1}/${plan.freeLimit})`);
+        } else {
+            console.log(`[Data Hub] Paid access: ${plan.source.id} - Deducted $${plan.cost}`);
+        }
+
+        UserManager.trackUsage(user, plan.source.id);
+
+        const data = await getActualPremiumData(plan.source.id, plan.isFreeEligible);
+        const payload: SourcePayload = {
+            sourceId: plan.source.id,
+            label: plan.source.label,
+            dataType: plan.source.dataType,
+            category: plan.source.category,
+            cost: plan.cost,
+            tier: plan.isFreeEligible ? 'free' : 'paid',
+            freshnessMinutes: estimateFreshnessMinutes(data as Record<string, unknown>, plan.source.freshnessWindowMinutes),
+            reputation: plan.source.reputation,
+            data,
+        };
+
+        payloads.push(payload);
+
+        if (plan.cost > 0) {
+            x402Analytics.recordPayment(plan.source.id, plan.cost, Date.now() - start);
+        }
+    }
+
+    const bundle = buildArcResearchBundle(payloads);
+
+    if (bundleRequested) {
         return res.status(200).json({
-            ...data,
+            bundle,
+            sources: payloads,
+            data: Object.fromEntries(payloads.map((payload) => [payload.sourceId, payload.data])),
             _billing: {
-                status: 'Paid',
-                cost: cost,
+                status: totalCost > 0 ? 'Bundle Paid' : 'Bundle Free',
+                cost: totalCost,
                 remaining_credit: user.creditBalance.toFixed(4),
-                reason: isPremiumSource ? 'Premium insight unlocked' : 'Free tier exceeded, used micro-credits'
-            }
+                reason: totalCost > 0
+                    ? 'Multiple paid sources unlocked through a single research bundle'
+                    : 'All requested bundle sources were within free tier',
+            },
         });
     }
 
-    // 6. Payment Required (402)
+    const singleSource = payloads[0];
+    const singlePlan = sourcePlans[0];
+    return res.status(200).json({
+        ...singleSource.data,
+        _research: {
+            source: singleSource,
+            bundle,
+        },
+        _billing: {
+            status: singlePlan.isFreeEligible ? 'Free Tier' : 'Paid',
+            cost: singleSource.cost,
+            remaining_free: singlePlan.isFreeEligible ? singlePlan.freeLimit - (singlePlan.currentUsage + 1) : undefined,
+            remaining_credit: user.creditBalance.toFixed(4),
+            reason: singlePlan.isFreeEligible
+                ? 'Basic data sources include a generous free tier'
+                : 'Premium insight unlocked',
+        },
+    });
+}
+
+function sendPaymentRequired(
+    res: NextApiResponse,
+    user: UserState,
+    sourcePlans: SourcePlan[],
+    totalCost: number,
+    bundleRequested: boolean
+) {
     const nonce = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     user.nonces.set(nonce, Date.now() + 300000);
 
     return res.status(402).json({
-        error: isPremiumSource ? 'Premium Source Required' : 'Free Limit Exceeded',
-        reason: isPremiumSource 
-            ? `Accessing "${source}" requires premium micro-credits ($${cost} USDC)`
-            : `You have used all ${freeLimit} free requests for ${baseSource}. Micro-payments enable continued access.`,
+        error: bundleRequested ? 'Research Bundle Required' : 'Premium Source Required',
+        reason: bundleRequested
+            ? `Accessing ${sourcePlans.length} sources requires ${totalCost.toFixed(3)} USDC in research credits.`
+            : `Accessing "${sourcePlans[0].source.label}" requires premium micro-credits ($${totalCost.toFixed(3)} USDC)`,
         recipient: DATA_HUB_WALLET,
-        amount: BATCH_TOPUP_AMOUNT, // Suggest 1 USDC top-up for efficiency
+        amount: BATCH_TOPUP_AMOUNT,
         currency: 'USDC',
         chainId: 5042002,
         nonce,
         current_balance: user.creditBalance.toFixed(4),
-        required_cost: cost,
+        required_cost: totalCost,
+        requested_sources: sourcePlans.map((plan) => plan.source.id),
+        bundle_requested: bundleRequested,
         circle_gateway: {
             enabled: true,
             description: 'Use Circle Gateway for unified USDC balance across chains',
@@ -300,8 +427,7 @@ async function verifyCircleGatewayPayment(paymentProof: string): Promise<number>
 // --- Data Fetching (Preserved & Cleaned) ---
 
 async function getActualPremiumData(source: string, isFreeTier: boolean = false) {
-    // Resolve aliases so the agent's source names map to real data functions
-    const resolvedSource = SOURCE_ALIASES[source] || source;
+    const resolvedSource = normalizeArcResearchSource(source);
 
     const data: Record<string, Record<string, unknown>> = {
         'alpha_vantage_enhanced': await getAlphaVantageData(isFreeTier),
@@ -312,7 +438,9 @@ async function getActualPremiumData(source: string, isFreeTier: boolean = false)
         'fred_insights': await getFredData(isFreeTier),
         'macro_analysis': await getMacroAnalysis(isFreeTier),
         'portfolio_optimization': await getPortfolioOptimization(isFreeTier),
-        'risk_assessment': await getRiskAssessment(isFreeTier)
+        'risk_assessment': await getRiskAssessment(isFreeTier),
+        'agent_execution': await getMacroAnalysis(isFreeTier),
+        'real_time_inflation': await getWorldBankData(isFreeTier)
     };
 
     return data[resolvedSource] || {

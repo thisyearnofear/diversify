@@ -185,6 +185,7 @@ export const AgentTierStatus: React.FC<{
             action: advice?.action,
             savings: advice?.expectedSavings,
             txHash: advice?.arcTxHash,
+            researchEvidence: advice?.researchEvidence,
           },
         });
       },
@@ -576,6 +577,19 @@ export const AgentTierStatus: React.FC<{
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       {sessionInfo.latestRecommendation.oneLiner || sessionInfo.latestRecommendation.reasoning}
                     </p>
+                    {sessionInfo.latestRecommendation.researchEvidence?.bundle && (
+                      <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                        <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded-full">
+                          Confidence {(sessionInfo.latestRecommendation.researchEvidence.bundle.confidence * 100).toFixed(0)}%
+                        </span>
+                        <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-full">
+                          Freshness {(sessionInfo.latestRecommendation.researchEvidence.bundle.freshnessScore * 100).toFixed(0)}%
+                        </span>
+                        <span className="px-2 py-0.5 bg-violet-50 dark:bg-violet-900/30 rounded-full">
+                          Agreement {(sessionInfo.latestRecommendation.researchEvidence.bundle.agreementScore * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1026,11 +1040,29 @@ const ActivityFeed: React.FC<{
                   rel="noopener noreferrer"
                   className="text-xs text-blue-500 hover:underline"
                   onClick={(e) => e.stopPropagation()}
-                >
-                  View tx →
-                </a>
+                  >
+                    View tx →
+                  </a>
               )}
             </div>
+            {activity.details?.researchEvidence?.bundle && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                  {Math.round(activity.details.researchEvidence.bundle.confidence * 100)}% confidence
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                  {Math.round(activity.details.researchEvidence.bundle.freshnessScore * 100)}% freshness
+                </span>
+                <span className="px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-[10px] font-bold text-violet-700 dark:text-violet-300">
+                  {activity.details.researchEvidence.bundle.sourceCount} sources
+                </span>
+              </div>
+            )}
+            {activity.details?.researchEvidence?.summary && (
+              <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
+                {activity.details.researchEvidence.summary}
+              </p>
+            )}
           </div>
         </motion.div>
       ))}

@@ -62,6 +62,57 @@ function getAdvisorPathValue(advice: AIAdvice): number | undefined {
     ?? advice.comparisonProjection?.oraclePathValue;
 }
 
+const ResearchEvidenceStrip = ({ advice }: { advice: AIAdvice }) => {
+  const evidence = advice.researchEvidence;
+  if (!evidence) return null;
+
+  const bundle = evidence.bundle;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 space-y-2">
+      {bundle && (
+        <div className="flex flex-wrap gap-2 text-[11px] font-bold text-gray-600 dark:text-gray-300">
+          <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded-full">
+            Confidence {(bundle.confidence * 100).toFixed(0)}%
+          </span>
+          <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-full">
+            Freshness {(bundle.freshnessScore * 100).toFixed(0)}%
+          </span>
+          <span className="px-2 py-0.5 bg-violet-50 dark:bg-violet-900/30 rounded-full">
+            Agreement {(bundle.agreementScore * 100).toFixed(0)}%
+          </span>
+          <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/30 rounded-full">
+            Reputation {(bundle.averageReputation * 100).toFixed(0)}%
+          </span>
+          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full">
+            {bundle.sourceCount} sources
+          </span>
+        </div>
+      )}
+
+      {evidence.sources?.length ? (
+        <div className="flex flex-wrap gap-2">
+          {evidence.sources.slice(0, 4).map((source) => (
+            <div
+              key={source.sourceId}
+              className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[11px] text-gray-500 dark:text-gray-400 font-mono"
+            >
+              {source.label}
+              {source.tier ? ` · ${source.tier}` : ""}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {evidence.summary ? (
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+          {evidence.summary}
+        </p>
+      ) : null}
+    </div>
+  );
+};
+
 interface AIAssistantProps {
   amount: number;
   holdings: string[];
@@ -465,6 +516,8 @@ export default function AIAssistant({
                       &ldquo;{advice.reasoning}&rdquo;
                     </p>
                   </div>
+
+                  <ResearchEvidenceStrip advice={advice} />
 
                   {/* Projection Comparison */}
                   <div className="bg-white rounded-xl p-3 border border-gray-100 shadow-sm">
@@ -1171,6 +1224,8 @@ export default function AIAssistant({
                       &quot;{advice.reasoning}&quot;
                     </p>
                   </div>
+
+                  <ResearchEvidenceStrip advice={advice} />
 
                   {/* Projection Card - Using Real Calculated Data */}
                   <div className="bg-white dark:bg-gray-950 rounded-2xl p-4 border border-gray-100 dark:border-white/5 shadow-inner">

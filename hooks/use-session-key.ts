@@ -109,6 +109,26 @@ export interface GuardianSessionInfo {
         expectedSavings?: number;
         confidence?: number;
         riskLevel?: string;
+        researchEvidence?: {
+            summary?: string;
+            bundle?: {
+                confidence: number;
+                agreementScore: number;
+                freshnessScore: number;
+                averageReputation: number;
+                sourceCount: number;
+            };
+            sources?: Array<{
+                sourceId: string;
+                label: string;
+                tier?: 'free' | 'paid';
+                dataType?: string;
+                category?: string;
+                cost?: number;
+                freshnessMinutes?: number;
+                reputation?: number;
+            }>;
+        };
     } | null;
 }
 

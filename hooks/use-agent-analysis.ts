@@ -225,6 +225,7 @@ export function useAgentAnalysis({
                   expectedSavings: result.advice.expectedSavings,
                   confidence: result.advice.confidence,
                   riskLevel: result.advice.riskLevel,
+                  researchEvidence: result.advice.researchEvidence,
                 },
               }),
             }).catch(() => {});
@@ -245,6 +246,7 @@ export function useAgentAnalysis({
             details: {
               action: result.advice?.action,
               savings: result.advice?.expectedSavings,
+              researchEvidence: result.advice?.researchEvidence,
             },
           });
 

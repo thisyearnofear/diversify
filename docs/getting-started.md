@@ -29,6 +29,10 @@ No wallet required — users can sign in via email, social login, or existing wa
 | `SYNTHDATA_API_KEY` | SynthData analytics |
 | `FRED_API_KEY` | Federal Reserve economic data (inflation rates) |
 | `COINGECKO_API_KEY` | Exchange rates |
+| `NEXT_PUBLIC_ENABLE_ARC` | Enable Arc testnet features in the UI |
+| `ENABLE_AUTONOMOUS_MODE` | Enable the Arc/x402 research flow |
+| `ARC_RPC_URL` | Arc RPC endpoint for payment verification |
+| `DATA_HUB_RECIPIENT_ADDRESS` | Recipient for Arc research payments |
 
 ## Supported Chains
 
@@ -38,6 +42,18 @@ No wallet required — users can sign in via email, social login, or existing wa
 | **Arbitrum** | Yield/RWA (USDC, USDY) | [Arbitrum Faucet](https://faucet.arbitrum.io/) |
 | **Arc Testnet** | Agent orchestration hub (USDC gas) | Circle Arc Faucet |
 | **Robinhood Chain** | Emerging market tokens | Robinhood Faucet |
+
+## Hackathon Research Mode
+
+If you are building the Arc Nano Payments submission, keep the existing app and add the research-payment loop on top:
+
+1. Set `NEXT_PUBLIC_ENABLE_ARC=true`
+2. Set `ENABLE_AUTONOMOUS_MODE=true`
+3. Configure `ARC_RPC_URL` and `DATA_HUB_RECIPIENT_ADDRESS`
+4. Create a Circle developer account and connect the same email used in the hackathon registration
+5. Use the Arc faucet for test funds and verify the research flow end to end
+
+This mode should reuse the advisor, action cards, and x402 gateway. Do not add a separate payment stack unless it replaces current logic.
 
 ## Test Drive
 

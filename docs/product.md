@@ -11,6 +11,33 @@ DiversiFi is a **savings protection app** for people in volatile economies. It p
 
 DiversiFi uses **LI.FI Composer** to execute atomic, multi-step DeFi workflows in a single user transaction. By abstracting complex cross-chain bridges, swaps, and contract interactions (such as vault deposits), we deliver a "DeFi Mullet" experience: consumer-grade simplicity in the front, and powerful cross-chain orchestration in the back.
 
+## Hackathon Direction
+
+For the Arc Nano Payments hackathon, DiversiFi should present as a **proof-of-research rebalancer**:
+
+- The user asks whether to hold, rebalance, or hedge.
+- The advisor buys fresh evidence from multiple sources using x402 / Circle Nanopayments.
+- The system scores source agreement, freshness, and reputation before making a recommendation.
+- The payment is part of the decision loop, not a separate product surface.
+- Existing advisor cards and action cards stay in place; we enhance them instead of creating a new dashboard.
+
+### Implementation Plan
+
+| Day | Files | Change |
+|-----|-------|--------|
+| 1 | `pages/api/agent/_advisor-core.ts`, `pages/api/agent/x402-gateway.ts`, `config/features.ts` | Audit duplicate source/payment logic and collapse into one canonical flow |
+| 2 | `packages/shared/src/*` or existing shared utility module | Add a single source registry for pricing, reputation, and freshness metadata |
+| 3 | `pages/api/agent/x402-gateway.ts` | Support evidence bundles instead of single-source reads |
+| 4 | `pages/api/agent/_advisor-core.ts` | Score evidence quality and emit HOLD / REBALANCE / HEDGE guidance |
+| 5 | `docs/HACKATHON_DEMO_SCRIPT.md` | Rewrite the demo story around paid research and confidence-scored recommendations |
+| 6 | `docs/integrations.md`, `docs/getting-started.md` | Document the runtime flags, source dependencies, and submit-ready flow |
+
+### Out of Scope
+
+- New payment protocol layers that do not replace existing x402 plumbing
+- New chain support unless it directly improves the research or settlement story
+- Separate research dashboards that duplicate advisor output
+
 
 ## How It Works
 
@@ -50,6 +77,7 @@ DiversiFi uses **LI.FI Composer** to execute atomic, multi-step DeFi workflows i
 3. **Prevent bloat** — Say no to features that don't serve the core story
 4. **DRY, clean, modular** — Code quality enables product clarity
 5. **Performant** — Fast loads, smooth interactions
+6. **Delete, don’t deprecate** — Remove unused code paths once the replacement is live
 
 ## What to Cut
 

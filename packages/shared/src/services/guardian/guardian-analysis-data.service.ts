@@ -1,10 +1,12 @@
 import { SynthDataService } from '../synth-data-service';
 import { marketPulseService } from '../../utils/market-pulse-service';
+import { getDefaultArcResearchBundleSources, type ArcResearchBundle } from '../../utils/arc-research-sources';
 
 export type GuardianAnalysisContext = {
   portfolioData: { balance: number; holdings: string[] };
   unifiedBalance: any;
   macroData: any;
+  researchBundle?: ArcResearchBundle;
   inflationResult: { data: any; hashes: Record<string, string> };
   economicResult: { data: any; hashes: Record<string, string> };
   yieldResult: { data: any; hashes: Record<string, string> };
@@ -90,28 +92,63 @@ export class GuardianAnalysisDataService {
       }
     }
 
-    steps.push("Purchasing market intelligence via Nanopayments...");
-    const macroResult = await fetchWithNanopayment('/api/agent/x402-gateway?source=macro-regime', {
-      amount: '0.001',
-      currency: 'USDC'
-    });
-    const macroData = await macroResult.json();
-    if (macroResult.headers.get('x-payment-proof')) {
-      paymentHashes['Macro Aggregator'] = macroResult.headers.get('x-payment-proof')!;
+    let macroData: any = {};
+    let inflationResult: { data: any; hashes: Record<string, string> } = { data: {}, hashes: {} };
+    let economicResult: { data: any; hashes: Record<string, string> } = { data: {}, hashes: {} };
+    let yieldResult: { data: any; hashes: Record<string, string> } = { data: {}, hashes: {} };
+    let researchBundle: ArcResearchBundle | undefined;
+
+    try {
+      const bundleSources = getDefaultArcResearchBundleSources();
+      steps.push("Purchasing market intelligence bundle via Nanopayments...");
+      const bundleResponse = await fetchWithNanopayment(
+        `/api/agent/x402-gateway?sources=${bundleSources.join(',')}`,
+        {
+          amount: '0.05',
+          currency: 'USDC'
+        }
+      );
+
+      const bundlePayload = await bundleResponse.json();
+      const bundleRecords = Array.isArray(bundlePayload?.bundle?.sources)
+        ? bundlePayload.bundle.sources
+        : [];
+
+      if (bundleResponse.headers.get('x-payment-proof')) {
+        paymentHashes['Arc Research Bundle'] = bundleResponse.headers.get('x-payment-proof')!;
+      }
+
+      researchBundle = bundlePayload?.bundle;
+      macroData = bundlePayload;
+      dataSources.push(...bundleRecords.map((record: any) => record.label || record.sourceId));
+
+      const groupedRecords = bundleRecords.reduce((acc: Record<string, Record<string, any>>, record: any) => {
+        const dataType = record.dataType || 'economic';
+        if (!acc[dataType]) {
+          acc[dataType] = {};
+        }
+        acc[dataType][record.sourceId || record.label] = record.data;
+        return acc;
+      }, {});
+
+      inflationResult = { data: groupedRecords.inflation || {}, hashes: {} };
+      economicResult = { data: groupedRecords.economic || {}, hashes: {} };
+      yieldResult = { data: groupedRecords.yield || {}, hashes: {} };
+    } catch (error) {
+      console.warn('[Arc Agent] Research bundle unavailable, falling back to individual sources:', error);
+      steps.push("Research bundle unavailable, falling back to individual sources...");
+      steps.push("Fetching real-time inflation data...");
+      inflationResult = await fetchInflationData(steps, dataSources);
+      Object.assign(paymentHashes, inflationResult.hashes);
+
+      steps.push("Accessing premium economic indicators...");
+      economicResult = await fetchEconomicData(steps, dataSources);
+      Object.assign(paymentHashes, economicResult.hashes);
+
+      steps.push("Scanning DeFi yield opportunities...");
+      yieldResult = await fetchYieldData(steps, dataSources);
+      Object.assign(paymentHashes, yieldResult.hashes);
     }
-    dataSources.push("Macro Aggregator");
-
-    steps.push("Fetching real-time inflation data...");
-    const inflationResult = await fetchInflationData(steps, dataSources);
-    Object.assign(paymentHashes, inflationResult.hashes);
-
-    steps.push("Accessing premium economic indicators...");
-    const economicResult = await fetchEconomicData(steps, dataSources);
-    Object.assign(paymentHashes, economicResult.hashes);
-
-    steps.push("Scanning DeFi yield opportunities...");
-    const yieldResult = await fetchYieldData(steps, dataSources);
-    Object.assign(paymentHashes, yieldResult.hashes);
 
     steps.push("Analyzing probabilistic price forecasts (SynthData)...");
     const synthPredictions: Record<string, any> = {};
@@ -133,6 +170,7 @@ export class GuardianAnalysisDataService {
         portfolioData,
         unifiedBalance,
         macroData,
+        researchBundle,
         inflationResult,
         economicResult,
         yieldResult,

@@ -16,6 +16,7 @@ import { GuardianAnalysisDataService } from './guardian/guardian-analysis-data.s
 import { GuardianRecommendationService } from './guardian/guardian-recommendation.service';
 import { GuardianDataAccessService } from './guardian/guardian-data-access.service';
 import { GuardianPostAnalysisService } from './guardian/guardian-post-analysis.service';
+import { createArcAgentDataSourceTemplates } from '../utils/arc-research-sources';
 
 export interface Payment {
     amount: string;
@@ -94,54 +95,7 @@ const ARC_CONFIG = {
  * Real premium data sources with x402 payment support
  * Enhanced for hackathon demo with realistic pricing
  */
-const DATA_SOURCES: DataSource[] = [
-    // Premium Data Sources (X402 Enabled) - Hackathon optimized
-    {
-        name: 'Macro Regime Oracle',
-        url: '/api/agent/x402-gateway?source=macro-regime',
-        cost: { amount: '0.01', currency: 'USDC' },
-        priority: 0, // Highest priority
-        dataType: 'economic',
-        x402Enabled: true,
-        headers: { 'Accept': 'application/json' }
-    },
-    {
-        name: 'Truflation Premium',
-        url: '/api/agent/x402-gateway?source=truflation',
-        cost: { amount: '0.01', currency: 'USDC' },
-        priority: 1,
-        dataType: 'inflation',
-        x402Enabled: true,
-        headers: { 'Accept': 'application/json' }
-    },
-    {
-        name: 'Glassnode Institutional',
-        url: '/api/agent/x402-gateway?source=glassnode',
-        cost: { amount: '0.01', currency: 'USDC' },
-        priority: 1,
-        dataType: 'sentiment',
-        x402Enabled: true,
-        headers: { 'Accept': 'application/json' }
-    },
-    {
-        name: 'DeFi Yield Analytics',
-        url: '/api/agent/x402-gateway?source=defi-yields',
-        cost: { amount: '0.01', currency: 'USDC' },
-        priority: 1,
-        dataType: 'yield',
-        x402Enabled: true,
-        headers: { 'Accept': 'application/json' }
-    },
-    {
-        name: 'RWA Market Data',
-        url: '/api/agent/x402-gateway?source=rwa-markets',
-        cost: { amount: '0.01', currency: 'USDC' },
-        priority: 2,
-        dataType: 'economic',
-        x402Enabled: true,
-        headers: { 'Accept': 'application/json' }
-    }
-];
+const DATA_SOURCES: DataSource[] = createArcAgentDataSourceTemplates();
 
 export interface AgentWalletProvider {
     getAddress(): string;

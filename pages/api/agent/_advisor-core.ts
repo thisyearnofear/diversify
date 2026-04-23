@@ -29,6 +29,7 @@ type ConversationRequest = {
 type AnalysisRequest = {
   inflationData?: Record<string, RegionalInflationData>;
   macroData?: Record<string, any>;
+  researchEvidence?: any;
   networkActivity?: any;
   userBalance?: number;
   currentHoldings?: string[];
@@ -38,6 +39,31 @@ type AnalysisRequest = {
   analysis?: PortfolioAnalysis;
   userRegion?: string;
   strategyPrompt?: string;
+};
+
+type ResearchEvidenceSourceSummary = {
+  sourceId: string;
+  label: string;
+  tier?: 'free' | 'paid';
+  dataType?: string;
+  category?: string;
+  cost?: number;
+  freshnessMinutes?: number;
+  reputation?: number;
+};
+
+type ResearchEvidenceSummary = {
+  summary: string;
+  bundle?: {
+    confidence: number;
+    agreementScore: number;
+    freshnessScore: number;
+    averageReputation: number;
+    sourceCount: number;
+    paidSourceCount?: number;
+    freeSourceCount?: number;
+  };
+  sources?: ResearchEvidenceSourceSummary[];
 };
 
 const ADVISOR_SYSTEM_PROMPT = `You are DiversiFi Advisor - the unified reasoning and guidance layer for DiversiFi.
@@ -246,6 +272,85 @@ function getMainnetChainContext(chainId?: number): string {
 CURRENT CHAIN: Chain ID ${chainId}
 - Recommend switching to Celo Mainnet, Arbitrum Mainnet, or Base Mainnet for real asset strategies
 `;
+}
+
+function formatMacroDataSummary(macroData?: Record<string, any>): string {
+  if (!macroData || Object.keys(macroData).length === 0) {
+    return '';
+  }
+
+  const bundle = resolveResearchBundle(macroData);
+  const sources = Array.isArray(bundle?.sources) ? bundle.sources : null;
+
+  if (sources && sources.length > 0) {
+    return [
+      `- Bundle Confidence: ${((bundle.confidence ?? 0) * 100).toFixed(0)}%`,
+      `- Agreement Score: ${((bundle.agreementScore ?? 0) * 100).toFixed(0)}%`,
+      `- Freshness Score: ${((bundle.freshnessScore ?? 0) * 100).toFixed(0)}%`,
+      `- Average Reputation: ${((bundle.averageReputation ?? 0) * 100).toFixed(0)}%`,
+      `- Total Paid Sources: ${sources.length}`,
+      ...sources.map((source: any) =>
+        `- ${source.label || source.sourceId}: ${source.dataType || 'data'} | $${Number(source.cost || 0).toFixed(3)} USDC | rep ${(Number(source.reputation || 0) * 100).toFixed(0)}%`
+      )
+    ].join('\n');
+  }
+
+  return Object.entries(macroData).map(([code, data]) => {
+    const d = data as { gdpGrowth: number; corruptionControl: number };
+    return `- ${code}: GDP Growth: ${d.gdpGrowth ?? 'N/A'}%, Governance: ${d.corruptionControl ?? 'N/A'}/100`;
+  }).join('\n');
+}
+
+function resolveResearchBundle(macroData?: Record<string, any>) {
+  if (!macroData) {
+    return undefined;
+  }
+
+  return (macroData as any).bundle ?? (macroData as any)._research?.bundle;
+}
+
+function buildResearchEvidenceSummary(macroData?: Record<string, any>): ResearchEvidenceSummary | undefined {
+  if (!macroData || Object.keys(macroData).length === 0) {
+    return undefined;
+  }
+
+  const bundle = resolveResearchBundle(macroData);
+  const rawSources = Array.isArray(bundle?.sources)
+    ? bundle.sources
+    : Array.isArray((macroData as any).sources)
+      ? (macroData as any).sources
+      : [];
+
+  if (!bundle && rawSources.length === 0) {
+    return undefined;
+  }
+
+  const sources = rawSources.map((source: any): ResearchEvidenceSourceSummary => ({
+    sourceId: source.sourceId || source.id || source.label || 'unknown-source',
+    label: source.label || source.sourceId || 'Unknown Source',
+    tier: source.tier,
+    dataType: source.dataType,
+    category: source.category,
+    cost: Number(source.cost || 0),
+    freshnessMinutes: source.freshnessMinutes,
+    reputation: Number(source.reputation ?? 0),
+  }));
+
+  return {
+    summary: formatMacroDataSummary(macroData),
+    bundle: bundle
+      ? {
+          confidence: Number(bundle.confidence ?? 0),
+          agreementScore: Number(bundle.agreementScore ?? 0),
+          freshnessScore: Number(bundle.freshnessScore ?? 0),
+          averageReputation: Number(bundle.averageReputation ?? 0),
+          sourceCount: sources.length,
+          paidSourceCount: sources.filter((source: ResearchEvidenceSourceSummary) => source.tier === 'paid').length,
+          freeSourceCount: sources.filter((source: ResearchEvidenceSourceSummary) => source.tier === 'free').length,
+        }
+      : undefined,
+    sources,
+  };
 }
 
 function getPortfolioContext(portfolio?: ConversationRequest['portfolio']): string {
@@ -546,12 +651,7 @@ USER PROFILE:
 ${userRegion && inflationData[userRegion] ? `- Home Region Inflation: ${inflationData[userRegion].avgRate.toFixed(1)}% (${inflationData[userRegion].countries.length} countries)` : ''}
 
 MACRO STABILITY FACTORS:
-${macroData && Object.keys(macroData).length > 0
-  ? Object.entries(macroData).map(([code, data]) => {
-      const d = data as { gdpGrowth: number; corruptionControl: number };
-      return `- ${code}: GDP Growth: ${d.gdpGrowth ?? 'N/A'}%, Governance: ${d.corruptionControl ?? 'N/A'}/100`;
-    }).join('\n')
-  : 'Limited macro data available - rely on regional averages.'}
+${formatMacroDataSummary(macroData) || 'Limited macro data available - rely on regional averages.'}
 
 NETWORK MOMENTUM:
 - Active Protections (24h): ${networkActivity?.activeProtections24h || 84} users
@@ -659,7 +759,10 @@ REQUIRED OUTPUT (JSON):
   }
 
   return {
-    advice: parsed,
+    advice: {
+      ...parsed,
+      researchEvidence: parsed.researchEvidence ?? buildResearchEvidenceSummary(macroData),
+    },
     _meta: {
       modelUsed: result.model,
       provider: result.provider

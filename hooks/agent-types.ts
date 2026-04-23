@@ -16,10 +16,13 @@ export interface AgentActivity {
     x402Hash?: string;
     savings?: number;
     cost?: number;
+    researchEvidence?: ResearchEvidenceSummary;
   };
 }
 
 export interface AIAdvice {
+  researchEvidence?: ResearchEvidenceSummary;
+
   // Level-based classification
   level: "ADVISOR" | "GUARDIAN";
 
@@ -167,6 +170,33 @@ export interface AIAdvice {
   dataSources?: string[];
   expectedSavings?: number;
   timeHorizon?: string;
+}
+
+export interface ResearchEvidenceSource {
+  sourceId: string;
+  label: string;
+  tier?: "free" | "paid";
+  dataType?: string;
+  category?: string;
+  cost?: number;
+  freshnessMinutes?: number;
+  reputation?: number;
+}
+
+export interface ResearchEvidenceBundleSummary {
+  confidence: number;
+  agreementScore: number;
+  freshnessScore: number;
+  averageReputation: number;
+  sourceCount: number;
+  paidSourceCount?: number;
+  freeSourceCount?: number;
+}
+
+export interface ResearchEvidenceSummary {
+  summary: string;
+  bundle?: ResearchEvidenceBundleSummary;
+  sources?: ResearchEvidenceSource[];
 }
 
 export interface TourStep {

@@ -104,6 +104,7 @@ export {
   scoreTokens
 } from './utils/token-scoring';
 export { marketMomentumService, type MarketMomentum } from './utils/market-momentum-service';
+export * from './utils/arc-research-sources';
 export * from './utils/x402-analytics';
 
 // Export Modules (Wallet, etc.)

@@ -97,43 +97,73 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                             &quot;{advice.reasoning}&quot;
                         </p>
 
-                        {/* Data Freshness Indicator */}
-                        {advice.portfolioAnalysis && (
+                        {/* Research Evidence */}
+                        {(advice.researchEvidence || advice.portfolioAnalysis) && (
                             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                                 <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
-                                        <div className="flex items-center gap-2">
-                                            <span>📊</span>
-                                            <span>
-                                                Data: {advice.portfolioAnalysis.dataSource === 'imf' ? 'IMF (Live 2024)' :
-                                                    advice.portfolioAnalysis.dataSource === 'worldbank' ? 'World Bank (2024)' :
-                                                        'Market Data (Cached)'}
+                                    {advice.researchEvidence?.bundle && (
+                                        <div className="flex flex-wrap gap-2 text-[11px] font-bold text-gray-600 dark:text-gray-300">
+                                            <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded-full">
+                                                Confidence {(advice.researchEvidence.bundle.confidence * 100).toFixed(0)}%
+                                            </span>
+                                            <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/30 rounded-full">
+                                                Freshness {(advice.researchEvidence.bundle.freshnessScore * 100).toFixed(0)}%
+                                            </span>
+                                            <span className="px-2 py-0.5 bg-violet-50 dark:bg-violet-900/30 rounded-full">
+                                                Agreement {(advice.researchEvidence.bundle.agreementScore * 100).toFixed(0)}%
+                                            </span>
+                                            <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/30 rounded-full">
+                                                Reputation {(advice.researchEvidence.bundle.averageReputation * 100).toFixed(0)}%
+                                            </span>
+                                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full">
+                                                {advice.researchEvidence.bundle.sourceCount} sources
                                             </span>
                                         </div>
-                                        <div className="flex items-center gap-3">
-                                            <span className="flex items-center gap-1">
-                                                <span>🌍</span>
-                                                {advice.portfolioAnalysis.regionCount || 0} regions
-                                            </span>
-                                            <span className={`flex items-center gap-1 ${advice.confidence > 0.8 ? 'text-green-600' :
-                                                advice.confidence > 0.6 ? 'text-amber-600' : 'text-gray-500'
-                                                }`}>
-                                                <span>✓</span>
-                                                {advice.confidence > 0.8 ? 'High Confidence' :
-                                                    advice.confidence > 0.6 ? 'Medium Confidence' : 'Estimated'}
-                                            </span>
-                                        </div>
-                                    </div>
+                                    )}
 
-                                    {/* Macro Proof (Provenance) */}
-                                    <div className="flex flex-wrap gap-2 pt-1">
-                                        <div className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-500 font-mono">
-                                            Indicator: NY.GDP.MKTP.KD.ZG (Growth)
+                                    {advice.researchEvidence?.sources?.length ? (
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            {advice.researchEvidence.sources.slice(0, 4).map((source) => (
+                                                <div
+                                                    key={source.sourceId}
+                                                    className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-500 font-mono"
+                                                >
+                                                    {source.label}
+                                                    {source.tier ? ` · ${source.tier}` : ""}
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div className="px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs text-gray-500 font-mono">
-                                            Indicator: WGI.Governance (Composite)
+                                    ) : advice.portfolioAnalysis ? (
+                                        <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                                            <div className="flex items-center gap-2">
+                                                <span>📊</span>
+                                                <span>
+                                                    Data: {advice.portfolioAnalysis.dataSource === 'imf' ? 'IMF (Live 2024)' :
+                                                        advice.portfolioAnalysis.dataSource === 'worldbank' ? 'World Bank (2024)' :
+                                                            'Market Data (Cached)'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="flex items-center gap-1">
+                                                    <span>🌍</span>
+                                                    {advice.portfolioAnalysis.regionCount || 0} regions
+                                                </span>
+                                                <span className={`flex items-center gap-1 ${advice.confidence > 0.8 ? 'text-green-600' :
+                                                    advice.confidence > 0.6 ? 'text-amber-600' : 'text-gray-500'
+                                                    }`}>
+                                                    <span>✓</span>
+                                                    {advice.confidence > 0.8 ? 'High Confidence' :
+                                                        advice.confidence > 0.6 ? 'Medium Confidence' : 'Estimated'}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    ) : null}
+
+                                    {advice.researchEvidence?.summary && (
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                                            {advice.researchEvidence.summary}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
                         )}

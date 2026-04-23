@@ -39,6 +39,28 @@
 | **DeFiLlama** | TVL, yields | 100 req/day |
 | **GoodDollar** | UBI distribution | — |
 
+## Arc Research Payments
+
+DiversiFi’s hackathon path should reuse the current Arc/x402 gateway as the single billing surface.
+
+| Component | Responsibility |
+|-----------|-----------------|
+| `pages/api/agent/_advisor-core.ts` | Decide what evidence is needed before recommending an action |
+| `pages/api/agent/x402-gateway.ts` | Verify payment, enforce credit drawdown, and return paid evidence |
+| Shared source registry | Canonical source IDs, alias mapping, pricing, reputation, and freshness rules |
+
+### Payment Boundary
+
+- Keep x402 / Circle Nanopayments as the primary payment path.
+- Use MPP only if it can replace existing HTTP payment plumbing without adding a second protocol surface.
+- Do not create a separate billing service for the hackathon MVP.
+
+### Evidence Bundles
+
+- A single recommendation may request multiple sources.
+- Each bundle should return source payload, timestamp, cost, and confidence inputs.
+- The advisor should prefer fresh, high-agreement data and reduce action size when evidence conflicts.
+
 ## DEX & Routing
 
 | Chain | DEX | Router |
@@ -53,6 +75,7 @@
 - **CCTP Domains**: Arc → Arbitrum, Arbitrum → Celo (via bridge)
 - **MPC Wallets**: Circle MPC for agent fuel tank + Hyperliquid API keys
 - **EIP-3009**: USDC transfer with authorization for nanopayments
+- **Hackathon Default**: use Circle / x402 first; treat MPP as optional unless it reduces code, not increases it
 
 ## Wallet Integration
 
