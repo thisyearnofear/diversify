@@ -7,14 +7,31 @@
 
 import { ethers } from 'ethers';
 
-const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3001';
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3042';
 const ARC_RPC = 'https://rpc.testnet.arc.network';
-const USDC_TESTNET = '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B';
 
 class X402TestSuite {
     constructor() {
         this.results = [];
         this.provider = new ethers.providers.JsonRpcProvider(ARC_RPC);
+    }
+
+    async request(path, options = {}, clientTag = 'suite') {
+        const headers = {
+            ...(options.headers || {}),
+            'x-forwarded-for': `10.0.0.${Math.abs(this.hashTag(clientTag)) % 250 + 1}`
+        };
+
+        return fetch(`${BASE_URL}${path}`, { ...options, headers });
+    }
+
+    hashTag(input) {
+        let hash = 0;
+        for (let i = 0; i < input.length; i++) {
+            hash = ((hash << 5) - hash) + input.charCodeAt(i);
+            hash |= 0;
+        }
+        return hash;
     }
 
     async runAllTests() {
@@ -28,6 +45,7 @@ class X402TestSuite {
         await this.testFreemiumModel();
         await this.testMultipleDataSources();
         await this.testErrorRecovery();
+        await this.testMetricsEndpoint();
 
         this.printResults();
     }
@@ -35,7 +53,7 @@ class X402TestSuite {
     async testBasicChallenge() {
         console.log('Test 1: Basic X402 Challenge Flow');
         try {
-            const response = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=truflation`);
+            const response = await this.request('/api/agent/x402-gateway?source=truflation', {}, 'basic');
             
             if (response.status === 402) {
                 const challenge = await response.json();
@@ -65,18 +83,18 @@ class X402TestSuite {
         try {
             const requests = [];
             
-            // Send 12 requests rapidly (limit is 10 per minute)
-            for (let i = 0; i < 12; i++) {
-                requests.push(fetch(`${BASE_URL}/api/agent/x402-gateway?source=truflation`));
+            // Send 25 requests rapidly (current limit is 20 per minute)
+            for (let i = 0; i < 25; i++) {
+                requests.push(this.request('/api/agent/x402-gateway?source=truflation', {}, 'rate-limit'));
             }
             
             const responses = await Promise.all(requests);
             const rateLimitedCount = responses.filter(r => r.status === 429).length;
             
-            this.addResult('Rate Limiting', rateLimitedCount >= 2, 
-                `${rateLimitedCount} requests rate limited (expected >= 2)`);
+            this.addResult('Rate Limiting', rateLimitedCount >= 1, 
+                `${rateLimitedCount} requests rate limited (expected >= 1)`);
             
-            console.log(`   🛡️ Rate limited ${rateLimitedCount}/12 requests`);
+            console.log(`   🛡️ Rate limited ${rateLimitedCount}/25 requests`);
         } catch (error) {
             this.addResult('Rate Limiting', false, error.message);
         }
@@ -85,11 +103,11 @@ class X402TestSuite {
     async testInvalidPaymentProof() {
         console.log('\nTest 3: Invalid Payment Proof Rejection');
         try {
-            const response = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=truflation`, {
+            const response = await this.request('/api/agent/x402-gateway?source=truflation', {
                 headers: {
                     'x-payment-proof': '0xdeadbeef12345678901234567890123456789012345678901234567890123456'
                 }
-            });
+            }, 'invalid-proof');
             
             const isRejected = response.status === 401 || response.status === 500;
             this.addResult('Invalid Payment Rejection', isRejected, 
@@ -141,7 +159,7 @@ class X402TestSuite {
         console.log('\nTest 6: Freemium Model - Free vs Paid Tiers');
         try {
             // Test 1: First request should be free
-            const freeResponse = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=alpha_vantage_enhanced`);
+            const freeResponse = await this.request('/api/agent/x402-gateway?source=alpha_vantage_enhanced', {}, 'freemium-free');
             
             if (freeResponse.status === 200) {
                 const freeData = await freeResponse.json();
@@ -155,16 +173,17 @@ class X402TestSuite {
             
             // Test 2: Simulate hitting free limit (would need backend modification for testing)
             // For now, test the premium tier directly
-            const premiumResponse = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=macro_analysis`);
+            const premiumResponse = await this.request('/api/agent/x402-gateway?source=macro_analysis', {}, 'freemium-paid');
             
             if (premiumResponse.status === 402) {
                 const challenge = await premiumResponse.json();
-                const isPremiumService = challenge.amount > '0.01';
+                const challengeAmount = parseFloat(challenge.amount || '0');
+                const isPremiumService = challengeAmount > 0 && challengeAmount <= 0.01;
                 
                 this.addResult('Premium Service Pricing', isPremiumService,
-                    `Premium service costs ${challenge.amount} USDC`);
+                    `Premium service costs ${challengeAmount} USDC (must be <= 0.01)`);
                 
-                console.log(`   💎 Premium service: ${challenge.amount} USDC`);
+                console.log(`   💎 Premium service: ${challengeAmount} USDC`);
             }
             
         } catch (error) {
@@ -179,7 +198,7 @@ class X402TestSuite {
             const results = [];
             
             for (const source of sources) {
-                const response = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=${source}`);
+                const response = await this.request(`/api/agent/x402-gateway?source=${source}`, {}, `source-${source}`);
                 results.push({
                     source,
                     status: response.status,
@@ -209,15 +228,43 @@ class X402TestSuite {
         console.log('\nTest 8: Error Recovery and Fallbacks');
         try {
             // Test invalid source
-            const invalidResponse = await fetch(`${BASE_URL}/api/agent/x402-gateway?source=invalid`);
-            const hasDefaultPricing = invalidResponse.status === 402;
+            const invalidResponse = await this.request('/api/agent/x402-gateway?source=invalid', {}, 'invalid-source');
+            const isExplicitValidationError = invalidResponse.status === 400;
             
-            this.addResult('Error Recovery', hasDefaultPricing, 
-                'Invalid source falls back to default pricing');
+            this.addResult('Error Recovery', isExplicitValidationError, 
+                'Invalid source returns explicit validation error');
             
             console.log(`   🔧 Invalid source handling: ${invalidResponse.status}`);
         } catch (error) {
             this.addResult('Error Recovery', false, error.message);
+        }
+    }
+
+    async testMetricsEndpoint() {
+        console.log('\nTest 9: Metrics Endpoint & Pricing Guardrail');
+        try {
+            const response = await this.request('/api/agent/x402-metrics', {}, 'metrics');
+            if (response.status !== 200) {
+                this.addResult('Metrics Endpoint', false, `Expected 200, got ${response.status}`);
+                return;
+            }
+
+            const metrics = await response.json();
+            const hasFrequencyFields = typeof metrics.transactionFrequency?.totalSettledPayments === 'number';
+            const maxPerAction = metrics.pricing?.maxPerActionPriceUSDC;
+            const meetsOneCentCap = typeof maxPerAction === 'number' && maxPerAction <= 0.01;
+            const pass = hasFrequencyFields && meetsOneCentCap;
+
+            this.addResult(
+                'Metrics Endpoint',
+                pass,
+                `maxPerActionPriceUSDC=${maxPerAction}, totalSettledPayments=${metrics.transactionFrequency?.totalSettledPayments}`
+            );
+
+            console.log(`   📈 totalSettledPayments: ${metrics.transactionFrequency?.totalSettledPayments}`);
+            console.log(`   💲 maxPerActionPriceUSDC: ${maxPerAction}`);
+        } catch (error) {
+            this.addResult('Metrics Endpoint', false, error.message);
         }
     }
 
@@ -250,8 +297,8 @@ class X402TestSuite {
         
         console.log('\n💡 Next Steps:');
         console.log('   1. Fund an agent wallet with USDC on Arc Testnet');
-        console.log('   2. Run a real payment test with: pnpm test-x402-real');
-        console.log('   3. Monitor spending and data quality in production');
+        console.log('   2. Run frequency validation with: pnpm test-x402-frequency');
+        console.log('   3. Capture /api/agent/x402-metrics in your submission video');
     }
 }
 

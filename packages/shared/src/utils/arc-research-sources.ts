@@ -139,7 +139,7 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     label: 'Macro Regime Oracle',
     aliases: ['macro-regime'],
     category: 'premium',
-    price: '0.01',
+    price: '0.004',
     freeLimit: 0,
     dataType: 'economic',
     fetchKey: 'macro_analysis',
@@ -153,7 +153,7 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     label: 'Portfolio Optimization',
     aliases: ['rwa-markets'],
     category: 'premium',
-    price: '0.05',
+    price: '0.005',
     freeLimit: 0,
     dataType: 'economic',
     fetchKey: 'portfolio_optimization',
@@ -167,7 +167,7 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     label: 'Risk Assessment',
     aliases: [],
     category: 'premium',
-    price: '0.02',
+    price: '0.006',
     freeLimit: 0,
     dataType: 'economic',
     fetchKey: 'risk_assessment',
@@ -181,7 +181,7 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     label: 'Agent Execution',
     aliases: [],
     category: 'premium',
-    price: '0.10',
+    price: '0.01',
     freeLimit: 0,
     dataType: 'economic',
     fetchKey: 'agent_execution',
@@ -195,7 +195,7 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     label: 'Real-Time Inflation',
     aliases: ['real-time-inflation'],
     category: 'premium',
-    price: '0.01',
+    price: '0.004',
     freeLimit: 0,
     dataType: 'inflation',
     fetchKey: 'real_time_inflation',
@@ -308,4 +308,3 @@ export function summarizeArcResearchBundle(bundle: ArcResearchBundle): string {
 
   return lines.join('\n');
 }
-

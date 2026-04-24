@@ -14,6 +14,8 @@
 | `/api/vault/fees` | GET | Fee summary |
 | `/api/status` | GET | System health check |
 | `/api/agent/execute-swap` | POST | Execute swap via agent |
+| `/api/agent/x402-gateway` | GET | Payment challenge + paid evidence retrieval |
+| `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
 
 ## AI Providers
 
@@ -54,6 +56,8 @@ DiversiFi’s hackathon path should reuse the current Arc/x402 gateway as the si
 - Keep x402 / Circle Nanopayments as the primary payment path.
 - Use MPP only if it can replace existing HTTP payment plumbing without adding a second protocol surface.
 - Do not create a separate billing service for the hackathon MVP.
+- Include nonce expiry and replay checks for payment proofs in gateway flow.
+- Keep configured paid-source prices at or below `$0.01` per action.
 
 ### Evidence Bundles
 

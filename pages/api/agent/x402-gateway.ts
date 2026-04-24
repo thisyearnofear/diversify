@@ -31,7 +31,10 @@ const USDC_TESTNET = ARC_DATA_HUB_CONFIG.USDC_TESTNET;
 const USDC_MAINNET = '0xCa23545A2F2199b1307A0B2E15a0c1086da37798';
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 20; // Increased limit for batched users
-const BATCH_TOPUP_AMOUNT = '1.00'; // Suggest 1 USDC top-up
+const BATCH_TOPUP_AMOUNT = '1.00'; // Optional larger top-up users can choose
+const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MIN_PAYMENT_AMOUNT_USDC = 0.001;
+const processedPaymentProofs = new Set<string>();
 
 // --- Types ---
 interface UserState {
@@ -125,6 +128,33 @@ type SourcePayload = {
     data: Record<string, unknown>;
 };
 
+type PaymentMandatePayload = {
+    amount: string;
+    nonce?: string;
+    [key: string]: unknown;
+};
+
+function getHeader(req: NextApiRequest, key: string): string | undefined {
+    const value = req.headers[key];
+    if (!value) return undefined;
+    return Array.isArray(value) ? value[0] : value;
+}
+
+function consumeNonce(user: UserState, nonce: string): { valid: boolean; reason?: string } {
+    const expiresAt = user.nonces.get(nonce);
+    if (!expiresAt) {
+        return { valid: false, reason: 'Unknown payment nonce' };
+    }
+
+    if (Date.now() > expiresAt) {
+        user.nonces.delete(nonce);
+        return { valid: false, reason: 'Payment nonce expired' };
+    }
+
+    user.nonces.delete(nonce);
+    return { valid: true };
+}
+
 function parseRequestedSources(sourceParam: NextApiRequest['query']['source'], sourcesParam: NextApiRequest['query']['sources']): string[] {
     const values = [sourceParam, sourcesParam].flatMap((value) => {
         if (!value) return [];
@@ -191,8 +221,9 @@ export default async function handler(
 ) {
     const start = Date.now();
     const requestedSources = parseRequestedSources(req.query.source, req.query.sources);
-    const paymentProof = req.headers['x-payment-proof'] as string;
-    const paymentMandate = req.headers['x-payment-mandate'] as string;
+    const paymentProof = getHeader(req, 'x-payment-proof');
+    const paymentMandate = getHeader(req, 'x-payment-mandate');
+    const paymentNonce = getHeader(req, 'x-payment-nonce');
 
     const clientIP = (req.headers['x-forwarded-for'] as string) || req.connection.remoteAddress || 'unknown';
     const clientKey = Array.isArray(clientIP) ? clientIP[0] : clientIP;
@@ -227,8 +258,17 @@ export default async function handler(
 
     if (paymentMandate) {
         try {
-            const mandate = JSON.parse(paymentMandate);
-            const isValid = await circleService.verifyNanopaymentMandate(mandate);
+            const mandate = JSON.parse(paymentMandate) as PaymentMandatePayload;
+            if (!mandate.nonce) {
+                return res.status(400).json({ error: 'Missing nonce in payment mandate' });
+            }
+
+            const nonceCheck = consumeNonce(user, mandate.nonce);
+            if (!nonceCheck.valid) {
+                return res.status(401).json({ error: nonceCheck.reason });
+            }
+
+            const isValid = await circleService.verifyNanopaymentMandate(mandate as any);
 
             if (isValid) {
                 const amount = parseFloat(mandate.amount);
@@ -245,6 +285,13 @@ export default async function handler(
 
     if (paymentProof) {
         try {
+            if (paymentNonce) {
+                const nonceCheck = consumeNonce(user, paymentNonce);
+                if (!nonceCheck.valid) {
+                    return res.status(401).json({ error: nonceCheck.reason });
+                }
+            }
+
             const amountCredited = await verifyCircleGatewayPayment(paymentProof);
             if (amountCredited > 0) {
                 UserManager.addCredit(user, amountCredited);
@@ -336,7 +383,9 @@ function sendPaymentRequired(
     bundleRequested: boolean
 ) {
     const nonce = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    user.nonces.set(nonce, Date.now() + 300000);
+    const expiresAt = Date.now() + CHALLENGE_TTL_MS;
+    user.nonces.set(nonce, expiresAt);
+    const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
 
     return res.status(402).json({
         error: bundleRequested ? 'Research Bundle Required' : 'Premium Source Required',
@@ -344,10 +393,12 @@ function sendPaymentRequired(
             ? `Accessing ${sourcePlans.length} sources requires ${totalCost.toFixed(3)} USDC in research credits.`
             : `Accessing "${sourcePlans[0].source.label}" requires premium micro-credits ($${totalCost.toFixed(3)} USDC)`,
         recipient: DATA_HUB_WALLET,
-        amount: BATCH_TOPUP_AMOUNT,
+        amount: paymentAmount.toFixed(3),
         currency: 'USDC',
         chainId: 5042002,
         nonce,
+        expires: expiresAt,
+        suggested_topup_amount: BATCH_TOPUP_AMOUNT,
         current_balance: user.creditBalance.toFixed(4),
         required_cost: totalCost,
         requested_sources: sourcePlans.map((plan) => plan.source.id),
@@ -362,6 +413,10 @@ function sendPaymentRequired(
 
 // --- Verification Logic ---
 async function verifyOnChainPayment(txHash: string): Promise<number> {
+    if (processedPaymentProofs.has(txHash)) {
+        throw new Error('Transaction already processed');
+    }
+
     const provider = new ethers.providers.JsonRpcProvider(ARC_RPC);
     const tx = await provider.getTransaction(txHash);
 
@@ -391,10 +446,8 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
         throw new Error('Invalid payment recipient');
     }
 
-    // Check against used nonces to prevent replay (Simple in-memory check for now)
-    // In production, store processed txHashes in DB
-    const isReplay = false; // Placeholder
-    if (isReplay) throw new Error('Transaction already processed');
+    // In production, move this set into Redis/DB for multi-instance replay protection.
+    processedPaymentProofs.add(txHash);
 
     return amountUSDC;
 }
@@ -402,16 +455,20 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
 // Enhanced verification using Circle Gateway for cross-chain payments
 async function verifyCircleGatewayPayment(paymentProof: string): Promise<number> {
     try {
+        if (processedPaymentProofs.has(paymentProof)) {
+            throw new Error('Payment proof already processed');
+        }
+
         // Check if this is a Circle Gateway transaction
         if (paymentProof.startsWith('circle-gateway-')) {
             const isValid = await circleService.verifyGatewayTransaction(paymentProof);
             if (!isValid) {
                 throw new Error('Invalid Circle Gateway transaction');
             }
-            
-            // For hackathon demo, we'll return a fixed amount
-            // In production, this would fetch the actual amount from Circle Gateway
-            return 1.00; // 1 USDC credited for Circle Gateway transactions
+
+            const parsedAmount = parseGatewayProofAmount(paymentProof);
+            processedPaymentProofs.add(paymentProof);
+            return parsedAmount ?? 0.01;
         }
         
         // If not a Circle Gateway transaction, fall back to on-chain verification
@@ -422,6 +479,15 @@ async function verifyCircleGatewayPayment(paymentProof: string): Promise<number>
         console.error('Circle Gateway payment verification failed:', errorMessage);
         throw new Error(`Circle Gateway verification failed: ${errorMessage}`);
     }
+}
+
+function parseGatewayProofAmount(paymentProof: string): number | null {
+    const match = paymentProof.match(/:([0-9]+(?:\.[0-9]{1,6})?)$/);
+    if (!match) return null;
+
+    const parsed = parseFloat(match[1]);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    return parsed;
 }
 
 // --- Data Fetching (Preserved & Cleaned) ---
@@ -608,16 +674,16 @@ async function getFredData(isFreeTier: boolean) {
 
 // Premium Services
 async function getMacroAnalysis(isFreeTier: boolean) {
-    if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.03 USDC' };
+    if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.004 USDC' };
     return { macro_regime: 'Disinflationary Growth', confidence: 0.78, tier: 'premium' };
 }
 
 async function getPortfolioOptimization(isFreeTier: boolean) {
-    if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.05 USDC' };
+    if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.005 USDC' };
     return { optimal_weights: { 'USDC': 30, 'BTC': 20 }, tier: 'premium' };
 }
 
 async function getRiskAssessment(isFreeTier: boolean) {
-    if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.02 USDC' };
+    if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.006 USDC' };
     return { risk_score: 3.2, mitigation: 'Diversify', tier: 'premium' };
 }

@@ -55,6 +55,19 @@ If you are building the Arc Nano Payments submission, keep the existing app and 
 
 This mode should reuse the advisor, action cards, and x402 gateway. Do not add a separate payment stack unless it replaces current logic.
 
+### Hackathon Verification Commands
+
+```bash
+pnpm test-x402
+pnpm test-x402-comprehensive
+pnpm test-x402-frequency
+```
+
+For judge-facing evidence, use:
+
+- `GET /api/agent/x402-metrics` for transaction frequency and pricing caps
+- Circle Developer Console + Arc Explorer for end-to-end settlement proof
+
 ## Test Drive
 
 1. Switch to Celo Sepolia in your wallet

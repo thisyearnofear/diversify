@@ -3,8 +3,8 @@
 async function runX402VerificationTests() {
     console.log('🚀 Starting X402 & Data Hub Verification Tests...\n');
 
-    const BASE_URL = 'http://localhost:3001'; // Assuming local dev server
-    const GATEWAY_URL = `${BASE_URL}/api/agent/x402-gateway?source=truflation`;
+    const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3042';
+    const GATEWAY_URL = `${BASE_URL}/api/agent/x402-gateway?source=macro_analysis`;
 
     // Test 1: Initial Request (Should challenge with 402)
     console.log('Test 1: Initial Request (Challenge Check)');
@@ -16,7 +16,7 @@ async function runX402VerificationTests() {
             console.log(`Challenge Details: ${challenge.amount} ${challenge.currency} to ${challenge.recipient}`);
         }
     } catch (e) {
-        console.log('❌ Error: Ensure `npm run dev` is running on port 3001');
+        console.log(`❌ Error: Ensure \`pnpm dev\` is running and TEST_BASE_URL is reachable (${BASE_URL})`);
     }
 
     // Test 2: Invalid Payment Proof (Should reject with 401/500)
