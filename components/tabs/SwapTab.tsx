@@ -332,6 +332,8 @@ export default function SwapTab({
     toChainId?: number,
     fromTokenInflation?: number,
     toTokenInflation?: number,
+    recipientAddress?: string,
+    phoneNumber?: string,
   ) => {
     setSwapStatus("Initiating swap...");
     setSwapStep("approving");
@@ -367,6 +369,8 @@ export default function SwapTab({
         amount,
         fromChainId,
         toChainId,
+        recipientAddress,
+        phoneNumber,
         onApprovalSubmitted: setApprovalTxHash,
         onSwapSubmitted: () => {
           setSwapStatus("Swap submitted...");
@@ -726,6 +730,7 @@ export default function SwapTab({
                             undefined,
                             undefined,
                             contact.identifier,
+                            contact.resolvedAddress,
                           );
                         }
                         setShowSocialPicker(false);
@@ -761,12 +766,14 @@ export default function SwapTab({
               >
                 <YieldDiscoverySection
                   chainId={walletChainId || 42220}
+                  description="Ranked vaults with route context so you can review the destination before selecting token amount."
+                  actionLabel="Review in Swap"
                   onSelectVault={(vault) => {
                     if (swapInterfaceRef.current?.setTokens) {
                       swapInterfaceRef.current.setTokens(
                         vault.asset.symbol,
                         `lifi-earn:${vault.id}`,
-                        "10",
+                        "",
                         walletChainId || 42220,
                         vault.chainId
                       );

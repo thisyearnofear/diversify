@@ -1,6 +1,7 @@
-import { forwardRef, useImperativeHandle, useState } from "react";
+import { forwardRef, useImperativeHandle } from "react";
 import { useSwapController } from "../../hooks/use-swap-controller";
 import { ChainDetectionService } from "@diversifi/shared";
+import { NETWORKS } from "../../config";
 import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";
 import SwapAIInsight from "./SwapAIInsight";
@@ -31,6 +32,8 @@ interface SwapInterfaceProps {
     toChainId?: number,
     fromInflation?: number,
     toInflation?: number,
+    recipientAddress?: string,
+    phoneNumber?: string,
   ) => Promise<unknown>;
   title?: string;
   address?: string | null;
@@ -90,6 +93,10 @@ const SwapInterface = forwardRef<
     setAmount,
     slippageTolerance,
     setSlippageTolerance,
+    recipientAddress,
+    setRecipientAddress,
+    phoneNumber,
+    setPhoneNumber,
     fromChainId,
     setFromChainId,
     toChainId,
@@ -122,9 +129,31 @@ const SwapInterface = forwardRef<
     preferredToRegion,
   });
 
-  // Local state for SocialConnect features
-  const [phoneNumber, setPhoneNumber] = useState<string>("");
-  const [recipientAddress, setRecipientAddress] = useState<string>("");
+  const availableBalance = Number.parseFloat(tokenBalances[fromToken]?.formattedBalance || "0");
+  const parsedAmount = Number.parseFloat(amount || "0");
+  const isCrossChainRoute = ChainDetectionService.isCrossChain(fromChainId, toChainId);
+
+  const getChainName = (selectedChainId?: number | null) =>
+    Object.values(NETWORKS).find((network) => network.chainId === selectedChainId)?.name;
+
+  const getSwapDisabledReason = () => {
+    if (!address) return "Connect your wallet to review and execute this route.";
+    if (!fromToken || !toToken) return "Select both source and destination assets.";
+    if (fromToken === toToken) return "Choose a different destination asset to continue.";
+    if (!amount) return "Enter the amount you want to move before reviewing the route.";
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      return "Enter a valid amount greater than zero.";
+    }
+    if (parsedAmount > availableBalance) {
+      return `Amount exceeds your available ${fromToken} balance.`;
+    }
+    return null;
+  };
+
+  const ctaDisabledReason = getSwapDisabledReason();
+  const ctaHelperText = isCrossChainRoute
+    ? "This route may bridge funds before the final swap or deposit. Review destination chain details before submitting."
+    : "Review the estimated output and confirm the destination asset before submitting.";
 
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
@@ -158,9 +187,9 @@ const SwapInterface = forwardRef<
       setFromToken(from.toUpperCase());
       setToToken(to.toUpperCase());
 
-      if (inputAmount) setAmount(inputAmount);
-      if (phoneNumber) setPhoneNumber(phoneNumber);
-      if (recipientAddress) setRecipientAddress(recipientAddress);
+      if (inputAmount !== undefined) setAmount(inputAmount);
+      if (phoneNumber !== undefined) setPhoneNumber(phoneNumber || null);
+      if (recipientAddress !== undefined) setRecipientAddress(recipientAddress || null);
     },
     }));
 
@@ -245,31 +274,37 @@ const SwapInterface = forwardRef<
         )}
 
         {phoneNumber && (
-          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center gap-3">
-            <span className="text-xl">📱</span>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-green-800 dark:text-green-200 uppercase">
-                SocialConnect Recipient
-              </p>
-              <p className="text-sm text-green-700 dark:text-green-300">
-                Sending to <span className="font-bold">{phoneNumber}</span>
+          <section
+            className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20"
+            aria-label="SocialConnect recipient"
+          >
+            <div className="flex items-start gap-3">
+              <span className="text-xl" aria-hidden="true">📱</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                  SocialConnect recipient selected
+                </p>
+                <p className="mt-1 text-sm leading-6 text-emerald-800 dark:text-emerald-200">
+                  Tokens will be sent to <span className="font-bold">{phoneNumber}</span> after the route completes.
+                </p>
                 {recipientAddress && (
-                  <span className="text-xs block opacity-70 truncate max-w-[200px]">
-                    {recipientAddress}
-                  </span>
+                  <p className="mt-1 truncate text-xs text-emerald-700/80 dark:text-emerald-300/80">
+                    Resolved address: {recipientAddress}
+                  </p>
                 )}
-              </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhoneNumber(null);
+                  setRecipientAddress(null);
+                }}
+                className="rounded-lg px-2 py-1.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-emerald-100 dark:hover:bg-emerald-900/40 dark:focus-visible:ring-offset-gray-900"
+              >
+                Clear
+              </button>
             </div>
-            <button 
-              onClick={() => {
-                // Clear recipient (would need a clearRecipient method in controller)
-                console.log("Clearing SocialConnect recipient");
-              }}
-              className="text-green-800 dark:text-green-200 opacity-50 hover:opacity-100"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </div>
+          </section>
         )}
 
         <div className="space-y-3">
@@ -296,7 +331,7 @@ const SwapInterface = forwardRef<
               className={`p-3 rounded-full transition-colors shadow-md ${fromTokenRegion && toTokenRegion
                 ? `bg-gradient-to-b from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-gray-200`
                 : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
-                }`}
+                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 motion-reduce:transition-none`}
               disabled={isLoading}
               aria-label="Switch tokens"
             >
@@ -337,7 +372,12 @@ const SwapInterface = forwardRef<
             amount={amount}
             fromToken={fromToken}
             toToken={toToken}
+            fromTokenRegion={fromTokenRegion}
             toTokenRegion={toTokenRegion}
+            fromChainName={getChainName(fromChainId)}
+            toChainName={getChainName(toChainId)}
+            slippageTolerance={slippageTolerance}
+            isCrossChain={isCrossChainRoute}
             mounted={mounted}
           />
 
@@ -403,13 +443,9 @@ const SwapInterface = forwardRef<
             toTokenRegion={toTokenRegion}
             isBeginner={isBeginner}
             zapMode={zapMode}
-            disabled={
-              !address ||
-              fromToken === toToken ||
-              !amount ||
-              parseFloat(amount) <= 0 ||
-              parseFloat(amount) > parseFloat(tokenBalances[fromToken]?.formattedBalance || "0")
-            }
+            disabled={Boolean(ctaDisabledReason)}
+            disabledReason={ctaDisabledReason}
+            helperText={ctaHelperText}
             onClick={() => executeSwap(onSwap, contractCall)}
             stickyMobile={isMobile && isBeginner}
           />        </div>

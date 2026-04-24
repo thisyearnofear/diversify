@@ -17,6 +17,9 @@ import { LIFI_VAULTS, getLiFiVaults, getLiFiVaultByAddress, type VaultConfig } f
 
 const LIFI_API_BASE = 'https://li.quest/v1';
 const EARN_API_BASE = 'https://earn.li.fi/v1';
+const VAULT_CACHE_TTL_MS = 60_000;
+
+const vaultQueryCache = new Map<string, { timestamp: number; data: EarnVault[] }>();
 
 export interface EarnVault {
     id: string;
@@ -126,6 +129,22 @@ export class EarnService {
         };
     }
 
+    private static getVaultCacheKey(params?: {
+        chainIds?: number[];
+        protocols?: string[];
+        categories?: string[];
+        risk?: ('low' | 'medium' | 'high')[];
+        useLive?: boolean;
+    }): string {
+        return JSON.stringify({
+            chainIds: params?.chainIds ?? [],
+            protocols: params?.protocols ?? [],
+            categories: params?.categories ?? [],
+            risk: params?.risk ?? [],
+            useLive: params?.useLive ?? true,
+        });
+    }
+
     /**
      * Fetch live vaults from LI.FI Earn API
      * Uses earn.li.fi for real-time vault data
@@ -166,6 +185,12 @@ export class EarnService {
     }): Promise<EarnVault[]> {
         this.ensureInitialized();
 
+        const cacheKey = this.getVaultCacheKey(params);
+        const cached = vaultQueryCache.get(cacheKey);
+        if (cached && (Date.now() - cached.timestamp) < VAULT_CACHE_TTL_MS) {
+            return cached.data;
+        }
+
         const useLive = params?.useLive ?? true;
         
         if (useLive && params?.chainIds?.length === 1) {
@@ -205,6 +230,10 @@ export class EarnService {
                     filtered: filteredVaults.length,
                 });
 
+                vaultQueryCache.set(cacheKey, {
+                    timestamp: Date.now(),
+                    data: filteredVaults,
+                });
                 return filteredVaults;
             } catch (e) {
                 console.warn('[EarnService] Live fetch failed, using fallback:', e);
@@ -227,6 +256,10 @@ export class EarnService {
         console.info('[EarnService] Using curated vault fallback', {
             chainIds,
             total: fallbackVaults.length,
+        });
+        vaultQueryCache.set(cacheKey, {
+            timestamp: Date.now(),
+            data: fallbackVaults,
         });
         return fallbackVaults;
     }
@@ -478,7 +511,7 @@ export class EarnService {
                         apy: Number(position.vault?.analytics?.apy?.total ?? position.apy ?? 0),
                     };
                 })
-                .filter((position): position is EarnPosition => position !== null);
+                .filter((position: EarnPosition | null): position is EarnPosition => position !== null);
         } catch (error) {
             console.warn('[EarnService] Failed to fetch user positions', {
                 correlationId: options?.correlationId,

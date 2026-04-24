@@ -13,6 +13,7 @@ export interface SocialContact {
   identifier: string;
   type: 'phone' | 'email';
   name?: string;
+  resolvedAddress?: string;
 }
 
 interface SocialContactPickerProps {
@@ -40,7 +41,7 @@ export function SocialContactPicker({ onSelect, onResolve, amount, disabled }: S
       const address = await onResolve(identifier.trim(), type);
       if (address) {
         setResolvedAddress(address);
-        onSelect({ identifier: identifier.trim(), type });
+        onSelect({ identifier: identifier.trim(), type, resolvedAddress: address });
       } else {
         setError('No wallet found for this contact');
       }
@@ -103,7 +104,7 @@ export function SocialContactPicker({ onSelect, onResolve, amount, disabled }: S
           onChange={(e) => setIdentifier(formatIdentifier(e.target.value, type))}
           placeholder={type === 'email' ? 'friend@example.com' : '(555) 123-4567'}
           disabled={disabled || isResolving}
-          className="w-full px-3 py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
+          className={`w-full py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 ${type === 'phone' ? 'pl-10 pr-3' : 'px-3'}`}
         />
         {type === 'phone' && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">

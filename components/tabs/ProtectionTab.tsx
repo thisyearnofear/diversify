@@ -141,7 +141,7 @@ export default function ProtectionTab({
     }
 
     const sourceToken = fromToken || getBestFromToken(targetToken);
-    const swapAmount = amount || getSwapAmount(sourceToken);
+    const swapAmount = amount !== undefined ? amount : getSwapAmount(sourceToken);
 
     // Find source chain from balances
     const sourceTokenObj = chains
@@ -652,11 +652,14 @@ export default function ProtectionTab({
       {!isBeginner && (
         <YieldDiscoverySection
           chainId={chainId ?? undefined}
+          title="Protection Yield Opportunities"
+          description="Low-to-medium risk vaults ranked for protection plans. Review the route, confirm the amount, and then deposit through LI.FI."
+          actionLabel="Review in Protect"
           onSelectVault={(vault) => {
             openProtectionFlow(
               `lifi-earn:${vault.id}`,
               vault.asset.symbol,
-              '10'
+              ""
             );
           }}
         />

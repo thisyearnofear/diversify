@@ -28,6 +28,8 @@ interface HookSwapParams {
     fromChainId?: number;
     toChainId?: number;
     slippageTolerance?: number;
+    recipientAddress?: string;
+    phoneNumber?: string;
     optimization?: 'speed' | 'cost'; // User preference for optimization
     contractCall?: {
         toContractAddress: string;
@@ -133,6 +135,8 @@ export function useSwap() {
                 toChainId: params.toChainId || currentChainId,
                 userAddress,
                 slippageTolerance: params.slippageTolerance || (isMiniPay ? TX_CONFIG.MINIPAY_SLIPPAGE : TX_CONFIG.DEFAULT_SLIPPAGE),
+                recipientAddress: params.recipientAddress,
+                phoneNumber: params.phoneNumber,
                 contractCall: params.contractCall,
             };
 
@@ -218,6 +222,8 @@ export function useSwap() {
                 toChainId: params.toChainId || currentChainId,
                 userAddress,
                 slippageTolerance: finalSlippage,
+                recipientAddress: params.recipientAddress,
+                phoneNumber: params.phoneNumber,
                 contractCall: params.contractCall,
             };
 

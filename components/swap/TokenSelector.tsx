@@ -50,6 +50,9 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const showRegionalInfo = experienceMode !== "beginner";
+  const selectorId = React.useId();
+  const amountInputId = React.useId();
+  const amountHintId = React.useId();
 
   // Beginner: show educational tooltip about why to swap
   const [showWhySwapTooltip, setShowWhySwapTooltip] = React.useState(false);
@@ -220,14 +223,14 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 
   return (
     <div>
-      <label className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
+      <label htmlFor={selectorId} className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
         <span className="mr-2">{label}</span>
         {/* Beginner mode: show "Why swap?" tooltip */}
         {isBeginnerMode && label === 'From' && (
           <button
             type="button"
             onClick={() => setShowWhySwapTooltip(!showWhySwapTooltip)}
-            className="ml-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 px-2 py-1 rounded-full hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors min-h-[44px] flex items-center"
+            className="ml-1 flex min-h-[44px] items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm text-blue-700 transition-colors hover:bg-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 dark:focus-visible:ring-offset-gray-900"
             title="Why should I swap?"
           >
             💡 Why swap?
@@ -278,12 +281,12 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       )}
 
       {/* Balance display - Essential for all users to understand their position */}
-      <div className="flex justify-end mb-1">
+      <div className="mb-2 flex justify-end">
         <button
           type="button"
           onClick={setMaxAmount}
           disabled={disabled || !hasBalance || Boolean(isCrossChain)}
-          className={`text-xs font-bold px-3 py-2 rounded-md flex items-center transition-all min-h-[44px] ${isCrossChain && !hasBalance
+          className={`flex min-h-[44px] items-center rounded-lg px-3 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 ${isCrossChain && !hasBalance
             ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
             : hasBalance
               ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 border border-blue-100 dark:border-blue-800'
@@ -315,13 +318,15 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 
       <div className="flex space-x-2">
         <select
+          id={selectorId}
           value={selectedToken}
           onChange={(e) => {
             const newToken = e.target.value;
             onTokenChange(newToken);
           }}
+          aria-invalid={!selectedTokenCompliant}
           className={`${showAmountInput ? "w-1/3" : "w-full"
-            } rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800 ${!selectedTokenCompliant ? 'border-red-500 dark:border-red-500' : ''
+            } rounded-xl border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800 min-h-[52px] px-3 ${!selectedTokenCompliant ? 'border-red-500 dark:border-red-500' : ''
             }`}
           style={regionColor && selectedTokenCompliant ? {
             borderColor: regionColor,
@@ -361,11 +366,16 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
 
         {showAmountInput && onAmountChange && (
           <div className="relative w-2/3">
+            <label htmlFor={amountInputId} className="sr-only">
+              {`${label} amount`}
+            </label>
             <input
+              id={amountInputId}
               type="number"
               value={amount}
               onChange={(e) => onAmountChange(e.target.value)}
-              className="w-full rounded-lg border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold pr-16 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800"
+              aria-describedby={isCrossChain ? amountHintId : undefined}
+              className="w-full rounded-xl border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold pr-16 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800 min-h-[52px] px-3"
               placeholder="Amount"
               min="0"
               step="0.01"
@@ -375,7 +385,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             <button
               type="button"
               onClick={setMaxAmount}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 text-xs font-bold px-2 py-1 rounded transition-colors ${!hasBalance || isCrossChain
+              className={`absolute right-2 top-1/2 transform -translate-y-1/2 rounded-md px-2 py-1 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 ${!hasBalance || isCrossChain
                 ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                 : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800'
                 }`}
@@ -394,6 +404,12 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         )}
       </div>
 
+      {showAmountInput && isCrossChain && (
+        <p id={amountHintId} className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-300">
+          Cross-chain quotes can shift with bridge fees and final destination liquidity. Start with a deliberate amount.
+        </p>
+      )}
+
       {/* Strategy Violation Warning */}
       {!selectedTokenCompliant && selectedTokenCompliance.reason && (
         <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
@@ -411,11 +427,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                   <strong>Recommended alternatives:</strong> {selectedTokenCompliance.alternatives.join(', ')}
                 </p>
               )}
-              <button
-                className="mt-2 text-xs font-bold text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline"
-              >
-                I understand the risk
-              </button>
             </div>
           </div>
         </div>

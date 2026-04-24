@@ -47,7 +47,7 @@ export function MobileCollapsible({
       className={`group ${className}`}
       open={!defaultCollapsedOnMobile}
     >
-      <summary className="flex items-center justify-between cursor-pointer list-none py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors tap-target-min">
+      <summary className="flex items-center justify-between cursor-pointer list-none py-2 px-3 bg-gray-50 dark:bg-gray-800 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors motion-reduce:transition-none tap-target-min focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900">
         <div className="flex items-center gap-2">
           {icon && <span>{icon}</span>}
           <span className="text-sm font-bold text-gray-700 dark:text-gray-300">{title}</span>

@@ -17,17 +17,19 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
     if (status === "idle" || status === "completed") return null;
 
     return (
-        <div
-            className={`p-3 rounded-card ${status === "error"
-                ? "bg-accent-error/5 text-accent-error border border-accent-error/10"
-                : "bg-accent-info/5 text-accent-info border border-accent-info/10"
+        <section
+            aria-live="polite"
+            aria-atomic="true"
+            className={`rounded-2xl border p-4 shadow-sm ${status === "error"
+                ? "border-red-200 bg-red-50/80 text-red-800 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-200"
+                : "border-sky-200 bg-sky-50/80 text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/20 dark:text-sky-200"
                 }`}
         >
-            <div className="flex items-center">
+            <div className="flex items-start gap-3">
                 {status === "approving" && (
                     <>
                         <svg
-                            className="animate-spin -ml-1 mr-2 size-4"
+                            className="mt-0.5 size-4 animate-spin"
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
@@ -46,14 +48,19 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             />
                         </svg>
-                        <span>Preparing your protection move...</span>
+                        <div>
+                            <p className="text-sm font-bold">Preparing your route</p>
+                            <p className="mt-1 text-sm leading-6 opacity-90">
+                                Reviewing approvals and building the transaction request.
+                            </p>
+                        </div>
                     </>
                 )}
 
                 {status === "swapping" && (
                     <>
                         <svg
-                            className="animate-spin -ml-1 mr-2 size-4"
+                            className="mt-0.5 size-4 animate-spin"
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
@@ -72,14 +79,19 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                             />
                         </svg>
-                        <span>Completing your protection move...</span>
+                        <div>
+                            <p className="text-sm font-bold">Transaction in progress</p>
+                            <p className="mt-1 text-sm leading-6 opacity-90">
+                                Confirming the swap or deposit onchain. Keep this screen open until confirmation.
+                            </p>
+                        </div>
                     </>
                 )}
 
                 {status === "error" && (
                     <>
                         <svg
-                            className="size-4 mr-2 text-accent-error"
+                            className="mt-0.5 size-4"
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 20 20"
                             fill="currentColor"
@@ -90,16 +102,19 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                                 clipRule="evenodd"
                             />
                         </svg>
-                        <span>
-                            {error || "Something went wrong while trying to protect your savings"}
-                        </span>
+                        <div>
+                            <p className="text-sm font-bold">Transaction needs attention</p>
+                            <p className="mt-1 text-sm leading-6">
+                                {error || "Something went wrong while trying to protect your savings"}
+                            </p>
+                        </div>
                     </>
                 )}
             </div>
 
             {txHash && (
-                <div className="mt-2 text-sm border-t border-gray-200 pt-2">
-                    <div className="flex items-center justify-between mb-1">
+                <div className="mt-4 border-t border-current/10 pt-4 text-sm">
+                    <div className="mb-1 flex items-center justify-between gap-2">
                         <span className="font-medium text-gray-700 dark:text-gray-300">
                             Transaction ID:
                         </span>
@@ -109,14 +124,14 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                                 // In a real app we'd use a toast, but keeping consistent with original code
                                 alert("Transaction hash copied to clipboard!");
                             }}
-                            className="text-xs bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-md transition-colors"
+                            className="rounded-md bg-white px-2 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                             title="Copy to clipboard"
                         >
                             Copy
                         </button>
                     </div>
                     <div className="flex items-center">
-                        <code className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-2 py-1 rounded text-xs font-mono w-full overflow-hidden text-ellipsis">
+                        <code className="w-full overflow-hidden rounded bg-white px-2 py-1 text-xs font-mono text-gray-800 text-ellipsis dark:bg-gray-900 dark:text-gray-200">
                             {txHash}
                         </code>
                     </div>
@@ -133,7 +148,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                             }
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center text-accent-info hover:underline bg-accent-info/10 px-3 py-1.5 rounded-md text-sm font-medium"
+                            className="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-medium text-sky-700 hover:underline dark:bg-gray-900 dark:text-sky-300"
                         >
                             <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -149,7 +164,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                     </div>
                 </div>
             )}
-        </div>
+        </section>
     );
 };
 

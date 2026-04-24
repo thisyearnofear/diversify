@@ -221,6 +221,8 @@ export function useSwapController({
         toChainId: number,
         fromInflation: number,
         toInflation: number,
+        recipientAddress?: string,
+        phoneNumber?: string,
       ) => Promise<unknown>,
       contractCall?: {
         toContractAddress: string;
@@ -259,6 +261,8 @@ export function useSwapController({
             toChainId,
             fromInflation,
             toInflation,
+            recipientAddress || undefined,
+            phoneNumber || undefined,
           )) as { swapTxHash?: string };
           if (result?.swapTxHash) setLocalTxHash(result.swapTxHash);
           setStatus("completed");
@@ -271,6 +275,8 @@ export function useSwapController({
             fromChainId: enableCrossChain ? fromChainId : undefined,
             toChainId: enableCrossChain ? toChainId : undefined,
             slippageTolerance,
+            recipientAddress: recipientAddress || undefined,
+            phoneNumber: phoneNumber || undefined,
             contractCall,
           });
           // Note: Hook state will be handled via useEffect tracking swapStep
@@ -364,6 +370,10 @@ export function useSwapController({
     setAmount,
     slippageTolerance,
     setSlippageTolerance,
+    recipientAddress,
+    setRecipientAddress,
+    phoneNumber,
+    setPhoneNumber,
     fromChainId,
     setFromChainId,
     toChainId,

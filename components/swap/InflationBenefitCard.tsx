@@ -25,17 +25,20 @@ const InflationBenefitCard: React.FC<InflationBenefitCardProps> = ({
     }
 
     return (
-        <div className="relative p-3 rounded-lg overflow-hidden border-2 shadow-md bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+        <section
+            className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20"
+            aria-label="Inflation protection insight"
+        >
             <div className="relative">
-                <h3 className="text-xs font-bold mb-1.5 flex items-center text-gray-900 dark:text-gray-100">
-                    <span className="mr-1.5 text-sm">✨</span>
+                <h3 className="mb-2 flex items-center text-sm font-bold text-gray-900 dark:text-gray-100">
+                    <span className="mr-2 text-base" aria-hidden="true">✨</span>
                     Inflation Protection
                 </h3>
-                <div className="flex items-center mb-2 gap-1">
+                <div className="mb-3 flex items-center gap-1">
                     <div className="flex items-center">
                         {fromTokenRegion && fromTokenRegion !== 'Unknown' && (
                             <div
-                                className="size-5 rounded-full flex items-center justify-center mr-1"
+                                className="mr-1 flex size-6 items-center justify-center rounded-full"
                                 style={{
                                     backgroundColor: fromTokenRegion
                                         ? REGION_COLORS[fromTokenRegion as keyof typeof REGION_COLORS]
@@ -45,19 +48,19 @@ const InflationBenefitCard: React.FC<InflationBenefitCardProps> = ({
                                 <RegionalIconography
                                     region={fromTokenRegion as Region}
                                     size="sm"
-                                    className="text-white scale-[0.6]"
+                                    className="text-white scale-[0.65]"
                                 />
                             </div>
                         )}
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                             {fromToken}
                         </span>
                     </div>
-                    <span className="mx-1 text-gray-600 dark:text-gray-400 font-bold text-xs">→</span>
+                    <span className="mx-1 text-sm font-bold text-gray-600 dark:text-gray-400">→</span>
                     <div className="flex items-center">
                         {toTokenRegion && toTokenRegion !== 'Unknown' && (
                             <div
-                                className="size-5 rounded-full flex items-center justify-center mr-1"
+                                className="mr-1 flex size-6 items-center justify-center rounded-full"
                                 style={{
                                     backgroundColor: toTokenRegion
                                         ? REGION_COLORS[toTokenRegion as keyof typeof REGION_COLORS]
@@ -67,24 +70,24 @@ const InflationBenefitCard: React.FC<InflationBenefitCardProps> = ({
                                 <RegionalIconography
                                     region={toTokenRegion as Region}
                                     size="sm"
-                                    className="text-white scale-[0.6]"
+                                    className="text-white scale-[0.65]"
                                 />
                             </div>
                         )}
-                        <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
+                        <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                             {toToken}
                         </span>
                     </div>
                 </div>
-                <p className="text-xs font-medium text-gray-800 dark:text-gray-200">
+                <p className="text-sm leading-6 text-gray-800 dark:text-gray-200">
                     Save ~{" "}
-                    <span className="font-bold text-green-700 dark:text-green-400 text-sm">
+                    <span className="text-base font-bold text-emerald-700 dark:text-emerald-300">
                         {inflationDifference.toFixed(1)}%
                     </span>{" "}
                     per year in {toTokenRegion && toTokenRegion !== 'Unknown' ? toTokenRegion : 'target region'}.
                 </p>
             </div>
-        </div>
+        </section>
     );
 };
 
