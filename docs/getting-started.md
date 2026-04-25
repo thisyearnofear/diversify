@@ -23,9 +23,9 @@ No wallet required — users can sign in via email, social login, or existing wa
 | Variable | Purpose |
 |----------|---------|
 | `VAULT_PRIVATE_KEY` | Dev fallback when Privy smart account not configured |
-| `GEMINI_API_KEY` | AI fallback (Venice AI is primary) |
-| `GOOGLE_AI_API_KEY` | Google AI services |
-| `VENICE_API_KEY` | Venice AI (primary agent intelligence) |
+| `GEMINI_API_KEY` | **Primary** AI provider (Gemini Flash / Pro). Required for Google prize track. |
+| `VENICE_API_KEY` | Secondary AI fallback |
+| `GOOGLE_AI_API_KEY` | Google AI services (embeddings etc.) |
 | `SYNTHDATA_API_KEY` | SynthData analytics |
 | `FRED_API_KEY` | Federal Reserve economic data (inflation rates) |
 | `COINGECKO_API_KEY` | Exchange rates |

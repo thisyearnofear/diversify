@@ -21,9 +21,11 @@
 
 | Provider | Role | Fallback |
 |----------|------|----------|
-| **Venice AI** | Primary agent intelligence | Gemini |
-| **Gemini** | AI fallback | Error response |
-| **Google AI** | Embeddings, analysis | — |
+| **Gemini (Google)** | Primary agent intelligence (Flash for speed, Pro for reasoning) | Venice AI |
+| **Venice AI** | Secondary / fallback | Modal (GLM) |
+| **Modal (GLM)** | Tertiary fallback | Error response |
+
+> **User-supplied keys**: Users can paste their own Gemini API key in the ⚙️ chat settings modal. The key is stored in `localStorage` and forwarded via the `x-gemini-key` request header — it is never persisted server-side. This removes shared rate-limit pressure and qualifies for the Google prize track.
 
 ### AI Endpoints & Caching
 
@@ -126,8 +128,9 @@ The following files are git-ignored and must be configured from `.example` templ
 
 | Provider | Limit | Cache Duration |
 |----------|-------|----------------|
+| Gemini (shared key) | 60 req/min | 5 min |
+| Gemini (user key) | User's own quota | 5 min |
 | Venice AI | 60 req/min | 5 min |
-| Gemini | 60 req/min | 5 min |
 | World Bank | 10k/month | 24 hrs |
 | FRED | 120/min | 1 hr |
 | CoinGecko | 50k/month | 1 min |
@@ -139,7 +142,7 @@ The following files are git-ignored and must be configured from `.example` templ
 |----------|------------|
 | Frontend | Next.js 15, React 19, Tailwind CSS |
 | Smart Accounts | Privy + Safe (ERC-4337) |
-| AI | Venice AI (primary), Gemini (fallback) |
+| AI | Gemini (primary), Venice AI (fallback), Modal GLM (tertiary) |
 | Swaps | Mento Protocol (Celo), 1inch/Uniswap (Arbitrum) |
 | Bridging | Circle CCTP, LiFi |
 | Hedging | Hyperliquid perps |

@@ -31,6 +31,28 @@ User -> /api/agent/advisor
 | `packages/shared/src/utils/arc-research-sources.ts` | Canonical source pricing/reputation/freshness registry |
 | `packages/shared/src/utils/x402-analytics.ts` | Payment/frequency analytics aggregation |
 | `pages/api/agent/x402-metrics.ts` | Exposes transaction-frequency and pricing guardrail metrics |
+| `packages/shared/src/services/ai/ai-service.ts` | Multi-provider AI with Gemini-first routing and automatic failover |
+| `components/agent/AIChat.tsx` | Chat UI — shows provider badge per message, ⚙️ settings for user Gemini key |
+
+## AI Provider Routing
+
+```text
+Request → Gemini (primary, Flash/Pro)
+              ↓ fail / rate-limit
+          Venice AI (secondary)
+              ↓ fail
+          Modal GLM (tertiary)
+              ↓ fail
+          Error
+```
+
+User-supplied Gemini key flow:
+```text
+localStorage["diversifi_user_gemini_key"]
+  → x-gemini-key header on /api/agent/advisor
+  → server temporarily overrides GEMINI_API_KEY for that request
+  → Gemini client uses user's quota (no shared rate-limit pressure)
+```
 
 ## Payment Design Notes
 
@@ -38,6 +60,7 @@ User -> /api/agent/advisor
 - Proofs are replay-checked in-memory for demo safety.
 - Per-action source prices are capped at `<= 0.01 USDC` in registry.
 - Free-tier sources can be fetched without payment until free limit is exhausted.
+- Analytics counter (`x402Analytics`) is in-memory — pump with `pnpm test-x402-comprehensive` after each server start before recording demo.
 
 ## Demo Evidence Surface
 
