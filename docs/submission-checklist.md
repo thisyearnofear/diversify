@@ -30,7 +30,11 @@ Expected:
 Each paid request fires a real USDC micro-tx on Arc. Verify with:
 
 ```bash
-curl -s http://localhost:6174/api/agent/x402-metrics | python3 -m json.tool
+# Production (live)
+curl -s https://api.diversifi.famile.xyz/api/agent/x402-metrics | python3 -m json.tool
+
+# Local dev
+curl -s http://localhost:3042/api/agent/x402-metrics | python3 -m json.tool
 ```
 
 Check `arcSettlement.agentUSDCBalance` is decreasing and

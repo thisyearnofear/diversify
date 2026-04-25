@@ -28,7 +28,7 @@
 
 Open in browser:
 ```
-https://diversifi.app/api/agent/x402-metrics
+https://api.diversifi.famile.xyz/api/agent/x402-metrics
 ```
 or the production IP equivalent.
 
@@ -69,14 +69,14 @@ https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8
 
 Open a new tab and hit the gateway directly:
 ```
-https://diversifi.app/api/agent/x402-gateway?source=macro_analysis
+https://api.diversifi.famile.xyz/api/agent/x402-gateway?source=macro_analysis
 ```
 
 **Show:** `402` response with `nonce`, `amount: "0.004"`, `currency: "USDC"`, `expires`
 
 Now submit with a payment proof:
 ```
-https://diversifi.app/api/agent/x402-gateway?source=macro_analysis
+https://api.diversifi.famile.xyz/api/agent/x402-gateway?source=macro_analysis
 Header: x-payment-proof: circle-gateway-live-demo-001:0.004
 ```
 
@@ -98,7 +98,7 @@ Header: x-payment-proof: circle-gateway-live-demo-001:0.004
 **Why:** Demonstrates agent-level orchestration — not one tx, many.
 
 ```
-https://diversifi.app/api/agent/x402-gateway?sources=macro_analysis,portfolio_optimization,risk_assessment
+https://api.diversifi.famile.xyz/api/agent/x402-gateway?sources=macro_analysis,portfolio_optimization,risk_assessment
 Header: x-payment-proof: circle-gateway-bundle-demo-001:0.015
 ```
 
