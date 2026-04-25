@@ -1,172 +1,221 @@
-# Arc Nano Payments Hackathon Demo Script
-## DiversiFi - AI-Powered Wealth Protection with Paid Research
+# Arc Nano Payments Hackathon — Demo Script
+## DiversiFi: AI Wealth Protection with Real On-Chain Evidence
 
-**Track:** Agentic Economy / Consumer AI Payments / B2B FinOps
-**Duration:** 3-4 minutes
-**Tagline:** "Spend fractions of a cent on better evidence before moving money."
-
----
-
-## Demo Narrative
-
-### Opening Hook (15 seconds)
-> "Your savings do not fail because the market is invisible. They fail because the decision is stale. What if an AI could buy fresh evidence before it moved your money?"
-
-**[Screen: Landing page with inflation, FX, commodity, and stablecoin risk panels]**
-
-### Problem Statement (30 seconds)
-> "Meet Sarah. She keeps $1,000 in stablecoins. The hard part is not sending money, it is knowing when to hold, rebalance, or hedge. If the agent relies on one source, or one stale signal, it can make the wrong call."
-
-**[Screen: Portfolio overview with source freshness and confidence indicators]**
-
-> "DiversiFi solves this by paying for multiple live sources on Arc, comparing them, and only then recommending an action."
-
-### Solution Demo (2 minutes)
-
-#### Part 1: Ask the Advisor
-> "Sarah asks the advisor whether her portfolio should hold, rebalance, or hedge."
-
-**[Screen: Advisor tab with Ask AI open]**
-
-**Actions:**
-1. Click `Ask AI` on the Protection Plan card
-2. Ask: "Should I hold, rebalance, or hedge?"
-3. Show the advisor requesting a research bundle
-4. Show the gateway confirming the request is paid
-
-**Narration:**
-> "The advisor does not guess. It buys evidence first."
-
-#### Part 2: Paid Evidence Loop
-> "The system now fetches inflation, FX, commodity, and stablecoin data from multiple sources."
-
-**[Screen: Evidence panel with source names, timestamps, and micro-payments]**
-
-**Actions:**
-1. Show 3+ source fetches settling through the Arc x402 gateway
-2. Display source reputation, freshness, and cost
-3. Show the evidence bundle being aggregated
-4. Show the agent collecting 50+ tiny payment or research events in the demo path
-
-**Narration:**
-> "Each request is tiny, but the loop matters. This is only economical because settlement is cheap enough to support high-frequency research."
-
-#### Part 3: Confidence-Scored Recommendation
-> "Once the evidence is in, the advisor explains the recommendation."
-
-**[Screen: Recommendation card with HOLD / REBALANCE / HEDGE state]**
-
-**Actions:**
-1. Show the source agreement score
-2. Show the freshness score
-3. Show the final recommendation and rationale
-4. Show the margin explanation: why repeated research would not work with normal gas costs
-
-**Narration:**
-> "The payment is not the product. Better decisions are the product."
-
-#### Part 4: Optional Action
-> "If the evidence is strong enough, the advisor can trigger the existing action card."
-
-**[Screen: Existing action card / rebalance flow]**
-
-**Actions:**
-1. Show HOLD if the portfolio is stable
-2. Or show a small REBALANCE action if signals drift
-3. Keep the existing UX surfaces; do not introduce a new dashboard
-
-**Narration:**
-> "DiversiFi stays calm and simple. The system only acts when the evidence justifies it."
+**Tracks:** 🤖 Agent-to-Agent Payment Loop · 🪙 Per-API Monetization Engine
+**Duration:** 3–4 minutes
+**Tagline:** "Your savings advisor buys fresh evidence on-chain before it moves your money."
 
 ---
 
-## Key Features Highlight (30 seconds)
+## The Story (say this out loud)
 
-**[Screen: Split screen with the advisor, evidence panel, and action card]**
-
-> "What makes this different is the decision loop:"
-
-**Features:**
-1. **Contextual AI Buttons** - `Ask AI` on every card
-2. **Paid Research Loop** - micro-payments unlock live evidence
-3. **Source Confidence** - freshness, reputation, and agreement scores
-4. **Action Cards** - HOLD / REBALANCE / HEDGE instead of generic chat
-5. **Arc Settlement** - repeated research is economically viable
-6. **Real-Time Risk Data** - inflation, stablecoin, FX, and commodity signals
+> "Most AI advisors guess. DiversiFi pays for proof.
+>
+> Before recommending any portfolio action, our advisor buys live macro,
+> yield, and risk data from multiple independent sources — each purchase
+> settled as a real USDC micro-transaction on Arc, verified on-chain,
+> before the recommendation is made.
+>
+> The payment is not a demo. The intelligence is not canned.
+> Both are happening right now."
 
 ---
 
-## Technical Deep Dive (30 seconds)
+## Screen-by-Screen Walkthrough
 
-**[Screen: Architecture diagram or code snippet]**
+### 1 — Open the metrics endpoint first (30 seconds)
+**Why:** Establishes credibility before touching the UI. Judges see hard numbers upfront.
 
-> "Under the hood, the flow stays small and composable:"
+Open in browser:
+```
+https://diversifi.app/api/agent/x402-metrics
+```
+or the production IP equivalent.
 
-```text
-User Action -> Advisor -> x402 Gateway -> Evidence Bundle
-                                  -> Shared Source Registry
-                                  -> Confidence and Margin Scoring
-                                  -> Action Card
+**Point out:**
+- `transactionFrequency.totalSettledPayments` — 100+ real settled payments
+- `pricing.allSourcesAtOrBelowOneCent: true` — every source ≤ $0.01
+- `pricing.maxPerActionPriceUSDC: 0.01`
+- `arcSettlement.agentAddress` — the live EOA wallet
+- `arcSettlement.agentExplorer` — click it
+
+**Say:**
+> "This is not simulated. Every number here comes from real requests that
+> settled real USDC on Arc."
+
+---
+
+### 2 — Arc Explorer: the agent wallet (30 seconds)
+**Why:** On-chain proof is a hard submission requirement.
+
+Click `arcSettlement.agentExplorer` or open directly:
+```
+https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8
 ```
 
-**Narration:**
-> "The advisor asks for a bundle, the gateway settles payment, the source registry resolves where to pull from, and the advisor decides whether the portfolio should move."
+**Point out:**
+- Wallet balance (funded with 20 USDC, draining with each research request)
+- Transaction list — each row is a real USDC transfer triggered by a research request
+- Click one tx — show `to: DATA_HUB_RECIPIENT`, `value: 0.001–0.01 USDC`
 
-**Example:**
-```typescript
-const bundle = await fetch('/api/agent/x402-gateway?source=macro-regime');
-const evidence = await bundle.json();
+**Say:**
+> "Each of these transactions was triggered automatically — not by a human
+> clicking send, but by an AI agent buying evidence before advising."
 
-const recommendation = scoreEvidence({
-  inflation: evidence.inflation,
-  stablecoinRisk: evidence.stablecoinRisk,
-  commoditySignals: evidence.commodities,
-  confidenceThreshold: 0.8
-});
+---
+
+### 3 — Fire a live paid request via the gateway (45 seconds)
+**Why:** Shows the x402 payment loop raw — before the UI abstracts it.
+
+Open a new tab and hit the gateway directly:
+```
+https://diversifi.app/api/agent/x402-gateway?source=macro_analysis
 ```
 
----
+**Show:** `402` response with `nonce`, `amount: "0.004"`, `currency: "USDC"`, `expires`
 
-## Impact & Results (20 seconds)
+Now submit with a payment proof:
+```
+https://diversifi.app/api/agent/x402-gateway?source=macro_analysis
+Header: x-payment-proof: circle-gateway-live-demo-001:0.004
+```
 
-**[Screen: Dashboard showing recommendation history]**
+**Point out in the 200 response:**
+- `data.macro_regime`, `data.confidence`, `data.recommended_stance` — **real Gemini analysis**,
+  not a hardcoded string. Changes with market conditions.
+- `_billing.arcSettled: true`
+- `_billing.txHashes[0]` — paste this into Arc Explorer
+- `_billing.explorer[0]` — direct link to the on-chain proof
 
-> "Sarah's results after one week:"
-
-**Metrics:**
-- Evidence spend: less than $1 total
-- Research checks performed: 50+
-- Recommendation confidence: 0.87
-- Bad move avoided: 1
-- Protection outcome: multiple sources confirmed the decision
-
-**Narration:**
-> "The app is not selling certainty. It is selling better evidence at a cost small enough to make frequent research practical."
-
----
-
-## Closing (15 seconds)
-
-> "DiversiFi combines AI guidance with Arc micropayments to make evidence-backed financial decisions practical at scale. No stale data, no guesswork, just better protection."
-
-**[Screen: Call to action]**
-
-**Text on screen:**
-- Try it: diversifi.app
-- GitHub: github.com/thisyearnofear/diversify
-- Built with: Arc, USDC, Circle Nanopayments, x402
-- Track: Agentic Economy
-
-**Narration:**
-> "Built in one week for the Arc Nano Payments hackathon."
+**Say:**
+> "Gemini Flash pulled live data from World Bank, CoinGecko, and FRED,
+> synthesised a macro regime analysis, and the payment for that analysis
+> just settled on Arc. The tx hash is right there."
 
 ---
 
-## Submission Checklist
+### 4 — Bundle request: three premium sources at once (30 seconds)
+**Why:** Demonstrates agent-level orchestration — not one tx, many.
 
-- Show at least 50 onchain or settled microtransactions in the demo path
-- Show per-action pricing at or below $0.01
-- Show source freshness and agreement in the UI
-- Include a clear margin explanation for why gas-heavy research would fail
-- Keep the demo focused on the existing Advisor and action-card surfaces
+```
+https://diversifi.app/api/agent/x402-gateway?sources=macro_analysis,portfolio_optimization,risk_assessment
+Header: x-payment-proof: circle-gateway-bundle-demo-001:0.015
+```
 
+**Point out:**
+- Three separate AI analyses returned
+- `_billing.cost: 0.015` — sum of all three sources
+- `_billing.txHashes` — array with one tx per paid source
+- `_billing.arcSettled: true`
+
+**Say:**
+> "One API call, three independent Gemini analyses of live data,
+> three on-chain settlements. The agent pays for exactly what it uses —
+> no batching, no custody, no intermediary."
+
+---
+
+### 5 — The advisor UI: full loop end to end (60 seconds)
+**Why:** Shows the user-facing product and connects everything above.
+
+Open the app (production URL). Show the Advisor tab.
+
+**Actions:**
+1. Click **Ask AI** — type: *"Should I hold or rebalance given current inflation?"*
+2. Watch the thinking steps — "Querying World Bank...", "Fetching DeFiLlama yields..."
+3. Response arrives — point out the **"Powered by Gemini"** badge under the message
+4. Click ⚙️ settings icon — show the user API key modal
+   > "Users can bring their own Gemini key for higher rate limits.
+   > It's stored locally, never persisted on our servers."
+5. If a rebalance recommendation appears — show the action card
+
+**Say:**
+> "The user sees a calm, simple interface. Behind it, the agent bought
+> evidence from five data sources, Gemini synthesised the analysis,
+> and the payments settled on Arc — all before this response appeared."
+
+---
+
+### 6 — Margin explanation: why this only works on Arc (30 seconds)
+**Why:** Hard requirement in the submission rules.
+
+Show the source pricing table from `/api/agent/x402-metrics`:
+
+```
+macro_analysis:         $0.004 per request
+portfolio_optimization: $0.005 per request
+risk_assessment:        $0.006 per request
+world_bank_analytics:   $0.001 per request
+coingecko_analytics:    $0.001 per request
+```
+
+**Say:**
+> "At $0.004 per macro analysis, we can afford to run this research
+> loop every few minutes. On Ethereum mainnet, a single ERC-20 transfer
+> costs $2–5 in gas. That's 500–1,250x the value of the data itself.
+> The economics are simply impossible.
+>
+> Arc's dollar-denominated, gas-free settlement is not a nice-to-have —
+> it's what makes this business model exist at all."
+
+---
+
+## Key Numbers for Judges
+
+| Metric | Value |
+|--------|-------|
+| Max per-action price | $0.01 USDC |
+| Cheapest source | $0.001 USDC |
+| On-chain settlements | 100+ |
+| Agent wallet | `0x6D5967...2DaC8` on Arc testnet |
+| Arc Explorer | `testnet.arcscan.app/address/0x6D5967...2DaC8` |
+| Metrics endpoint | `/api/agent/x402-metrics` |
+| Premium data source | Gemini Flash — live synthesis, not hardcoded |
+| AI fallback chain | Gemini → Venice AI → Modal GLM |
+
+---
+
+## Judging Criteria — How We Score
+
+| Criterion | Our answer |
+|-----------|-----------|
+| **Application of Technology** | Arc settlement in every paid request; Gemini synthesises all premium data; Circle x402 is the payment primitive; Circle API key for verification |
+| **Business Value** | Savings protection for emerging market users who face >10% annual inflation — a real underserved market |
+| **Originality** | AI agent that *purchases* intelligence before advising — not just chat, but an economically grounded decision loop |
+| **Presentation** | Live on-chain proof visible before any UI demo; tx hashes in every API response |
+
+---
+
+## Tracks Entered
+
+**Primary — 🤖 Agent-to-Agent Payment Loop**
+The advisor agent autonomously pays the x402 gateway for evidence. No human approves each transaction. The agent decides what evidence it needs, pays for it, and uses it.
+
+**Secondary — 🪙 Per-API Monetization Engine**
+The x402 gateway is a production API that charges per request in USDC, with tiered free/premium pricing, rate limiting, nonce replay protection, and real Arc settlement.
+
+---
+
+## Circle Product Feedback (submission form — $500 USDC bonus)
+
+> **Products used:** Arc (settlement), USDC (payment token), Circle Nanopayments / x402
+> (payment standard), Circle Wallets API (payment verification), Circle API key (developer auth).
+>
+> **Why we chose them:** x402 maps perfectly to HTTP API design — the 402 status code was
+> purpose-built for this. Arc's dollar-denominated fees gave us predictable unit economics.
+> USDC as the gas token eliminated the "ETH price risk eats my margin" problem entirely.
+>
+> **What worked well:** Arc RPC was stable and fast throughout development. The x402
+> challenge/response pattern required zero new infrastructure — it fits inside a standard
+> Next.js API route. The Circle API key activation was instant.
+>
+> **What could be improved:** The entity secret setup for developer-controlled wallets has
+> significant friction for hackathon pace (RSA key generation, recovery file management,
+> one-time-use ciphertext rotation). A first-class EOA-based developer wallet path in the
+> Circle Console — similar to how MetaMask works — would dramatically lower the barrier.
+>
+> **Recommendations:** (1) Provide a testnet "quick wallet" in the Circle Console that
+> requires no entity secret — just an API key — for prototyping. (2) Add a webhook endpoint
+> that fires when a payment is received, so agents can react to incoming payments without
+> polling. (3) The Arc block explorer could show USDC token transfers more prominently —
+> right now you need to dig into logs to see the amount.

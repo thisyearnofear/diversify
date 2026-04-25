@@ -13,24 +13,26 @@ DiversiFi uses **LI.FI Composer** to execute atomic, multi-step DeFi workflows i
 
 ## Hackathon Direction
 
-For the Arc Nano Payments hackathon, DiversiFi should present as a **proof-of-research rebalancer**:
+DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Payments hackathon:
 
 - The user asks whether to hold, rebalance, or hedge.
-- The advisor buys fresh evidence from multiple sources using x402 / Circle Nanopayments.
-- The system scores source agreement, freshness, and reputation before making a recommendation.
+- The advisor buys fresh evidence from multiple independent sources using x402 / Circle Nanopayments.
+- Each premium purchase triggers a real USDC micro-transaction on Arc, returned as a tx hash.
+- Evidence is scored for freshness, reputation, and source agreement before a recommendation is made.
 - The payment is part of the decision loop, not a separate product surface.
-- Existing advisor cards and action cards stay in place; we enhance them instead of creating a new dashboard.
 
-### Implementation Plan
+### What Was Shipped
 
-| Day | Files | Change |
-|-----|-------|--------|
-| 1 | `pages/api/agent/_advisor-core.ts`, `pages/api/agent/x402-gateway.ts`, `config/features.ts` | Audit duplicate source/payment logic and collapse into one canonical flow |
-| 2 | `packages/shared/src/*` or existing shared utility module | Add a single source registry for pricing, reputation, and freshness metadata |
-| 3 | `pages/api/agent/x402-gateway.ts` | Support evidence bundles instead of single-source reads |
-| 4 | `pages/api/agent/_advisor-core.ts` | Score evidence quality and emit HOLD / REBALANCE / HEDGE guidance |
-| 5 | `docs/HACKATHON_DEMO_SCRIPT.md` | Rewrite the demo story around paid research and confidence-scored recommendations |
-| 6 | `docs/integrations.md`, `docs/getting-started.md` | Document the runtime flags, source dependencies, and submit-ready flow |
+| Area | What's live |
+|------|-------------|
+| **x402 gateway** | HTTP 402 challenge → payment proof → data, with nonce/replay protection and rate limiting |
+| **Real Arc settlement** | Every paid request fires `USDC.transfer` on Arc via EOA; tx hash returned in `_billing` |
+| **Gemini synthesis** | `macro_analysis`, `portfolio_optimization`, `risk_assessment` call Gemini Flash with live data |
+| **Live data sources** | World Bank, FRED, CoinGecko, DeFiLlama, Yearn, Alpha Vantage — real API calls |
+| **Evidence bundles** | Single request can fetch multiple sources; bundle scored for confidence and agreement |
+| **Provider badge** | Chat UI shows "Powered by Gemini" / "✦ Venice" per message |
+| **User API key** | ⚙️ modal lets users supply their own Gemini key; forwarded via `x-gemini-key` header |
+| **Metrics endpoint** | `/api/agent/x402-metrics` — payment count, pricing proof, agent wallet balance, Arc Explorer link |
 
 ### Out of Scope
 
@@ -127,8 +129,9 @@ For the Arc Nano Payments hackathon, DiversiFi should present as a **proof-of-re
 DiversiFi was built across multiple hackathons:
 - **Celo "Build Agents for the Real World"** — Financial inclusion, autonomous operations, UX innovation
 - **Auth0 "Authorized to Act"** — Dual permission model (on-chain + off-chain consent)
+- **Arc "Agentic Economy on Arc"** — Real on-chain settlement, Gemini-powered evidence synthesis, x402 per-request monetisation
 
-Key accomplishments: culturally-aligned strategies, Agent Fuel Model, inflation-first design, proactive monitoring, privacy-first AI.
+Key accomplishments: culturally-aligned strategies, Agent Fuel Model, inflation-first design, proactive monitoring, privacy-first AI, real Arc settlement loop.
 
 ## Target Users
 
