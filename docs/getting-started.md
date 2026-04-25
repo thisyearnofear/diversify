@@ -33,6 +33,8 @@ No wallet required — users can sign in via email, social login, or existing wa
 | `ENABLE_AUTONOMOUS_MODE` | Enable the Arc/x402 research flow |
 | `ARC_RPC_URL` | Arc RPC endpoint for payment verification |
 | `DATA_HUB_RECIPIENT_ADDRESS` | Recipient for Arc research payments |
+| `VAULT_PRIVATE_KEY` | EOA private key — funds real on-chain USDC settlements on Arc |
+| `CIRCLE_API_KEY` | Circle API key for wallet and payment verification |
 
 ## Supported Chains
 
@@ -65,8 +67,18 @@ pnpm test-x402-frequency
 
 For judge-facing evidence, use:
 
-- `GET /api/agent/x402-metrics` for transaction frequency and pricing caps
-- Circle Developer Console + Arc Explorer for end-to-end settlement proof
+- `GET /api/agent/x402-metrics` — transaction frequency, pricing caps, agent wallet balance, Arc Explorer link
+- Arc Explorer — `https://testnet.arcscan.app/address/<VAULT_PRIVATE_KEY address>` — live on-chain tx history
+- Each paid gateway response includes `_billing.txHashes[]` and `_billing.explorer[]` — direct tx links
+
+### Funding the Agent Wallet
+
+The agent wallet (`VAULT_PRIVATE_KEY` address) must hold testnet USDC on Arc to settle paid requests on-chain.
+
+1. Get the address: `GET /api/agent/x402-metrics` → `arcSettlement.agentAddress`
+2. Fund it: [faucet.circle.com](https://faucet.circle.com) → select **Arc Testnet** → paste address
+3. Verify: `arcSettlement.agentUSDCBalance` will show the balance in the metrics endpoint
+4. Each paid research request now fires a real `USDC.transfer` on Arc and returns the tx hash
 
 ## Test Drive
 

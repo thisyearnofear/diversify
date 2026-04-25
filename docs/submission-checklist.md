@@ -1,29 +1,20 @@
 # Submission Checklist
 
-This runbook is for the `Agentic Economy on Arc` hackathon submission package.
-
 Reference: https://lablab.ai/ai-hackathons/nano-payments-arc
 
-## 1. Environment
-
-Set required values in `.env.local`:
+## 1. Environment (all set on Hetzner production)
 
 ```bash
 NEXT_PUBLIC_ENABLE_ARC=true
 ENABLE_AUTONOMOUS_MODE=true
 ARC_RPC_URL=https://rpc.testnet.arc.network
-DATA_HUB_RECIPIENT_ADDRESS=<wallet_on_arc>
+DATA_HUB_RECIPIENT_ADDRESS=0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B
+VAULT_PRIVATE_KEY=<agent EOA — 20 USDC funded on Arc testnet>
+CIRCLE_API_KEY=<set>
+GEMINI_API_KEY=<set>
 ```
 
-## 2. Start App
-
-```bash
-pnpm dev
-```
-
-App runs on `http://localhost:3042`.
-
-## 3. Validate Gateway and Pricing
+## 2. Validate Pricing and Gateway
 
 ```bash
 pnpm test-x402
@@ -31,54 +22,68 @@ pnpm test-x402-comprehensive
 ```
 
 Expected:
+- 402 challenge: `nonce`, `expires`, `amount`, `currency=USDC`
+- All source prices ≤ `$0.01`
 
-- 402 challenge includes `nonce`, `expires`, `amount`, `currency=USDC`
-- premium challenge prices are at or below `$0.01`
+## 3. Verify Real On-Chain Settlement
 
-## 4. Generate and Verify Transaction-Frequency Evidence
-
-The metrics endpoint:
+Each paid request fires a real USDC micro-tx on Arc. Verify with:
 
 ```bash
-curl -s http://localhost:3042/api/agent/x402-metrics
+curl -s http://localhost:6174/api/agent/x402-metrics | python3 -m json.tool
 ```
 
-Frequency check script:
+Check `arcSettlement.agentUSDCBalance` is decreasing and
+`arcSettlement.agentExplorer` links to live transactions.
+
+Direct proof: https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8
+
+## 4. Generate Transaction Frequency Evidence
 
 ```bash
 pnpm test-x402-frequency
 ```
 
-Target:
+Target: `transactionFrequency.totalSettledPayments >= 50`
 
-- `transactionFrequency.totalSettledPayments >= 50`
+If below 50, run paid requests through the gateway first:
+```bash
+pnpm test-x402-comprehensive
+```
 
 ## 5. Required Video Segments
 
-Include these segments in the submission video:
+Record these in order (server must be running throughout):
 
-1. Circle Developer Console transaction execution
-2. Arc Explorer verification of that transaction
-3. Advisor -> x402 evidence loop in app UI
-4. `/api/agent/x402-metrics` showing frequency and pricing
-5. Margin explanation: why traditional gas would break this model
+1. **`/api/agent/x402-metrics`** — show `agentUSDCBalance`, `totalSettledPayments`, `allSourcesAtOrBelowOneCent: true`
+2. **Arc Explorer** — open `arcSettlement.agentExplorer` link — show real on-chain txs
+3. **App UI** — Advisor tab → Ask AI → watch paid evidence loop → "Powered by Gemini" badge
+4. **Gateway response** — show `_billing.txHashes[]` and `_billing.explorer[]` with real tx hashes
+5. **Margin explanation** — why repeated research at $0.004/request fails under traditional gas
 
-## 6. Repository Artifacts
+## 6. Submission Form Fields
 
-Before submission:
+### Track
+Primary: **🤖 Agent-to-Agent Payment Loop** (AI advisor pays for evidence autonomously)
+Secondary: **🪙 Per-API Monetization Engine** (x402 gateway charges per research request)
 
-- verify `README.md` reflects Arc submission mode
-- ensure docs links resolve (`docs/architecture.md`, this checklist)
-- confirm x402 scripts run from `package.json`
+### Circle Product Feedback (required — eligible for $500 USDC bonus)
+Cover:
+- **Arc** — settlement layer for all micro-transactions; sub-second finality made high-frequency research economically viable
+- **USDC** — native payment token; dollar-denominated pricing eliminated margin uncertainty
+- **Circle Nanopayments / x402** — core payment primitive; HTTP 402 challenge/response pattern fit naturally into API gateway design
+- **Circle Wallets API** — used for payment verification and balance queries
+- What worked: x402 challenge/response was straightforward to implement; Arc RPC was stable
+- What could improve: entity secret setup UX is friction-heavy for hackathon pace; a simpler EOA-based dev wallet flow would help
+- Recommendation: first-class support for EOA wallets in the developer console alongside MPC wallets
 
-## 7. Final Dry Run
+### Google Prize Track
+Explicitly state: **Gemini Flash** powers all three premium research sources and the advisor conversation. Each paid research request calls `generateChatCompletion` with Gemini as primary provider to synthesise live multi-source data into structured portfolio intelligence.
 
-Run this sequence in order:
+## 7. Repository Artifacts
 
-```bash
-pnpm test-x402
-pnpm test-x402-comprehensive
-pnpm test-x402-frequency
-```
-
-If the frequency check is below 50, run real paid flows first, then rerun.
+- `README.md` — reflects Arc submission mode ✅
+- `docs/architecture.md` — Arc settlement + Gemini synthesis flows ✅
+- `docs/integrations.md` — on-chain settlement flow documented ✅
+- `docs/getting-started.md` — agent wallet funding instructions ✅
+- GitHub repo public ✅

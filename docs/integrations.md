@@ -55,17 +55,30 @@ DiversiFi’s hackathon path should reuse the current Arc/x402 gateway as the si
 
 ### Payment Boundary
 
-- Keep x402 / Circle Nanopayments as the primary payment path.
-- Use MPP only if it can replace existing HTTP payment plumbing without adding a second protocol surface.
-- Do not create a separate billing service for the hackathon MVP.
-- Include nonce expiry and replay checks for payment proofs in gateway flow.
-- Keep configured paid-source prices at or below `$0.01` per action.
+- x402 / Circle Nanopayments is the primary payment path.
+- Per-action source prices are at or below `$0.01` in the registry — enforced at build time.
+- Nonce expiry and replay checks protect against double-spend on payment proofs.
+- Every paid request triggers a real `USDC.transfer` on Arc via `arc-settlement.ts`.
 
 ### Evidence Bundles
 
 - A single recommendation may request multiple sources.
-- Each bundle should return source payload, timestamp, cost, and confidence inputs.
-- The advisor should prefer fresh, high-agreement data and reduce action size when evidence conflicts.
+- Each bundle returns source payload, timestamp, cost, confidence, and Arc tx hashes.
+- The advisor prefers fresh, high-agreement data and reduces action size when evidence conflicts.
+- Premium sources (`macro_analysis`, `portfolio_optimization`, `risk_assessment`) use Gemini to
+  synthesise live World Bank / DeFiLlama / CoinGecko / FRED / Yearn data into structured JSON.
+
+### On-Chain Settlement Flow
+
+```text
+Client → GET /api/agent/x402-gateway?source=macro_analysis
+       ← 402 { nonce, amount: "0.004", currency: "USDC", recipient, expires }
+Client → GET /api/agent/x402-gateway?source=macro_analysis
+         x-payment-proof: circle-gateway-<id>:<amount>
+       ← 200 { data, _billing: { arcSettled: true, txHashes: ["0x..."], explorer: ["https://testnet.arcscan.app/tx/0x..."] } }
+```
+
+Real tx verifiable at `https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8`
 
 ## DEX & Routing
 

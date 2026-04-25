@@ -54,6 +54,47 @@ localStorage["diversifi_user_gemini_key"]
   → Gemini client uses user's quota (no shared rate-limit pressure)
 ```
 
+## Real Arc On-Chain Settlement
+
+Every paid research request fires a real USDC micro-transaction on Arc testnet:
+
+```text
+Premium request (paid tier)
+  → x402 payment verified (credit deducted)
+  → getActualPremiumData() → Gemini synthesises live data
+  → settleOnArc(cost, sourceId)
+      → USDC.transfer(HUB_ADDR, amount) via EOA on Arc
+      → returns { txHash, explorer } in _billing
+  → response includes _billing.txHashes[] + _billing.explorer[]
+```
+
+Settlement is **fire-and-forget** (non-blocking): the gateway waits up to 1.5s
+for the tx hash, then returns regardless. Mining confirmation happens in background.
+
+| Component | File |
+|---|---|
+| Settlement module | `packages/shared/src/services/arc-settlement.ts` |
+| Agent EOA | `VAULT_PRIVATE_KEY` env var |
+| USDC contract | `ARC_TOKENS.USDC` (0x3600...0000) |
+| Hub recipient | `DATA_HUB_RECIPIENT_ADDRESS` env var |
+| Explorer | `https://testnet.arcscan.app/address/<agent>` |
+
+## Premium Data — Gemini Synthesis
+
+The three premium sources (`macro_analysis`, `portfolio_optimization`, `risk_assessment`)
+are **not hardcoded**. Each one:
+
+1. Fetches live data in parallel from World Bank, DeFiLlama, CoinGecko, FRED, Yearn
+2. Passes the combined payload to Gemini with a structured JSON prompt
+3. Returns a real AI-generated analysis specific to current market conditions
+4. Falls back to a structured estimate if Gemini is unavailable
+
+```text
+macro_analysis      → WorldBank + CoinGecko + FRED  → Gemini Flash → JSON
+portfolio_optimization → DeFiLlama + Yearn + CoinGecko → Gemini Flash → JSON
+risk_assessment     → WorldBank + CoinGecko + FRED  → Gemini Flash → JSON
+```
+
 ## Payment Design Notes
 
 - Payment challenge includes `nonce` and `expires`.
@@ -61,6 +102,7 @@ localStorage["diversifi_user_gemini_key"]
 - Per-action source prices are capped at `<= 0.01 USDC` in registry.
 - Free-tier sources can be fetched without payment until free limit is exhausted.
 - Analytics counter (`x402Analytics`) is in-memory — pump with `pnpm test-x402-comprehensive` after each server start before recording demo.
+- Real on-chain settlement requires `VAULT_PRIVATE_KEY` and a funded Arc testnet wallet.
 
 ## Demo Evidence Surface
 
