@@ -223,6 +223,7 @@ export interface AIMessage {
   content: string;
   timestamp: Date;
   type?: "text" | "recommendation" | "insight";
+  provider?: "gemini" | "venice" | "modal" | "openai";
   insights?: {
     summary: string;
     tags: string[];

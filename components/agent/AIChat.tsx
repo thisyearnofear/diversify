@@ -228,6 +228,108 @@ const HoldActionWidget = ({ action }: { action: any }) => {
  * AGGRESSIVE CONSOLIDATION: Replaces standalone chat with a global
  * overlay that persists context across any screen.
  */
+// Persisted user API key (client-side only, never sent to our server unintentionally)
+const USER_GEMINI_KEY_STORAGE = "diversifi_user_gemini_key";
+
+function useUserGeminiKey() {
+  const [key, setKey] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem(USER_GEMINI_KEY_STORAGE) || "";
+  });
+  const save = (k: string) => {
+    const trimmed = k.trim();
+    if (trimmed) localStorage.setItem(USER_GEMINI_KEY_STORAGE, trimmed);
+    else localStorage.removeItem(USER_GEMINI_KEY_STORAGE);
+    setKey(trimmed);
+  };
+  return { key, save };
+}
+
+function ProviderBadge({ provider }: { provider?: string }) {
+  if (!provider) return null;
+  if (provider === "gemini") return (
+    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-500 dark:text-blue-400 opacity-70 mt-0.5">
+      <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      Gemini
+    </span>
+  );
+  if (provider === "venice") return (
+    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-purple-500 dark:text-purple-400 opacity-70 mt-0.5">
+      ✦ Venice
+    </span>
+  );
+  return null;
+}
+
+function ModelSettingsModal({ onClose, userGeminiKey, onSaveKey }: {
+  onClose: () => void;
+  userGeminiKey: string;
+  onSaveKey: (k: string) => void;
+}) {
+  const [draft, setDraft] = useState(userGeminiKey);
+  const [saved, setSaved] = useState(false);
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center p-4" onClick={onClose}>
+      <div
+        className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-5 mb-4"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-tight">AI Model Settings</h3>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Default: Gemini (shared key). Add your own for higher limits.</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold">×</button>
+        </div>
+
+        {/* Default model info */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 border border-blue-100 dark:border-blue-800/30">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-black text-blue-700 dark:text-blue-300">✦ Default: Gemini Flash</span>
+            <span className="text-[9px] bg-blue-100 dark:bg-blue-800/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>
+          </div>
+          <p className="text-[11px] text-blue-600 dark:text-blue-400">Powered by Google Gemini 3.1 Flash · No setup needed · Shared rate limits apply</p>
+        </div>
+
+        {/* User's own Gemini key */}
+        <div className="mb-4">
+          <label className="block text-[11px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+            Your Gemini API Key <span className="text-gray-400 font-normal normal-case">(optional — removes rate limits)</span>
+          </label>
+          <input
+            type="password"
+            value={draft}
+            onChange={e => { setDraft(e.target.value); setSaved(false); }}
+            placeholder="AIza..."
+            className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-400 font-mono"
+          />
+          <p className="text-[10px] text-gray-400 mt-1">
+            Stored locally only · Never sent to our servers ·{" "}
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Get a free key →</a>
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => { onSaveKey(draft); setSaved(true); }}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider py-2.5 rounded-xl transition-colors"
+          >
+            {saved ? "✓ Saved!" : "Save Key"}
+          </button>
+          {draft && (
+            <button
+              onClick={() => { setDraft(""); onSaveKey(""); setSaved(false); }}
+              className="px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs font-bold rounded-xl transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AIChat() {
   const {
     messages,
@@ -236,6 +338,7 @@ export default function AIChat() {
     clearMessages,
     addUserMessage,
   } = useAIConversation();
+  const { key: userGeminiKey, save: saveGeminiKey } = useUserGeminiKey();
   const { capabilities } = useAgentStatus();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
   const { isChatting, thinkingStep, sendChatMessage } = useAgentChat({
@@ -252,6 +355,7 @@ export default function AIChat() {
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [showClaimFlow, setShowClaimFlow] = useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
+  const [showSettings, setShowSettings] = useState(false);
 
   // Initialize background Celo event monitoring & proactive insights capability
   useProactiveAgent();
@@ -432,6 +536,13 @@ export default function AIChat() {
           </div>
           <div className="flex items-center gap-3">
             <button
+              onClick={() => setShowSettings(true)}
+              className="text-[10px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-wider transition-colors"
+              title="AI model settings"
+            >
+              ⚙️
+            </button>
+            <button
               onClick={() => setCurrentView(currentView === 'chat' ? 'history' : 'chat')}
               className={`text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-all ${
                 currentView === 'history' 
@@ -570,8 +681,11 @@ export default function AIChat() {
                         <HoldActionWidget action={msg.action} />
                       )}
                       
-                      <div className={`text-[10px] mt-1.5 opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>
-                        {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      <div className={`flex items-center gap-2 mt-1.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <span className={`text-[10px] opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>
+                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {msg.role === "assistant" && <ProviderBadge provider={msg.provider} />}
                       </div>
                     </div>
                   </motion.div>
@@ -634,6 +748,13 @@ export default function AIChat() {
           </form>
         </div>
       </motion.div>
+      )}
+      {showSettings && (
+        <ModelSettingsModal
+          onClose={() => setShowSettings(false)}
+          userGeminiKey={userGeminiKey}
+          onSaveKey={(k) => { saveGeminiKey(k); setShowSettings(false); }}
+        />
       )}
     </div>
   );

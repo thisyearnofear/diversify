@@ -60,11 +60,11 @@ export const ARC_DATA_HUB_CONFIG = {
         'world_bank': '0.001',
         'defillama': '0.001',
         // Premium Sources (Always require micro-credits)
-        'macro_analysis': '0.01',
-        'portfolio_optimization': '0.05',
-        'risk_assessment': '0.02',
-        'agent_execution': '0.10',
-        'real_time_inflation': '0.01'
+        'macro_analysis': '0.004',
+        'portfolio_optimization': '0.005',
+        'risk_assessment': '0.006',
+        'agent_execution': '0.01',
+        'real_time_inflation': '0.004'
     },
     FREE_LIMITS: {
         'alpha_vantage': 10,

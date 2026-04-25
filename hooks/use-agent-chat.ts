@@ -295,9 +295,17 @@ export function useAgentChat({
               }
             : undefined;
 
+        // Pick up user's own Gemini key if they've set one
+        const userGeminiKey = typeof window !== "undefined"
+          ? localStorage.getItem("diversifi_user_gemini_key") || ""
+          : "";
+
         const response = await fetch(`${apiBase}/api/agent/advisor`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(userGeminiKey ? { "x-gemini-key": userGeminiKey } : {}),
+          },
           body: JSON.stringify({
             mode: "conversation",
             message: content,
@@ -317,6 +325,7 @@ export function useAgentChat({
             timestamp: new Date(),
             type: result.type || "text",
             action: result.action,
+            provider: result.provider,
           };
           addMessage(assistantMessage);
 

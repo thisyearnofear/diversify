@@ -401,9 +401,10 @@ export async function generateChatCompletion(
           ? ["gemini", "venice"]
           : ["venice", "gemini"];
       } else {
-        providerOrder = config.veniceApiKey
-          ? ["venice", "gemini"]
-          : ["gemini", "venice"];
+        // Gemini-first for all flows: enables Google prize track + better JSON structured output
+        providerOrder = config.geminiApiKey
+          ? ["gemini", "venice"]
+          : ["venice", "gemini"];
       }
 
       for (const provider of providerOrder) {

@@ -9,6 +9,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { mode = 'conversation' } = req.body || {};
 
+    // Allow user to supply their own Gemini key for higher rate limits
+    const userGeminiKey = req.headers['x-gemini-key'] as string | undefined;
+    if (userGeminiKey) {
+      process.env.GEMINI_API_KEY = userGeminiKey;
+    }
+
     if (mode === 'analysis') {
       const result = await runAdvisorAnalysis(req.body || {});
       return res.status(200).json(result);
