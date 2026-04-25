@@ -5,6 +5,7 @@ import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useAgentConfig } from "./use-agent-config";
 import { useMultichainBalances } from "./use-multichain-balances";
 import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@diversifi/shared";
+import { useX402Payment } from "./use-x402-payment";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -47,6 +48,7 @@ export function useAgentChat({
   const { chainId, address } = useWalletContext();
   const { config } = useAgentConfig();
   const portfolio = useMultichainBalances(address, config.goal);
+  const { payForSource } = useX402Payment();
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
@@ -258,6 +260,24 @@ export function useAgentChat({
         thinkingStep: "Consulting Advisor...",
       });
 
+      // Attempt x402 payment for premium research before calling the advisor.
+      // If the user's wallet is connected and on Arc, this fires a real USDC
+      // micro-tx and returns the proof headers. On free tier or if the wallet
+      // isn't on Arc, it returns empty headers and skips gracefully.
+      let x402Headers: Record<string, string> = {};
+      let x402Receipt: AIMessage["x402Receipt"] = null;
+      try {
+        updateChatState({ thinkingStep: "Buying research evidence on Arc..." });
+        const { headers, payment } = await payForSource("macro_analysis");
+        x402Headers = headers;
+        if (payment) {
+          x402Receipt = { txHash: payment.txHash, amount: payment.amount, explorer: payment.explorer };
+        }
+      } catch {
+        // Payment failed or not on Arc — advisor falls back to free-tier sources
+        x402Headers = {};
+      }
+
       const CHAT_THINKING_MESSAGES = [
         "Analyzing query...",
         "Scanning market data...",
@@ -305,6 +325,7 @@ export function useAgentChat({
           headers: {
             "Content-Type": "application/json",
             ...(userGeminiKey ? { "x-gemini-key": userGeminiKey } : {}),
+            ...x402Headers,
           },
           body: JSON.stringify({
             mode: "conversation",
@@ -326,6 +347,7 @@ export function useAgentChat({
             type: result.type || "text",
             action: result.action,
             provider: result.provider,
+            x402Receipt,
           };
           addMessage(assistantMessage);
 

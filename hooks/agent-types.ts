@@ -224,6 +224,11 @@ export interface AIMessage {
   timestamp: Date;
   type?: "text" | "recommendation" | "insight";
   provider?: "gemini" | "venice" | "modal" | "openai";
+  x402Receipt?: {
+    txHash: string;
+    amount: string;
+    explorer: string;
+  } | null;
   insights?: {
     summary: string;
     tags: string[];

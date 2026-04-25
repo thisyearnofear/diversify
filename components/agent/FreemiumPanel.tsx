@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCredits } from "../../hooks/use-credits";
+import { useArcBalance } from "../../hooks/use-arc-balance";
 
 interface FreemiumPanelProps {
   onGoodDollarClaim: () => void;
@@ -8,6 +9,7 @@ interface FreemiumPanelProps {
 
 export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps) {
   const { status: creditsStatus, claimReward, shareApp } = useCredits();
+  const { balance: arcBalance, isOnArc } = useArcBalance();
   const [showFreemium, setShowFreemium] = useState(false);
   const [proofInput, setProofInput] = useState("");
   const [claimingKey, setClaimingKey] = useState<string | null>(null);
@@ -21,7 +23,11 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
         className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-emerald-200/60 dark:border-emerald-700/40 text-xs"
       >
         <span className="flex items-center gap-2">
-          {creditsStatus.trial.active ? (
+          {arcBalance !== null ? (
+            <span className="font-bold text-purple-700 dark:text-purple-300">
+              ⚡ Arc: ${parseFloat(arcBalance).toFixed(3)} USDC
+            </span>
+          ) : creditsStatus.trial.active ? (
             <span className="font-bold text-emerald-700 dark:text-emerald-300">🎁 Free Trial — {creditsStatus.trial.daysRemaining}d left</span>
           ) : (
             <span className="font-bold text-teal-700 dark:text-teal-300">💳 Credits: ${creditsStatus.credits.bonus.toFixed(3)} USDC</span>
@@ -45,6 +51,27 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
             className="overflow-hidden"
           >
             <div className="mt-2 rounded-xl border border-emerald-200/60 dark:border-emerald-700/40 bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
+              {/* Arc balance + research cost breakdown */}
+              {arcBalance !== null && (
+                <div className="px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-t-xl">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-black text-purple-700 dark:text-purple-300">⚡ Arc Research Balance</span>
+                    <span className="text-xs font-bold text-purple-700 dark:text-purple-300">${parseFloat(arcBalance).toFixed(4)} USDC</span>
+                  </div>
+                  <div className="text-[10px] text-purple-600 dark:text-purple-400 mb-2">
+                    Each advisor question costs $0.004–$0.01 USDC — settled on Arc in real time.
+                  </div>
+                  <a
+                    href="https://faucet.circle.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] font-bold text-purple-500 underline"
+                  >
+                    Get testnet USDC from Circle faucet →
+                  </a>
+                </div>
+              )}
+
               {/* Trial / Credits summary */}
               <div className="px-3 py-2 flex items-center justify-between">
                 <div>

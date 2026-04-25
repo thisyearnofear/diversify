@@ -686,6 +686,17 @@ export default function AIChat() {
                           {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {msg.role === "assistant" && <ProviderBadge provider={msg.provider} />}
+                        {msg.role === "assistant" && msg.x402Receipt && (
+                          <a
+                            href={msg.x402Receipt.explorer}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 opacity-80 hover:opacity-100 transition-opacity"
+                            title={`You paid $${msg.x402Receipt.amount} USDC on Arc for this analysis`}
+                          >
+                            ⛓ ${msg.x402Receipt.amount} on Arc ↗
+                          </a>
+                        )}
                       </div>
                     </div>
                   </motion.div>
