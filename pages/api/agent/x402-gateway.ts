@@ -7,9 +7,12 @@ import {
     circleService,
     getArcResearchSource,
     normalizeArcResearchSource,
+    settleOnArc,
+    generateChatCompletion,
     type ArcResearchCategory,
     type ArcResearchDataType,
     type ArcResearchSourceDefinition,
+    type SettlementResult,
     x402Analytics
 } from '@diversifi/shared';
 
@@ -337,7 +340,31 @@ export default async function handler(
         }
     }
 
+    // --- Real Arc on-chain settlement (fire-and-forget, non-blocking) ---
+    // Fires a real USDC micro-tx on Arc for every paid request.
+    // Settlement runs in background — gateway response is not delayed.
+    const settlements: SettlementResult[] = [];
+    if (totalCost > 0) {
+        const settlementPromises = sourcePlans
+            .filter(p => p.cost > 0)
+            .map(p => settleOnArc(p.cost, p.source.id));
+
+        // Await with a short timeout so we can include tx hashes in the response
+        // if they land quickly (Arc has sub-second finality), but never block.
+        const settled = await Promise.race([
+            Promise.all(settlementPromises),
+            new Promise<null>(r => setTimeout(() => r(null), 1500)),
+        ]);
+
+        if (Array.isArray(settled)) {
+            settled.forEach(r => { if (r.settled) settlements.push(r as SettlementResult); });
+        }
+    }
+
     const bundle = buildArcResearchBundle(payloads);
+    const settlementMeta = settlements.length > 0
+        ? { txHashes: settlements.map(s => s.txHash), explorer: settlements.map(s => s.explorer), arcSettled: true }
+        : { arcSettled: false };
 
     if (bundleRequested) {
         return res.status(200).json({
@@ -351,6 +378,7 @@ export default async function handler(
                 reason: totalCost > 0
                     ? 'Multiple paid sources unlocked through a single research bundle'
                     : 'All requested bundle sources were within free tier',
+                ...settlementMeta,
             },
         });
     }
@@ -371,6 +399,7 @@ export default async function handler(
             reason: singlePlan.isFreeEligible
                 ? 'Basic data sources include a generous free tier'
                 : 'Premium insight unlocked',
+            ...settlementMeta,
         },
     });
 }
@@ -672,18 +701,97 @@ async function getFredData(isFreeTier: boolean) {
     };
 }
 
-// Premium Services
+// --- Premium Sources: Gemini-synthesised from live data ---
+// Each function fetches real underlying data first, then asks Gemini to
+// produce a structured analysis. Falls back to a structured estimate on error.
+// DRY: shared helper handles the Gemini call + JSON parsing in one place.
+
+async function geminiSynthesise<T>(
+    systemPrompt: string,
+    userPrompt: string,
+    fallback: T,
+): Promise<T> {
+    try {
+        const result = await generateChatCompletion({
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user',   content: userPrompt },
+            ],
+            responseMimeType: 'application/json',
+            temperature: 0.2,
+            maxTokens: 600,
+        }, 'gemini');
+        return JSON.parse(result.content) as T;
+    } catch (err) {
+        console.warn('[x402-gateway] Gemini synthesis failed, using fallback:', (err as Error).message);
+        return fallback;
+    }
+}
+
 async function getMacroAnalysis(isFreeTier: boolean) {
     if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.004 USDC' };
-    return { macro_regime: 'Disinflationary Growth', confidence: 0.78, tier: 'premium' };
+
+    // Pull live inputs in parallel
+    const [wb, cg, fred] = await Promise.all([
+        getWorldBankData(false),
+        getCoinGeckoData(false),
+        getFredData(false),
+    ]);
+
+    return geminiSynthesise(
+        'You are a macro regime analyst. Respond with valid JSON only.',
+        `Given this live data, classify the current macro regime and give a portfolio stance.
+World Bank inflation: ${JSON.stringify(wb)}
+CoinGecko prices: ${JSON.stringify(cg)}
+FRED CPI: ${JSON.stringify(fred)}
+
+Respond with JSON: { macro_regime, confidence (0-1), inflation_trend, risk_appetite, recommended_stance, key_risks: [], tier }`,
+        { macro_regime: 'Disinflationary Growth', confidence: 0.74, inflation_trend: 'Easing',
+          risk_appetite: 'Moderate', recommended_stance: 'HOLD', key_risks: ['Sticky services CPI'], tier: 'premium' },
+    );
 }
 
 async function getPortfolioOptimization(isFreeTier: boolean) {
     if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.005 USDC' };
-    return { optimal_weights: { 'USDC': 30, 'BTC': 20 }, tier: 'premium' };
+
+    const [defi, yearn, cg] = await Promise.all([
+        getDeFiLlamaData(false),
+        getYearnData(false),
+        getCoinGeckoData(false),
+    ]);
+
+    return geminiSynthesise(
+        'You are a DeFi portfolio optimiser. Respond with valid JSON only.',
+        `Given live yield and price data, suggest optimal stablecoin allocation weights.
+DeFiLlama top yields: ${JSON.stringify(defi)}
+Yearn vaults: ${JSON.stringify(yearn)}
+Market prices: ${JSON.stringify(cg)}
+
+Respond with JSON: { optimal_weights: { [asset]: percentage }, expected_blended_apy, rebalance_urgency, rationale, tier }`,
+        { optimal_weights: { USDC: 40, USDY: 30, SYRUPUSDC: 20, PAXG: 10 },
+          expected_blended_apy: 4.2, rebalance_urgency: 'LOW', rationale: 'Yield-weighted allocation', tier: 'premium' },
+    );
 }
 
 async function getRiskAssessment(isFreeTier: boolean) {
     if (isFreeTier) return { message: 'Premium only', upgrade_cost: '0.006 USDC' };
-    return { risk_score: 3.2, mitigation: 'Diversify', tier: 'premium' };
+
+    const [wb, cg, fred] = await Promise.all([
+        getWorldBankData(false),
+        getCoinGeckoData(false),
+        getFredData(false),
+    ]);
+
+    return geminiSynthesise(
+        'You are a portfolio risk analyst. Respond with valid JSON only.',
+        `Assess current risk for a stablecoin-focused emerging-market portfolio.
+World Bank data: ${JSON.stringify(wb)}
+CoinGecko prices: ${JSON.stringify(cg)}
+FRED data: ${JSON.stringify(fred)}
+
+Respond with JSON: { risk_score (1-10), risk_level, primary_risks: [], mitigation_actions: [], drawdown_estimate_pct, confidence, tier }`,
+        { risk_score: 3.2, risk_level: 'LOW', primary_risks: ['USD debasement', 'Stablecoin depeg'],
+          mitigation_actions: ['Diversify into gold', 'Hold yield-bearing USDC'],
+          drawdown_estimate_pct: 4.5, confidence: 0.81, tier: 'premium' },
+    );
 }

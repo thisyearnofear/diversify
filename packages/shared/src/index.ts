@@ -1,4 +1,5 @@
 // Export Services
+import { settleOnArc, getAgentUSDCBalance, getAgentAddress, type SettlementResult, type SettlementSkipped } from './services/arc-settlement';
 import { circleService, CircleService } from './services/circle-service';
 import { ArcAgent, SessionKeyProvider } from './services/arc-agent';
 import { SocialConnectService } from './services/social-connect-service';
@@ -25,6 +26,11 @@ import {
 } from './services/vault/smart-account-provider';
 
 export {
+  settleOnArc,
+  getAgentUSDCBalance,
+  getAgentAddress,
+  type SettlementResult,
+  type SettlementSkipped,
   circleService,
   CircleService,
   ArcAgent,
