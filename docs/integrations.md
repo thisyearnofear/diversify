@@ -55,10 +55,11 @@ DiversiFi’s hackathon path should reuse the current Arc/x402 gateway as the si
 
 ### Payment Boundary
 
-- x402 / Circle Nanopayments is the primary payment path.
+- The live judge-facing path is: `402` challenge → buyer sends a real Arc USDC transfer → gateway verifies the tx hash and nonce.
 - Per-action source prices are at or below `$0.01` in the registry — enforced at build time.
 - Nonce expiry and replay checks protect against double-spend on payment proofs.
 - Every paid request triggers a real `USDC.transfer` on Arc via `arc-settlement.ts`.
+- Opaque `circle-gateway-*` proof ids are intentionally not accepted in the judge-facing flow unless server-side verification is explicitly configured.
 
 ### Evidence Bundles
 
@@ -74,7 +75,8 @@ DiversiFi’s hackathon path should reuse the current Arc/x402 gateway as the si
 Client → GET /api/agent/x402-gateway?source=macro_analysis
        ← 402 { nonce, amount: "0.004", currency: "USDC", recipient, expires }
 Client → GET /api/agent/x402-gateway?source=macro_analysis
-         x-payment-proof: circle-gateway-<id>:<amount>
+         x-payment-proof: 0x<real_arc_usdc_transfer_tx_hash>
+         x-payment-nonce: <challenge_nonce>
        ← 200 { data, _billing: { arcSettled: true, txHashes: ["0x..."], explorer: ["https://testnet.arcscan.app/tx/0x..."] } }
 ```
 
@@ -94,7 +96,7 @@ Real tx verifiable at `https://testnet.arcscan.app/address/0x6D5967e30dF504834DF
 - **CCTP Domains**: Arc → Arbitrum, Arbitrum → Celo (via bridge)
 - **MPC Wallets**: Circle MPC for agent fuel tank + Hyperliquid API keys
 - **EIP-3009**: USDC transfer with authorization for nanopayments
-- **Hackathon Default**: use Circle / x402 first; treat MPP as optional unless it reduces code, not increases it
+- **Hackathon Default**: prefer the simplest externally verifiable proof path for judges; keep experimental payment variants out of the core demo unless they are fully verified end to end
 
 ## Wallet Integration
 

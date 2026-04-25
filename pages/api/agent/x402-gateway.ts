@@ -433,9 +433,9 @@ function sendPaymentRequired(
         requested_sources: sourcePlans.map((plan) => plan.source.id),
         bundle_requested: bundleRequested,
         circle_gateway: {
-            enabled: true,
-            description: 'Use Circle Gateway for unified USDC balance across chains',
-            benefits: ['Zero-gas nanopayments', 'Instant settlement', 'Cross-chain liquidity']
+            enabled: Boolean(process.env.CIRCLE_API_KEY),
+            description: 'Opaque Circle Gateway proof IDs are not accepted in the judge-facing path unless server-side verification is explicitly configured.',
+            benefits: ['Use signed mandates when supported', 'Fall back to real Arc tx hashes', 'Keep payment proofs externally verifiable']
         }
     });
 }
@@ -481,14 +481,17 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
     return amountUSDC;
 }
 
-// Enhanced verification using Circle Gateway for cross-chain payments
+// Payment proofs must be real Arc tx hashes or verified signed mandates.
 async function verifyCircleGatewayPayment(paymentProof: string): Promise<number> {
     try {
         if (processedPaymentProofs.has(paymentProof)) {
             throw new Error('Payment proof already processed');
         }
 
-        // Check if this is a Circle Gateway transaction
+        if (ethers.utils.isHexString(paymentProof, 32)) {
+            return await verifyOnChainPayment(paymentProof);
+        }
+
         if (paymentProof.startsWith('circle-gateway-')) {
             const isValid = await circleService.verifyGatewayTransaction(paymentProof);
             if (!isValid) {
@@ -499,10 +502,9 @@ async function verifyCircleGatewayPayment(paymentProof: string): Promise<number>
             processedPaymentProofs.add(paymentProof);
             return parsedAmount ?? 0.01;
         }
-        
-        // If not a Circle Gateway transaction, fall back to on-chain verification
-        return await verifyOnChainPayment(paymentProof);
-        
+
+        throw new Error('Unsupported payment proof format');
+
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Circle Gateway payment verification failed:', errorMessage);

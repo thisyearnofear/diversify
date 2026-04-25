@@ -312,7 +312,12 @@ export class CircleService {
      * Verify a Circle Gateway transaction
      */
     async verifyGatewayTransaction(transactionId: string): Promise<boolean> {
-        return transactionId.startsWith('circle-gateway-');
+        if (!transactionId || transactionId.startsWith('circle-gateway-live-demo') || transactionId.startsWith('circle-gateway-bundle-demo')) {
+            return false;
+        }
+
+        console.warn('[Circle Service] Gateway transaction verification is not configured for opaque transaction IDs; use on-chain tx hashes or signed mandates in the judge-facing flow.');
+        return false;
     }
 
     // =========================================================================

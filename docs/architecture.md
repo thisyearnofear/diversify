@@ -98,19 +98,22 @@ risk_assessment     → WorldBank + CoinGecko + FRED  → Gemini Flash → JSON
 ## Payment Design Notes
 
 - Payment challenge includes `nonce` and `expires`.
-- Proofs are replay-checked in-memory for demo safety.
+- Buyer proofs accepted in the judge-facing flow are real Arc tx hashes plus the issued nonce.
+- Payment proofs are replay-checked in-memory for prototype safety; move this to Redis/DB for multi-instance production.
 - Per-action source prices are capped at `<= 0.01 USDC` in registry.
 - Free-tier sources can be fetched without payment until free limit is exhausted.
-- Analytics counter (`x402Analytics`) is in-memory — pump with `pnpm test-x402-comprehensive` after each server start before recording demo.
+- `/api/agent/x402-metrics` derives `totalSettledPayments` from Arc USDC `Transfer` logs for the agent wallet; app analytics remain supplementary.
 - Real on-chain settlement requires `VAULT_PRIVATE_KEY` and a funded Arc testnet wallet.
 
 ## Demo Evidence Surface
 
 Use `/api/agent/x402-metrics` as the canonical demo evidence endpoint for:
 
-- settled payment count
+- chain-derived settled payment count
+- recent Arc settlement tx hashes
+- total settled USDC from the live agent wallet
 - success rate
 - top paid sources
 - maximum configured per-action price
 
-This endpoint should be shown in the demo recording alongside Circle Console + Arc Explorer transaction proof.
+This endpoint should be shown in the demo recording alongside Arc Explorer transaction proof.

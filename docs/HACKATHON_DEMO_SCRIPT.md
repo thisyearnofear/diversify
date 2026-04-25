@@ -33,15 +33,18 @@ https://api.diversifi.famile.xyz/api/agent/x402-metrics
 or the production IP equivalent.
 
 **Point out:**
-- `transactionFrequency.totalSettledPayments` — 100+ real settled payments
+- `transactionFrequency.totalSettledPayments` — count derived from Arc USDC `Transfer` logs
+- `transactionFrequency.evidenceSource: arc_usdc_transfer_logs`
 - `pricing.allSourcesAtOrBelowOneCent: true` — every source ≤ $0.01
 - `pricing.maxPerActionPriceUSDC: 0.01`
 - `arcSettlement.agentAddress` — the live EOA wallet
 - `arcSettlement.agentExplorer` — click it
+- `arcSettlement.recentTransfers[0].txHash` — latest proof
 
 **Say:**
 > "This is not simulated. Every number here comes from real requests that
-> settled real USDC on Arc."
+> settled real USDC on Arc. The count is derived from token transfer logs,
+> not from a server-side counter."
 
 ---
 
@@ -74,10 +77,11 @@ https://api.diversifi.famile.xyz/api/agent/x402-gateway?source=macro_analysis
 
 **Show:** `402` response with `nonce`, `amount: "0.004"`, `currency: "USDC"`, `expires`
 
-Now submit with a payment proof:
+Now complete a real payment using the app UI or a funded buyer wallet, then re-run the same request with the actual tx hash:
 ```
 https://api.diversifi.famile.xyz/api/agent/x402-gateway?source=macro_analysis
-Header: x-payment-proof: circle-gateway-live-demo-001:0.004
+Header: x-payment-proof: 0x<real_arc_usdc_transfer_tx_hash>
+Header: x-payment-nonce: <nonce_from_402_response>
 ```
 
 **Point out in the 200 response:**
@@ -99,7 +103,8 @@ Header: x-payment-proof: circle-gateway-live-demo-001:0.004
 
 ```
 https://api.diversifi.famile.xyz/api/agent/x402-gateway?sources=macro_analysis,portfolio_optimization,risk_assessment
-Header: x-payment-proof: circle-gateway-bundle-demo-001:0.015
+Header: x-payment-proof: 0x<real_arc_usdc_transfer_tx_hash>
+Header: x-payment-nonce: <nonce_from_402_response>
 ```
 
 **Point out:**
@@ -155,7 +160,7 @@ coingecko_analytics:    $0.001 per request
 > costs $2–5 in gas. That's 500–1,250x the value of the data itself.
 > The economics are simply impossible.
 >
-> Arc's dollar-denominated, gas-free settlement is not a nice-to-have —
+> Arc's dollar-denominated low-cost settlement is not a nice-to-have —
 > it's what makes this business model exist at all."
 
 ---
@@ -166,7 +171,7 @@ coingecko_analytics:    $0.001 per request
 |--------|-------|
 | Max per-action price | $0.01 USDC |
 | Cheapest source | $0.001 USDC |
-| On-chain settlements | 100+ |
+| On-chain settlements | Live count from `/api/agent/x402-metrics` |
 | Agent wallet | `0x6D5967...2DaC8` on Arc testnet |
 | Arc Explorer | `testnet.arcscan.app/address/0x6D5967...2DaC8` |
 | Metrics endpoint | `/api/agent/x402-metrics` |
@@ -179,7 +184,7 @@ coingecko_analytics:    $0.001 per request
 
 | Criterion | Our answer |
 |-----------|-----------|
-| **Application of Technology** | Arc settlement in every paid request; Gemini synthesises all premium data; Circle x402 is the payment primitive; Circle API key for verification |
+| **Application of Technology** | Arc settlement in every paid request; Gemini synthesises all premium data; x402-style 402 negotiation gates premium access; Arc tx hashes and transfer logs provide proof |
 | **Business Value** | Savings protection for emerging market users who face >10% annual inflation — a real underserved market |
 | **Originality** | AI agent that *purchases* intelligence before advising — not just chat, but an economically grounded decision loop |
 | **Presentation** | Live on-chain proof visible before any UI demo; tx hashes in every API response |
@@ -198,16 +203,16 @@ The x402 gateway is a production API that charges per request in USDC, with tier
 
 ## Circle Product Feedback (submission form — $500 USDC bonus)
 
-> **Products used:** Arc (settlement), USDC (payment token), Circle Nanopayments / x402
-> (payment standard), Circle Wallets API (payment verification), Circle API key (developer auth).
+> **Products used:** Arc (settlement), USDC (payment token), x402-style `402 Payment Required`
+> challenge flow, Circle APIs for supplementary wallet/account experimentation.
 >
-> **Why we chose them:** x402 maps perfectly to HTTP API design — the 402 status code was
+> **Why we chose them:** `402 Payment Required` maps perfectly to HTTP API design — the status code was
 > purpose-built for this. Arc's dollar-denominated fees gave us predictable unit economics.
 > USDC as the gas token eliminated the "ETH price risk eats my margin" problem entirely.
 >
-> **What worked well:** Arc RPC was stable and fast throughout development. The x402
+> **What worked well:** Arc RPC was stable and fast throughout development. The 402
 > challenge/response pattern required zero new infrastructure — it fits inside a standard
-> Next.js API route. The Circle API key activation was instant.
+> Next.js API route.
 >
 > **What could be improved:** The entity secret setup for developer-controlled wallets has
 > significant friction for hackathon pace (RSA key generation, recovery file management,

@@ -22,11 +22,13 @@ async function run() {
 
   const payload = await response.json();
   const settled = payload.transactionFrequency?.totalSettledPayments ?? 0;
+  const evidenceSource = payload.transactionFrequency?.evidenceSource ?? 'unknown';
   const successRate = payload.transactionFrequency?.successRate ?? 0;
   const maxPerAction = payload.pricing?.maxPerActionPriceUSDC ?? null;
   const oneCentCap = payload.pricing?.allSourcesAtOrBelowOneCent ?? false;
 
   console.log(`Settled payments: ${settled}`);
+  console.log(`Evidence source: ${evidenceSource}`);
   console.log(`Success rate: ${(successRate * 100).toFixed(2)}%`);
   console.log(`Max per-action price (USDC): ${maxPerAction}`);
   console.log(`All sources <= $0.01: ${oneCentCap ? 'YES' : 'NO'}`);

@@ -22,6 +22,7 @@
     "test-x402": "node tests/test-x402-hub.mjs",
     "test-x402-comprehensive": "node tests/test-x402-comprehensive.mjs",
     "test-x402-frequency": "node tests/test-x402-frequency.mjs",
+    "generate-x402-volume": "node scripts/generate-x402-volume.mjs",
     "validate-agent": "node -e \"const { validateAgentConfig } = require('./utils/arc-agent-setup.ts'); console.log(validateAgentConfig());\"",
     "register-agent": "npx tsx scripts/register-on-agentscan.ts"
   },

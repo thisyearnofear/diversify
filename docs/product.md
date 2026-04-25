@@ -16,7 +16,7 @@ DiversiFi uses **LI.FI Composer** to execute atomic, multi-step DeFi workflows i
 DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Payments hackathon:
 
 - The user asks whether to hold, rebalance, or hedge.
-- The advisor buys fresh evidence from multiple independent sources using x402 / Circle Nanopayments.
+- The advisor gates premium evidence behind an x402-style `402 Payment Required` challenge and accepts real Arc USDC payment proofs.
 - Each premium purchase triggers a real USDC micro-transaction on Arc, returned as a tx hash.
 - Evidence is scored for freshness, reputation, and source agreement before a recommendation is made.
 - The payment is part of the decision loop, not a separate product surface.

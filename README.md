@@ -2,7 +2,7 @@
 
 DiversiFi is an AI advisor for wealth protection that **pays for live evidence on-chain before recommending any portfolio action**.
 
-For the Arc hackathon, it runs as a proof-of-research rebalancer: the advisor buys macro, yield, and risk data from multiple independent sources via x402 / Circle Nanopayments, each purchase settled as a real USDC micro-transaction on Arc, then Gemini synthesises the evidence into a confidence-scored recommendation.
+For the Arc hackathon, it runs as a proof-of-research rebalancer: the advisor negotiates access with an x402-style `402 Payment Required` challenge, accepts a real Arc USDC payment proof from the buyer, then settles its own research spend on Arc before returning the response. Gemini synthesises the paid evidence into a confidence-scored recommendation.
 
 **Live app:** https://diversifiapp.vercel.app  
 **Hackathon:** [Agentic Economy on Arc](https://lablab.ai/ai-hackathons/nano-payments-arc)
@@ -14,7 +14,7 @@ For the Arc hackathon, it runs as a proof-of-research rebalancer: the advisor bu
 | Requirement | Proof |
 |---|---|
 | Per-action pricing ≤ $0.01 | `allSourcesAtOrBelowOneCent: true` — [metrics endpoint](https://api.diversifi.famile.xyz/api/agent/x402-metrics) |
-| 50+ on-chain transactions | `totalSettledPayments` counter + Arc Explorer tx list |
+| 50+ on-chain transactions | `totalSettledPayments` is derived from Arc USDC `Transfer` logs for the live agent wallet |
 | Real Arc settlement | Every paid request fires `USDC.transfer` — tx hash in `_billing.txHashes` |
 | Margin explanation | $0.004/request vs $2–5 ETH gas = 500–1,250× — impossible on L1 |
 
@@ -56,7 +56,7 @@ ARC_RPC_URL=https://rpc.testnet.arc.network
 DATA_HUB_RECIPIENT_ADDRESS=<hub_wallet>
 VAULT_PRIVATE_KEY=<funded_arc_eoa>   # fires real USDC settlements
 GEMINI_API_KEY=<key>                 # primary AI provider
-CIRCLE_API_KEY=<key>                 # payment verification
+CIRCLE_API_KEY=<key>                 # optional Circle API experimentation
 ```
 
 ## Verification Commands
@@ -64,7 +64,8 @@ CIRCLE_API_KEY=<key>                 # payment verification
 ```bash
 pnpm test-x402                # gateway challenge/response
 pnpm test-x402-comprehensive  # full payment loop across all sources
-pnpm test-x402-frequency      # assert 50+ settled payments
+pnpm test-x402-frequency      # verify chain-derived settled payment count
+pnpm generate-x402-volume     # generate real paid requests with a funded buyer EOA
 ```
 
 ## Documentation
@@ -80,4 +81,4 @@ pnpm test-x402-frequency      # assert 50+ settled payments
 
 ## Core Stack
 
-Next.js 15 · Privy + Safe · Circle Wallets / x402 / Nanopayments · Arc Testnet · USDC · Gemini Flash · Venice AI · LI.FI Composer
+Next.js 15 · Privy + Safe · x402-style payment negotiation · Arc Testnet · USDC · Gemini Flash · Venice AI · LI.FI Composer · Circle APIs (supplementary)

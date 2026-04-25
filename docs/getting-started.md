@@ -31,10 +31,11 @@ No wallet required — users can sign in via email, social login, or existing wa
 | `COINGECKO_API_KEY` | Exchange rates |
 | `NEXT_PUBLIC_ENABLE_ARC` | Enable Arc testnet features in the UI |
 | `ENABLE_AUTONOMOUS_MODE` | Enable the Arc/x402 research flow |
-| `ARC_RPC_URL` | Arc RPC endpoint for payment verification |
+| `ARC_RPC_URL` | Arc RPC endpoint for on-chain payment and settlement verification |
 | `DATA_HUB_RECIPIENT_ADDRESS` | Recipient for Arc research payments |
 | `VAULT_PRIVATE_KEY` | EOA private key — funds real on-chain USDC settlements on Arc |
-| `CIRCLE_API_KEY` | Circle API key for wallet and payment verification |
+| `ARC_SETTLEMENT_START_BLOCK` | Optional optimization: first Arc block to scan when deriving settlement counts from USDC transfer logs |
+| `CIRCLE_API_KEY` | Optional Circle API key for wallet/account experimentation |
 
 ## Supported Chains
 
@@ -52,7 +53,7 @@ If you are building the Arc Nano Payments submission, keep the existing app and 
 1. Set `NEXT_PUBLIC_ENABLE_ARC=true`
 2. Set `ENABLE_AUTONOMOUS_MODE=true`
 3. Configure `ARC_RPC_URL` and `DATA_HUB_RECIPIENT_ADDRESS`
-4. Create a Circle developer account and connect the same email used in the hackathon registration
+4. Fund a buyer EOA and the agent EOA with Arc testnet USDC
 5. Use the Arc faucet for test funds and verify the research flow end to end
 
 This mode should reuse the advisor, action cards, and x402 gateway. Do not add a separate payment stack unless it replaces current logic.
@@ -67,9 +68,10 @@ pnpm test-x402-frequency
 
 For judge-facing evidence, use:
 
-- `GET /api/agent/x402-metrics` — transaction frequency, pricing caps, agent wallet balance, Arc Explorer link
+- `GET /api/agent/x402-metrics` — chain-derived transaction frequency, pricing caps, agent wallet balance, Arc Explorer link
 - Arc Explorer — `https://testnet.arcscan.app/address/<VAULT_PRIVATE_KEY address>` — live on-chain tx history
 - Each paid gateway response includes `_billing.txHashes[]` and `_billing.explorer[]` — direct tx links
+- `pnpm generate-x402-volume` — generate real paid requests with a funded buyer EOA
 
 ### Funding the Agent Wallet
 
@@ -79,6 +81,19 @@ The agent wallet (`VAULT_PRIVATE_KEY` address) must hold testnet USDC on Arc to 
 2. Fund it: [faucet.circle.com](https://faucet.circle.com) → select **Arc Testnet** → paste address
 3. Verify: `arcSettlement.agentUSDCBalance` will show the balance in the metrics endpoint
 4. Each paid research request now fires a real `USDC.transfer` on Arc and returns the tx hash
+
+### Funding the Buyer Wallet
+
+To produce legitimate paid requests in volume, fund a separate buyer EOA and export it as `X402_BUYER_PRIVATE_KEY`.
+
+```bash
+X402_BUYER_PRIVATE_KEY=<funded_arc_testnet_buyer> \
+RUN_COUNT=17 \
+X402_SOURCES=macro_analysis,portfolio_optimization,risk_assessment \
+pnpm generate-x402-volume
+```
+
+This generates real buyer-side Arc USDC transfers and real seller-side Arc settlements. Use it before recording the final demo if the live chain-derived count is below the submission threshold.
 
 ## Test Drive
 
