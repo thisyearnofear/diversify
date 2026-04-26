@@ -38,10 +38,12 @@ const BATCH_TOPUP_AMOUNT = '1.00'; // Optional larger top-up users can choose
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_PAYMENT_AMOUNT_USDC = 0.001;
 const processedPaymentProofs = new Set<string>();
+const USDC_DECIMALS = 6;
+const CREDIT_EPSILON_MICRO_USDC = 1;
 
 // --- Types ---
 interface UserState {
-    creditBalance: number; // Available credit in USDC
+    creditBalanceMicros: number; // Available credit in micro-USDC
     requestCount: number;
     windowStart: number;
     nonces: Map<string, number>; // Nonce -> Expiry
@@ -55,7 +57,7 @@ class UserManager {
     static getUser(clientKey: string): UserState {
         if (!this.users.has(clientKey)) {
             this.users.set(clientKey, {
-                creditBalance: 0,
+                creditBalanceMicros: 0,
                 requestCount: 0,
                 windowStart: Date.now(),
                 nonces: new Map(),
@@ -96,13 +98,13 @@ class UserManager {
         return user.usageHistory[sourceKey]?.count || 0;
     }
 
-    static addCredit(user: UserState, amount: number) {
-        user.creditBalance += amount;
+    static addCredit(user: UserState, amountMicros: number) {
+        user.creditBalanceMicros += amountMicros;
     }
 
-    static deductCredit(user: UserState, amount: number): boolean {
-        if (user.creditBalance >= amount) {
-            user.creditBalance -= amount;
+    static deductCredit(user: UserState, amountMicros: number): boolean {
+        if (user.creditBalanceMicros + CREDIT_EPSILON_MICRO_USDC >= amountMicros) {
+            user.creditBalanceMicros = Math.max(0, user.creditBalanceMicros - amountMicros);
             return true;
         }
         return false;
@@ -136,6 +138,23 @@ type PaymentMandatePayload = {
     nonce?: string;
     [key: string]: unknown;
 };
+
+function toMicroUSDC(amount: number | string): number {
+    const normalized = typeof amount === 'number' ? amount : parseFloat(amount);
+    if (!Number.isFinite(normalized)) {
+        throw new Error(`Invalid USDC amount: ${amount}`);
+    }
+
+    return Math.round(normalized * (10 ** USDC_DECIMALS));
+}
+
+function fromMicroUSDC(amountMicros: number): number {
+    return amountMicros / (10 ** USDC_DECIMALS);
+}
+
+function formatMicroUSDC(amountMicros: number, decimals: number = 6): string {
+    return fromMicroUSDC(amountMicros).toFixed(decimals);
+}
 
 function getHeader(req: NextApiRequest, key: string): string | undefined {
     const value = req.headers[key];
@@ -258,6 +277,7 @@ export default async function handler(
         ? sourcePlans.map((plan) => plan.source.label).join(', ')
         : sourcePlans[0].source.label;
     const totalCost = sourcePlans.reduce((sum, plan) => sum + plan.cost, 0);
+    const totalCostMicros = sourcePlans.reduce((sum, plan) => sum + toMicroUSDC(plan.cost), 0);
 
     if (paymentMandate) {
         try {
@@ -275,7 +295,7 @@ export default async function handler(
 
             if (isValid) {
                 const amount = parseFloat(mandate.amount);
-                UserManager.addCredit(user, amount);
+                UserManager.addCredit(user, toMicroUSDC(amount));
                 console.log(`[Data Hub] Nanopayment Mandate verified: $${amount}`);
                 x402Analytics.recordPayment(requestedSourceLabel, amount, Date.now() - start, 'CIRCLE_NANOPAYMENT');
             } else {
@@ -297,7 +317,7 @@ export default async function handler(
 
             const amountCredited = await verifyCircleGatewayPayment(paymentProof);
             if (amountCredited > 0) {
-                UserManager.addCredit(user, amountCredited);
+                UserManager.addCredit(user, toMicroUSDC(amountCredited));
                 const paymentMethod = paymentProof.startsWith('circle-gateway-') ? 'CIRCLE_GATEWAY' : 'ON_CHAIN';
                 x402Analytics.recordPayment(requestedSourceLabel, amountCredited, Date.now() - start, paymentMethod);
             }
@@ -306,7 +326,7 @@ export default async function handler(
         }
     }
 
-    if (totalCost > 0 && !UserManager.deductCredit(user, totalCost)) {
+    if (totalCostMicros > 0 && !UserManager.deductCredit(user, totalCostMicros)) {
         return sendPaymentRequired(res, user, sourcePlans, totalCost, bundleRequested);
     }
 
@@ -374,7 +394,7 @@ export default async function handler(
             _billing: {
                 status: totalCost > 0 ? 'Bundle Paid' : 'Bundle Free',
                 cost: totalCost,
-                remaining_credit: user.creditBalance.toFixed(4),
+                remaining_credit: formatMicroUSDC(user.creditBalanceMicros, 4),
                 reason: totalCost > 0
                     ? 'Multiple paid sources unlocked through a single research bundle'
                     : 'All requested bundle sources were within free tier',
@@ -395,7 +415,7 @@ export default async function handler(
             status: singlePlan.isFreeEligible ? 'Free Tier' : 'Paid',
             cost: singleSource.cost,
             remaining_free: singlePlan.isFreeEligible ? singlePlan.freeLimit - (singlePlan.currentUsage + 1) : undefined,
-            remaining_credit: user.creditBalance.toFixed(4),
+            remaining_credit: formatMicroUSDC(user.creditBalanceMicros, 4),
             reason: singlePlan.isFreeEligible
                 ? 'Basic data sources include a generous free tier'
                 : 'Premium insight unlocked',
@@ -428,7 +448,7 @@ function sendPaymentRequired(
         nonce,
         expires: expiresAt,
         suggested_topup_amount: BATCH_TOPUP_AMOUNT,
-        current_balance: user.creditBalance.toFixed(4),
+        current_balance: formatMicroUSDC(user.creditBalanceMicros, 4),
         required_cost: totalCost,
         requested_sources: sourcePlans.map((plan) => plan.source.id),
         bundle_requested: bundleRequested,

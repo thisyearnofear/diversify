@@ -65,6 +65,8 @@ pnpm generate-x402-volume
 
 That bundle produces up to three Arc settlements per successful request, so `17` successful runs can produce `51` seller-side settlements.
 
+For the current live evidence run, the funded agent EOA was also used as the buyer wallet because no separate `X402_BUYER_PRIVATE_KEY` was configured on the server. The transactions are still real Arc payment-loop transfers, but the count includes both buyer-side payments and seller-side settlements from the same address.
+
 ## 5. Required Video Segments
 
 Record these in order (server must be running throughout):

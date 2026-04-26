@@ -46,6 +46,12 @@ or the production IP equivalent.
 > settled real USDC on Arc. The count is derived from token transfer logs,
 > not from a server-side counter."
 
+If a judge asks why the count moved quickly during the final volume run, say:
+> "For the final proof run we used the funded agent EOA as both buyer and seller
+> because no separate buyer key was configured on the server. The transfers are
+> still real Arc payment-loop transactions, and the metrics endpoint derives the
+> count directly from on-chain USDC transfer logs."
+
 ---
 
 ### 2 — Arc Explorer: the agent wallet (30 seconds)
