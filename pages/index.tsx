@@ -296,7 +296,7 @@ export default function DiversiFiPage() {
                 </span>
               </button>
               {/* First-visit nudge tooltip — auto-dismisses on any interaction */}
-              {showModeTip && activeHint !== 'mode' && (
+              {showModeTip && !isStrategyModalOpen && activeHint !== 'mode' && (
                 <div className="absolute right-0 top-full mt-1.5 w-44 bg-emerald-700 text-white rounded-xl px-3 py-2 shadow-xl z-50">
                   <button
                     onClick={dismissModeTip}
@@ -355,9 +355,11 @@ export default function DiversiFiPage() {
           experienceMode={experienceMode}
         />
 
-        <AnimatePresence>
-          <GuidedTour />
-        </AnimatePresence>
+        {!isStrategyModalOpen && (
+          <AnimatePresence>
+            <GuidedTour />
+          </AnimatePresence>
+        )}
 
         <motion.div
           className="pt-2 pb-20"
