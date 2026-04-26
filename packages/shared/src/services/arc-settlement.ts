@@ -91,6 +91,7 @@ export interface ArcSettlementTransfer {
     txHash: string;
     amountUSDC: string;
     blockNumber: number;
+    blockTimestamp: string | null;
     logIndex: number;
     explorer: string;
 }
@@ -104,6 +105,7 @@ export interface ArcSettlementStats {
     totalSettledUSDC: string;
     latestTransferBlock: number | null;
     recentTransfers: ArcSettlementTransfer[];
+    amountBreakdown: Record<string, number>;
 }
 
 function getTransferTopic(address: string): string {
@@ -120,6 +122,7 @@ function createEmptySettlementStats(agentAddress: string, recipientAddress: stri
         totalSettledUSDC: '0.000000',
         latestTransferBlock: null,
         recentTransfers: [],
+        amountBreakdown: {},
     };
 }
 
@@ -142,6 +145,10 @@ function mergeSettlementStats(
         ...base.recentTransfers,
         ...delta.recentTransfers,
     ]).slice(0, maxRecentTransfers);
+    const amountBreakdown = { ...base.amountBreakdown };
+    for (const [amount, count] of Object.entries(delta.amountBreakdown)) {
+        amountBreakdown[amount] = (amountBreakdown[amount] || 0) + count;
+    }
 
     const totalSettled = ethers.utils
         .parseUnits(base.totalSettledUSDC, 6)
@@ -153,6 +160,7 @@ function mergeSettlementStats(
         totalSettledUSDC: ethers.utils.formatUnits(totalSettled, 6),
         latestTransferBlock: Math.max(base.latestTransferBlock || 0, delta.latestTransferBlock || 0) || null,
         recentTransfers: mergedRecent,
+        amountBreakdown,
     };
 }
 
@@ -212,7 +220,7 @@ async function scanSettlementRange(
     );
 
     let totalSettled = ethers.BigNumber.from(0);
-    const transfers = logs.map((log) => {
+    const transferRecords = logs.map((log) => {
         const parsed = transferInterface.parseLog(log);
         const amount = parsed.args.value as ethers.BigNumber;
         totalSettled = totalSettled.add(amount);
@@ -221,22 +229,36 @@ async function scanSettlementRange(
             txHash: log.transactionHash,
             amountUSDC: ethers.utils.formatUnits(amount, 6),
             blockNumber: log.blockNumber,
+            blockTimestamp: null,
             logIndex: log.logIndex,
             explorer: `${ARC_EXPLORER_BASE}/tx/${log.transactionHash}`,
         };
     });
 
-    const recentTransfers = sortRecentTransfers(transfers).slice(0, maxRecentTransfers);
+    const amountBreakdown = transferRecords.reduce<Record<string, number>>((acc, transfer) => {
+        const normalizedAmount = Number.parseFloat(transfer.amountUSDC).toFixed(6);
+        acc[normalizedAmount] = (acc[normalizedAmount] || 0) + 1;
+        return acc;
+    }, {});
+    const recentTransfers = sortRecentTransfers(transferRecords).slice(0, maxRecentTransfers);
+    const uniqueBlocks = [...new Set(recentTransfers.map((transfer) => transfer.blockNumber))];
+    const blocks = await Promise.all(uniqueBlocks.map((blockNumber) => provider.getBlock(blockNumber)));
+    const blockTimestamps = new Map(blocks.map((block) => [block.number, new Date(block.timestamp * 1000).toISOString()]));
+    const recentTransfersWithTimestamps = recentTransfers.map((transfer) => ({
+        ...transfer,
+        blockTimestamp: blockTimestamps.get(transfer.blockNumber) || null,
+    }));
 
     return {
         proofSource: 'arc_usdc_transfer_logs',
         agentAddress,
         recipientAddress,
         tokenAddress: USDC_ADDR,
-        transferCount: transfers.length,
+        transferCount: transferRecords.length,
         totalSettledUSDC: ethers.utils.formatUnits(totalSettled, 6),
-        latestTransferBlock: recentTransfers[0]?.blockNumber ?? null,
-        recentTransfers,
+        latestTransferBlock: recentTransfersWithTimestamps[0]?.blockNumber ?? null,
+        recentTransfers: recentTransfersWithTimestamps,
+        amountBreakdown,
     };
 }
 
