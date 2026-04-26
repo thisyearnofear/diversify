@@ -186,6 +186,29 @@ export default function AgentTab({
       )}
 
       {/* Ask Agent CTA — bridges Agent tab to AI chat drawer */}
+      <div className="rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/10 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-200">
+              Premium research bundle
+            </p>
+            <p className="mt-1 text-sm text-amber-900 dark:text-amber-100">
+              Run macro analysis, portfolio optimization, and risk assessment with one Arc payment.
+            </p>
+          </div>
+          <span className="rounded-full bg-white/80 dark:bg-black/20 px-2 py-1 text-[11px] font-black text-amber-700 dark:text-amber-300">
+            $0.015
+          </span>
+        </div>
+        <button
+          onClick={() => askAdvisor("Run a paid premium research bundle using macro analysis, portfolio optimization, and risk assessment, then explain the result simply.")}
+          className="mt-3 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 transition-colors"
+        >
+          <span>⛓</span>
+          <span>Run premium research</span>
+        </button>
+      </div>
+
       <button
         onClick={handleAskAgent}
         className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"

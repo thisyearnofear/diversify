@@ -230,6 +230,23 @@ const HoldActionWidget = ({ action }: { action: any }) => {
  */
 // Persisted user API key (client-side only, never sent to our server unintentionally)
 const USER_GEMINI_KEY_STORAGE = "diversifi_user_gemini_key";
+const STARTER_PROMPTS = [
+  {
+    label: "Portfolio summary",
+    prompt: "Summarize my portfolio protection status and tell me the top 3 actions to take.",
+    badge: "Free",
+  },
+  {
+    label: "Protection plan",
+    prompt: "Create a practical protection plan for my savings using stablecoins, yield, and real-world assets.",
+    badge: "Free",
+  },
+  {
+    label: "Paid macro bundle",
+    prompt: "Run a paid premium research bundle using macro analysis, portfolio optimization, and risk assessment, then explain the result simply.",
+    badge: "$0.015 Arc",
+  },
+] as const;
 
 function useUserGeminiKey() {
   const [key, setKey] = useState<string>(() => {
@@ -357,6 +374,13 @@ export default function AIChat() {
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
   const [showSettings, setShowSettings] = useState(false);
 
+  const submitPrompt = (prompt: string) => {
+    if (!prompt.trim() || isChatting) return;
+    addUserMessage(prompt);
+    sendChatMessage(prompt);
+    setInputValue("");
+  };
+
   // Initialize background Celo event monitoring & proactive insights capability
   useProactiveAgent();
 
@@ -367,10 +391,7 @@ export default function AIChat() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim() || isChatting) return;
-    addUserMessage(inputValue.trim());
-    sendChatMessage(inputValue.trim());
-    setInputValue("");
+    submitPrompt(inputValue.trim());
   };
 
   // Auto-scroll to bottom on new messages
@@ -529,7 +550,7 @@ export default function AIChat() {
                   className="w-1.5 h-1.5 rounded-full bg-amber-500" 
                 />
                 <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase">
-                  Get Stable or Die Trying
+                  Protected savings assistant
                 </span>
               </div>
             </div>
@@ -550,13 +571,13 @@ export default function AIChat() {
                   : 'bg-white/50 dark:bg-gray-800/50 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-700/30'
               }`}
             >
-              {currentView === 'chat' ? 'Library 📜' : 'Back to Chat 💬'}
+              {currentView === 'chat' ? 'History' : 'Chat'}
             </button>
             <button
               onClick={() => setShowClearConfirm(true)}
               className="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase tracking-wider"
             >
-              Reset
+              Clear
             </button>
             {/* Explicit close button so users can dismiss without confusion */}
             <button
@@ -605,24 +626,33 @@ export default function AIChat() {
                     
                     <div className="space-y-2">
                       <p className="text-base font-bold text-amber-800 dark:text-amber-200">
-                        DiversiFi awaits your question
+                        Ask for a clear next action
+                      </p>
+                      <p className="max-w-[300px] text-sm text-gray-600 dark:text-gray-300">
+                        Start with a portfolio summary, a protection plan, or a paid Arc research bundle with on-chain proof.
                       </p>
                     </div>
-                    
-                    {/* Quick action pills */}
-                    <div className="flex flex-wrap justify-center gap-2 max-w-[280px]">
-                      {["What's my portfolio?", "How do I earn yield?", "Protect my savings"].map((prompt, i) => (
+
+                    <div className="w-full max-w-[320px] rounded-2xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/70 dark:bg-amber-900/10 p-3 text-left">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                        Premium research
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900 dark:text-amber-100">
+                        Paid evidence runs on Arc and costs between <span className="font-bold">$0.004</span> and <span className="font-bold">$0.015</span> USDC.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-2 max-w-[320px]">
+                      {STARTER_PROMPTS.map(({ label, prompt, badge }) => (
                         <motion.button
-                          key={prompt}
-                          onClick={() => {
-                            setInputValue(prompt);
-                            addUserMessage(prompt);
-                            sendChatMessage(prompt);
-                            setInputValue("");
-                          }}
-                          className="px-3 py-1.5 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700/30 hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
+                          key={label}
+                          onClick={() => submitPrompt(prompt)}
+                          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700/30 hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
                         >
-                          {prompt}
+                          <span>{label}</span>
+                          <span className="rounded-full bg-white/80 dark:bg-black/20 px-1.5 py-0.5 text-[10px] font-black">
+                            {badge}
+                          </span>
                         </motion.button>
                       ))}
                     </div>
@@ -729,34 +759,40 @@ export default function AIChat() {
 
         {/* Footer Input */}
         <div className="p-6 pt-2 pb-10 bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 flex items-center gap-3">
-          <form
-            onSubmit={handleSubmit}
-            className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 flex items-center shadow-inner"
-          >
-            <input
-              type="text"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              placeholder="Type or tap microphone..."
-              className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white"
-            />
-            <VoiceButton
-              size="sm"
-              variant="embedded"
-              onTranscription={(t) => {
-                addUserMessage(t);
-                sendChatMessage(t);
-              }}
-            />
-            {inputValue.trim() && (
-              <button
-                type="submit"
-                className="ml-2 text-blue-600 font-bold text-sm uppercase"
-              >
-                Send
-              </button>
-            )}
-          </form>
+          <div className="flex-1 space-y-2">
+            <form
+              onSubmit={handleSubmit}
+              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 flex items-center shadow-inner"
+            >
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                placeholder="Ask for a summary, plan, or paid research..."
+                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white"
+              />
+              <VoiceButton
+                size="sm"
+                variant="embedded"
+                onTranscription={(t) => {
+                  submitPrompt(t);
+                }}
+              />
+              {inputValue.trim() && (
+                <button
+                  type="submit"
+                  className="ml-2 text-blue-600 font-bold text-sm uppercase"
+                >
+                  Send
+                </button>
+              )}
+            </form>
+            <p className="px-1 text-[11px] text-gray-500 dark:text-gray-400">
+              {address
+                ? "Paid research uses your connected wallet for Arc USDC micropayments when required."
+                : "Connect a wallet to unlock paid Arc research. Free analysis still works without payment."}
+            </p>
+          </div>
         </div>
       </motion.div>
       )}

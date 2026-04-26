@@ -733,6 +733,22 @@ async function geminiSynthesise<T>(
     userPrompt: string,
     fallback: T,
 ): Promise<T> {
+    const parseStructuredJson = (content: string): T => {
+        const trimmed = content.trim();
+        const fencedMatch = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
+        const candidate = fencedMatch?.[1]?.trim()
+            || (() => {
+                const startBrace = trimmed.indexOf('{');
+                const endBrace = trimmed.lastIndexOf('}');
+                if (startBrace !== -1 && endBrace !== -1 && endBrace > startBrace) {
+                    return trimmed.slice(startBrace, endBrace + 1).trim();
+                }
+                return trimmed;
+            })();
+
+        return JSON.parse(candidate) as T;
+    };
+
     try {
         const result = await generateChatCompletion({
             messages: [
@@ -743,7 +759,7 @@ async function geminiSynthesise<T>(
             temperature: 0.2,
             maxTokens: 600,
         }, 'gemini');
-        return JSON.parse(result.content) as T;
+        return parseStructuredJson(result.content);
     } catch (err) {
         console.warn('[x402-gateway] Gemini synthesis failed, using fallback:', (err as Error).message);
         return fallback;
