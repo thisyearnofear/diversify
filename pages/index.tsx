@@ -125,7 +125,7 @@ export default function DiversiFiPage() {
   // One-time mode toggle discoverability tip — shown only on first visit
   const [showModeTip, setShowModeTip] = useState(() => {
     if (typeof window === 'undefined') return false;
-    return !localStorage.getItem('seenModeTip');
+    return !localStorage.getItem('seenModeTip') && !!localStorage.getItem('inlineOnboardingDismissed');
   });
   const dismissModeTip = () => {
     setShowModeTip(false);

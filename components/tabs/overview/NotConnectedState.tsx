@@ -59,7 +59,7 @@ export function NotConnectedState({
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-2xl">🛡️</span>
                 <h3 className="text-lg font-black text-emerald-900 dark:text-emerald-100">
-                  Protect Your Savings from Inflation
+                  Protect Your Savings
                 </h3>
               </div>
               <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
@@ -108,7 +108,7 @@ export function NotConnectedState({
           <div className="space-y-2">
             <WalletButton variant="primary" className="w-full" />
             <p className="text-center text-xs text-emerald-700 dark:text-emerald-300">
-              Start with your own wallet or explore in demo mode first.
+              Connect a wallet to personalize your protection, or try demo mode first.
             </p>
           </div>
         </div>
@@ -119,22 +119,23 @@ export function NotConnectedState({
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-black text-gray-900 dark:text-white">
-              🎮 Explore Demo Mode
+              🎮 Try Demo Mode
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              See how protection works with sample data — no wallet needed
+              Explore the protection flow with sample data — no wallet needed
             </p>
           </div>
           <button
             onClick={onEnableDemo}
             className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
           >
-            Try Demo
+            Open Demo
           </button>
         </div>
       </Card>
 
       {/* How it works */}
+      {!showOnboarding && (
       <Card padding="p-4">
         <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest mb-3">
           Your First Three Steps
@@ -157,6 +158,7 @@ export function NotConnectedState({
           ))}
         </div>
       </Card>
+      )}
     </div>
   );
 }
