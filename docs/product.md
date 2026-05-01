@@ -2,7 +2,7 @@
 
 ## Core Story
 
-DiversiFi is a **savings protection app** for people in volatile economies. It protects purchasing power from inflation and currency devaluation through guided stablecoin diversification using advanced cross-chain orchestration.
+DiversiFi is a **savings protection app** for people in volatile economies. For the Arc submission, the narrow claim is simpler: the advisor buys fresh evidence before recommending any allocation change.
 
 **What it is**: A calm, simple savings protection experience.
 **What it is not**: A trading terminal, DeFi control panel, or yield farming dashboard.
@@ -20,6 +20,7 @@ DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Paymen
 - Each premium purchase triggers a real USDC micro-transaction on Arc, returned as a tx hash.
 - Evidence is scored for freshness, reputation, and source agreement before a recommendation is made.
 - The payment is part of the decision loop, not a separate product surface.
+- Judge-facing observability is backed by Arc transfer evidence, so payment counts and usage telemetry stay coherent after deploys.
 
 ### What Was Shipped
 
@@ -48,6 +49,18 @@ DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Paymen
 3. **User deposits stablecoins** → Agent diversifies per plan
 4. **User monitors** → Real-time receipts, allocations, P&L
 5. **User withdraws anytime** → Fees settled at withdrawal
+
+## Primary Persona
+
+- A stablecoin saver who wants to protect purchasing power but does not want to manually monitor macro data, risk signals, and yield opportunities.
+- They want one practical answer: hold, rebalance, or de-risk.
+- They value attached proof more than a verbose AI explanation.
+
+## Validation Status
+
+- **What is validated now:** the payment loop, settlement proof, source pricing, and end-to-end advisor flow all work live on Arc.
+- **What the current UX optimizes for:** a calm research-to-recommendation flow rather than power-user trading behavior.
+- **What remains after the hackathon:** broader user interviews and retention testing; the current submission proves economic and technical viability first.
 
 ## Financial Strategies (Protection Plans)
 

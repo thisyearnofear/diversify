@@ -42,8 +42,12 @@ Check `arcSettlement.agentUSDCBalance` is decreasing and
 
 Also confirm:
 - `transactionFrequency.evidenceSource = arc_usdc_transfer_logs`
+- `transactionFrequency.successRate > 0`
+- `transactionFrequency.topSources` is populated
+- `transactionFrequency.recentSpending` is populated
 - `arcSettlement.settledTransferCount` matches the count you can justify on Arc Explorer
 - `arcSettlement.recentTransfers[]` contains recent tx hashes and explorer links
+- `transactionFrequency.observabilityMode` is either `runtime_analytics` or `chain_derived_fallback`, never an empty analytics surface
 
 Direct proof: https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8
 
@@ -77,7 +81,20 @@ Record these in order (server must be running throughout):
 4. **Gateway response** — show `_billing.txHashes[]` and `_billing.explorer[]` with real tx hashes
 5. **Margin explanation** — why repeated research at $0.004/request fails under traditional gas
 
-## 6. Submission Form Fields
+## 6. Narrative Tightening for the Form and Demo
+
+Use this framing consistently:
+
+- **What it is:** an AI advisor that buys premium evidence before making allocation recommendations
+- **What it is not:** a generic wealth app, chatbot, or pay-per-API wrapper
+- **Who it is for:** users who want evidence-backed guidance without manually assembling macro, yield, and risk research
+- **Why Arc matters:** the research cost is smaller than traditional gas, so the payment loop is economically viable
+
+When asked about observability polish, say:
+
+> Early on, settled-payment counts were chain-derived while some dashboard analytics were process-memory only, so deploys could reset success metrics. The live metrics endpoint now derives judge-facing observability from the same Arc evidence as the payment count, which is why success rate, top sources, and recent spending remain populated after restarts.
+
+## 7. Submission Form Fields
 
 ### Track
 Primary: **🤖 Agent-to-Agent Payment Loop** (AI advisor pays for evidence autonomously)
@@ -96,7 +113,7 @@ Cover:
 ### Google Prize Track
 Explicitly state: **Gemini Flash** powers all three premium research sources and the advisor conversation. Each paid research request calls `generateChatCompletion` with Gemini as primary provider to synthesise live multi-source data into structured portfolio intelligence.
 
-## 7. Repository Artifacts
+## 8. Repository Artifacts
 
 - `README.md` — reflects Arc submission mode ✅
 - `docs/architecture.md` — Arc settlement + Gemini synthesis flows ✅

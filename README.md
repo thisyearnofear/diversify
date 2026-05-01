@@ -1,6 +1,6 @@
 # DiversiFi — Arc Nano Payments Submission
 
-DiversiFi is an AI advisor for wealth protection that **pays for live evidence on-chain before recommending any portfolio action**.
+DiversiFi is an AI advisor that **buys premium evidence on-chain before recommending any allocation decision**.
 
 For the Arc hackathon, it runs as a proof-of-research rebalancer: the advisor negotiates access with an x402-style `402 Payment Required` challenge, accepts a real Arc USDC payment proof from the buyer, then settles its own research spend on Arc before returning the response. Gemini synthesises the paid evidence into a confidence-scored recommendation.
 
@@ -16,7 +16,14 @@ For the Arc hackathon, it runs as a proof-of-research rebalancer: the advisor ne
 | Per-action pricing ≤ $0.01 | `allSourcesAtOrBelowOneCent: true` — [metrics endpoint](https://api.diversifi.famile.xyz/api/agent/x402-metrics) |
 | 50+ on-chain transactions | `totalSettledPayments` is derived from Arc USDC `Transfer` logs for the live agent wallet |
 | Real Arc settlement | Every paid request fires `USDC.transfer` — tx hash in `_billing.txHashes` |
+| Observable payment loop | `successRate`, `topSources`, and `recentSpending` fall back to chain-derived evidence if runtime analytics reset after deploy |
 | Margin explanation | $0.004/request vs $2–5 ETH gas = 500–1,250× — impossible on L1 |
+
+## User and Use Case
+
+- **Primary user:** a saver who wants evidence-backed guidance before moving stablecoin allocations.
+- **Core workflow:** ask whether to hold or rebalance, let the advisor buy current macro/risk/yield evidence, then review a recommendation with attached payment proof.
+- **Hackathon claim:** payment is part of the decision loop, not a separate checkout flow or abstract API billing layer.
 
 **Agent wallet (Arc testnet):**  
 `https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8`

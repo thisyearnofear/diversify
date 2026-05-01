@@ -103,6 +103,7 @@ risk_assessment     → WorldBank + CoinGecko + FRED  → Gemini Flash → JSON
 - Per-action source prices are capped at `<= 0.01 USDC` in registry.
 - Free-tier sources can be fetched without payment until free limit is exhausted.
 - `/api/agent/x402-metrics` derives `totalSettledPayments` from Arc USDC `Transfer` logs for the agent wallet; app analytics remain supplementary.
+- If runtime analytics reset after a deploy, `/api/agent/x402-metrics` now derives `successRate`, `topSources`, and `recentSpending` from the same chain evidence and exposes `observabilityMode: chain_derived_fallback`.
 - Real on-chain settlement requires `VAULT_PRIVATE_KEY` and a funded Arc testnet wallet.
 
 ## Demo Evidence Surface
@@ -114,6 +115,8 @@ Use `/api/agent/x402-metrics` as the canonical demo evidence endpoint for:
 - total settled USDC from the live agent wallet
 - success rate
 - top paid sources
+- recent spending cadence
+- explicit observability mode
 - maximum configured per-action price
 
 This endpoint should be shown in the demo recording alongside Arc Explorer transaction proof.

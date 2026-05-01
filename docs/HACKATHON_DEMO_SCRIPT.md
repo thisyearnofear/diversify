@@ -1,9 +1,9 @@
 # Arc Nano Payments Hackathon — Demo Script
-## DiversiFi: AI Wealth Protection with Real On-Chain Evidence
+## DiversiFi: AI Advisor with Real On-Chain Evidence
 
 **Tracks:** 🤖 Agent-to-Agent Payment Loop · 🪙 Per-API Monetization Engine
 **Duration:** 3–4 minutes
-**Tagline:** "Your savings advisor buys fresh evidence on-chain before it moves your money."
+**Tagline:** "The advisor buys fresh evidence on-chain before it recommends any allocation change."
 
 ---
 
@@ -11,7 +11,7 @@
 
 > "Most AI advisors guess. DiversiFi pays for proof.
 >
-> Before recommending any portfolio action, our advisor buys live macro,
+> Before recommending any allocation action, our advisor buys live macro,
 > yield, and risk data from multiple independent sources — each purchase
 > settled as a real USDC micro-transaction on Arc, verified on-chain,
 > before the recommendation is made.
@@ -35,6 +35,8 @@ or the production IP equivalent.
 **Point out:**
 - `transactionFrequency.totalSettledPayments` — count derived from Arc USDC `Transfer` logs
 - `transactionFrequency.evidenceSource: arc_usdc_transfer_logs`
+- `transactionFrequency.successRate` — now derived from durable evidence when runtime analytics reset
+- `transactionFrequency.topSources` and `recentSpending` — judge-facing observability no longer goes blank after deploys
 - `pricing.allSourcesAtOrBelowOneCent: true` — every source ≤ $0.01
 - `pricing.maxPerActionPriceUSDC: 0.01`
 - `arcSettlement.agentAddress` — the live EOA wallet
@@ -44,7 +46,8 @@ or the production IP equivalent.
 **Say:**
 > "This is not simulated. Every number here comes from real requests that
 > settled real USDC on Arc. The count is derived from token transfer logs,
-> not from a server-side counter."
+> not from a server-side counter. Even the judge-facing observability now
+> falls back to the same chain evidence if app-memory analytics reset."
 
 If a judge asks why the count moved quickly during the final volume run, say:
 > "For the final proof run we used the funded agent EOA as both buyer and seller
@@ -145,6 +148,12 @@ Open the app (production URL). Show the Advisor tab.
 > evidence from five data sources, Gemini synthesised the analysis,
 > and the payments settled on Arc — all before this response appeared."
 
+**Frame the user clearly:**
+> "This is for a saver who does not want to become a trader. They want a
+> narrow decision answered well: should I hold, rebalance, or reduce risk?
+> The value is that the advisor pays for fresh evidence before answering,
+> instead of pretending stale context is enough."
+
 ---
 
 ### 6 — Margin explanation: why this only works on Arc (30 seconds)
@@ -191,7 +200,7 @@ coingecko_analytics:    $0.001 per request
 | Criterion | Our answer |
 |-----------|-----------|
 | **Application of Technology** | Arc settlement in every paid request; Gemini synthesises all premium data; x402-style 402 negotiation gates premium access; Arc tx hashes and transfer logs provide proof |
-| **Business Value** | Savings protection for emerging market users who face >10% annual inflation — a real underserved market |
+| **Business Value** | Evidence-backed savings decisions for users who want guidance without becoming active traders; payment cost stays below the value of the research |
 | **Originality** | AI agent that *purchases* intelligence before advising — not just chat, but an economically grounded decision loop |
 | **Presentation** | Live on-chain proof visible before any UI demo; tx hashes in every API response |
 
