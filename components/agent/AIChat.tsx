@@ -11,6 +11,8 @@ import { useProactiveAgent } from "../../hooks/use-proactive-agent";
 import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";
+import SoSoIntelligenceCard from "./SoSoIntelligenceCard";
+import SoSoActionModal, { type SoSoTradeProposal } from "./SoSoActionModal";
 import dynamic from "next/dynamic";
 import SimpleMarkdown from "../shared/SimpleMarkdown";
 
@@ -373,6 +375,8 @@ export default function AIChat() {
   const [showClaimFlow, setShowClaimFlow] = useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
   const [showSettings, setShowSettings] = useState(false);
+  const [soSoModalOpen, setSoSoModalOpen] = useState(false);
+  const [soSoTradeProposal, setSoSoTradeProposal] = useState<SoSoTradeProposal | null>(null);
 
   const submitPrompt = (prompt: string) => {
     if (!prompt.trim() || isChatting) return;
@@ -710,6 +714,29 @@ export default function AIChat() {
                       {msg.action?.type === 'hold' && (
                         <HoldActionWidget action={msg.action} />
                       )}
+
+                      {/* SoSoValue Intelligence Card */}
+                      {msg.type === 'sosovalue_intelligence' && msg.sosovalueData && (
+                        <div className="mt-3">
+                          <SoSoIntelligenceCard
+                            data={msg.sosovalueData}
+                            onProposeTrade={(newsItem) => {
+                              const isBullish = newsItem.sentiment >= 55;
+                              const proposal: SoSoTradeProposal = {
+                                newsItem,
+                                suggestedAction: isBullish ? 'BUY' : 'SELL',
+                                confidence: Math.round(newsItem.sentiment),
+                                reasoning: `Based on ${newsItem.sentiment}/100 sentiment score for "${newsItem.title}"`,
+                              };
+                              setSoSoTradeProposal(proposal);
+                              setSoSoModalOpen(true);
+                            }}
+                            onAnalyze={(newsItem) => {
+                              addUserMessage(`Analyze this market intelligence: "${newsItem.title}" - sentiment ${newsItem.sentiment}/100`);
+                            }}
+                          />
+                        </div>
+                      )}
                       
                       <div className={`flex items-center gap-2 mt-1.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                         <span className={`text-[10px] opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>
@@ -801,6 +828,20 @@ export default function AIChat() {
           onClose={() => setShowSettings(false)}
           userGeminiKey={userGeminiKey}
           onSaveKey={(k) => { saveGeminiKey(k); setShowSettings(false); }}
+        />
+      )}
+      {soSoModalOpen && (
+        <SoSoActionModal
+          isOpen={soSoModalOpen}
+          onClose={() => { setSoSoModalOpen(false); setSoSoTradeProposal(null); }}
+          proposal={soSoTradeProposal}
+          onConfirm={(proposal) => {
+            // Log the trade proposal for now
+            console.log('Trade proposal confirmed:', proposal);
+            addUserMessage(`Trade proposal confirmed: ${proposal.suggestedAction} based on "${proposal.newsItem.title}"`);
+            setSoSoModalOpen(false);
+            setSoSoTradeProposal(null);
+          }}
         />
       )}
     </div>

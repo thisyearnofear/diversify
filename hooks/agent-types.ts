@@ -217,12 +217,44 @@ export interface OnrampRecommendation {
   alternatives?: string[];
 }
 
+export interface SoSoIntelligenceContent {
+  source: 'sosovalue_intelligence';
+  data: {
+    news: Array<{
+      id: string;
+      title: string;
+      summary: string;
+      sentiment: number;
+      tags: string[];
+      source: string;
+      publishedAt: string;
+      url?: string;
+    }>;
+    market: {
+      marketSentiment: number;
+      btcDominance: number;
+      totalMcap: number;
+      fearGreedIndex?: number;
+      topCoins?: Array<{ symbol: string; change24h: number }>;
+    };
+    ssiIndex?: {
+      name: string;
+      value: number;
+      change24h: number;
+      momentum: 'STRONG_UP' | 'UP' | 'NEUTRAL' | 'DOWN' | 'STRONG_DOWN';
+    };
+    timestamp: string;
+    tier: 'free' | 'premium';
+  };
+  x402Cost?: string;
+}
+
 export interface AIMessage {
   id?: string;
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: Date;
-  type?: "text" | "recommendation" | "insight";
+  type?: "text" | "recommendation" | "insight" | "sosovalue_intelligence";
   provider?: "gemini" | "venice" | "modal" | "openai";
   x402Receipt?: {
     txHash: string;
@@ -234,8 +266,9 @@ export interface AIMessage {
     tags: string[];
     actionItems: string[];
   };
+  sosovalueData?: SoSoIntelligenceContent['data'];
   action?: {
-    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold";
+    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold" | "propose_sosovalue_trade";
     tab?: string;
     delay?: number;
     amount?: string;
@@ -244,6 +277,7 @@ export interface AIMessage {
     fromToken?: string;
     message?: string;
     reason?: string;
+    newsItem?: SoSoIntelligenceContent['data']['news'][0];
   };
 }
 
