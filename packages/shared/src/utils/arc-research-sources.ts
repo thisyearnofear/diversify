@@ -204,6 +204,20 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     freshnessWindowMinutes: 15,
     description: 'Live inflation proxy for immediate portfolio checks',
   },
+  sosovalue_intelligence: {
+    id: 'sosovalue_intelligence',
+    label: 'SoSoValue Intelligence',
+    aliases: ['sosovalue', 'sosovalue-news', 'market-intelligence', 'flash-news'],
+    category: 'basic',
+    price: '0.001',
+    freeLimit: 10,
+    dataType: 'sentiment',
+    fetchKey: 'sosovalue_intelligence',
+    priority: 2,
+    reputation: 0.88,
+    freshnessWindowMinutes: 10,
+    description: 'Flash news, sentiment analysis, and SSI index signals from SoSoValue',
+  },
 } as const;
 
 export type ArcResearchSourceId = keyof typeof ARC_RESEARCH_SOURCE_REGISTRY;
