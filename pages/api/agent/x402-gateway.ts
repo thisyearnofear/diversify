@@ -1,6 +1,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
+import { getSoSoValueIntelligence } from '../../../lib/sosovalue';
 import {
     ARC_DATA_HUB_CONFIG,
     buildArcResearchBundle,
@@ -558,7 +559,7 @@ async function getActualPremiumData(source: string, isFreeTier: boolean = false)
         'risk_assessment': await getRiskAssessment(isFreeTier),
         'agent_execution': await getMacroAnalysis(isFreeTier),
         'real_time_inflation': await getWorldBankData(isFreeTier),
-        'sosovalue_intelligence': await getSoSoValueData(isFreeTier),
+        'sosovalue_intelligence': await getSoSoValueIntelligence(!isFreeTier),
     };
 
     return data[resolvedSource] || {
@@ -835,160 +836,4 @@ Respond with JSON: { risk_score (1-10), risk_level, primary_risks: [], mitigatio
     );
 }
 
-// --- SoSoValue Intelligence ---
-// SoSoValue API: https://sosovalue-1.gitbook.io/sosovalue-api-doc
-// Provides: Flash news, sentiment analysis, SSI protocol indices
 
-const SOSOVALUE_BASE_URL = 'https://open-api.sosovalue.com';
-
-interface SoSoValueNewsItem {
-  id: string;
-  title: string;
-  content: string;
-  sentiment: number; // 0-100
-  sentiment_label: 'bullish' | 'bearish' | 'neutral';
-  tags: string[];
-  published_at: string;
-  source: string;
-}
-
-interface SoSoValueIndex {
-  symbol: string;
-  name: string;
-  value: number;
-  change_24h: number;
-  trend: 'up' | 'down' | 'neutral';
-}
-
-async function getSoSoValueData(isFreeTier: boolean): Promise<Record<string, unknown>> {
-  const apiKey = process.env.SOSOVALUE_API_KEY;
-  
-  if (!apiKey) {
-    return {
-      status: 'error',
-      message: 'SoSoValue API key not configured',
-      tier: 'free',
-      fallback: true
-    };
-  }
-
-  const headers = {
-    'Authorization': `Bearer ${apiKey}`,
-    'Content-Type': 'application/json'
-  };
-
-  try {
-    // Fetch flash news and market sentiment in parallel
-    const [newsResponse, sentimentResponse] = await Promise.allSettled([
-      fetch(`${SOSOVALUE_BASE_URL}/v1/news/flash?limit=5`, { headers }),
-      fetch(`${SOSOVALUE_BASE_URL}/v1/market/sentiment`, { headers })
-    ]);
-
-    const news: SoSoValueNewsItem[] = [];
-    const marketSentiment = {
-      fear_greed_index: 50,
-      bullish_ratio: 0.5,
-      source: 'SoSoValue'
-    };
-
-    // Process news if available
-    if (newsResponse.status === 'fulfilled' && newsResponse.value.ok) {
-      try {
-        const newsData = await newsResponse.value.json();
-        if (Array.isArray(newsData)) {
-          news.push(...newsData.slice(0, 5));
-        }
-      } catch (e) {
-        console.warn('[SoSoValue] Failed to parse news response');
-      }
-    }
-
-    // Process sentiment if available
-    if (sentimentResponse.status === 'fulfilled' && sentimentResponse.value.ok) {
-      try {
-        const sentimentData = await sentimentResponse.value.json();
-        Object.assign(marketSentiment, sentimentData);
-      } catch (e) {
-        console.warn('[SoSoValue] Failed to parse sentiment response');
-      }
-    }
-
-    // If no real data, provide demo data for development
-    if (news.length === 0) {
-      news.push({
-        id: 'demo-1',
-        title: 'Institutional inflows into ETH ETFs reach record levels',
-        content: 'Spot Ethereum ETFs have seen unprecedented daily inflows, signaling growing institutional adoption.',
-        sentiment: 78,
-        sentiment_label: 'bullish',
-        tags: ['ethereum', 'etf', 'institutional'],
-        published_at: new Date().toISOString(),
-        source: 'SoSoValue Demo'
-      });
-      news.push({
-        id: 'demo-2',
-        title: 'DeFi TVL rebounds as yields improve across major protocols',
-        content: 'Total value locked in DeFi protocols has increased 15% week-over-week.',
-        sentiment: 72,
-        sentiment_label: 'bullish',
-        tags: ['defi', 'yields', 'tvl'],
-        published_at: new Date().toISOString(),
-        source: 'SoSoValue Demo'
-      });
-    }
-
-    const baseData = {
-      flash_news: news,
-      market_sentiment: marketSentiment,
-      source: 'SoSoValue Intelligence',
-      tier: isFreeTier ? 'free' : 'premium',
-      fetched_at: new Date().toISOString()
-    };
-
-    // Premium tier adds SSI index and detailed analysis
-    if (!isFreeTier) {
-      try {
-        const ssiResponse = await fetch(`${SOSOVALUE_BASE_URL}/v1/index/ssi/protocol`, { headers });
-        if (ssiResponse.ok) {
-          const ssiData = await ssiResponse.json();
-          return {
-            ...baseData,
-            ssi_index: ssiData,
-            premium_features: {
-              ssi_analysis: 'Full SSI Protocol integration enabled',
-              execution_signals: 'SoDEX-ready signal generation'
-            }
-          };
-        }
-      } catch (e) {
-        console.warn('[SoSoValue] SSI index unavailable');
-      }
-
-      // Fallback premium features without real SSI data
-      return {
-        ...baseData,
-        ssi_index: {
-          protocol: 'SSI',
-          total_value: 125_000_000,
-          change_24h: 8.5,
-          top_components: ['BTC', 'ETH', 'SOL'],
-          trend: 'bullish'
-        } as SoSoValueIndex,
-        premium_features: {
-          ssi_analysis: 'SSI Protocol tracking enabled',
-          execution_signals: 'Signal generation ready for SoDEX'
-        }
-      };
-    }
-
-    return baseData;
-  } catch (error) {
-    console.error('[SoSoValue] API error:', error);
-    return {
-      status: 'error',
-      message: 'SoSoValue service temporarily unavailable',
-      tier: 'free',
-      fallback: true
-    };
-  }
-}

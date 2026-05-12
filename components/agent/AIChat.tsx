@@ -239,6 +239,11 @@ const STARTER_PROMPTS = [
     badge: "Free",
   },
   {
+    label: "Market intelligence",
+    prompt: "Show me the latest market news and sentiment signals from SoSoValue.",
+    badge: "SoSoValue",
+  },
+  {
     label: "Protection plan",
     prompt: "Create a practical protection plan for my savings using stablecoins, yield, and real-world assets.",
     badge: "Free",

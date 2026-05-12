@@ -16,6 +16,7 @@
 | `/api/agent/execute-swap` | POST | Execute swap via agent |
 | `/api/agent/x402-gateway` | GET | Payment challenge + paid evidence retrieval |
 | `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
+| `/api/agent/sosovalue` | GET | SoSoValue market intelligence (news, sentiment, SSI index); `?tier=premium` for SSI |
 
 ## AI Providers
 
@@ -42,6 +43,7 @@
 | **CoinGecko** | Exchange rates | 50k req/month |
 | **DeFiLlama** | TVL, yields | 100 req/day |
 | **GoodDollar** | UBI distribution | — |
+| **SoSoValue** | Flash news, market sentiment, SSI Protocol index | Free tier + API key for live data |
 
 ## Arc Research Payments
 

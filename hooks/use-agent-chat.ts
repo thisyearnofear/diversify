@@ -260,6 +260,27 @@ export function useAgentChat({
         thinkingStep: "Consulting Advisor...",
       });
 
+      // Inject SoSoValue intelligence card for market/news queries before advisor reply
+      const SOSOVALUE_TRIGGERS = /\b(news|market|sentiment|flash|sosovalue|ssi|signal|headline|crypto news|market intel)\b/i;
+      if (SOSOVALUE_TRIGGERS.test(content)) {
+        try {
+          updateChatState({ thinkingStep: "Fetching SoSoValue market intelligence..." });
+          const ssRes = await fetch(`${apiBase}/api/agent/sosovalue`);
+          if (ssRes.ok) {
+            const ssData = await ssRes.json();
+            addMessage({
+              role: 'assistant',
+              content: 'Here\'s the latest market intelligence from SoSoValue:',
+              timestamp: new Date(),
+              type: 'sosovalue_intelligence',
+              sosovalueData: ssData,
+            });
+          }
+        } catch {
+          // Non-blocking — advisor still runs below
+        }
+      }
+
       // Attempt x402 payment for premium research before calling the advisor.
       // If the user's wallet is connected and on Arc, this fires a real USDC
       // micro-tx and returns the proof headers. On free tier or if the wallet

@@ -28,11 +28,15 @@ User -> /api/agent/advisor
 |-----------|----------------|
 | `pages/api/agent/_advisor-core.ts` | Decides required evidence and produces recommendations |
 | `pages/api/agent/x402-gateway.ts` | Payment challenge, nonce validation, premium data access, billing |
+| `pages/api/agent/sosovalue.ts` | SoSoValue market intelligence endpoint (news, sentiment, SSI index) |
+| `lib/sosovalue.ts` | Shared SoSoValue API client — single source of truth used by gateway and sosovalue route |
 | `packages/shared/src/utils/arc-research-sources.ts` | Canonical source pricing/reputation/freshness registry |
 | `packages/shared/src/utils/x402-analytics.ts` | Payment/frequency analytics aggregation |
 | `pages/api/agent/x402-metrics.ts` | Exposes transaction-frequency and pricing guardrail metrics |
 | `packages/shared/src/services/ai/ai-service.ts` | Multi-provider AI with Gemini-first routing and automatic failover |
 | `components/agent/AIChat.tsx` | Chat UI — shows provider badge per message, ⚙️ settings for user Gemini key |
+| `components/agent/SoSoIntelligenceCard.tsx` | Inline card rendering SoSoValue news, sentiment, and SSI index in chat |
+| `components/agent/SoSoActionModal.tsx` | Trade proposal confirmation modal triggered from SoSoValue news items |
 
 ## AI Provider Routing
 
