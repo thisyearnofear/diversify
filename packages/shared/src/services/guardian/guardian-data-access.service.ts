@@ -48,6 +48,13 @@ export class GuardianDataAccessService {
     return this.fetchSourceGroup(yieldSources.slice(0, 1), steps, sources, 'Retrieved yield data from', true);
   }
 
+import { zeroGStorageService } from '../storage-service';
+import type { AgentWalletProvider, Payment, X402Challenge } from '../arc-agent';
+import type { CircleService } from '../circle-service';
+import type { DataSource } from '../arc-agent';
+
+// ... (keep class signature)
+
   private async fetchSourceGroup(
     sourcesToFetch: DataSource[],
     steps: string[],
@@ -57,6 +64,7 @@ export class GuardianDataAccessService {
   ) {
     const data: any = {};
     const hashes: Record<string, string> = {};
+    const storageCids: Record<string, string> = {}; // New: Track CIDs for evidence commitment
 
     for (const source of sourcesToFetch) {
       if (this.isCircuitOpen(source.name)) {
@@ -74,9 +82,24 @@ export class GuardianDataAccessService {
         });
 
         if (response && response.ok) {
-          data[source.name] = await response.json();
+          const rawData = await response.json();
+          data[source.name] = rawData;
           sources.push(source.name);
           steps.push(`✓ ${successPrefix} ${source.name}${source.x402Enabled ? ` for ${source.cost.amount} USDC` : ''}`);
+          
+          // Commitment: Upload evidence to 0G
+          try {
+            const storage = await zeroGStorageService.uploadEvidence(rawData, {
+              agent: this.deps.agentAddress,
+              source: source.name,
+              timestamp: Date.now()
+            });
+            storageCids[source.name] = storage.cid;
+            steps.push(`✓ Evidence committed to 0G Storage (CID: ${storage.cid.substring(0, 8)}...)`);
+          } catch (e) {
+            steps.push(`⚠ Evidence commitment to 0G failed`);
+          }
+
           if (response.headers.get('x-payment-proof')) {
             hashes[source.name] = response.headers.get('x-payment-proof')!;
           }
@@ -91,7 +114,7 @@ export class GuardianDataAccessService {
       }
     }
 
-    return { data, hashes };
+    return { data, hashes, storageCids };
   }
 
   private async fetchWithX402Payment(

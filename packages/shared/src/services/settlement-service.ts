@@ -1,19 +1,18 @@
 /**
- * Arc On-Chain Settlement
+ * Cross-Chain On-Chain Settlement Service
  *
- * Sends real USDC micro-payments on Arc testnet for each paid research request.
+ * Sends real USDC micro-payments on supported networks (0G, Arc, etc.) for each paid research request.
  * Uses the VAULT_PRIVATE_KEY EOA — no Circle entity secret required.
  *
  * Core Principles:
- * - ENHANCEMENT FIRST: Plugs into existing verifyCircleGatewayPayment path
- * - SINGLE RESPONSIBILITY: Only handles Arc EOA settlement, nothing else
- * - PERFORMANT: Non-blocking — fires tx and returns hash immediately, does not
- *   wait for confirmation so gateway latency is unaffected
- * - DRY: ARC_RPC and USDC address come from shared config, never duplicated
+ * - ENHANCEMENT FIRST: Generalized from Arc-only to multi-chain (0G ready)
+ * - SINGLE RESPONSIBILITY: Only handles EOA settlement across supported chains
+ * - PERFORMANT: Non-blocking — fires tx and returns hash immediately
+ * - DRY: RPCs and USDC addresses come from shared config
  */
 
 import { ethers } from 'ethers';
-import { ARC_DATA_HUB_CONFIG, ARC_TOKENS } from '../config';
+import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS } from '../config';
 
 // Minimal ERC-20 ABI — transfer only
 const ERC20_TRANSFER_ABI = [
@@ -24,62 +23,86 @@ const TRANSFER_EVENT_ABI = [
     'event Transfer(address indexed from, address indexed to, uint256 value)',
 ] as const;
 
-const ARC_RPC   = process.env.ARC_RPC_URL            || 'https://rpc.testnet.arc.network';
-const USDC_ADDR = ARC_TOKENS.USDC;                    // 0x3600...0000
-const HUB_ADDR  = process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS;
-const ARC_EXPLORER_BASE = 'https://testnet.arcscan.app';
-const SETTLEMENT_CACHE_TTL_MS = Number(process.env.ARC_SETTLEMENT_CACHE_TTL_MS || 30_000);
-const SETTLEMENT_LOG_CHUNK_SIZE = Number(process.env.ARC_SETTLEMENT_LOG_CHUNK_SIZE || 20_000);
-const SETTLEMENT_START_BLOCK = Number(process.env.ARC_SETTLEMENT_START_BLOCK || 0);
-const SETTLEMENT_RECENT_LIMIT = Number(process.env.ARC_SETTLEMENT_RECENT_LIMIT || 10);
-const MIN_LOG_CHUNK_SIZE = 500;
 const transferInterface = new ethers.utils.Interface(TRANSFER_EVENT_ABI);
 const transferTopic = transferInterface.getEventTopic('Transfer');
 
-// Lazily initialised — one provider + signer for the lifetime of the process
-let _provider: ethers.providers.JsonRpcProvider | null = null;
-let _signer:   ethers.Wallet | null = null;
-let _usdc:     ethers.Contract | null = null;
-let _ready:    boolean | null = null; // null = unchecked, true/false = result
-let _settlementStatsCache: {
-    key: string;
-    updatedAt: number;
-    latestBlock: number;
-    stats: ArcSettlementStats;
-} | null = null;
+export type SettlementNetwork = 'ARC' | 'ZERO_G';
 
-function getProvider(): ethers.providers.JsonRpcProvider {
-    if (!_provider) {
-        _provider = new ethers.providers.JsonRpcProvider(ARC_RPC);
-    }
-
-    return _provider;
+export interface SettlementConfig {
+    rpcUrl: string;
+    usdcAddress: string;
+    recipientAddress: string;
+    explorerBase: string;
+    chainId: number;
+    name: string;
 }
 
-function getContracts(): { provider: ethers.providers.JsonRpcProvider; signer: ethers.Wallet; usdc: ethers.Contract } | null {
-    if (_ready === false) return null;
+const NETWORK_CONFIGS: Record<SettlementNetwork, SettlementConfig> = {
+    ARC: {
+        rpcUrl: process.env.ARC_RPC_URL || NETWORKS.ARC_TESTNET.rpcUrl,
+        usdcAddress: ARC_TOKENS.USDC,
+        recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+        explorerBase: NETWORKS.ARC_TESTNET.explorerUrl,
+        chainId: NETWORKS.ARC_TESTNET.chainId,
+        name: 'Arc Testnet',
+    },
+    ZERO_G: {
+        rpcUrl: process.env.ZERO_G_RPC_URL || NETWORKS.ZERO_G_TESTNET.rpcUrl,
+        usdcAddress: ZERO_G_DATA_HUB_CONFIG.USDC_TESTNET,
+        recipientAddress: ZERO_G_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+        explorerBase: NETWORKS.ZERO_G_TESTNET.explorerUrl,
+        chainId: NETWORKS.ZERO_G_TESTNET.chainId,
+        name: '0G Galileo Testnet',
+    },
+};
 
+const SETTLEMENT_CACHE_TTL_MS = 30_000;
+const SETTLEMENT_LOG_CHUNK_SIZE = 20_000;
+const SETTLEMENT_START_BLOCK = 0;
+const SETTLEMENT_RECENT_LIMIT = 10;
+const MIN_LOG_CHUNK_SIZE = 500;
+
+// Lazily initialised providers and signers per network
+const _providers: Record<string, ethers.providers.JsonRpcProvider> = {};
+const _signers: Record<string, ethers.Wallet> = {};
+const _usdcContracts: Record<string, ethers.Contract> = {};
+const _settlementStatsCache: Record<string, {
+    updatedAt: number;
+    latestBlock: number;
+    stats: SettlementStats;
+}> = {};
+
+function getProvider(network: SettlementNetwork): ethers.providers.JsonRpcProvider {
+    if (!_providers[network]) {
+        _providers[network] = new ethers.providers.JsonRpcProvider(NETWORK_CONFIGS[network].rpcUrl);
+    }
+    return _providers[network];
+}
+
+function getContracts(network: SettlementNetwork): { provider: ethers.providers.JsonRpcProvider; signer: ethers.Wallet; usdc: ethers.Contract } | null {
     const key = process.env.VAULT_PRIVATE_KEY;
     if (!key) {
-        _ready = false;
-        console.warn('[ArcSettlement] VAULT_PRIVATE_KEY not set — on-chain settlement disabled');
+        console.warn(`[SettlementService] VAULT_PRIVATE_KEY not set — on-chain settlement disabled for ${network}`);
         return null;
     }
 
-    if (!_provider || !_signer || !_usdc) {
-        _provider = getProvider();
-        _signer   = new ethers.Wallet(key, _provider);
-        _usdc     = new ethers.Contract(USDC_ADDR, ERC20_TRANSFER_ABI, _signer);
+    if (!_usdcContracts[network]) {
+        const provider = getProvider(network);
+        const signer = new ethers.Wallet(key, provider);
+        const usdc = new ethers.Contract(NETWORK_CONFIGS[network].usdcAddress, ERC20_TRANSFER_ABI, signer);
+        _signers[network] = signer;
+        _usdcContracts[network] = usdc;
     }
 
-    return { provider: _provider, signer: _signer!, usdc: _usdc! };
+    return { provider: _providers[network], signer: _signers[network], usdc: _usdcContracts[network] };
 }
 
 export interface SettlementResult {
     txHash: string;
     amount: string;       // USDC, e.g. "0.001"
-    explorer: string;     // Arc testnet explorer link
+    explorer: string;     // Explorer link
     settled: true;
+    network: SettlementNetwork;
 }
 
 export interface SettlementSkipped {
@@ -87,7 +110,7 @@ export interface SettlementSkipped {
     reason: string;
 }
 
-export interface ArcSettlementTransfer {
+export interface SettlementTransfer {
     txHash: string;
     amountUSDC: string;
     blockNumber: number;
@@ -96,51 +119,53 @@ export interface ArcSettlementTransfer {
     explorer: string;
 }
 
-export interface ArcSettlementStats {
-    proofSource: 'arc_usdc_transfer_logs';
+export interface SettlementStats {
+    proofSource: string;
     agentAddress: string;
     recipientAddress: string;
     tokenAddress: string;
     transferCount: number;
     totalSettledUSDC: string;
     latestTransferBlock: number | null;
-    recentTransfers: ArcSettlementTransfer[];
+    recentTransfers: SettlementTransfer[];
     amountBreakdown: Record<string, number>;
+    network: SettlementNetwork;
 }
 
 function getTransferTopic(address: string): string {
     return ethers.utils.hexZeroPad(ethers.utils.getAddress(address), 32);
 }
 
-function createEmptySettlementStats(agentAddress: string, recipientAddress: string): ArcSettlementStats {
+function createEmptySettlementStats(network: SettlementNetwork, agentAddress: string, recipientAddress: string): SettlementStats {
+    const config = NETWORK_CONFIGS[network];
     return {
-        proofSource: 'arc_usdc_transfer_logs',
+        proofSource: `${network.toLowerCase()}_usdc_transfer_logs`,
         agentAddress,
         recipientAddress,
-        tokenAddress: USDC_ADDR,
+        tokenAddress: config.usdcAddress,
         transferCount: 0,
         totalSettledUSDC: '0.000000',
         latestTransferBlock: null,
         recentTransfers: [],
         amountBreakdown: {},
+        network,
     };
 }
 
-function sortRecentTransfers(transfers: ArcSettlementTransfer[]): ArcSettlementTransfer[] {
+function sortRecentTransfers(transfers: SettlementTransfer[]): SettlementTransfer[] {
     return [...transfers].sort((left, right) => {
         if (left.blockNumber !== right.blockNumber) {
             return right.blockNumber - left.blockNumber;
         }
-
         return right.logIndex - left.logIndex;
     });
 }
 
 function mergeSettlementStats(
-    base: ArcSettlementStats,
-    delta: ArcSettlementStats,
+    base: SettlementStats,
+    delta: SettlementStats,
     maxRecentTransfers: number,
-): ArcSettlementStats {
+): SettlementStats {
     const mergedRecent = sortRecentTransfers([
         ...base.recentTransfers,
         ...delta.recentTransfers,
@@ -165,6 +190,7 @@ function mergeSettlementStats(
 }
 
 async function fetchTransferLogs(
+    network: SettlementNetwork,
     provider: ethers.providers.JsonRpcProvider,
     fromBlock: number,
     toBlock: number,
@@ -172,13 +198,14 @@ async function fetchTransferLogs(
     chunkSize: number = SETTLEMENT_LOG_CHUNK_SIZE,
 ): Promise<ethers.providers.Log[]> {
     const allLogs: ethers.providers.Log[] = [];
+    const usdcAddress = NETWORK_CONFIGS[network].usdcAddress;
 
     for (let start = fromBlock; start <= toBlock;) {
         const end = Math.min(start + chunkSize - 1, toBlock);
 
         try {
             const logs = await provider.getLogs({
-                address: USDC_ADDR,
+                address: usdcAddress,
                 fromBlock: start,
                 toBlock: end,
                 topics,
@@ -191,7 +218,7 @@ async function fetchTransferLogs(
             }
 
             const smallerChunk = Math.max(MIN_LOG_CHUNK_SIZE, Math.floor(chunkSize / 2));
-            const logs = await fetchTransferLogs(provider, start, end, topics, smallerChunk);
+            const logs = await fetchTransferLogs(network, provider, start, end, topics, smallerChunk);
             allLogs.push(...logs);
             start = end + 1;
         }
@@ -201,18 +228,21 @@ async function fetchTransferLogs(
 }
 
 async function scanSettlementRange(
+    network: SettlementNetwork,
     provider: ethers.providers.JsonRpcProvider,
     agentAddress: string,
     recipientAddress: string,
     fromBlock: number,
     toBlock: number,
     maxRecentTransfers: number,
-): Promise<ArcSettlementStats> {
+): Promise<SettlementStats> {
     if (fromBlock > toBlock) {
-        return createEmptySettlementStats(agentAddress, recipientAddress);
+        return createEmptySettlementStats(network, agentAddress, recipientAddress);
     }
 
+    const config = NETWORK_CONFIGS[network];
     const logs = await fetchTransferLogs(
+        network,
         provider,
         fromBlock,
         toBlock,
@@ -231,7 +261,7 @@ async function scanSettlementRange(
             blockNumber: log.blockNumber,
             blockTimestamp: null,
             logIndex: log.logIndex,
-            explorer: `${ARC_EXPLORER_BASE}/tx/${log.transactionHash}`,
+            explorer: `${config.explorerBase}/tx/${log.transactionHash}`,
         };
     });
 
@@ -250,25 +280,25 @@ async function scanSettlementRange(
     }));
 
     return {
-        proofSource: 'arc_usdc_transfer_logs',
+        proofSource: `${network.toLowerCase()}_usdc_transfer_logs`,
         agentAddress,
         recipientAddress,
-        tokenAddress: USDC_ADDR,
+        tokenAddress: config.usdcAddress,
         transferCount: transferRecords.length,
         totalSettledUSDC: ethers.utils.formatUnits(totalSettled, 6),
         latestTransferBlock: recentTransfersWithTimestamps[0]?.blockNumber ?? null,
         recentTransfers: recentTransfersWithTimestamps,
         amountBreakdown,
+        network,
     };
 }
 
 /**
- * Check whether the agent wallet has enough USDC to settle.
- * Returns balance in human-readable USDC or null if unavailable.
+ * Check whether the agent wallet has enough USDC to settle on a specific network.
  */
-export async function getAgentUSDCBalance(): Promise<string | null> {
+export async function getAgentUSDCBalance(network: SettlementNetwork = 'ZERO_G'): Promise<string | null> {
     try {
-        const c = getContracts();
+        const c = getContracts(network);
         if (!c) return null;
         const raw: ethers.BigNumber = await c.usdc.balanceOf(c.signer.address);
         return ethers.utils.formatUnits(raw, 6);
@@ -287,39 +317,48 @@ export function getAgentAddress(): string | null {
     }
 }
 
-export async function getArcSettlementStats(options?: {
+export async function getSettlementStats(network: SettlementNetwork = 'ZERO_G', options?: {
     agentAddress?: string | null;
     recipientAddress?: string;
     maxRecentTransfers?: number;
-    provider?: ethers.providers.JsonRpcProvider;
-}): Promise<ArcSettlementStats | null> {
+}): Promise<SettlementStats | null> {
     const agentAddress = options?.agentAddress ?? getAgentAddress();
     if (!agentAddress) return null;
 
-    const recipientAddress = options?.recipientAddress || HUB_ADDR;
+    const config = NETWORK_CONFIGS[network];
+    const recipientAddress = options?.recipientAddress || config.recipientAddress;
     const maxRecentTransfers = options?.maxRecentTransfers || SETTLEMENT_RECENT_LIMIT;
-    const provider = options?.provider || getProvider();
-    const latestBlock = await provider.getBlockNumber();
-    const cacheKey = `${ethers.utils.getAddress(agentAddress)}:${ethers.utils.getAddress(recipientAddress)}:${maxRecentTransfers}`;
-
-    if (
-        _settlementStatsCache &&
-        _settlementStatsCache.key === cacheKey &&
-        Date.now() - _settlementStatsCache.updatedAt < SETTLEMENT_CACHE_TTL_MS &&
-        _settlementStatsCache.latestBlock >= latestBlock
-    ) {
-        return _settlementStatsCache.stats;
+    const provider = getProvider(network);
+    
+    // Attempt to get block number, fallback to 0 if network is down
+    let latestBlock = 0;
+    try {
+        latestBlock = await provider.getBlockNumber();
+    } catch (err) {
+        console.warn(`[SettlementService] Failed to get block number for ${network}:`, err);
+        return createEmptySettlementStats(network, agentAddress, recipientAddress);
     }
 
-    const isCacheHit = _settlementStatsCache?.key === cacheKey;
+    const cacheKey = `${network}:${ethers.utils.getAddress(agentAddress)}:${ethers.utils.getAddress(recipientAddress)}:${maxRecentTransfers}`;
+
+    if (
+        _settlementStatsCache[cacheKey] &&
+        Date.now() - _settlementStatsCache[cacheKey].updatedAt < SETTLEMENT_CACHE_TTL_MS &&
+        _settlementStatsCache[cacheKey].latestBlock >= latestBlock
+    ) {
+        return _settlementStatsCache[cacheKey].stats;
+    }
+
+    const isCacheHit = !!_settlementStatsCache[cacheKey];
     const baseStats = isCacheHit
-        ? _settlementStatsCache!.stats
-        : createEmptySettlementStats(agentAddress, recipientAddress);
+        ? _settlementStatsCache[cacheKey].stats
+        : createEmptySettlementStats(network, agentAddress, recipientAddress);
     const scanFromBlock = isCacheHit
-        ? _settlementStatsCache!.latestBlock + 1
+        ? _settlementStatsCache[cacheKey].latestBlock + 1
         : Math.max(0, SETTLEMENT_START_BLOCK);
 
     const deltaStats = await scanSettlementRange(
+        network,
         provider,
         agentAddress,
         recipientAddress,
@@ -332,8 +371,7 @@ export async function getArcSettlementStats(options?: {
         ? mergeSettlementStats(baseStats, deltaStats, maxRecentTransfers)
         : deltaStats;
 
-    _settlementStatsCache = {
-        key: cacheKey,
+    _settlementStatsCache[cacheKey] = {
         updatedAt: Date.now(),
         latestBlock,
         stats,
@@ -343,57 +381,61 @@ export async function getArcSettlementStats(options?: {
 }
 
 /**
- * Settle a micro-payment on Arc by sending `amountUSDC` from the agent EOA
- * to the data-hub recipient. Fire-and-forget: returns the tx hash without
- * waiting for confirmation so the gateway response stays fast.
- *
- * Returns SettlementSkipped if the wallet is unfunded or the key is missing.
+ * Settle a micro-payment by sending `amountUSDC` from the agent EOA
+ * to the data-hub recipient. Fire-and-forget.
  */
-export async function settleOnArc(
+export async function settleOnChain(
     amountUSDC: number,
     sourceId: string,
+    network: SettlementNetwork = 'ZERO_G'
 ): Promise<SettlementResult | SettlementSkipped> {
-    const c = getContracts();
-    if (!c) return { settled: false, reason: 'No agent wallet configured' };
+    const c = getContracts(network);
+    const config = NETWORK_CONFIGS[network];
+    if (!c) return { settled: false, reason: `No agent wallet configured for ${network}` };
 
     // Minimum settlement: 0.001 USDC (1000 micro-USDC)
     const micro = Math.max(0.001, Math.min(amountUSDC, 0.01));
     const raw   = ethers.utils.parseUnits(micro.toFixed(6), 6);
 
     try {
-        // Non-blocking balance pre-check to avoid wasting a nonce on a doomed tx
+        // Non-blocking balance pre-check
         const balance: ethers.BigNumber = await c.usdc.balanceOf(c.signer.address);
         if (balance.lt(raw)) {
             return {
                 settled: false,
-                reason: `Insufficient USDC balance (${ethers.utils.formatUnits(balance, 6)} < ${micro})`,
+                reason: `Insufficient USDC balance on ${network} (${ethers.utils.formatUnits(balance, 6)} < ${micro})`,
             };
         }
 
-        // Send — do NOT await mining; return the hash immediately
-        const tx: ethers.providers.TransactionResponse = await c.usdc.transfer(HUB_ADDR, raw, {
-            gasLimit: 80_000,
+        // Send — do NOT await mining
+        const tx: ethers.providers.TransactionResponse = await c.usdc.transfer(config.recipientAddress, raw, {
+            gasLimit: 100_000,
         });
 
         const result: SettlementResult = {
             txHash:   tx.hash,
             amount:   micro.toFixed(6),
-            explorer: `${ARC_EXPLORER_BASE}/tx/${tx.hash}`,
+            explorer: `${config.explorerBase}/tx/${tx.hash}`,
             settled:  true,
+            network,
         };
 
-        console.log(`[ArcSettlement] ✅ ${sourceId} → ${micro} USDC → ${tx.hash}`);
+        console.log(`[SettlementService] ✅ ${sourceId} → ${micro} USDC on ${network} → ${tx.hash}`);
 
-        // Mine in background so we get a receipt for logging — does not block response
+        // Mine in background
         tx.wait(1).then(receipt => {
-            console.log(`[ArcSettlement] ⛏  confirmed block ${receipt.blockNumber}: ${tx.hash}`);
+            console.log(`[SettlementService] ⛏ ${network} confirmed block ${receipt.blockNumber}: ${tx.hash}`);
         }).catch(err => {
-            console.warn(`[ArcSettlement] tx ${tx.hash} mining warning:`, err.message);
+            console.warn(`[SettlementService] ${network} tx ${tx.hash} mining warning:`, err.message);
         });
 
         return result;
     } catch (err: any) {
-        console.error('[ArcSettlement] transfer failed:', err.message);
+        console.error(`[SettlementService] ${network} transfer failed:`, err.message);
         return { settled: false, reason: err.message };
     }
 }
+
+// Backward compatibility exports for Arc (deprecated)
+export const settleOnArc = (amount: number, sourceId: string) => settleOnChain(amount, sourceId, 'ARC');
+export const getArcSettlementStats = (options?: any) => getSettlementStats('ARC', options);

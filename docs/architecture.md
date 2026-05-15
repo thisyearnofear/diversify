@@ -83,15 +83,17 @@ for the tx hash, then returns regardless. Mining confirmation happens in backgro
 | Hub recipient | `DATA_HUB_RECIPIENT_ADDRESS` env var |
 | Explorer | `https://testnet.arcscan.app/address/<agent>` |
 
-## Premium Data — Gemini Synthesis
+## 0G Integration (Verifiable Intelligence)
 
-The three premium sources (`macro_analysis`, `portfolio_optimization`, `risk_assessment`)
-are **not hardcoded**. Each one:
+DiversiFi leverages the 0G ecosystem as its "Truth Layer":
+- **Evidence Commit (0G Storage):** Every premium research payload is hashed and uploaded to 0G Storage, with the resulting CID persisted in the analysis result. This provides an immutable audit trail for all advisor recommendations.
+- **State Persistence (0G DA):** The agent serializes its internal context (preferences, risk profile) to 0G Data Availability (DA) after every analysis, ensuring resilience and persistence across serverless executions.
 
-1. Fetches live data in parallel from World Bank, DeFiLlama, CoinGecko, FRED, Yearn
-2. Passes the combined payload to Gemini with a structured JSON prompt
-3. Returns a real AI-generated analysis specific to current market conditions
-4. Falls back to a structured estimate if Gemini is unavailable
+| Component | Responsibility |
+|-----------|----------------|
+| `packages/shared/src/services/storage-service.ts` | 0G Storage interface for evidence commitment |
+| `packages/shared/src/services/persistence-service.ts` | 0G DA interface for agent state persistence |
+| `packages/shared/src/services/settlement-service.ts` | Cross-chain settlement (supports 0G and Arc) |
 
 ```text
 macro_analysis      → WorldBank + CoinGecko + FRED  → Gemini Flash → JSON

@@ -25,6 +25,13 @@ export const NETWORKS = {
         explorerUrl: 'https://testnet.arcscan.app',
         devOnly: true, // Only show in development
     },
+    ZERO_G_TESTNET: {
+        chainId: 16602,
+        name: '0G Galileo Testnet',
+        rpcUrl: process.env.NEXT_PUBLIC_ZERO_G_RPC || 'https://evmrpc-testnet.0g.ai',
+        explorerUrl: 'https://chainscan-galileo.0g.ai',
+        devOnly: true,
+    },
     ARBITRUM_ONE: {
         chainId: 42161,
         name: 'Arbitrum',
@@ -76,6 +83,16 @@ export const ARC_DATA_HUB_CONFIG = {
     },
     USDC_TESTNET: '0x3600000000000000000000000000000000000000',
     CHAIN_ID: 5042002
+};
+
+// 0G Data Hub Configuration (X402 Economy on 0G)
+export const ZERO_G_DATA_HUB_CONFIG = {
+    RECIPIENT_ADDRESS: process.env.ZERO_G_DATA_HUB_RECIPIENT || '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B', // Mirroring Arc recipient as default
+    CATEGORIES: ARC_DATA_HUB_CONFIG.CATEGORIES,
+    PRICING: ARC_DATA_HUB_CONFIG.PRICING,
+    FREE_LIMITS: ARC_DATA_HUB_CONFIG.FREE_LIMITS,
+    USDC_TESTNET: process.env.NEXT_PUBLIC_ZERO_G_USDC || '0x8045a9f6d54b690820416e037de2241d9f8df386',
+    CHAIN_ID: 16602
 };
 
 // =============================================================================
@@ -504,6 +521,7 @@ export const BROKER_ADDRESSES = {
     MAINNET: '0x777a8255ca72412f0d706dc03c9d1987306b4cad',
     CELO_SEPOLIA: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
     ARC_TESTNET: '0x0000000000000000000000000000000000000000',
+    ZERO_G_TESTNET: '0x0000000000000000000000000000000000000000',
     RH_TESTNET: '0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3',
 } as const;
 

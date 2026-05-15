@@ -101,6 +101,28 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                         {(advice.researchEvidence || advice.portfolioAnalysis) && (
                             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-600">
                                 <div className="space-y-2">
+                                    {/* 0G Evidence Receipts */}
+                                    {advice.evidenceCids && Object.keys(advice.evidenceCids).length > 0 && (
+                                        <div className="bg-gradient-to-r from-gray-50 to-indigo-50 dark:from-gray-800 dark:to-indigo-900/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-800">
+                                            <p className="text-[10px] font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-widest mb-1">
+                                                Verified 0G Evidence Receipts
+                                            </p>
+                                            <div className="flex flex-wrap gap-1">
+                                                {Object.entries(advice.evidenceCids).map(([source, cid]) => (
+                                                    <a 
+                                                        key={source}
+                                                        href={`https://storage-testnet.0g.ai/ipfs/${cid}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="px-2 py-1 bg-white dark:bg-gray-900 border border-indigo-200 dark:border-indigo-700 rounded text-[10px] font-mono text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900 transition-colors"
+                                                    >
+                                                        {source}: {cid.substring(0, 8)}...
+                                                    </a>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {advice.researchEvidence?.bundle && (
                                         <div className="flex flex-wrap gap-2 text-[11px] font-bold text-gray-600 dark:text-gray-300">
                                             <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded-full">

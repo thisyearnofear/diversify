@@ -162,6 +162,7 @@ describe('SocialContactPicker', () => {
       expect(mockOnSelect).toHaveBeenCalledWith({
         identifier: 'test@example.com',
         type: 'email',
+        resolvedAddress: '0x1234567890abcdef',
       });
     });
   });

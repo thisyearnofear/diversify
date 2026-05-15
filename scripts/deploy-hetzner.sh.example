@@ -56,6 +56,9 @@ if [ ! -f "$DEPLOY_DIR/.env" ]; then
 fi
 
 # ── 4. Install dependencies ─────────────────────────────────────────────────
+echo "🧹 Pre-build prune (stale webpack/turbo cache from prior build)..."
+rm -rf "$DEPLOY_DIR/.next/cache" "$DEPLOY_DIR/.turbo" "$DEPLOY_DIR/tsconfig.tsbuildinfo" "$DEPLOY_DIR/node_modules_hidden"
+
 echo "📦 Installing dependencies..."
 pnpm install --frozen-lockfile
 
@@ -87,10 +90,13 @@ if [ -f "$DEPLOY_DIR/.next/standalone/server.js" ]; then
   APP_DIR="$RUNTIME_DIR"
   RUNTIME_BOOTSTRAP="$RUNTIME_DIR/start-runtime.sh"
 
-  echo "🧹 Pruning build-only source artifacts..."
-  rm -rf "$DEPLOY_DIR/.next" "$DEPLOY_DIR/node_modules" "$DEPLOY_DIR/.turbo"
+  echo "🧹 Pruning build-only source artifacts from $DEPLOY_DIR..."
+  rm -rf "$DEPLOY_DIR/.next" "$DEPLOY_DIR/node_modules" "$DEPLOY_DIR/node_modules_hidden" "$DEPLOY_DIR/.turbo" "$DEPLOY_DIR/tsconfig.tsbuildinfo"
+  pnpm store prune >/dev/null 2>&1 || true
 else
   echo "⚠️ Standalone output missing; falling back to source-build runtime from $DEPLOY_DIR"
+  echo "🧹 Pruning build cache only (keeping node_modules for source-mode runtime)..."
+  rm -rf "$DEPLOY_DIR/.next/cache" "$DEPLOY_DIR/.turbo" "$DEPLOY_DIR/tsconfig.tsbuildinfo" "$DEPLOY_DIR/node_modules_hidden"
 fi
 
 # ── 6. Start/reload server ──────────────────────────────────────────────────
