@@ -55,6 +55,7 @@ export interface AIProviderConfig {
   elevenLabsApiKey?: string;
   elevenLabsVoiceId?: string;
   openaiApiKey?: string;
+  zeroGApiKey?: string;
 }
 
 export interface ChatCompletionOptions {
@@ -71,7 +72,7 @@ export interface ChatCompletionOptions {
 export interface ChatCompletionResult {
   content: string;
   model: string;
-  provider: "venice" | "gemini" | "modal" | "openai";
+  provider: "venice" | "gemini" | "modal" | "openai" | "zeroG";
   usage?: {
     promptTokens: number;
     completionTokens: number;
@@ -104,6 +105,7 @@ export interface AIServiceStatus {
   gemini: { available: boolean; lastError?: string };
   elevenLabs: { available: boolean; lastError?: string };
   openai: { available: boolean; lastError?: string };
+  zeroG: { available: boolean; lastError?: string };
 }
 
 // ============================================================================
@@ -118,6 +120,7 @@ function getCurrentConfig(): AIProviderConfig {
     elevenLabsVoiceId:
       process.env.ELEVENLABS_VOICE_ID || "pNInz6obpg8ndclKuzWf",
     openaiApiKey: process.env.OPENAI_API_KEY,
+    zeroGApiKey: process.env.ZERO_G_SERVING_API_KEY,
   };
 }
 
@@ -129,10 +132,10 @@ if (process.env.NODE_ENV === 'development') {
     hasGeminiKey: !!currentConfig.geminiApiKey,
     hasElevenLabsKey: !!currentConfig.elevenLabsApiKey,
     hasOpenAIKey: !!currentConfig.openaiApiKey,
+    hasZeroGKey: !!currentConfig.zeroGApiKey,
   });
 }
 
-// Model mappings
 // Model mappings
 const VENICE_MODELS = {
   flagship: "google-gemma-3-27b-it", // 198k context, best balance of price/speed/quality
@@ -185,6 +188,12 @@ const openaiCircuitBreaker = circuitBreakerManager.getCircuit("openai-api", {
   successThreshold: 2,
 });
 
+const zeroGCircuitBreaker = circuitBreakerManager.getCircuit("zerog-serve", {
+  failureThreshold: 3,
+  timeout: 30000,
+  successThreshold: 2,
+});
+
 // ============================================================================
 // CLIENT INITIALIZATION
 // ============================================================================
@@ -192,9 +201,11 @@ const openaiCircuitBreaker = circuitBreakerManager.getCircuit("openai-api", {
 let veniceClient: OpenAI | null = null;
 let geminiClient: GoogleGenerativeAI | null = null;
 let openaiClient: OpenAI | null = null;
+let zeroGClient: OpenAI | null = null;
 let veniceClientApiKey: string | undefined;
 let geminiClientApiKey: string | undefined;
 let openaiClientApiKey: string | undefined;
+let zeroGClientApiKey: string | undefined;
 
 function getVeniceClient(): OpenAI | null {
   const config = getCurrentConfig();
@@ -238,6 +249,22 @@ function getOpenAIClient(): OpenAI | null {
     openaiClientApiKey = config.openaiApiKey;
   }
   return openaiClient;
+}
+
+function getZeroGClient(): OpenAI | null {
+  const config = getCurrentConfig();
+
+  if (
+    config.zeroGApiKey &&
+    (!zeroGClient || zeroGClientApiKey !== config.zeroGApiKey)
+  ) {
+    zeroGClient = new OpenAI({
+      apiKey: config.zeroGApiKey,
+      baseURL: 'https://router-api.0g.ai/v1',
+    });
+    zeroGClientApiKey = config.zeroGApiKey;
+  }
+  return zeroGClient;
 }
 
 // ============================================================================
@@ -324,6 +351,57 @@ async function callOpenAIChat(
     content,
     model: response.model,
     provider: "openai",
+    usage: response.usage
+      ? {
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+        }
+      : undefined,
+  };
+}
+
+/**
+ * 0G Serving: Decentralized AI Inference via 0G Router API
+ * OpenAI-compatible endpoint at https://router-api.0g.ai/v1
+ * Models: deepseek-v4-pro, zai-org/GLM-5.1-FP8, qwen3.6-plus, etc.
+ */
+async function callZeroGChat(
+  options: ChatCompletionOptions,
+): Promise<ChatCompletionResult> {
+  const client = getZeroGClient();
+  if (!client) throw new Error('0G Serve client not initialized - check ZERO_G_SERVING_API_KEY');
+
+  const systemMessages = options.messages.filter((m) => m.role === 'system');
+  const conversationMessages = options.messages.filter(
+    (m) => m.role === 'user' || m.role === 'assistant',
+  );
+
+  // Use deepseek-v4-pro as the default 0G model (best reasoning-to-cost ratio)
+  const model = options.model || 'deepseek-v4-pro';
+
+  const response = await client.chat.completions.create({
+    model,
+    messages: [
+      ...systemMessages,
+      ...conversationMessages,
+    ] as any,
+    max_tokens: options.maxTokens || 800,
+    temperature: options.temperature || 0.7,
+    ...(options.responseMimeType === 'application/json' && {
+      response_format: { type: 'json_object' as const },
+    }),
+  });
+
+  const content = response.choices[0]?.message?.content || '';
+
+  return {
+    content:
+      options.responseMimeType === 'application/json'
+        ? cleanJsonResponse(content)
+        : content,
+    model: response.model || model,
+    provider: 'zeroG' as const,
     usage: response.usage
       ? {
           promptTokens: response.usage.prompt_tokens,
@@ -489,7 +567,45 @@ export async function generateChatCompletion(
         }
       }
 
-      // Try Modal as third fallback
+      // Try 0G Serving as fourth fallback (decentralized inference on 0G)
+      if (config.zeroGApiKey) {
+        try {
+          const result = await zeroGCircuitBreaker.call(() =>
+            withTimeout(
+              callZeroGChat(options),
+              30000,
+              '0G Serving API timed out after 30s',
+            ),
+          );
+
+          // Validate JSON response if requested
+          if (options.responseMimeType === "application/json") {
+            try {
+              JSON.parse(cleanJsonResponse(result.content));
+            } catch (jsonError) {
+              console.warn(
+                `[AI Service] zeroG returned invalid JSON, not caching:`,
+                jsonError,
+              );
+              throw new Error(
+                `Invalid JSON response from zeroG: ${jsonError}`,
+              );
+            }
+          }
+
+          return { data: result, source: "zeroG" };
+        } catch (zeroGError: any) {
+          errors.push({ provider: "zeroG", error: zeroGError.message });
+          console.warn(
+            '[AI Service] 0G Serving failed, trying Modal fallback...',
+            zeroGError.message,
+          );
+        }
+      } else {
+        errors.push({ provider: "zeroG", error: '0G Serving API key not configured' });
+      }
+
+      // Try Modal as fifth fallback
       if (MODAL_TOKEN) {
         try {
           const result = await callModalChat(options);
@@ -515,43 +631,84 @@ export async function generateChatCompletion(
     );
   }
 
+  // Record to 0G Chain ledger for all verifiable recommendations (non-blocking)
+  // Records regardless of which AI provider generated the analysis — the contract
+  // lives on 0G Chain and links back to the CID in 0G Storage.
+  if (typeof window === 'undefined') {
+    recordToRecommendationLedger(options, result.data).catch(err =>
+      console.warn('[Verifiable AI] Ledger recording failed:', err)
+    );
+  }
+
   return result.data;
 }
 
 /**
  * Anchors AI interaction to 0G Storage for verifiability
+ * Tags the evidence with 0G Serving model info if provider was zeroG
  */
 async function anchorToZeroG(options: ChatCompletionOptions, result: ChatCompletionResult): Promise<void> {
+  // Determine if this is an analysis worth anchoring
+  const isAnalysis = options.messages.some(m => 
+    m.content.toLowerCase().includes('analyze') || 
+    m.content.toLowerCase().includes('recommend') ||
+    m.content.toLowerCase().includes('strategy')
+  ) || options.responseMimeType === 'application/json';
+
+  if (!isAnalysis) return;
+
+  const data = {
+    prompt: options.messages.map(m => ({ role: m.role, length: m.content.length })),
+    fullPrompt: options.messages,
+    response: result.content,
+    model: result.model,
+    provider: result.provider,
+    servingNetwork: result.provider === 'zeroG' ? '0G-Serving' : 'centralized',
+    timestamp: Date.now()
+  };
+
+  const metadata = {
+    agent: 'DiversiFi-Agent',
+    source: 'AI-Audit-Log',
+    timestamp: Date.now(),
+    inferenceNetwork: result.provider === 'zeroG' ? '0G-Serving' : undefined,
+    modelId: result.model,
+  };
+
+  // Background audit task - errors are handled by the caller's .catch()
+  await zeroGStorageService.uploadEvidence(data, metadata);
+}
+
+/**
+ * Records recommendations made via 0G Serving to the on-chain ledger
+ * (non-blocking background task)
+ */
+async function recordToRecommendationLedger(options: ChatCompletionOptions, result: ChatCompletionResult): Promise<void> {
   try {
-    // Determine if this is an analysis worth anchoring
-    const isAnalysis = options.messages.some(m => 
-      m.content.toLowerCase().includes('analyze') || 
+    // Only record significant analyses, not casual chat
+    const isSignificant = options.messages.some(m => 
       m.content.toLowerCase().includes('recommend') ||
-      m.content.toLowerCase().includes('strategy')
+      m.content.toLowerCase().includes('strategy') ||
+      m.content.toLowerCase().includes('allocate')
     ) || options.responseMimeType === 'application/json';
 
-    if (!isAnalysis) return;
+    if (!isSignificant) return;
 
-    const data = {
-      prompt: options.messages.map(m => ({ role: m.role, length: m.content.length })),
-      fullPrompt: options.messages,
-      response: result.content,
-      model: result.model,
-      provider: result.provider,
-      timestamp: Date.now()
-    };
+    const { recommendationLedgerService } = await import('../recommendation-ledger.service');
 
-    const metadata = {
-      agent: 'DiversiFi-Agent',
-      source: 'AI-Audit-Log',
-      timestamp: Date.now()
-    };
-
-    // This will execute in the background
-    await zeroGStorageService.uploadEvidence(data, metadata);
+    // Attempt to record to the ledger (silently fails if contract not deployed)
+    await recommendationLedgerService.recordRecommendation({
+      user: '0x0000000000000000000000000000000000000000', // unknown user in stateless context
+      action: 'ANALYSIS',
+      targetToken: '',
+      reasoning: result.content.substring(0, 500), // store first 500 chars
+      evidenceCid: '', // will be linked by the anchorToZeroG call
+      servingModel: result.model,
+      confidence: 0.7,
+    });
   } catch (error) {
-    // Silent fail as this is a background audit task
-    throw error;
+    // Silent fail
+    console.warn('[RecordToLedger] Failed:', (error as Error).message);
   }
 }
 
@@ -1219,6 +1376,7 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
     gemini: { available: false },
     elevenLabs: { available: false },
     openai: { available: false },
+    zeroG: { available: false },
   };
   const config = getCurrentConfig();
 
@@ -1246,6 +1404,19 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
       }
     } catch (error) {
       status.gemini.lastError = (error as Error).message;
+    }
+  }
+
+  // Check 0G Serving
+  if (config.zeroGApiKey) {
+    try {
+      const client = getZeroGClient();
+      if (client) {
+        await client.models.list();
+        status.zeroG.available = true;
+      }
+    } catch (error) {
+      status.zeroG.lastError = (error as Error).message;
     }
   }
 

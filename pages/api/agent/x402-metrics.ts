@@ -5,6 +5,7 @@ import {
   getAgentAddress,
   getAgentUSDCBalance,
   getArcSettlementStats,
+  getLedgerStats,
 } from '@diversifi/shared';
 
 const JUDGE_SAFE_SOURCE_LABELS: Record<string, string> = {
@@ -78,8 +79,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? ['Durable app-level analytics are now inferred from Arc settlement history while persistent telemetry is finalized']
       : [];
 
+  // Fetch 0G Recommendation Ledger stats (non-blocking — graceful fallback)
+  let ledgerStats = null;
+  try {
+    ledgerStats = await getLedgerStats();
+  } catch {
+    // Ledger not deployed or unreachable
+  }
+
   return res.status(200).json({
     generatedAt: new Date().toISOString(),
+    zeroGIntegratedLedger: ledgerStats,
+    zeroGServing: {
+      status: process.env.ZERO_G_SERVING_API_KEY ? 'configured' : 'not_configured',
+      description: 'Decentralized AI inference via 0G Router API',
+    },
     transactionFrequency: {
       totalSettledPayments: chainSettlement?.transferCount ?? dashboard.totalPayments,
       evidenceSource: chainSettlement?.proofSource ?? 'in_memory_fallback',

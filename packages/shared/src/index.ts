@@ -78,6 +78,17 @@ export { AIService, generateChatCompletion, getAIServiceStatus, cacheSystemPromp
 export { TokenVaultClient, type TokenVaultConfig } from './services/auth0-token-vault';
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export { IntelligenceService } from './services/ai/intelligence.service';
+export {
+  recommendationLedgerService,
+  setLedgerContractAddress,
+  getLedgerContractAddress,
+  recordRecommendation,
+  getRecommendation,
+  getUserRecommendations,
+  getLedgerStats,
+  type LedgerRecommendation,
+  type LedgerConfig,
+} from './services/recommendation-ledger.service';
 export { IntentDiscoveryService, type AppIntent, type AppTab } from './services/ai/intent-discovery.service';
 export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';
 export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent-action.service';
@@ -98,7 +109,7 @@ export {
 } from './utils/portfolio-analysis';
 export type { PortfolioAnalysis, TokenAllocation, RegionalExposure, RebalancingOpportunity } from './utils/portfolio-analysis';
 export * from './utils/unified-cache-service';
-export { inflationService, exchangeRateService, ImprovedInflationService, ExchangeRateService } from './utils/improved-data-services';
+export { inflationService, exchangeRateService, ImprovedInflationService, ExchangeRateService, macroService } from './utils/improved-data-services';
 export * from './utils/macro-economic-service';
 export * from './utils/environment';
 export * from './utils/wallet-provider';

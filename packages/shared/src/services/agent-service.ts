@@ -470,7 +470,25 @@ export class AgentService {
                 executionTxHash,
             });
 
-            // Phase 5E: Persist state to 0G DA
+            // Phase 5E: Record to 0G Recommendation Ledger (non-blocking)
+            import('./recommendation-ledger.service').then(async (ledger) => {
+              try {
+                await ledger.recordRecommendation({
+                  user: this.agentAddress,
+                  action: finalResult.action,
+                  targetToken: finalResult.targetToken || '',
+                  reasoning: finalResult.reasoning.substring(0, 500),
+                  evidenceCid: Object.values(finalResult.evidenceCids || {}).join(',') || '',
+                  servingModel: 'guardian-ai',
+                  settlementTxHash: finalResult.arcTxHash,
+                  confidence: finalResult.confidence,
+                });
+              } catch (err) {
+                console.warn('[RecommendationLedger] Background recording failed:', err);
+              }
+            });
+
+            // Phase 5F: Persist state to 0G DA
             await this.persistAgentState();
 
             // Phase 5C: Execution Receipts — Record successful autonomous analysis on-chain
