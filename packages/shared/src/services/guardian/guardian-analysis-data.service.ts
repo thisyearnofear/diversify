@@ -7,9 +7,9 @@ export type GuardianAnalysisContext = {
   unifiedBalance: any;
   macroData: any;
   researchBundle?: ArcResearchBundle;
-  inflationResult: { data: any; hashes: Record<string, string> };
-  economicResult: { data: any; hashes: Record<string, string> };
-  yieldResult: { data: any; hashes: Record<string, string> };
+  inflationResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> };
+  economicResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> };
+  yieldResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> };
   synthPredictions: Record<string, any>;
   pulse: Awaited<ReturnType<typeof marketPulseService.getMarketPulse>>;
   riskStatus: any;
@@ -32,9 +32,9 @@ export class GuardianAnalysisDataService {
     }) => Promise<any>;
     transferUSDCViaGateway: (fromChainId: number, toChainId: number, amount: string) => Promise<string>;
     fetchWithNanopayment: (url: string, payment: { amount: string; currency: 'USDC' }) => Promise<Response>;
-    fetchInflationData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string> }>;
-    fetchEconomicData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string> }>;
-    fetchYieldData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string> }>;
+    fetchInflationData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string>; storageCids?: Record<string, string> }>;
+    fetchEconomicData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string>; storageCids?: Record<string, string> }>;
+    fetchYieldData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string>; storageCids?: Record<string, string> }>;
     monitorRiskExposure: (steps: string[], portfolioUsd: number) => Promise<any>;
     getFallbackRecommendation: () => any;
   }): Promise<{ context?: GuardianAnalysisContext; earlyResult?: any }> {
@@ -93,9 +93,9 @@ export class GuardianAnalysisDataService {
     }
 
     let macroData: any = {};
-    let inflationResult: { data: any; hashes: Record<string, string> } = { data: {}, hashes: {} };
-    let economicResult: { data: any; hashes: Record<string, string> } = { data: {}, hashes: {} };
-    let yieldResult: { data: any; hashes: Record<string, string> } = { data: {}, hashes: {} };
+    let inflationResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> } = { data: {}, hashes: {}, storageCids: {} };
+    let economicResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> } = { data: {}, hashes: {}, storageCids: {} };
+    let yieldResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> } = { data: {}, hashes: {}, storageCids: {} };
     let researchBundle: ArcResearchBundle | undefined;
 
     try {
@@ -131,9 +131,9 @@ export class GuardianAnalysisDataService {
         return acc;
       }, {});
 
-      inflationResult = { data: groupedRecords.inflation || {}, hashes: {} };
-      economicResult = { data: groupedRecords.economic || {}, hashes: {} };
-      yieldResult = { data: groupedRecords.yield || {}, hashes: {} };
+      inflationResult = { data: groupedRecords.inflation || {}, hashes: {}, storageCids: {} };
+      economicResult = { data: groupedRecords.economic || {}, hashes: {}, storageCids: {} };
+      yieldResult = { data: groupedRecords.yield || {}, hashes: {}, storageCids: {} };
     } catch (error) {
       console.warn('[Arc Agent] Research bundle unavailable, falling back to individual sources:', error);
       steps.push("Research bundle unavailable, falling back to individual sources...");

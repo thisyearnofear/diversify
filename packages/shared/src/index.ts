@@ -1,17 +1,11 @@
-// Export Services
-import {
-  settleOnChain,
-  getAgentUSDCBalance,
-  getAgentAddress,
-  getSettlementStats,
-  type SettlementResult,
-  type SettlementSkipped,
-  type SettlementStats,
-  type SettlementTransfer,
-} from './services/settlement-service';
+import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer } from './services/settlement-service';
 import { circleService, CircleService } from './services/circle-service';
 import { AgentService, SessionKeyProvider } from './services/agent-service';
+import { zeroGStorageService, ZeroGStorageService } from './services/storage-service';
+import { zeroGPersistenceService, ZeroGPersistenceService } from './services/persistence-service';
 import { SocialConnectService } from './services/social-connect-service';
+// ... existing imports ...
+
 import { RWAService, rwaService } from './services/rwa-service';
 import { SynthDataService } from './services/synth-data-service';
 import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
@@ -47,6 +41,10 @@ export {
   CircleService,
   AgentService,
   SessionKeyProvider,
+  zeroGStorageService,
+  ZeroGStorageService,
+  zeroGPersistenceService,
+  ZeroGPersistenceService,
   SocialConnectService,
   RWAService,
   rwaService,

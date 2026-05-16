@@ -394,6 +394,12 @@ export class AgentService {
 
             const context = analysisData.context!;
             steps.push("Synthesizing multi-source intelligence...");
+
+            // Merge evidence CIDs from all sources
+            Object.assign(evidenceCids, context.inflationResult.storageCids || {});
+            Object.assign(evidenceCids, context.economicResult.storageCids || {});
+            Object.assign(evidenceCids, context.yieldResult.storageCids || {});
+
             const recommendation = await GuardianRecommendationService.generateRecommendation(
                 context,
                 (content) => this.parseRecommendation(content)

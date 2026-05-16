@@ -168,6 +168,8 @@ export interface AIAdvice {
   confidence: number;
   riskLevel?: "LOW" | "MEDIUM" | "HIGH";
   dataSources?: string[];
+  evidenceCids?: Record<string, string>; // 0G Storage CIDs for research evidence
+  stateAnchor?: string; // 0G Storage/DA anchor for agent state
   expectedSavings?: number;
   timeHorizon?: string;
 }

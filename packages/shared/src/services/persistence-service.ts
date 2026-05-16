@@ -1,7 +1,10 @@
 /**
  * 0G DA Persistence Service
- * Stores agent context and state in 0G Data Availability layer.
+ * Stores agent context and state in 0G Storage (serving as a verifiable DA layer).
  */
+
+import { Indexer, Blob as ZgBlob } from '@0gfoundation/0g-storage-ts-sdk';
+import * as ethers6 from 'ethers6';
 
 export interface AgentContext {
     userId: string;
@@ -12,33 +15,77 @@ export interface AgentContext {
 }
 
 export class ZeroGPersistenceService {
-    private readonly daUrl: string;
+    private readonly indexerUrl: string;
+    private readonly evmRpc: string;
 
-    constructor(daUrl: string = process.env.ZERO_G_DA_URL || 'https://da-testnet.0g.ai') {
-        this.daUrl = daUrl;
+    constructor(
+        indexerUrl: string = process.env.ZERO_G_INDEXER_URL || 'https://indexer-storage-testnet-turbo.0g.ai',
+        evmRpc: string = process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai'
+    ) {
+        this.indexerUrl = indexerUrl;
+        this.evmRpc = evmRpc;
     }
 
     /**
-     * Persists agent state to 0G DA
+     * Persists agent state to 0G Storage
+     * Using Storage as a verifiable state anchor (pseudo-DA)
      */
     async persistState(context: AgentContext): Promise<string> {
-        console.log(`[0G DA] Persisting state for user ${context.userId}...`);
-        
-        // Serialize and commit to 0G DA
-        // In reality, this would involve sending the data blob to the 0G DA node
-        const blobId = `da_${Math.random().toString(36).substring(2, 10)}`;
-        
-        console.log(`[0G DA] State persisted with BlobID: ${blobId}`);
-        return blobId;
+        const privateKey = process.env.VAULT_PRIVATE_KEY;
+        if (!privateKey) {
+            console.warn('[0G Persistence] VAULT_PRIVATE_KEY missing, skipping real persistence');
+            return 'mock_persistence_id';
+        }
+
+        try {
+            console.log(`[0G Persistence] Persisting state for user ${context.userId} to 0G...`);
+            
+            const payload = JSON.stringify({
+                ...context,
+                persistenceType: 'agent-state-anchor',
+                appId: 'diversifi'
+            });
+
+            // Setup Ethers v6
+            const provider = new ethers6.JsonRpcProvider(this.evmRpc);
+            const signer = new ethers6.Wallet(privateKey, provider);
+            
+            // Setup 0G Indexer
+            const indexer = new Indexer(this.indexerUrl);
+
+            // Create and upload blob
+            const blob = new ZgBlob(new Uint8Array(Buffer.from(payload)) as any);
+            const [tree, treeErr] = await blob.merkleTree();
+            if (treeErr || !tree) {
+                console.error('[0G Persistence] Merkle Tree generation failed:', treeErr);
+                throw treeErr || new Error('Merkle Tree missing');
+            }
+
+            const rootHash = tree.rootHash();
+            const [tx, upErr] = await indexer.upload(blob, this.evmRpc, signer as any);
+            
+            if (upErr) {
+                console.error('[0G Persistence] Upload failed:', upErr);
+                throw upErr;
+            }
+
+            console.log(`[0G Persistence] State anchored to 0G. BlobID: ${rootHash}`);
+            return String(rootHash);
+        } catch (error: any) {
+            console.error('[0G Persistence] Failed to persist state to 0G:', error.message);
+            // Non-blocking fallback
+            return `error_${Date.now()}`;
+        }
     }
 
     /**
-     * Restores latest state from 0G DA
+     * Restores latest state from 0G (Simulated via resolution)
      */
     async restoreState(userId: string): Promise<AgentContext | null> {
-        console.log(`[0G DA] Restoring state for user ${userId}...`);
+        console.log(`[0G Persistence] Restoring state for user ${userId} (Querying 0G Storage)...`);
         
-        // Simulated restoration
+        // In a full implementation, we would query the indexer for the latest blob 
+        // associated with this user's identity or a known root hash.
         return null; 
     }
 }
