@@ -120,3 +120,49 @@ Explicitly state: **Gemini Flash** powers all three premium research sources and
 - `docs/integrations.md` — on-chain settlement flow documented ✅
 - `docs/getting-started.md` — agent wallet funding instructions ✅
 - GitHub repo public ✅
+
+## 9. 0G Submission
+
+### Contract
+
+| Item | Value |
+|------|-------|
+| Contract | `RecommendationLedger` |
+| Address | `0x75C08758A099c27cE85600d6a7C5E933091C1495` |
+| Network | 0G Galileo Testnet (chainId 16602) |
+| Explorer | https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495 |
+
+### Verify On-Chain Anchoring
+
+```bash
+# Fetch the latest anchored recommendation from the ledger endpoint
+curl -s https://api.diversifi.famile.xyz/api/agent/zero-g-ledger | python3 -m json.tool
+```
+
+Expected response fields:
+- `contractAddress` — matches `0x75C08758A099c27cE85600d6a7C5E933091C1495`
+- `network` — `0G Galileo Testnet`
+- `totalRecommendations` — count of on-chain records
+- `latestRecommendation.txHash` — real 0G chain transaction hash
+- `latestRecommendation.explorerUrl` — direct chainscan-galileo link to the anchoring tx
+
+### Verify Contract Deployment
+
+```bash
+# Confirm bytecode is live at the contract address
+curl -s -X POST https://evmrpc-testnet.0g.ai \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x75C08758A099c27cE85600d6a7C5E933091C1495","latest"],"id":1}' \
+  | python3 -m json.tool
+```
+
+Expected: `result` is a non-empty hex string (not `"0x"`).
+
+### 0G Stack Coverage
+
+| Layer | Integration |
+|-------|-------------|
+| 0G Chain | `RecommendationLedger` contract — every AI recommendation anchored on-chain |
+| 0G Storage | Evidence blobs stored via `zeroGStorageService` before each recommendation |
+| 0G DA | State availability for verifiable agent history |
+| 0G Serving | Primary AI inference provider (Venice fallback) |

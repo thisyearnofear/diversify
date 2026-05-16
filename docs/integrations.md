@@ -17,13 +17,15 @@
 | `/api/agent/x402-gateway` | GET | Payment challenge + paid evidence retrieval |
 | `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
 | `/api/agent/sosovalue` | GET | SoSoValue market intelligence (news, sentiment, SSI index); `?tier=premium` for SSI |
+| `/api/agent/zero-g-ledger` | GET | 0G `RecommendationLedger` on-chain recommendations + stats; `?user=0x...` to filter |
 
 ## AI Providers
 
 | Provider | Role | Fallback |
 |----------|------|----------|
 | **Gemini (Google)** | Primary agent intelligence (Flash for speed, Pro for reasoning) | Venice AI |
-| **Venice AI** | Secondary / fallback | Modal (GLM) |
+| **Venice AI** | Secondary / fallback | 0G Serving |
+| **0G Serving** | Decentralized inference via 0G Router (`deepseek-v4-pro`, `GLM-5.1`, `qwen3.6-plus`) | Modal (GLM) |
 | **Modal (GLM)** | Tertiary fallback | Error response |
 
 > **User-supplied keys**: Users can paste their own Gemini API key in the ⚙️ chat settings modal. The key is stored in `localStorage` and forwarded via the `x-gemini-key` request header — it is never persisted server-side. This removes shared rate-limit pressure and qualifies for the Google prize track.
@@ -83,6 +85,45 @@ Client → GET /api/agent/x402-gateway?source=macro_analysis
 ```
 
 Real tx verifiable at `https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8`
+
+## 0G Chain — RecommendationLedger
+
+Every advisor recommendation is recorded on the 0G Galileo Testnet via the `RecommendationLedger` contract. This is the immutable, queryable ledger of agent output and links the full 0G Serving → 0G Storage → 0G Chain trace.
+
+| Field | Value |
+|-------|-------|
+| **Network** | 0G Galileo Testnet (chainId `16602`) |
+| **Contract** | [`0x75C08758A099c27cE85600d6a7C5E933091C1495`](https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495) |
+| **RPC** | `https://evmrpc-testnet.0g.ai` |
+| **Explorer** | `https://chainscan-galileo.0g.ai` |
+| **Write authority** | EOA configured via `VAULT_PRIVATE_KEY` (automatically authorised on deploy; admin can grant via `setAgentAuthorization`) |
+| **Public API** | `GET /api/agent/zero-g-ledger` |
+
+### Recorded fields (per recommendation)
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `user` | address | Recipient of the recommendation |
+| `action` | string | `SWAP` / `HOLD` / `REBALANCE` / `BRIDGE` |
+| `targetToken` | string | e.g. `USDY`, `PAXG` (empty for HOLD) |
+| `reasoning` | string | Full AI-generated reasoning text |
+| `evidenceCid` | string | 0G Storage CID for the evidence bundle |
+| `servingModel` | string | 0G Serving model ID (e.g. `deepseek-v4-pro`) |
+| `settlementTxHash` | string | Arc x402 settlement tx hash (if a payment was made) |
+| `timestamp` | uint256 | Block timestamp |
+| `confidence` | uint256 | AI confidence in basis points (0–10000) |
+
+### Verifying the contract
+
+```bash
+# Confirm the contract is deployed
+curl -s -X POST https://evmrpc-testnet.0g.ai \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x75C08758A099c27cE85600d6a7C5E933091C1495","latest"],"id":1}'
+
+# Read live stats + recent recommendations through the API
+curl -s https://api.diversifi.famile.xyz/api/agent/zero-g-ledger | python3 -m json.tool
+```
 
 ## DEX & Routing
 

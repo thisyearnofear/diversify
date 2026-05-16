@@ -33,14 +33,16 @@
 
 ---
 
-## 2. Verifiable AI: The 0G Audit Trail (1:15 - 1:45)
-**Action:** Click the pulsing **"Verifiable AI"** 🛡️ badge on the Guardian Pulse card.
-**Visual:** The **Audit Trail Modal** slides in with glassmorphism effects, showing 0G CIDs and Gemini model timestamps.
+## 2. Verifiable AI: The Full 0G Stack (1:15 - 1:45)
+**Action:** Click the pulsing **"Verifiable AI"** 🛡️ badge. The **Verifiable AI Dashboard** opens, showing the full Serving → Storage → Chain trace for the latest recommendation.
+**Visual:** Three stacked panels — `0G Serving` model ID, `0G Storage` evidence CID, and `0G Chain` ledger receipt with a link to chainscan-galileo.
 
 **Say:**
-> "We solve the AI Trust problem. Every decision this agent makes—every prompt, every data source, and every reasoning step—is anchored to the **0G Storage layer**. 
-> 
-> This created an immutable audit trail. We are providing **Proof of Intelligence**. You can verify exactly what data Gemini used to recommend your portfolio rebalance. This is the foundation of the Agentic Economy: verifiable autonomy."
+> "We solve the AI Trust problem with the **full 0G stack**. Every decision is traceable end-to-end:
+>
+> First, inference can run on **0G Serving** — fully decentralized AI. Then the evidence bundle is hashed and committed to **0G Storage** — that's the CID right there. Finally — and this is the new piece — every recommendation is recorded on **0G Chain** in our `RecommendationLedger` contract.
+>
+> Here's the contract: `0x75C0…1495` on 0G Galileo. Click through and you can see every recommendation this agent has ever made, linked to its evidence CID, the model that produced it, and the Arc settlement tx that paid for the data. That's **Proof of Intelligence** — verifiable autonomy."
 
 ---
 

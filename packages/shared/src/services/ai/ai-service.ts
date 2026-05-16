@@ -56,6 +56,7 @@ export interface AIProviderConfig {
   elevenLabsVoiceId?: string;
   openaiApiKey?: string;
   zeroGApiKey?: string;
+  featherlessApiKey?: string;
 }
 
 export interface ChatCompletionOptions {
@@ -72,7 +73,7 @@ export interface ChatCompletionOptions {
 export interface ChatCompletionResult {
   content: string;
   model: string;
-  provider: "venice" | "gemini" | "modal" | "openai" | "zeroG";
+  provider: "venice" | "gemini" | "modal" | "openai" | "zeroG" | "featherless";
   usage?: {
     promptTokens: number;
     completionTokens: number;
@@ -106,6 +107,7 @@ export interface AIServiceStatus {
   elevenLabs: { available: boolean; lastError?: string };
   openai: { available: boolean; lastError?: string };
   zeroG: { available: boolean; lastError?: string };
+  featherless: { available: boolean; lastError?: string };
 }
 
 // ============================================================================
@@ -121,6 +123,7 @@ function getCurrentConfig(): AIProviderConfig {
       process.env.ELEVENLABS_VOICE_ID || "pNInz6obpg8ndclKuzWf",
     openaiApiKey: process.env.OPENAI_API_KEY,
     zeroGApiKey: process.env.ZERO_G_SERVING_API_KEY,
+    featherlessApiKey: process.env.FEATHERLESS_API_KEY,
   };
 }
 
@@ -133,6 +136,7 @@ if (process.env.NODE_ENV === 'development') {
     hasElevenLabsKey: !!currentConfig.elevenLabsApiKey,
     hasOpenAIKey: !!currentConfig.openaiApiKey,
     hasZeroGKey: !!currentConfig.zeroGApiKey,
+    hasFeatherlessKey: !!currentConfig.featherlessApiKey,
   });
 }
 
@@ -188,6 +192,12 @@ const openaiCircuitBreaker = circuitBreakerManager.getCircuit("openai-api", {
   successThreshold: 2,
 });
 
+const featherlessCircuitBreaker = circuitBreakerManager.getCircuit("featherless-api", {
+  failureThreshold: 3,
+  timeout: 30000,
+  successThreshold: 2,
+});
+
 const zeroGCircuitBreaker = circuitBreakerManager.getCircuit("zerog-serve", {
   failureThreshold: 3,
   timeout: 30000,
@@ -202,10 +212,12 @@ let veniceClient: OpenAI | null = null;
 let geminiClient: GoogleGenerativeAI | null = null;
 let openaiClient: OpenAI | null = null;
 let zeroGClient: OpenAI | null = null;
+let featherlessClient: OpenAI | null = null;
 let veniceClientApiKey: string | undefined;
 let geminiClientApiKey: string | undefined;
 let openaiClientApiKey: string | undefined;
 let zeroGClientApiKey: string | undefined;
+let featherlessClientApiKey: string | undefined;
 
 function getVeniceClient(): OpenAI | null {
   const config = getCurrentConfig();
@@ -249,6 +261,22 @@ function getOpenAIClient(): OpenAI | null {
     openaiClientApiKey = config.openaiApiKey;
   }
   return openaiClient;
+}
+
+function getFeatherlessClient(): OpenAI | null {
+  const config = getCurrentConfig();
+
+  if (
+    config.featherlessApiKey &&
+    (!featherlessClient || featherlessClientApiKey !== config.featherlessApiKey)
+  ) {
+    featherlessClient = new OpenAI({
+      apiKey: config.featherlessApiKey,
+      baseURL: 'https://api.featherless.ai/v1',
+    });
+    featherlessClientApiKey = config.featherlessApiKey;
+  }
+  return featherlessClient;
 }
 
 function getZeroGClient(): OpenAI | null {
@@ -351,6 +379,56 @@ async function callOpenAIChat(
     content,
     model: response.model,
     provider: "openai",
+    usage: response.usage
+      ? {
+          promptTokens: response.usage.prompt_tokens,
+          completionTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+        }
+      : undefined,
+  };
+}
+
+/**
+ * Featherless: OpenAI-compatible open-model inference
+ * Endpoint: https://api.featherless.ai/v1
+ * Default model: meta-llama/Llama-3.3-70B-Instruct
+ */
+async function callFeatherlessChat(
+  options: ChatCompletionOptions,
+): Promise<ChatCompletionResult> {
+  const client = getFeatherlessClient();
+  if (!client) throw new Error('Featherless client not initialized - check FEATHERLESS_API_KEY');
+
+  const systemMessages = options.messages.filter((m) => m.role === 'system');
+  const conversationMessages = options.messages.filter(
+    (m) => m.role === 'user' || m.role === 'assistant',
+  );
+
+  const model = options.model || 'meta-llama/Llama-3.3-70B-Instruct';
+
+  const response = await client.chat.completions.create({
+    model,
+    messages: [
+      ...systemMessages,
+      ...conversationMessages,
+    ] as any,
+    max_tokens: options.maxTokens || 800,
+    temperature: options.temperature || 0.7,
+    ...(options.responseMimeType === 'application/json' && {
+      response_format: { type: 'json_object' as const },
+    }),
+  });
+
+  const content = response.choices[0]?.message?.content || '';
+
+  return {
+    content:
+      options.responseMimeType === 'application/json'
+        ? cleanJsonResponse(content)
+        : content,
+    model: response.model || model,
+    provider: 'featherless' as const,
     usage: response.usage
       ? {
           promptTokens: response.usage.prompt_tokens,
@@ -565,6 +643,44 @@ export async function generateChatCompletion(
             );
           }
         }
+      }
+
+      // Try Featherless as third fallback (open-model inference)
+      if (config.featherlessApiKey) {
+        try {
+          const result = await featherlessCircuitBreaker.call(() =>
+            withTimeout(
+              callFeatherlessChat(options),
+              30000,
+              'Featherless API timed out after 30s',
+            ),
+          );
+
+          // Validate JSON response if requested
+          if (options.responseMimeType === "application/json") {
+            try {
+              JSON.parse(cleanJsonResponse(result.content));
+            } catch (jsonError) {
+              console.warn(
+                `[AI Service] featherless returned invalid JSON, not caching:`,
+                jsonError,
+              );
+              throw new Error(
+                `Invalid JSON response from featherless: ${jsonError}`,
+              );
+            }
+          }
+
+          return { data: result, source: "featherless" };
+        } catch (featherlessError: any) {
+          errors.push({ provider: "featherless", error: featherlessError.message });
+          console.warn(
+            '[AI Service] Featherless failed, trying 0G Serving fallback...',
+            featherlessError.message,
+          );
+        }
+      } else {
+        errors.push({ provider: "featherless", error: 'Featherless API key not configured' });
       }
 
       // Try 0G Serving as fourth fallback (decentralized inference on 0G)
@@ -1377,6 +1493,7 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
     elevenLabs: { available: false },
     openai: { available: false },
     zeroG: { available: false },
+    featherless: { available: false },
   };
   const config = getCurrentConfig();
 
@@ -1404,6 +1521,19 @@ export async function getAIServiceStatus(): Promise<AIServiceStatus> {
       }
     } catch (error) {
       status.gemini.lastError = (error as Error).message;
+    }
+  }
+
+  // Check Featherless
+  if (config.featherlessApiKey) {
+    try {
+      const client = getFeatherlessClient();
+      if (client) {
+        status.featherless.available =
+          featherlessCircuitBreaker.getState().state === "CLOSED";
+      }
+    } catch (error) {
+      status.featherless.lastError = (error as Error).message;
     }
   }
 

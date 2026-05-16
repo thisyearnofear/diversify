@@ -9,11 +9,14 @@ DiversiFi is an autonomous financial advisor powered by a verifiable, on-chain r
 ---
 
 ## 🏗️ The 0G-Powered Architecture
-At our core, we believe the future of AI agents relies on **verifiable data**. 
+At our core, we believe the future of AI agents relies on **verifiable data**. DiversiFi uses the **full 0G stack** as its truth layer — every recommendation is traceable from inference → evidence → chain record:
 
-- **0G Storage (The Decentralized Backbone)**: Every insight, backtest simulation, and agent decision is streamed to **0G Storage**. This creates an immutable "Proof of Intelligence" that allows users and auditors to verify the data sources the agent actually used to make a recommendation.
-- **AI Reasoning Engine (Venice + Gemini 3.1)**: Primary inference via Venice AI with automatic fallback to Google Gemini 3.1 Flash-Lite. Multi-provider resilience ensures 99.9% uptime.
-- **Arc Network x402 (Autonomous Economics)**: Our agent manages its own P&L, negotiating premium data access using x402 nanopayments settled on-chain.
+- **0G Serving (Decentralized Inference)**: Recommendations can be generated through the 0G Router (`deepseek-v4-pro`, `GLM-5.1`, `qwen3.6-plus`) as part of the AI failover chain alongside Gemini and Venice.
+- **0G Storage (Evidence Layer)**: Every premium research payload, prompt, and reasoning step is hashed and uploaded to **0G Storage**, producing a CID that anchors the advisor's "Proof of Intelligence".
+- **0G DA (State Persistence)**: The agent's internal context (preferences, risk profile) is serialized to 0G Data Availability after every analysis for resilience across serverless invocations.
+- **0G Chain — `RecommendationLedger`**: Every advisor recommendation is recorded on-chain on 0G Galileo Testnet, linking `user → action → evidence CID → serving model → settlement tx → confidence`. This is the immutable, queryable ledger of what the agent recommended and why.
+- **AI Reasoning Engine (Gemini → Venice → 0G Serving → Modal)**: Multi-provider failover chain. Each response is tagged with the provider that produced it.
+- **Arc Network x402 (Autonomous Economics)**: The agent negotiates premium data access using x402 nanopayments settled on Arc.
 - **Proof of Efficacy (Backtesting)**: Before recommending any allocation, our agent simulates its proposed action on the **Robinhood Testnet**, anchoring the backtest result to 0G for future verification.
 
 ---
@@ -29,10 +32,15 @@ At our core, we believe the future of AI agents relies on **verifiable data**.
 
 ## 🔑 Judge Verification Proofs
 
+### 0G Stack (Verifiable AI)
+- **RecommendationLedger Contract** (0G Galileo Testnet, chainId `16602`): [`0x75C08758A099c27cE85600d6a7C5E933091C1495`](https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495)
+- **Ledger API**: [https://api.diversifi.famile.xyz/api/agent/zero-g-ledger](https://api.diversifi.famile.xyz/api/agent/zero-g-ledger) — live on-chain recommendations + stats
+- **Storage / DA**: Open the **"Verifiable AI"** dashboard in-app to view live 0G evidence CIDs, serving-model IDs, and chain receipts
+
+### Arc Stack (Autonomous Payments)
 - **Agent Wallet (Arc Testnet)**: `0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8`
-- **Audit Trail**: Open the **"Verifiable AI"** modal in the Guardian Pulse dashboard to view live 0G anchors.
 - **Settlement Metrics**: [https://api.diversifi.famile.xyz/api/agent/x402-metrics](https://api.diversifi.famile.xyz/api/agent/x402-metrics)
-- **Explorer**: [testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8](https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8)
+- **Arc Explorer**: [testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8](https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8)
 
 ---
 

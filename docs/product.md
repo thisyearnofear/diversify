@@ -34,6 +34,9 @@ DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Paymen
 | **Provider badge** | Chat UI shows "Powered by Gemini" / "✦ Venice" per message |
 | **User API key** | ⚙️ modal lets users supply their own Gemini key; forwarded via `x-gemini-key` header |
 | **Metrics endpoint** | `/api/agent/x402-metrics` — payment count, pricing proof, agent wallet balance, Arc Explorer link |
+| **0G full-stack** | Serving (inference) → Storage (evidence CID) → DA (state) → Chain `RecommendationLedger` ([`0x75C0…1495`](https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495)) records every recommendation on-chain |
+| **0G ledger API** | `/api/agent/zero-g-ledger` — total recommendations + recent on-chain records with explorer links |
+| **Verifiable AI dashboard** | In-app modal renders full Serving → Storage → Chain trace per recommendation |
 
 ### Out of Scope
 
