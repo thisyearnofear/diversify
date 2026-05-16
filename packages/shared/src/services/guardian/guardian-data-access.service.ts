@@ -1,6 +1,6 @@
-import type { AgentWalletProvider, Payment, X402Challenge } from '../arc-agent';
+import type { AgentWalletProvider, Payment, X402Challenge, DataSource } from '../agent-service';
 import type { CircleService } from '../circle-service';
-import type { DataSource } from '../arc-agent';
+import { zeroGStorageService } from '../storage-service';
 
 type FailureState = Map<string, { count: number; lastFailure: number; openUntil?: number }>;
 
@@ -48,12 +48,6 @@ export class GuardianDataAccessService {
     return this.fetchSourceGroup(yieldSources.slice(0, 1), steps, sources, 'Retrieved yield data from', true);
   }
 
-import { zeroGStorageService } from '../storage-service';
-import type { AgentWalletProvider, Payment, X402Challenge } from '../arc-agent';
-import type { CircleService } from '../circle-service';
-import type { DataSource } from '../arc-agent';
-
-// ... (keep class signature)
 
   private async fetchSourceGroup(
     sourcesToFetch: DataSource[],

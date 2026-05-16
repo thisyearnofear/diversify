@@ -1,4 +1,4 @@
-import type { AnalysisResult, AgentWalletProvider } from '../arc-agent';
+import type { AnalysisResult, AgentWalletProvider } from '../agent-service';
 import { utils } from 'ethers';
 
 export class GuardianPostAnalysisService {

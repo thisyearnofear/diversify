@@ -1,16 +1,16 @@
 // Export Services
 import {
-  settleOnArc,
+  settleOnChain,
   getAgentUSDCBalance,
   getAgentAddress,
-  getArcSettlementStats,
+  getSettlementStats,
   type SettlementResult,
   type SettlementSkipped,
-  type ArcSettlementStats,
-  type ArcSettlementTransfer,
-} from './services/arc-settlement';
+  type SettlementStats,
+  type SettlementTransfer,
+} from './services/settlement-service';
 import { circleService, CircleService } from './services/circle-service';
-import { ArcAgent, SessionKeyProvider } from './services/arc-agent';
+import { AgentService, SessionKeyProvider } from './services/agent-service';
 import { SocialConnectService } from './services/social-connect-service';
 import { RWAService, rwaService } from './services/rwa-service';
 import { SynthDataService } from './services/synth-data-service';
@@ -35,17 +35,17 @@ import {
 } from './services/vault/smart-account-provider';
 
 export {
-  settleOnArc,
+  settleOnChain,
   getAgentUSDCBalance,
   getAgentAddress,
-  getArcSettlementStats,
+  getSettlementStats,
   type SettlementResult,
   type SettlementSkipped,
-  type ArcSettlementStats,
-  type ArcSettlementTransfer,
+  type SettlementStats,
+  type SettlementTransfer,
   circleService,
   CircleService,
-  ArcAgent,
+  AgentService,
   SessionKeyProvider,
   SocialConnectService,
   RWAService,

@@ -4,7 +4,7 @@
  * Supports both Embed/NLA authentication and direct Webhook triggers
  */
 
-import { AnalysisResult } from './arc-agent';
+import { AnalysisResult } from './agent-service';
 
 export interface ZapierMCPConfig {
     embedId?: string;

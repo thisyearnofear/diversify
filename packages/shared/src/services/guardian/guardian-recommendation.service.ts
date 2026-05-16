@@ -1,5 +1,5 @@
 import { AIService } from '../ai/ai-service';
-import type { AnalysisResult } from '../arc-agent';
+import type { AnalysisResult } from '../agent-service';
 import type { GuardianAnalysisContext } from './guardian-analysis-data.service';
 
 type RecommendationShape = Partial<AnalysisResult> & {
@@ -74,6 +74,7 @@ Provide a JSON response with:
     paymentHashes: Record<string, string>;
     steps: string[];
     executionTxHash?: string;
+    evidenceCids?: Record<string, string>;
   }): AnalysisResult {
     const {
       recommendation,
@@ -84,6 +85,7 @@ Provide a JSON response with:
       portfolioValue,
       dataSources,
       paymentHashes,
+      evidenceCids,
       steps,
       executionTxHash,
     } = params;
@@ -108,6 +110,7 @@ Provide a JSON response with:
       actionSteps: steps.concat(actionSteps),
       urgencyLevel,
       arcTxHash: executionTxHash,
+      evidenceCids,
     };
   }
 }

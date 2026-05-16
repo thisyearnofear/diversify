@@ -19,6 +19,7 @@ import { GuardianPostAnalysisService } from './guardian/guardian-post-analysis.s
 import { createArcAgentDataSourceTemplates } from '../utils/arc-research-sources';
 import { zeroGStorageService } from './storage-service';
 import { zeroGPersistenceService } from './persistence-service';
+import { SettlementNetwork } from './settlement-service';
 
 export interface Payment {
     amount: string;
@@ -233,23 +234,6 @@ export class SessionKeyProvider implements AgentWalletProvider {
  * Configurable for any network supporting EOA-based USDC settlement.
  */
 
-import { ethers, providers, Wallet, Contract, utils } from 'ethers';
-import { circleService, CircleService } from './circle-service';
-import { RealCircleWalletProvider } from './circle-wallet-provider-real';
-import { hyperliquidService } from './hyperliquid.service';
-import { SynthDataService } from './synth-data-service';
-import { HYPERLIQUID_CONFIG, NETWORKS } from '../config/index';
-import { GuardianExecutionService } from './guardian/guardian-execution.service';
-import { GuardianAnalysisDataService } from './guardian/guardian-analysis-data.service';
-import { GuardianRecommendationService } from './guardian/guardian-recommendation.service';
-import { GuardianDataAccessService } from './guardian/guardian-data-access.service';
-import { GuardianPostAnalysisService } from './guardian/guardian-post-analysis.service';
-import { createArcAgentDataSourceTemplates } from '../utils/arc-research-sources';
-import { zeroGStorageService } from './storage-service';
-import { zeroGPersistenceService } from './persistence-service';
-import { SettlementNetwork, settleOnChain } from './settlement-service';
-
-// ... (keep Payment, X402Challenge, DataSource, AnalysisResult, AgentWalletProvider, EthersWalletProvider, SessionKeyProvider)
 
 export class AgentService {
     private provider: providers.JsonRpcProvider;
@@ -263,6 +247,7 @@ export class AgentService {
     private initialized: boolean = false;
     private dataSourceFailures: Map<string, { count: number; lastFailure: number; openUntil?: number }> = new Map();
     private lastAnalysisResult: AnalysisResult | null = null;
+    private isTestnet: boolean = true;
 
     private static readonly DATA_SOURCE_MAX_FAILURES = 3;
     private static readonly DATA_SOURCE_FAILURE_WINDOW_MS = 5 * 60 * 1000;
@@ -339,20 +324,6 @@ export class AgentService {
         }
     }
 
-    /**
-     * Autonomous analysis with multi-chain x402 settlement
-     */
-    async analyzePortfolioAutonomously(
-        portfolioData: { balance: number; holdings: string[] },
-        userPreferences: any,
-        networkInfo: { chainId: number, name: string }
-    ): Promise<AnalysisResult> {
-        // ... (method body unchanged but ensure payment calls use settleOnChain(..., this.network))
-        // Replace previous settleOnArc usage with settleOnChain(amount, sourceId, this.network)
-    }
-
-    // ... (rest of methods)
-}
 
     private async ensureInitialized(): Promise<void> {
         if (this.initialized) return;
@@ -382,6 +353,7 @@ export class AgentService {
         const steps: string[] = [];
         const dataSources: string[] = [];
         const paymentHashes: Record<string, string> = {};
+        const evidenceCids: Record<string, string> = {};
 
         try {
             await this.ensureInitialized();
@@ -395,9 +367,9 @@ export class AgentService {
                 setSpentToday: (next) => { this.spentToday = next; },
                 dataSourceFailures: this.dataSourceFailures,
                 appBaseUrl: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-                dataSourceFailureWindowMs: ArcAgent.DATA_SOURCE_FAILURE_WINDOW_MS,
-                dataSourceCooldownMs: ArcAgent.DATA_SOURCE_COOLDOWN_MS,
-                dataSourceMaxFailures: ArcAgent.DATA_SOURCE_MAX_FAILURES,
+                dataSourceFailureWindowMs: AgentService.DATA_SOURCE_FAILURE_WINDOW_MS,
+                dataSourceCooldownMs: AgentService.DATA_SOURCE_COOLDOWN_MS,
+                dataSourceMaxFailures: AgentService.DATA_SOURCE_MAX_FAILURES,
             });
             const analysisData = await GuardianAnalysisDataService.gatherContext({
                 portfolioData,
@@ -857,12 +829,12 @@ export class AgentService {
         successful: number;
         results: Array<{
             scenario: typeof scenarios[0];
-            result: Awaited<ReturnType<ArcAgent['simulateRobinhoodSwap']>>;
+            result: Awaited<ReturnType<AgentService['simulateRobinhoodSwap']>>;
         }>;
     }> {
         const results: Array<{
             scenario: typeof scenarios[0];
-            result: Awaited<ReturnType<ArcAgent['simulateRobinhoodSwap']>>;
+            result: Awaited<ReturnType<AgentService['simulateRobinhoodSwap']>>;
         }> = [];
         
         let successful = 0;
@@ -1032,7 +1004,7 @@ export class AgentService {
                 utils.toUtf8Bytes(JSON.stringify(payload.data))
             );
             payload.signature = await this.wallet.signTypedData(
-                { name: 'ArcAgent', version: '1' },
+                { name: 'AgentService', version: '1' },
                 { Intelligence: [{ name: 'hash', type: 'bytes32' }] },
                 { hash: payloadHash }
             );

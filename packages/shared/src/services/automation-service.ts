@@ -4,7 +4,7 @@
  * Supports email notifications, webhooks, and MCP integrations
  */
 
-import { AnalysisResult } from './arc-agent';
+import { AnalysisResult } from './agent-service';
 import { TokenVaultClient, TokenVaultConfig } from './auth0-token-vault';
 
 export interface AutomationConfig {

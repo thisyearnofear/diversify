@@ -6,7 +6,7 @@
  */
 
 import { ethers } from 'ethers';
-import type { AgentWalletProvider } from './arc-agent';
+import type { AgentWalletProvider } from './agent-service';
 
 export interface CircleWalletConfig {
     walletId: string;
