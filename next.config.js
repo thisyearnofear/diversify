@@ -2,18 +2,20 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
-  // Skip ESLint during build - run separately in CI
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // Skip type checking during build - run separately in CI  
+
   typescript: {
     ignoreBuildErrors: true,
   },
+
   transpilePackages: [
     "@diversifi/shared",
     "@stable-station/mento-utils",
   ],
+
+  experimental: {
+    prefetchInlining: true,
+    appNewScrollHandler: true,
+  },
 
   webpack: (config, { isServer }) => {
     if (!isServer) {

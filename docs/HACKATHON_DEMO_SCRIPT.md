@@ -77,7 +77,7 @@
 ---
 
 ## Technical "Wow" Factors for Judges:
-1.  **Google Gemini 1.5 Flash**: Real-time synthesis of IMF, World Bank, and CoinGecko data.
+1.  **Google Gemini 3.1 Flash**: Real-time synthesis of IMF, World Bank, and CoinGecko data.
 2.  **0G Storage**: Immutable audit trail for every AI interaction.
 3.  **Arc Network**: x402-style on-chain settlement for research costs.
 4.  **Robinhood Testnet**: Autonomous backtesting to prove "Alpha" before execution.

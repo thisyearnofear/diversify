@@ -8,6 +8,9 @@ import { unifiedCache } from './unified-cache-service';
 import { circuitBreakerManager } from './circuit-breaker-service';
 import { getFallbackByRegion } from '../constants/inflation';
 
+// Re-export macroService for backwards compatibility
+export { macroService } from './macro-economic-service';
+
 export class ImprovedInflationService {
   private readonly circuitBreaker = circuitBreakerManager.getCircuit('inflation-service', {
     failureThreshold: 3,
