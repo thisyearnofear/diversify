@@ -18,6 +18,7 @@
     "@celo/identity": "5.1.2",
     "@celo/poprf": "0.1.9",
     "@circle-fin/developer-controlled-wallets": "10.0.1",
+    "@diversifi/shared-0g": "workspace:*",
     "@farcaster/miniapp-sdk": "0.2.1",
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",

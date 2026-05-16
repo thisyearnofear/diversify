@@ -1,6 +1,6 @@
 import type { AgentWalletProvider, Payment, X402Challenge, DataSource } from '../agent-service';
 import type { CircleService } from '../circle-service';
-import { zeroGStorageService } from '../storage-service';
+import { zeroGStorageService } from '@diversifi/shared-0g/src/services/storage-service';
 
 type FailureState = Map<string, { count: number; lastFailure: number; openUntil?: number }>;
 

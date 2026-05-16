@@ -17,8 +17,8 @@ import { GuardianRecommendationService } from './guardian/guardian-recommendatio
 import { GuardianDataAccessService } from './guardian/guardian-data-access.service';
 import { GuardianPostAnalysisService } from './guardian/guardian-post-analysis.service';
 import { createArcAgentDataSourceTemplates } from '../utils/arc-research-sources';
-import { zeroGStorageService } from './storage-service';
-import { zeroGPersistenceService } from './persistence-service';
+import { zeroGStorageService } from '@diversifi/shared-0g/src/services/storage-service';
+import { zeroGPersistenceService } from '@diversifi/shared-0g/src/services/persistence-service';
 import { SettlementNetwork } from './settlement-service';
 
 export interface Payment {

@@ -3,9 +3,6 @@
  * Stores agent context and state in 0G Storage (serving as a verifiable DA layer).
  */
 
-import { Indexer, Blob as ZgBlob } from '@0gfoundation/0g-storage-ts-sdk';
-import * as ethers6 from 'ethers6';
-
 export interface AgentContext {
     userId: string;
     preferences: Record<string, any>;
@@ -31,6 +28,15 @@ export class ZeroGPersistenceService {
      * Using Storage as a verifiable state anchor (pseudo-DA)
      */
     async persistState(context: AgentContext): Promise<string> {
+        let SDK: any;
+        if (typeof window === 'undefined') {
+            SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+        } else {
+            throw new Error('0G Persistence is not available in the browser.');
+        }
+        const { Indexer, Blob: ZgBlob } = SDK;
+        const ethers6 = eval('require("ethers6")');
+
         const privateKey = process.env.VAULT_PRIVATE_KEY;
         if (!privateKey) {
             console.warn('[0G Persistence] VAULT_PRIVATE_KEY missing, skipping real persistence');
@@ -73,7 +79,6 @@ export class ZeroGPersistenceService {
             return String(rootHash);
         } catch (error: any) {
             console.error('[0G Persistence] Failed to persist state to 0G:', error.message);
-            // Non-blocking fallback
             return `error_${Date.now()}`;
         }
     }
@@ -83,9 +88,6 @@ export class ZeroGPersistenceService {
      */
     async restoreState(userId: string): Promise<AgentContext | null> {
         console.log(`[0G Persistence] Restoring state for user ${userId} (Querying 0G Storage)...`);
-        
-        // In a full implementation, we would query the indexer for the latest blob 
-        // associated with this user's identity or a known root hash.
         return null; 
     }
 }

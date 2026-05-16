@@ -1,0 +1,10 @@
+{
+  "name": "@diversifi/shared-0g",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/0g-services.ts",
+  "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "1.2.9",
+    "ethers6": "npm:ethers@6"
+  }
+}

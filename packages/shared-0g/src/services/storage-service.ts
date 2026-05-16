@@ -3,9 +3,6 @@
  * Interface to upload evidence bundles to 0G Storage.
  */
 
-import { Indexer, Blob as ZgBlob } from '@0gfoundation/0g-storage-ts-sdk';
-import * as ethers6 from 'ethers6';
-
 export interface StorageResult {
     cid: string;
     url: string;
@@ -28,6 +25,17 @@ export class ZeroGStorageService {
     }
 
     async uploadEvidence(data: any, metadata: { agent: string; source: string; timestamp: number }): Promise<StorageResult> {
+        let SDK: any;
+        if (typeof window === 'undefined') {
+            // Use eval to hide the require from Webpack's static analysis
+            SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+        } else {
+            throw new Error('0G Storage is not available in the browser.');
+        }
+
+        const { Indexer, Blob: ZgBlob } = SDK;
+        const ethers6 = eval('require("ethers6")');
+
         const privateKey = process.env.VAULT_PRIVATE_KEY;
         if (!privateKey) {
             throw new Error('VAULT_PRIVATE_KEY missing for 0G Storage upload');
@@ -43,14 +51,14 @@ export class ZeroGStorageService {
 
             console.log(`[0G Storage] Uploading evidence from ${metadata.source} to ${this.indexerUrl}...`);
 
-            // 1. Setup Ethers v6 Provider and Signer
+            // Setup Ethers v6 Provider and Signer
             const provider = new ethers6.JsonRpcProvider(this.evmRpc);
             const signer = new ethers6.Wallet(privateKey, provider);
             
-            // 2. Setup 0G Indexer
+            // Setup 0G Indexer
             const indexer = new Indexer(this.indexerUrl);
 
-            // 3. Create ZgBlob from payload
+            // Create ZgBlob from payload
             const blob = new ZgBlob(new Uint8Array(Buffer.from(payload)) as any);
             
             // 4. Get Merkle Tree for CID (root hash)
@@ -64,7 +72,6 @@ export class ZeroGStorageService {
             console.log(`[0G Storage] Data Root Hash: ${rootHash}`);
 
             // 5. Upload to 0G Storage
-            // Using as any to bypass ethers v5/v6 signer type mismatch
             const [tx, upErr] = await indexer.upload(blob, this.evmRpc, signer as any);
             
             if (upErr) {
@@ -81,8 +88,6 @@ export class ZeroGStorageService {
             };
         } catch (error: any) {
             console.error('[0G Storage] Upload failed:', error.message);
-            // Fallback to mock behavior in case of dev/testnet instability during demo, 
-            // but log clearly so we know it's a fallback.
             if (process.env.NODE_ENV === 'development') {
                 console.warn('[0G Storage] Falling back to mock CID for development/demo stability');
                 const mockCid = `bafybeih${Math.random().toString(36).substring(2, 15)}`;

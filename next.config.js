@@ -17,7 +17,6 @@ const nextConfig = {
 
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Client-side polyfills for Node.js modules used by Celo SDKs
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
