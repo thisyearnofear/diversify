@@ -33,36 +33,42 @@ export function GuardianPulse() {
     if (error || !data) return null;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-5">
             <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                    </span>
-                    Guardian Pulse
-                </h3>
+                <div className="space-y-0.5">
+                    <h3 className="text-[10px] font-black uppercase text-blue-500 dark:text-blue-400 tracking-widest flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+                        </span>
+                        Guardian Pulse
+                    </h3>
+                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">
+                        Autonomous Market Synthesis
+                    </p>
+                </div>
                 <button 
                     onClick={() => setIsAuditOpen(true)}
-                    className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all cursor-pointer active:scale-95 shadow-sm"
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 rounded-full shadow-[0_4px_12px_rgba(37,99,235,0.3)] hover:shadow-[0_8px_16px_rgba(37,99,235,0.4)] transition-all cursor-pointer active:scale-95 border border-white/10"
                 >
-                    <span className="text-[8px] font-black text-blue-600 dark:text-blue-400 uppercase">Verifiable AI</span>
-                    <span className="text-[10px]">🛡️</span>
+                    <span className="text-[9px] font-black text-white uppercase tracking-tighter">Verifiable AI</span>
+                    <span className="text-xs">🛡️</span>
                 </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">Sentiment</div>
-                    <div className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
+                <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-[1.5rem] border border-gray-100 dark:border-white/5 shadow-inner">
+                    <div className="text-[9px] text-gray-400 font-bold uppercase mb-1 tracking-tighter">Market Sentiment</div>
+                    <div className="text-xl font-black text-gray-900 dark:text-white flex items-baseline gap-1">
                         {Math.round(data.pulse.sentiment)}
-                        <span className="text-[10px] font-medium text-gray-500">/ 100</span>
+                        <span className="text-[9px] font-bold text-gray-400">/100</span>
                     </div>
                 </div>
-                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800">
-                    <div className="text-[10px] text-gray-400 font-bold uppercase mb-1">War Risk</div>
-                    <div className="text-lg font-black text-gray-900 dark:text-white flex items-center gap-2">
-                        {Math.round(data.pulse.warRisk)}%
+                <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-[1.5rem] border border-gray-100 dark:border-white/5 shadow-inner">
+                    <div className="text-[9px] text-gray-400 font-bold uppercase mb-1 tracking-tighter">War Risk Index</div>
+                    <div className="text-xl font-black text-red-600 dark:text-red-400 flex items-baseline gap-1">
+                        {Math.round(data.pulse.warRisk)}
+                        <span className="text-[9px] font-bold opacity-60">%</span>
                     </div>
                 </div>
             </div>
