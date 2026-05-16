@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { IntelligenceItem } from '../../types/intelligence';
-import { AuditTrailModal } from './AuditTrailModal';
+import { VerifiableAIDashboard } from './VerifiableAIDashboard';
 import { RiskHeatMap } from './RiskHeatMap';
 
 export function GuardianPulse() {
@@ -120,7 +120,7 @@ export function GuardianPulse() {
                 </p>
             </div>
 
-            <AuditTrailModal isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
+            <VerifiableAIDashboard isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
         </div>
     );
 }
