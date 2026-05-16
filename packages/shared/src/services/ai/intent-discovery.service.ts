@@ -16,6 +16,7 @@ export type AppIntent =
     | { type: 'ONBOARDING'; topic: 'what-is-this' | 'how-to-start' | 'is-safe' | 'wallet-help' | 'demo' }
     | { type: 'GOODDOLLAR'; topic: 'claim' | 'verify' | 'status' | 'info' }
     | { type: 'WDK_ACTION'; topic: 'switch' | 'info' | 'status' | 'settlement' }
+    | { type: 'PROACTIVE_REBALANCE'; fromToken?: string; toToken?: string; amount?: string; reason?: string }
     | { type: 'QUERY'; context: 'market' | 'portfolio' | 'general' }
     | { type: 'UNKNOWN' };
 

@@ -8,6 +8,8 @@
  */
 
 import { AIService } from './ai-service';
+import { AgentService } from '../agent-service';
+import { SettlementNetwork } from '../settlement-service';
 import type { IntelligenceItem } from '../../types/intelligence';
 import type { MarketPulse } from '../../utils/market-pulse-service';
 import type { VoiceInsightResult } from './voice-insights.service';
@@ -85,6 +87,12 @@ export class IntelligenceService {
             });
 
             const items = JSON.parse(completion.content) as IntelligenceItem[];
+
+            // Proof of Efficacy: Run backtests for recommended assets (non-blocking)
+            this.runProofOfEfficacy(items).catch(err => 
+                console.warn('[Proof of Efficacy] Background backtest failed:', err)
+            );
+
             return this.deduplicateInsights(items);
         } catch (error) {
             console.error('[IntelligenceService] Error generating AI insights, falling back to rule-based:', error);
@@ -211,5 +219,36 @@ export class IntelligenceService {
             hash = hash & hash; // Convert to 32bit integer
         }
         return Math.abs(hash).toString(16);
+    }
+
+    /**
+     * Runs backtests for intelligence items to provide "Proof of Efficacy"
+     */
+    private static async runProofOfEfficacy(items: IntelligenceItem[]): Promise<void> {
+        const recommendations = items.filter(item => item.impactAsset);
+        if (recommendations.length === 0) return;
+
+        try {
+            const agent = new AgentService({
+                rpcUrl: process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network',
+                network: SettlementNetwork.ARC,
+                spendingLimit: 0
+            });
+
+            const scenarios = recommendations.map(item => ({
+                fromToken: 'ETH' as const,
+                toToken: (item.impactAsset as any) || 'STARK',
+                amount: '1.0'
+            }));
+
+            // Run simulations on Robinhood testnet
+            const backtest = await agent.runBacktestSequence(scenarios);
+            
+            // Note: The actual 0G anchoring of these backtests is handled inside AIService/AgentService
+            // which are called during the simulation and synthesis phases.
+            console.log(`[Proof of Efficacy] Verified ${backtest.successful}/${backtest.totalSimulations} strategies.`);
+        } catch (error) {
+            console.error('[Proof of Efficacy] Error:', error);
+        }
     }
 }

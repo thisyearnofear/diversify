@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { IntelligenceItem } from '../../types/intelligence';
+import { AuditTrailModal } from './AuditTrailModal';
+import { RiskHeatMap } from './RiskHeatMap';
 
 export function GuardianPulse() {
-    const [data, setData] = useState<{ pulse: any; insights: IntelligenceItem[] } | null>(null);
+    const [data, setData] = useState<{ pulse: any; insights: IntelligenceItem[]; regionalRisk?: any } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isAuditOpen, setIsAuditOpen] = useState(false);
 
     useEffect(() => {
         const fetchPulse = async () => {
@@ -39,10 +42,13 @@ export function GuardianPulse() {
                     </span>
                     Guardian Pulse
                 </h3>
-                <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">
+                <button 
+                    onClick={() => setIsAuditOpen(true)}
+                    className="flex items-center gap-1 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all cursor-pointer active:scale-95 shadow-sm"
+                >
                     <span className="text-[8px] font-black text-blue-600 dark:text-blue-400 uppercase">Verifiable AI</span>
                     <span className="text-[10px]">🛡️</span>
-                </div>
+                </button>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -60,6 +66,10 @@ export function GuardianPulse() {
                     </div>
                 </div>
             </div>
+
+            {data.regionalRisk && (
+                <RiskHeatMap riskData={data.regionalRisk} />
+            )}
 
             <div className="space-y-3">
                 <AnimatePresence>
@@ -103,6 +113,8 @@ export function GuardianPulse() {
                     All insights are anchored to 0G DA layer for auditability.
                 </p>
             </div>
+
+            <AuditTrailModal isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
         </div>
     );
 }

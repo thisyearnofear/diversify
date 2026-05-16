@@ -105,6 +105,17 @@ export class AgentActionService {
                 callbacks.onNavigate?.('earn');
                 break;
 
+            case 'PROACTIVE_REBALANCE':
+                callbacks.onToast?.(`Autonomous Pilot: Prepared rebalance for safety...`, 'ai');
+                callbacks.onSwapPrefill?.({
+                    fromToken: intent.fromToken,
+                    toToken: intent.toToken,
+                    amount: intent.amount,
+                    reason: intent.reason || `Autonomous Pilot: Market Volatility Detected`,
+                });
+                callbacks.onNavigate?.('exchange');
+                break;
+
             case 'GOODDOLLAR':
                 // For GoodDollar status/claims, we usually want the AI to give a contextual response
                 // but we also want to open the chat drawer.

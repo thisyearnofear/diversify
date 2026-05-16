@@ -33,9 +33,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       synthData
     );
 
+    // Calculate regional risk heatmap for UI (Top 1% enhancement)
+    const regionalRisk: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {};
+    const regions = ['Africa', 'LatAm', 'Asia', 'USA', 'Europe'];
+    
+    regions.forEach(region => {
+      // Find representative inflation for region
+      const countryData = inflationResult.data.countries.filter((c: any) => c.region === region || c.region === region.toLowerCase());
+      const avgInflation = countryData.length > 0 
+        ? countryData.reduce((acc: number, c: any) => acc + (c.value || 0), 0) / countryData.length
+        : (region === 'LatAm' ? 35 : region === 'Africa' ? 15 : 4);
+
+      if (avgInflation > 30) regionalRisk[region] = 'critical';
+      else if (avgInflation > 15) regionalRisk[region] = 'high';
+      else if (avgInflation > 7) regionalRisk[region] = 'medium';
+      else regionalRisk[region] = 'low';
+    });
+
     return res.status(200).json({
       pulse,
       insights,
+      regionalRisk,
       timestamp: Date.now()
     });
   } catch (error: any) {
