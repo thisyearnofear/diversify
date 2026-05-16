@@ -231,7 +231,7 @@ export class IntelligenceService {
         try {
             const agent = new AgentService({
                 rpcUrl: process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network',
-                network: SettlementNetwork.ARC,
+                network: 'ARC',
                 spendingLimit: 0
             });
 
