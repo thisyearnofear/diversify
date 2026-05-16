@@ -17,6 +17,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { circuitBreakerManager } from "../../utils/circuit-breaker-service";
 import { unifiedCache } from "../../utils/unified-cache-service";
 import { withTimeout } from "../../utils/promise-utils";
+import { zeroGStorageService } from "@diversifi/shared-0g/src/services/storage-service";
 
 /**
  * Robustly clean JSON strings from AI responses
@@ -507,7 +508,51 @@ export async function generateChatCompletion(
     "volatile",
   );
 
+  // Anchor to 0G Storage for verifiability (non-blocking)
+  if (typeof window === 'undefined') {
+    anchorToZeroG(options, result.data).catch(err => 
+      console.warn('[Verifiable AI] Background anchoring failed:', err)
+    );
+  }
+
   return result.data;
+}
+
+/**
+ * Anchors AI interaction to 0G Storage for verifiability
+ */
+async function anchorToZeroG(options: ChatCompletionOptions, result: ChatCompletionResult): Promise<void> {
+  try {
+    // Determine if this is an analysis worth anchoring
+    const isAnalysis = options.messages.some(m => 
+      m.content.toLowerCase().includes('analyze') || 
+      m.content.toLowerCase().includes('recommend') ||
+      m.content.toLowerCase().includes('strategy')
+    ) || options.responseMimeType === 'application/json';
+
+    if (!isAnalysis) return;
+
+    const data = {
+      prompt: options.messages.map(m => ({ role: m.role, length: m.content.length })),
+      fullPrompt: options.messages,
+      response: result.content,
+      model: result.model,
+      provider: result.provider,
+      timestamp: Date.now()
+    };
+
+    const metadata = {
+      agent: 'DiversiFi-Agent',
+      source: 'AI-Audit-Log',
+      timestamp: Date.now()
+    };
+
+    // This will execute in the background
+    await zeroGStorageService.uploadEvidence(data, metadata);
+  } catch (error) {
+    // Silent fail as this is a background audit task
+    throw error;
+  }
 }
 
 /**

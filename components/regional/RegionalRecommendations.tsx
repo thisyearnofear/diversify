@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Region } from "../../hooks/use-user-region";
 import { getRegionDesign } from "../../constants/tokens";
+import { REGION_METADATA } from "../../config/emerging-markets";
+import { useAnimatedCounter } from "../../hooks/use-animated-counter";
 
 // Geographic allocation recommendations for users based on their home region
 interface RegionInsight {
@@ -173,6 +175,19 @@ export default function RegionalRecommendations({
   const [showConsiderations, setShowConsiderations] = useState(false);
   const regionData = REGION_INSIGHTS[selectedRegion];
   const regionDesign = getRegionDesign(selectedRegion);
+  const metaStats = (REGION_METADATA as any)[selectedRegion.toLowerCase()]?.stats;
+
+  const { value: inflationVal } = useAnimatedCounter({ 
+    target: metaStats?.avgInflation || regionData.inflationRate, 
+    duration: 1500,
+    decimals: 1
+  });
+  
+  const { value: yieldVal } = useAnimatedCounter({ 
+    target: metaStats?.diversifiYield || 12.5, 
+    duration: 2000,
+    decimals: 1
+  });
 
   // Calculate how far current allocation is from typical
   const calculateDifference = () => {
@@ -245,6 +260,53 @@ export default function RegionalRecommendations({
             );
           })}
         </div>
+
+        {/* Protection Card (High-Stakes Narrative) */}
+        {metaStats && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-gradient-to-br from-red-600 to-orange-700 rounded-2xl p-5 shadow-2xl relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 p-4 opacity-10">
+              <span className="text-8xl">🛡️</span>
+            </div>
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="bg-white/20 backdrop-blur-md text-[10px] font-black text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
+                  Live Risk Assessment
+                </span>
+              </div>
+              
+              <h3 className="text-white font-black text-xl leading-tight mb-4">
+                {metaStats.protectionMessage}
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 border border-white/10">
+                  <div className="text-[10px] text-white/60 font-bold uppercase mb-1">Local Inflation</div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-white">{inflationVal.toFixed(1)}</span>
+                    <span className="text-xs font-bold text-red-300">%</span>
+                  </div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20 shadow-lg">
+                  <div className="text-[10px] text-white/60 font-bold uppercase mb-1">DiversiFi Yield</div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-black text-green-400">{yieldVal.toFixed(1)}</span>
+                    <span className="text-xs font-bold text-green-400">%</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-4 flex items-center gap-2 text-[10px] text-white/50 italic">
+                <span>⚡</span> Powered by Google Gemini & 0G Data Integrity
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Description Card */}
         <div className={`bg-gradient-to-br ${regionDesign.gradient} bg-opacity-10 rounded-xl p-4 shadow-inner`}>

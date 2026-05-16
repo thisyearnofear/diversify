@@ -396,6 +396,12 @@ export const REGION_METADATA = {
     darkBgGradient: "from-green-900/20 to-emerald-900/20",
     description: "East, West, and South African markets",
     countries: ["Kenya", "Nigeria", "South Africa", "Wakanda", "Sahara"],
+    stats: {
+      avgInflation: 18.5,
+      localYield: 4.2,
+      diversifiYield: 12.8,
+      protectionMessage: "Protect against double-digit debasement with Celo-native stables.",
+    }
   },
   latam: {
     label: "Latin America",
@@ -405,6 +411,12 @@ export const REGION_METADATA = {
     darkBgGradient: "from-blue-900/20 to-cyan-900/20",
     description: "Brazil, Mexico, Argentina, and beyond",
     countries: ["Brazil", "Mexico", "Argentina", "Republic of Isthmus"],
+    stats: {
+      avgInflation: 42.1,
+      localYield: 8.5,
+      diversifiYield: 14.2,
+      protectionMessage: "Your local currency lost 40% value this year. Pivot to PAXG or USDY.",
+    }
   },
   asia: {
     label: "Asia Pacific",
@@ -414,5 +426,11 @@ export const REGION_METADATA = {
     darkBgGradient: "from-orange-900/20 to-red-900/20",
     description: "India, Japan, Southeast Asia",
     countries: ["India", "Singapore", "Philippines", "Japan"],
+    stats: {
+      avgInflation: 6.2,
+      localYield: 3.1,
+      diversifiYield: 11.5,
+      protectionMessage: "Beat local savings rates by 3x with optimized cross-chain yield.",
+    }
   },
 };

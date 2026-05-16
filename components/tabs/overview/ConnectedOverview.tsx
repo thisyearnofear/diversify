@@ -19,6 +19,7 @@ import DashboardCard from "../../shared/DashboardCard";
 import { AgentTierStatus } from "../../agent/AgentTierStatus";
 import { GoalAlignmentBanner } from "./GoalAlignmentBanner";
 import { InflationTooltip } from "./InflationTooltip";
+import { GuardianPulse } from "../../agent/GuardianPulse";
 
 const EMERGING_MARKETS = {
   Africa: { growth: 4.2, highlight: "Fastest growing mobile money market" },
@@ -457,58 +458,12 @@ export function ConnectedOverview({
       {/* 4. MARKET INTELLIGENCE */}
       {!isBeginner && (
       <DashboardCard
-        title={isBeginner ? "Global Opportunities" : "Market Intelligence"}
+        title={isBeginner ? "Global Opportunities" : "Guardian Pulse"}
         icon={<span>🌍</span>}
         color="blue"
         size="lg"
       >
-        <div className="flex flex-wrap gap-2 mb-4">
-          {REGIONS.map((region) => (
-            <button
-              key={region}
-              onClick={() => setSelectedMarket(region)}
-              className={`px-3 py-1.5 text-xs font-black uppercase rounded-lg transition-all ${
-                region === selectedMarket
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "bg-white dark:bg-gray-800 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
-              }`}
-            >
-              {region}
-            </button>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-blue-100 dark:border-blue-800">
-            <div className="flex items-center gap-1 mb-1">
-              <div className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase">
-                {isBeginner ? "Living Costs Up" : "Inflation"}
-              </div>
-              <InflationTooltip />
-            </div>
-            <div className="text-2xl font-black text-gray-900 dark:text-white">
-              {selectedMarketInflation.toFixed(1)}%
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-emerald-100 dark:border-emerald-800">
-            <div className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase mb-1">
-              {isBeginner ? "Growth Potential" : "Market Growth"}
-            </div>
-            <div className="text-2xl font-black text-gray-900 dark:text-white">
-              +{selectedMarketData.growth}%
-            </div>
-          </div>
-        </div>
-        <div className="p-3 bg-gray-900 dark:bg-gray-950 rounded-xl text-white text-xs font-bold italic mb-4">
-          &quot;{selectedMarketData.highlight}&quot;
-        </div>
-        {isAdvanced && currencyPerformanceData && (
-          <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div className="text-xs font-black text-gray-400 uppercase mb-3">
-              Currency Velocity (30D)
-            </div>
-            <CurrencyPerformanceChart data={currencyPerformanceData} title="" />
-          </div>
-        )}
+        <GuardianPulse />
       </DashboardCard>
       )}
 
