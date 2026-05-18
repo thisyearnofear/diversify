@@ -76,16 +76,89 @@ export function SelectionScreen({
 
     const strategy = STRATEGIES[currentIndex];
 
+import { GuardianMascot } from '../../shared/GuardianMascot';
+
+export function SelectionScreen({
+    currentIndex,
+    selected,
+    onSelect,
+    onNext,
+    onPrev,
+    onContinue,
+    onBack,
+    onSkip,
+}: SelectionScreenProps) {
+    const x = useMotionValue(0);
+    const rotate = useTransform(x, [-150, 150], [-12, 12]);
+    const scale = useTransform(x, [-150, 0, 150], [0.95, 1, 0.95]);
+    const cardOpacity = useTransform(x, [-150, -75, 0, 75, 150], [0.6, 1, 1, 1, 0.6]);
+
+    const SWIPE_THRESHOLD = 75;
+    const VELOCITY_THRESHOLD = 400;
+
+    const handleDragStart = () => {
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+            navigator.vibrate(10);
+        }
+    };
+
+    const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        if (typeof window !== 'undefined' && 'vibrate' in navigator && Math.abs(info.offset.x) % 50 < 10) {
+            navigator.vibrate(5);
+        }
+    };
+
+    const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        const offsetX = info.offset.x;
+        const velX = info.velocity.x;
+        const absOffset = Math.abs(offsetX);
+        const absVel = Math.abs(velX);
+
+        x.set(0);
+
+        const shouldNavigate = absOffset > SWIPE_THRESHOLD || absVel > VELOCITY_THRESHOLD;
+
+        if (shouldNavigate && absOffset > 10) {
+            if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                navigator.vibrate(30);
+            }
+            if (offsetX > 0 && currentIndex > 0) {
+                onPrev();
+            } else if (offsetX < 0 && currentIndex < STRATEGIES.length - 1) {
+                onNext();
+            }
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'ArrowLeft' && currentIndex > 0) {
+            onPrev();
+        } else if (e.key === 'ArrowRight' && currentIndex < STRATEGIES.length - 1) {
+            onNext();
+        } else if (e.key === 'Enter' || e.key === ' ') {
+            onSelect(STRATEGIES[currentIndex].id);
+        }
+    };
+
+    const strategy = STRATEGIES[currentIndex];
+
     return (
         <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
             {/* Header - More compact on small screens */}
             <div className="p-6 md:p-8 border-b border-gray-100 dark:border-gray-800/50 bg-white/50 dark:bg-gray-900/50">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg md:text-xl font-[900] tracking-tight text-gray-900 dark:text-white">
-                        Financial Philosophy
-                    </h3>
-                    <div className="px-3 py-1 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-xs font-black rounded-full uppercase tracking-widest">
-                        {currentIndex + 1} / {STRATEGIES.length}
+                <div className="flex items-center gap-4 mb-4">
+                    <GuardianMascot size={60} mood={selected ? 'happy' : 'thinking'} />
+                    <div className="flex-1">
+                        <motion.div 
+                            className="bg-blue-600 text-white text-[10px] md:text-xs font-black px-3 py-2 rounded-2xl rounded-bl-none shadow-lg"
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            key={selected ? 'selected' : 'thinking'}
+                        >
+                            {selected 
+                                ? `Great choice! ${STRATEGIES?.find(s => s.id === selected)?.name} is a strong philosophy.`
+                                : 'Which philosophy guides your savings?'}
+                        </motion.div>
                     </div>
                 </div>
                 <div className="flex gap-1.5" role="progressbar" aria-valuenow={currentIndex + 1} aria-valuemin={1} aria-valuemax={STRATEGIES.length}>

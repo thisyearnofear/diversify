@@ -383,20 +383,27 @@ export default function DiversiFiPage() {
           }}
         >
           <AnimatePresence mode="wait">
+import { GuardianStreakWidget } from "../components/agent/GuardianStreakWidget";
+
+...
+
               {activeTab === "overview" && (
                 <TabPane id="overview">
                   <ErrorBoundary>
                     <PullToRefresh onRefresh={refresh}>
-                      <OverviewTab
-                        portfolio={multichainPortfolio}
-                        isRegionLoading={isRegionLoading}
-                        userRegion={userRegion}
-                        setUserRegion={setUserRegion}
-                        REGIONS={REGIONS}
-                        setActiveTab={setActiveTab}
-                        refreshBalances={refresh}
-                        currencyPerformanceData={currencyPerformanceData}
-                      />
+                      <div className="p-4 space-y-4">
+                        <GuardianStreakWidget />
+                        <OverviewTab
+                          portfolio={multichainPortfolio}
+                          isRegionLoading={isRegionLoading}
+                          userRegion={userRegion}
+                          setUserRegion={setUserRegion}
+                          REGIONS={REGIONS}
+                          setActiveTab={setActiveTab}
+                          refreshBalances={refresh}
+                          currencyPerformanceData={currencyPerformanceData}
+                        />
+                      </div>
                     </PullToRefresh>
                   </ErrorBoundary>
                 </TabPane>

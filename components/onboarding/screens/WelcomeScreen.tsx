@@ -4,6 +4,8 @@ import { OnboardingScreenProps } from './types';
 import { NETWORKS } from '../../../config';
 import { useWalletContext } from '../../wallet/WalletProvider';
 
+import { GuardianMascot } from '../../shared/GuardianMascot';
+
 interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue: () => void;
     chainId?: number;
@@ -36,35 +38,23 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                 <div className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-purple-400 dark:bg-purple-600 rounded-full blur-[120px] mix-blend-multiply" />
             </div>
 
-            {/* Premium Iconography / Shield Metaphor */}
+            {/* Premium Iconography / Mascot */}
             <motion.div
                 className="mb-6 md:mb-10 relative mt-4 md:mt-0"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', duration: 1 }}
             >
-                {/* Glow Ring */}
-                <motion.div
-                    className="absolute inset-0 bg-blue-500/20 dark:bg-blue-500/10 blur-3xl rounded-full"
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                />
-
-                <div className="size-24 md:size-32 bg-white dark:bg-gray-800 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl flex items-center justify-center border border-gray-100 dark:border-gray-700 relative z-10 transition-transform hover:scale-105 duration-500">
-                    <motion.div
-                        className="text-5xl md:text-7xl select-none"
-                        animate={{
-                            rotateY: [0, 360],
-                        }}
-                        transition={{
-                            duration: 15,
-                            repeat: Infinity,
-                            ease: 'linear',
-                        }}
-                    >
-                        🛡️
-                    </motion.div>
-                </div>
+                <GuardianMascot size={160} mood="happy" />
+                
+                <motion.div 
+                  className="absolute -right-4 -top-4 bg-white dark:bg-gray-800 px-4 py-2 rounded-2xl shadow-xl border border-blue-100 dark:border-blue-900 z-20"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1 }}
+                >
+                  <span className="text-xs font-black text-blue-600">"Hi, I'm Divi!"</span>
+                </motion.div>
             </motion.div>
 
             {/* Welcome Text with Refined Typography */}
@@ -75,10 +65,10 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                 className="px-4"
             >
                 <h2 className="text-3xl md:text-4xl font-[900] tracking-tight text-gray-900 dark:text-white mb-2 md:mb-4 leading-tight">
-                    Secure Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Wealth</span>
+                    Your Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Guardian</span>
                 </h2>
                 <p className="text-base md:text-lg text-gray-500 dark:text-gray-400 mb-8 md:mb-10 max-w-sm mx-auto leading-relaxed font-medium">
-                    Protect your savings across regions and cultures with tailored financial philosophies.
+                    I'm here to protect your wealth from inflation and find growth in any economy.
                 </p>
             </motion.div>
 
@@ -106,7 +96,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                     className="w-full px-8 py-4 md:py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base md:text-lg font-black rounded-[1.5rem] md:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
                     whileHover={{ y: -2, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.4)" }}
                 >
-                    Get Started →
+                    Let's Talk →
                 </motion.button>
 
                 {/* Test Drive entry point — for connected wallets: one-tap network switch */}

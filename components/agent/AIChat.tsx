@@ -764,13 +764,15 @@ export default function AIChat() {
                   </motion.div>
                 ))}
 
+import { GuardianMascot } from "../shared/GuardianMascot";
+
+... (rest of the file remains same until thinking state)
+
                 {isChatting && (
                   <div className="flex justify-start">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm max-w-[90%]">
-                      <div className="flex items-center gap-3">
-                         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }} className="text-2xl">🪙</motion.div>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm max-w-[90%] flex items-center gap-3">
+                         <GuardianMascot size={40} mood="thinking" />
                          <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">{thinkingStep || "Analyzing..."}</span>
-                      </div>
                     </div>
                   </div>
                 )}

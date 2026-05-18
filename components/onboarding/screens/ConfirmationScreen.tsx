@@ -10,6 +10,8 @@ interface ConfirmationScreenProps extends OnboardingScreenProps {
     onConfirm: () => void;
 }
 
+import { GuardianMascot } from '../../shared/GuardianMascot';
+
 export function ConfirmationScreen({
     strategy,
     onConfirm,
@@ -44,14 +46,14 @@ export function ConfirmationScreen({
                     transition={{ type: "spring", stiffness: 200 }}
                     className="relative z-10 text-center"
                 >
-                    <div className="size-16 md:size-24 bg-white/20 backdrop-blur-md rounded-2xl md:rounded-[2.5rem] border border-white/30 flex items-center justify-center mx-auto mb-4 md:mb-6 shadow-2xl">
-                        <span className="text-4xl md:text-6xl select-none">{strategyData.icon}</span>
+                    <div className="mx-auto mb-4 md:mb-6">
+                        <GuardianMascot size={120} mood="protective" className="mx-auto" />
                     </div>
                     <h2 className="text-xl md:text-3xl font-[900] text-white mb-1 md:mb-2 tracking-tight">
-                        {strategyData.name}
+                        Confirm Protection
                     </h2>
                     <div className="inline-block px-3 py-1 md:px-4 md:py-1.5 bg-black/20 backdrop-blur-sm rounded-full text-white/90 text-xs md:text-xs font-black uppercase tracking-[0.2em]">
-                        {strategyData.tagline}
+                        {strategyData.name}
                     </div>
                 </motion.div>
             </div>

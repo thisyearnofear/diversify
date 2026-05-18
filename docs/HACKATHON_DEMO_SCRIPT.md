@@ -16,7 +16,7 @@
 > 
 > Most financial advisors are reactive. They tell you what happened yesterday. We built **DiversiFi**: a proactive, verifiable AI Guardian that moves your money to safety *before* the crash happens. 
 > 
-> This isn't just a UI—this is real-time macro intelligence synthesized by **Google Gemini 1.5 Flash** and anchored to the **0G Data Availability layer**."
+> This isn't just a UI—this is real-time macro intelligence synthesized by **Google Gemini 3.1 Flash** and anchored to the **0G Data Availability layer**."
 
 ---
 

@@ -368,18 +368,23 @@ export default function ProtectionTab({
   // ============================================================================
   // RENDER: Connected
   // ============================================================================
+import { GuardianMascot } from "../shared/GuardianMascot";
+
+...
 
   return (
     <div className="space-y-4">
       {/* Strategy Alignment Bar */}
       {selectedStrategyData && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
-          <span className="text-xl">{selectedStrategyData.icon}</span>
+          <GuardianMascot size={40} mood={strategyAlignmentScore > 80 ? 'happy' : 'thinking'} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300 truncate">
                 {selectedStrategyData.name}
               </span>
+...
+
               <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 ml-2 shrink-0">
                 {strategyAlignmentScore}% aligned
               </span>
