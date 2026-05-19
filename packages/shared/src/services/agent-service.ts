@@ -2,14 +2,18 @@
  * Arc Network Agent Service
  * Autonomous AI agent that pays for its own API calls using x402 protocol.
  * Integrated with the Arc Data Hub for on-chain verified premium data access.
+ * 
+ * REFACTORED: Now delegates to specialized services for better separation of concerns.
  */
 
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
+
+import { AgentWalletProvider } from '../types/wallet-provider';
+export { AgentWalletProvider };
 import { rwaService } from './rwa-service';
 import { circleService, CircleService } from './circle-service';
 import { RealCircleWalletProvider } from './circle-wallet-provider-real';
 import { hyperliquidService } from './hyperliquid.service';
-import { SynthDataService } from './synth-data-service';
 import { HYPERLIQUID_CONFIG } from '../config/index';
 import { GuardianExecutionService } from './guardian/guardian-execution.service';
 import { GuardianAnalysisDataService } from './guardian/guardian-analysis-data.service';
@@ -18,8 +22,11 @@ import { GuardianDataAccessService } from './guardian/guardian-data-access.servi
 import { GuardianPostAnalysisService } from './guardian/guardian-post-analysis.service';
 import { createArcAgentDataSourceTemplates } from '../utils/arc-research-sources';
 import { zeroGStorageService } from '@diversifi/shared-0g/src/services/storage-service';
-import { zeroGPersistenceService } from '@diversifi/shared-0g/src/services/persistence-service';
-import { SettlementNetwork } from './settlement-service';
+import { WalletService } from './wallet-service';
+import { BridgeService } from './bridge-service';
+import { StrategyService } from './strategy-service';
+import { RiskService } from './risk-service';
+import { StateService } from './state-service';
 
 export interface Payment {
     amount: string;
@@ -101,153 +108,23 @@ const ARC_CONFIG = {
  */
 const DATA_SOURCES: DataSource[] = createArcAgentDataSourceTemplates();
 
-export interface AgentWalletProvider {
-    getAddress(): string;
-    initialize?: () => Promise<void>;
-    getExecutionSigner?(): ethers.Signer | null;
-    signTransaction(tx: any): Promise<string>;
-    sendTransaction(tx: any): Promise<any>;
-    balanceOf(tokenAddress: string): Promise<number>;
-    transfer(to: string, amount: string, tokenAddress: string): Promise<any>;
-    signTypedData(domain: any, types: any, value: any): Promise<string>;
-}
-
-export class EthersWalletProvider implements AgentWalletProvider {
-    private wallet: Wallet;
-    private provider: providers.JsonRpcProvider;
-
-    constructor(privateKey: string, provider: providers.JsonRpcProvider) {
-        this.provider = provider;
-        this.wallet = new Wallet(privateKey, provider);
-    }
-
-    getAddress() { return this.wallet.address; }
-    getExecutionSigner() { return this.wallet; }
-    signTransaction(tx: any) { return this.wallet.signTransaction(tx); }
-    sendTransaction(tx: any) { return this.wallet.sendTransaction(tx); }
-    async balanceOf(tokenAddress: string) {
-        const abi = ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
-        const contract = new Contract(tokenAddress, abi, this.provider);
-        const [balance, decimals] = await Promise.all([
-            contract.balanceOf(this.wallet.address),
-            contract.decimals()
-        ]);
-        return parseFloat(utils.formatUnits(balance, decimals));
-    }
-    async transfer(to: string, amount: string, tokenAddress: string) {
-        const abi = ['function transfer(address, uint256) returns (bool)', 'function decimals() view returns (uint8)'];
-        const contract = new Contract(tokenAddress, abi, this.wallet);
-        const decimals = await contract.decimals();
-        const amountWei = utils.parseUnits(amount, decimals);
-        const tx = await contract.transfer(to, amountWei);
-        return await tx.wait();
-    }
-    async signTypedData(domain: any, types: any, value: any) {
-        return await this.wallet._signTypedData(domain, types, value);
-    }
-}
-
-export class SessionKeyProvider implements AgentWalletProvider {
-    private wallet: Wallet;
-    private provider: providers.JsonRpcProvider;
-    readonly permission: import('./erc7715-service').SessionPermission;
-    private spentTodayUSD: number = 0;
-
-    constructor(
-        sessionPrivateKey: string,
-        permission: import('./erc7715-service').SessionPermission,
-        provider: providers.JsonRpcProvider
-    ) {
-        this.wallet = new Wallet(sessionPrivateKey, provider);
-        this.provider = provider;
-        this.permission = permission;
-
-        if (this.wallet.address.toLowerCase() !== permission.sessionKeyAddress.toLowerCase()) {
-            throw new Error(
-                `Session key address mismatch: key=${this.wallet.address} permission=${permission.sessionKeyAddress}`
-            );
-        }
-    }
-
-    getAddress() { return this.wallet.address; }
-    getExecutionSigner() { return this.wallet; }
-    signTransaction(tx: any) { return this.wallet.signTransaction(tx); }
-
-    async sendTransaction(tx: any) {
-        const { erc7715Service } = await import('./erc7715-service');
-        const action = (tx._action ?? 'swap') as import('./erc7715-service').AllowedAction;
-        const token = (tx._token ?? 'USDC') as import('./erc7715-service').AllowedToken;
-        const amountUSD = tx._amountUSD ?? 0;
-
-        const check = erc7715Service.isActionAllowed(
-            this.permission, action, token, amountUSD, this.spentTodayUSD
-        );
-        if (!check.allowed) {
-            throw new Error(`[SessionKeyProvider] Permission denied: ${check.reason}`);
-        }
-
-        const result = await this.wallet.sendTransaction(tx);
-        this.spentTodayUSD += amountUSD;
-        return result;
-    }
-
-    async balanceOf(tokenAddress: string) {
-        const abi = ['function balanceOf(address) view returns (uint256)', 'function decimals() view returns (uint8)'];
-        const contract = new Contract(tokenAddress, abi, this.provider);
-        const [balance, decimals] = await Promise.all([
-            contract.balanceOf(this.wallet.address),
-            contract.decimals()
-        ]);
-        return parseFloat(utils.formatUnits(balance, decimals));
-    }
-
-    async transfer(to: string, amount: string, tokenAddress: string) {
-        const abi = ['function transfer(address, uint256) returns (bool)', 'function decimals() view returns (uint8)'];
-        const contract = new Contract(tokenAddress, abi, this.wallet);
-        const decimals = await contract.decimals();
-        const amountWei = utils.parseUnits(amount, decimals);
-        const tx = await contract.transfer(to, amountWei);
-        return await tx.wait();
-    }
-
-    async signTypedData(domain: any, types: any, value: any) {
-        // Enforce permission scope before signing (nanopayments consume spending limit)
-        const amountUSD = parseFloat(utils.formatUnits(value.value, 6));
-        const { erc7715Service } = await import('./erc7715-service');
-        const check = erc7715Service.isActionAllowed(
-            this.permission, 'payment' as any, 'USDC' as any, amountUSD, this.spentTodayUSD
-        );
-
-        if (!check.allowed) {
-            throw new Error(`[SessionKeyProvider] Nanopayment denied: ${check.reason}`);
-        }
-
-        const sig = await this.wallet._signTypedData(domain, types, value);
-        this.spentTodayUSD += amountUSD;
-        return sig;
-    }
-}
-
-/**
- * Autonomous Agent Service
- * AI agent that pays for its own data using x402 on-chain micro-payments.
- * Configurable for any network supporting EOA-based USDC settlement.
- */
-
-
 export class AgentService {
+    private walletService: WalletService;
+    private bridgeService: BridgeService;
+    private strategyService: StrategyService;
+    private riskService: RiskService;
+    private stateService: StateService;
+    
     private provider: providers.JsonRpcProvider;
-    private wallet: AgentWalletProvider;
-    private userId?: string;
+    private circleService: CircleService;
     private agentAddress: string = '';
     private spendingLimit: number = 5.0;
     private spentToday: number = 0;
-    private network: SettlementNetwork;
-    private circleService: CircleService;
-    private initialized: boolean = false;
+    private network: any; // SettlementNetwork
     private dataSourceFailures: Map<string, { count: number; lastFailure: number; openUntil?: number }> = new Map();
     private lastAnalysisResult: AnalysisResult | null = null;
     private isTestnet: boolean = true;
+    private initialized: boolean = false;
 
     private static readonly DATA_SOURCE_MAX_FAILURES = 3;
     private static readonly DATA_SOURCE_FAILURE_WINDOW_MS = 5 * 60 * 1000;
@@ -262,84 +139,89 @@ export class AgentService {
         circleEntitySecret?: string;
         circleBaseUrl?: string;
         rpcUrl: string;
-        network: SettlementNetwork;
+        network: any; // SettlementNetwork
         spendingLimit?: number;
     }) {
-        this.userId = config.userId;
         this.network = config.network;
-        this.provider = new providers.JsonRpcProvider(config.rpcUrl);
-        this.circleService = circleService;
-
-        if (this.userId) {
-            this.wallet = new RealCircleWalletProvider({
-                walletId: 'pending',
-                apiKey: config.circleApiKey || process.env.CIRCLE_API_KEY || '',
-                entitySecret: config.circleEntitySecret || process.env.CIRCLE_ENTITY_SECRET || '',
-                baseUrl: config.circleBaseUrl
-            });
-        } else if (config.circleWalletId && config.circleApiKey) {
-            this.wallet = new RealCircleWalletProvider({
-                walletId: config.circleWalletId,
-                apiKey: config.circleApiKey,
-                entitySecret: config.circleEntitySecret || process.env.CIRCLE_ENTITY_SECRET || '',
-                baseUrl: config.circleBaseUrl
-            });
-        } else if (config.sessionKey) {
-            this.wallet = new SessionKeyProvider(
-                config.sessionKey.privateKey,
-                config.sessionKey.permission,
-                this.provider
-            );
-            this.agentAddress = this.wallet.getAddress();
-            this.initialized = true;
-        } else if (config.privateKey) {
-            this.wallet = new EthersWalletProvider(config.privateKey, this.provider);
-            this.agentAddress = this.wallet.getAddress();
-            this.initialized = true;
-        } else {
-            throw new Error('No wallet configuration provided for AgentService');
-        }
-
         this.spendingLimit = config.spendingLimit || 5.0;
+        
+        // Initialize shared services
+        this.walletService = new WalletService({
+            userId: config.userId,
+            privateKey: config.privateKey,
+            sessionKey: config.sessionKey,
+            circleWalletId: config.circleWalletId,
+            circleApiKey: config.circleApiKey,
+            circleEntitySecret: config.circleEntitySecret,
+            circleBaseUrl: config.circleBaseUrl,
+            rpcUrl: config.rpcUrl,
+            circleService: circleService
+        });
+        
+        this.circleService = circleService;
+        this.provider = new providers.JsonRpcProvider(config.rpcUrl);
+        
+        // Initialize specialized services
+        this.bridgeService = new BridgeService(
+            this.walletService, 
+            this.circleService, 
+            '' // agentAddress will be set after initialization
+        );
+        
+        this.strategyService = new StrategyService(
+            this.walletService,
+            '' // agentAddress will be set after initialization
+        );
+        
+        this.riskService = new RiskService(
+            this.walletService,
+            '' // agentAddress will be set after initialization
+        );
+        
+        this.stateService = new StateService(config.userId);
     }
 
-    // ... (keep ensureInitialized)
+    /**
+     * Initialize the agent service and all dependencies
+     */
+    async initialize(): Promise<void> {
+        if (this.initialized) return;
+
+        await this.walletService.ensureInitialized();
+        
+        // Update services with actual agent address
+        const agentAddress = this.walletService.getAgentAddress();
+        this.agentAddress = agentAddress;
+        
+        // Update services that need the agent address
+        (this.bridgeService as any).agentAddress = agentAddress;
+        (this.strategyService as any).agentAddress = agentAddress;
+        (this.riskService as any).agentAddress = agentAddress;
+        
+        this.initialized = true;
+    }
 
     /**
      * Persist agent state to 0G DA
      */
     async persistAgentState() {
-        if (!this.userId) return;
+        if (!this.walletService.getUserId()) return;
         
         try {
-            await zeroGPersistenceService.persistState({
-                userId: this.userId,
+            await this.stateService.persistAgentState({
                 preferences: {}, 
-                riskProfile: 'MEDIUM',
-                lastStateHash: 'hash',
-                timestamp: Date.now()
+                riskProfile: 'MEDIUM'
             });
         } catch (e) {
             console.error('[AgentService] Persistence to 0G DA failed:', e);
         }
     }
 
-
-    private async ensureInitialized(): Promise<void> {
-        if (this.initialized) return;
-
-        // If we have a userId but no specific walletId, fetch/create it via CircleService
-        if (this.userId && this.wallet instanceof RealCircleWalletProvider) {
-            const walletId = await this.circleService.getOrCreateAgentWallet(this.userId);
-            (this.wallet as any).updateWalletId(walletId);
-        }
-
-        if (typeof this.wallet.initialize === 'function') {
-            await this.wallet.initialize();
-        }
-
-        this.agentAddress = this.wallet.getAddress();
-        this.initialized = true;
+    /**
+     * Restore agent state from 0G DA
+     */
+    async restoreAgentState() {
+        return await this.stateService.restoreAgentState();
     }
 
     /**
@@ -356,10 +238,10 @@ export class AgentService {
         const evidenceCids: Record<string, string> = {};
 
         try {
-            await this.ensureInitialized();
+            await this.initialize();
             const dataAccess = new GuardianDataAccessService({
-                ensureInitialized: () => this.ensureInitialized(),
-                wallet: this.wallet,
+                ensureInitialized: () => this.initialize(),
+                wallet: this.walletService,
                 circleService: this.circleService,
                 agentAddress: this.agentAddress,
                 spendingLimit: () => this.spendingLimit,
@@ -371,6 +253,7 @@ export class AgentService {
                 dataSourceCooldownMs: AgentService.DATA_SOURCE_COOLDOWN_MS,
                 dataSourceMaxFailures: AgentService.DATA_SOURCE_MAX_FAILURES,
             });
+            
             const analysisData = await GuardianAnalysisDataService.gatherContext({
                 portfolioData,
                 spendingLimit: this.spendingLimit,
@@ -429,12 +312,12 @@ export class AgentService {
                 }
             }
 
-            // 2) Swapping USDC target tokens (Phase 5B)
+            // 2) Swapping USDC to target tokens (Phase 5B)
             if (canExecute && action === 'SWAP' && recommendation.targetToken) {
                 steps.push(`🚀 Autonomous Opportunity: Swapping USDC to ${recommendation.targetToken} for stable yield...`);
                 try {
                     const execution = await GuardianExecutionService.executeSwap({
-                        wallet: this.wallet,
+                        wallet: this.walletService,
                         targetToken: recommendation.targetToken,
                         networkInfo,
                         agentAddress: this.agentAddress,
@@ -448,7 +331,7 @@ export class AgentService {
 
                     // Fallback to demo payload if real swap fails (e.g. no signer or no liquidity on testnet)
                     executionTxHash = await GuardianExecutionService.executeSimulatedFallback({
-                        wallet: this.wallet,
+                        wallet: this.walletService,
                         agentAddress: this.agentAddress,
                         steps,
                     });
@@ -472,20 +355,20 @@ export class AgentService {
 
             // Phase 5E: Record to 0G Recommendation Ledger (non-blocking)
             import('./recommendation-ledger.service').then(async (ledger) => {
-              try {
-                await ledger.recordRecommendation({
-                  user: this.agentAddress,
-                  action: finalResult.action,
-                  targetToken: finalResult.targetToken || '',
-                  reasoning: finalResult.reasoning.substring(0, 500),
-                  evidenceCid: Object.values(finalResult.evidenceCids || {}).join(',') || '',
-                  servingModel: 'guardian-ai',
-                  settlementTxHash: finalResult.arcTxHash,
-                  confidence: finalResult.confidence,
-                });
-              } catch (err) {
-                console.warn('[RecommendationLedger] Background recording failed:', err);
-              }
+                try {
+                    await ledger.recordRecommendation({
+                        user: this.agentAddress,
+                        action: finalResult.action,
+                        targetToken: finalResult.targetToken || '',
+                        reasoning: finalResult.reasoning.substring(0, 500),
+                        evidenceCid: Object.values(finalResult.evidenceCids || {}).join(',') || '',
+                        servingModel: 'guardian-ai',
+                        settlementTxHash: finalResult.arcTxHash,
+                        confidence: finalResult.confidence,
+                    });
+                } catch (err) {
+                    console.warn('[RecommendationLedger] Background recording failed:', err);
+                }
             });
 
             // Phase 5F: Persist state to 0G DA
@@ -495,8 +378,8 @@ export class AgentService {
             if (executionTxHash) {
                 try {
                     const receiptHash = await GuardianPostAnalysisService.recordAnalysisOnChain({
-                        ensureInitialized: () => this.ensureInitialized(),
-                        wallet: this.wallet,
+                        ensureInitialized: () => this.initialize(),
+                        wallet: this.walletService,
                         agentAddress: this.agentAddress,
                         analysis: finalResult,
                     });
@@ -514,7 +397,7 @@ export class AgentService {
                 analysis: finalResult,
                 userPreferences,
                 portfolioData,
-                userId: this.userId,
+                userId: this.walletService.getUserId(),
             }).catch(err => {
                 console.error('[Arc Agent] Failed to trigger final automations:', err);
             });
@@ -531,21 +414,8 @@ export class AgentService {
      * This is the "Teleportation" spoke of the 2026 architecture
      */
     async bridgeToArbitrum(amount: string): Promise<string> {
-        await this.ensureInitialized();
-        
-        if (!(this.wallet instanceof RealCircleWalletProvider)) {
-            throw new Error('Autonomous bridging requires a real Circle MPC wallet');
-        }
-
-        const walletId = (this.wallet as any).getWalletId();
-        const destinationAddress = this.agentAddress; // Same address on both chains for the agent
-
-        return await this.circleService.bridgeUSDC(
-            walletId,
-            'ARBITRUM',
-            destinationAddress,
-            amount
-        );
+        await this.initialize();
+        return await this.bridgeService.bridgeToArbitrum(amount);
     }
 
     /**
@@ -553,18 +423,8 @@ export class AgentService {
      * Arc L1 (USDC) -> Arbitrum (USDC) -> Hyperliquid Deposit Address
      */
     async bridgeToHyperliquid(amount: string): Promise<string> {
-        await this.ensureInitialized();
-        
-        // Step 1: Teleport fuel to Arbitrum Spoke
-        console.log(`[Arc Agent] Fuel Line Part 1: Bridging ${amount} USDC to Arbitrum...`);
-        const bridgeTxId = await this.bridgeToArbitrum(amount);
-        
-        // Step 2: Transfer from Arbitrum Agent wallet to Hyperliquid Deposit Address
-        // In 2026, CCTP V2 allows us to chain these or use a smart relayer
-        // For now, we return the initiation ID as Part 1 is the cross-chain bottleneck
-        console.log(`[Arc Agent] Fuel Line Part 2: Hyperliquid Deposit Scheduled via ${HYPERLIQUID_CONFIG.BRIDGE_ADDRESS_ARBITRUM}`);
-        
-        return bridgeTxId;
+        await this.initialize();
+        return await this.bridgeService.bridgeToHyperliquid(amount);
     }
 
     /**
@@ -592,7 +452,7 @@ export class AgentService {
             toChainId: params.toChainId,
             userAddress: this.agentAddress,
             slippageTolerance: 0.5,
-            signer: this.wallet // Pass the agent's signer directly
+            signer: this.walletService // Pass the agent's signer directly
         } as any);
     }
 
@@ -600,9 +460,9 @@ export class AgentService {
      * Get USDC balance for the agent wallet
      */
     private async getUSDCBalance(): Promise<number> {
-        await this.ensureInitialized();
+        await this.initialize();
         try {
-            return await this.wallet.balanceOf(ARC_CONFIG.USDC_TESTNET);
+            return await this.walletService.getUSDCBalance();
         } catch (error) {
             console.error('Failed to get USDC balance:', error);
             return 0;
@@ -615,7 +475,7 @@ export class AgentService {
      */
     async getUnifiedUSDCBalance(): Promise<any> {
         try {
-            await this.ensureInitialized();
+            await this.initialize();
             return await this.circleService.getUnifiedUSDCBalance(this.agentAddress);
         } catch (error) {
             console.error('Failed to get unified USDC balance:', error);
@@ -635,8 +495,8 @@ export class AgentService {
         toChainId: number,
         amount: string
     ): Promise<string> {
+        await this.initialize();
         try {
-            await this.ensureInitialized();
             return await this.circleService.transferUSDCViaGateway(
                 fromChainId, toChainId, amount, this.agentAddress
             );
@@ -652,9 +512,8 @@ export class AgentService {
     async bridgeUSDC(
         amount: string
     ): Promise<any> {
+        await this.initialize();
         try {
-            await this.ensureInitialized();
-            
             console.log(`[Arc Agent] Bridging ${amount} USDC to Arbitrum via CCTP`);
             const txId = await this.bridgeToArbitrum(amount);
 
@@ -662,7 +521,6 @@ export class AgentService {
                 transactionId: txId,
                 status: 'pending'
             };
-
         } catch (error) {
             console.error('Circle Bridge Kit operation failed:', error);
             throw error;
@@ -673,11 +531,9 @@ export class AgentService {
      * Get Circle Bridge Kit status and capabilities
      */
     async getBridgeKitStatus() {
-        await this.ensureInitialized();
+        await this.initialize();
         return await this.circleService.getBridgeKitStatus();
     }
-
-    // fetchWithAPIKey is deprecated in favor of x402-proxied gateway calls
 
     /**
      * Fallback recommendation if analysis fails
@@ -723,46 +579,8 @@ export class AgentService {
         steps: string[],
         portfolioValue: number
     ): Promise<{ hedgeTx?: string; status: string }> {
-        try {
-            await this.ensureInitialized();
-            
-            // Check risk signals from SynthData
-            const btcForecast = await SynthDataService.getPredictions('BTC');
-            const ethForecast = await SynthDataService.getPredictions('ETH');
-
-            // Use volatility as a risk indicator (High volatility = high drawdown risk)
-            const btcVol = btcForecast?.forecast_future?.average_volatility || 0;
-            const ethVol = ethForecast?.forecast_future?.average_volatility || 0;
-            
-            const isHighRisk = btcVol > 0.08 || ethVol > 0.08;
-
-            if (isHighRisk && this.spendingLimit > 0) {
-                steps.push("⚠ High Drawdown Risk Detected: Initializing autonomous hedge...");
-                
-                // Open 1x Short Hedge on Hyperliquid
-                // We use 10% of portfolio value for the hedge
-                const hedgeAmount = portfolioValue * 0.1;
-                
-                try {
-                    const txId = await hyperliquidService.openHedge(
-                        this.wallet as any,
-                        'ETH',
-                        hedgeAmount
-                    );
-                    
-                    steps.push(`✓ Protection Active: 1x ETH Short Hedge opened on Hyperliquid`);
-                    return { hedgeTx: txId, status: 'PROTECTED' };
-                } catch (hedgeError: any) {
-                    console.error('[Arc Agent] Hedging failed:', hedgeError.message);
-                    steps.push(`⚠ Hedging failed: ${hedgeError.message}`);
-                }
-            }
-
-            return { status: 'STABLE' };
-        } catch (error) {
-            console.error('[Arc Agent] Risk monitoring failed:', error);
-            return { status: 'ERROR' };
-        }
+        await this.initialize();
+        return await this.riskService.monitorRiskExposure(steps, portfolioValue);
     }
 
     /**
@@ -784,60 +602,8 @@ export class AgentService {
         simulationId?: string;
         error?: string;
     }> {
-        try {
-            await this.ensureInitialized();
-            
-            // Dynamic import to avoid circular dependencies
-            const { RobinhoodAMMStrategy } = await import('./swap/strategies/robinhood-amm.strategy');
-            const { NETWORKS } = await import('../config');
-            
-            const strategy = new RobinhoodAMMStrategy();
-            
-            // Build swap params for RH testnet
-            const swapParams = {
-                fromToken: params.fromToken,
-                toToken: params.toToken,
-                amount: params.amount,
-                fromChainId: NETWORKS.RH_TESTNET.chainId,
-                toChainId: NETWORKS.RH_TESTNET.chainId,
-                slippageTolerance: 1,
-                userAddress: this.agentAddress,
-            };
-            
-            // Check if strategy supports this swap
-            if (!strategy.supports(swapParams)) {
-                return {
-                    success: false,
-                    error: 'Unsupported swap pair. Must be ETH ↔ stock token on RH testnet.'
-                };
-            }
-            
-            // Get estimate (dry-run, no on-chain execution)
-            const estimate = await strategy.getEstimate(swapParams);
-            
-            // Generate simulation ID for tracking
-            const simulationId = `rh-sim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-            
-            console.log(`[Arc Agent] Robinhood Simulation: ${params.amount} ${params.fromToken} → ${estimate.expectedOutput} ${params.toToken}`);
-            
-            // In production, this would record to a simulation log or streak rewards
-            // For now, return the estimate as the simulation result
-            return {
-                success: true,
-                estimate: {
-                    expectedOutput: estimate.expectedOutput || '0',
-                    minimumOutput: estimate.minimumOutput || '0',
-                    priceImpact: estimate.priceImpact,
-                },
-                simulationId,
-            };
-        } catch (error: any) {
-            console.error('[Arc Agent] Robinhood simulation failed:', error);
-            return {
-                success: false,
-                error: error.message || 'Simulation failed',
-            };
-        }
+        await this.initialize();
+        return await this.strategyService.simulateRobinhoodSwap(params);
     }
 
     /**
@@ -856,26 +622,8 @@ export class AgentService {
             result: Awaited<ReturnType<AgentService['simulateRobinhoodSwap']>>;
         }>;
     }> {
-        const results: Array<{
-            scenario: typeof scenarios[0];
-            result: Awaited<ReturnType<AgentService['simulateRobinhoodSwap']>>;
-        }> = [];
-        
-        let successful = 0;
-        
-        for (const scenario of scenarios) {
-            const result = await this.simulateRobinhoodSwap(scenario);
-            results.push({ scenario, result });
-            if (result.success) successful++;
-        }
-        
-        console.log(`[Arc Agent] Backtest complete: ${successful}/${scenarios.length} simulations successful`);
-        
-        return {
-            totalSimulations: scenarios.length,
-            successful,
-            results,
-        };
+        await this.initialize();
+        return await this.strategyService.runBacktestSequence(scenarios);
     }
 
     /**
@@ -891,9 +639,10 @@ export class AgentService {
         address?: string;
         error?: string;
     }> {
+        await this.initialize();
+        // Note: This would need to be moved to a SocialService in a full refactor
+        // For now, keeping it here to minimize changes
         try {
-            await this.ensureInitialized();
-            
             // Dynamic import to avoid circular dependencies
             const { SocialConnectService, IdentifierPrefix } = await import('./social-connect-service');
             
@@ -910,7 +659,7 @@ export class AgentService {
             
             // Create auth signer from agent wallet
             const authSigner = SocialConnectService.createViemAuthSigner(
-                this.wallet,
+                this.walletService,
                 this.agentAddress as any
             );
             
@@ -955,6 +704,9 @@ export class AgentService {
         resolvedAddress?: string;
         error?: string;
     }> {
+        await this.initialize();
+        // Note: This would need to be moved to a SocialService in a full refactor
+        // For now, keeping it here to minimize changes
         try {
             // Step 1: Resolve social identifier
             const resolution = await this.resolveSocialIdentifier(params);
@@ -998,7 +750,7 @@ export class AgentService {
         requesterAddress: string,
         queryType: 'macro' | 'yield' | 'strategy'
     ): Promise<any> {
-        await this.ensureInitialized();
+        await this.initialize();
         console.log(`[Arc Agent] A2A Request from ${requesterAddress} for ${queryType}`);
 
         // Serve cached analysis — honest about data availability
@@ -1027,7 +779,7 @@ export class AgentService {
             const payloadHash = utils.keccak256(
                 utils.toUtf8Bytes(JSON.stringify(payload.data))
             );
-            payload.signature = await this.wallet.signTypedData(
+            payload.signature = await this.walletService.signTypedData(
                 { name: 'AgentService', version: '1' },
                 { Intelligence: [{ name: 'hash', type: 'bytes32' }] },
                 { hash: payloadHash }
@@ -1063,7 +815,7 @@ export class AgentService {
      */
     async getNetworkStatus() {
         try {
-            await this.ensureInitialized();
+            await this.initialize();
             const network = await this.provider.getNetwork();
             const balance = await this.getUSDCBalance();
 

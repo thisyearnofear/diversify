@@ -35,6 +35,7 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
+import { GuardianMascot } from "../shared/GuardianMascot";
 
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
   ssr: false,
@@ -368,9 +369,7 @@ export default function ProtectionTab({
   // ============================================================================
   // RENDER: Connected
   // ============================================================================
-import { GuardianMascot } from "../shared/GuardianMascot";
 
-...
 
   return (
     <div className="space-y-4">

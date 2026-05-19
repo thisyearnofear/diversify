@@ -6,7 +6,7 @@
  */
 
 import { ethers } from 'ethers';
-import type { AgentWalletProvider } from './agent-service';
+import type { AgentWalletProvider } from '../types/wallet-provider';
 
 export interface CircleWalletConfig {
     walletId: string;

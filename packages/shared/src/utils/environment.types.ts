@@ -1,0 +1,1 @@
+export type OperationMode = 'production' | 'development' | 'ci';

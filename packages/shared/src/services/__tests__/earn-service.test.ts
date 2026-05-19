@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EarnService, type EarnVault } from '../earn-service';
 
 const originalLiFiApiKey = process.env.LIFI_API_KEY;
+const originalLiFiIntegratorId = process.env.LIFI_INTEGRATOR_ID;
 
 const buildVault = (overrides: Partial<EarnVault>): EarnVault => ({
   id: overrides.id || 'vault-1',
@@ -58,11 +59,13 @@ describe('EarnService.rankVaultsForRecommendation', () => {
 describe('EarnService.getDepositQuote', () => {
   afterEach(() => {
     process.env.LIFI_API_KEY = originalLiFiApiKey;
+    process.env.LIFI_INTEGRATOR_ID = originalLiFiIntegratorId;
     vi.restoreAllMocks();
   });
 
   it('uses explicit destination chain when provided for cross-chain deposit', async () => {
     process.env.LIFI_API_KEY = 'test-lifi-key';
+    process.env.LIFI_INTEGRATOR_ID = 'diversifi-minipay';
     vi.spyOn(EarnService as any, 'ensureInitialized').mockImplementation(() => {});
     const fetchMock = vi.spyOn(globalThis, 'fetch' as any).mockResolvedValue({
       ok: true,
@@ -105,6 +108,7 @@ describe('EarnService.getDepositQuote', () => {
 describe('EarnService.fetchUserPositions', () => {
   afterEach(() => {
     process.env.LIFI_API_KEY = originalLiFiApiKey;
+    process.env.LIFI_INTEGRATOR_ID = originalLiFiIntegratorId;
     vi.restoreAllMocks();
   });
 

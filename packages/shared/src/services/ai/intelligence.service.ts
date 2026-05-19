@@ -83,10 +83,10 @@ export class IntelligenceService {
                         content: `Context: ${JSON.stringify(context)}`
                     }
                 ],
-                responseMimeType: 'application/json'
+                responseFormat: { type: 'json_object' }
             });
 
-            const items = JSON.parse(completion.content) as IntelligenceItem[];
+            const items = JSON.parse(completion.data) as IntelligenceItem[];
 
             // Proof of Efficacy: Run backtests for recommended assets (non-blocking)
             this.runProofOfEfficacy(items).catch(err => 

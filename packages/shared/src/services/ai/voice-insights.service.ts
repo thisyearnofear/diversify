@@ -50,10 +50,10 @@ export class VoiceInsightsService {
                 messages: [{ role: 'system', content: prompt }],
                 // Gemini 3.1 Flash-Lite is the latest speed-optimized model (March 2026)
                 model: 'gemini-3.1-flash-lite-preview', 
-                responseMimeType: 'application/json'
+                responseFormat: { type: 'json_object' }
             });
 
-            return JSON.parse(result.content);
+            return JSON.parse(result.data);
         } catch (error) {
             console.error('[VoiceInsightsService] Failed to generate insights:', error);
             return {
@@ -105,7 +105,7 @@ export class VoiceInsightsService {
                 model: 'gemini-3.1-flash-lite-preview'
             });
 
-            return result.content;
+            return result.data;
         } catch (error) {
             console.error('[VoiceInsightsService] Briefing generation failed:', error);
             return "Good morning. Your portfolio is currently stable, but I am monitoring increased volatility in the emerging markets. I recommend reviewing your protection plan today.";

@@ -1,8 +1,9 @@
 import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer } from './services/settlement-service';
 import { circleService, CircleService } from './services/circle-service';
-import { AgentService, SessionKeyProvider } from './services/agent-service';
+import { AgentService } from './services/agent-service';
 import { SocialConnectService } from './services/social-connect-service';
 // ... existing imports ...
+import { SessionKeyProvider } from "./services/wallet-service";
 
 import { RWAService, rwaService } from './services/rwa-service';
 import { SynthDataService } from './services/synth-data-service';

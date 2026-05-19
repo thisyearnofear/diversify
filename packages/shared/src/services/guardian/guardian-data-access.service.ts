@@ -1,4 +1,5 @@
-import type { AgentWalletProvider, Payment, X402Challenge, DataSource } from '../agent-service';
+import type { AgentWalletProvider } from '../../types/wallet-provider';
+import type { Payment, X402Challenge, DataSource } from '../agent-service';
 import type { CircleService } from '../circle-service';
 import { zeroGStorageService } from '@diversifi/shared-0g/src/services/storage-service';
 

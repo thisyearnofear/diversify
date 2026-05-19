@@ -57,10 +57,10 @@ Provide a JSON response with:
     const prompt = this.buildPrompt(context);
     const aiResponse = await AIService.chat({
       messages: [{ role: 'system', content: prompt }],
-      responseMimeType: 'application/json'
+      responseFormat: { type: 'json_object' }
     });
 
-    return parseRecommendation(aiResponse.content);
+    return parseRecommendation(aiResponse.data);
   }
 
   static buildFinalResult(params: {

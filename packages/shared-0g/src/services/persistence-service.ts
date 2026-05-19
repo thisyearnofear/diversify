@@ -1,7 +1,10 @@
+import { getOperationMode, areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
 /**
  * 0G DA Persistence Service
  * Stores agent context and state in 0G Storage (serving as a verifiable DA layer).
  */
+
+import { zeroGStorageService } from './storage-service';
 
 export interface AgentContext {
     userId: string;
@@ -10,6 +13,18 @@ export interface AgentContext {
     lastStateHash: string;
     timestamp: number;
 }
+
+export interface PersistedState {
+    context: AgentContext;
+    metadata: {
+        version: string;
+        persistedAt: number;
+        checksum: string;
+    };
+}
+
+export const PERSISTENCE_VERSION = '1.0.0';
+export const LATEST_STATE_PREFIX = 'diversifi:agent-state:';
 
 export class ZeroGPersistenceService {
     private readonly indexerUrl: string;
@@ -24,33 +39,84 @@ export class ZeroGPersistenceService {
     }
 
     /**
+     * Get operation mode for fallback behavior
+     */
+    private getFallbackBehavior(): { allowMock: boolean; failLoud: boolean } {
+        const envOverride = process.env.DIVERSIFI_DEV_FALLBACK;
+        
+        if (envOverride === 'enabled') {
+            return { allowMock: true, failLoud: false };
+        }
+        if (envOverride === 'disabled') {
+            return { allowMock: false, failLoud: true };
+        }
+        
+        const isCI = process.env.CI === 'true' || process.env.NODE_ENV === 'test';
+        const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+        
+        return {
+            allowMock: isDev && !isCI,
+            failLoud: isCI,
+        };
+    }
+
+    /**
+     * Simple checksum function for state validation
+     */
+    private simpleChecksum(data: string): string {
+        let hash = 0;
+        for (let i = 0; i < data.length; i++) {
+            const char = data.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash |= 0; // Convert to 32-bit integer
+        }
+        return Math.abs(hash).toString(36);
+    }
+
+    /**
      * Persists agent state to 0G Storage
      * Using Storage as a verifiable state anchor (pseudo-DA)
      */
     async persistState(context: AgentContext): Promise<string> {
-        let SDK: any;
-        if (typeof window === 'undefined') {
-            SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
-        } else {
-            throw new Error('0G Persistence is not available in the browser.');
-        }
-        const { Indexer, Blob: ZgBlob } = SDK;
-        const ethers6 = eval('require("ethers6")');
-
+        const { allowMock, failLoud } = this.getFallbackBehavior();
         const privateKey = process.env.VAULT_PRIVATE_KEY;
+        
         if (!privateKey) {
-            console.warn('[0G Persistence] VAULT_PRIVATE_KEY missing, skipping real persistence');
-            return 'mock_persistence_id';
+            const msg = '[0G Persistence] VAULT_PRIVATE_KEY missing';
+            if (failLoud) {
+                throw new Error(`${msg} — CI mode requires real 0G credentials`);
+            }
+            if (allowMock) {
+                console.warn(`${msg}, returning mock persistence ID in development`);
+                return 'mock_persistence_id';
+            }
+            throw new Error(`${msg} — production mode requires real 0G credentials`);
         }
 
         try {
             console.log(`[0G Persistence] Persisting state for user ${context.userId} to 0G...`);
             
-            const payload = JSON.stringify({
-                ...context,
-                persistenceType: 'agent-state-anchor',
-                appId: 'diversifi'
-            });
+            // Create persisted state wrapper with metadata and checksum
+            const persistedState: PersistedState = {
+                context: { ...context }, // Copy to avoid mutation issues
+                metadata: {
+                    version: PERSISTENCE_VERSION,
+                    persistedAt: Date.now(),
+                    checksum: this.simpleChecksum(JSON.stringify(context)),
+                },
+            };
+
+            const payload = JSON.stringify(persistedState);
+
+            // Import SDK dynamically
+            let SDK: any;
+            if (typeof window === 'undefined') {
+                SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+            } else {
+                throw new Error('0G Persistence is not available in the browser.');
+            }
+            const { Indexer, Blob: ZgBlob } = SDK;
+            const ethers6 = eval('require("ethers6")');
 
             // Setup Ethers v6
             const provider = new ethers6.JsonRpcProvider(this.evmRpc);
@@ -79,16 +145,124 @@ export class ZeroGPersistenceService {
             return String(rootHash);
         } catch (error: any) {
             console.error('[0G Persistence] Failed to persist state to 0G:', error.message);
-            return `error_${Date.now()}`;
+            
+            const { allowMock, failLoud } = this.getFallbackBehavior();
+            if (failLoud) {
+                throw error; // Re-throw in CI — no silent errors
+            }
+            if (allowMock) {
+                console.warn('[0G Persistence] Falling back to mock error ID in development');
+                return `error_${Date.now()}`;
+            }
+            throw error;
         }
     }
 
     /**
-     * Restores latest state from 0G (Simulated via resolution)
+     * Restores latest state from 0G Storage
      */
     async restoreState(userId: string): Promise<AgentContext | null> {
-        console.log(`[0G Persistence] Restoring state for user ${userId} (Querying 0G Storage)...`);
-        return null; 
+        console.log(`[0G Persistence] Restoring state for user ${userId}...`);
+
+        const { allowMock, failLoud } = this.getFallbackBehavior();
+
+        try {
+            // Step 1: Discover state blobs for this user
+            const entries = await zeroGStorageService.listContent(LATEST_STATE_PREFIX + userId);
+            
+            // Handle case where listContent might not be available or returns empty in dev mode mock
+            if (!entries || entries.length === 0) {
+                console.warn(`[0G Persistence] No persisted state found for user ${userId}`);
+                return null;
+            }
+
+            // Step 2: Pick the latest entry (last element = most recently added)
+            const latestCid = entries[entries.length - 1];
+
+            // Step 3: Download the raw content
+            const raw = await zeroGStorageService.downloadContent(latestCid);
+
+            // Step 4: Parse persisted state wrapper
+            const persisted: PersistedState = JSON.parse(raw);
+
+            // Step 5: Validate version compatibility
+            if (persisted.metadata.version !== PERSISTENCE_VERSION) {
+                // Could add semver comparison here for backward compat
+                console.warn(`[0G Persistence] Version mismatch: stored=${persisted.metadata.version}, expected=${PERSISTENCE_VERSION}`);
+                
+                const { allowMock, failLoud } = this.getFallbackBehavior();
+                if (failLoud) {
+                    throw new Error(`[0G Persistence] Version mismatch: stored=${persisted.metadata.version}, expected=${PERSISTENCE_VERSION}`);
+                }
+                if (allowMock) {
+                    console.warn(`[0G Persistence] Version mismatch, returning null in development`);
+                    return null;
+                }
+                throw new Error(`[0G Persistence] Version mismatch: stored=${persisted.metadata.version}, expected=${PERSISTENCE_VERSION}`);
+            }
+
+            // Step 6: Verify checksum
+            const computedChecksum = this.simpleChecksum(JSON.stringify(persisted.context));
+            if (computedChecksum !== persisted.metadata.checksum) {
+                console.error('[0G Persistence] Checksum mismatch — state may be corrupted');
+                
+                const { allowMock, failLoud } = this.getFallbackBehavior();
+                if (failLoud) {
+                    throw new Error('[0G Persistence] Checksum mismatch — state may be corrupted');
+                }
+                if (allowMock) {
+                    console.warn('[0G Persistence] Checksum mismatch, returning null in development');
+                    return null;
+                }
+                throw new Error('[0G Persistence] Checksum mismatch — state may be corrupted');
+            }
+
+            // Step 7: Validate user ID match
+            if (persisted.context.userId !== userId) {
+                console.error(`[0G Persistence] User ID mismatch: stored=${persisted.context.userId}, requested=${userId}`);
+                
+                const { allowMock, failLoud } = this.getFallbackBehavior();
+                if (failLoud) {
+                    throw new Error(`[0G Persistence] User ID mismatch: stored=${persisted.context.userId}, requested=${userId}`);
+                }
+                if (allowMock) {
+                    console.warn(`[0G Persistence] User ID mismatch, returning null in development`);
+                    return null;
+                }
+                throw new Error(`[0G Persistence] User ID mismatch: stored=${persisted.context.userId}, requested=${userId}`);
+            }
+
+            // Step 8: Verify timestamp sanity
+            if (persisted.context.timestamp > Date.now() + 5000) { // Allow 5 seconds clock drift
+                console.warn('[0G Persistence] State timestamp is in the future — rejecting');
+                
+                const { allowMock, failLoud } = this.getFallbackBehavior();
+                if (failLoud) {
+                    throw new Error('[0G Persistence] State timestamp is in the future — rejecting');
+                }
+                if (allowMock) {
+                    console.warn('[0G Persistence] Future timestamp, returning null in development');
+                    return null;
+                }
+                throw new Error('[0G Persistence] State timestamp is in the future — rejecting');
+            }
+
+            console.log(`[0G Persistence] State restored successfully for user ${userId} (version ${persisted.metadata.version})`);
+            return persisted.context;
+        } catch (error: any) {
+            // If we already handled specific errors above, this is for unexpected ones
+            console.error('[0G Persistence] Failed to restore state:', error.message);
+            
+            const { allowMock, failLoud } = this.getFallbackBehavior();
+            if (failLoud) {
+                throw error; // Re-throw in CI
+            }
+            if (allowMock) {
+                console.warn('[0G Persistence] Falling back to null in development due to unexpected error');
+                return null;
+            }
+            throw error;
+        }
     }
 }
 

@@ -3,10 +3,16 @@
  * Interface to upload evidence bundles to 0G Storage.
  */
 
+import { getOperationMode, areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
+
 export interface StorageResult {
     cid: string;
     url: string;
     txHash?: string;
+}
+
+export interface ListContentResult {
+    cids: string[];
 }
 
 export class ZeroGStorageService {
@@ -38,7 +44,18 @@ export class ZeroGStorageService {
 
         const privateKey = process.env.VAULT_PRIVATE_KEY;
         if (!privateKey) {
-            throw new Error('VAULT_PRIVATE_KEY missing for 0G Storage upload');
+            if (shouldFailLoudly()) {
+                throw new Error('VAULT_PRIVATE_KEY missing for 0G Storage upload — CI mode requires real 0G credentials');
+            }
+            if (areMockFallbacksAllowed()) {
+                console.warn('[0G Storage] VAULT_PRIVATE_KEY missing, returning mock CID for development/demo stability');
+                const mockCid = `bafybeih${Math.random().toString(36).substring(2, 15)}`;
+                return {
+                    cid: mockCid,
+                    url: `${this.storageUrl}/ipfs/${mockCid}`
+                };
+            }
+            throw new Error('VAULT_PRIVATE_KEY missing for 0G Storage upload — production mode requires real 0G credentials');
         }
 
         try {
@@ -88,15 +105,134 @@ export class ZeroGStorageService {
             };
         } catch (error: any) {
             console.error('[0G Storage] Upload failed:', error.message);
-            if (process.env.NODE_ENV === 'development') {
-                console.warn('[0G Storage] Falling back to mock CID for development/demo stability');
+            
+            if (shouldFailLoudly()) {
+                throw new Error(`[0G Storage] CI mode requires real 0G Storage: ${error.message}`);
+            }
+            
+            if (areMockFallbacksAllowed()) {
+                console.warn(`[0G Storage] Falling back to mock CID in development — reason: ${error.message}`);
                 const mockCid = `bafybeih${Math.random().toString(36).substring(2, 15)}`;
                 return {
                     cid: mockCid,
                     url: `${this.storageUrl}/ipfs/${mockCid}`
                 };
             }
+            
             throw new Error(`Evidence commit to 0G Storage failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * List content stored under a specific prefix
+     */
+    async listContent(prefix: string): Promise<string[]> {
+        if (shouldFailLoudly()) {
+            const privateKey = process.env.VAULT_PRIVATE_KEY;
+            if (!privateKey) {
+                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — CI mode requires real 0G credentials');
+            }
+        } else if (!areMockFallbacksAllowed()) {
+            const privateKey = process.env.VAULT_PRIVATE_KEY;
+            if (!privateKey) {
+                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — production mode requires real 0G credentials');
+            }
+        }
+
+        try {
+            console.log(`[0G Storage] Listing content with prefix: ${prefix}`);
+            
+            // Import SDK dynamically
+            let SDK: any;
+            if (typeof window === 'undefined') {
+                SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+            } else {
+                throw new Error('0G Storage is not available in the browser.');
+            }
+            const { Indexer } = SDK;
+            const ethers6 = eval('require("ethers6")');
+
+            // Setup Ethers v6
+            const provider = new ethers6.JsonRpcProvider(this.evmRpc);
+            const signer = new ethers6.Wallet(process.env.VAULT_PRIVATE_KEY || '', provider);
+            
+            // Setup 0G Indexer
+            const indexer = new Indexer(this.indexerUrl);
+
+            // In a real implementation, we'd use the indexer to list blobs by prefix
+            // For now, we'll return an empty array as a placeholder
+            // The actual implementation would depend on the 0G SDK's listing capabilities
+            console.log(`[0G Storage] List content not fully implemented, returning empty array`);
+            return [];
+        } catch (error: any) {
+            console.error('[0G Storage] Failed to list content:', error.message);
+            
+            if (shouldFailLoudly()) {
+                throw error; // Re-throw in CI
+            }
+            
+            if (areMockFallbacksAllowed()) {
+                console.warn('[0G Storage] Falling back to empty list in development');
+                return [];
+            }
+            
+            throw error;
+        }
+    }
+
+    /**
+     * Download content by CID
+     */
+    async downloadContent(cid: string): Promise<string> {
+        if (shouldFailLoudly()) {
+            const privateKey = process.env.VAULT_PRIVATE_KEY;
+            if (!privateKey) {
+                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — CI mode requires real 0G credentials');
+            }
+        } else if (!areMockFallbacksAllowed()) {
+            const privateKey = process.env.VAULT_PRIVATE_KEY;
+            if (!privateKey) {
+                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — production mode requires real 0G credentials');
+            }
+        }
+
+        try {
+            console.log(`[0G Storage] Downloading content for CID: ${cid}`);
+            
+            // Import SDK dynamically
+            let SDK: any;
+            if (typeof window === 'undefined') {
+                SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+            } else {
+                throw new Error('0G Storage is not available in the browser.');
+            }
+            const { Indexer } = SDK;
+            const ethers6 = eval('require("ethers6")');
+
+            // Setup Ethers v6
+            const provider = new ethers6.JsonRpcProvider(this.evmRpc);
+            const signer = new ethers6.Wallet(process.env.VAULT_PRIVATE_KEY || '', provider);
+            
+            // Setup 0G Indexer
+            const indexer = new Indexer(this.indexerUrl);
+
+            // In a real implementation, we'd use the indexer to download blob by CID
+            // For now, we'll return mock content as a placeholder
+            console.log(`[0G Storage] Download content not fully implemented, returning mock content`);
+            return `mock_downloaded_content_for_${cid}`;
+        } catch (error: any) {
+            console.error('[0G Storage] Failed to download content:', error.message);
+            
+            if (shouldFailLoudly()) {
+                throw error; // Re-throw in CI
+            }
+            
+            if (areMockFallbacksAllowed()) {
+                console.warn('[0G Storage] Falling back to mock content in development');
+                return `mock_content_error_${Date.now()}`;
+            }
+            
+            throw error;
         }
     }
 }

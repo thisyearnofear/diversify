@@ -1,4 +1,5 @@
-import type { AnalysisResult, AgentWalletProvider } from '../agent-service';
+import type { AgentWalletProvider } from '../../types/wallet-provider';
+import type { AnalysisResult } from '../agent-service';
 import { utils } from 'ethers';
 
 export class GuardianPostAnalysisService {
