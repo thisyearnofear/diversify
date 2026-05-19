@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { STRATEGIES, FinancialStrategy } from '@/hooks/useFinancialStrategies';
 import { OnboardingScreenProps } from './types';
+import { GuardianMascot } from '../../shared/GuardianMascot';
 
 interface SelectionScreenProps extends OnboardingScreenProps {
     currentIndex: number;
@@ -11,72 +12,6 @@ interface SelectionScreenProps extends OnboardingScreenProps {
     onPrev: () => void;
     onContinue: () => void;
 }
-
-export function SelectionScreen({
-    currentIndex,
-    selected,
-    onSelect,
-    onNext,
-    onPrev,
-    onContinue,
-    onBack,
-    onSkip,
-}: SelectionScreenProps) {
-    const x = useMotionValue(0);
-    const rotate = useTransform(x, [-150, 150], [-12, 12]);
-    const scale = useTransform(x, [-150, 0, 150], [0.95, 1, 0.95]);
-    const cardOpacity = useTransform(x, [-150, -75, 0, 75, 150], [0.6, 1, 1, 1, 0.6]);
-
-    const SWIPE_THRESHOLD = 75;
-    const VELOCITY_THRESHOLD = 400;
-
-    const handleDragStart = () => {
-        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-            navigator.vibrate(10);
-        }
-    };
-
-    const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        if (typeof window !== 'undefined' && 'vibrate' in navigator && Math.abs(info.offset.x) % 50 < 10) {
-            navigator.vibrate(5);
-        }
-    };
-
-    const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        const offsetX = info.offset.x;
-        const velX = info.velocity.x;
-        const absOffset = Math.abs(offsetX);
-        const absVel = Math.abs(velX);
-
-        x.set(0);
-
-        const shouldNavigate = absOffset > SWIPE_THRESHOLD || absVel > VELOCITY_THRESHOLD;
-
-        if (shouldNavigate && absOffset > 10) {
-            if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                navigator.vibrate(30);
-            }
-            if (offsetX > 0 && currentIndex > 0) {
-                onPrev();
-            } else if (offsetX < 0 && currentIndex < STRATEGIES.length - 1) {
-                onNext();
-            }
-        }
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'ArrowLeft' && currentIndex > 0) {
-            onPrev();
-        } else if (e.key === 'ArrowRight' && currentIndex < STRATEGIES.length - 1) {
-            onNext();
-        } else if (e.key === 'Enter' || e.key === ' ') {
-            onSelect(STRATEGIES[currentIndex].id);
-        }
-    };
-
-    const strategy = STRATEGIES[currentIndex];
-
-import { GuardianMascot } from '../../shared/GuardianMascot';
 
 export function SelectionScreen({
     currentIndex,
@@ -272,7 +207,6 @@ export function SelectionScreen({
                 <div className="px-6 py-2 text-center">
                     <div className="flex items-center justify-center gap-2">
                         <div className="size-1 rounded-full bg-gray-300 animate-pulse" />
-                        {/* Touch devices: swipe hint / pointer devices: arrow key hint */}
                         <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
                             <span className="md:hidden">Swipe to Explore</span>
                             <span className="hidden md:inline">← → to Browse</span>
