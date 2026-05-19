@@ -93,7 +93,7 @@ export class ZeroGAnchoringDecorator {
           reasoning: result.substring(0, 500),
           evidenceCid: '', // Would be from anchorToZeroG
           servingModel: options.model ?? 'unknown',
-          confidence: 0.8
+          confidence: 8000
         });
       } catch (error: any) {
         console.warn('[ZeroG Anchoring] Failed to record recommendation:', error);

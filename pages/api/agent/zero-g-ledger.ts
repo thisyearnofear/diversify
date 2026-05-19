@@ -74,7 +74,8 @@ export default async function handler(
         evidenceCid: evidenceCid || '',
         servingModel: servingModel || 'user-attested',
         settlementTxHash: '',
-        confidence: typeof confidence === 'number' ? confidence : 0.9,
+        // Convert human-friendly 0-1 range to basis points (0-10000) for the contract
+        confidence: typeof confidence === 'number' ? Math.round(confidence * 10000) : 9000,
       });
 
       if (!result) {

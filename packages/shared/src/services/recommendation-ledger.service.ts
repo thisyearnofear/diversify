@@ -168,9 +168,6 @@ export async function recordRecommendation(params: {
             return null;
         }
 
-        // Convert confidence from 0-1 to basis points (0-10000)
-        const confidenceBps = Math.min(10000, Math.round(params.confidence * 10000));
-
         const tx = await contract.recordRecommendation(
             params.user,
             params.action,
@@ -179,11 +176,17 @@ export async function recordRecommendation(params: {
             params.evidenceCid,
             params.servingModel,
             params.settlementTxHash || '',
-            confidenceBps,
+            params.confidence,
             { gasLimit: 300_000 }
         );
 
         const receipt = await tx.wait();
+
+        // Check if the transaction reverted
+        if (receipt && receipt.status === 0) {
+            console.error(`[RecommendationLedger] ❌ Transaction reverted for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
+            return null;
+        }
 
         // ethers v6: parse the RecommendationRecorded event from receipt logs
         let id = -1;

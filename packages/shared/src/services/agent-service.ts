@@ -364,7 +364,8 @@ export class AgentService {
                         evidenceCid: Object.values(finalResult.evidenceCids || {}).join(',') || '',
                         servingModel: 'guardian-ai',
                         settlementTxHash: finalResult.arcTxHash,
-                        confidence: finalResult.confidence,
+                        // Convert 0-1 confidence from analysis to basis points (0-10000) for the contract
+                        confidence: Math.round((finalResult.confidence || 0) * 10000),
                     });
                 } catch (err) {
                     console.warn('[RecommendationLedger] Background recording failed:', err);

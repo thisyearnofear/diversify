@@ -64,9 +64,8 @@ export class RecommendationLedgerDecorator {
         targetToken: '',
         reasoning: result.substring(0, 500),
         evidenceCid: '', // Would be from 0G anchoring if applied
-        servingModel: options.model ?? 'unknown',
-        confidence: 0.8
-      });
+        servingModel: options.model ?? 'unknown',          confidence: 8000
+        });
     } catch (error: any) {
       console.warn('[Recommendation Ledger] Failed to record recommendation:', error);
     }
