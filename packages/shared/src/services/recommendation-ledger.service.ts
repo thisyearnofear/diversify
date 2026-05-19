@@ -10,7 +10,7 @@
  *   - Settlement tx hash (x402 nanopayment proof)
  */
 
-import { ethers } from 'ethers';
+import { ethers } from 'ethers6';
 
 // ============================================================================
 // TYPES
@@ -71,20 +71,20 @@ const RECOMMENDATION_LEDGER_ABI = [
 
 // Default config for 0G Galileo Testnet
 const DEFAULT_CONFIG: LedgerConfig = {
-    contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0x75C08758A099c27cE85600d6a7C5E933091C1495',
+    contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f',
     rpcUrl: process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai',
     chainId: 16602,
 };
 
 // Lazily initialised provider, signer, and contract
-let _provider: ethers.providers.JsonRpcProvider | null = null;
+let _provider: ethers.JsonRpcProvider | null = null;
 let _signer: ethers.Wallet | null = null;
 let _readOnlyContract: ethers.Contract | null = null;
 let _writeContract: ethers.Contract | null = null;
 
-function getProvider(): ethers.providers.JsonRpcProvider {
+function getProvider(): ethers.JsonRpcProvider {
     if (!_provider) {
-        _provider = new ethers.providers.JsonRpcProvider(DEFAULT_CONFIG.rpcUrl);
+        _provider = new ethers.JsonRpcProvider(DEFAULT_CONFIG.rpcUrl);
     }
     return _provider;
 }
@@ -183,8 +183,31 @@ export async function recordRecommendation(params: {
             { gasLimit: 300_000 }
         );
 
-        const receipt = await tx.wait(1);
-        const id = receipt.events?.[0]?.args?.id?.toNumber() || -1;
+        const receipt = await tx.wait();
+
+        // ethers v6: parse the RecommendationRecorded event from receipt logs
+        let id = -1;
+        if (receipt) {
+            for (const log of receipt.logs) {
+                try {
+                    const parsed = contract.interface.parseLog({
+                        topics: [...log.topics],
+                        data: log.data
+                    });
+                    if (!parsed || parsed.name !== 'RecommendationRecorded') continue;
+                    id = Number(parsed.args.id);
+                    break;
+                } catch {
+                    // Skip logs that don't match our ABI
+                }
+            }
+            // Fallback: read totalRecommendations stat if event parsing didn't yield an ID
+            if (id < 1) {
+                try {
+                    id = Number(await contract.totalRecommendations());
+                } catch {}
+            }
+        }
 
         console.log(`[RecommendationLedger] ✅ Recorded #${id} for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
 
@@ -212,8 +235,8 @@ export async function getRecommendation(id: number): Promise<LedgerRecommendatio
             evidenceCid: result.evidenceCid,
             servingModel: result.servingModel,
             settlementTxHash: result.settlementTxHash,
-            timestamp: result.timestamp.toNumber(),
-            confidence: result.confidence.toNumber() / 10000,
+            timestamp: Number(result.timestamp),
+            confidence: Number(result.confidence) / 10000,
         };
     } catch (error: any) {
         console.error('[RecommendationLedger] Failed to get recommendation:', error.message);
@@ -228,7 +251,7 @@ export async function getUserRecommendationIds(user: string): Promise<number[]> 
     try {
         const contract = getReadOnlyContract();
         const ids = await contract.getUserRecommendationIds(user);
-        return ids.map((id: any) => id.toNumber());
+        return ids.map((id: any) => Number(id));
     } catch (error: any) {
         console.error('[RecommendationLedger] Failed to get user recommendation IDs:', error.message);
         return [];
@@ -257,10 +280,10 @@ export async function getUserRecommendations(
                 evidenceCid: r.evidenceCid,
                 servingModel: r.servingModel,
                 settlementTxHash: r.settlementTxHash,
-                timestamp: r.timestamp.toNumber(),
-                confidence: r.confidence.toNumber() / 10000,
+                timestamp: Number(r.timestamp),
+                confidence: Number(r.confidence) / 10000,
             })),
-            total: total.toNumber(),
+            total: Number(total),
         };
     } catch (error: any) {
         console.error('[RecommendationLedger] Failed to get user recommendations:', error.message);
@@ -283,7 +306,7 @@ export async function getLedgerStats(): Promise<{
         const actualOwner = await contract.owner();
 
         return {
-            totalRecommendations: total.toNumber(),
+            totalRecommendations: Number(total),
             contractAddress: DEFAULT_CONFIG.contractAddress,
             chainId: DEFAULT_CONFIG.chainId,
             isDeployed: true,
@@ -306,7 +329,7 @@ export async function getTotalRecommendations(): Promise<number> {
     try {
         const contract = getReadOnlyContract();
         const total = await contract.totalRecommendations();
-        return total.toNumber();
+        return Number(total);
     } catch {
         return 0;
     }

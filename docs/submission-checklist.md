@@ -128,9 +128,9 @@ Explicitly state: **Gemini Flash** powers all three premium research sources and
 | Item | Value |
 |------|-------|
 | Contract | `RecommendationLedger` |
-| Address | `0x75C08758A099c27cE85600d6a7C5E933091C1495` |
+| Address | `0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f` |
 | Network | 0G Galileo Testnet (chainId 16602) |
-| Explorer | https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495 |
+| Explorer | https://chainscan-galileo.0g.ai/address/0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f |
 
 ### Verify On-Chain Anchoring
 
@@ -140,7 +140,7 @@ curl -s https://api.diversifi.famile.xyz/api/agent/zero-g-ledger | python3 -m js
 ```
 
 Expected response fields:
-- `contractAddress` — matches `0x75C08758A099c27cE85600d6a7C5E933091C1495`
+- `contractAddress` — matches `0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f`
 - `network` — `0G Galileo Testnet`
 - `totalRecommendations` — count of on-chain records
 - `latestRecommendation.txHash` — real 0G chain transaction hash
@@ -152,7 +152,7 @@ Expected response fields:
 # Confirm bytecode is live at the contract address
 curl -s -X POST https://evmrpc-testnet.0g.ai \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x75C08758A099c27cE85600d6a7C5E933091C1495","latest"],"id":1}' \
+  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f","latest"],"id":1}' \
   | python3 -m json.tool
 ```
 

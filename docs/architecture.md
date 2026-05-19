@@ -96,7 +96,7 @@ DiversiFi uses the full 0G stack as its "Truth Layer". Every advisor recommendat
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| `RecommendationLedger` | [`0x75C08758A099c27cE85600d6a7C5E933091C1495`](https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495) | Immutable record of every AI recommendation |
+| `RecommendationLedger` | [`0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f`](https://chainscan-galileo.0g.ai/address/0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f) | Immutable record of every AI recommendation |
 
 ### Components
 

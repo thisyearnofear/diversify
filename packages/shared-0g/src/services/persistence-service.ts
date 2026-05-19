@@ -61,6 +61,53 @@ export class ZeroGPersistenceService {
     }
 
     /**
+     * Parse and validate a persisted state string, returning the AgentContext
+     * or null if validation fails.
+     */
+    private parseAndValidatePersistedState(raw: string, userId: string): AgentContext | null {
+        try {
+            let persisted: PersistedState;
+            try {
+                persisted = JSON.parse(raw);
+            } catch {
+                console.error('[0G Persistence] Failed to parse persisted state JSON');
+                return null;
+            }
+
+            // Validate version compatibility
+            if (persisted.metadata?.version !== PERSISTENCE_VERSION) {
+                console.warn(`[0G Persistence] Version mismatch: stored=${persisted.metadata?.version}, expected=${PERSISTENCE_VERSION}`);
+                return null;
+            }
+
+            // Verify checksum
+            const computedChecksum = this.simpleChecksum(JSON.stringify(persisted.context));
+            if (computedChecksum !== persisted.metadata.checksum) {
+                console.error('[0G Persistence] Checksum mismatch — state may be corrupted');
+                return null;
+            }
+
+            // Validate user ID match
+            if (persisted.context.userId !== userId) {
+                console.error(`[0G Persistence] User ID mismatch: stored=${persisted.context.userId}, requested=${userId}`);
+                return null;
+            }
+
+            // Verify timestamp sanity
+            if (persisted.context.timestamp > Date.now() + 5000) {
+                console.warn('[0G Persistence] State timestamp is in the future — rejecting');
+                return null;
+            }
+
+            console.log(`[0G Persistence] State restored successfully for user ${userId} (version ${persisted.metadata.version})`);
+            return persisted.context;
+        } catch {
+            console.error('[0G Persistence] Unexpected error during state validation');
+            return null;
+        }
+    }
+
+    /**
      * Simple checksum function for state validation
      */
     private simpleChecksum(data: string): string {
@@ -142,6 +189,10 @@ export class ZeroGPersistenceService {
             }
 
             console.log(`[0G Persistence] State anchored to 0G. BlobID: ${rootHash}`);
+
+            // Register with storage service so listContent can discover this state
+            zeroGStorageService.registerContent(LATEST_STATE_PREFIX + context.userId, String(rootHash));
+
             return String(rootHash);
         } catch (error: any) {
             console.error('[0G Persistence] Failed to persist state to 0G:', error.message);
@@ -159,7 +210,42 @@ export class ZeroGPersistenceService {
     }
 
     /**
+     * Look up evidence CIDs from the on-chain RecommendationLedger contract
+     * as a persistent fallback when the in-memory content registry is empty
+     * (e.g., after a server restart).
+     */
+    private async lookupCidFromLedger(userId: string): Promise<string | null> {
+        try {
+            // Dynamic import to avoid hard dependency on @diversifi/shared
+            const { recommendationLedgerService } = await import(
+                '../../../shared/src/services/recommendation-ledger.service'
+            );
+
+            const ids = await recommendationLedgerService.getUserRecommendationIds(userId);
+            if (!ids || ids.length === 0) {
+                return null;
+            }
+
+            // Get the most recent recommendation (highest ID)
+            const latestId = ids[ids.length - 1];
+            const rec = await recommendationLedgerService.getRecommendation(latestId);
+
+            if (rec?.evidenceCid && rec.evidenceCid.length > 0) {
+                console.log(`[0G Persistence] Found evidence CID from on-chain ledger: ${rec.evidenceCid.slice(0, 16)}… (recommendation #${rec.id})`);
+                return rec.evidenceCid;
+            }
+
+            return null;
+        } catch (error: any) {
+            console.warn('[0G Persistence] Ledger CID lookup failed (non-fatal):', error.message);
+            return null;
+        }
+    }
+
+    /**
      * Restores latest state from 0G Storage
+     * Falls back to on-chain RecommendationLedger for CID discovery
+     * when the in-memory content registry is empty (e.g. after restart).
      */
     async restoreState(userId: string): Promise<AgentContext | null> {
         console.log(`[0G Persistence] Restoring state for user ${userId}...`);
@@ -170,8 +256,17 @@ export class ZeroGPersistenceService {
             // Step 1: Discover state blobs for this user
             const entries = await zeroGStorageService.listContent(LATEST_STATE_PREFIX + userId);
             
-            // Handle case where listContent might not be available or returns empty in dev mode mock
+            // Step 1b: If registry is empty, fall back to on-chain ledger discovery
             if (!entries || entries.length === 0) {
+                console.log(`[0G Persistence] In-memory registry empty — querying on-chain RecommendationLedger for user ${userId}...`);
+                const ledgerCid = await this.lookupCidFromLedger(userId);
+                if (ledgerCid) {
+                    console.log(`[0G Persistence] Found CID from on-chain ledger: ${ledgerCid.slice(0, 16)}…`);
+                    // Register it so future lookups hit the registry first
+                    zeroGStorageService.registerContent(LATEST_STATE_PREFIX + userId, ledgerCid);
+                    const raw = await zeroGStorageService.downloadContent(ledgerCid);
+                    return this.parseAndValidatePersistedState(raw, userId);
+                }
                 console.warn(`[0G Persistence] No persisted state found for user ${userId}`);
                 return null;
             }
@@ -182,73 +277,7 @@ export class ZeroGPersistenceService {
             // Step 3: Download the raw content
             const raw = await zeroGStorageService.downloadContent(latestCid);
 
-            // Step 4: Parse persisted state wrapper
-            const persisted: PersistedState = JSON.parse(raw);
-
-            // Step 5: Validate version compatibility
-            if (persisted.metadata.version !== PERSISTENCE_VERSION) {
-                // Could add semver comparison here for backward compat
-                console.warn(`[0G Persistence] Version mismatch: stored=${persisted.metadata.version}, expected=${PERSISTENCE_VERSION}`);
-                
-                const { allowMock, failLoud } = this.getFallbackBehavior();
-                if (failLoud) {
-                    throw new Error(`[0G Persistence] Version mismatch: stored=${persisted.metadata.version}, expected=${PERSISTENCE_VERSION}`);
-                }
-                if (allowMock) {
-                    console.warn(`[0G Persistence] Version mismatch, returning null in development`);
-                    return null;
-                }
-                throw new Error(`[0G Persistence] Version mismatch: stored=${persisted.metadata.version}, expected=${PERSISTENCE_VERSION}`);
-            }
-
-            // Step 6: Verify checksum
-            const computedChecksum = this.simpleChecksum(JSON.stringify(persisted.context));
-            if (computedChecksum !== persisted.metadata.checksum) {
-                console.error('[0G Persistence] Checksum mismatch — state may be corrupted');
-                
-                const { allowMock, failLoud } = this.getFallbackBehavior();
-                if (failLoud) {
-                    throw new Error('[0G Persistence] Checksum mismatch — state may be corrupted');
-                }
-                if (allowMock) {
-                    console.warn('[0G Persistence] Checksum mismatch, returning null in development');
-                    return null;
-                }
-                throw new Error('[0G Persistence] Checksum mismatch — state may be corrupted');
-            }
-
-            // Step 7: Validate user ID match
-            if (persisted.context.userId !== userId) {
-                console.error(`[0G Persistence] User ID mismatch: stored=${persisted.context.userId}, requested=${userId}`);
-                
-                const { allowMock, failLoud } = this.getFallbackBehavior();
-                if (failLoud) {
-                    throw new Error(`[0G Persistence] User ID mismatch: stored=${persisted.context.userId}, requested=${userId}`);
-                }
-                if (allowMock) {
-                    console.warn(`[0G Persistence] User ID mismatch, returning null in development`);
-                    return null;
-                }
-                throw new Error(`[0G Persistence] User ID mismatch: stored=${persisted.context.userId}, requested=${userId}`);
-            }
-
-            // Step 8: Verify timestamp sanity
-            if (persisted.context.timestamp > Date.now() + 5000) { // Allow 5 seconds clock drift
-                console.warn('[0G Persistence] State timestamp is in the future — rejecting');
-                
-                const { allowMock, failLoud } = this.getFallbackBehavior();
-                if (failLoud) {
-                    throw new Error('[0G Persistence] State timestamp is in the future — rejecting');
-                }
-                if (allowMock) {
-                    console.warn('[0G Persistence] Future timestamp, returning null in development');
-                    return null;
-                }
-                throw new Error('[0G Persistence] State timestamp is in the future — rejecting');
-            }
-
-            console.log(`[0G Persistence] State restored successfully for user ${userId} (version ${persisted.metadata.version})`);
-            return persisted.context;
+            return this.parseAndValidatePersistedState(raw, userId);
         } catch (error: any) {
             // If we already handled specific errors above, this is for unexpected ones
             console.error('[0G Persistence] Failed to restore state:', error.message);

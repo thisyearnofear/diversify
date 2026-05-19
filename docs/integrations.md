@@ -93,7 +93,7 @@ Every advisor recommendation is recorded on the 0G Galileo Testnet via the `Reco
 | Field | Value |
 |-------|-------|
 | **Network** | 0G Galileo Testnet (chainId `16602`) |
-| **Contract** | [`0x75C08758A099c27cE85600d6a7C5E933091C1495`](https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495) |
+| **Contract** | [`0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f`](https://chainscan-galileo.0g.ai/address/0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f) |
 | **RPC** | `https://evmrpc-testnet.0g.ai` |
 | **Explorer** | `https://chainscan-galileo.0g.ai` |
 | **Write authority** | EOA configured via `VAULT_PRIVATE_KEY` (automatically authorised on deploy; admin can grant via `setAgentAuthorization`) |
@@ -119,7 +119,7 @@ Every advisor recommendation is recorded on the 0G Galileo Testnet via the `Reco
 # Confirm the contract is deployed
 curl -s -X POST https://evmrpc-testnet.0g.ai \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x75C08758A099c27cE85600d6a7C5E933091C1495","latest"],"id":1}'
+  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f","latest"],"id":1}'
 
 # Read live stats + recent recommendations through the API
 curl -s https://api.diversifi.famile.xyz/api/agent/zero-g-ledger | python3 -m json.tool

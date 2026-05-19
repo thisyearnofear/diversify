@@ -80,11 +80,6 @@ contract RecommendationLedger {
         _;
     }
 
-    modifier onlyAuthorized() {
-        require(authorizedAgents[msg.sender] || msg.sender == owner, "Not authorized agent");
-        _;
-    }
-
     // ====================================================================
     // CONSTRUCTOR
     // ====================================================================
@@ -141,7 +136,14 @@ contract RecommendationLedger {
         string calldata servingModel,
         string calldata settlementTxHash,
         uint256 confidence
-    ) external onlyAuthorized returns (uint256) {
+    ) external returns (uint256) {
+        // Allow: authorized agents, the contract owner, or the user recording about themselves
+        require(
+            authorizedAgents[msg.sender] ||
+            msg.sender == owner ||
+            msg.sender == user,
+            "Not authorized to record"
+        );
         require(user != address(0), "User cannot be zero address");
         require(bytes(action).length > 0, "Action required");
         require(confidence <= 10000, "Confidence max 10000 bps");

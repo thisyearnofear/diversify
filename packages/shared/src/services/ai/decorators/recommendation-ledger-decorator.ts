@@ -59,13 +59,13 @@ export class RecommendationLedgerDecorator {
       // Extract basic info for the ledger from the result
       // In a real implementation, we'd parse the result to determine action, token, etc.
       await recommendationLedgerService.recordRecommendation({
-        user: 'unknown', // Would be set by the service
-        action: 'UNKNOWN', // Would be determined from result parsing
+        user: options.user || 'unknown',
+        action: 'UNKNOWN',
         targetToken: '',
         reasoning: result.substring(0, 500),
         evidenceCid: '', // Would be from 0G anchoring if applied
         servingModel: options.model ?? 'unknown',
-        confidence: 0.8 // Default confidence - would be better estimated
+        confidence: 0.8
       });
     } catch (error: any) {
       console.warn('[Recommendation Ledger] Failed to record recommendation:', error);

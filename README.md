@@ -33,7 +33,7 @@ At our core, we believe the future of AI agents relies on **verifiable data**. D
 ## 🔑 Judge Verification Proofs
 
 ### 0G Stack (Verifiable AI)
-- **RecommendationLedger Contract** (0G Galileo Testnet, chainId `16602`): [`0x75C08758A099c27cE85600d6a7C5E933091C1495`](https://chainscan-galileo.0g.ai/address/0x75C08758A099c27cE85600d6a7C5E933091C1495)
+- **RecommendationLedger Contract** (0G Galileo Testnet, chainId `16602`): [`0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f`](https://chainscan-galileo.0g.ai/address/0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f)
 - **Ledger API**: [https://api.diversifi.famile.xyz/api/agent/zero-g-ledger](https://api.diversifi.famile.xyz/api/agent/zero-g-ledger) — live on-chain recommendations + stats
 - **Storage / DA**: Open the **"Verifiable AI"** dashboard in-app to view live 0G evidence CIDs, serving-model IDs, and chain receipts
 

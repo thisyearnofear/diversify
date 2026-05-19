@@ -26,6 +26,12 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
   webSearch?: boolean;
   responseFormat?: { type: 'text' } | { type: 'json_object' };
+  /**
+   * The connected wallet address of the user making the request.
+   * Passed through to decorators so the on-chain RecommendationLedger
+   * records are attributed to the actual user instead of 'unknown'.
+   */
+  user?: string;
 }
 
 /**

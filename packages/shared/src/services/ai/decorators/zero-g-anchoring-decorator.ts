@@ -87,13 +87,13 @@ export class ZeroGAnchoringDecorator {
         
         // Extract basic info for the ledger
         await recommendationLedgerService.recordRecommendation({
-          user: 'unknown', // Would be set by the service
-          action: 'UNKNOWN', // Would be determined from result
+          user: options.user || 'unknown',
+          action: 'UNKNOWN',
           targetToken: '',
           reasoning: result.substring(0, 500),
           evidenceCid: '', // Would be from anchorToZeroG
           servingModel: options.model ?? 'unknown',
-          confidence: 0.8 // Default confidence
+          confidence: 0.8
         });
       } catch (error: any) {
         console.warn('[ZeroG Anchoring] Failed to record recommendation:', error);

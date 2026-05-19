@@ -3,7 +3,7 @@
  * Interface to upload evidence bundles to 0G Storage.
  */
 
-import { getOperationMode, areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
+import { areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
 
 export interface StorageResult {
     cid: string;
@@ -19,6 +19,13 @@ export class ZeroGStorageService {
     private readonly storageUrl: string;
     private readonly indexerUrl: string;
     private readonly evmRpc: string;
+    /**
+     * In-memory content registry mapping prefix → list of CIDs.
+     * Content-addressed storage (like 0G) has no native "list by prefix" API,
+     * so we maintain this registry to enable listing content uploaded during
+     * the current session. Entries are added on upload via registerContent().
+     */
+    private readonly contentRegistry: Map<string, string[]> = new Map();
 
     constructor(
         storageUrl: string = process.env.ZERO_G_STORAGE_URL || 'https://storage-testnet.0g.ai',
@@ -28,6 +35,20 @@ export class ZeroGStorageService {
         this.storageUrl = storageUrl;
         this.indexerUrl = indexerUrl;
         this.evmRpc = evmRpc;
+    }
+
+    /**
+     * Register a CID under a prefix so it can be discovered via listContent().
+     * Called automatically after each successful uploadEvidence or persistState call.
+     */
+    registerContent(prefix: string, cid: string): void {
+        const existing = this.contentRegistry.get(prefix) || [];
+        // Avoid duplicate entries for the same CID
+        if (!existing.includes(cid)) {
+            existing.push(cid);
+            this.contentRegistry.set(prefix, existing);
+            console.log(`[0G Storage] Registered CID ${cid.slice(0, 16)}… under prefix "${prefix}"`);
+        }
     }
 
     async uploadEvidence(data: any, metadata: { agent: string; source: string; timestamp: number }): Promise<StorageResult> {
@@ -98,8 +119,13 @@ export class ZeroGStorageService {
 
             console.log(`[0G Storage] Upload successful. Tx: ${JSON.stringify(tx)}`);
 
+            // Auto-register CID in content registry for later discovery via listContent
+            const cid = rootHash || 'unknown';
+            this.registerContent(`evidence:${metadata.agent}`, cid);
+            this.registerContent(`evidence:${metadata.source}`, cid);
+
             return {
-                cid: rootHash || 'unknown',
+                cid: cid,
                 url: `${this.storageUrl}/ipfs/${rootHash}`,
                 txHash: typeof tx === 'object' ? JSON.stringify(tx) : String(tx)
             };
@@ -124,80 +150,43 @@ export class ZeroGStorageService {
     }
 
     /**
-     * List content stored under a specific prefix
+     * List content stored under a specific prefix.
+     *
+     * Since 0G Storage is content-addressed with no native "list by prefix" API,
+     * this reads from the in-memory content registry populated on every upload.
+     *
+     * For persistent discoverability across sessions, implement a side index
+     * (e.g., maintain a KV store mapping prefix → CIDs on each upload).
      */
     async listContent(prefix: string): Promise<string[]> {
-        if (shouldFailLoudly()) {
-            const privateKey = process.env.VAULT_PRIVATE_KEY;
-            if (!privateKey) {
-                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — CI mode requires real 0G credentials');
-            }
-        } else if (!areMockFallbacksAllowed()) {
-            const privateKey = process.env.VAULT_PRIVATE_KEY;
-            if (!privateKey) {
-                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — production mode requires real 0G credentials');
-            }
+        const entries = this.contentRegistry.get(prefix);
+        if (entries && entries.length > 0) {
+            console.log(`[0G Storage] Found ${entries.length} content entries for prefix "${prefix}"`);
+            return [...entries];
         }
 
-        try {
-            console.log(`[0G Storage] Listing content with prefix: ${prefix}`);
-            
-            // Import SDK dynamically
-            let SDK: any;
-            if (typeof window === 'undefined') {
-                SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
-            } else {
-                throw new Error('0G Storage is not available in the browser.');
-            }
-            const { Indexer } = SDK;
-            const ethers6 = eval('require("ethers6")');
-
-            // Setup Ethers v6
-            const provider = new ethers6.JsonRpcProvider(this.evmRpc);
-            const signer = new ethers6.Wallet(process.env.VAULT_PRIVATE_KEY || '', provider);
-            
-            // Setup 0G Indexer
-            const indexer = new Indexer(this.indexerUrl);
-
-            // In a real implementation, we'd use the indexer to list blobs by prefix
-            // For now, we'll return an empty array as a placeholder
-            // The actual implementation would depend on the 0G SDK's listing capabilities
-            console.log(`[0G Storage] List content not fully implemented, returning empty array`);
-            return [];
-        } catch (error: any) {
-            console.error('[0G Storage] Failed to list content:', error.message);
-            
-            if (shouldFailLoudly()) {
-                throw error; // Re-throw in CI
-            }
-            
-            if (areMockFallbacksAllowed()) {
-                console.warn('[0G Storage] Falling back to empty list in development');
-                return [];
-            }
-            
-            throw error;
-        }
+        console.log(`[0G Storage] No entries in registry for prefix "${prefix}" — returning empty`);
+        return [];
     }
 
     /**
-     * Download content by CID
+     * Download content by CID (root hash) from 0G Storage.
+     * Uses the 0G Storage SDK's Downloader to retrieve the blob data from indexer nodes.
      */
     async downloadContent(cid: string): Promise<string> {
-        if (shouldFailLoudly()) {
-            const privateKey = process.env.VAULT_PRIVATE_KEY;
-            if (!privateKey) {
-                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — CI mode requires real 0G credentials');
+        // Validate the CID looks plausible before attempting download
+        // Reject known mock/error CIDs to avoid confusing SDK errors
+        if (!cid || cid === 'mock_persistence_id' || cid.startsWith('error_') || cid.startsWith('mock_content') || cid.startsWith('bafybeih')) {
+            if (areMockFallbacksAllowed()) {
+                console.warn(`[0G Storage] Skipping real download for mock CID: ${cid}`);
+                return `mock_content_for_${cid}`;
             }
-        } else if (!areMockFallbacksAllowed()) {
-            const privateKey = process.env.VAULT_PRIVATE_KEY;
-            if (!privateKey) {
-                throw new Error('[0G Storage] VAULT_PRIVATE_KEY missing — production mode requires real 0G credentials');
-            }
+            console.warn(`[0G Storage] Rejecting non-0G CID: ${cid}`);
+            throw new Error(`Invalid 0G Storage CID: ${cid}`);
         }
 
         try {
-            console.log(`[0G Storage] Downloading content for CID: ${cid}`);
+            console.log(`[0G Storage] Downloading content for CID: ${cid.slice(0, 16)}…`);
             
             // Import SDK dynamically
             let SDK: any;
@@ -206,25 +195,46 @@ export class ZeroGStorageService {
             } else {
                 throw new Error('0G Storage is not available in the browser.');
             }
-            const { Indexer } = SDK;
-            const ethers6 = eval('require("ethers6")');
+            const { Downloader } = SDK;
 
-            // Setup Ethers v6
-            const provider = new ethers6.JsonRpcProvider(this.evmRpc);
-            const signer = new ethers6.Wallet(process.env.VAULT_PRIVATE_KEY || '', provider);
+            // Create Downloader pointing at the indexer nodes
+            // The Downloader constructor accepts an array of node URLs
+            const downloader = new Downloader([this.indexerUrl]);
+
+            // Download the blob by its root hash (CID)
+            // downloadToBlob returns [blobBytes, error] tuple
+            const [blob, downloadErr] = await downloader.downloadToBlob(cid);
             
-            // Setup 0G Indexer
-            const indexer = new Indexer(this.indexerUrl);
+            if (downloadErr) {
+                console.error('[0G Storage] Download failed:', downloadErr);
+                throw new Error(`0G Storage download failed for CID ${cid.slice(0, 16)}…: ${downloadErr.message || downloadErr}`);
+            }
 
-            // In a real implementation, we'd use the indexer to download blob by CID
-            // For now, we'll return mock content as a placeholder
-            console.log(`[0G Storage] Download content not fully implemented, returning mock content`);
-            return `mock_downloaded_content_for_${cid}`;
+            // Convert blob to UTF-8 string.
+            // The SDK's downloadToBlob returns a 0G Blob instance wrapping a web Blob in .blob.
+            let text: string;
+            if (blob && typeof blob === 'object' && blob.blob && typeof blob.blob.text === 'function') {
+                // 0G Blob instance with underlying web Blob
+                text = await blob.blob.text();
+            } else if (blob instanceof Uint8Array) {
+                text = new TextDecoder().decode(blob);
+            } else if (blob && typeof blob === 'object' && blob.data) {
+                // Handle { data: Uint8Array } wrapper
+                text = new TextDecoder().decode(
+                    blob.data instanceof Uint8Array ? blob.data : new Uint8Array(blob.data)
+                );
+            } else {
+                // Fallback: try toString()
+                text = String(blob);
+            }
+
+            console.log(`[0G Storage] Successfully downloaded ${text.length} bytes for CID ${cid.slice(0, 16)}…`);
+            return text;
         } catch (error: any) {
             console.error('[0G Storage] Failed to download content:', error.message);
             
             if (shouldFailLoudly()) {
-                throw error; // Re-throw in CI
+                throw error; // Re-throw in CI — no silent fallbacks
             }
             
             if (areMockFallbacksAllowed()) {

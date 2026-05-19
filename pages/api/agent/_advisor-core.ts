@@ -427,6 +427,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     messages,
     temperature: 0.7,
     maxTokens: getAdaptiveTokenLimit('chat'),
+    user: address,
   });
 
   let responseText = result.content;

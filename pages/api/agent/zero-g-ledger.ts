@@ -5,8 +5,13 @@
  * contract on 0G Galileo Testnet.
  *
  * GET /api/agent/zero-g-ledger?user=<address>&limit=10&offset=0
+ *   - Returns global stats + recent recommendations (filtered by user if address given)
  *
- * If no user address is provided, returns global stats without filtering by user.
+ * POST /api/agent/zero-g-ledger
+ *   - Allows any user to record their own attestation to the ledger
+ *   - Body: { user, action, targetToken, reasoning, evidenceCid, servingModel, confidence }
+ *   - The `user` address must match the one specified in the body
+ *   - Returns { id, txHash } on success
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -46,6 +51,54 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
+  // ========================================================================
+  // POST — Submit a user attestation to the ledger
+  // ========================================================================
+  if (req.method === 'POST') {
+    try {
+      const { user, action, targetToken, reasoning, evidenceCid, servingModel, confidence } = req.body;
+
+      if (!user || !action) {
+        return res.status(400).json({ error: 'Missing required fields: user and action' });
+      }
+
+      if (typeof user !== 'string' || !user.startsWith('0x')) {
+        return res.status(400).json({ error: 'user must be a valid 0x-prefixed address' });
+      }
+
+      const result = await recommendationLedgerService.recordRecommendation({
+        user,
+        action,
+        targetToken: targetToken || '',
+        reasoning: reasoning || '',
+        evidenceCid: evidenceCid || '',
+        servingModel: servingModel || 'user-attested',
+        settlementTxHash: '',
+        confidence: typeof confidence === 'number' ? confidence : 0.9,
+      });
+
+      if (!result) {
+        return res.status(500).json({ error: 'Failed to record recommendation to on-chain ledger' });
+      }
+
+      console.log(`[0G Ledger API] User attestation recorded #${result.id} for ${user}: ${action} (tx: ${result.txHash})`);
+
+      return res.status(200).json({
+        success: true,
+        id: result.id,
+        txHash: result.txHash,
+        explorerUrl: `https://chainscan-galileo.0g.ai/tx/${result.txHash}`,
+        message: `Recommendation recorded on-chain as #${result.id}`,
+      });
+    } catch (error: any) {
+      console.error('[0G Ledger API] POST failed:', error.message);
+      return res.status(500).json({ error: error.message || 'Failed to record attestation' });
+    }
+  }
+
+  // ========================================================================
+  // GET — Query the ledger
+  // ========================================================================
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
