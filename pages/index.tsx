@@ -47,6 +47,7 @@ import GuidedTour from "../components/tour/GuidedTour";
 import TourTrigger from "../components/tour/TourTrigger";
 import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 import PullToRefresh from "../components/ui/PullToRefresh";
+import { GuardianStreakWidget } from "../components/agent/GuardianStreakWidget";
 
 import { useVoiceIntent } from "../hooks/use-voice-intent";
 import { useAnalytics } from "../hooks/use-analytics";
@@ -381,11 +382,8 @@ export default function DiversiFiPage() {
               setActiveTab(newTab);
             }
           }}
-        >
-          <AnimatePresence mode="wait">
-import { GuardianStreakWidget } from "../components/agent/GuardianStreakWidget";
-
-...
+         >
+           <AnimatePresence mode="wait">
 
               {activeTab === "overview" && (
                 <TabPane id="overview">

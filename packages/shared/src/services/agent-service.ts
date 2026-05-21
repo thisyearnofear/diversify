@@ -8,8 +8,8 @@
 
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
 
-import { AgentWalletProvider } from '../types/wallet-provider';
-export { AgentWalletProvider };
+import type { AgentWalletProvider } from '../types/wallet-provider';
+export type { AgentWalletProvider };
 import { rwaService } from './rwa-service';
 import { circleService, CircleService } from './circle-service';
 import { RealCircleWalletProvider } from './circle-wallet-provider-real';
