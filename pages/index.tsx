@@ -60,17 +60,64 @@ import { useProtectionProfile } from "../hooks/use-protection-profile";
 const TAB_DISPLAY_ORDER = ["overview", "exchange", "agent", "protect", "info"] as const;
 type TabId = typeof TAB_DISPLAY_ORDER[number];
 
-// Reusable animated tab wrapper — eliminates repeated motion.div boilerplate
+// Reusable animated tab wrapper — enhanced with engaging transitions
 function TabPane({ id, children }: { id: string; children: React.ReactNode }) {
+  // Define different transition styles for variety
+  const transitionStyles: Record<string, any> = {
+    overview: { 
+      initial: { opacity: 0, scale: 0.9, rotateX: -10 },
+      animate: { opacity: 1, scale: 1, rotateX: 0 },
+      exit: { opacity: 0, scale: 0.95, rotateX: 5 },
+      transition: { duration: 0.3, type: "spring", stiffness: 260, damping: 20 }
+    },
+    exchange: { 
+      initial: { opacity: 0, x: -20, rotate: -5 },
+      animate: { opacity: 1, x: 0, rotate: 0 },
+      exit: { opacity: 0, x: 20, rotate: 5 },
+      transition: { duration: 0.25, ease: "easeOut" }
+    },
+    agent: { 
+      initial: { opacity: 0, rotateY: -30 },
+      animate: { opacity: 1, rotateY: 0 },
+      exit: { opacity: 0, rotateY: 30 },
+      transition: { duration: 0.35, type: "spring", stiffness: 300, damping: 20 }
+    },
+    protect: { 
+      initial: { opacity: 0, y: 20, filter: "blur(4px)" },
+      animate: { opacity: 1, y: 0, filter: "blur(0px)" },
+      exit: { opacity: 0, y: -20, filter: "blur(4px)" },
+      transition: { duration: 0.3, ease: "easeOut" }
+    },
+    info: { 
+      initial: { opacity: 0, scale: 0.8 },
+      animate: { opacity: 1, scale: 1 },
+      exit: { opacity: 0, scale: 0.9 },
+      transition: { duration: 0.2, ease: "easeOut" }
+    }
+  };
+
+  const style = transitionStyles[id as keyof typeof transitionStyles] || transitionStyles.overview;
+
   return (
     <motion.div
       key={id}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
-      transition={{ duration: 0.15, ease: "easeOut" }}
+      initial={style.initial}
+      animate={style.animate}
+      exit={style.exit}
+      transition={style.transition}
     >
-      {children}
+      {/* Stagger animation for direct children */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ 
+          delay: 0.05, 
+          duration: 0.2, 
+          ease: "easeOut" 
+        }}
+      >
+        {children}
+      </motion.div>
     </motion.div>
   );
 }
