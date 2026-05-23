@@ -5,27 +5,22 @@ import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
 import {
   Card,
-  ConnectWalletPrompt,
   InsightCard,
-  ProtectionDashboard,
 } from "../shared/TabComponents";
 import DashboardCard from "../shared/DashboardCard";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
-import WalletButton from "../wallet/WalletButton";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
-import {
-  useProtectionProfile,
-  USER_GOALS,
-} from "@/hooks/use-protection-profile";
+import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
 import { StrategyService } from "@diversifi/shared";
 import { useToast } from "@/components/ui/Toast";
 import EmptyState from "@/components/ui/EmptyState";
 
-import ProfileWizard from "./protect/ProfileWizard";
+import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
+import { ProtectionPlanCard } from "./protect/ProtectionPlanCard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import YieldDiscoverySection from "../earn/YieldDiscoverySection";
@@ -391,48 +386,7 @@ export default function ProtectionTab({
   // ============================================================================
 
   if (!address && !isDemo) {
-    return (
-      <div className="space-y-4">
-        <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-black uppercase tracking-tight">
-                Protection Plan
-              </h3>
-              <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-                Build your inflation protection plan
-              </p>
-            </div>
-            <span className="text-3xl">🤖</span>
-          </div>
-          <ConnectWalletPrompt
-            message="Connect your wallet to analyze your portfolio across Arbitrum and Celo against real-time global inflation data."
-            WalletButtonComponent={<WalletButton variant="inline" />}
-            experienceMode={experienceMode}
-          />
-        </Card>
-
-        {/* Preview of goals */}
-        <Card className="bg-gray-50 border-dashed border-2 p-4">
-          <h4 className="text-xs font-black uppercase text-gray-400 mb-4 tracking-widest text-center">
-            Available Protection Goals
-          </h4>
-          <div className="grid grid-cols-2 gap-2 opacity-50">
-            {USER_GOALS.map((goal) => (
-              <div
-                key={goal.value}
-                className="p-3 bg-white rounded-xl text-center shadow-md"
-              >
-                <div className="text-xl mb-1">{goal.icon}</div>
-                <div className="text-xs font-black uppercase text-gray-900">
-                  {goal.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-    );
+    return <ProtectionNotConnected experienceMode={experienceMode} />;
   }
 
   // ============================================================================
@@ -488,132 +442,15 @@ export default function ProtectionTab({
       {/* =====================================================================
           CONSOLIDATED PROTECTION DASHBOARD
           ===================================================================== */}
-      {isBeginner ? (
-        // Beginner: Simple hero with protection level
-        <Card padding="p-0" className="overflow-hidden shadow-[0_20px_50px_-24px_rgba(79,70,229,0.45)] border border-indigo-200/40 dark:border-indigo-900/40">
-          <div className="bg-gradient-to-br from-indigo-600 via-indigo-600 to-purple-700 p-6 text-white relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-3xl" />
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-50 backdrop-blur-sm">
-                  <span className="size-1.5 rounded-full bg-white" />
-                  Plan Setup
-                </div>
-                <h3 className="text-xl font-black uppercase tracking-tight">
-                  Protection Plan
-                </h3>
-                <p className="text-indigo-100 text-sm font-semibold opacity-90 mt-2 max-w-[220px] leading-relaxed">
-                  {isComplete ? "Your plan is ready" : "Set up your protection plan"}
-                </p>
-              </div>
-              <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl border border-white/30 shadow-sm">
-                <span className="text-2xl">🤖</span>
-              </div>
-            </div>
-            <div className="text-center relative z-10">
-              <div className="text-4xl font-black tracking-tight">
-                {protectionScore}%
-              </div>
-              <div className="text-sm text-indigo-100 font-semibold mt-1">
-                Protection Level
-              </div>
-            </div>
-          </div>
-          <div className="p-5 bg-white dark:bg-gray-900">
-            <ProfileWizard
-              mode={profileMode}
-              currentStep={currentStep}
-              config={config}
-              currentGoalIcon={currentGoalIcon}
-              currentGoalLabel={currentGoalLabel}
-              currentRiskLabel={currentRiskLabel}
-              currentTimeHorizonLabel={currentTimeHorizonLabel}
-              onSetUserGoal={setUserGoal}
-              onSetRiskTolerance={setRiskTolerance}
-              onSetTimeHorizon={setTimeHorizon}
-              onNextStep={nextStep}
-              onSkipToEnd={skipToEnd}
-              onCompleteEditing={completeEditing}
-              onStartEditing={startEditing}
-              onBack={prevStep}
-            />
-          </div>
-        </Card>
-      ) : (
-        // Non-beginner: Full ProtectionDashboard
-        <Card
-          aiPrompt={() => `Review my protection plan: $${displayTotalValue.toFixed(0)} across ${displayChainCount} chains. Goal: ${currentGoalLabel}. Region: ${userRegion}. What should I know?`}
-          aiQuickQuestions={[
-            "What's my biggest risk?",
-            "How can I improve my protection score?",
-            "Should I rebalance now?",
-            "What's my inflation exposure?",
-            "Am I diversified enough?"
-          ]}
-        >
-          <ProtectionDashboard
-          title="Protection Plan"
-          subtitle={isComplete ? "Your protection profile is ready" : "Set your protection profile"}
-          icon={<span>🤖</span>}
-          totalValue={`$${displayTotalValue.toFixed(0)}`}
-          chainCount={displayChainCount}
-          score={protectionScore}
-          strategy={config.userGoal || 'global'}
-          factors={[
-            {
-              label: "Portfolio Coverage",
-              value: liveAnalysis?.tokenCount > 0 ? 95 : 50,
-              status: liveAnalysis?.tokenCount > 0 ? `${liveAnalysis?.tokenCount} tokens` : "No data",
-              icon: "💰",
-            },
-            {
-              label: "Chain Diversification",
-              value: displayChainCount > 1 ? 90 : 60,
-              status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`,
-              icon: "🔗",
-            },
-            {
-              label: "Regional Diversification",
-              value: currentRegions.length > 2 ? 90 : 70,
-              status: `${currentRegions.length} regions`,
-              icon: "🌍",
-            },
-            {
-              label: "Inflation Risk",
-              value: Math.max(0, 100 - (liveAnalysis?.weightedInflationRisk || 0) * 10),
-              status: `${Math.round(liveAnalysis?.weightedInflationRisk || 0)}% weighted`,
-              icon: "🛡️",
-            },
-          ]}
-          isLoading={isMultichainLoading}
-          isStale={isStale}
-          streak={streak}
-          canClaim={canClaim}
-          estimatedReward={estimatedReward}
-          onClaim={() => setShowClaimFlow(true)}
-        >
-          <div className="mt-2">
-            <ProfileWizard
-              mode={profileMode}
-              currentStep={currentStep}
-              config={config}
-              currentGoalIcon={currentGoalIcon}
-              currentGoalLabel={currentGoalLabel}
-              currentRiskLabel={currentRiskLabel}
-              currentTimeHorizonLabel={currentTimeHorizonLabel}
-              onSetUserGoal={setUserGoal}
-              onSetRiskTolerance={setRiskTolerance}
-              onSetTimeHorizon={setTimeHorizon}
-              onNextStep={nextStep}
-              onSkipToEnd={skipToEnd}
-              onCompleteEditing={completeEditing}
-              onStartEditing={startEditing}
-              onBack={prevStep}
-            />
-          </div>
-        </ProtectionDashboard>
-        </Card>
-      )}
+      {<ProtectionPlanCard
+        experienceMode={experienceMode}
+        address={address}
+        portfolio={activePortfolio as MultichainPortfolio}
+        userRegion={userRegion}
+        isComplete={isComplete}
+        currentGoalLabel={currentGoalLabel}
+        onClaim={() => setShowClaimFlow(true)}
+      />}
 
       {/* =================================================================
           PRIMARY INSIGHT CARD - Dynamic based on selected goal

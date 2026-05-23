@@ -17,6 +17,32 @@ const nextConfig = {
     appNewScrollHandler: true,
   },
 
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        fs: false,
+        net: false,
+        tls: false,
+        dns: false,
+        child_process: false,
+        readline: false,
+        zlib: false,
+        'dtrace-provider': false,
+        stream: false,
+        util: false,
+        buffer: false,
+        assert: false,
+        http: false,
+        https: false,
+        os: false,
+        url: false,
+        crypto: false,
+      };
+    }
+    return config;
+  },
+
   turbopack: {
     resolveAlias: {
       fs: './lib/empty-module.js',

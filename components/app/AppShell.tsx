@@ -15,18 +15,31 @@ import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import { NETWORKS } from "@/config";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import TabNavigation from "@/components/ui/TabNavigation";
-import OverviewTab from "@/components/tabs/OverviewTab";
-import ProtectionTab from "@/components/tabs/ProtectionTab";
+
+const tabSkeleton = (rows: number = 3) => (
+  <div className="animate-pulse space-y-4 pt-4">
+    {Array.from({ length: rows }).map((_, i) => (
+      <div
+        key={i}
+        className={`h-${i === 0 ? '10' : i === 1 ? '8' : '40'} bg-gray-100 dark:bg-gray-800 rounded-${i === 2 ? '2xl' : 'xl'} ${i === 1 ? 'w-3/4' : ''}`}
+      />
+    ))}
+  </div>
+);
+
+const OverviewTab = dynamic(() => import("@/components/tabs/OverviewTab"), {
+  ssr: false,
+  loading: () => tabSkeleton(3),
+});
+
+const ProtectionTab = dynamic(() => import("@/components/tabs/ProtectionTab"), {
+  ssr: false,
+  loading: () => tabSkeleton(3),
+});
 
 const ExchangeTab = dynamic(() => import("@/components/tabs/ExchangeTab"), {
   ssr: false,
-  loading: () => (
-    <div className="animate-pulse space-y-4 pt-4">
-      <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded-xl" />
-      <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl w-3/4" />
-      <div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
-    </div>
-  ),
+  loading: () => tabSkeleton(3),
 });
 
 const AgentTab = dynamic(() => import("@/components/tabs/AgentTab"), {
@@ -40,7 +53,10 @@ const AgentTab = dynamic(() => import("@/components/tabs/AgentTab"), {
   ),
 });
 
-import InfoTab from "@/components/tabs/InfoTab";
+const InfoTab = dynamic(() => import("@/components/tabs/InfoTab"), {
+  ssr: false,
+  loading: () => tabSkeleton(2),
+});
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { GuardianStreakWidget } from "@/components/agent/GuardianStreakWidget";
 import { WalletTutorial } from "@/components/wallet/WalletTutorial";
@@ -203,10 +219,12 @@ export default function AppShell({
         <AnimatePresence mode="wait">
           {activeTab === "overview" && (
             <TabPane id="overview">
-              <ErrorBoundary>
-                <PullToRefresh onRefresh={refresh}>
-                  <div className="p-4 space-y-4">
+              <PullToRefresh onRefresh={refresh}>
+                <div className="p-4 space-y-4">
+                  <ErrorBoundary moduleName="Streak Widget">
                     <GuardianStreakWidget />
+                  </ErrorBoundary>
+                  <ErrorBoundary moduleName="Overview Dashboard">
                     <OverviewTab
                       portfolio={multichainPortfolio}
                       isLoading={isMultichainLoading}
@@ -218,9 +236,9 @@ export default function AppShell({
                       refreshBalances={refresh}
                       currencyPerformanceData={currencyPerformanceData}
                     />
-                  </div>
-                </PullToRefresh>
-              </ErrorBoundary>
+                  </ErrorBoundary>
+                </div>
+              </PullToRefresh>
             </TabPane>
           )}
 
