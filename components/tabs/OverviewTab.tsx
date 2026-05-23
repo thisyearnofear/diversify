@@ -8,9 +8,11 @@ import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 import { NotConnectedState } from "./overview/NotConnectedState";
 import { ConnectingState } from "./overview/ConnectingState";
 import { ConnectedOverview } from "./overview/ConnectedOverview";
+import OverviewSkeleton from "../ui/skeletons/OverviewSkeleton";
 
 interface OverviewTabProps {
   portfolio: MultichainPortfolio;
+  isLoading?: boolean;
   isRegionLoading: boolean;
   userRegion: Region;
   setUserRegion: (region: Region) => void;
@@ -34,6 +36,7 @@ interface OverviewTabProps {
 
 export default function OverviewTab({
   portfolio,
+  isLoading,
   userRegion,
   setUserRegion,
   REGIONS,
@@ -48,6 +51,10 @@ export default function OverviewTab({
 
   const isDemo = demoMode.isActive;
   const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
+
+  if (isLoading && address) {
+    return <OverviewSkeleton />;
+  }
 
   if (!address && !isConnecting && !isDemo) {
     return (

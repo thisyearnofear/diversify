@@ -44,6 +44,7 @@
     "@vercel/og": "0.8.6",
     "autoprefixer": "^10.4.0",
     "axios": "1.13.2",
+    "canvas-confetti": "1.9.4",
     "ethers6": "npm:ethers@^6.16.0",
     "formidable": "3.5.4",
     "framer-motion": "12.26.2",
@@ -60,6 +61,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
+    "@types/canvas-confetti": "1.9.0",
     "@types/formidable": "3.4.6",
     "@types/node": "^22.8.6",
     "@types/react": "^18",

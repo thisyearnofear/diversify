@@ -109,9 +109,17 @@ module.exports = {
           "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
         "glass": "0 8px 32px 0 rgba(31, 38, 135, 0.07)",
         "glass-lg": "0 8px 32px 0 rgba(31, 38, 135, 0.15)",
+        "nav": "0 -4px 16px rgba(0, 0, 0, 0.08)",
+        "2xl": "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+        "3xl": "0 35px 60px -15px rgba(0, 0, 0, 0.3)",
       },
       borderRadius: {
         card: "0.75rem",
+        "2xl": "1rem",
+        "3xl": "1.5rem",
+      },
+      letterSpacing: {
+        widest: "0.2em",
       },
       backdropBlur: {
         xs: "2px",

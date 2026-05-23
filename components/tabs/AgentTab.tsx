@@ -19,11 +19,13 @@ import { useAgentActivities } from "../../hooks/use-agent-activities";
 import { useExperience } from "../../context/app/ExperienceContext";
 import { useAdvisor } from "../../hooks/use-advisor";
 import { useNavigation } from "../../context/app/NavigationContext";
+import { useWalletContext } from "../wallet/WalletProvider";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { Skeleton } from "../shared/TabComponents";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import AgentQuickActions from "../agent/AgentQuickActions";
+import EmptyState from "../ui/EmptyState";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -40,6 +42,7 @@ export default function AgentTab({
   isFarcaster,
   portfolio,
 }: AgentTabProps) {
+  const { address } = useWalletContext();
   const {
     capabilities,
     autonomousStatus,
@@ -75,6 +78,19 @@ export default function AgentTab({
       "Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.",
     );
   };
+
+  // Empty state when wallet not connected
+  if (!address) {
+    return (
+      <div className="space-y-4 pb-6">
+        <EmptyState
+          icon="🤖"
+          title="AI Advisor"
+          description="Connect a wallet to get personalized financial advice."
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 pb-6">

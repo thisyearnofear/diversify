@@ -160,7 +160,7 @@ export function SelectionScreen({
                     >
                         <motion.div
                             onClick={() => onSelect(strategy.id)}
-                            className={`p-6 md:p-8 rounded-[1.5rem] md:rounded-[2rem] border-2 transition-all duration-500 relative overflow-hidden ${selected === strategy.id
+                            className={`p-6 md:p-8 rounded-3xl md:rounded-[2rem] border-2 transition-all duration-500 relative overflow-hidden ${selected === strategy.id
                                 ? 'border-blue-500 bg-white dark:bg-gray-900 shadow-[0_16px_32px_-8px_rgba(37,99,235,0.2)] scale-105'
                                 : 'border-gray-100 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 shadow-xl'
                                 }`}
@@ -173,11 +173,11 @@ export function SelectionScreen({
                             <div className="relative mb-4 md:mb-8 flex justify-center text-6xl md:text-8xl">
                                 {strategy.icon}
                             </div>
-                            <h4 className="text-xl md:text-3xl font-[900] text-gray-900 dark:text-white text-center mb-1 tracking-tight">
+                            <h4 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white text-center mb-1 tracking-tight">
                                 {strategy.name}
                             </h4>
                             {strategy.nativeName && (
-                                <p className="text-xs md:text-xs font-black uppercase tracking-[0.2em] text-blue-500 dark:text-blue-400 text-center mb-4 md:mb-6 opacity-80">
+                                <p className="text-xs md:text-xs font-black uppercase tracking-widest text-blue-500 dark:text-blue-400 text-center mb-4 md:mb-6 opacity-80">
                                     {strategy.nativeName}
                                 </p>
                             )}

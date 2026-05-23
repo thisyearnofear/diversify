@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { NETWORKS } from '../../../config';
 import { useWalletContext } from '../../wallet/WalletProvider';
@@ -11,11 +11,24 @@ interface WelcomeScreenProps extends OnboardingScreenProps {
     chainId?: number;
 }
 
+// Region data with inflation rates
+const REGIONS = [
+    { id: 'USA', label: 'USA', flag: '🗽', inflation: 3.5, lossPer10k: 350 },
+    { id: 'Europe', label: 'Europe', flag: '🏰', inflation: 2.3, lossPer10k: 230 },
+    { id: 'LatAm', label: 'LatAm', flag: '🌋', inflation: 10.4, lossPer10k: 1040 },
+    { id: 'Africa', label: 'Africa', flag: '🌍', inflation: 15.8, lossPer10k: 1580 },
+    { id: 'Asia', label: 'Asia', flag: '⛩️', inflation: 4.2, lossPer10k: 420 },
+] as const;
+
 export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected, chainId }: WelcomeScreenProps) {
     const isTestnet = chainId && (chainId === NETWORKS.CELO_SEPOLIA.chainId || chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId);
     const { switchNetwork, isConnected } = useWalletContext();
     const [isSwitching, setIsSwitching] = useState(false);
     const [switchDone, setSwitchDone] = useState(false);
+    const [selectedRegion, setSelectedRegion] = useState<string | null>(null);
+    const [showTestDetails, setShowTestDetails] = useState(false);
+
+    const selectedRegionData = REGIONS.find(r => r.id === selectedRegion);
 
     const handleSwitchToTestnet = async () => {
         if (isSwitching) return;
@@ -30,6 +43,9 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
         }
     };
 
+    // Determine the onboarding phase
+    const phase: 'regions' | 'impact' = selectedRegion ? 'impact' : 'regions';
+
     return (
         <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 text-center relative overflow-y-auto custom-scrollbar">
             {/* Mesh Gradient Background */}
@@ -38,170 +54,199 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                 <div className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-purple-400 dark:bg-purple-600 rounded-full blur-[120px] mix-blend-multiply" />
             </div>
 
-            {/* Premium Iconography / Mascot */}
+            {/* Brand and Mascot — always visible */}
             <motion.div
-                className="mb-6 md:mb-10 relative mt-4 md:mt-0"
+                className="mb-2 relative mt-4 md:mt-0"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', duration: 1 }}
             >
-                <GuardianMascot size={160} mood="happy" />
-                
-                <motion.div 
-                  className="absolute -right-4 -top-4 bg-white dark:bg-gray-800 px-4 py-2 rounded-2xl shadow-xl border border-blue-100 dark:border-blue-900 z-20"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1 }}
-                >
-                  <span className="text-xs font-black text-blue-600">"Hi, I'm Divi!"</span>
-                </motion.div>
+                <div className="flex items-center justify-center gap-1.5 mb-3">
+                    <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
+                        <span className="text-white text-xs font-black">D</span>
+                    </div>
+                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
+                </div>
+                <GuardianMascot size={100} mood={phase === 'impact' ? 'happy' : 'neutral'} />
             </motion.div>
 
-            {/* Welcome Text with Refined Typography */}
+            {/* Social Proof Counter Bar */}
             <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                className="w-full max-w-sm mb-6"
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="px-4"
+                transition={{ delay: 0.6, duration: 0.5 }}
             >
-                <h2 className="text-3xl md:text-4xl font-[900] tracking-tight text-gray-900 dark:text-white mb-2 md:mb-4 leading-tight">
-                    Your Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Guardian</span>
-                </h2>
-                <p className="text-base md:text-lg text-gray-500 dark:text-gray-400 mb-8 md:mb-10 max-w-sm mx-auto leading-relaxed font-medium">
-                    I'm here to protect your wealth from inflation and find growth in any economy.
-                </p>
+                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-2 text-center">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                        Join 2,400+ users protecting $1.2M+ in savings
+                    </span>
+                </div>
             </motion.div>
 
-            {/* Testnet Indicator — shown when already on a testnet */}
-            {isTestnet && (
+            {/* Phase 1: Region Selection */}
+            {phase === 'regions' && (
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="mb-6 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-2 rounded-xl text-sm font-bold border border-amber-200 dark:border-amber-800 flex items-center gap-2"
+                    key="phase-regions"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="w-full max-w-sm"
                 >
-                    <span>🧪</span>
-                    testnet mode active — play money only
+                    <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
+                        Your Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Guardian</span>
+                    </h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+                        Where are you based? Inflation hits differently everywhere.
+                    </p>
+
+                    <div className="grid grid-cols-2 gap-2 mb-6">
+                        {REGIONS.map((region) => (
+                            <button
+                                key={region.id}
+                                onClick={() => setSelectedRegion(region.id)}
+                                className={`p-3 rounded-2xl border-2 text-left transition-all ${
+                                    selectedRegion === region.id
+                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-400'
+                                        : 'border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 bg-white dark:bg-gray-800'
+                                }`}
+                            >
+                                <span className="text-xl block mb-1">{region.flag}</span>
+                                <span className="text-xs font-black text-gray-900 dark:text-white block">{region.label}</span>
+                                <span className="text-[10px] text-gray-500 dark:text-gray-400">{region.inflation}% inflation</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    <motion.button
+                        onClick={onContinue}
+                        className="w-full px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-black rounded-2xl shadow-lg active:scale-95 transition-all"
+                        whileHover={{ y: -1 }}
+                    >
+                        Let's Get Started →
+                    </motion.button>
+
+                    {/* Chain complexity hidden behind toggle */}
+                    <div className="mt-4">
+                        <button
+                            onClick={() => setShowTestDetails(!showTestDetails)}
+                            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors font-medium"
+                        >
+                            {showTestDetails ? '− Hide test details' : '+ Need test funds? (advanced)'}
+                        </button>
+                        <AnimatePresence>
+                            {showTestDetails && (
+                                <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden mt-2"
+                                >
+                                    <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl p-3">
+                                        <p className="text-xs text-violet-600 dark:text-violet-400 mb-2">
+                                            Try with test funds (no real money):
+                                        </p>
+                                        <div className="flex gap-2 mb-2">
+                                            <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="text-xs text-violet-600 dark:text-violet-400 underline hover:no-underline">Arc faucet →</a>
+                                            <a href="https://faucet.celo.org" target="_blank" rel="noopener noreferrer" className="text-xs text-violet-600 dark:text-violet-400 underline hover:no-underline">Celo faucet →</a>
+                                        </div>
+                                        {isConnected ? (
+                                            <button
+                                                onClick={handleSwitchToTestnet}
+                                                disabled={isSwitching}
+                                                className={`w-full py-2 rounded-xl text-xs font-black transition-all ${
+                                                    switchDone
+                                                        ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                                                        : 'bg-violet-600 hover:bg-violet-700 text-white active:scale-95'
+                                                }`}
+                                            >
+                                                {switchDone ? '✓ Switched to Arc Testnet' : isSwitching ? 'Switching…' : '⚡ Switch to Arc Testnet'}
+                                            </button>
+                                        ) : (
+                                            <p className="text-xs text-violet-500 dark:text-violet-400">Connect a wallet first, then switch to testnet.</p>
+                                        )}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {onSkip && (
+                        <button
+                            onClick={onSkip}
+                            className="w-full px-6 py-3 mt-2 text-xs font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        >
+                            Skip to App
+                        </button>
+                    )}
                 </motion.div>
             )}
 
-            {/* Actions */}
-            <motion.div
-                className="space-y-3 md:space-y-4 w-full max-w-xs pb-8 md:pb-0"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-            >
-                <motion.button
-                    onClick={onContinue}
-                    className="w-full px-8 py-4 md:py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base md:text-lg font-black rounded-[1.5rem] md:rounded-3xl shadow-[0_20px_40px_-10px_rgba(0,0,0,0.3)] active:scale-95 transition-all"
-                    whileHover={{ y: -2, boxShadow: "0 25px 50px -12px rgba(0,0,0,0.4)" }}
+            {/* Phase 2: Aha Moment — Show personalized impact + connect/demo */}
+            {phase === 'impact' && selectedRegionData && (
+                <motion.div
+                    key="phase-impact"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="w-full max-w-sm"
                 >
-                    Let's Talk →
-                </motion.button>
+                    <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
+                        Here's the reality in <span className="text-blue-500">{selectedRegionData.flag} {selectedRegionData.label}</span>
+                    </h2>
 
-                {/* Test Drive entry point — for connected wallets: one-tap network switch */}
-                {!isTestnet && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.55 }}
-                        className="w-full bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-2xl overflow-hidden"
-                    >
-                        <div className="px-4 pt-3 pb-2">
-                            <div className="flex items-center gap-2 mb-1">
-                                <span className="text-base">🧪</span>
-                                <span className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wide">
-                                    Test Drive — No Real Money
-                                </span>
-                            </div>
-                            <p className="text-xs text-violet-600 dark:text-violet-500 leading-snug mb-3">
-                                Try Arc Testnet with free USDC. Earn badges. Graduate to mainnet when ready.
+                    {/* The aha moment: personalized impact card */}
+                    <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 rounded-2xl p-5 mb-5">
+                        <p className="text-xs text-red-600 dark:text-red-400 font-bold mb-1">Every year, inflation silently takes</p>
+                        <p className="text-4xl font-black text-red-600 dark:text-red-400 mb-2">
+                            ${selectedRegionData.lossPer10k.toLocaleString()}
+                        </p>
+                        <p className="text-sm text-red-500 dark:text-red-300">
+                            from every <strong>$10,000</strong> you keep in {selectedRegionData.label}.
+                        </p>
+                        <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
+                            <p className="text-xs text-red-500 dark:text-red-300">
+                                That's <strong>${(selectedRegionData.lossPer10k / 365).toFixed(1)}/day</strong> — gone. Every day you wait.
                             </p>
-                            {switchDone ? (
-                                /* Step 2: switched — now guide to faucet */
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        <span className="text-xs font-black">Switched to Arc Testnet!</span>
-                                    </div>
-                                    <a
-                                        href="https://faucet.circle.com"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full py-2 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-xl transition-colors"
-                                    >
-                                        <span>Get Free USDC from Faucet</span>
-                                        <span>→</span>
-                                    </a>
-                                    <button
-                                        onClick={onContinue}
-                                        className="w-full py-1.5 text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-900 transition-colors"
-                                    >
-                                        Continue to App →
-                                    </button>
-                                </div>
-                            ) : isConnected ? (
-                                /* Step 1: wallet connected — one tap to switch */
-                                <button
-                                    onClick={handleSwitchToTestnet}
-                                    disabled={isSwitching}
-                                    className={`w-full py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 ${
-                                        isSwitching
-                                            ? 'bg-violet-200 dark:bg-violet-900/40 text-violet-400 cursor-wait'
-                                            : 'bg-violet-600 hover:bg-violet-700 text-white active:scale-95'
-                                    }`}
-                                >
-                                    {isSwitching ? (
-                                        <>
-                                            <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                            <span>Switching…</span>
-                                        </>
-                                    ) : (
-                                        <>⚡ Switch to Arc Testnet</>
-                                    )}
-                                </button>
-                            ) : (
-                                /* No wallet — prompt to connect first */
-                                <div className="text-xs text-violet-500 dark:text-violet-400 text-center">
-                                    Connect your wallet above, then tap here to switch to testnet
-                                </div>
-                            )}
                         </div>
-                        {/* Footer: faucet links always visible */}
-                        {!switchDone && (
-                            <div className="px-4 pb-3 flex gap-3 text-xs text-violet-400 dark:text-violet-500 font-medium">
-                                <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="hover:text-violet-700 dark:hover:text-violet-300 transition-colors">Arc faucet →</a>
-                                <a href="https://faucet.celo.org" target="_blank" rel="noopener noreferrer" className="hover:text-violet-700 dark:hover:text-violet-300 transition-colors">Celo faucet →</a>
-                            </div>
-                        )}
-                    </motion.div>
-                )}
+                    </div>
 
-                {onConnectWallet && !isWalletConnected && (
-                    <motion.button
-                        onClick={onConnectWallet}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.6 }}
-                        className="w-full px-6 py-3 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors flex items-center justify-center gap-2"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                        </svg>
-                        Already have a wallet? Connect Now
-                    </motion.button>
-                )}
-                {onSkip && (
-                    <button
-                        onClick={onSkip}
-                        className="w-full px-6 py-2 text-xs font-[800] text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest"
-                    >
-                        Skip to App
-                    </button>
-                )}
-            </motion.div>
-        </div >
+                    {/* Value prop: what DiversiFi does */}
+                    <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl p-4 mb-5">
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">DiversiFi protects you by</p>
+                        <p className="text-base font-black text-emerald-900 dark:text-emerald-100">
+                            spreading your stablecoins across stronger economies worldwide.
+                        </p>
+                        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                            No lock-ups. No hidden fees. Pause anytime.
+                        </p>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="space-y-2">
+                        {onConnectWallet && !isWalletConnected && (
+                            <motion.button
+                                onClick={onConnectWallet}
+                                className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg"
+                                whileHover={{ y: -1 }}
+                            >
+                                <span>Connect Wallet to Start Protecting</span>
+                            </motion.button>
+                        )}
+                        <button
+                            onClick={onSkip}
+                            className="w-full px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold rounded-2xl active:scale-95 transition-all"
+                        >
+                            Explore Demo First
+                        </button>
+                        <button
+                            onClick={() => setSelectedRegion(null)}
+                            className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        >
+                            ← Pick a different region
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+        </div>
     );
 }

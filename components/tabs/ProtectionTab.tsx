@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import confetti from "canvas-confetti";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
@@ -22,6 +23,7 @@ import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
 import { StrategyService } from "@diversifi/shared";
 import { useToast } from "@/components/ui/Toast";
+import EmptyState from "@/components/ui/EmptyState";
 
 import ProfileWizard from "./protect/ProfileWizard";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
@@ -36,6 +38,7 @@ import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 import { GuardianMascot } from "../shared/GuardianMascot";
+import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
   ssr: false,
@@ -48,6 +51,7 @@ const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimF
 interface ProtectionTabProps {
   userRegion: Region;
   portfolio: MultichainPortfolio;
+  isLoading?: boolean;
   onSelectStrategy?: (strategy: string) => void;
   setActiveTab?: (tab: import("@/constants/tabs").TabId) => void;
 }
@@ -57,6 +61,7 @@ import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 export default function ProtectionTab({
   userRegion,
   portfolio,
+  isLoading,
   onSelectStrategy,
   setActiveTab,
 }: ProtectionTabProps) {
@@ -70,6 +75,10 @@ export default function ProtectionTab({
 
   // Use demo data if in demo mode
   const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
+
+  if (isLoading && address && !isDemo) {
+    return <ProtectionSkeleton />;
+  }
 
   const {
     totalValue,
@@ -125,6 +134,54 @@ export default function ProtectionTab({
   // Use the pre-calculated live portfolio analysis from the portfolio prop
   const liveAnalysis = activePortfolio;
   const topOpportunity = rebalancingOpportunities?.[0];
+
+  // ============================================================================
+  // CONFETTI CELEBRATIONS
+  // ============================================================================
+
+  const lastScoreMilestoneRef = useRef(0);
+  const hasFiredProfileConfettiRef = useRef(false);
+
+  const fireScoreConfetti = useCallback((score: number) => {
+    const milestone = Math.floor(score / 25) * 25;
+    if (milestone > 0 && milestone > lastScoreMilestoneRef.current) {
+      lastScoreMilestoneRef.current = milestone;
+      confetti({
+        particleCount: 60,
+        spread: 50,
+        origin: { y: 0.4, x: 0.5 },
+        colors: ["#6366f1", "#a855f7", "#ec4899"],
+      });
+    }
+  }, []);
+
+  const fireProfileConfetti = useCallback(() => {
+    if (!hasFiredProfileConfettiRef.current) {
+      hasFiredProfileConfettiRef.current = true;
+      const end = Date.now() + 800;
+      const colors = ["#6366f1", "#a855f7", "#ec4899"];
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.7 },
+          colors,
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.7 },
+          colors,
+        });
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    }
+  }, []);
 
   // ============================================================================
   // HANDLERS
@@ -251,6 +308,18 @@ export default function ProtectionTab({
       )
     : 0;
 
+  useEffect(() => {
+    if (address && protectionScore > 0 && displayTotalValue > 0) {
+      fireScoreConfetti(protectionScore);
+    }
+  }, [protectionScore, fireScoreConfetti, address, displayTotalValue]);
+
+  useEffect(() => {
+    if (isComplete && address) {
+      fireProfileConfetti();
+    }
+  }, [isComplete, address, fireProfileConfetti]);
+
   // Keep hook order stable across disconnected/connected renders.
   const strategyAlignmentScore = useMemo(() => {
     if (!selectedStrategy || !displayRegionData.length) return protectionScore;
@@ -370,6 +439,19 @@ export default function ProtectionTab({
   // RENDER: Connected
   // ============================================================================
 
+  // Show EmptyState when connected but no protection data exists yet
+  if (address && displayTotalValue === 0 && !isComplete) {
+    return (
+      <div className="space-y-4">
+        <EmptyState
+          icon="🛡️"
+          title="No protection plan yet"
+          description="Start by connecting a wallet and exploring your options."
+          action={setActiveTab ? { label: "Add Funds", onClick: () => setActiveTab("exchange") } : undefined}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

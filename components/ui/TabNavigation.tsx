@@ -29,7 +29,7 @@ const TABS: TabItem[] = [
   },
   {
     id: "exchange",
-    label: "Protect",
+    label: "Exchange",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -47,7 +47,7 @@ const TABS: TabItem[] = [
   },
   {
     id: "protect",
-    label: "Plan",
+    label: "Protect",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
@@ -79,7 +79,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     : TABS.filter(t => isAdvanced || !ADVANCED_ONLY_TAB_IDS.includes(t.id));
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe">
       <div className="max-w-md mx-auto flex">
         {visibleTabs.map((tab) => {
           const badgeCount = badges[tab.id];

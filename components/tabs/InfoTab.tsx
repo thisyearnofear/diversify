@@ -10,6 +10,7 @@ import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 import { DepositHub } from "../onramp/DepositHub";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import type { Region } from "@/hooks/use-user-region";
+import InfoSkeleton from "../ui/skeletons/InfoSkeleton";
 
 interface InfoTabProps {
   availableTokens: Array<{
@@ -18,15 +19,20 @@ interface InfoTabProps {
     region: string;
   }>;
   userRegion: Region;
+  isLoading?: boolean;
 }
 
-export default function InfoTab({ availableTokens, userRegion }: InfoTabProps) {
+export default function InfoTab({ availableTokens, userRegion, isLoading }: InfoTabProps) {
   const { address, chainId, formatAddress } = useWalletContext();
   const { experienceMode } = useExperience();
   const { streak, canClaim, isWhitelisted, estimatedReward, verifyIdentity } = useStreakRewards();
   const [showNetworkInfo, setShowNetworkInfo] = useState(false);
 
   const isBeginner = experienceMode === "beginner";
+
+  if (isLoading) {
+    return <InfoSkeleton />;
+  }
 
   // Use ChainDetectionService for all chain checks
   const isCelo = ChainDetectionService.isCelo(chainId ?? null);

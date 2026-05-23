@@ -17,30 +17,26 @@ const nextConfig = {
     appNewScrollHandler: true,
   },
 
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-        net: false,
-        tls: false,
-        dns: false,
-        child_process: false,
-        readline: false,
-        zlib: false,
-        'dtrace-provider': false,
-        stream: false,
-        util: false,
-        buffer: false,
-        assert: false,
-        http: false,
-        https: false,
-        os: false,
-        url: false,
-        crypto: false,
-      };
-    }
-    return config;
+  turbopack: {
+    resolveAlias: {
+      fs: './lib/empty-module.js',
+      net: './lib/empty-module.js',
+      tls: './lib/empty-module.js',
+      dns: './lib/empty-module.js',
+      child_process: './lib/empty-module.js',
+      readline: './lib/empty-module.js',
+      zlib: './lib/empty-module.js',
+      'dtrace-provider': './lib/empty-module.js',
+      stream: './lib/empty-module.js',
+      util: './lib/empty-module.js',
+      buffer: './lib/empty-module.js',
+      assert: './lib/empty-module.js',
+      http: './lib/empty-module.js',
+      https: './lib/empty-module.js',
+      os: './lib/empty-module.js',
+      url: './lib/empty-module.js',
+      crypto: './lib/empty-module.js',
+    },
   },
 
   // Route heavy/slow API routes to Hetzner (always-on, no cold starts, no 15s timeout)

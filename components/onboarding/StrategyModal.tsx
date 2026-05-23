@@ -9,7 +9,7 @@
  * 5. ConfirmationScreen - Final summary and capability awareness
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStrategy } from '@/context/app/StrategyContext';
 import { STRATEGIES } from '@/hooks/useFinancialStrategies';
@@ -154,7 +154,10 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
                     >
                         {step === 'welcome' && (
                             <WelcomeScreen
-                                onContinue={() => setStep('region')}
+                                onContinue={() => {
+                                    // WelcomeScreen handles region + impact internally
+                                    // This callback is kept for backward compatibility
+                                }}
                                 onSkip={handleSkip}
                                 onConnectWallet={onConnectWallet}
                                 isWalletConnected={isWalletConnected}
@@ -206,7 +209,7 @@ export default function StrategyModal({ isOpen, onClose, onComplete, onConnectWa
                         )}
                         {step === 'paper-trading' && (
                             <PaperTradingScreen
-                                onContinue={() => setStep('confirm')}
+                                onContinue={handleConfirm}
                                 onBack={handleBack}
                                 onSkip={handleSkip}
                             />
@@ -236,21 +239,28 @@ export function useStrategyModal() {
 
     useEffect(() => {
         if (typeof window !== 'undefined' && !financialStrategy && !hasShown) {
-            const hasSeenModal = localStorage.getItem('hasSeenStrategyModal');
-            if (!hasSeenModal) {
+            const onboardingDone = localStorage.getItem('onboardingCompleted');
+            if (!onboardingDone) {
                 const timer = setTimeout(() => {
                     setIsOpen(true);
                     setHasShown(true);
-                    localStorage.setItem('hasSeenStrategyModal', 'true');
                 }, 2000);
                 return () => clearTimeout(timer);
             }
         }
     }, [financialStrategy, hasShown]);
 
+    const closeAndPersist = useCallback(() => {
+        setIsOpen(false);
+        setHasShown(true);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('onboardingCompleted', 'true');
+        }
+    }, []);
+
     return {
         isOpen,
         openModal: () => setIsOpen(true),
-        closeModal: () => setIsOpen(false),
+        closeModal: closeAndPersist,
     };
 }

@@ -16,8 +16,9 @@ export function NotConnectedState({
   regionalInflation,
   onEnableDemo,
 }: NotConnectedStateProps) {
-  const monthlyLoss = ((1000 * (regionalInflation / 100)) / 12).toFixed(2);
-  const yearlyLoss = (1000 * (regionalInflation / 100)).toFixed(0);
+  const [savingsAmount, setSavingsAmount] = useState(1000);
+  const monthlyLoss = ((savingsAmount * (regionalInflation / 100)) / 12).toFixed(2);
+  const yearlyLoss = (savingsAmount * (regionalInflation / 100)).toFixed(0);
 
   const HOW_IT_WORKS = [
     {
@@ -72,8 +73,20 @@ export function NotConnectedState({
 
           <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-emerald-100 dark:border-emerald-900">
             <div className="text-center mb-3">
-              <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold">
-                If you protect $1,000 →
+              <label htmlFor="savings-input" className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold block">
+                If you protect
+              </label>
+              <div className="flex items-center justify-center gap-1 mb-2">
+                <span className="text-lg text-emerald-600 dark:text-emerald-400 font-bold">$</span>
+                <input
+                  id="savings-input"
+                  type="number"
+                  min="0"
+                  max="10000000"
+                  value={savingsAmount}
+                  onChange={(e) => setSavingsAmount(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-28 text-center text-2xl font-black text-emerald-900 dark:text-emerald-100 bg-transparent border-b-2 border-emerald-300 dark:border-emerald-700 focus:border-emerald-500 outline-none transition-colors"
+                />
               </div>
               <div className="text-3xl font-black text-emerald-900 dark:text-emerald-100">
                 Save ${yearlyLoss}/year

@@ -49,10 +49,10 @@ export function ConfirmationScreen({
                     <div className="mx-auto mb-4 md:mb-6">
                         <GuardianMascot size={120} mood="protective" className="mx-auto" />
                     </div>
-                    <h2 className="text-xl md:text-3xl font-[900] text-white mb-1 md:mb-2 tracking-tight">
+                    <h2 className="text-xl md:text-3xl font-black text-white mb-1 md:mb-2 tracking-tight">
                         Confirm Protection
                     </h2>
-                    <div className="inline-block px-3 py-1 md:px-4 md:py-1.5 bg-black/20 backdrop-blur-sm rounded-full text-white/90 text-xs md:text-xs font-black uppercase tracking-[0.2em]">
+                    <div className="inline-block px-3 py-1 md:px-4 md:py-1.5 bg-black/20 backdrop-blur-sm rounded-full text-white/90 text-xs md:text-xs font-black uppercase tracking-widest">
                         {strategyData.name}
                     </div>
                 </motion.div>
@@ -97,7 +97,7 @@ export function ConfirmationScreen({
                 </section>
 
                 {/* Recommendations with high contrast */}
-                <section className="bg-blue-600 dark:bg-blue-700 rounded-[1.5rem] md:rounded-[2.5rem] p-6 md:p-8 shadow-2xl shadow-blue-500/20 text-white overflow-hidden relative">
+                <section className="bg-blue-600 dark:bg-blue-700 rounded-3xl md:rounded-[2.5rem] p-6 md:p-8 shadow-2xl shadow-blue-500/20 text-white overflow-hidden relative">
                     {/* Decorative glow */}
                     <div className="absolute top-0 right-0 size-24 md:size-32 bg-white/20 blur-3xl rounded-full -mr-12 md:-mr-16 -mt-12 md:-mt-16" />
 

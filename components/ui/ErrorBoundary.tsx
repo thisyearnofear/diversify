@@ -1,4 +1,5 @@
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
+import ErrorState from './ErrorState';
 
 interface Props {
   children: ReactNode;
@@ -81,42 +82,13 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       const moduleName = this.props.moduleName || 'This component';
-      
-      // You can render any custom fallback UI
+
       return (
-        <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">⚠️</span>
-            <div className="flex-1">
-              <h2 className="text-lg font-bold text-red-800 dark:text-red-200 mb-1">
-                {moduleName} Error
-              </h2>
-              <p className="text-sm text-red-700 dark:text-red-300 mb-3">
-                Something went wrong. Your funds are safe — this is a display issue.
-              </p>
-              <details className="text-xs text-red-600 dark:text-red-400 mb-3">
-                <summary className="cursor-pointer font-medium">Technical details</summary>
-                <p className="mt-2 whitespace-pre-wrap font-mono bg-red-100 dark:bg-red-900/30 p-2 rounded">
-                  {this.state.error?.toString()}
-                </p>
-              </details>
-              <div className="flex gap-2">
-                <button
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-semibold"
-                  onClick={this.handleRetry}
-                >
-                  Try Again
-                </button>
-                <button
-                  className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors text-sm font-semibold"
-                  onClick={() => window.location.reload()}
-                >
-                  Reload Page
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ErrorState
+          title={`${moduleName} Error`}
+          message="Something went wrong. Your funds are safe — this is a display issue."
+          onRetry={this.handleRetry}
+        />
       );
     }
 

@@ -1,0 +1,151 @@
+/**
+ * AppHeader — The top header bar for the DiversiFi app.
+ * Contains: logo, mode toggle, voice button, wallet button.
+ */
+import { useState } from "react";
+import type { UserExperienceMode } from "@/context/app/types";
+import VoiceButton from "@/components/ui/VoiceButton";
+import WalletButton from "@/components/wallet/WalletButton";
+import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
+
+interface AppHeaderProps {
+  experienceMode: UserExperienceMode;
+  setExperienceMode: (mode: UserExperienceMode) => void;
+  address?: string | null;
+  isWhitelisted: boolean;
+  isFarcaster: boolean;
+  handleTranscription: (text: string) => void;
+}
+
+export default function AppHeader({
+  experienceMode, setExperienceMode, address, isWhitelisted, isFarcaster, handleTranscription,
+}: AppHeaderProps) {
+  const [activeHint, setActiveHint] = useState<"mode" | "voice" | null>(null);
+  const [showModeTip, setShowModeTip] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("seenModeTip") && !!localStorage.getItem("inlineOnboardingDismissed");
+  });
+  const dismissModeTip = () => {
+    setShowModeTip(false);
+    if (typeof window !== "undefined") localStorage.setItem("seenModeTip", "1");
+  };
+
+  return (
+    <div className="flex items-center justify-between mb-2 py-1">
+      {/* Left: Logo */}
+      <div className="flex items-center gap-2 sm:gap-2">
+        <div className="w-7 h-7 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
+          <span className="text-white text-sm font-black">D</span>
+        </div>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+            DiversiFi
+          </h1>
+          {address && (
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${isWhitelisted ? "bg-emerald-500" : "bg-amber-500"} animate-pulse`}
+              />
+              {isWhitelisted && (
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
+                  Verified
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Right: Controls */}
+      <div className="flex items-center gap-1 sm:gap-2">
+        {/* Mode toggle */}
+        <div
+          className="relative"
+          onMouseEnter={() => setActiveHint("mode")}
+          onMouseLeave={() => setActiveHint(null)}
+        >
+          <button
+            onClick={() => {
+              const next =
+                experienceMode === "beginner"
+                  ? "intermediate"
+                  : experienceMode === "intermediate"
+                    ? "advanced"
+                    : "beginner";
+              setExperienceMode(next);
+              setActiveHint(null);
+              dismissModeTip();
+            }}
+            className="flex flex-col items-center gap-0.5"
+            aria-label={
+              experienceMode === "beginner"
+                ? "Switch to Standard mode — unlock more features"
+                : experienceMode === "intermediate"
+                  ? "Switch to Advanced mode — power analytics & voice shortcuts"
+                  : "Switch to Simple mode — hide advanced panels"
+            }
+          >
+            <span className="relative w-10 h-8 text-sm rounded-xl transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg">
+              {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
+              {showModeTip && (
+                <span className="absolute inset-0 rounded-xl ring-2 ring-emerald-400 animate-ping opacity-75 pointer-events-none" />
+              )}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 leading-none">
+              {experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}
+            </span>
+          </button>
+          {showModeTip && activeHint !== "mode" && (
+            <div className="absolute right-0 top-full mt-1.5 w-44 bg-emerald-700 text-white rounded-xl px-3 py-2 shadow-xl z-50">
+              <button
+                onClick={dismissModeTip}
+                className="absolute top-1.5 right-2 text-emerald-300 hover:text-white text-xs leading-none"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+              <p className="text-xs font-black leading-snug pr-4">Tap to unlock more features →</p>
+              <div className="absolute -top-1.5 right-3 w-3 h-3 bg-emerald-700 rotate-45 rounded-sm" />
+            </div>
+          )}
+          {activeHint === "mode" && (
+            <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50">
+              <button
+                onClick={() => setActiveHint(null)}
+                className="absolute top-1.5 right-2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-xs leading-none"
+                aria-label="Dismiss"
+              >
+                ✕
+              </button>
+              <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1 pr-5">
+                {experienceMode === "beginner" ? "Simple 🌱" : experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
+              </div>
+              <div className="text-xs font-bold text-white mb-0.5">
+                Tap → {experienceMode === "beginner" ? "Standard 🚀" : experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
+              </div>
+              <div className="text-xs text-gray-300 leading-relaxed">
+                {experienceMode === "beginner"
+                  ? "Unlocks: token search, inflation comparison, AI chat"
+                  : experienceMode === "intermediate"
+                    ? "Unlocks: power analytics, voice shortcuts, batch ops"
+                    : "Hides advanced panels — back to focused view"}
+              </div>
+              <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
+            </div>
+          )}
+        </div>
+
+        {/* Voice assistant */}
+        <VoiceButton
+          size="sm"
+          variant="default"
+          externalSuggestionsOpen={activeHint === "voice"}
+          onSuggestionsChange={(open) => setActiveHint(open ? "voice" : null)}
+          onTranscription={handleTranscription}
+        />
+
+        {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
+      </div>
+    </div>
+  );
+}

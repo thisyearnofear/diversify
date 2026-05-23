@@ -1,0 +1,96 @@
+/* ==========================================================================
+   Design Tokens — CSS Custom Properties
+   Maps Tailwind theme values to semantic design tokens for consistency.
+   ========================================================================== */
+
+:root {
+  /* ── Brand Colors ──────────────────────────────────────────────────── */
+  --color-brand:           #0284c7;   /* primary-600 */
+  --color-brand-light:     #0ea5e9;   /* primary-500 */
+  --color-brand-dark:      #0369a1;   /* primary-700 */
+
+  --color-accent-success:  #059669;
+  --color-accent-warning:  #D97706;
+  --color-accent-error:    #DC2626;
+  --color-accent-info:     #2563EB;
+
+  /* ── Text Colors ───────────────────────────────────────────────────── */
+  --color-text-primary:    #111827;
+  --color-text-secondary:  #374151;
+  --color-text-muted:      #6B7280;
+  --color-text-light:      #F9FAFB;
+
+  /* ── Background Colors ─────────────────────────────────────────────── */
+  --color-bg-light:        #FFFFFF;
+  --color-bg-offwhite:     #F9FAFB;
+  --color-bg-subtle:       #F3F4F6;
+  --color-bg-muted:        #E5E7EB;
+
+  /* ── Border Radii ──────────────────────────────────────────────────── */
+  --radius-sm:      0.25rem;   /* rounded-sm     */
+  --radius-md:      0.375rem;  /* rounded        */
+  --radius-lg:      0.5rem;    /* rounded-lg     */
+  --radius-xl:      0.75rem;   /* rounded-xl     */
+  --radius-2xl:     1rem;      /* rounded-2xl    */
+  --radius-3xl:     1.5rem;    /* rounded-3xl    */
+  --radius-card:    0.75rem;   /* rounded-card   */
+  --radius-full:    9999px;    /* rounded-full   */
+
+  /* ── Shadows ───────────────────────────────────────────────────────── */
+  --shadow-sm:   0 1px 2px 0 rgba(0,0,0,0.05);
+  --shadow-md:   0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-lg:   0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  --shadow-xl:   0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
+  --shadow-2xl:  0 25px 50px -12px rgba(0,0,0,0.25);
+  --shadow-3xl:  0 35px 60px -15px rgba(0,0,0,0.3);
+  --shadow-card: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  --shadow-glass: 0 8px 32px 0 rgba(31,38,135,0.07);
+  --shadow-nav:  0 -4px 16px rgba(0,0,0,0.08);
+
+  /* ── Transitions ───────────────────────────────────────────────────── */
+  --transition-fast:   150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow:   300ms ease;
+
+  /* ── Z-index Layers ────────────────────────────────────────────────── */
+  --z-base:      0;
+  --z-dropdown:  10;
+  --z-sticky:    20;
+  --z-nav:       40;
+  --z-fab:       40;
+  --z-modal:     50;
+  --z-tooltip:   50;
+  --z-toast:     60;
+
+  /* ── Font Weights ──────────────────────────────────────────────────── */
+  --font-normal:     400;
+  --font-medium:     500;
+  --font-semibold:   600;
+  --font-bold:       700;
+  --font-extrabold:  800;
+  --font-black:      900;
+
+  /* ── Letter Spacing ────────────────────────────────────────────────── */
+  --tracking-tight:   -0.025em;
+  --tracking-normal:  0;
+  --tracking-wide:    0.025em;
+  --tracking-wider:   0.05em;
+  --tracking-widest:  0.2em;
+}
+
+/* ── Dark Mode Overrides ──────────────────────────────────────────────── */
+.dark {
+  --color-brand:           #38bdf8;   /* primary-400 */
+  --color-brand-light:     #7dd3fc;   /* primary-300 */
+
+  --color-text-primary:    #F9FAFB;
+  --color-text-secondary:  #E5E7EB;
+  --color-text-muted:      #9CA3AF;
+
+  --color-bg-light:        #111827;
+  --color-bg-offwhite:     #1F2937;
+  --color-bg-subtle:       #374151;
+  --color-bg-muted:        #4B5563;
+
+  --shadow-glass:          0 8px 32px 0 rgba(0,0,0,0.3);
+}
