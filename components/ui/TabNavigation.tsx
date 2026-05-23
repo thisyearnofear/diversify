@@ -38,10 +38,12 @@ const TABS: TabItem[] = [
   },
   {
     id: "agent",
-    label: "Advisor",
+    // "Pilot" matches the "Proactive Pilot" brand and distinguishes the agent
+    // control center (settings, automation, backtests) from the chat FAB.
+    label: "Pilot",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5" />
       </svg>
     ),
   },

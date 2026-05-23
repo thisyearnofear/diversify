@@ -113,30 +113,11 @@ export function GuardianPulse() {
                         Autonomous Market Synthesis
                     </p>
                 </div>
-                <button 
+                <button
                     onClick={() => setIsAuditOpen(true)}
-                    className="flex items-center gap-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 px-3 py-1.5 rounded-full shadow-[0_4px_12px_rgba(37,99,235,0.3)] hover:shadow-[0_8px_16px_rgba(37,99,235,0.4)] transition-all cursor-pointer active:scale-95 border border-white/10"
-                    initial={{ scale: 0.9 }}
-                    animate={{ scale: 1 }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    className="text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 uppercase tracking-wider transition-colors cursor-pointer active:scale-95"
                 >
-                    <motion.span
-                        className="text-[9px] font-black text-white uppercase tracking-tighter"
-                        initial={{ x: 0 }}
-                        animate={{ x: [0, 2, 0] }}
-                        transition={{ duration: 2, repeat: Infinity }}
-                    >
-                        Verifiable AI
-                    </motion.span>
-                    <motion.span
-                        className="text-xs"
-                        initial={{ rotate: 0 }}
-                        animate={{ rotate: [0, 10, -10, 0] }}
-                        transition={{ duration: 3, repeat: Infinity }}
-                    >
-                        🛡️
-                    </motion.span>
+                    Verify on-chain ↗
                 </button>
             </div>
 
@@ -277,17 +258,6 @@ export function GuardianPulse() {
                 </motion.div>
             </div>
             
-            <motion.div
-                className="text-center"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-            >
-                <p className="text-[10px] text-gray-400 italic">
-                    All insights are anchored to 0G DA layer for auditability.
-                </p>
-            </motion.div>
-
             <VerifiableAIDashboard isOpen={isAuditOpen} onClose={() => setIsAuditOpen(false)} />
         </motion.div>
     );

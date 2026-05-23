@@ -9,6 +9,8 @@ import { GuardianMascot } from '../../shared/GuardianMascot';
 interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue: () => void;
     chainId?: number;
+    /** Called when the user finishes onboarding (connect, demo). Receives the selected region. */
+    onComplete?: (region: string | null) => void;
 }
 
 // Region data with inflation rates
@@ -20,7 +22,7 @@ const REGIONS = [
     { id: 'Asia', label: 'Asia', flag: '⛩️', inflation: 4.2, lossPer10k: 420 },
 ] as const;
 
-export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected, chainId }: WelcomeScreenProps) {
+export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected, chainId, onComplete }: WelcomeScreenProps) {
     const isTestnet = chainId && (chainId === NETWORKS.CELO_SEPOLIA.chainId || chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.RH_TESTNET.chainId);
     const { switchNetwork, isConnected } = useWalletContext();
     const [isSwitching, setIsSwitching] = useState(false);
@@ -225,7 +227,11 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                     <div className="space-y-2">
                         {onConnectWallet && !isWalletConnected && (
                             <motion.button
-                                onClick={onConnectWallet}
+                                onClick={async () => {
+                                    try { await onConnectWallet(); } catch { /* user rejected — fall through */ }
+                                    if (onComplete) onComplete(selectedRegion);
+                                    else onSkip?.();
+                                }}
                                 className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg"
                                 whileHover={{ y: -1 }}
                             >
@@ -233,7 +239,10 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                             </motion.button>
                         )}
                         <button
-                            onClick={onSkip}
+                            onClick={() => {
+                                if (onComplete) onComplete(selectedRegion);
+                                else onSkip?.();
+                            }}
                             className="w-full px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold rounded-2xl active:scale-95 transition-all"
                         >
                             Explore Demo First

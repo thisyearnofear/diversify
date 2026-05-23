@@ -58,7 +58,7 @@ export default function AppHeader({
 
       {/* Right: Controls */}
       <div className="flex items-center gap-1 sm:gap-2">
-        {/* Mode toggle */}
+        {/* Mode toggle — one tooltip, calm affordance */}
         <div
           className="relative"
           onMouseEnter={() => setActiveHint("mode")}
@@ -79,56 +79,37 @@ export default function AppHeader({
             className="flex flex-col items-center gap-0.5"
             aria-label={
               experienceMode === "beginner"
-                ? "Switch to Standard mode — unlock more features"
+                ? "Switch to Standard mode"
                 : experienceMode === "intermediate"
-                  ? "Switch to Advanced mode — power analytics & voice shortcuts"
-                  : "Switch to Simple mode — hide advanced panels"
+                  ? "Switch to Advanced mode"
+                  : "Switch to Simple mode"
             }
           >
-            <span className="relative w-10 h-8 text-sm rounded-xl transition-all flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg">
+            <span className="w-10 h-8 text-sm rounded-xl flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md">
               {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
-              {showModeTip && (
-                <span className="absolute inset-0 rounded-xl ring-2 ring-emerald-400 animate-ping opacity-75 pointer-events-none" />
-              )}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400 leading-none">
               {experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}
             </span>
           </button>
-          {showModeTip && activeHint !== "mode" && (
-            <div className="absolute right-0 top-full mt-1.5 w-44 bg-emerald-700 text-white rounded-xl px-3 py-2 shadow-xl z-50">
-              <button
-                onClick={dismissModeTip}
-                className="absolute top-1.5 right-2 text-emerald-300 hover:text-white text-xs leading-none"
-                aria-label="Dismiss"
-              >
-                ✕
-              </button>
-              <p className="text-xs font-black leading-snug pr-4">Tap to unlock more features →</p>
-              <div className="absolute -top-1.5 right-3 w-3 h-3 bg-emerald-700 rotate-45 rounded-sm" />
-            </div>
-          )}
-          {activeHint === "mode" && (
+          {(activeHint === "mode" || showModeTip) && (
             <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50">
               <button
-                onClick={() => setActiveHint(null)}
+                onClick={() => { setActiveHint(null); dismissModeTip(); }}
                 className="absolute top-1.5 right-2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-xs leading-none"
                 aria-label="Dismiss"
               >
                 ✕
               </button>
-              <div className="text-xs font-black uppercase tracking-widest text-gray-400 mb-1 pr-5">
-                {experienceMode === "beginner" ? "Simple 🌱" : experienceMode === "intermediate" ? "Standard 🚀" : "Advanced ⚡"}
-              </div>
-              <div className="text-xs font-bold text-white mb-0.5">
+              <div className="text-xs font-bold text-white mb-0.5 pr-5">
                 Tap → {experienceMode === "beginner" ? "Standard 🚀" : experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
               </div>
               <div className="text-xs text-gray-300 leading-relaxed">
                 {experienceMode === "beginner"
-                  ? "Unlocks: token search, inflation comparison, AI chat"
+                  ? "Unlocks token search, inflation comparison, AI chat"
                   : experienceMode === "intermediate"
-                    ? "Unlocks: power analytics, voice shortcuts, batch ops"
-                    : "Hides advanced panels — back to focused view"}
+                    ? "Unlocks power analytics, voice shortcuts, batch ops"
+                    : "Hides advanced panels for a focused view"}
               </div>
               <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
             </div>

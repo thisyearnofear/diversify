@@ -53,50 +53,18 @@ interface TabPaneProps {
   children: ReactNode;
 }
 
-const transitionStyles: Record<string, any> = {
-  overview: {
-    initial: { opacity: 0, scale: 0.9, rotateX: -10 },
-    animate: { opacity: 1, scale: 1, rotateX: 0 },
-    exit: { opacity: 0, scale: 0.95, rotateX: 5 },
-    transition: { duration: 0.3, type: "spring", stiffness: 260, damping: 20 },
-  },
-  exchange: {
-    initial: { opacity: 0, x: -20, rotate: -5 },
-    animate: { opacity: 1, x: 0, rotate: 0 },
-    exit: { opacity: 0, x: 20, rotate: 5 },
-    transition: { duration: 0.25, ease: "easeOut" },
-  },
-  agent: {
-    initial: { opacity: 0, rotateY: -30 },
-    animate: { opacity: 1, rotateY: 0 },
-    exit: { opacity: 0, rotateY: 30 },
-    transition: { duration: 0.35, type: "spring", stiffness: 300, damping: 20 },
-  },
-  protect: {
-    initial: { opacity: 0, y: 20, filter: "blur(4px)" },
-    animate: { opacity: 1, y: 0, filter: "blur(0px)" },
-    exit: { opacity: 0, y: -20, filter: "blur(4px)" },
-    transition: { duration: 0.3, ease: "easeOut" },
-  },
-  info: {
-    initial: { opacity: 0, scale: 0.8 },
-    animate: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.9 },
-    transition: { duration: 0.2, ease: "easeOut" },
-  },
+// One calm transition vocabulary across all tabs. Predictability > novelty.
+const tabTransition = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+  transition: { duration: 0.18, ease: "easeOut" as const },
 };
 
 function TabPane({ id, children }: TabPaneProps) {
-  const style = transitionStyles[id] || transitionStyles.overview;
   return (
-    <motion.div key={id} {...style}>
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05, duration: 0.2, ease: "easeOut" }}
-      >
-        {children}
-      </motion.div>
+    <motion.div key={id} {...tabTransition}>
+      {children}
     </motion.div>
   );
 }
@@ -301,36 +269,27 @@ export default function AppShell({
         </AnimatePresence>
       </motion.div>
 
-      {/* AI Chat FAB */}
+      {/* Ask Guardian FAB — chat surface, distinct from the Pilot tab (control center) */}
       <motion.button
         key={bounceKey}
         onClick={openAdvisor}
-        aria-label="AI Chat"
-        initial={{ opacity: 0, scale: 0, y: 20 }}
-        animate={{
-          opacity: 1,
-          scale: [0, 1.15, 1],
-          y: 0,
-        }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        whileHover={{ scale: 1.08, boxShadow: "0 0 20px rgba(37, 99, 235, 0.5)" }}
-        whileTap={{ scale: 0.92 }}
-        className="fixed bottom-20 right-4 z-40 w-12 h-12 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 flex items-center justify-center"
+        aria-label="Ask Guardian — chat with your AI"
+        title="Ask Guardian"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.94 }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="fixed bottom-20 right-4 z-40 h-12 pl-3 pr-4 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/30 flex items-center gap-2"
       >
-        <motion.span
-          className="text-lg leading-none"
-          animate={{ rotate: [0, -10, 10, -10, 0] }}
-          transition={{ duration: 3, repeat: Infinity, repeatDelay: 4 }}
-        >
-          🤖
-        </motion.span>
-        <span className="absolute inset-0 rounded-2xl bg-blue-400/30 animate-ping pointer-events-none" style={{ animationDuration: "3s" }} />
+        <span className="text-lg leading-none">💬</span>
+        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">Ask</span>
         {unreadCount > 0 && (
           <motion.span
             key={`badge-${bounceKey}`}
-            initial={{ scale: 0 }}
-            animate={{ scale: [0, 1.3, 1] }}
-            transition={{ duration: 0.3 }}
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: [0.6, 1.2, 1], opacity: 1 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
             className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
           >
             {unreadCount > 9 ? "9+" : unreadCount}

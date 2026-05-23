@@ -11,6 +11,7 @@ import { DepositHub } from "../onramp/DepositHub";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import type { Region } from "@/hooks/use-user-region";
 import InfoSkeleton from "../ui/skeletons/InfoSkeleton";
+import { VerifiableAIDashboard } from "../agent/VerifiableAIDashboard";
 
 interface InfoTabProps {
   availableTokens: Array<{
@@ -181,7 +182,73 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
         )}
       </div>
 
+      {/* Verifiability & Security — technical detail for the curious, out of the way for everyone else */}
+      <VerifiabilitySection />
 
     </div>
+  );
+}
+
+
+// ============================================================================
+// Verifiability Section — canonical home for the technical detail.
+// Accessible from the Info tab; not in the face of consumer users.
+// ============================================================================
+
+function VerifiabilitySection() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+
+  return (
+    <>
+      <div className="pt-2">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-full flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-xs font-bold text-gray-500 hover:bg-gray-100 transition-colors shadow-sm"
+        >
+          <div className="flex items-center gap-2">
+            <span>🛡️</span>
+            <span>VERIFIABILITY & SECURITY</span>
+          </div>
+          <span>{isOpen ? '−' : '+'}</span>
+        </button>
+
+        {isOpen && (
+          <div className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg">
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+              Every AI recommendation is traceable end-to-end: from the model that produced it, to the evidence that supports it, to the on-chain record that proves it.
+            </p>
+
+            <div className="grid grid-cols-2 gap-2 text-[10px]">
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">0G Storage</div>
+                <p className="text-gray-600 dark:text-gray-400">Evidence CIDs anchored to decentralized storage</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">0G Serving</div>
+                <p className="text-gray-600 dark:text-gray-400">Decentralized AI inference via Router API</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">0G Chain</div>
+                <p className="text-gray-600 dark:text-gray-400">RecommendationLedger contract on Galileo testnet</p>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">Arc x402</div>
+                <p className="text-gray-600 dark:text-gray-400">Nanopayment settlement for premium data access</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowDashboard(true)}
+              className="w-full py-3 bg-indigo-600 text-white text-xs font-black rounded-xl hover:bg-indigo-700 transition-colors active:scale-95"
+            >
+              Open Verifiable AI Dashboard →
+            </button>
+          </div>
+        )}
+      </div>
+
+      <VerifiableAIDashboard isOpen={showDashboard} onClose={() => setShowDashboard(false)} />
+    </>
   );
 }
