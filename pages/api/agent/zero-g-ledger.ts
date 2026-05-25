@@ -44,7 +44,7 @@ interface LedgerResponse {
   stats: LedgerStats;
   recent: LedgerRecommendation[];
   explorerBase: string;
-  contractExplorer: string;
+  contractExplorer: string | null;
 }
 
 export default async function handler(
@@ -144,9 +144,7 @@ export default async function handler(
       stats,
       recent,
       explorerBase: 'https://chainscan-galileo.0g.ai',
-      contractExplorer: contractAddress
-        ? `https://chainscan-galileo.0g.ai/address/${contractAddress}`
-        : null,
+      contractExplorer: contractAddress || null,
     } satisfies LedgerResponse);
   } catch (error: any) {
     console.error('[0G Ledger API] Failed:', error.message);
@@ -160,9 +158,7 @@ export default async function handler(
       },
       recent: [],
       explorerBase: 'https://chainscan-galileo.0g.ai',
-      contractExplorer: contractAddress
-        ? `https://chainscan-galileo.0g.ai/address/${contractAddress}`
-        : null,
+      contractExplorer: contractAddress || null,
     });
   }
 }

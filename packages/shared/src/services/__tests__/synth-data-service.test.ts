@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import axios from 'axios';
-import { SynthDataService } from '../synth-data-service';
 
 vi.mock('axios');
 
 const mockedAxios = vi.mocked(axios, true);
+const loadSynthDataService = async () => (await import('../synth-data-service')).SynthDataService;
 
 describe('SynthDataService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
+    vi.resetModules();
+    process.env.SYNTH_API_KEY = 'test-key';
   });
 
   describe('normalization', () => {
@@ -33,6 +35,7 @@ describe('SynthDataService', () => {
         }
       });
 
+      const SynthDataService = await loadSynthDataService();
       const result = await SynthDataService.getPredictions('BTC');
 
       expect(result).toBeTruthy();
@@ -60,6 +63,7 @@ describe('SynthDataService', () => {
         }
       });
 
+      const SynthDataService = await loadSynthDataService();
       const result = await SynthDataService.getPredictions('NVDAX');
 
       expect(result).toBeTruthy();
@@ -72,6 +76,7 @@ describe('SynthDataService', () => {
 
   describe('deterministic fallback', () => {
     it('returns deterministic fallback for unknown asset', async () => {
+      const SynthDataService = await loadSynthDataService();
       const first = (SynthDataService as any).getFallbackForecast('UNKNOWN_ASSET');
       const second = (SynthDataService as any).getFallbackForecast('UNKNOWN_ASSET');
 
@@ -81,6 +86,7 @@ describe('SynthDataService', () => {
     });
 
     it('returns deterministic fallback for option pricing and liquidation', async () => {
+      const SynthDataService = await loadSynthDataService();
       const optionFirst = (SynthDataService as any).getFallbackOptionPricing('BTC');
       const optionSecond = (SynthDataService as any).getFallbackOptionPricing('BTC');
       const liqFirst = (SynthDataService as any).getFallbackLiquidation('BTC');
@@ -94,7 +100,8 @@ describe('SynthDataService', () => {
   });
 
   describe('coverage map', () => {
-    it('reports supported and unsupported assets correctly', () => {
+    it('reports supported and unsupported assets correctly', async () => {
+      const SynthDataService = await loadSynthDataService();
       expect(SynthDataService.isSynthAssetCovered('BTC')).toBe(true);
       expect(SynthDataService.isSynthAssetCovered('SPYX')).toBe(true);
       expect(SynthDataService.isSynthAssetCovered('DOGE')).toBe(false);

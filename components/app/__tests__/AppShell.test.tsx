@@ -121,9 +121,9 @@ const defaultProps = {
   unreadCount: 0,
   multichainPortfolio: EMPTY_PORTFOLIO,
   isRegionLoading: false,
-  userRegion: "us" as const,
+  userRegion: "USA" as const,
   setUserRegion: vi.fn(),
-  REGIONS: ["us", "ke", "global"] as const,
+  REGIONS: ["USA", "Africa", "Europe"] as const,
   inflationData: {},
   isMultichainLoading: false,
   refresh: vi.fn(),
@@ -146,7 +146,7 @@ describe("AppShell AI Chat FAB", () => {
   it("renders the AI Chat FAB button", () => {
     render(<AppShell {...defaultProps} />);
 
-    expect(screen.getByLabelText("AI Chat")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ask Guardian — chat with your AI")).toBeInTheDocument();
   });
 
   it("calls openAdvisor when FAB is clicked", () => {
@@ -154,7 +154,7 @@ describe("AppShell AI Chat FAB", () => {
 
     render(<AppShell {...defaultProps} openAdvisor={openAdvisor} />);
 
-    fireEvent.click(screen.getByLabelText("AI Chat"));
+    fireEvent.click(screen.getByLabelText("Ask Guardian — chat with your AI"));
     expect(openAdvisor).toHaveBeenCalled();
   });
 
@@ -179,7 +179,7 @@ describe("AppShell AI Chat FAB", () => {
   it("renders the robot emoji in the FAB", () => {
     render(<AppShell {...defaultProps} />);
 
-    const button = screen.getByLabelText("AI Chat");
-    expect(button.textContent).toContain("🤖");
+    const button = screen.getByLabelText("Ask Guardian — chat with your AI");
+    expect(button.textContent).toContain("💬");
   });
 });

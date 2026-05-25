@@ -1,6 +1,7 @@
-import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer } from './services/settlement-service';
+import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, settleOnArc, getArcSettlementStats, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer } from './services/settlement-service';
 import { circleService, CircleService } from './services/circle-service';
 import { AgentService } from './services/agent-service';
+import { ArcAgent } from './services/arc-agent';
 import { SocialConnectService } from './services/social-connect-service';
 // ... existing imports ...
 import { SessionKeyProvider } from "./services/wallet-service";
@@ -29,9 +30,11 @@ import {
 
 export {
   settleOnChain,
+  settleOnArc,
   getAgentUSDCBalance,
   getAgentAddress,
   getSettlementStats,
+  getArcSettlementStats,
   type SettlementResult,
   type SettlementSkipped,
   type SettlementStats,
@@ -39,6 +42,7 @@ export {
   circleService,
   CircleService,
   AgentService,
+  ArcAgent,
   SessionKeyProvider,
   SocialConnectService,
   RWAService,

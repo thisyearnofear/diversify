@@ -15,6 +15,7 @@ import SoSoIntelligenceCard from "./SoSoIntelligenceCard";
 import SoSoActionModal, { type SoSoTradeProposal } from "./SoSoActionModal";
 import dynamic from "next/dynamic";
 import SimpleMarkdown from "../shared/SimpleMarkdown";
+import { GuardianMascot } from "../shared/GuardianMascot";
 
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
   ssr: false,
@@ -763,10 +764,6 @@ export default function AIChat() {
                     </div>
                   </motion.div>
                 ))}
-
-import { GuardianMascot } from "../shared/GuardianMascot";
-
-... (rest of the file remains same until thinking state)
 
                 {isChatting && (
                   <div className="flex justify-start">

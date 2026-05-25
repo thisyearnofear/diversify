@@ -559,7 +559,7 @@ async function getActualPremiumData(source: string, isFreeTier: boolean = false)
         'risk_assessment': await getRiskAssessment(isFreeTier),
         'agent_execution': await getMacroAnalysis(isFreeTier),
         'real_time_inflation': await getWorldBankData(isFreeTier),
-        'sosovalue_intelligence': await getSoSoValueIntelligence(!isFreeTier),
+        'sosovalue_intelligence': await getSoSoValueIntelligence(!isFreeTier) as unknown as Record<string, unknown>,
     };
 
     return data[resolvedSource] || {

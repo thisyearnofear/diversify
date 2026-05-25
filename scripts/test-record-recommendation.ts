@@ -29,6 +29,10 @@ async function main() {
       confidence: 8500,
     });
 
+    if (!result) {
+      throw new Error('Recommendation was not recorded');
+    }
+
     console.log('✅ Recommendation recorded successfully!');
     console.log(`  Recommendation ID: ${result.id}`);
     console.log(`  Transaction Hash: ${result.txHash}`);

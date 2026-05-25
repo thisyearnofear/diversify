@@ -218,7 +218,7 @@ const MOCK_PORTFOLIO = {
     },
   ],
   regionData: [
-    { region: "us", usdValue: 2000, value: 2000, color: "#6366f1" },
+    { region: "USA", usdValue: 2000, value: 2000, color: "#6366f1" },
     { region: "ke", usdValue: 1000, value: 1000, color: "#a855f7" },
     { region: "global", usdValue: 2000, value: 2000, color: "#ec4899" },
   ],
@@ -245,7 +245,7 @@ describe("ProtectionTab Confetti", () => {
 
   it("renders without connected wallet (no confetti)", () => {
     render(
-      <ProtectionTab userRegion="us" portfolio={EMPTY_PORTFOLIO} />,
+      <ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />,
     );
     expect(confetti).not.toHaveBeenCalled();
   });
@@ -258,7 +258,7 @@ describe("ProtectionTab Confetti", () => {
 
     render(
       <ProtectionTab
-        userRegion="us"
+        userRegion="USA"
         portfolio={{
           ...MOCK_PORTFOLIO,
           diversificationScore: 82,
@@ -283,7 +283,7 @@ describe("ProtectionTab Confetti", () => {
 
     render(
       <ProtectionTab
-        userRegion="us"
+        userRegion="USA"
         portfolio={{
           ...MOCK_PORTFOLIO,
           diversificationScore: 10,

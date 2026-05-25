@@ -8,7 +8,7 @@
  * 5. On-chain settlement of data access on 0G Galileo
  */
 
-import { AgentService } from '../packages/shared/src/services/agent-service.ts';
+import { AgentService } from '../packages/shared/src/services/agent-service';
 import * as dotenv from 'dotenv';
 import { providers } from 'ethers';
 

@@ -133,9 +133,9 @@ function generateCombinedRecommendation(
 
     // Enhance with web insights if available
     if (webAnalysis?.webInsights?.goldContext && userGoal === 'rwa_access') {
-        const gold = webAnalysis.webInsights.goldContext;
+        const gold = webAnalysis.webInsights.goldContext as { momentum?: string; ytdChange?: number };
 
-        if (gold.momentum === 'bullish' && gold.ytdChange > 15) {
+        if (gold.momentum === 'bullish' && (gold.ytdChange ?? 0) > 15) {
             reasoning += ` Gold is up ${gold.ytdChange}% YTD - consider DCA strategy to avoid buying at local peak.`;
             timing = 'DCA over 4 weeks';
         } else if (gold.momentum === 'bearish') {

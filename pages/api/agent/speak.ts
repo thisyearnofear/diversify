@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { text, voice, speed, preferredProvider } = req.body;
+    const { text, voice, speed } = req.body;
     
     if (!text) {
         return res.status(400).json({ error: 'No text provided' });
@@ -31,7 +31,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             text,
             voice,
             speed,
-        }, preferredProvider || 'auto');
+        });
 
         // Log which provider was used (for monitoring)
         console.log(`[TTS] Generated speech using ${result.provider}: ${text.slice(0, 50)}...`);

@@ -11,6 +11,28 @@ DiversiFi is a **savings protection app** for people in volatile economies. For 
 
 DiversiFi uses **LI.FI Composer** to execute atomic, multi-step DeFi workflows in a single user transaction. By abstracting complex cross-chain bridges, swaps, and contract interactions (such as vault deposits), we deliver a "DeFi Mullet" experience: consumer-grade simplicity in the front, and powerful cross-chain orchestration in the back.
 
+## Logos Bounty Track (LP-0008)
+
+DiversiFi submits as **LP-0008: Autonomous AI Module with Wallet, Storage, and Messaging** on [Network School Logos Bounties](https://ns.com/logos).
+
+The module surfaces DiversiFi's existing agent stack as a standalone, bounty-facing experience:
+
+- **Wallet**: `ArcAgent` service class extends the agent with ARC testnet wallet capabilities
+- **Storage**: 0G Storage evidence anchoring + 0G Chain `RecommendationLedger` for verifiable traces
+- **Messaging**: Autonomous analysis triggered from the module page, returning AI-synthesized recommendations
+- **Capability introspection**: `/api/agent/module-status` reports live/demo/unavailable readiness across all five surfaces (execution, payments, storage, serving, ledger)
+
+The module page (`/autonomous-module`) is a focused view connecting: wallet auth → portfolio snapshot → autonomous analysis → Arc payment proof → 0G ledger. It reuses the same deep-analyze, x402-metrics, and zero-g-ledger endpoints the consumer app uses.
+
+### LP-0008 Deliverables
+
+| Area | What's shipped |
+|------|----------------|
+| **Agent wallet** | `ArcAgent` class with ARC testnet RPC, session-based permissions, Circle MPC support |
+| **Capability API** | `GET /api/agent/module-status` — env-aware readiness reporting |
+| **Module page** | `/autonomous-module` — wallet + analysis + proof surfaces in one view |
+| **Existing proof surfaces** | x402-metrics (Arc payments) + zero-g-ledger (0G recommendation trace) |
+
 ## Hackathon Direction
 
 DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Payments hackathon:

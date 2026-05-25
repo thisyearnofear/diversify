@@ -74,10 +74,10 @@ const TOKEN_LIMITS = {
 // ============================================================================
 
 class AIServiceImpl {
-  private providers: BaseAIProvider[] = [];
-  private chatOrchestrator!: FallbackOrchestrator;
-  private speechOrchestrator!: FallbackOrchestrator;
-  private transcriptionOrchestrator!: FallbackOrchestrator;
+  providers: BaseAIProvider[] = [];
+  chatOrchestrator!: FallbackOrchestrator;
+  speechOrchestrator!: FallbackOrchestrator;
+  transcriptionOrchestrator!: FallbackOrchestrator;
   private cachingDecorator!: CachingDecorator;
   private zeroGAnchoringDecorator!: ZeroGAnchoringDecorator;
   private recommendationLedgerDecorator!: RecommendationLedgerDecorator;
@@ -236,6 +236,11 @@ class AIServiceImpl {
       }
     }
 
+    // Backward-compat top-level aliases expected by existing routes/UI
+    status.venice = status.providers.venice || { available: false, initialized: false };
+    status.gemini = status.providers.gemini || { available: false, initialized: false };
+    status.elevenLabs = status.providers.elevenlabs || status.providers.elevenLabs || { available: false, initialized: false };
+
     return status;
   }
 
@@ -276,10 +281,56 @@ export function getAIServiceInstance(): AIServiceImpl {
 }
 
 // Backward compatibility named exports for the main methods
-export const generateChatCompletion = (...args: Parameters<AIServiceImpl['chat']>) => getAIServiceInstance().chat(...args);
-export const generateSpeech = (...args: Parameters<AIServiceImpl['speech']>) => getAIServiceInstance().speech(...args);
-export const transcribe = (filePath: string) => getAIServiceInstance().transcribe(filePath);
-export const analyzeWithWeb = (...args: Parameters<AIServiceImpl['analyzeWithWeb']>) => getAIServiceInstance().analyzeWithWeb(...args);
+export const generateChatCompletion = async (
+  options: ChatCompletionOptions,
+  preferredProvider?: 'venice' | 'gemini' | 'auto'
+) => {
+  const result = await getAIServiceInstance().chatOrchestrator.executeChatCompletion(options, preferredProvider);
+  return {
+    ...result,
+    content: result.content ?? result.data,
+    model: result.model ?? result.modelUsed,
+  };
+};
+export const generateSpeech = async (
+  options: TTSOptions,
+  preferredProvider?: 'venice' | 'elevenlabs' | 'auto'
+) => {
+  const result = await getAIServiceInstance().speechOrchestrator.executeSpeechGeneration(options, preferredProvider);
+  return {
+    ...result,
+    audio: result.audio ?? result.data,
+  };
+};
+export const transcribe = async (
+  filePath: string,
+  preferredProvider?: 'openai' | 'elevenlabs' | 'auto'
+) => {
+  const result = await getAIServiceInstance().transcriptionOrchestrator.executeTranscription(filePath, preferredProvider);
+  return {
+    ...result,
+    text: result.text ?? result.data,
+  };
+};
+export const analyzeWithWeb = async (
+  options: ChatCompletionOptions | string,
+  userGoal?: string
+) => {
+  const normalizedOptions: ChatCompletionOptions = typeof options === 'string'
+    ? {
+        messages: [
+          { role: 'system', content: 'You are a web-enriched financial analyst.' },
+          { role: 'user', content: userGoal ? `${options}\n\nUser goal: ${userGoal}` : options },
+        ],
+      }
+    : options;
+  const result = await getAIServiceInstance().analyzeWithWeb(normalizedOptions);
+  return {
+    ...result,
+    content: result.content ?? result.data,
+    model: result.model ?? result.modelUsed,
+  };
+};
 export const getAIServiceStatus = () => getAIServiceInstance().getStatus();
 
 // Backward compatibility named exports for utility functions
@@ -303,10 +354,10 @@ export function getAdaptiveTokenLimit(requestType: keyof typeof TOKEN_LIMITS = '
 
 // Backward compatibility object export
 export const AIService = {
-  chat: (...args: Parameters<AIServiceImpl['chat']>) => getAIServiceInstance().chat(...args),
-  speech: (...args: Parameters<AIServiceImpl['speech']>) => getAIServiceInstance().speech(...args),
-  transcribe: (filePath: string) => getAIServiceInstance().transcribe(filePath),
-  analyzeWithWeb: (...args: Parameters<AIServiceImpl['analyzeWithWeb']>) => getAIServiceInstance().analyzeWithWeb(...args),
+  chat: async (...args: Parameters<typeof generateChatCompletion>) => generateChatCompletion(...args),
+  speech: async (...args: Parameters<typeof generateSpeech>) => generateSpeech(...args),
+  transcribe: async (...args: Parameters<typeof transcribe>) => transcribe(...args),
+  analyzeWithWeb: async (...args: Parameters<typeof analyzeWithWeb>) => analyzeWithWeb(...args),
   getStatus: () => getAIServiceInstance().getStatus(),
 };
 

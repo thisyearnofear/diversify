@@ -5,6 +5,7 @@ import ThemeToggle from "./ThemeToggle";
 import { useExperience } from "../../context/app/ExperienceContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { NetworkOptimizedOnramp } from "../onramp";
+import { GuardianMascot } from "../shared/GuardianMascot";
 
 interface LayoutProps {
   children: ReactNode;
@@ -58,9 +59,6 @@ export default function Layout({
         <div className="max-w-7xl mx-auto p-4 sm:px-6 lg:px-8">
           {/* Mobile: Two-row layout, Desktop: Single row */}
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0">
-import { GuardianMascot } from "../shared/GuardianMascot";
-
-... (rest of the file)
 
             {/* Logo row */}
             <div className="flex items-center gap-3">

@@ -4,7 +4,8 @@
 DiversiFi is an autonomous financial advisor powered by a verifiable, on-chain research loop. We protect wealth from high inflation by combining real-time AI synthesis with decentralized storage and settlement.
 
 **Live App:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app)  
-**Hackathon Tracks:** 🤖 Agentic Economy · 🛡️ Verifiable AI (0G) · 🪙 Autonomous Payments (Arc)
+**Hackathon Tracks:** 🤖 Agentic Economy · 🛡️ Verifiable AI (0G) · 🪙 Autonomous Payments (Arc)  
+**Logos Bounty:** [LP-0008 — Autonomous AI Module with Wallet, Storage, and Messaging](https://ns.com/logos)
 
 ---
 
@@ -22,6 +23,10 @@ At our core, we believe the future of AI agents relies on **verifiable data**. D
 ---
 
 ## 🚀 Key Features
+
+*   **Autonomous AI Module (Logos LP-0008)**: Standalone bounty-facing page (`/autonomous-module`) demonstrating wallet-backed autonomous analysis, x402-paid research, and 0G-verified recommendation traces. Capability introspection via `/api/agent/module-status`.
+*   **ArcAgent Service**: `ArcAgent` class extending `AgentService` with ARC testnet-first wallet and session-based execution. Re-exported from `@diversifi/shared`.
+*   **ESLint v9 Configuration**: Migrated from `.eslintrc.json` to `eslint.config.cjs` (flat config) with Next.js core-web-vitals rules.
 
 *   **Guardian Pulse**: AI-synthesized market insights, powered by real-time data and anchored for truth via 0G.
 *   **Proactive Pilot**: Autonomous rebalancing intent discovery, allowing users to approve complex financial strategies with one tap.

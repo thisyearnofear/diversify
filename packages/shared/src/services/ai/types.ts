@@ -26,6 +26,8 @@ export interface ChatCompletionOptions {
   maxTokens?: number;
   webSearch?: boolean;
   responseFormat?: { type: 'text' } | { type: 'json_object' };
+  responseMimeType?: string;
+  preferredProvider?: string;
   /**
    * The connected wallet address of the user making the request.
    * Passed through to decorators so the on-chain RecommendationLedger
@@ -39,9 +41,14 @@ export interface ChatCompletionOptions {
  */
 export interface ChatCompletionResult {
   data: string;
+  content?: string;
   provider: string;
   modelUsed?: string;
+  model?: string;
   citations?: string[];
+  webInsights?: Record<string, unknown> | null;
+  sources?: string[];
+  timestamp?: string;
 }
 
 /**
@@ -58,6 +65,7 @@ export interface TTSOptions {
  */
 export interface TTSResult {
   data: any; // Would be audio buffer or base64 string
+  audio?: any;
   provider: string;
   voiceId?: string;
   audioFormat?: string;
@@ -68,6 +76,7 @@ export interface TTSResult {
  */
 export interface TranscriptionResult {
   data: string;
+  text?: string;
   provider: string;
 }
 
@@ -80,6 +89,9 @@ export interface AIServiceStatus {
     initialized: boolean;
     error?: string;
   }>;
+  venice?: { available: boolean; initialized: boolean; error?: string };
+  gemini?: { available: boolean; initialized: boolean; error?: string };
+  elevenLabs?: { available: boolean; initialized: boolean; error?: string };
   timestamp: number;
 }
 

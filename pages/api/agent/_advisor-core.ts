@@ -734,7 +734,7 @@ REQUIRED OUTPUT (JSON):
   try {
     parsed = safeJsonParse(result.content, {
       provider: result.provider,
-      model: result.model
+      model: result.model || result.modelUsed || 'unknown'
     });
   } catch {
     const repairResult = await generateChatCompletion({
@@ -755,7 +755,7 @@ REQUIRED OUTPUT (JSON):
 
     parsed = safeJsonParse(repairResult.content, {
       provider: repairResult.provider,
-      model: repairResult.model
+      model: repairResult.model || repairResult.modelUsed || 'unknown'
     });
   }
 

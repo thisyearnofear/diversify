@@ -69,6 +69,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ? `${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`
         : undefined;
 
+    const veniceStatus = aiStatus.venice ?? { available: false, initialized: false };
+    const geminiStatus = aiStatus.gemini ?? { available: false, initialized: false };
+    const elevenLabsStatus = aiStatus.elevenLabs ?? { available: false, initialized: false };
+
     return res.status(200).json({
         // Arc Agent status
         enabled: arcEnabled,
@@ -80,24 +84,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // AI capabilities with provider details
         capabilities: {
-            analysis: aiStatus.venice.available || aiStatus.gemini.available,
+            analysis: veniceStatus.available || geminiStatus.available,
             analysisProviders: {
-                venice: aiStatus.venice.available,
-                gemini: aiStatus.gemini.available,
+                venice: veniceStatus.available,
+                gemini: geminiStatus.available,
             },
             // Note: Venice AI does not support transcription yet (feature in progress)
             // ElevenLabs Scribe v2 is available as fallback
             transcription: !!(process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY),
             transcriptionProviders: {
                 openai: !!process.env.OPENAI_API_KEY,
-                elevenlabs: aiStatus.elevenLabs.available,
+                elevenlabs: elevenLabsStatus.available,
             },
-            speech: aiStatus.venice.available || aiStatus.elevenLabs.available,
+            speech: veniceStatus.available || elevenLabsStatus.available,
             speechProviders: {
-                venice: aiStatus.venice.available,
-                elevenLabs: aiStatus.elevenLabs.available,
+                venice: veniceStatus.available,
+                elevenLabs: elevenLabsStatus.available,
             },
-            webSearch: aiStatus.venice.available, // Venice-only feature
+            webSearch: veniceStatus.available, // Venice-only feature
         },
         
         // Provider health details
@@ -105,8 +109,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         
         // Feature flags
         features: {
-            webEnrichedAnalysis: aiStatus.venice.available,
-            multiProviderTTS: aiStatus.venice.available && aiStatus.elevenLabs.available,
+            webEnrichedAnalysis: veniceStatus.available,
+            multiProviderTTS: veniceStatus.available && elevenLabsStatus.available,
         }
     });
 }
