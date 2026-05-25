@@ -121,39 +121,7 @@ Explicitly state: **Gemini Flash** powers all three premium research sources and
 - `docs/getting-started.md` — agent wallet funding instructions ✅
 - GitHub repo public ✅
 
-## 9. Logos Bounty Submission (LP-0008)
-
-Reference: https://ns.com/logos
-
-### Validation
-
-```bash
-# Module capability status
-curl -s http://localhost:3042/api/agent/module-status | python3 -m json.tool
-```
-
-Expected: five capabilities (`autonomousExecution`, `payments`, `storage`, `serving`, `ledger`) each with `available`, `mode` (live/demo/unavailable), and `detail`.
-
-### Required Environment
-
-| Var | Purpose |
-|-----|---------|
-| `ZERO_G_STORAGE_URL` | 0G Storage endpoint |
-| `ZERO_G_SERVING_API_KEY` | 0G Serving API key (optional — fallback to Gemini/Venice) |
-| `ZERO_G_LEDGER_CONTRACT` | `RecommendationLedger` address (defaults to `0x75C0…1495`) |
-| `VAULT_PRIVATE_KEY` | EOA for Arc settlements & 0G ledger writes |
-| `CIRCLE_API_KEY` | Optional — wallet-backed execution |
-| `ARC_RPC_URL` | Arc RPC for on-chain payment verification |
-
-### Verification
-
-1. Open `/autonomous-module` in browser
-2. Click **Load module status** — confirm all surfaces are reported
-3. Connect wallet and run autonomous analysis
-4. Verify Arc payment proof at `/api/agent/x402-metrics`
-5. Verify 0G ledger at `/api/agent/zero-g-ledger`
-
-## 10. 0G Submission
+## 9. 0G Submission
 
 ### Contract
 

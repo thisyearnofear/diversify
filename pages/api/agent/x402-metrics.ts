@@ -34,7 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Agent wallet info — lets judges verify the on-chain settlement address
   const agentAddress = getAgentAddress();
-  const agentBalance = agentAddress ? await getAgentUSDCBalance() : null;
+  const agentBalance = agentAddress ? await getAgentUSDCBalance('ARC') : null;
   const chainSettlement = agentAddress
     ? await getArcSettlementStats({ agentAddress, maxRecentTransfers: 10 }).catch(() => null)
     : null;

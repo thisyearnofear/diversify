@@ -80,16 +80,6 @@
 
 ---
 
-## Logos Bounty Demo (LP-0008: Autonomous AI Module)
-
-For the [Logos bounty surface](https://ns.com/logos) at `/autonomous-module`:
-
-1. Open `/autonomous-module` — shows the standalone bounty page with capability overview
-2. Click **Load module status** — shows live/demo/unavailable for all five surfaces
-3. Connect wallet and click **Run autonomous analysis** — triggers the same deep-analyze path
-4. Click **Open payment proof** → `/api/agent/x402-metrics` — Arc settlement evidence
-5. Click **Open ledger proof** → `/api/agent/zero-g-ledger` — 0G recommendation traces
-
 ## Technical "Wow" Factors for Judges:
 1.  **Google Gemini 3.1 Flash**: Real-time synthesis of IMF, World Bank, and CoinGecko data.
 2.  **0G Storage**: Immutable audit trail for every AI interaction.

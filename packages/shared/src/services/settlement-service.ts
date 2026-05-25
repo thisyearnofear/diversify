@@ -58,9 +58,24 @@ const NETWORK_CONFIGS: Record<SettlementNetwork, SettlementConfig> = {
 
 const SETTLEMENT_CACHE_TTL_MS = 30_000;
 const SETTLEMENT_LOG_CHUNK_SIZE = 20_000;
-const SETTLEMENT_START_BLOCK = 0;
 const SETTLEMENT_RECENT_LIMIT = 10;
 const MIN_LOG_CHUNK_SIZE = 500;
+
+/**
+ * Returns the starting block for settlement log scanning on a given network.
+ * Reads from an env var (e.g. ARC_SETTLEMENT_START_BLOCK) for production,
+ * otherwise scans the most recent 10,000 blocks to avoid timeouts on cold starts.
+ */
+function getSettlementStartBlock(network: SettlementNetwork, latestBlock: number): number {
+  const envKey = `${network}_SETTLEMENT_START_BLOCK`;
+  const configured = process.env[envKey];
+  if (configured) {
+    const parsed = parseInt(configured, 10);
+    if (!Number.isNaN(parsed) && parsed >= 0) return parsed;
+  }
+  // Default: scan last 10k blocks (avoids genesis scan on cold start)
+  return Math.max(0, latestBlock - 10_000);
+}
 
 // Lazily initialised providers and signers per network
 const _providers: Record<string, ethers.providers.JsonRpcProvider> = {};
@@ -355,7 +370,7 @@ export async function getSettlementStats(network: SettlementNetwork = 'ZERO_G', 
         : createEmptySettlementStats(network, agentAddress, recipientAddress);
     const scanFromBlock = isCacheHit
         ? _settlementStatsCache[cacheKey].latestBlock + 1
-        : Math.max(0, SETTLEMENT_START_BLOCK);
+        : getSettlementStartBlock(network, latestBlock);
 
     const deltaStats = await scanSettlementRange(
         network,

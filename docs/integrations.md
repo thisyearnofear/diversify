@@ -18,7 +18,6 @@
 | `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
 | `/api/agent/sosovalue` | GET | SoSoValue market intelligence (news, sentiment, SSI index); `?tier=premium` for SSI |
 | `/api/agent/zero-g-ledger` | GET | 0G `RecommendationLedger` on-chain recommendations + stats; `?user=0x...` to filter |
-| `/api/agent/module-status` | GET | Logos LP-0008 autonomous module capability introspection (execution, payments, storage, serving, ledger) |
 
 ## AI Providers
 

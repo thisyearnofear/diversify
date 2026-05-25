@@ -58,38 +58,6 @@ localStorage["diversifi_user_gemini_key"]
   → Gemini client uses user's quota (no shared rate-limit pressure)
 ```
 
-## Logos Autonomous AI Module (LP-0008)
-
-A standalone bounty-facing module for the [Logos Bounty LP-0008](https://ns.com/logos) (Autonomous AI Module with Wallet, Storage, and Messaging):
-
-### Components
-
-| Component | Responsibility |
-|-----------|----------------|
-| `packages/shared/src/services/arc-agent.ts` | `ArcAgent` class extending `AgentService` — ARC testnet-first wallet & execution agent |
-| `pages/api/agent/module-status.ts` | Capability introspection endpoint — reports live/demo/unavailable for execution, payments, storage, serving, ledger |
-| `pages/autonomous-module.tsx` | Standalone page tying wallet → portfolio → analysis → proof surfaces into a single bounty-facing surface |
-
-### Capability Model
-
-The module introspects its environment via `module-status.ts` and reports five dimensions:
-
-| Capability | Mode Logic |
-|------------|------------|
-| `autonomousExecution` | `live` if Circle or legacy agent key available, `demo` if session-only, `unavailable` if nothing |
-| `payments` | `live` if an agent address is derived from `VAULT_PRIVATE_KEY` |
-| `storage` | `live` if `ZERO_G_STORAGE_URL` + `VAULT_PRIVATE_KEY`, `demo` if just URL |
-| `serving` | `live` if `ZERO_G_SERVING_API_KEY`, `demo` otherwise (Gemini/Venice fallback) |
-| `ledger` | `live` if ledger contract address + `VAULT_PRIVATE_KEY`, `demo` if just contract |
-
-### Entrypoints
-
-| Surface | Endpoint |
-|---------|----------|
-| Autonomous analysis | `/api/agent/deep-analyze` |
-| Payment proof (Arc) | `/api/agent/x402-metrics` |
-| Recommendation ledger (0G) | `/api/agent/zero-g-ledger` |
-
 ## Real Arc On-Chain Settlement
 
 Every paid research request fires a real USDC micro-transaction on Arc testnet:

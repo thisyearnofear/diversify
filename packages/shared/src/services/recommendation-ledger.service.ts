@@ -71,7 +71,7 @@ const RECOMMENDATION_LEDGER_ABI = [
 
 // Default config for 0G Galileo Testnet
 const DEFAULT_CONFIG: LedgerConfig = {
-    contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f',
+    contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
     rpcUrl: process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai',
     chainId: 16602,
 };
