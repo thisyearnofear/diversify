@@ -15,7 +15,9 @@ import SoSoIntelligenceCard from "./SoSoIntelligenceCard";
 import SoSoActionModal, { type SoSoTradeProposal } from "./SoSoActionModal";
 import dynamic from "next/dynamic";
 import SimpleMarkdown from "../shared/SimpleMarkdown";
-import { GuardianMascot } from "../shared/GuardianMascot";
+import { ResearchCheck } from "./ResearchCheck";
+import { ResearchReceipt } from "./ResearchReceipt";
+import { TrustFlow } from "./TrustFlow";
 
 const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
   ssr: false,
@@ -364,7 +366,7 @@ export default function AIChat() {
     addUserMessage,
   } = useAIConversation();
   const { key: userGeminiKey, save: saveGeminiKey } = useUserGeminiKey();
-  const { capabilities } = useAgentStatus();
+  const { capabilities, autonomousStatus } = useAgentStatus();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
   const { isChatting, thinkingStep, sendChatMessage } = useAgentChat({
     apiBase: API_BASE,
@@ -750,15 +752,7 @@ export default function AIChat() {
                         </span>
                         {msg.role === "assistant" && <ProviderBadge provider={msg.provider} />}
                         {msg.role === "assistant" && msg.x402Receipt && (
-                          <a
-                            href={msg.x402Receipt.explorer}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-600 dark:text-emerald-400 opacity-80 hover:opacity-100 transition-opacity"
-                            title={`You paid $${msg.x402Receipt.amount} USDC on Arc for this analysis`}
-                          >
-                            ⛓ ${msg.x402Receipt.amount} on Arc ↗
-                          </a>
+                          <ResearchReceipt receipt={msg.x402Receipt} provider={msg.provider} />
                         )}
                       </div>
                     </div>
@@ -767,9 +761,8 @@ export default function AIChat() {
 
                 {isChatting && (
                   <div className="flex justify-start">
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm max-w-[90%] flex items-center gap-3">
-                         <GuardianMascot size={40} mood="thinking" />
-                         <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">{thinkingStep || "Analyzing..."}</span>
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm max-w-[90%]">
+                      <TrustFlow isActive step={thinkingStep} />
                     </div>
                   </div>
                 )}
@@ -791,6 +784,12 @@ export default function AIChat() {
         {/* Footer Input */}
         <div className="p-6 pt-2 pb-10 bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 flex items-center gap-3">
           <div className="flex-1 space-y-2">
+            <div className="px-1">
+              <ResearchCheck
+                isResearching={isChatting}
+                spent={autonomousStatus?.spent ?? 0}
+              />
+            </div>
             <form
               onSubmit={handleSubmit}
               className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 flex items-center shadow-inner"
