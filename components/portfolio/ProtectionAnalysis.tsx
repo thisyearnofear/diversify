@@ -58,19 +58,57 @@ const GRADE_EXPLANATIONS: Record<string, Record<string, string>> = {
     },
 };
 
-export default function ProtectionAnalysis({
-    regionData,
-    totalValue,
-    goalScores,
-    diversificationScore,
-    diversificationRating,
-    onOptimize,
-    onSwap,
-    chainId,
-    refreshBalances,
-    yieldSummary
-}: ProtectionAnalysisProps) {
-    const [showAmounts, setShowAmounts] = useState(false);
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+// ... existing imports ...
+
+// Helper to calculate recovery gain
+const calculateRecovery = (lossPercent: number) => {
+    if (lossPercent >= 100) return Infinity;
+    const lossDecimal = lossPercent / 100;
+    const requiredGain = (lossDecimal / (1 - lossDecimal)) * 100;
+    return requiredGain;
+};
+
+// ... inside the component ...
+    const [hypotheticalLoss, setHypotheticalLoss] = useState<number>(20);
+    const recoveryNeeded = useMemo(() => calculateRecovery(hypotheticalLoss), [hypotheticalLoss]);
+
+// ... add this before the header in the return ...
+                {/* Recovery Calculator Widget */}
+                <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-5 rounded-2xl border border-orange-200 dark:border-orange-800/50 shadow-sm mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 flex items-center justify-center bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+                            <span className="text-lg">⚠️</span>
+                        </div>
+                        <h3 className="font-black text-orange-950 dark:text-orange-50 text-xs uppercase tracking-widest">The Recovery Trap</h3>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div className="flex-1">
+                            <label className="text-[10px] text-orange-800 dark:text-orange-300 font-bold uppercase tracking-wider mb-1.5 block">If I lose</label>
+                            <div className="flex items-center bg-white/50 dark:bg-black/20 rounded-xl border border-orange-200 dark:border-orange-700 p-2.5 shadow-inner">
+                                <input 
+                                    type="number" 
+                                    value={hypotheticalLoss} 
+                                    onChange={(e) => setHypotheticalLoss(Math.min(99, Math.max(0, Number(e.target.value))))}
+                                    className="w-full bg-transparent text-sm font-bold text-gray-900 dark:text-white outline-none"
+                                />
+                                <span className="text-orange-500 font-black">%</span>
+                            </div>
+                        </div>
+                        <div className="flex-1 text-center bg-white/40 dark:bg-black/10 rounded-xl p-3 border border-orange-100 dark:border-orange-800/50">
+                            <label className="text-[10px] text-orange-800 dark:text-orange-300 font-bold uppercase tracking-wider mb-0.5 block">I need to gain</label>
+                            <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
+                                {isFinite(recoveryNeeded) ? recoveryNeeded.toFixed(0) : '??'}%
+                            </div>
+                            <span className="text-[9px] text-orange-500 font-black uppercase">to break even</span>
+                        </div>
+                    </div>
+                    <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 mt-4 font-medium italic leading-relaxed">
+                        Volatility isn't just risk—it's a mathematical handicap. Our stable-baskets are designed to shield you from this asymmetry.
+                    </p>
+                </div>
+
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showYieldBreakdown, setShowYieldBreakdown] = useState(false);
     const [highlightedRegionIndex, setHighlightedRegionIndex] = useState<number | null>(null);
