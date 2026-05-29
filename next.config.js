@@ -1,3 +1,5 @@
+const webpack = require('webpack');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -19,51 +21,50 @@ const nextConfig = {
 
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        // Modules with browser polyfills
+        stream: require.resolve('stream-browserify'),
+        crypto: require.resolve('crypto-browserify'),
+        http: require.resolve('stream-http'),
+        https: require.resolve('https-browserify'),
+        os: require.resolve('os-browserify/browser'),
+        assert: require.resolve('assert/'),
+        url: require.resolve('url/'),
+        util: require.resolve('util/'),
+        buffer: require.resolve('buffer/'),
+        zlib: require.resolve('browserify-zlib'),
+        process: require.resolve('process/browser'),
+        // Truly server-only modules (no browser equivalent)
         fs: false,
         net: false,
         tls: false,
         dns: false,
         child_process: false,
         readline: false,
-        zlib: false,
         'dtrace-provider': false,
-        stream: false,
-        util: require.resolve('util/'),
-        assert: false,
-        http: false,
-        https: false,
-        os: false,
-        url: false,
-        crypto: false,
       };
 
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        buffer: require.resolve('buffer/'),
-      };
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          Buffer: ['buffer', 'Buffer'],
+          process: 'process/browser',
+        })
+      );
     }
     return config;
   },
 
   turbopack: {
     resolveAlias: {
+      // Truly server-only — no browser equivalent
       fs: './lib/empty-module.js',
       net: './lib/empty-module.js',
       tls: './lib/empty-module.js',
       dns: './lib/empty-module.js',
       child_process: './lib/empty-module.js',
       readline: './lib/empty-module.js',
-      zlib: './lib/empty-module.js',
       'dtrace-provider': './lib/empty-module.js',
-      stream: './lib/empty-module.js',
-      assert: './lib/empty-module.js',
-      http: './lib/empty-module.js',
-      https: './lib/empty-module.js',
-      os: './lib/empty-module.js',
-      url: './lib/empty-module.js',
-      crypto: './lib/empty-module.js',
     },
   },
 
