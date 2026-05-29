@@ -10,3 +10,4 @@ export { hyperliquidService, HyperliquidService } from './hyperliquid.service';
 export { earnService, EarnService } from './earn-service';
 export { VaultService } from './vault/vault.service';
 export { feeEngine, FeeEngine } from './vault/fee-engine';
+export { BrightDataService } from './bright-data-service';

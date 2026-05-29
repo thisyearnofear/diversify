@@ -24,6 +24,8 @@ type ConversationRequest = {
     }>;
   };
   financialStrategy?: FinancialStrategy;
+  /** Research evidence from the gateway (macro data, Bright Data scrapes, etc.) */
+  macroData?: Record<string, any>;
 };
 
 type AnalysisRequest = {
@@ -66,59 +68,34 @@ type ResearchEvidenceSummary = {
   sources?: ResearchEvidenceSourceSummary[];
 };
 
-const ADVISOR_SYSTEM_PROMPT = `You are DiversiFi Advisor - the unified reasoning and guidance layer for DiversiFi.
+const ADVISOR_SYSTEM_PROMPT = `You are DiversiFi Advisor. Be concise, authoritative, and data-driven. Never begin with a disclaimer, apology, or hedge — state your best answer immediately. If you lack data, note the limitation in one phrase and proceed.
 
-IMPORTANT: Never mention GLM, Venice.ai, or that you are an AI language model. Always identify yourself as DiversiFi Advisor.
+REAL ASSETS (mainnet only — recommend these):
+- Celo Mainnet: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
+- Arbitrum Mainnet: USDY (~5% APY), SYRUPUSDC (~4.5% APY), PAXG (gold-backed), USDC, EURC
+- Base Mainnet: LI.FI Earn vaults via Morpho, yoUSD, Aave (up to 16% APY)
 
-WHAT DIVERSIFI ENABLES:
-1. **Inflation Protection** - Move savings into diversified stablecoins and RWAs that preserve purchasing power
-2. **Yield Generation** - Earn returns on tokenized real-world assets (USDY ~5%, SYRUPUSDC ~4.5%, PAXG gold-backed)
-3. **Global Exposure** - Access regional stablecoins (USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm) across multiple currencies
-4. **Daily UBI** - Earn $G GoodDollar universal basic income just for using the platform
+TESTNET ONLY — never recommend for real portfolios: Robinhood fictional stocks (ACME, WAYNE, STARK), Test Drive demo assets.
 
-MAINNET CHAINS & REAL ASSETS:
-- **Celo Mainnet**: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
-- **Arbitrum Mainnet**: USDY (Ondo ~5% yield), SYRUPUSDC (Morpho ~4.5% yield), PAXG (gold-backed), USDC, EURC
+TONE RULES:
+1. No filler. Strip: "I'd be happy to", "Consider", "You might want to", "Let me explain", "As DiversiFi Advisor..."
+2. Lead with the answer, not the caveat
+3. Max 80 words for simple answers. Max 5 bullets for complex ones. Never exceed 150 words.
+4. Use exact figures when available, skip adjectives when you have data
 
-TESTNET-ONLY FEATURES (DO NOT RECOMMEND FOR REAL MONEY):
-- Robinhood Chain fictional stocks (ACME, WAYNE, STARK) - testnet only, play money
-- Test Drive mode - demo assets, not real value
+RESPONSE STRUCTURE:
+1. Direct answer (1-2 sentences)
+2. Supporting data or context (1-2 bullets max, only if needed)
+3. End with one action card when relevant
 
-CORE CAPABILITIES:
-- Explain portfolio risk, inflation, and diversification trade-offs
-- Answer follow-up questions conversationally
-- Recommend specific protective actions grounded in portfolio and market context
-- Trigger UI actions when the user asks for navigation or claims
+ACTION CARDS (append at end of response, exact format):
+[ACTION:SWAP:fromToken:toToken:amount:network] — e.g., [ACTION:SWAP:cUSD:EURm:5:Celo]
+[ACTION:HOLD] — portfolio is balanced, no changes needed
+[ACTION:CLAIM_UBI] — direct to GoodDollar claim
+[ACTION:VERIFY_IDENTITY] — face verification required
+[ACTION:NAVIGATE:tab_name] — switch to a specific tab
 
-RESPONSE GUIDELINES:
-- **BE CONCISE**: Keep responses under 200 words. Users prefer brief, actionable advice.
-- **PRIORITIZE**: Lead with the most important insight, then 2-3 key points maximum.
-- **REAL ASSETS ONLY**: Only recommend mainnet assets (Celo/Arbitrum). Never suggest fictional stocks for real portfolios.
-- Use exact figures when available
-- If uncertain, say so rather than guessing
-- If the request is analysis-heavy, stay analytical; if it is navigational, stay direct
-
-ACTION TRIGGERING:
-If you want to trigger a specific UI action, include one of these tags at the end of your response:
-- [ACTION:CLAIM_UBI]
-- [ACTION:VERIFY_IDENTITY]
-- [ACTION:NAVIGATE:tab_name]
-- [ACTION:SWAP:fromToken:toToken:amount:network] - e.g., [ACTION:SWAP:cUSD:EURm:5:Celo]
-- [ACTION:HOLD] - When portfolio is well-balanced and no action needed
-
-WHEN TO USE ACTION CARDS:
-- After analyzing a portfolio, ALWAYS provide an action card
-- If recommending a swap/rebalance: Use [ACTION:SWAP:...]
-- If portfolio is well-balanced: Use [ACTION:HOLD]
-- If user needs to claim UBI: Use [ACTION:CLAIM_UBI]
-- If user needs identity verification: Use [ACTION:VERIFY_IDENTITY]
-- If directing to a specific tab: Use [ACTION:NAVIGATE:tab_name]
-
-ACTION CARD EXAMPLES:
-- "Increase EURm allocation by $5" → [ACTION:SWAP:cUSD:EURm:5:Celo]
-- "Swap $10 to USDY for yield" → [ACTION:SWAP:USDC:USDY:10:Arbitrum]
-- "Portfolio looks good, hold steady" → [ACTION:HOLD]
-- "Claim your daily G$" → [ACTION:CLAIM_UBI]
+Always include an action card after portfolio analysis. Otherwise, include one only when a specific action is warranted.
 `;
 
 function cleanJsonResponse(text: string): string {
@@ -395,6 +372,71 @@ ${holdingLines}
 `;
 }
 
+function extractBrightDataContext(macroData?: Record<string, any>): string {
+  if (!macroData || Object.keys(macroData).length === 0) return '';
+
+  const lines: string[] = [];
+
+  // Extract central bank announcements
+  const cbSources = ['brightdata_central_banks', 'brightdata_evidence_layer'];
+  for (const key of cbSources) {
+    if (macroData[key]) {
+      const content = macroData[key] as any;
+      const announcements = content.announcements || content.centralBanks || [];
+      if (Array.isArray(announcements) && announcements.length > 0) {
+        lines.push('\nRECENT CENTRAL BANK ANNOUNCEMENTS (Bright Data — scraped live):');
+        for (const a of announcements.slice(0, 5)) {
+          const stance = a.policyStance ? ` [${a.policyStance.toUpperCase()}]` : '';
+          const takeaways = a.keyTakeaways?.length ? ` — ${a.keyTakeaways.join('; ')}` : '';
+          lines.push(`- ${a.bank || 'Central Bank'}: ${a.title || a.snippet || 'Statement'}${stance}${takeaways} (${a.url || ''})`);
+        }
+      }
+      break; // Only use first matching source
+    }
+  }
+
+  // Extract commodity prices
+  const cmdSources = ['brightdata_commodities', 'brightdata_evidence_layer'];
+  for (const key of cmdSources) {
+    if (macroData[key]) {
+      const content = macroData[key] as any;
+      const prices = content.prices || content.commodities || [];
+      if (Array.isArray(prices) && prices.length > 0) {
+        lines.push('\nLIVE COMMODITY PRICES (Bright Data Web Unlocker):');
+        for (const p of prices.slice(0, 4)) {
+          const change = p.change24hPct != null ? ` (${p.change24hPct > 0 ? '+' : ''}${p.change24hPct.toFixed(1)}% 24h)` : '';
+          lines.push(`- ${p.commodity}: ${p.currency || 'USD'} ${p.price}${p.unit ? '/' + p.unit.replace('per ', '') : ''}${change} [${p.source || p.sourceUrl || ''}]`);
+        }
+      }
+      break;
+    }
+  }
+
+  // Extract financial news sentiment
+  const newsSources = ['brightdata_financial_news', 'brightdata_evidence_layer'];
+  for (const key of newsSources) {
+    if (macroData[key]) {
+      const content = macroData[key] as any;
+      const news = content.news || [];
+      if (Array.isArray(news) && news.length > 0) {
+        lines.push('\nFINANCIAL NEWS SENTIMENT (Bright Data SERP):');
+        const bySentiment: Record<string, number> = {};
+        for (const n of news) {
+          const s = n.sentiment || 'neutral';
+          bySentiment[s] = (bySentiment[s] || 0) + 1;
+        }
+        lines.push(`- Sentiment split: Positive ${bySentiment.positive || 0}, Negative ${bySentiment.negative || 0}, Neutral ${bySentiment.neutral || 0}`);
+        for (const n of news.slice(0, 4)) {
+          lines.push(`- ${n.headline || 'Headline'} [${n.sentiment || 'neutral'}] — ${n.source || ''}`);
+        }
+      }
+      break;
+    }
+  }
+
+  return lines.length > 0 ? lines.join('\n') : '';
+}
+
 export async function runAdvisorConversation(input: ConversationRequest) {
   const { message, history = [], chainId, address, portfolio, financialStrategy } = input;
   const gdContext = await getGoodDollarContext(address);
@@ -402,13 +444,15 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     ? `\nUSER'S FINANCIAL STRATEGY: ${financialStrategy}\n${StrategyService.getAIPrompt(financialStrategy)}\nAlways reference this strategy explicitly when giving portfolio advice, asset suggestions, or rebalancing recommendations.\n`
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
+  const brightDataContext = extractBrightDataContext(input.macroData);
   const contextPrompt =
     ADVISOR_SYSTEM_PROMPT +
     getTestDriveContext(chainId) +
     getMainnetChainContext(chainId) +
     gdContext +
     portfolioContext +
-    strategyContext;
+    strategyContext +
+    brightDataContext;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: contextPrompt },
@@ -580,53 +624,30 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
 
   const realYield = treasuryYield - currentInflation;
   const systemInstruction = `
-You are the DiversiFi Advisor in analysis mode - a data-driven AI that provides ACTIONABLE financial advice.
+You are DiversiFi Advisor in analysis mode. Deliver high-signal, data-backed recommendations only. No preamble, no hedging.
 
-CORE MISSION: Protect user wealth from inflation using quantified analysis and macro-economic stability indicators.
+RULES:
+- Max 100 words for any analysis. Lead with the recommendation, not the explanation.
+- Only recommend real mainnet assets (Celo, Arbitrum, Base). Never suggest testnet assets or fictional stocks.
+- Prefer exact numbers over adjectives. If data is missing, skip the analysis rather than guessing.
 
-CRITICAL CONSTRAINTS:
-- **BE CONCISE**: Keep reasoning under 150 words. Users want quick, actionable insights.
-- **REAL ASSETS ONLY**: Only recommend assets available on Celo Mainnet or Arbitrum Mainnet.
-- **NO TESTNET ASSETS**: Never recommend fictional stocks (ACME, WAYNE, STARK) or testnet-only assets for real portfolios.
+ASSET GUIDANCE:
+- Real Yield > 2% → favor yield assets (USDY ~5%, SYRUPUSDC ~4.5%, LI.FI Earn vaults)
+- Real Yield 0-2% → balanced: mix yield + gold hedge
+- Real Yield < 0% → favor PAXG (gold-backed inflation hedge)
 
-${strategyPrompt ? `
-USER'S FINANCIAL STRATEGY:
-${strategyPrompt}
+REAL ASSETS:
+- Arbitrum: USDY (~5%), SYRUPUSDC (~4.5%), PAXG, USDC, EURC
+- Celo: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR
+- Base: LI.FI Earn vaults — Morpho, yoUSD, Aave (up to 16% APY)
 
-CRITICAL: You MUST tailor ALL recommendations to align with this strategy.
-` : ''}
+${strategyPrompt ? `USER STRATEGY: ${strategyPrompt} — align all recommendations with this strategy.` : ''}
 
-ANALYSIS FRAMEWORK:
-1. Lead with the most important insight (1 sentence)
-2. Provide 2-3 key data points supporting the recommendation
-3. Suggest ONE specific, executable action
-4. Keep total reasoning under 150 words
-
-AVAILABLE ACTIONS:
-- SWAP
-- BRIDGE
-- REBALANCE
-- HOLD
-- BUY
-- SELL
-
-REAL ASSETS - ARBITRUM MAINNET:
-- USDY (Ondo): ~5% APY - recommend for yield seekers
-- SYRUPUSDC (Syrup/Morpho): ~4.5% APY - recommend for yield seekers
-- PAXG (Paxos): 0% APY, gold-backed - recommend for inflation hedge when Real Yield < 0%
-
-REAL ASSETS - CELO MAINNET:
-- Regional stablecoins: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm
-- Recommend for geographic diversification and inflation protection
-
-RWA SELECTION GUIDANCE:
-- If Real Yield > 2%: strongly favor USDY/SYRUPUSDC over PAXG
-- If Real Yield 0-2%: balanced approach
-- If Real Yield < 0%: PAXG becomes more attractive
-
+RESPONSE FORMAT:
+1. Recommendation (1 sentence)
+2. 2 data reasons (bullets)
+3. Action: one of SWAP, BRIDGE, REBALANCE, HOLD, BUY, SELL
 ${getOnrampSystemPrompt()}
-
-TONE: Expert financial advisor who explains the WHY with data, not opinions. Be brief and decisive.
 `;
 
   const userGoal = config?.userGoal || 'exploring';
@@ -653,6 +674,9 @@ ${userRegion && inflationData[userRegion] ? `- Home Region Inflation: ${inflatio
 
 MACRO STABILITY FACTORS:
 ${formatMacroDataSummary(macroData) || 'Limited macro data available - rely on regional averages.'}
+
+BRIGHT DATA EVIDENCE (live scraped intelligence):
+${extractBrightDataContext(macroData) || 'No Bright Data evidence available.'}
 
 NETWORK MOMENTUM:
 - Active Protections (24h): ${networkActivity?.activeProtections24h || 84} users

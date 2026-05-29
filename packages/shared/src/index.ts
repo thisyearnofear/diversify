@@ -98,6 +98,15 @@ export { IntentDiscoveryService, type AppIntent, type AppTab } from './services/
 export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';
 export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent-action.service';
 export { getYieldRecommendations, yieldAdvisorService } from './services/ai/yield-advisor.service';
+export { BrightDataService } from './services/bright-data-service';
+export type {
+  BrightDataCentralBankAnnouncement,
+  BrightDataCommodityPrice,
+  BrightDataNewsItem,
+  BrightDataEvidenceBundle,
+  BrightDataBankCode,
+  BrightDataCommodity,
+} from './services/bright-data-types';
 
 // Export Utils
 export * from './utils/market-pulse-service';

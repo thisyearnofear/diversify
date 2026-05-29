@@ -5,6 +5,7 @@ import { getSoSoValueIntelligence } from '../../../lib/sosovalue';
 import {
     ARC_DATA_HUB_CONFIG,
     buildArcResearchBundle,
+    BrightDataService,
     circleService,
     getArcResearchSource,
     normalizeArcResearchSource,
@@ -560,6 +561,10 @@ async function getActualPremiumData(source: string, isFreeTier: boolean = false)
         'agent_execution': await getMacroAnalysis(isFreeTier),
         'real_time_inflation': await getWorldBankData(isFreeTier),
         'sosovalue_intelligence': await getSoSoValueIntelligence(!isFreeTier) as unknown as Record<string, unknown>,
+        'brightdata_central_banks': await getBrightDataCentralBanks(isFreeTier),
+        'brightdata_commodities': await getBrightDataCommodities(isFreeTier),
+        'brightdata_financial_news': await getBrightDataFinancialNews(isFreeTier),
+        'brightdata_evidence_layer': await getBrightDataEvidenceLayer(isFreeTier),
     };
 
     return data[resolvedSource] || {
@@ -836,4 +841,86 @@ Respond with JSON: { risk_score (1-10), risk_level, primary_risks: [], mitigatio
     );
 }
 
+// --- Bright Data Evidence Layer (Hackathon Integration) ---
 
+async function getBrightDataCentralBanks(isFreeTier: boolean): Promise<Record<string, unknown>> {
+    try {
+        const banks = isFreeTier ? ['FED'] : ['FED', 'ECB', 'BOE', 'BOJ'];
+        const announcements = await BrightDataService.getCentralBankAnnouncements({ banks, maxAgeHours: isFreeTier ? 48 : 24 });
+        return {
+            announcements,
+            count: announcements.length,
+            banks: banks.length,
+            tier: isFreeTier ? 'free' : 'premium',
+            retrievedAt: new Date().toISOString(),
+        };
+    } catch (err) {
+        console.warn('[BrightData] Central banks fetch failed:', (err as Error).message);
+        return { announcements: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium' };
+    }
+}
+
+async function getBrightDataCommodities(isFreeTier: boolean): Promise<Record<string, unknown>> {
+    try {
+        const commodities = isFreeTier ? ['gold', 'crude_oil'] : ['gold', 'crude_oil', 'copper', 'wheat'];
+        const prices = await BrightDataService.getCommodityPrices({ commodities });
+        return {
+            prices,
+            count: prices.length,
+            commodities: commodities.length,
+            tier: isFreeTier ? 'free' : 'premium',
+            retrievedAt: new Date().toISOString(),
+        };
+    } catch (err) {
+        console.warn('[BrightData] Commodities fetch failed:', (err as Error).message);
+        return { prices: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium' };
+    }
+}
+
+async function getBrightDataFinancialNews(isFreeTier: boolean): Promise<Record<string, unknown>> {
+    try {
+        const regions = isFreeTier ? ['US'] : ['US', 'EU', 'EM'];
+        const news = await BrightDataService.getFinancialNewsSentiment({ regions, maxItems: isFreeTier ? 5 : 15 });
+        return {
+            news,
+            count: news.length,
+            regions: regions.length,
+            tier: isFreeTier ? 'free' : 'premium',
+            retrievedAt: new Date().toISOString(),
+        };
+    } catch (err) {
+        console.warn('[BrightData] Financial news fetch failed:', (err as Error).message);
+        return { news: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium' };
+    }
+}
+
+async function getBrightDataEvidenceLayer(isFreeTier: boolean): Promise<Record<string, unknown>> {
+    if (isFreeTier) {
+        // Free tier gets a lightweight bundle: Fed only, gold+oil only, US news
+        try {
+            const [banks, commodities, news] = await Promise.all([
+                BrightDataService.getCentralBankAnnouncements({ banks: ['FED'], maxAgeHours: 48 }),
+                BrightDataService.getCommodityPrices({ commodities: ['gold', 'crude_oil'] }),
+                BrightDataService.getFinancialNewsSentiment({ regions: ['US'], maxItems: 3 }),
+            ]);
+            return {
+                centralBanks: banks,
+                commodities,
+                news,
+                meta: { generatedAt: new Date().toISOString(), bundleType: 'free' },
+                tier: 'free',
+            };
+        } catch (err) {
+            console.warn('[BrightData] Free evidence layer failed:', (err as Error).message);
+            return { error: (err as Error).message, tier: 'free' };
+        }
+    }
+
+    try {
+        const bundle = await BrightDataService.getEvidenceLayer();
+        return { ...bundle, tier: 'premium' };
+    } catch (err) {
+        console.warn('[BrightData] Evidence layer failed:', (err as Error).message);
+        return { error: (err as Error).message, tier: 'premium' };
+    }
+}
