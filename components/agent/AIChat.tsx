@@ -798,7 +798,7 @@ export default function AIChat() {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask for a summary, plan, or paid research..."
+                placeholder="Ask about your portfolio, macro outlook, or strategy..."
                 className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white"
               />
               <VoiceButton
@@ -819,8 +819,8 @@ export default function AIChat() {
             </form>
             <p className="px-1 text-[11px] text-gray-500 dark:text-gray-400">
               {address
-                ? "Paid research uses your connected wallet for Arc USDC micropayments when required."
-                : "Connect a wallet to unlock paid Arc research. Free analysis still works without payment."}
+                ? "5 free premium queries/day. After that, research costs $0.004–$0.01 USDC on Arc."
+                : "Free analysis included. Connect a wallet to unlock premium research after daily limit."}
             </p>
           </div>
         </div>

@@ -59,7 +59,7 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
                     <span className="text-xs font-bold text-purple-700 dark:text-purple-300">${parseFloat(arcBalance).toFixed(4)} USDC</span>
                   </div>
                   <div className="text-[10px] text-purple-600 dark:text-purple-400 mb-2">
-                    Each advisor question costs $0.004–$0.01 USDC — settled on Arc in real time.
+                    5 free premium queries/day included. Beyond that, $0.004–$0.01 USDC per query on Arc.
                   </div>
                   <a
                     href="https://faucet.circle.com"

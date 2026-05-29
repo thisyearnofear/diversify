@@ -201,7 +201,7 @@ function resolveSourcePlan(user: UserState, requestedSource: string): SourcePlan
     }
 
     const currentUsage = UserManager.getUsage(user, source.id);
-    const isFreeEligible = source.category === 'basic' && currentUsage < source.freeLimit;
+    const isFreeEligible = source.freeLimit > 0 && currentUsage < source.freeLimit;
     const cost = isFreeEligible ? 0 : parseFloat(source.price);
 
     return {
@@ -418,8 +418,8 @@ export default async function handler(
             remaining_free: singlePlan.isFreeEligible ? singlePlan.freeLimit - (singlePlan.currentUsage + 1) : undefined,
             remaining_credit: formatMicroUSDC(user.creditBalanceMicros, 4),
             reason: singlePlan.isFreeEligible
-                ? 'Basic data sources include a generous free tier'
-                : 'Premium insight unlocked',
+                ? `Free tier (${singlePlan.freeLimit - (singlePlan.currentUsage + 1)} remaining today)`
+                : 'Premium insight unlocked — daily free limit reached',
             ...settlementMeta,
         },
     });

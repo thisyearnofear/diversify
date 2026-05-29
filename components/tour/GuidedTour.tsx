@@ -37,7 +37,7 @@ const TOUR_STEPS: TourStep[] = [
     {
         id: "complete",
         title: "You're Ready!",
-        description: "Connect your wallet to start protecting your savings. It's free and takes 30 seconds.",
+        description: "Connect your wallet to start protecting your savings. No sign-up required — takes 30 seconds.",
         tab: "overview",
     },
 ];

@@ -261,7 +261,7 @@ export default function SwapSuccessCelebration({
                       Daily UBI Unlocked
                     </p>
                     <p className="text-xs text-emerald-600/80 dark:text-emerald-500/80 leading-relaxed">
-                      You can now claim free G$ tokens daily. Check InfoTab to learn more.
+                      Daily G$ rewards activated! Complete face verification to start claiming.
                     </p>
                   </div>
                 </div>

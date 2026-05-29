@@ -188,7 +188,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
       <InsightCard
         icon="💰"
         title="Daily G$ Access"
-        description="Connect your wallet to unlock free daily G$ through platform usage"
+        description="Connect your wallet to earn daily G$ rewards through platform usage"
         variant="default"
       />
     );
@@ -202,8 +202,8 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
         <InsightCard
           icon="🌱"
           title="Unlock Daily G$"
-          description="Swap $1+ to unlock your free daily G$ UBI claim and earn your First Swap badge."
-          impact="Free daily UBI"
+          description="Swap $1+ to activate daily G$ rewards. Requires one-time face verification on GoodDollar."
+          impact="Daily G$ rewards"
           action={
             onSaveClick
               ? { label: 'Make a Swap →', onClick: onSaveClick }

@@ -206,7 +206,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                             spreading your stablecoins across stronger economies worldwide.
                         </p>
                         <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                            No lock-ups. No hidden fees. Pause anytime.
+                            No lock-ups. No subscriptions. Pause anytime.
                         </p>
                     </div>
 

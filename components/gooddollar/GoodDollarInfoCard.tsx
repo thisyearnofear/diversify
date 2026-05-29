@@ -164,7 +164,7 @@ export default function GoodDollarInfoCard({
                             {canClaim ? "G$ Ready to Claim!" : `G$ · ${streak?.daysActive || 0}-Day Streak`}
                         </span>
                         <p className="text-xs text-emerald-600/70 dark:text-emerald-500/70">
-                            {canClaim ? estimatedReward || "Claim now" : "Free daily UBI on Celo"}
+                            {canClaim ? estimatedReward || "Claim now" : "Daily G$ rewards on Celo"}
                         </p>
                     </div>
                 </div>
@@ -239,7 +239,7 @@ export default function GoodDollarInfoCard({
                     {/* Protocol Description */}
                     <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                         <strong>Universal Basic Income</strong> powered by crypto yield.
-                        Free G$ tokens distributed daily to verified users on{" "}
+                        G$ tokens distributed daily to verified users on{" "}
                         <Tooltip content={TOOLTIPS.stablecoin}>Celo</Tooltip>.
                     </p>
 
@@ -325,7 +325,7 @@ export default function GoodDollarInfoCard({
                                     { step: "1", text: "Supporters stake stablecoins in DeFi protocols" },
                                     { step: "2", text: "Interest earned funds the GoodDollar Reserve" },
                                     { step: "3", text: "G$ tokens are minted and distributed as UBI" },
-                                    { step: "4", text: "You claim your free daily G$ on Celo!" },
+                                    { step: "4", text: "You claim your daily G$ on Celo (after face verification)" },
                                 ].map(({ step, text }) => (
                                     <motion.div
                                         key={step}
@@ -352,7 +352,7 @@ export default function GoodDollarInfoCard({
                         >
                             <div className="grid grid-cols-2 gap-2 pt-1">
                                 {[
-                                    { icon: "🎁", label: "Free Daily Claims", sub: "No cost to claim" },
+                                    { icon: "🎁", label: "Daily Claims", sub: "No gas cost to claim" },
                                     { icon: "🌍", label: "Global Access", sub: "Anyone can join" },
                                     { icon: "💰", label: "Tradeable", sub: "Swap G$ anytime" },
                                     { icon: "⚡", label: "On Celo", sub: "Low-cost txs" },
