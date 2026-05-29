@@ -17,7 +17,7 @@ const nextConfig = {
     appNewScrollHandler: true,
   },
 
-  webpack: (config, { isServer, webpack }) => {
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.alias = {
         ...config.resolve.alias,
@@ -43,12 +43,6 @@ const nextConfig = {
         ...config.resolve.fallback,
         buffer: require.resolve('buffer/'),
       };
-
-      config.plugins.push(
-        new webpack.ProvidePlugin({
-          Buffer: ['buffer', 'Buffer'],
-        }),
-      );
     }
     return config;
   },

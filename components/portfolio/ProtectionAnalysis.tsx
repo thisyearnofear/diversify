@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PrimaryButton, LoadingSpinner } from '../shared/TabComponents';
 import SimplePieChart from './SimplePieChart';
@@ -27,7 +27,6 @@ interface ProtectionAnalysisProps {
     yieldSummary?: MultichainPortfolio;
 }
 
-// Grade explanations for user education
 const GRADE_EXPLANATIONS: Record<string, Record<string, string>> = {
     hedge: {
         'A+': 'Excellent inflation protection across multiple regions',
@@ -58,11 +57,6 @@ const GRADE_EXPLANATIONS: Record<string, Record<string, string>> = {
     },
 };
 
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-// ... existing imports ...
-
-// Helper to calculate recovery gain
 const calculateRecovery = (lossPercent: number) => {
     if (lossPercent >= 100) return Infinity;
     const lossDecimal = lossPercent / 100;
@@ -70,53 +64,28 @@ const calculateRecovery = (lossPercent: number) => {
     return requiredGain;
 };
 
-// ... inside the component ...
+export default function ProtectionAnalysis({
+    regionData,
+    totalValue,
+    goalScores,
+    diversificationScore,
+    diversificationRating,
+    onOptimize,
+    onSwap,
+    chainId,
+    refreshBalances,
+    yieldSummary,
+}: ProtectionAnalysisProps) {
     const [hypotheticalLoss, setHypotheticalLoss] = useState<number>(20);
     const recoveryNeeded = useMemo(() => calculateRecovery(hypotheticalLoss), [hypotheticalLoss]);
-
-// ... add this before the header in the return ...
-                {/* Recovery Calculator Widget */}
-                <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-5 rounded-2xl border border-orange-200 dark:border-orange-800/50 shadow-sm mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="w-8 h-8 flex items-center justify-center bg-orange-100 dark:bg-orange-900/50 rounded-lg">
-                            <span className="text-lg">⚠️</span>
-                        </div>
-                        <h3 className="font-black text-orange-950 dark:text-orange-50 text-xs uppercase tracking-widest">The Recovery Trap</h3>
-                    </div>
-                    <div className="flex items-center gap-6">
-                        <div className="flex-1">
-                            <label className="text-[10px] text-orange-800 dark:text-orange-300 font-bold uppercase tracking-wider mb-1.5 block">If I lose</label>
-                            <div className="flex items-center bg-white/50 dark:bg-black/20 rounded-xl border border-orange-200 dark:border-orange-700 p-2.5 shadow-inner">
-                                <input 
-                                    type="number" 
-                                    value={hypotheticalLoss} 
-                                    onChange={(e) => setHypotheticalLoss(Math.min(99, Math.max(0, Number(e.target.value))))}
-                                    className="w-full bg-transparent text-sm font-bold text-gray-900 dark:text-white outline-none"
-                                />
-                                <span className="text-orange-500 font-black">%</span>
-                            </div>
-                        </div>
-                        <div className="flex-1 text-center bg-white/40 dark:bg-black/10 rounded-xl p-3 border border-orange-100 dark:border-orange-800/50">
-                            <label className="text-[10px] text-orange-800 dark:text-orange-300 font-bold uppercase tracking-wider mb-0.5 block">I need to gain</label>
-                            <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
-                                {isFinite(recoveryNeeded) ? recoveryNeeded.toFixed(0) : '??'}%
-                            </div>
-                            <span className="text-[9px] text-orange-500 font-black uppercase">to break even</span>
-                        </div>
-                    </div>
-                    <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 mt-4 font-medium italic leading-relaxed">
-                        Volatility isn't just risk—it's a mathematical handicap. Our stable-baskets are designed to shield you from this asymmetry.
-                    </p>
-                </div>
-
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [showYieldBreakdown, setShowYieldBreakdown] = useState(false);
     const [highlightedRegionIndex, setHighlightedRegionIndex] = useState<number | null>(null);
     const [expandedGrade, setExpandedGrade] = useState<string | null>(null);
     const [showGrades, setShowGrades] = useState(false);
     const [showAssetInventory, setShowAssetInventory] = useState(false);
+    const [showAmounts, setShowAmounts] = useState(false);
 
-    // Animated counter for diversification score
     const { formattedValue: animatedScore, isComplete: scoreAnimationComplete } = useAnimatedCounter({
         target: diversificationScore,
         duration: 800,
@@ -143,7 +112,6 @@ const calculateRecovery = (lossPercent: number) => {
         return 'D';
     };
 
-    // Trigger grade reveal after score animation completes
     React.useEffect(() => {
         if (scoreAnimationComplete) {
             const timer = setTimeout(() => setShowGrades(true), 200);
@@ -157,44 +125,42 @@ const calculateRecovery = (lossPercent: number) => {
         const rwaPercent = totalValue > 0 ? (rwaAllocation / totalValue) * 100 : 0;
 
         const baseUrl = 'https://diversifiapp.vercel.app';
-
-        // Generate unique share ID based on user stats
         const shareId = `${Date.now().toString(36)}`;
-
-        // Calculate percentile (mock - in production could be based on actual user data)
         const percentile = Math.min(99, Math.max(50, Math.round(diversificationScore + 10)));
-
-        // Build dynamic share page URL with fc:miniapp meta tags
-        // Note: Don't pre-encode query params - they'll be encoded when the full URL is encoded for the share intent
         const sharePageUrl = `${baseUrl}/share/${shareId}?r=${activeRegions}&d=${getLetterRating(goalScores.diversify)}&i=${getLetterRating(goalScores.hedge)}&rwa=${rwaPercent.toFixed(1)}&s=${diversificationScore}&p=${percentile}`;
 
         if (platform === 'twitter') {
-            const twitterText = `🛡️ My DiversiFi Protection Score:\n\n` +
-                `📍 ${activeRegions} regions protected\n` +
-                `📊 Diversification: ${getLetterRating(goalScores.diversify)}\n` +
-                `💰 Inflation Hedge: ${getLetterRating(goalScores.hedge)}\n` +
-                `🏠 RWA Exposure: ${rwaPercent.toFixed(1)}%\n\n` +
-                `Top ${percentile}% of users!\n\n` +
-                `#DiversiFi #WealthProtection`;
+            const twitterText = [
+                '🛡️ My DiversiFi Protection Score:',
+                `📍 ${activeRegions} regions protected`,
+                `📊 Diversification: ${getLetterRating(goalScores.diversify)}`,
+                `💰 Inflation Hedge: ${getLetterRating(goalScores.hedge)}`,
+                `🏠 RWA Exposure: ${rwaPercent.toFixed(1)}%`,
+                '',
+                `Top ${percentile}% of users!`,
+                '',
+                '#DiversiFi #WealthProtection',
+            ].join('\n');
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(twitterText)}&url=${encodeURIComponent(sharePageUrl)}`);
         } else {
-            // Engaging Farcaster cast text with competitive element
-            const castText = `Just checked my DiversiFi protection score:\n\n` +
-                `🛡️ ${activeRegions} regions • Diversification ${getLetterRating(goalScores.diversify)} • Hedge ${getLetterRating(goalScores.hedge)}\n\n` +
-                `Top ${percentile}% of users. How protected are you?`;
+            const castText = [
+                'Just checked my DiversiFi protection score:',
+                '',
+                `🛡️ ${activeRegions} regions • Diversification ${getLetterRating(goalScores.diversify)} • Hedge ${getLetterRating(goalScores.hedge)}`,
+                '',
+                `Top ${percentile}% of users. How protected are you?`,
+            ].join('\n');
 
-            // Try to use SDK composeCast if in Farcaster Mini App context
             try {
                 const context = await Promise.race([
                     sdk.context,
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 200))
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 200)),
                 ]);
 
                 if (context && sdk.actions?.composeCast) {
-                    // Use native SDK - embeds the share page with fc:miniapp meta for rich preview
                     sdk.actions.composeCast({
                         text: castText,
-                        embeds: [sharePageUrl]
+                        embeds: [sharePageUrl],
                     });
                     return;
                 }
@@ -202,7 +168,6 @@ const calculateRecovery = (lossPercent: number) => {
                 // Not in Farcaster Mini App context, fall through to URL intent
             }
 
-            // Fallback for external browsers - use 'embeds' not 'embeds[]'
             const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(castText)}&embeds=${encodeURIComponent(sharePageUrl)}`;
             window.open(warpcastUrl);
         }
@@ -210,7 +175,6 @@ const calculateRecovery = (lossPercent: number) => {
 
     return (
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
-            {/* Header */}
             <div className="bg-gradient-to-r from-gray-900 to-gray-800 p-4">
                 <div className="flex items-center justify-between">
                     <div>
@@ -223,11 +187,7 @@ const calculateRecovery = (lossPercent: number) => {
                             disabled={isRefreshing}
                             className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors disabled:opacity-50"
                         >
-                            {isRefreshing ? (
-                                <LoadingSpinner size="sm" />
-                            ) : (
-                                <span>🔄</span>
-                            )}
+                            {isRefreshing ? <LoadingSpinner size="sm" /> : <span>🔄</span>}
                         </button>
                         <button
                             onClick={() => shareToSocial('farcaster')}
@@ -240,6 +200,40 @@ const calculateRecovery = (lossPercent: number) => {
             </div>
 
             <div className="p-4 space-y-6">
+                {/* Recovery Calculator Widget */}
+                <div className="bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 p-5 rounded-2xl border border-orange-200 dark:border-orange-800/50 shadow-sm">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="w-8 h-8 flex items-center justify-center bg-orange-100 dark:bg-orange-900/50 rounded-lg">
+                            <span className="text-lg">⚠️</span>
+                        </div>
+                        <h3 className="font-black text-orange-950 dark:text-orange-50 text-xs uppercase tracking-widest">The Recovery Trap</h3>
+                    </div>
+                    <div className="flex items-center gap-6">
+                        <div className="flex-1">
+                            <label className="text-[10px] text-orange-800 dark:text-orange-300 font-bold uppercase tracking-wider mb-1.5 block">If I lose</label>
+                            <div className="flex items-center bg-white/50 dark:bg-black/20 rounded-xl border border-orange-200 dark:border-orange-700 p-2.5 shadow-inner">
+                                <input
+                                    type="number"
+                                    value={hypotheticalLoss}
+                                    onChange={(e) => setHypotheticalLoss(Math.min(99, Math.max(0, Number(e.target.value))))}
+                                    className="w-full bg-transparent text-sm font-bold text-gray-900 dark:text-white outline-none"
+                                />
+                                <span className="text-orange-500 font-black">%</span>
+                            </div>
+                        </div>
+                        <div className="flex-1 text-center bg-white/40 dark:bg-black/10 rounded-xl p-3 border border-orange-100 dark:border-orange-800/50">
+                            <label className="text-[10px] text-orange-800 dark:text-orange-300 font-bold uppercase tracking-wider mb-0.5 block">I need to gain</label>
+                            <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
+                                {isFinite(recoveryNeeded) ? recoveryNeeded.toFixed(0) : '??'}%
+                            </div>
+                            <span className="text-[9px] text-orange-500 font-black uppercase">to break even</span>
+                        </div>
+                    </div>
+                    <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 mt-4 font-medium italic leading-relaxed">
+                        Volatility isn't just risk—it's a mathematical handicap. Our stable-baskets are designed to shield you from this asymmetry.
+                    </p>
+                </div>
+
                 {/* Diversification Score */}
                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
                     <div className="flex items-end justify-between">
@@ -253,22 +247,22 @@ const calculateRecovery = (lossPercent: number) => {
                             <div className="text-3xl font-black text-blue-600 dark:text-blue-400">
                                 {Number(animatedScore).toFixed(0)}/100
                             </div>
-                            <div className={`text-sm font-bold px-3 py-1 rounded-full inline-block mt-2 ${diversificationScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            <div className={`text-sm font-bold px-3 py-1 rounded-full inline-block mt-2 ${
+                                diversificationScore >= 80 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
                                 diversificationScore >= 60 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                    diversificationScore >= 40 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
-                                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                                }`}>
+                                diversificationScore >= 40 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' :
+                                'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'}`
+                            }>
                                 {diversificationRating}
                             </div>
                         </div>
                     </div>
 
-                    {/* Progress bar */}
                     <div className="mt-4 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
                         <div
                             className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2.5 rounded-full"
                             style={{ width: `${diversificationScore}%` }}
-                        ></div>
+                        />
                     </div>
                 </div>
 
@@ -280,9 +274,9 @@ const calculateRecovery = (lossPercent: number) => {
                                 const letterGrade = getLetterRating(score);
                                 const gradeColor =
                                     score >= 80 ? 'from-green-500 to-emerald-600' :
-                                        score >= 60 ? 'from-blue-500 to-indigo-600' :
-                                            score >= 40 ? 'from-amber-500 to-orange-500' :
-                                                'from-red-500 to-red-600';
+                                    score >= 60 ? 'from-blue-500 to-indigo-600' :
+                                    score >= 40 ? 'from-amber-500 to-orange-500' :
+                                    'from-red-500 to-red-600';
 
                                 return (
                                     <motion.div
@@ -299,16 +293,13 @@ const calculateRecovery = (lossPercent: number) => {
                                                 <h4 className="font-black text-gray-900 dark:text-white text-sm capitalize">
                                                     {goal.replace(/([A-Z])/g, ' $1').trim()}
                                                 </h4>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    Protection Grade
-                                                </p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Protection Grade</p>
                                             </div>
                                             <div className={`bg-gradient-to-r ${gradeColor} text-white text-lg font-black w-12 h-12 rounded-xl flex items-center justify-center shadow-lg`}>
                                                 {letterGrade}
                                             </div>
                                         </div>
 
-                                        {/* Expanded explanation */}
                                         <AnimatePresence>
                                             {expandedGrade === goal && (
                                                 <motion.div
@@ -353,16 +344,14 @@ const calculateRecovery = (lossPercent: number) => {
                         {regionData.map((region, index) => (
                             <div
                                 key={index}
-                                className={`p-2 rounded-lg border text-center transition-all ${highlightedRegionIndex === index
-                                    ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-105'
-                                    : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'
-                                    }`}
+                                className={`p-2 rounded-lg border text-center transition-all ${
+                                    highlightedRegionIndex === index
+                                        ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-105'
+                                        : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'
+                                }`}
                             >
                                 <div className="flex items-center justify-center gap-1">
-                                    <div
-                                        className="w-3 h-3 rounded-full"
-                                        style={{ backgroundColor: region.color }}
-                                    ></div>
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: region.color }} />
                                     <span className="text-xs font-bold text-gray-900 dark:text-white truncate">
                                         {region.region}
                                     </span>
@@ -395,7 +384,7 @@ const calculateRecovery = (lossPercent: number) => {
                     </div>
                 )}
 
-                {/* Asset Inventory - Essential Balance Visibility */}
+                {/* Asset Inventory */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl shadow-inner overflow-hidden">
                     <button
                         onClick={() => setShowAssetInventory(!showAssetInventory)}
@@ -415,9 +404,7 @@ const calculateRecovery = (lossPercent: number) => {
 
                     {showAssetInventory && (
                         <div className="p-4 pt-0 border-t border-gray-100 dark:border-gray-700/50 animate-in fade-in slide-in-from-top-1">
-                            <AssetInventory
-                                tokens={yieldSummary?.allTokens || []}
-                            />
+                            <AssetInventory tokens={yieldSummary?.allTokens || []} />
                         </div>
                     )}
                 </div>
@@ -435,20 +422,16 @@ const calculateRecovery = (lossPercent: number) => {
                             </button>
                         </div>
 
-                        {yieldSummary && (
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-2xl font-black text-green-600 dark:text-green-400">
-                                    {typeof yieldSummary.avgYieldRate !== 'undefined' ? yieldSummary.avgYieldRate.toFixed(2) : '0.00'}%
-                                </span>
-                                <span className="text-xs text-gray-600 dark:text-gray-400">APY</span>
-                            </div>
-                        )}
+                        <div className="flex items-baseline gap-2">
+                            <span className="text-2xl font-black text-green-600 dark:text-green-400">
+                                {typeof yieldSummary.avgYieldRate !== 'undefined' ? yieldSummary.avgYieldRate.toFixed(2) : '0.00'}%
+                            </span>
+                            <span className="text-xs text-gray-600 dark:text-gray-400">APY</span>
+                        </div>
 
-                        {yieldSummary && (
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                                Estimated annual earnings: ${typeof yieldSummary.totalAnnualYield !== 'undefined' ? yieldSummary.totalAnnualYield.toFixed(2) : '0.00'}
-                            </p>
-                        )}
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                            Estimated annual earnings: ${typeof yieldSummary.totalAnnualYield !== 'undefined' ? yieldSummary.totalAnnualYield.toFixed(2) : '0.00'}
+                        </p>
 
                         <AnimatePresence>
                             {showYieldBreakdown && (
@@ -459,7 +442,7 @@ const calculateRecovery = (lossPercent: number) => {
                                     className="mt-3 pt-3 border-t border-green-200 dark:border-green-800 overflow-hidden"
                                 >
                                     <div className="space-y-2">
-                                        {yieldSummary && yieldSummary.tokens && yieldSummary.tokens.map((item: TokenAllocation, index: number) => (
+                                        {yieldSummary.tokens?.map((item: TokenAllocation, index: number) => (
                                             <div key={index} className="flex justify-between text-sm">
                                                 <span className="text-gray-600 dark:text-gray-400">{item.symbol}</span>
                                                 <span className="font-medium text-green-600 dark:text-green-400">{item.yieldRate?.toFixed(2) || '0.00'}%</span>
@@ -474,14 +457,10 @@ const calculateRecovery = (lossPercent: number) => {
 
                 {/* Action Buttons */}
                 <div className="grid grid-cols-2 gap-3">
-                    <PrimaryButton
-                        onClick={onOptimize}
-                    >
+                    <PrimaryButton onClick={onOptimize}>
                         <span>Optimize Portfolio</span>
                     </PrimaryButton>
-                    <PrimaryButton
-                        onClick={onSwap}
-                    >
+                    <PrimaryButton onClick={onSwap}>
                         <span>Swap Assets</span>
                     </PrimaryButton>
                 </div>
