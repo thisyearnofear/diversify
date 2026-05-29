@@ -58,7 +58,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
 
             {/* Brand and Mascot — always visible */}
             <motion.div
-                className="mb-2 relative mt-4 md:mt-0"
+                className="mb-4 relative mt-6 md:mt-4"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', duration: 1 }}
@@ -72,19 +72,6 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                 <GuardianMascot size={100} mood={phase === 'impact' ? 'happy' : 'neutral'} />
             </motion.div>
 
-            {/* Social Proof Counter Bar */}
-            <motion.div
-                className="w-full max-w-sm mb-6"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6, duration: 0.5 }}
-            >
-                <div className="bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-2 text-center">
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                        Join 2,400+ users protecting $1.2M+ in savings
-                    </span>
-                </div>
-            </motion.div>
 
             {/* Phase 1: Region Selection */}
             {phase === 'regions' && (

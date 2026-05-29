@@ -114,7 +114,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                     value={currentChainId || ''}
                     onChange={(e) => switchNetwork(Number(e.target.value))}
                     disabled={isSwitching}
-                    className="text-xs font-black uppercase tracking-tight bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 pr-6 text-gray-700 dark:text-gray-300 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 appearance-none cursor-pointer"
+                    className="text-xs font-black uppercase tracking-tight bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 pr-6 text-gray-700 dark:text-gray-300 hover:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 appearance-none cursor-pointer min-w-[5.5rem]"
                     style={{
                         backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
                         backgroundPosition: 'right 0.25rem center',

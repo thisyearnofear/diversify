@@ -36,7 +36,7 @@ export class VeniceProvider extends BaseAIProvider {
   }
 
   isAvailable(): boolean {
-    return !!this.apiKey && !!this.client;
+    return !!this.apiKey;
   }
 
   async generateChatCompletion(
