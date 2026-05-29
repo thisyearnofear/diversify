@@ -17,7 +17,7 @@ const nextConfig = {
     appNewScrollHandler: true,
   },
 
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, webpack }) => {
     if (!isServer) {
       config.resolve.alias = {
         ...config.resolve.alias,
@@ -31,7 +31,6 @@ const nextConfig = {
         'dtrace-provider': false,
         stream: false,
         util: false,
-        buffer: false,
         assert: false,
         http: false,
         https: false,
@@ -39,6 +38,17 @@ const nextConfig = {
         url: false,
         crypto: false,
       };
+
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        buffer: require.resolve('buffer/'),
+      };
+
+      config.plugins.push(
+        new webpack.ProvidePlugin({
+          Buffer: ['buffer', 'Buffer'],
+        }),
+      );
     }
     return config;
   },
@@ -55,7 +65,7 @@ const nextConfig = {
       'dtrace-provider': './lib/empty-module.js',
       stream: './lib/empty-module.js',
       util: './lib/empty-module.js',
-      buffer: './lib/empty-module.js',
+      buffer: require.resolve('buffer/'),
       assert: './lib/empty-module.js',
       http: './lib/empty-module.js',
       https: './lib/empty-module.js',

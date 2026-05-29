@@ -11,6 +11,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -72,8 +74,8 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
 
     try {
       const [metricsRes, ledgerRes] = await Promise.all([
-        fetch('/api/agent/x402-metrics').then(r => r.json()),
-        fetch('/api/agent/zero-g-ledger').then(r => r.json()),
+        fetch(`${API_BASE}/api/agent/x402-metrics`).then(r => r.json()),
+        fetch(`${API_BASE}/api/agent/zero-g-ledger`).then(r => r.json()),
       ]);
 
       setMetricsData(metricsRes);
