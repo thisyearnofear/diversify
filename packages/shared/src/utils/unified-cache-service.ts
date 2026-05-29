@@ -60,7 +60,6 @@ export class UnifiedCacheService {
 
     // Check if there's already a pending request for this key
     if (this.pendingRequests.has(key)) {
-      console.log(`[Cache] Coalescing request for key: ${key}`);
       const data = await this.pendingRequests.get(key);
       return {
         data,

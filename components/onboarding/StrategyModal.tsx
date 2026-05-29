@@ -57,7 +57,7 @@ export default function StrategyModal({
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.96, opacity: 0, y: 12 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="fixed inset-4 md:inset-x-auto md:inset-y-8 md:w-full md:max-w-lg md:mx-auto z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10 overflow-y-auto max-h-[90vh] flex flex-col"
+                        className="fixed inset-4 md:inset-0 md:m-auto md:w-full md:max-w-lg md:h-fit md:max-h-[90vh] z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10 overflow-y-auto flex flex-col"
                     >
                         <WelcomeScreen
                             onContinue={() => { /* WelcomeScreen drives its own phase */ }}

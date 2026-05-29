@@ -100,7 +100,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
 
         {/* Gradients */}
         <defs>
-          <linearGradient id="bodyGradient" x1="50" y1="10" x2="50" y2="90" gradientUnits="userSpaceOnPoints">
+          <linearGradient id="bodyGradient" x1="50" y1="10" x2="50" y2="90" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#EFF6FF" />
             <stop offset="100%" stopColor="#DBEAFE" />
           </linearGradient>
