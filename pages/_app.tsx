@@ -25,7 +25,7 @@ export default function App({ Component, pageProps }: AppProps) {
         const { isMiniPayEnvironment } = await import("@diversifi/shared");
         const inMiniPay = isMiniPayEnvironment();
         setIsInMiniPay(inMiniPay);
-        
+
         // Signal Farcaster Readiness
         console.log("[Farcaster] Attempting early ready signal...");
         if (sdk && sdk.actions && sdk.actions.ready) {
@@ -39,10 +39,9 @@ export default function App({ Component, pageProps }: AppProps) {
           console.log("Redirecting to /minipay-test page");
           router.push("/minipay-test");
         }
-
-        setIsReady(true);
       } catch (e) {
         console.error("App initialization failed:", e);
+      } finally {
         setIsReady(true);
       }
     };
@@ -50,9 +49,23 @@ export default function App({ Component, pageProps }: AppProps) {
     init();
   }, [router]);
 
-  // Prevent hydration mismatch by only rendering after client-side init
+  // Ensure client-side only mount for providers that use browser APIs
+  // Privy, Wagmi, and wallet hooks access localStorage/window during hydration
   if (!isReady) {
-    return null;
+    return (
+      <>
+        <Head>
+          <title>DiversiFi - Stablecoin Portfolio Diversification</title>
+          <meta name="description" content="Visualize and manage your stablecoin portfolio diversification" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+          <link rel="icon" href="/icon.png" />
+          <link rel="apple-touch-icon" href="/icon.png" />
+        </Head>
+      </>
+    );
   }
 
   return (
