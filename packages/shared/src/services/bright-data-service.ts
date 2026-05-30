@@ -377,56 +377,53 @@ ${rawHtml.slice(0, 6000)}`,
 function parseGoogleSerpHtml(html: string, maxResults: number): Array<{ title: string; snippet: string; url: string; date?: string; source?: string }> {
   const results: Array<{ title: string; snippet: string; url: string; date?: string; source?: string }> = [];
 
-  // Extract organic search results from Google HTML
-  // Google wraps results in <h3> tags, links in <a href="..."> tags
-  const resultBlocks = html.split(/<div[^>]*class="[^"]*g[^"]*"/i).slice(1);
-  if (resultBlocks.length === 0) {
-    // Try alternative pattern — sometimes Google uses different markup
-    const altBlocks = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi);
-    if (altBlocks) {
-      for (const block of altBlocks.slice(0, maxResults)) {
-        const title = block.replace(/<[^>]+>/g, '').trim();
-        const linkMatch = html.match(new RegExp(`<a[^>]*href="(https?://[^"]+)"[^>]*>[\\s\\S]*?${escapeRegex(title.slice(0, 30))}`));
-        if (title) {
-          results.push({
-            title,
-            snippet: '',
-            url: linkMatch?.[1] || '',
-            source: linkMatch?.[1] ? new URL(linkMatch[1]).hostname.replace('www.', '') : '',
-          });
-        }
-      }
-      return results;
-    }
-    return [];
-  }
+  // Extract title-URL pairs from search result links
+  // Google search results: <a href="URL"><h3>TITLE</h3></a>
+  const linkBlocks = html.match(/<a[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi) || [];
+  const seen = new Set<string>();
 
-  for (const block of resultBlocks.slice(0, maxResults)) {
+  for (const block of linkBlocks) {
+    if (results.length >= maxResults) break;
+
+    const hrefMatch = block.match(/href="(https?:\/\/[^"]+)"/i);
+    const url = hrefMatch ? hrefMatch[1].replace(/&amp;/g, '&') : '';
+    if (!url || url.includes('google.com') || url.includes('accounts.google.com') || url.includes('support.google.com')) continue;
+    if (seen.has(url)) continue;
+    seen.add(url);
+
     // Extract title from <h3>
     const titleMatch = block.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i);
-    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#39;/g, "'").trim() : '';
 
-    // Extract URL from <a href>
-    const linkMatch = block.match(/<a[^>]*href="(https?:\/\/[^\s"]+)"[^>]*>/i);
-    const url = linkMatch ? linkMatch[1] : '';
-
-    // Extract snippet
-    const snippetMatch = block.match(/(?:<span[^>]*class="[^"]*st[^"]*"[^>]*>|<\/h3>[\s\S]*?)([\s\S]*?)(?:<\/span>|<br)/i);
-    const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+    // Find snippet near this result
+    const blockStart = html.indexOf(url);
+    const afterBlock = blockStart > 0 ? html.slice(blockStart, blockStart + 2000) : '';
+    const snippetMatch = afterBlock.match(/(?:<span[^>]*>|<\/h3>)\s*([^<]{30,300})/i);
+    const snippet = snippetMatch ? snippetMatch[1].trim() : '';
 
     if (title || url) {
       let source = '';
-      try { source = url ? new URL(url).hostname.replace('www.', '') : ''; } catch {}
+      try { source = new URL(url).hostname.replace('www.', ''); } catch {}
 
       results.push({ title, snippet: snippet.slice(0, 200), url, source });
     }
   }
 
-  return results;
-}
+  // Fallback: look for any h3 tags with related links
+  if (results.length === 0) {
+    const h3s = html.match(/<h3[^>]*>(.*?)<\/h3>/gi) || [];
+    const h3Texts = h3s.map(h => h.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').trim()).filter(Boolean);
+    const rawLinks = html.match(/https?:\/\/[^\s"<>]+/gi) || [];
+    const externalLinks = rawLinks.filter(l => !l.includes('google.com') && !l.includes('gstatic.com'));
 
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    for (let i = 0; i < Math.min(h3Texts.length, externalLinks.length, maxResults); i++) {
+      let source = '';
+      try { source = new URL(externalLinks[i]).hostname.replace('www.', ''); } catch {}
+      results.push({ title: h3Texts[i], snippet: '', url: externalLinks[i], source });
+    }
+  }
+
+  return results;
 }
 
 async function fetchWebUnlocker(url: string): Promise<string | null> {
