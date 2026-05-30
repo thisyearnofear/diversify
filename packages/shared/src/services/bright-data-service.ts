@@ -21,8 +21,9 @@ import type {
   BrightDataCommodity,
 } from "./bright-data-types";
 
-const BRIGHT_DATA_BASE = "https://api.brightdata.com";
-const API_KEY = () => process.env.BRIGHT_DATA_API_KEY;
+const BRIGHT_DATA_BASE = "https://api.brightdata.com/request";
+const API_KEY = () => process.env.BRIGHT_DATA_API_KEY || "";
+const UNLOCKER_ZONE = () => process.env.BRIGHT_DATA_UNLOCKER_ZONE || "web_unlocker1";
 
 const CENTRAL_BANK_DOMAINS: Record<BrightDataBankCode, string> = {
   FED: "federalreserve.gov",
@@ -216,6 +217,11 @@ async function fetchCommodityPrice(
   const rawHtml = await fetchWebUnlocker(url);
   if (!rawHtml) return null;
 
+  // Try direct HTML parsing first
+  const parsedHtml = parseCommodityHtml(commodity, rawHtml, url);
+  if (parsedHtml) return parsedHtml;
+
+  // Fallback: strip HTML and try Gemini
   const text = stripHtml(rawHtml).slice(0, 3000);
 
   return parseWithGemini<BrightDataCommodityPrice | null>(
@@ -229,6 +235,72 @@ SCRAPED PAGE CONTENT:
 ${text}`,
     null
   );
+}
+
+function parseCommodityHtml(commodity: string, html: string, sourceUrl: string): BrightDataCommodityPrice | null {
+  const text = stripHtml(html);
+  const units: Record<string, string> = {
+    gold: "per ounce", crude_oil: "per barrel", brent: "per barrel",
+    copper: "per ounce", wheat: "per bushel", corn: "per bushel",
+  };
+
+  // Try multiple pattern families
+  const patterns = [
+    // "Gold price today: $2,342.50"
+    new RegExp(`${commodity.replace(/_/g, '\\s*')}[\\s\\w]*?(?:price|spot)[:\\s]*\\$?([\\d,]+(?:\\.\\d{1,2})?)`, 'i'),
+    // "$2,342.50 per ounce"
+    /\$?([\d,]+(?:\.\d{1,2})?)\s*(?:USD|US\s*Dollars?)?\s*(?:per\s+(?:troy\s+)?(?:oz|ounce|barrel|bushel))/i,
+    // Simple price: 2,342.50 USD
+    /([\d,]+(?:\.\d{1,2})?)\s*(?:USD|US\s*Dollars?)/i,
+  ];
+
+  const changePatterns = [
+    /(?:change|Δ)[\s:]*([+-]?[\d,]+(?:\.\d{1,2})?)/i,
+    /([+-]?[\d,]+(?:\.\d{1,2})?)\s*(?:%|percent)/i,
+  ];
+
+  let price: number | null = null;
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) {
+      price = parseFloat(match[1].replace(/,/g, ''));
+      break;
+    }
+  }
+
+  if (!price || isNaN(price)) return null;
+
+  let change24h = 0;
+  let change24hPct = 0;
+  for (const pattern of changePatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      const val = parseFloat(match[1].replace(/,/g, ''));
+      if (!isNaN(val)) {
+        // If it has a % sign, it's percentage change
+        if (match[0].includes('%')) {
+          change24hPct = val;
+          change24h = (price * val) / 100;
+        } else {
+          change24h = val;
+          change24hPct = (val / price) * 100;
+        }
+        break;
+      }
+    }
+  }
+
+  return {
+    commodity,
+    price,
+    currency: "USD",
+    unit: units[commodity] || "per unit",
+    change24h,
+    change24hPct,
+    source: new URL(sourceUrl).hostname.replace("www.", ""),
+    sourceUrl,
+    retrievedAt: new Date().toISOString(),
+  };
 }
 
 function buildNewsQueries(regions: string[], topics: string[]): string[] {
@@ -277,43 +349,103 @@ async function fetchSerpResults(
   query: string,
   numResults: number = 5
 ): Promise<Array<{ title: string; snippet: string; url: string; date?: string; source?: string }>> {
-  const data = await makeBrightDataRequest<any>(
-    "/serp/req",
-    {
-      query,
-      num_results: numResults,
-      include_markdown: false,
-    }
+  const zone = UNLOCKER_ZONE();
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=${numResults}&hl=en`;
+
+  const rawHtml = await makeBrightDataRequest<string>({
+    zone,
+    url: googleUrl,
+    format: "raw",
+  });
+
+  if (!rawHtml) return [];
+  const results = parseGoogleSerpHtml(rawHtml, numResults);
+  if (results.length > 0) return results;
+
+  // Fallback: try Gemini
+  return parseWithGemini<Array<{ title: string; snippet: string; url: string; date?: string; source?: string }>>(
+    `Extract search results from Google SERP HTML. Return VALID JSON array of objects:
+[{ "title": string, "snippet": string, "url": string, "date": string|null, "source": string }]
+Only include actual organic search results. Return [] if no results found.
+
+HTML:
+${rawHtml.slice(0, 6000)}`,
+    []
   );
+}
 
-  if (!data?.organic) return [];
+function parseGoogleSerpHtml(html: string, maxResults: number): Array<{ title: string; snippet: string; url: string; date?: string; source?: string }> {
+  const results: Array<{ title: string; snippet: string; url: string; date?: string; source?: string }> = [];
 
-  return data.organic.slice(0, numResults).map((r: any) => ({
-    title: r.title || "",
-    snippet: r.snippet || r.description || "",
-    url: r.link || r.url || "",
-    date: r.date || undefined,
-    source: r.source || extractDomain(r.link || ""),
-  }));
+  // Extract organic search results from Google HTML
+  // Google wraps results in <h3> tags, links in <a href="..."> tags
+  const resultBlocks = html.split(/<div[^>]*class="[^"]*g[^"]*"/i).slice(1);
+  if (resultBlocks.length === 0) {
+    // Try alternative pattern — sometimes Google uses different markup
+    const altBlocks = html.match(/<h3[^>]*>([\s\S]*?)<\/h3>/gi);
+    if (altBlocks) {
+      for (const block of altBlocks.slice(0, maxResults)) {
+        const title = block.replace(/<[^>]+>/g, '').trim();
+        const linkMatch = html.match(new RegExp(`<a[^>]*href="(https?://[^"]+)"[^>]*>[\\s\\S]*?${escapeRegex(title.slice(0, 30))}`));
+        if (title) {
+          results.push({
+            title,
+            snippet: '',
+            url: linkMatch?.[1] || '',
+            source: linkMatch?.[1] ? new URL(linkMatch[1]).hostname.replace('www.', '') : '',
+          });
+        }
+      }
+      return results;
+    }
+    return [];
+  }
+
+  for (const block of resultBlocks.slice(0, maxResults)) {
+    // Extract title from <h3>
+    const titleMatch = block.match(/<h3[^>]*>([\s\S]*?)<\/h3>/i);
+    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+    // Extract URL from <a href>
+    const linkMatch = block.match(/<a[^>]*href="(https?:\/\/[^\s"]+)"[^>]*>/i);
+    const url = linkMatch ? linkMatch[1] : '';
+
+    // Extract snippet
+    const snippetMatch = block.match(/(?:<span[^>]*class="[^"]*st[^"]*"[^>]*>|<\/h3>[\s\S]*?)([\s\S]*?)(?:<\/span>|<br)/i);
+    const snippet = snippetMatch ? snippetMatch[1].replace(/<[^>]+>/g, '').trim() : '';
+
+    if (title || url) {
+      let source = '';
+      try { source = url ? new URL(url).hostname.replace('www.', '') : ''; } catch {}
+
+      results.push({ title, snippet: snippet.slice(0, 200), url, source });
+    }
+  }
+
+  return results;
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 async function fetchWebUnlocker(url: string): Promise<string | null> {
-  const data = await makeBrightDataRequest<any>(
-    "/unlocker/request",
-    {
-      url,
-      method: "GET",
-      format: "raw",
-    }
-  );
+  const zone = UNLOCKER_ZONE();
+  if (!zone) {
+    console.warn("[BrightData] No BRIGHT_DATA_UNLOCKER_ZONE configured");
+    return null;
+  }
 
-  return data?.body || data?.html || data?.content || null;
+  return makeBrightDataRequest<string>({
+    zone,
+    url,
+    format: "raw",
+  });
 }
 
 // ── SHARED INFRASTRUCTURE ─────────────────────────────────────────────
 
 async function makeBrightDataRequest<T>(
-  endpoint: string,
   body: Record<string, unknown>
 ): Promise<T | null> {
   const key = API_KEY();
@@ -323,15 +455,14 @@ async function makeBrightDataRequest<T>(
   }
 
   const maxRetries = 2;
-  const baseDelay = 1000;
-  const url = `${BRIGHT_DATA_BASE}${endpoint}`;
+  const baseDelay = 2000;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
+      const timeout = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch(url, {
+      const response = await fetch(BRIGHT_DATA_BASE, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${key}`,
@@ -343,16 +474,23 @@ async function makeBrightDataRequest<T>(
 
       clearTimeout(timeout);
 
+      const responseText = await response.text();
+
       if (response.status >= 400) {
-        const errorText = await response.text().catch(() => "");
-        throw new Error(`HTTP ${response.status}: ${errorText.slice(0, 200)}`);
+        console.warn(`[BrightData] HTTP ${response.status}: ${responseText.slice(0, 300)}`);
+        if (response.status >= 400 && response.status < 500) {
+          return null; // Don't retry client errors
+        }
+        throw new Error(`HTTP ${response.status}`);
       }
 
-      return (await response.json()) as T;
+      return responseText as unknown as T;
     } catch (error: any) {
+      if (error.name === "AbortError") {
+        console.warn(`[BrightData] Request timed out (attempt ${attempt + 1})`);
+      }
       const is4xx = error?.message?.match(/^HTTP 4\d\d/);
       if (is4xx || attempt === maxRetries) {
-        console.warn(`[BrightData] Request failed (attempt ${attempt + 1}):`, error.message);
         return null;
       }
 
@@ -397,9 +535,46 @@ async function parseWithGemini<T>(
 
     return JSON.parse(candidate) as T;
   } catch (err) {
-    console.warn("[BrightData] Gemini parsing failed:", (err as Error).message);
-    return fallback;
+    console.warn("[BrightData] Gemini parsing failed, using regex fallback:", (err as Error).message);
+    try {
+      return regexParse<T>(systemPrompt, fallback);
+    } catch (e2) {
+      console.warn("[BrightData] Regex fallback also failed:", (e2 as Error).message);
+      return fallback;
+    }
   }
+}
+
+function regexParse<T>(systemPrompt: string, fallback: T): T {
+  const text = systemPrompt;
+
+  // Try to extract headlines + URLs from search result HTML or text
+  const headlineMatches = text.match(/TITLE:\s*(.+?)(?:\n|$)/gi) || [];
+  const urlMatches = text.match(/URL:\s*(https?:\/\/\S+)/gi) || [];
+  const snippetMatches = text.match(/SNIPPET:\s*(.+?)(?:\n|$)/gi) || [];
+
+  const headlines = headlineMatches.map((m: string) => m.replace(/^TITLE:\s*/i, '').trim());
+  const urls = urlMatches.map((m: string) => m.replace(/^URL:\s*/i, '').trim());
+  const snippets = snippetMatches.map((m: string) => m.replace(/^SNIPPET:\s*/i, '').trim());
+
+  if (headlines.length > 0) {
+    const results = headlines.map((title: string, i: number) => ({
+      title,
+      snippet: snippets[i] || '',
+      url: urls[i] || '',
+      source: urls[i] ? new URL(urls[i]).hostname.replace('www.', '') : '',
+    }));
+    return results as unknown as T;
+  }
+
+  // Try to extract commodity prices from raw text
+  const priceMatch = text.match(/(\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?)\s*(?:USD|\$)/i);
+  if (priceMatch) {
+    const price = parseFloat(priceMatch[1].replace(/,/g, ''));
+    return { price, currency: 'USD' } as unknown as T;
+  }
+
+  return fallback;
 }
 
 function stripHtml(html: string): string {
