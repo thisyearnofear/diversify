@@ -423,26 +423,8 @@ export default function AIChat() {
     }
   }, [currentUserMsgCount, setDrawerOpen]);
 
-  // Handle actions from AI responses
-  useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage?.role === "assistant" && lastMessage.action) {
-      const { type, delay = 1500 } = lastMessage.action;
-      
-      if (type === "navigate" && lastMessage.action.tab) {
-        const { tab } = lastMessage.action;
-        const timer = setTimeout(() => {
-          const migrated = LEGACY_TAB_MAP[tab];
-          const candidate = migrated || tab;
-          if (isTabId(candidate)) {
-            setActiveTab(candidate);
-          }
-          setDrawerOpen(false);
-        }, delay);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [messages, setActiveTab, setDrawerOpen]);
+  // Actions are now user-initiated via buttons below each AI response.
+  // No auto-triggers — no tab switches, no claim popups, no navigation.
 
   if (!isDrawerOpen && !showClaimFlow) return null;
 
