@@ -427,13 +427,22 @@ export default function AIChat() {
   useEffect(() => {
     const lastMessage = messages[messages.length - 1];
     if (lastMessage?.role === "assistant" && lastMessage.action) {
-      const { type } = lastMessage.action;
-      // Only auto-trigger execute_rwa (swap) — all other actions use visible buttons
-      if (type === "execute_rwa" && lastMessage.action.fromToken && lastMessage.action.targetAsset) {
-        // SWAP already has its own widget — no auto-navigation needed
+      const { type, delay = 1500 } = lastMessage.action;
+      
+      if (type === "navigate" && lastMessage.action.tab) {
+        const { tab } = lastMessage.action;
+        const timer = setTimeout(() => {
+          const migrated = LEGACY_TAB_MAP[tab];
+          const candidate = migrated || tab;
+          if (isTabId(candidate)) {
+            setActiveTab(candidate);
+          }
+          setDrawerOpen(false);
+        }, delay);
+        return () => clearTimeout(timer);
       }
     }
-  }, [messages]);
+  }, [messages, setActiveTab, setDrawerOpen]);
 
   if (!isDrawerOpen && !showClaimFlow) return null;
 
@@ -599,6 +608,59 @@ export default function AIChat() {
                 ref={scrollRef}
               >
                 {messages.length === 0 && !isChatting && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="h-full flex flex-col items-center justify-center text-center space-y-5"
+                  >
+                    {/* Animated gold coin stack */}
+                    <div className="relative">
+                      <motion.div
+                        animate={{ y: [0, -10, 0] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        className="text-5xl filter drop-shadow-lg"
+                      >
+                        🪙
+                      </motion.div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <p className="text-base font-bold text-amber-800 dark:text-amber-200">
+                        Ask for a clear next action
+                      </p>
+                      <p className="max-w-[300px] text-sm text-gray-600 dark:text-gray-300">
+                        Start with a portfolio summary, a protection plan, or a paid Arc research bundle with on-chain proof.
+                      </p>
+                    </div>
+
+                    <div className="w-full max-w-[320px] rounded-2xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/70 dark:bg-amber-900/10 p-3 text-left">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                        Premium research
+                      </p>
+                      <p className="mt-1 text-xs text-amber-900 dark:text-amber-100">
+                        Paid evidence runs on Arc and costs between <span className="font-bold">$0.004</span> and <span className="font-bold">$0.015</span> USDC.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap justify-center gap-2 max-w-[320px]">
+                      {STARTER_PROMPTS.map(({ label, prompt, badge }) => (
+                        <motion.button
+                          key={label}
+                          onClick={() => submitPrompt(prompt)}
+                          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700/30 hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
+                        >
+                          <span>{label}</span>
+                          <span className="rounded-full bg-white/80 dark:bg-black/20 px-1.5 py-0.5 text-[10px] font-black">
+                            {badge}
+                          </span>
+                        </motion.button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+
+                {messages.map((msg, i) => (
                   <motion.div
                     key={i}
                     initial={{ opacity: 0, y: 10 }}
@@ -720,62 +782,19 @@ export default function AIChat() {
                   </div>
                 )}
 
-                {/* Starter prompts: always visible (full hero on empty, compact row otherwise) */}
-                {!isChatting && (
-                  messages.length === 0 ? (
-                    <motion.div 
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.5 }}
-                      className="h-full flex flex-col items-center justify-center text-center space-y-5"
-                    >
-                      <div className="relative">
-                        <motion.div
-                          animate={{ y: [0, -10, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                          className="text-5xl filter drop-shadow-lg"
-                        >
-                          🪙
-                        </motion.div>
-                      </div>
-                      <div className="space-y-2">
-                        <p className="text-base font-bold text-amber-800 dark:text-amber-200">Ask for a clear next action</p>
-                        <p className="max-w-[300px] text-sm text-gray-600 dark:text-gray-300">Start with a portfolio summary, a protection plan, or a paid Arc research bundle with on-chain proof.</p>
-                      </div>
-                      <div className="w-full max-w-[320px] rounded-2xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/70 dark:bg-amber-900/10 p-3 text-left">
-                        <p className="text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">Premium research</p>
-                        <p className="mt-1 text-xs text-amber-900 dark:text-amber-100">Paid evidence runs on Arc and costs between <span className="font-bold">$0.004</span> and <span className="font-bold">$0.015</span> USDC.</p>
-                      </div>
-                      <div className="flex flex-wrap justify-center gap-2 max-w-[320px]">
-                        {STARTER_PROMPTS.map(({ label, prompt, badge }) => (
-                          <motion.button
-                            key={label}
-                            onClick={() => submitPrompt(prompt)}
-                            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700/30 hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
-                          >
-                            <span>{label}</span>
-                            <span className="rounded-full bg-white/80 dark:bg-black/20 px-1.5 py-0.5 text-[10px] font-black">{badge}</span>
-                          </motion.button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex flex-wrap justify-center gap-1.5 pt-4 pb-2"
-                    >
-                      {STARTER_PROMPTS.map(({ label, prompt }) => (
-                        <button
-                          key={label}
-                          onClick={() => submitPrompt(prompt)}
-                          className="px-2.5 py-1 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </motion.div>
-                  )
+                {/* Starter prompts: compact row when messages exist (full hero shown when empty above) */}
+                {!isChatting && messages.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1.5 pt-2 pb-1">
+                    {STARTER_PROMPTS.map(({ label, prompt }) => (
+                      <button
+                        key={label}
+                        onClick={() => submitPrompt(prompt)}
+                        className="px-2.5 py-1 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 )}
               </motion.div>
             ) : (
