@@ -440,17 +440,6 @@ export default function AIChat() {
           setDrawerOpen(false);
         }, delay);
         return () => clearTimeout(timer);
-      } else if (type === "claim_ubi") {
-        const timer = setTimeout(() => {
-          setShowClaimFlow(true);
-          setDrawerOpen(false);
-        }, delay);
-        return () => clearTimeout(timer);
-      } else if (type === "verify_identity") {
-        const timer = setTimeout(() => {
-          setActiveTab("protect");
-        }, delay);
-        return () => clearTimeout(timer);
       }
     }
   }, [messages, setActiveTab, setDrawerOpen]);
@@ -721,6 +710,32 @@ export default function AIChat() {
                       
                       {msg.action?.type === 'hold' && (
                         <HoldActionWidget action={msg.action} />
+                      )}
+
+                      {/* Visible action buttons for claim / verify / navigate */}
+                      {msg.action?.type === 'claim_ubi' && (
+                        <button
+                          onClick={() => setShowClaimFlow(true)}
+                          className="mt-3 w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+                        >
+                          🪙 Claim Daily G$ UBI
+                        </button>
+                      )}
+                      {msg.action?.type === 'verify_identity' && (
+                        <button
+                          onClick={() => setActiveTab("protect")}
+                          className="mt-3 w-full px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+                        >
+                          🛡️ Verify Identity
+                        </button>
+                      )}
+                      {msg.action?.type === 'navigate' && msg.action.tab && (
+                        <button
+                          onClick={() => { if (isTabId(msg.action!.tab)) setActiveTab(msg.action!.tab); }}
+                          className="mt-3 w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+                        >
+                          → Open {msg.action.tab}
+                        </button>
                       )}
 
                       {/* SoSoValue Intelligence Card */}

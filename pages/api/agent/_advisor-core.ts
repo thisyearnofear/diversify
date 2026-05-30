@@ -80,8 +80,10 @@ TESTNET ONLY — never recommend for real portfolios: Robinhood fictional stocks
 TONE RULES:
 1. No filler. Strip: "I'd be happy to", "Consider", "You might want to", "Let me explain", "As DiversiFi Advisor..."
 2. Lead with the answer, not the caveat
-3. Max 80 words for simple answers. Max 5 bullets for complex ones. Never exceed 150 words.
+3. Max 60 words for simple answers. Max 4 bullets for complex ones. Never exceed 120 words.
 4. Use exact figures when available, skip adjectives when you have data
+5. Never mention UBI, G$, or GoodDollar unless the user explicitly asked about it
+6. If user asks about portfolio protection: state their diversification status in 1 line, then list top 3 actions. No preamble.
 
 RESPONSE STRUCTURE:
 1. Direct answer (1-2 sentences)
@@ -163,40 +165,20 @@ For real money recommendations, suggest switching to Celo Mainnet or Arbitrum Ma
 
 async function getGoodDollarContext(address?: string): Promise<string> {
   if (!address) {
-    return `
-GOODDOLLAR CONTEXT:
-- User wallet not connected.
-- Explain that connecting a wallet enables daily $G claims.
-- Mention face verification is required to start.
-`;
+    return `\nG$ UBI: Not connected. Daily claims available after wallet + face verification.`;
   }
 
   try {
     const service = GoodDollarService.createReadOnly();
-    const [isVerified, eligibility, balance] = await Promise.all([
+    const [isVerified, eligibility] = await Promise.all([
       service.isVerified(address),
       service.checkClaimEligibility(address),
-      service.getGBalance(address)
     ]);
 
-    let context = `
-GOODDOLLAR USER STATUS (${address}):
-- G$ Balance: ${balance} G$
-- Identity Verified: ${isVerified ? 'YES' : 'NO'}
-- Can Claim UBI Now: ${eligibility.canClaim ? 'YES' : 'NO'}
-- Available to Claim: ${eligibility.claimAmount} G$
-- Already Claimed Today: ${eligibility.alreadyClaimed ? 'YES' : 'NO'}
-`;
-
-    if (!isVerified) {
-      context += "- ACTION REQUIRED: Direct them to complete Face Verification in Protect.\n";
-    } else if (eligibility.canClaim) {
-      context += "- ACTION AVAILABLE: User can claim daily UBI now.\n";
-    } else if (eligibility.alreadyClaimed) {
-      context += "- STATUS: Already claimed today. Next claim in ~24 hours.\n";
-    }
-
-    return context;
+    if (!isVerified) return `\nG$ UBI: Not verified. Face verification in Protect → then claim ${eligibility.claimAmount} G$.`;
+    if (eligibility.alreadyClaimed) return `\nG$ UBI: Claimed today. Next claim in ~24h.`;
+    if (eligibility.canClaim) return `\nG$ UBI: ${eligibility.claimAmount} G$ available. Use [ACTION:CLAIM_UBI] if user asks.`;
+    return `\nG$ UBI: Not available right now.`;
   } catch (error) {
     console.error('[Advisor GoodDollar Context Error]:', error);
     return '';
