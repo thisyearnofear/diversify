@@ -25,3 +25,6 @@ See [core-principles/taste.md](core-principles/taste.md)
 # Frontend
 - Use Framer Motion for animations in React components. Confidence: 0.70
 
+# Deployment
+- Before deploying, test external integration response times and optimize UX for latency (async patterns, caching, streaming, pre-fetching) rather than accepting slow synchronous responses. Confidence: 0.75
+

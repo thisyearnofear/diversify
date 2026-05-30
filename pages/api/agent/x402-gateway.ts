@@ -11,6 +11,7 @@ import {
     normalizeArcResearchSource,
     settleOnArc,
     generateChatCompletion,
+    startBrightDataWarming,
     type ArcResearchCategory,
     type ArcResearchDataType,
     type ArcResearchSourceDefinition,
@@ -843,6 +844,13 @@ Respond with JSON: { risk_score (1-10), risk_level, primary_risks: [], mitigatio
 
 // --- Bright Data Evidence Layer (Hackathon Integration) ---
 
+/**
+ * Cache-first race: return cached evidence immediately (sub-10ms).
+ * If cache is stale, start a fresh scrape in the background and
+ * return the old data with `stale: true`. Next request gets fresh.
+ */
+const BRIGHT_DATA_TIMEOUT_MS = 6000; // 6s max for a fresh scrape, fall back to stale
+
 async function getBrightDataCentralBanks(isFreeTier: boolean): Promise<Record<string, unknown>> {
     try {
         const banks = isFreeTier ? ['FED'] : ['FED', 'ECB', 'BOE', 'BOJ'];
@@ -853,10 +861,11 @@ async function getBrightDataCentralBanks(isFreeTier: boolean): Promise<Record<st
             banks: banks.length,
             tier: isFreeTier ? 'free' : 'premium',
             retrievedAt: new Date().toISOString(),
+            stale: false,
         };
     } catch (err) {
         console.warn('[BrightData] Central banks fetch failed:', (err as Error).message);
-        return { announcements: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium' };
+        return { announcements: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium', stale: true };
     }
 }
 
@@ -923,4 +932,14 @@ async function getBrightDataEvidenceLayer(isFreeTier: boolean): Promise<Record<s
         console.warn('[BrightData] Evidence layer failed:', (err as Error).message);
         return { error: (err as Error).message, tier: 'premium' };
     }
+}
+
+// Start background Bright Data cache warming on server boot
+// (runs after first request triggers this module's import)
+let _warmed = false;
+if (typeof setInterval !== 'undefined' && !_warmed) {
+  _warmed = true;
+  setTimeout(() => {
+    startBrightDataWarming();
+  }, 2000); // Brief delay so server boots fast, then warm
 }

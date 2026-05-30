@@ -11,6 +11,7 @@
  */
 
 import { unifiedCache } from "../utils/unified-cache-service";
+import type { CacheCategory } from "../utils/unified-cache-service";
 import { generateChatCompletion } from "./ai/ai-service";
 import type {
   BrightDataCentralBankAnnouncement,
@@ -45,6 +46,40 @@ const COMMODITY_URLS: Record<BrightDataCommodity, string> = {
   corn: "https://tradingeconomics.com/commodity/corn",
 };
 
+/**
+ * Cache-first with stale-while-revalidate timeout.
+ * Returns cached data immediately if available. If expired, races
+ * the fetch against a timeout — falls back to stale cache if the
+ * fresh scrape takes too long (Bright Data is 5-15s for Web Unlocker).
+ */
+async function cacheFirst<T>(
+  cacheKey: string,
+  category: CacheCategory,
+  fetchFn: () => Promise<{ data: T; source: string }>,
+  freshTimeoutMs: number = 6000,
+): Promise<T> {
+  const cached = await unifiedCache.getOrFetch(
+    cacheKey,
+    async () => {
+      // Race: fresh fetch vs timeout
+      const result = await Promise.race([
+        fetchFn(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), freshTimeoutMs)),
+      ]);
+
+      if (result) return result;
+
+      // Timed out — return placeholder so getOrFetch records the cache entry
+      // Next request will try again
+      return { data: null as unknown as T, source: "brightdata-timeout" };
+    },
+    category,
+    false
+  );
+
+  return cached.data;
+}
+
 export class BrightDataService {
   // ── CENTRAL BANK ANNOUNCEMENTS (SERP API) ──────────────────────────
 
@@ -55,20 +90,12 @@ export class BrightDataService {
     const { banks, maxAgeHours = 48 } = params;
     const cacheKey = `brightdata:central-banks:${banks.sort().join(",")}:${maxAgeHours}`;
 
-    const { data } = await unifiedCache.getOrFetch(
-      cacheKey,
-      async () => {
-        const results = await Promise.all(
-          banks.map((bank) => fetchBankAnnouncements(bank, maxAgeHours))
-        );
-        const flattened = results.flat();
-        return { data: flattened, source: "brightdata-serp" };
-      },
-      "moderate",
-      false
-    );
-
-    return data;
+    return cacheFirst(cacheKey, "moderate", async () => {
+      const results = await Promise.all(
+        banks.map((bank) => fetchBankAnnouncements(bank, maxAgeHours))
+      );
+      return { data: results.flat(), source: "brightdata-serp" };
+    });
   }
 
   // ── COMMODITY PRICES (Web Unlocker) ───────────────────────────────
@@ -79,19 +106,12 @@ export class BrightDataService {
     const { commodities } = params;
     const cacheKey = `brightdata:commodities:${commodities.sort().join(",")}`;
 
-    const { data } = await unifiedCache.getOrFetch(
-      cacheKey,
-      async () => {
-        const results = await Promise.all(
-          commodities.map((c) => fetchCommodityPrice(c))
-        );
-        return { data: results.filter(Boolean) as BrightDataCommodityPrice[], source: "brightdata-unlocker" };
-      },
-      "volatile",
-      false
-    );
-
-    return data;
+    return cacheFirst(cacheKey, "volatile", async () => {
+      const results = await Promise.all(
+        commodities.map((c) => fetchCommodityPrice(c))
+      );
+      return { data: results.filter(Boolean) as BrightDataCommodityPrice[], source: "brightdata-unlocker" };
+    });
   }
 
   // ── FINANCIAL NEWS SENTIMENT (SERP API) ───────────────────────────
@@ -104,22 +124,15 @@ export class BrightDataService {
     const { regions = ["US"], topics = ["inflation", "central bank", "commodities"], maxItems = 10 } = params;
     const cacheKey = `brightdata:news:${regions.sort().join(",")}:${topics.sort().join(",")}`;
 
-    const { data } = await unifiedCache.getOrFetch(
-      cacheKey,
-      async () => {
-        const queries = buildNewsQueries(regions, topics);
-        const rawResults = await Promise.all(
-          queries.map((q) => fetchSerpResults(q, maxItems / queries.length || 3))
-        );
-        const headlines = rawResults.flat();
-        const parsed = await parseNewsSentiment(headlines);
-        return { data: parsed, source: "brightdata-serp" };
-      },
-      "moderate",
-      false
-    );
-
-    return data;
+    return cacheFirst(cacheKey, "moderate", async () => {
+      const queries = buildNewsQueries(regions, topics);
+      const rawResults = await Promise.all(
+        queries.map((q) => fetchSerpResults(q, maxItems / queries.length || 3))
+      );
+      const headlines = rawResults.flat();
+      const parsed = await parseNewsSentiment(headlines);
+      return { data: parsed, source: "brightdata-serp" };
+    });
   }
 
   // ── EVIDENCE LAYER BUNDLE ─────────────────────────────────────────

@@ -99,6 +99,7 @@ export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voi
 export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent-action.service';
 export { getYieldRecommendations, yieldAdvisorService } from './services/ai/yield-advisor.service';
 export { BrightDataService } from './services/bright-data-service';
+export { startBrightDataWarming, stopBrightDataWarming } from './services/bright-data-warmer';
 export type {
   BrightDataCentralBankAnnouncement,
   BrightDataCommodityPrice,
