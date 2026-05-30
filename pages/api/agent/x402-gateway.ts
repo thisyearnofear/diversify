@@ -856,8 +856,8 @@ async function getBrightDataCentralBanks(isFreeTier: boolean): Promise<Record<st
         const banks = isFreeTier ? ['FED'] : ['FED', 'ECB', 'BOE', 'BOJ'];
         const announcements = await BrightDataService.getCentralBankAnnouncements({ banks, maxAgeHours: isFreeTier ? 48 : 24 });
         return {
-            announcements,
-            count: announcements.length,
+            announcements: announcements || [],
+            count: announcements?.length ?? 0,
             banks: banks.length,
             tier: isFreeTier ? 'free' : 'premium',
             retrievedAt: new Date().toISOString(),
@@ -874,15 +874,16 @@ async function getBrightDataCommodities(isFreeTier: boolean): Promise<Record<str
         const commodities = isFreeTier ? ['gold', 'crude_oil'] : ['gold', 'crude_oil', 'copper', 'wheat'];
         const prices = await BrightDataService.getCommodityPrices({ commodities });
         return {
-            prices,
-            count: prices.length,
+            prices: prices || [],
+            count: prices?.length ?? 0,
             commodities: commodities.length,
             tier: isFreeTier ? 'free' : 'premium',
             retrievedAt: new Date().toISOString(),
+            stale: false,
         };
     } catch (err) {
         console.warn('[BrightData] Commodities fetch failed:', (err as Error).message);
-        return { prices: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium' };
+        return { prices: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium', stale: true };
     }
 }
 
@@ -891,15 +892,16 @@ async function getBrightDataFinancialNews(isFreeTier: boolean): Promise<Record<s
         const regions = isFreeTier ? ['US'] : ['US', 'EU', 'EM'];
         const news = await BrightDataService.getFinancialNewsSentiment({ regions, maxItems: isFreeTier ? 5 : 15 });
         return {
-            news,
-            count: news.length,
+            news: news || [],
+            count: news?.length ?? 0,
             regions: regions.length,
             tier: isFreeTier ? 'free' : 'premium',
             retrievedAt: new Date().toISOString(),
+            stale: false,
         };
     } catch (err) {
         console.warn('[BrightData] Financial news fetch failed:', (err as Error).message);
-        return { news: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium' };
+        return { news: [], error: (err as Error).message, tier: isFreeTier ? 'free' : 'premium', stale: true };
     }
 }
 

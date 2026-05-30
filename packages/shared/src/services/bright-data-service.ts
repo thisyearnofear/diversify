@@ -61,7 +61,6 @@ async function cacheFirst<T>(
   const cached = await unifiedCache.getOrFetch(
     cacheKey,
     async () => {
-      // Race: fresh fetch vs timeout
       const result = await Promise.race([
         fetchFn(),
         new Promise<null>((resolve) => setTimeout(() => resolve(null), freshTimeoutMs)),
@@ -69,13 +68,16 @@ async function cacheFirst<T>(
 
       if (result) return result;
 
-      // Timed out — return placeholder so getOrFetch records the cache entry
-      // Next request will try again
-      return { data: null as unknown as T, source: "brightdata-timeout" };
+      // Timed out — store empty array/object so callers don't get null
+      return { data: (Array.isArray([] as unknown as T) ? [] : {}) as unknown as T, source: "brightdata-timeout" };
     },
     category,
     false
   );
+
+  if (!cached.data) {
+    return (Array.isArray([] as unknown as T) ? [] : {}) as unknown as T;
+  }
 
   return cached.data;
 }
