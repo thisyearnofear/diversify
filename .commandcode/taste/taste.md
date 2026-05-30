@@ -3,7 +3,7 @@ See [core-principles/taste.md](core-principles/taste.md)
 # Workflow
 - Stage, commit, and push changes to main branch (avoid feature branches when possible). Confidence: 0.80
 - Only update existing documentation files; do not create new docs unless explicitly requested. Confidence: 0.85
-- Validate that the project builds before pushing changes. Confidence: 0.75
+- Skip local builds for the frontend; stage, commit, push and let Vercel handle deployment. Confidence: 0.75
 - Use `gh auth switch` to manage GitHub authentication when push fails. Confidence: 0.70
 
 # Infrastructure
