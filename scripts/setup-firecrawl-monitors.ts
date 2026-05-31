@@ -23,7 +23,7 @@ if (!FIRECRAWL_API_KEY) {
   process.exit(1);
 }
 
-const API_BASE = 'https://api.firecrawl.dev/v1';
+const API_BASE = 'https://api.firecrawl.dev/v2';
 
 interface MonitorConfig {
   name: string;
