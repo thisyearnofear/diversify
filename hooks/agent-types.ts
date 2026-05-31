@@ -263,6 +263,13 @@ export interface AIMessage {
     amount: string;
     explorer: string;
   } | null;
+  /** Research evidence sources shown below the message for transparency */
+  researchSources?: Array<{
+    label: string;
+    tier: string;
+    url: string;
+    cost: number;
+  }>;
   insights?: {
     summary: string;
     tags: string[];

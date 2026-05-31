@@ -48,7 +48,7 @@ export function useAgentChat({
   const { chainId, address } = useWalletContext();
   const { config } = useAgentConfig();
   const portfolio = useMultichainBalances(address, config.goal);
-  const { payForSource } = useX402Payment();
+  const { payForSource, fetchPaidSource } = useX402Payment();
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
@@ -281,22 +281,37 @@ export function useAgentChat({
         }
       }
 
-      // Attempt x402 payment for premium research before calling the advisor.
-      // If the user's wallet is connected and on Arc, this fires a real USDC
-      // micro-tx and returns the proof headers. On free tier or if the wallet
-      // isn't on Arc, it returns empty headers and skips gracefully.
-      let x402Headers: Record<string, string> = {};
+      // Fetch research evidence from the Arc Data Hub gateway.
+      // Uses fetchPaidSource which handles the full 402→pay→re-fetch cycle.
+      // The returned data becomes macroData for the advisor (provides evidence context).
       let x402Receipt: AIMessage["x402Receipt"] = null;
+      let macroData: Record<string, any> = {};
       try {
-        updateChatState({ thinkingStep: "Buying research evidence on Arc..." });
-        const { headers, payment } = await payForSource("macro_analysis");
-        x402Headers = headers;
+        updateChatState({ thinkingStep: "Gathering research evidence..." });
+
+        // Fetch the full research bundle (macro + portfolio opt + risk) in one call
+        const bundleSources = "macro_analysis,portfolio_optimization,risk_assessment";
+        const { data: bundleData, payment } = await fetchPaidSource(bundleSources);
+
         if (payment) {
-          x402Receipt = { txHash: payment.txHash, amount: payment.amount, explorer: payment.explorer };
+          x402Receipt = {
+            txHash: payment.txHash,
+            amount: payment.amount,
+            explorer: payment.explorer,
+          };
+        }
+
+        // Merge gateway response into macroData for the advisor
+        if (bundleData) {
+          // Bundle response has { data: { source_id: payload }, sources: [...], bundle: {...} }
+          macroData = bundleData.data || bundleData;
+          // Attach the bundle metadata so advisor can build evidence summary
+          if (bundleData.bundle) macroData._research = { bundle: bundleData.bundle };
+          if (bundleData.sources) macroData.sources = bundleData.sources;
+          if (bundleData._billing) macroData._billing = bundleData._billing;
         }
       } catch {
-        // Payment failed or not on Arc — advisor falls back to free-tier sources
-        x402Headers = {};
+        // Payment failed or gateway unreachable — advisor uses built-in context only
       }
 
       const CHAT_THINKING_MESSAGES = [
@@ -346,7 +361,6 @@ export function useAgentChat({
           headers: {
             "Content-Type": "application/json",
             ...(userGeminiKey ? { "x-gemini-key": userGeminiKey } : {}),
-            ...x402Headers,
           },
           body: JSON.stringify({
             mode: "conversation",
@@ -356,6 +370,7 @@ export function useAgentChat({
             address,
             portfolio: portfolioSnapshot,
             financialStrategy: getPersistedStrategy(),
+            macroData: Object.keys(macroData).length > 0 ? macroData : undefined,
           }),
         });
 
@@ -369,6 +384,7 @@ export function useAgentChat({
             action: result.action,
             provider: result.provider,
             x402Receipt,
+            researchSources: result.researchSources || [],
           };
           addMessage(assistantMessage);
 

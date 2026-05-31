@@ -140,7 +140,7 @@ export class FallbackOrchestrator {
     }
 
     // Add the fallback providers in order
-    const fallbackOrder = ["featherless", "zeroG", "modal"];
+    const fallbackOrder = ["aimlapi", "featherless", "zeroG", "modal"];
     for (const name of fallbackOrder) {
       if (providerMap[name] && !orderedNames.includes(name)) {
         orderedNames.push(name);

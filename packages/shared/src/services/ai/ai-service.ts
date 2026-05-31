@@ -19,6 +19,7 @@ import { FeatherlessProvider } from './providers/featherless-provider';
 import { ZeroGProvider } from './providers/zero-g-provider';
 import { ModalProvider } from './providers/modal-provider';
 import { OpenAIProvider } from './providers/openai-provider';
+import { AimlApiProvider } from './providers/aimlapi-provider';
 import { ElevenLabsProvider } from './providers/elevenlabs-provider';
 import { FallbackOrchestrator } from './fallback/fallback-orchestrator';
 import { CachingDecorator } from './decorators/caching-decorator';
@@ -93,6 +94,7 @@ class AIServiceImpl {
     const providerClasses: any[] = [
       VeniceProvider,
       GeminiProvider,
+      AimlApiProvider,
       FeatherlessProvider,
       ZeroGProvider,
       ModalProvider,
@@ -272,6 +274,7 @@ export function getAIServiceInstance(): AIServiceImpl {
       zeroGApiKey: process.env.ZEROG_API_KEY,
       modalToken: process.env.MODAL_TOKEN,
       openaiApiKey: process.env.OPENAI_API_KEY,
+      aimlApiKey: process.env.AIML_API_KEY,
       elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
       elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID
     };

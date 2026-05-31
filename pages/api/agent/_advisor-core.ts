@@ -1,4 +1,4 @@
-import { AIService, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
+import { AIService, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
 import { isTestnetChain, NETWORKS } from '../../../config';
 
 type ConversationRequest = {
@@ -427,6 +427,15 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
   const brightDataContext = extractBrightDataContext(input.macroData);
+
+  // Cognee: recall relevant memories for this user (non-blocking, graceful fallback)
+  let memoryContext = '';
+  try {
+    if (address) {
+      memoryContext = await cogneeMemoryService.getAdvisorContext(address, message);
+    }
+  } catch { /* Cognee unavailable — proceed without memory */ }
+
   const contextPrompt =
     ADVISOR_SYSTEM_PROMPT +
     getTestDriveContext(chainId) +
@@ -434,7 +443,8 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     gdContext +
     portfolioContext +
     strategyContext +
-    brightDataContext;
+    brightDataContext +
+    memoryContext;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
     { role: 'system', content: contextPrompt },
@@ -493,11 +503,65 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     }
   }
 
+  // Assemble research evidence for transparency in the chat UI
+  const evidence = buildResearchEvidenceSummary(input.macroData);
+  const gatewaySourcesList = evidence?.sources?.map(s => ({
+    label: s.label,
+    tier: s.tier || 'free',
+    url: (s as any).url || '',
+    cost: s.cost || 0,
+  })) || [];
+
+  // Always show what context was used — even free queries have value
+  const contextSources: Array<{ label: string; tier: string; url: string; cost: number }> = [];
+  if (portfolio && (portfolio.totalValue || 0) > 0) {
+    contextSources.push({ label: 'Portfolio snapshot', tier: 'free', url: '', cost: 0 });
+  }
+  if (chainId) {
+    contextSources.push({ label: 'Chain context', tier: 'free', url: '', cost: 0 });
+  }
+  if (financialStrategy) {
+    contextSources.push({ label: 'Strategy profile', tier: 'free', url: '', cost: 0 });
+  }
+  if (brightDataContext) {
+    contextSources.push({ label: 'Bright Data (live scrape)', tier: 'paid', url: '', cost: 0.002 });
+  }
+  if (memoryContext) {
+    contextSources.push({ label: 'Agent memory (Cognee)', tier: 'free', url: '', cost: 0 });
+  }
+
+  const researchSources = gatewaySourcesList.length > 0
+    ? gatewaySourcesList
+    : contextSources;
+
+  // Cognee: persist this interaction for future recall (fire-and-forget)
+  if (address) {
+    cogneeMemoryService.persistInteraction(
+      address,
+      message,
+      responseText,
+      {
+        action: action?.type,
+        sources: researchSources.map(s => s.label),
+        chainId,
+      }
+    ).catch(() => {});
+  }
+
   return {
     response: responseText,
     provider: result.provider,
     type: 'text',
     action,
+    researchSources,
+    memoryEnabled: cogneeMemoryService.isAvailable(),
+    billing: evidence?.bundle ? {
+      totalCost: evidence.bundle.paidSourceCount
+        ? evidence.sources?.reduce((sum, s) => sum + (s.cost || 0), 0) || 0
+        : 0,
+      confidence: evidence.bundle.confidence,
+      sourceCount: evidence.bundle.sourceCount,
+    } : undefined,
   };
 }
 

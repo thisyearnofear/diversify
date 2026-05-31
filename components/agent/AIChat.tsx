@@ -406,11 +406,13 @@ export default function AIChat() {
     submitPrompt(inputValue.trim());
   };
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages (RAF ensures DOM has painted)
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    requestAnimationFrame(() => {
+      if (scrollRef.current) {
+        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }
+    });
   }, [messages, isChatting]);
 
   // Only auto-open the drawer when a NEW user message is added.
@@ -690,6 +692,42 @@ export default function AIChat() {
                         />
                       )}
                       
+                      {/* Research evidence summary — Perplexity-style source citations */}
+                      {msg.role === "assistant" && msg.researchSources && msg.researchSources.length > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                                {msg.researchSources.length} source{msg.researchSources.length > 1 ? 's' : ''} consulted
+                              </span>
+                              {msg.researchSources.some(s => s.tier === 'paid') && (
+                                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold">
+                                  ${msg.researchSources.reduce((sum, s) => sum + (s.cost || 0), 0).toFixed(3)} USDC
+                                </span>
+                              )}
+                            </div>
+                            {msg.x402Receipt && (
+                              <a
+                                href={msg.x402Receipt.explorer}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[9px] text-blue-500 hover:text-blue-600 font-bold"
+                              >
+                                tx ↗
+                              </a>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {msg.researchSources.map((s, j) => (
+                              <span key={j} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${s.tier === 'paid' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${s.tier === 'paid' ? 'bg-amber-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                {s.label}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {msg.action?.type === 'hold' && (
                         <HoldActionWidget action={msg.action} />
                       )}
@@ -713,7 +751,7 @@ export default function AIChat() {
                       )}
                       {msg.action?.type === 'navigate' && msg.action.tab && (
                         <button
-                          onClick={() => { if (isTabId(msg.action!.tab)) setActiveTab(msg.action!.tab); }}
+                          onClick={() => { const t = msg.action?.tab || ''; if (isTabId(t)) setActiveTab(t); }}
                           className="mt-3 w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
                         >
                           → Open {msg.action.tab}

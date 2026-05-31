@@ -149,12 +149,28 @@ export function useX402Payment() {
         data: any;
         payment: X402PaymentResult | null;
     }> => {
-        const { headers, payment } = await payForSource(source);
+        // Use 'sources' param for comma-separated bundles, 'source' for single
+        const paramKey = source.includes(',') ? 'sources' : 'source';
+        const url = `${GATEWAY_BASE}/api/agent/x402-gateway?${paramKey}=${encodeURIComponent(source)}`;
 
-        const res = await fetch(
-            `${GATEWAY_BASE}/api/agent/x402-gateway?source=${source}`,
-            { headers: { ...headers } },
-        );
+        // First attempt — may return 200 (free tier) or 402 (needs payment)
+        const firstAttempt = await fetch(url);
+
+        if (firstAttempt.ok) {
+            // Free tier — return data directly
+            return { data: await firstAttempt.json(), payment: null };
+        }
+
+        if (firstAttempt.status !== 402) {
+            throw new Error(`Gateway returned unexpected status ${firstAttempt.status}`);
+        }
+
+        // 402 — need payment. Use the first source in the bundle for the payment flow.
+        const primarySource = source.split(',')[0].trim();
+        const { headers, payment } = await payForSource(primarySource);
+
+        // Re-fetch with payment proof
+        const res = await fetch(url, { headers: { ...headers } });
 
         if (!res.ok) {
             throw new Error(`Gateway request failed after payment: ${res.status}`);
