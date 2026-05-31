@@ -16,6 +16,7 @@
 
 const COGNEE_API_URL = process.env.COGNEE_API_URL || 'https://api.cognee.ai';
 const COGNEE_API_KEY = process.env.COGNEE_API_KEY || '';
+const COGNEE_TENANT_ID = process.env.COGNEE_TENANT_ID || '';
 
 interface CogneeMemory {
   id: string;
@@ -38,12 +39,25 @@ interface RememberOptions {
 class CogneeMemoryServiceImpl {
   private apiUrl: string;
   private apiKey: string;
+  private tenantId: string;
   private enabled: boolean;
 
   constructor() {
     this.apiUrl = COGNEE_API_URL;
     this.apiKey = COGNEE_API_KEY;
+    this.tenantId = COGNEE_TENANT_ID;
     this.enabled = !!this.apiKey;
+  }
+
+  private authHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'X-Api-Key': this.apiKey,
+    };
+    if (this.tenantId) {
+      headers['X-Tenant-Id'] = this.tenantId;
+    }
+    return headers;
   }
 
   isAvailable(): boolean {
@@ -79,10 +93,7 @@ class CogneeMemoryServiceImpl {
 
       const response = await fetch(`${this.apiUrl}/v1/add`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
+        headers: this.authHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -127,10 +138,7 @@ class CogneeMemoryServiceImpl {
 
       const response = await fetch(`${this.apiUrl}/v1/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
+        headers: this.authHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -166,9 +174,7 @@ class CogneeMemoryServiceImpl {
       const dataset = `user_${userId}`;
       const response = await fetch(`${this.apiUrl}/v1/datasets/${dataset}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
+        headers: this.authHeaders(),
       });
 
       return { success: response.ok };
@@ -185,10 +191,7 @@ class CogneeMemoryServiceImpl {
     try {
       await fetch(`${this.apiUrl}/v1/cognify`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
+        headers: this.authHeaders(),
         body: JSON.stringify({ datasets: [dataset] }),
       });
     } catch {
