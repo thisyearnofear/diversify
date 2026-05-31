@@ -97,6 +97,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
+      // Consent gate: only auto-execute for GUARDIAN-tier permissions.
+      // ADVISORY and COPILOT require manual user action.
+      // Additionally, require at least one prior manual execution (totalSpentUSD > 0)
+      // to confirm the user has actively used the system before we auto-trade.
+      if (perm.autonomyLevel !== 'GUARDIAN') {
+        continue;
+      }
+      if (perm.totalSpentUSD === 0 && !perm.firstAutoExecutionConfirmed) {
+        results.push({
+          userAddress,
+          action: 'skip',
+          status: 'awaiting_first_confirmation',
+          reason: 'Permission exists but user has not yet triggered a manual execution or confirmed auto-mode',
+        });
+        continue;
+      }
+
       // Check confidence threshold
       const confidence = recommendation.confidence ?? 0;
       if (confidence < CONFIDENCE_THRESHOLD) {

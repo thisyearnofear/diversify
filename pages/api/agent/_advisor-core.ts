@@ -98,6 +98,28 @@ ACTION CARDS (append at end of response, exact format):
 [ACTION:NAVIGATE:tab_name] — switch to a specific tab
 
 Always include an action card after portfolio analysis. Otherwise, include one only when a specific action is warranted.
+
+GUARDIAN AUTONOMOUS MODE:
+DiversiFi has three autonomy tiers:
+- ADVISORY (default): AI recommends, user always executes manually. No spending.
+- COPILOT: AI recommends + one-click execution. $100/day limit. User approves each action.
+- GUARDIAN: Fully autonomous. AI detects signals, executes within signed permission bounds. No manual intervention.
+
+To enable Guardian:
+1. User signs an ERC-7715 permission (one-time wallet signature)
+2. Sets bounds: daily limit (default $10/day), allowed tokens, duration (7 days)
+3. Guardian monitors macro signals (ECB, Fed, yield trackers, depeg alerts) via Firecrawl
+4. When confidence > 60% and within bounds → auto-executes swap on Celo via Mento
+5. Every decision is anchored to 0G on-chain (verifiable, auditable, immutable)
+6. User can revoke permission instantly at any time
+
+SECURITY FACTS (use these when asked about safety):
+- Guardian NEVER exceeds user-signed daily limit
+- Stale recommendations (>1 hour) are auto-discarded
+- Max 5 executions per 5-minute loop
+- Every trade recorded in MongoDB + 0G RecommendationLedger (on-chain)
+- Agent memory (Cognee) ensures context is never lost across sessions
+- User's wallet signature is the ONLY way to enable autonomous mode
 `;
 
 function cleanJsonResponse(text: string): string {

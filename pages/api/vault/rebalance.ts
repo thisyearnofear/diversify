@@ -9,6 +9,8 @@ import {
 
 type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' | 'failed';
 
+const rebalanceRateMap = new Map<string, number>();
+
 const TOKEN_ADDRESSES: Record<string, string> = {
   cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
   cEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
@@ -82,6 +84,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const service = new VaultService(vaultStore, circleExecutor);
 
   const { vaultId, userAddress, dryRun = false, recommendations = [] } = req.body || {};
+
+  // Rate limit: max 10 rebalance requests per minute per IP
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown';
+  const now = Date.now();
+  const windowKey = `${clientIp}:${Math.floor(now / 60000)}`;
+  if (!rebalanceRateMap.has(windowKey)) rebalanceRateMap.set(windowKey, 0);
+  const count = rebalanceRateMap.get(windowKey)! + 1;
+  rebalanceRateMap.set(windowKey, count);
+  // Evict old entries
+  for (const [k] of rebalanceRateMap) { if (!k.endsWith(`:${Math.floor(now / 60000)}`)) rebalanceRateMap.delete(k); }
+  if (count > 10) {
+    return res.status(429).json({ error: 'Rate limit exceeded. Max 10 requests/min.' });
+  }
 
   try {
     let id: string;
