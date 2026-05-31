@@ -25,7 +25,7 @@ import { vaultStore } from '../vault/_store';
 import { getGuardianState, updateGuardianState } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
-import { cogneeMemoryService } from '@diversifi/shared';
+import { cogneeMemoryService, recommendationLedgerService } from '@diversifi/shared';
 
 const GUARDIAN_LOOP_SECRET = process.env.GUARDIAN_LOOP_SECRET || 'dev-guardian-loop';
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
@@ -192,6 +192,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           // Clear the recommendation so it doesn't re-fire
           await updateGuardianState(userAddress, { latestRecommendation: undefined });
+
+          // Anchor to 0G RecommendationLedger on-chain (fire-and-forget)
+          recommendationLedgerService.recordRecommendation({
+            user: userAddress,
+            action: 'AUTONOMOUS_REBALANCE',
+            targetToken,
+            reasoning: recommendation.oneLiner || recommendation.reasoning || 'Guardian auto-execution',
+            evidenceCid: '', // Will be populated if 0G Storage upload precedes
+            servingModel: 'guardian-loop',
+            settlementTxHash: txHash,
+            confidence: Math.round(confidence * 10000), // Contract uses basis points
+          }).catch(() => {});
 
           // Persist to Cognee memory (fire-and-forget)
           cogneeMemoryService.persistInteraction(

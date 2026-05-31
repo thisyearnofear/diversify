@@ -20,7 +20,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateChatCompletion, cogneeMemoryService } from '@diversifi/shared';
+import { generateChatCompletion, cogneeMemoryService, recommendationLedgerService } from '@diversifi/shared';
 import { updateGuardianState } from '../vault/_guardian-state';
 import { Permission } from '../../../models/Permission';
 import dbConnect from '../../../lib/mongodb';
@@ -141,6 +141,17 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       });
       usersUpdated++;
     }
+
+    // Anchor signal to 0G RecommendationLedger on-chain (verifiable evidence trail)
+    recommendationLedgerService.recordRecommendation({
+      user: '0x0000000000000000000000000000000000000000', // System-level signal
+      action: `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`,
+      targetToken: parsed.targetToken || '',
+      reasoning: `${parsed.oneLiner}. Source: ${url}`,
+      evidenceCid: '', // Could store full page content in 0G Storage
+      servingModel: 'firecrawl-monitor',
+      confidence: Math.round((parsed.confidence || 0) * 10000),
+    }).catch(() => {});
 
     // Persist the signal to Cognee for long-term memory
     cogneeMemoryService.remember(

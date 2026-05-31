@@ -18,13 +18,16 @@
 | `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
 | `/api/agent/sosovalue` | GET | SoSoValue market intelligence (news, sentiment, SSI index); `?tier=premium` for SSI |
 | `/api/agent/zero-g-ledger` | GET | 0G `RecommendationLedger` on-chain recommendations + stats; `?user=0x...` to filter |
+| `/api/agent/guardian-loop` | POST | Autonomous execution cron (server-to-server, secret-protected) |
+| `/api/agent/firecrawl-webhook` | POST | Receives Firecrawl Monitor macro signal webhooks |
 
 ## AI Providers
 
 | Provider | Role | Fallback |
 |----------|------|----------|
 | **Gemini (Google)** | Primary agent intelligence (Flash for speed, Pro for reasoning) | Venice AI |
-| **Venice AI** | Secondary / fallback | 0G Serving |
+| **Venice AI** | Secondary / fallback | AI/ML API |
+| **AI/ML API** | 400+ models, OpenAI-compatible endpoint (`deepseek/deepseek-chat`) | 0G Serving |
 | **0G Serving** | Decentralized inference via 0G Router (`deepseek-v4-pro`, `GLM-5.1`, `qwen3.6-plus`) | Modal (GLM) |
 | **Modal (GLM)** | Tertiary fallback | Error response |
 
@@ -46,6 +49,32 @@
 | **DeFiLlama** | TVL, yields | 100 req/day |
 | **GoodDollar** | UBI distribution | — |
 | **SoSoValue** | Flash news, market sentiment, SSI Protocol index | Free tier + API key for live data |
+| **Firecrawl** | Event-driven macro page monitoring (ECB, Fed, yield trackers) | 500 credits/month free |
+| **Cognee** | Agent memory — cross-session persistent context | Tenant API (REST) |
+
+## Autonomous Guardian Loop
+
+The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio rebalancing within user-approved permission bounds.
+
+```
+Firecrawl detects macro change → webhook → AI extracts signal → guardian-state updated
+→ cron ticks → guardian-loop checks permissions → confidence > threshold? → auto-execute
+→ 0G RecommendationLedger records on-chain → Cognee persists memory
+```
+
+| Component | File | Purpose |
+|-----------|------|---------|
+| Guardian Loop | `pages/api/agent/guardian-loop.ts` | Cron-driven autonomous execution |
+| Firecrawl Webhook | `pages/api/agent/firecrawl-webhook.ts` | Macro signal ingestion |
+| Firecrawl Setup | `scripts/setup-firecrawl-monitors.ts` | Register page watchers |
+| Guardian State | `pages/api/vault/_guardian-state.ts` | Pending recommendation store |
+| Cognee Memory | `packages/shared/src/services/cognee-memory-service.ts` | Cross-session learning |
+
+### Security
+- `GUARDIAN_LOOP_SECRET` protects the cron endpoint (server-to-server only)
+- `FIRECRAWL_WEBHOOK_SECRET` authenticates incoming Firecrawl webhooks
+- User's ERC-7715 permission bounds are always enforced (daily limit, allowed tokens, expiry)
+- `GUARDIAN_CONFIDENCE_THRESHOLD` (default 0.6) prevents low-confidence auto-execution
 
 ## Arc Research Payments
 
@@ -200,7 +229,9 @@ The following files are git-ignored and must be configured from `.example` templ
 |----------|------------|
 | Frontend | Next.js 15, React 19, Tailwind CSS |
 | Smart Accounts | Privy + Safe (ERC-4337) |
-| AI | Gemini (primary), Venice AI (fallback), Modal GLM (tertiary) |
+| AI | Gemini (primary), Venice AI, AI/ML API (fallback), Modal GLM (tertiary) |
+| Agent Memory | Cognee (cross-session learning) |
+| Macro Monitoring | Firecrawl (event-driven page watching) |
 | Swaps | Mento Protocol (Celo), 1inch/Uniswap (Arbitrum) |
 | Bridging | Circle CCTP, LiFi |
 | Hedging | Hyperliquid perps |
