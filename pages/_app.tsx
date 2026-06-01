@@ -1,6 +1,6 @@
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 
@@ -30,9 +30,11 @@ export default function App({ Component, pageProps }: AppProps) {
 
   // Gate hydration until client-side init is complete.
   // Privy, Wagmi, and wallet hooks access localStorage/window during hydration.
+  useEffect(() => {
+    setReady(true);
+  }, []);
+
   if (!ready) {
-    // Schedule a microtask to flip the flag — avoids blocking the render
-    Promise.resolve().then(() => setReady(true));
     return <>{headMeta}</>;
   }
 

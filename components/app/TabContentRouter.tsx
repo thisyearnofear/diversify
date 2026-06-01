@@ -102,7 +102,7 @@ export default function TabContentRouter() {
       dragElastic={0.05}
       onPanEnd={(_e, info) => {
         const SWIPE_THRESHOLD = 60;
-        const idx = TAB_DISPLAY_ORDER.indexOf(activeTab as any);
+        const idx = TAB_DISPLAY_ORDER.indexOf(activeTab);
         if (info.offset.x < -SWIPE_THRESHOLD && idx < TAB_DISPLAY_ORDER.length - 1) {
           const newTab = TAB_DISPLAY_ORDER[idx + 1];
           trackTabChange(activeTab, newTab);
