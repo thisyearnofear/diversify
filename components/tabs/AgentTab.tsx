@@ -8,11 +8,15 @@
  */
 
 import React, { useCallback, useState } from "react";
+import dynamic from "next/dynamic";
 import { AgentTierStatus } from "../agent/AgentTierStatus";
 import AutomationSettings from "../agent/AutomationSettings";
 import ActionableRecommendation from "../agent/ActionableRecommendation";
-import { BacktestPanel } from "../agent/BacktestPanel";
 import { useAgentStatus } from "../../hooks/use-agent-status";
+const BacktestPanel = dynamic(() => import("../agent/BacktestPanel").then(m => ({ default: m.BacktestPanel })), {
+  ssr: false,
+});
+
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
 import { useAgentActivities } from "../../hooks/use-agent-activities";

@@ -8,8 +8,12 @@ import { ToastProvider } from "../components/ui/Toast";
 import { AppProviders } from "../context/app/AppProviders";
 import { AIConversationProvider } from "../context/AIConversationContext";
 import { PrivyProvider } from "../context/PrivyProvider";
-import AIChat from "../components/agent/AIChat";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
+
+const AIChat = dynamic(() => import("../components/agent/AIChat"), {
+  ssr: false,
+});
 import sdk from "@farcaster/miniapp-sdk";
 
 export default function App({ Component, pageProps }: AppProps) {
