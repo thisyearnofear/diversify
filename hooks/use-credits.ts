@@ -43,9 +43,12 @@ function loadStored(address?: string | null): StoredCredits {
   return { startedAt: Date.now(), bonusCredits: FREE_TRIAL_CREDITS, completedActions: [], referralCode: code };
 }
 
+const CREDITS_CHANGED_EVENT = 'diversifi-credits-changed';
+
 function saveStored(data: StoredCredits, address?: string | null) {
   try {
     localStorage.setItem(getStorageKey(address), JSON.stringify(data));
+    window.dispatchEvent(new CustomEvent(CREDITS_CHANGED_EVENT, { detail: data }));
   } catch {}
 }
 
@@ -83,6 +86,16 @@ export function useCredits() {
     };
     init();
   }, [address]);
+
+  // Sync across multiple useCredits() instances in the same tab
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<StoredCredits>).detail;
+      if (detail) setStoredState(detail);
+    };
+    window.addEventListener(CREDITS_CHANGED_EVENT, handler);
+    return () => window.removeEventListener(CREDITS_CHANGED_EVENT, handler);
+  }, []);
 
   const updateStored = useCallback((updater: (prev: StoredCredits) => StoredCredits) => {
     setStoredState(prev => {

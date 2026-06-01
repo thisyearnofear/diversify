@@ -34,7 +34,12 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
         className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${statusColor} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
       >
         <span>{receipt.status === 'failed' ? '!' : '⛓'}</span>
-        <span>{statusLabel} · ${Number.parseFloat(receipt.amount || '0').toFixed(3)} USDC</span>
+        <span>
+          {statusLabel} · ${Number.parseFloat(receipt.amount || '0').toFixed(3)} USDC
+          {receipt.status === 'failed' && receipt.error && (
+            <span className="ml-1 normal-case font-normal opacity-70">— {receipt.error}</span>
+          )}
+        </span>
         <motion.span
           animate={reducedMotion ? undefined : { rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
