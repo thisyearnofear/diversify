@@ -1,4 +1,7 @@
 const webpack = require('webpack');
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -19,9 +22,8 @@ const nextConfig = {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
-        // Modules with browser polyfills
+        // Modules with browser polyfills (needed by wagmi, viem, ethers v6)
         stream: require.resolve('stream-browserify'),
-        crypto: require.resolve('crypto-browserify'),
         http: require.resolve('stream-http'),
         https: require.resolve('https-browserify'),
         os: require.resolve('os-browserify/browser'),
@@ -31,6 +33,10 @@ const nextConfig = {
         buffer: require.resolve('buffer/'),
         zlib: require.resolve('browserify-zlib'),
         process: require.resolve('process/browser'),
+        // crypto: polyfill removed — only needed by server-side code leaking
+        // through the shared package barrel (web3.js via @celo/identity).
+        // Will be properly split in the package fission (docs/roadmap.md).
+        crypto: false,
         // Truly server-only modules (no browser equivalent)
         fs: false,
         net: false,
@@ -133,4 +139,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
