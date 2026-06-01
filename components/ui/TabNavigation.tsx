@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
 import type { UserExperienceMode } from "@/context/app/types";
@@ -80,10 +80,41 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     ? TABS.filter(t => BEGINNER_TAB_IDS.includes(t.id))
     : TABS.filter(t => isAdvanced || !ADVANCED_ONLY_TAB_IDS.includes(t.id));
 
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, currentIndex: number) => {
+    const tabCount = visibleTabs.length;
+    let newIndex = currentIndex;
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      newIndex = (currentIndex + 1) % tabCount;
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      newIndex = (currentIndex - 1 + tabCount) % tabCount;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      newIndex = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      newIndex = tabCount - 1;
+    } else {
+      return;
+    }
+
+    const nextTab = visibleTabs[newIndex];
+    setActiveTab(nextTab.id);
+    tabRefs.current[newIndex]?.focus();
+  }, [visibleTabs, setActiveTab]);
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe">
+    <div
+      role="tablist"
+      aria-label="Main navigation"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe"
+    >
       <div className="max-w-md mx-auto flex">
-        {visibleTabs.map((tab) => {
+        {visibleTabs.map((tab, index) => {
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
           const isActive = activeTab === tab.id;
@@ -91,12 +122,17 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
           return (
             <motion.button
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
+              ref={el => { tabRefs.current[index] = el; }}
               onClick={() => {
                 if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
                   window.navigator.vibrate(10);
                 }
                 setActiveTab(tab.id);
               }}
+              onKeyDown={(e) => handleKeyDown(e, index)}
               whileTap={{ scale: 0.9 }}
               className={`flex-1 min-w-0 py-2 px-1 min-h-[64px] text-center flex flex-col items-center justify-center transition-all duration-200 relative ${
                 isActive

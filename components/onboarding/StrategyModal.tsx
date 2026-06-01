@@ -3,7 +3,7 @@
  * Wraps WelcomeScreen and persists the user's region selection on completion.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProtectionProfile } from '@/hooks/use-protection-profile';
 import { useStrategy } from '@/context/app/StrategyContext';
@@ -27,6 +27,42 @@ export default function StrategyModal({
     chainId,
 }: StrategyModalProps) {
     const { setMultipleConfig } = useProtectionProfile();
+    const dialogRef = useRef<HTMLDivElement>(null);
+
+    // Focus trap: keep focus inside modal while open, Escape to close
+    useEffect(() => {
+        if (!isOpen || !dialogRef.current) return;
+        const dialog = dialogRef.current;
+        const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose();
+                return;
+            }
+            if (e.key !== 'Tab') return;
+
+            const focusable = dialog.querySelectorAll(focusableSelector);
+            if (!focusable.length) return;
+            const first = focusable[0] as HTMLElement;
+            const last = focusable[focusable.length - 1] as HTMLElement;
+
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last?.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first?.focus();
+            }
+        };
+
+        // Focus first focusable element on open
+        const firstFocusable = dialog.querySelector(focusableSelector) as HTMLElement;
+        firstFocusable?.focus();
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [isOpen, onClose]);
 
     const finish = useCallback((region?: string | null) => {
         if (region) {
@@ -53,6 +89,10 @@ export default function StrategyModal({
                         className="fixed inset-0 bg-gradient-to-br from-blue-900/90 via-purple-900/90 to-indigo-900/90 backdrop-blur-sm z-50"
                     />
                     <motion.div
+                        ref={dialogRef}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Welcome to DiversiFi"
                         initial={{ scale: 0.96, opacity: 0, y: 12 }}
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.96, opacity: 0, y: 12 }}

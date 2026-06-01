@@ -586,6 +586,9 @@ export default function AIChat() {
 
         {/* Scrollable Content Area */}
         <div 
+          role="log"
+          aria-live="polite"
+          aria-label="Chat messages"
           className="flex-1 overflow-hidden flex flex-col pt-2"
         >
           <AnimatePresence mode="wait">
@@ -888,6 +891,7 @@ export default function AIChat() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask about your portfolio, macro outlook, or strategy..."
+                aria-label="Ask your Guardian a question"
                 className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white"
               />
               <VoiceButton
