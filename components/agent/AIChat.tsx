@@ -911,9 +911,7 @@ export default function AIChat() {
               )}
             </form>
             <p className="px-1 text-[11px] text-gray-500 dark:text-gray-400">
-              {address
-                ? "Free research is included first. Paid evidence uses your Research Balance only after a quote."
-                : "Free analysis included. Connect a wallet to unlock paid research after the free tier."}
+              Each response uses research credits (~$0.015/query). Earn more via rewards above.
             </p>
           </div>
         </div>

@@ -7,7 +7,6 @@ import { useMultichainBalances } from "./use-multichain-balances";
 import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@diversifi/shared";
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
-import { useResearchPaymentSettings } from "./use-research-account";
 import { useCredits } from "./use-credits";
 import type {
   AgentChatActions,
@@ -54,10 +53,9 @@ export function useAgentChat({
   const { chainId, address } = useWalletContext();
   const { config } = useAgentConfig();
   const portfolio = useMultichainBalances(address, config.goal);
-  const { fetchPaidSource, quoteResearch } = useX402Payment();
+  const { fetchPaidSource } = useX402Payment();
   const { addActivity } = useAgentActivities();
-  const { settings: paymentSettings } = useResearchPaymentSettings();
-  const { deductCredits } = useCredits();
+  const { deductCredits, status: creditsStatus } = useCredits();
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
@@ -98,18 +96,14 @@ export function useAgentChat({
       if (!capabilities.chat) return;
 
       let effectiveContent = content;
-      let forceResearchPayment = false;
       const normalizedContent = content.trim().toLowerCase();
       const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
       const isAffirmative = /^(yes|yeah|yep|sure|ok|okay|do it|go ahead|please do|confirm)$/i.test(normalizedContent);
 
-      if (isAffirmative && lastAssistantMessage?.action?.type === "confirm_research" && lastAssistantMessage.action.prompt) {
-        effectiveContent = lastAssistantMessage.action.prompt;
-        forceResearchPayment = true;
-      } else if (lastAssistantMessage?.action?.type === "confirm_research" && /^(no|nope|cancel|skip)$/i.test(normalizedContent)) {
+      if (lastAssistantMessage?.action?.type === "confirm_research" && /^(no|nope|cancel|skip)$/i.test(normalizedContent)) {
         addMessage({
           role: "assistant",
-          content: "No paid Arc research run. I can still answer with free context whenever you're ready.",
+          content: "No problem. I can still answer with free context whenever you're ready.",
           timestamp: new Date(),
           type: "text",
           x402Receipt: {
@@ -317,85 +311,46 @@ export function useAgentChat({
       // The returned data becomes macroData for the advisor (provides evidence context).
       let x402Receipt: AIMessage["x402Receipt"] = null;
       let macroData: Record<string, any> = {};
-      try {
-        updateChatState({ thinkingStep: "Gathering research evidence..." });
+      // Check credits before fetching research
+      const currentCredits = creditsStatus?.credits.bonus ?? 0;
+      const hasCredits = currentCredits >= RESEARCH_BUNDLE_PRICE;
 
-        // Fetch the full research bundle (macro + portfolio opt + risk) in one call
-        const bundleSources = "macro_analysis,portfolio_optimization,risk_assessment";
-        if (!forceResearchPayment) {
-          updateChatState({ thinkingStep: "Pricing Arc research..." });
-          const quote = await quoteResearch(bundleSources);
-          const quoteAmount = Number.parseFloat(quote.amount);
-          const shouldAutoPay = paymentSettings.autoPayEnabled && quoteAmount <= paymentSettings.autoPayMaxUSDC;
-          if (quote.status === "quoted" && quoteAmount > 0 && !shouldAutoPay) {
-            addMessage({
-              role: "assistant",
-              content: `Premium Arc research is available for this answer. It will cost $${Number.parseFloat(quote.amount).toFixed(3)} USDC for ${quote.sources.filter(source => source.tier === "paid").length} paid source${quote.sources.filter(source => source.tier === "paid").length === 1 ? "" : "s"}.`,
-              timestamp: new Date(),
-              type: "text",
-              x402Receipt: {
-                status: "quoted",
-                amount: quote.amount,
-                currency: "USDC",
-                sources: quote.sources,
-                reason: quote.reason,
-                remainingCredit: quote.currentBalance,
-              },
-              action: {
-                type: "confirm_research",
-                prompt: effectiveContent,
-                quoteAmount: quote.amount,
-                quoteSources: quote.sources.map((source) => ({
-                  label: source.label,
-                  cost: source.cost,
-                  tier: source.tier,
-                })),
-              },
-            });
-            updateChatState({ isChatting: false, thinkingStep: "" });
-            return;
-          } else if (quote.status === "quoted" && quoteAmount > 0 && shouldAutoPay) {
-            addMessage({
-              role: "assistant",
-              content: `Auto-paying $${quoteAmount.toFixed(3)} USDC for Arc research under your $${paymentSettings.autoPayMaxUSDC.toFixed(3)} cap.`,
-              timestamp: new Date(),
-              type: "text",
-              x402Receipt: {
-                status: "quoted",
-                amount: quote.amount,
-                currency: "USDC",
-                sources: quote.sources,
-                reason: quote.reason,
-                remainingCredit: quote.currentBalance,
-              },
-            });
-          }
-        }
-
-        const { data: bundleData, receipt } = await fetchPaidSource(bundleSources);
-
-        x402Receipt = receipt;
-
-        // Merge gateway response into macroData for the advisor
-        if (bundleData) {
-          // Bundle response has { data: { source_id: payload }, sources: [...], bundle: {...} }
-          macroData = bundleData.data || bundleData;
-          // Attach the bundle metadata so advisor can build evidence summary
-          if (bundleData.bundle) macroData._research = { bundle: bundleData.bundle };
-          if (bundleData.sources) macroData.sources = bundleData.sources;
-          if (bundleData._billing) macroData._billing = bundleData._billing;
-        }
-      } catch (error: any) {
-        const errorMessage = error?.message || "Premium research payment failed";
+      if (!hasCredits) {
+        // No credits — skip research, advisor uses built-in context only
         x402Receipt = {
           status: "failed",
           amount: "0.000",
           currency: "USDC",
           sources: [],
-          reason: "Advisor answered without premium Arc research.",
-          error: errorMessage,
+          reason: "Advisor answered without research evidence.",
+          error: "Insufficient research credits. Earn more or add funds to unlock evidence-backed responses.",
         };
-        // Payment failed or gateway unreachable — advisor uses built-in context only
+      } else {
+        try {
+          updateChatState({ thinkingStep: "Gathering research evidence..." });
+
+          const bundleSources = "macro_analysis,portfolio_optimization,risk_assessment";
+          const { data: bundleData, receipt } = await fetchPaidSource(bundleSources);
+
+          x402Receipt = receipt;
+
+          if (bundleData) {
+            macroData = bundleData.data || bundleData;
+            if (bundleData.bundle) macroData._research = { bundle: bundleData.bundle };
+            if (bundleData.sources) macroData.sources = bundleData.sources;
+            if (bundleData._billing) macroData._billing = bundleData._billing;
+          }
+        } catch (error: any) {
+          const errorMessage = error?.message || "Research fetch failed";
+          x402Receipt = {
+            status: "failed",
+            amount: "0.000",
+            currency: "USDC",
+            sources: [],
+            reason: "Advisor answered without research evidence.",
+            error: errorMessage,
+          };
+        }
       }
 
       const CHAT_THINKING_MESSAGES = [
@@ -579,13 +534,12 @@ export function useAgentChat({
       portfolio.chainCount,
       portfolio.chains,
       portfolio.totalValue,
-      paymentSettings.autoPayEnabled,
-      paymentSettings.autoPayMaxUSDC,
+      creditsStatus,
       messages,
       addMessage,
       addActivity,
       fetchPaidSource,
-      quoteResearch,
+      deductCredits,
     ],
   );
 
