@@ -55,26 +55,29 @@ class X402TestSuite {
         try {
             const response = await this.request('/api/agent/x402-gateway?source=truflation', {}, 'basic');
             
-            if (response.status === 402) {
-                const challenge = await response.json();
-                
-                const hasRequiredFields = challenge.recipient && 
-                                        challenge.amount && 
-                                        challenge.currency === 'USDC' &&
-                                        challenge.nonce &&
-                                        challenge.expires;
-                
-                this.addResult('Basic Challenge', hasRequiredFields, 
-                    hasRequiredFields ? 'Challenge format correct' : 'Missing required fields');
-                
-                console.log(`   ✅ Challenge: ${challenge.amount} ${challenge.currency} to ${challenge.recipient}`);
-                console.log(`   📝 Nonce: ${challenge.nonce}`);
-                console.log(`   ⏰ Expires: ${new Date(challenge.expires).toISOString()}`);
+            if (response.status === 402 || response.status === 200) {
+                const payload = await response.json();
+                const isChallenge = response.status === 402;
+                const isFreeTier = response.status === 200 && payload._billing?.status === 'Free Tier';
+                const pass = isChallenge
+                    ? Boolean(payload.recipient && payload.amount && payload.currency === 'USDC' && payload.nonce && payload.expires)
+                    : isFreeTier;
+
+                this.addResult('Basic Gateway Response', pass,
+                    isChallenge ? 'Challenge format correct' : `Free tier response: ${payload._billing?.reason}`);
+
+                if (isChallenge) {
+                    console.log(`   ✅ Challenge: ${payload.amount} ${payload.currency} to ${payload.recipient}`);
+                    console.log(`   📝 Nonce: ${payload.nonce}`);
+                    console.log(`   ⏰ Expires: ${new Date(payload.expires).toISOString()}`);
+                } else {
+                    console.log(`   🆓 Free tier: ${payload._billing?.reason}`);
+                }
             } else {
-                this.addResult('Basic Challenge', false, `Expected 402, got ${response.status}`);
+                this.addResult('Basic Gateway Response', false, `Expected 200/402, got ${response.status}`);
             }
         } catch (error) {
-            this.addResult('Basic Challenge', false, error.message);
+            this.addResult('Basic Gateway Response', false, error.message);
         }
     }
 
@@ -184,6 +187,12 @@ class X402TestSuite {
                     `Premium service costs ${challengeAmount} USDC (must be <= 0.01)`);
                 
                 console.log(`   💎 Premium service: ${challengeAmount} USDC`);
+            } else if (premiumResponse.status === 200) {
+                const premiumData = await premiumResponse.json();
+                const isFreeTier = premiumData._billing?.status === 'Free Tier';
+                this.addResult('Premium Service Free Allowance', isFreeTier,
+                    `Premium source currently covered by free tier: ${premiumData._billing?.reason}`);
+                console.log(`   🆓 Premium source free allowance: ${premiumData._billing?.reason}`);
             }
             
         } catch (error) {

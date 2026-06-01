@@ -246,6 +246,7 @@ export default async function handler(
 ) {
     const start = Date.now();
     const requestedSources = parseRequestedSources(req.query.source, req.query.sources);
+    const quoteOnly = req.query.quote === '1' || req.query.quote === 'true';
     const paymentProof = getHeader(req, 'x-payment-proof');
     const paymentMandate = getHeader(req, 'x-payment-mandate');
     const paymentNonce = getHeader(req, 'x-payment-nonce');
@@ -281,6 +282,10 @@ export default async function handler(
         : sourcePlans[0].source.label;
     const totalCost = sourcePlans.reduce((sum, plan) => sum + plan.cost, 0);
     const totalCostMicros = sourcePlans.reduce((sum, plan) => sum + toMicroUSDC(plan.cost), 0);
+
+    if (quoteOnly) {
+        return sendResearchQuote(res, user, sourcePlans, totalCost, bundleRequested);
+    }
 
     if (paymentMandate) {
         try {
@@ -424,6 +429,53 @@ export default async function handler(
                 : 'Premium insight unlocked — daily free limit reached',
             ...settlementMeta,
         },
+    });
+}
+
+function buildQuoteLineItems(sourcePlans: SourcePlan[]) {
+    return sourcePlans.map((plan) => ({
+        sourceId: plan.source.id,
+        label: plan.source.label,
+        tier: plan.isFreeEligible ? 'free' : 'paid',
+        cost: plan.cost,
+        dataType: plan.source.dataType,
+        category: plan.source.category,
+        freshnessMinutes: plan.source.freshnessWindowMinutes,
+        reputation: plan.source.reputation,
+        freeRemaining: plan.isFreeEligible
+            ? Math.max(0, plan.freeLimit - (plan.currentUsage + 1))
+            : 0,
+    }));
+}
+
+function sendResearchQuote(
+    res: NextApiResponse,
+    user: UserState,
+    sourcePlans: SourcePlan[],
+    totalCost: number,
+    bundleRequested: boolean
+) {
+    const nonce = `quote_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const expiresAt = Date.now() + CHALLENGE_TTL_MS;
+    user.nonces.set(nonce, expiresAt);
+    const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
+
+    return res.status(200).json({
+        status: totalCost > 0 ? 'quoted' : 'free',
+        amount: totalCost > 0 ? paymentAmount.toFixed(3) : '0.000',
+        currency: 'USDC',
+        chainId: 5042002,
+        recipient: DATA_HUB_WALLET,
+        nonce,
+        expires: expiresAt,
+        current_balance: formatMicroUSDC(user.creditBalanceMicros, 4),
+        required_cost: totalCost,
+        requested_sources: sourcePlans.map((plan) => plan.source.id),
+        bundle_requested: bundleRequested,
+        reason: totalCost > 0
+            ? `Premium Arc research will use ${totalCost.toFixed(3)} USDC for ${sourcePlans.filter(plan => plan.cost > 0).length} paid source${sourcePlans.filter(plan => plan.cost > 0).length === 1 ? '' : 's'}.`
+            : 'This research is covered by the free tier. No Arc USDC will be spent.',
+        sources: buildQuoteLineItems(sourcePlans),
     });
 }
 

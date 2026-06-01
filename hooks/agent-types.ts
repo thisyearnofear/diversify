@@ -1,10 +1,11 @@
 import type { MultichainPortfolio } from "./use-multichain-balances";
 import type { RegionalInflationData } from "./use-inflation-data";
+import type { ResearchReceipt } from "@diversifi/shared";
 
 export interface AgentActivity {
   id: string;
   timestamp: number;
-  type: "analysis" | "recommendation" | "execution" | "payment";
+  type: "analysis" | "recommendation" | "execution" | "payment" | "research_payment";
   tier: "ADVISOR" | "GUARDIAN";
   description: string;
   status: "success" | "pending" | "failed";
@@ -16,6 +17,10 @@ export interface AgentActivity {
     x402Hash?: string;
     savings?: number;
     cost?: number;
+    query?: string;
+    sources?: Array<{ label: string; cost: number; tier: string }>;
+    explorer?: string;
+    remainingCredit?: string;
     researchEvidence?: ResearchEvidenceSummary;
   };
 }
@@ -258,11 +263,7 @@ export interface AIMessage {
   timestamp: Date;
   type?: "text" | "recommendation" | "insight" | "sosovalue_intelligence";
   provider?: "gemini" | "venice" | "modal" | "openai";
-  x402Receipt?: {
-    txHash: string;
-    amount: string;
-    explorer: string;
-  } | null;
+  x402Receipt?: ResearchReceipt | null;
   /** Research evidence sources shown below the message for transparency */
   researchSources?: Array<{
     label: string;
@@ -277,7 +278,7 @@ export interface AIMessage {
   };
   sosovalueData?: SoSoIntelligenceContent['data'];
   action?: {
-    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold" | "propose_sosovalue_trade";
+    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold" | "propose_sosovalue_trade" | "confirm_research";
     tab?: string;
     delay?: number;
     amount?: string;
@@ -286,6 +287,9 @@ export interface AIMessage {
     fromToken?: string;
     message?: string;
     reason?: string;
+    prompt?: string;
+    quoteAmount?: string;
+    quoteSources?: Array<{ label: string; cost: number; tier: string }>;
     newsItem?: SoSoIntelligenceContent['data']['news'][0];
   };
 }

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCredits } from "../../hooks/use-credits";
-import { useArcBalance } from "../../hooks/use-arc-balance";
+import { useResearchAccount } from "../../hooks/use-research-account";
 
 interface FreemiumPanelProps {
   onGoodDollarClaim: () => void;
@@ -9,12 +9,16 @@ interface FreemiumPanelProps {
 
 export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps) {
   const { status: creditsStatus, claimReward, shareApp } = useCredits();
-  const { balance: arcBalance, isOnArc } = useArcBalance();
+  const researchAccount = useResearchAccount();
   const [showFreemium, setShowFreemium] = useState(false);
   const [proofInput, setProofInput] = useState("");
   const [claimingKey, setClaimingKey] = useState<string | null>(null);
 
   if (!creditsStatus) return null;
+  const arcBalance = researchAccount.arcWalletBalance;
+  const spentToday = researchAccount.spentToday;
+  const lastResearchPayment = researchAccount.lastResearchPayment;
+  const { paymentSettings, updatePaymentSettings } = researchAccount;
 
   return (
     <div className="px-4 pt-1 pb-2">
@@ -26,6 +30,11 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
           {arcBalance !== null ? (
             <span className="font-bold text-purple-700 dark:text-purple-300">
               ⚡ Arc: ${parseFloat(arcBalance).toFixed(3)} USDC
+              {spentToday > 0 && (
+                <span className="ml-1 text-purple-500 dark:text-purple-400">
+                  · ${spentToday.toFixed(3)} spent today
+                </span>
+              )}
             </span>
           ) : creditsStatus.trial.active ? (
             <span className="font-bold text-emerald-700 dark:text-emerald-300">🎁 Free Trial — {creditsStatus.trial.daysRemaining}d left</span>
@@ -59,8 +68,60 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
                     <span className="text-xs font-bold text-purple-700 dark:text-purple-300">${parseFloat(arcBalance).toFixed(4)} USDC</span>
                   </div>
                   <div className="text-[10px] text-purple-600 dark:text-purple-400 mb-2">
-                    5 free premium queries/day included. Beyond that, $0.004–$0.01 USDC per query on Arc.
+                    Research quotes show before payment. Premium bundles typically cost $0.004–$0.015 USDC.
+                    {!researchAccount.isOnArc && " Payments switch to Arc automatically when your wallet supports it."}
                   </div>
+                  <div className="mb-2 rounded-lg bg-white/70 dark:bg-black/20 border border-purple-100 dark:border-purple-800/30 px-2 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300">
+                          Auto-pay research
+                        </p>
+                        <p className="text-[10px] text-purple-600 dark:text-purple-400">
+                          {paymentSettings.autoPayEnabled
+                            ? `On up to $${paymentSettings.autoPayMaxUSDC.toFixed(3)} per query`
+                            : "Confirm every paid bundle"}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => updatePaymentSettings({ autoPayEnabled: !paymentSettings.autoPayEnabled })}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${paymentSettings.autoPayEnabled ? "bg-purple-600" : "bg-gray-300 dark:bg-gray-600"}`}
+                        aria-pressed={paymentSettings.autoPayEnabled}
+                        aria-label="Toggle research auto-pay"
+                      >
+                        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${paymentSettings.autoPayEnabled ? "translate-x-5" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                    {paymentSettings.autoPayEnabled && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">Cap</span>
+                        <input
+                          type="number"
+                          min="0.001"
+                          step="0.001"
+                          value={paymentSettings.autoPayMaxUSDC.toFixed(3)}
+                          onChange={(event) => updatePaymentSettings({ autoPayMaxUSDC: Number(event.target.value) })}
+                          className="w-20 rounded-md border border-purple-100 dark:border-purple-800 bg-white dark:bg-gray-900 px-2 py-1 text-[10px] font-mono text-purple-800 dark:text-purple-200 outline-none focus:ring-2 focus:ring-purple-300"
+                        />
+                        <span className="text-[10px] text-purple-500 dark:text-purple-400">USDC/query</span>
+                      </div>
+                    )}
+                  </div>
+                  {lastResearchPayment && (
+                    <div className="mb-2 rounded-lg bg-white/70 dark:bg-black/20 border border-purple-100 dark:border-purple-800/30 px-2 py-1.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300">
+                          Last research
+                        </span>
+                        <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300">
+                          ${(lastResearchPayment.details?.cost || 0).toFixed(3)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-[10px] text-purple-600 dark:text-purple-400">
+                        {lastResearchPayment.description}
+                      </p>
+                    </div>
+                  )}
                   <a
                     href="https://faucet.circle.com"
                     target="_blank"

@@ -10,16 +10,30 @@ interface ResearchReceiptProps {
 export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
   const [open, setOpen] = useState(false);
   const reducedMotion = useReducedMotion();
+  const hasSpend = Number.parseFloat(receipt.amount || '0') > 0;
+  const statusLabel =
+    receipt.status === 'failed' ? 'Research skipped' :
+    receipt.status === 'skipped' ? 'Research skipped' :
+    receipt.status === 'quoted' ? 'Research quote' :
+    receipt.status === 'paid' ? 'Paid research' :
+    receipt.status === 'credit' ? 'Credits used' :
+    'Free research';
+  const statusColor =
+    receipt.status === 'failed' || receipt.status === 'skipped' || receipt.status === 'quoted'
+      ? 'text-amber-600 dark:text-amber-400'
+      : hasSpend
+        ? 'text-emerald-600 dark:text-emerald-400'
+        : 'text-gray-500 dark:text-gray-400';
 
   return (
     <div className="mt-2">
       <button
         onClick={() => setOpen(!open)}
         aria-label={open ? 'Hide research receipt' : 'Show research receipt'}
-        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+        className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${statusColor} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
       >
-        <span className="text-emerald-500">⛓</span>
-        <span>${receipt.amount} on Arc</span>
+        <span>{receipt.status === 'failed' ? '!' : '⛓'}</span>
+        <span>{statusLabel} · ${Number.parseFloat(receipt.amount || '0').toFixed(3)} USDC</span>
         <motion.span
           animate={reducedMotion ? undefined : { rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
@@ -43,30 +57,43 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Research receipt
                 </span>
-                <span className="text-[10px] font-mono text-emerald-400">
-                  ${receipt.amount} USDC
+                <span className={`text-[10px] font-mono ${statusColor}`}>
+                  ${Number.parseFloat(receipt.amount || '0').toFixed(3)} USDC
                 </span>
               </div>
 
-              <div className="flex flex-wrap gap-1.5">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-blue-500/10 text-blue-300 rounded-full border border-blue-500/20">
-                  World Bank
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-orange-500/10 text-orange-300 rounded-full border border-orange-500/20">
-                  CoinGecko
-                </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-bold bg-purple-500/10 text-purple-300 rounded-full border border-purple-500/20">
-                  DeFi Llama
-                </span>
-              </div>
+              {receipt.reason && (
+                <p className="text-[10px] leading-snug text-slate-400">
+                  {receipt.reason}
+                </p>
+              )}
+
+              {receipt.error && (
+                <p className="text-[10px] leading-snug text-amber-500 dark:text-amber-400">
+                  {receipt.error}
+                </p>
+              )}
+
+              {receipt.sources.length > 0 && (
+                <div className="space-y-1">
+                  {receipt.sources.map((source) => (
+                    <div key={source.sourceId} className="flex items-center justify-between gap-3 text-[10px]">
+                      <span className="truncate text-slate-400">{source.label}</span>
+                      <span className={source.tier === 'paid' ? 'font-mono text-emerald-400' : 'font-mono text-slate-500'}>
+                        ${source.cost.toFixed(3)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <div className="flex items-center gap-1">
                   <span className="inline-block w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-[9px]">
-                    ✓
+                    {receipt.status === 'failed' ? '!' : '✓'}
                   </span>
-                  <span className="text-emerald-400 font-bold text-[10px]">
-                    Verified
+                  <span className={`${statusColor} font-bold text-[10px]`}>
+                    {receipt.txHash ? 'Verified on Arc' : statusLabel}
                   </span>
                 </div>
                 {provider && (
@@ -76,14 +103,22 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                 )}
               </div>
 
-              <a
-                href={receipt.explorer}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block text-[10px] font-mono text-blue-400 hover:text-blue-300 truncate"
-              >
-                {receipt.txHash.slice(0, 18)}...{receipt.txHash.slice(-6)} ↗
-              </a>
+              {receipt.remainingCredit && (
+                <div className="text-[10px] text-slate-500">
+                  Gateway credit left: <span className="font-mono">${receipt.remainingCredit}</span>
+                </div>
+              )}
+
+              {receipt.txHash && receipt.explorer && (
+                <a
+                  href={receipt.explorer}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-[10px] font-mono text-blue-400 hover:text-blue-300 truncate"
+                >
+                  {receipt.txHash.slice(0, 18)}...{receipt.txHash.slice(-6)} ↗
+                </a>
+              )}
             </div>
           </motion.div>
         )}

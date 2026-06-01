@@ -158,6 +158,7 @@ export * from './types/portfolio';
 export * from './types/inflation';
 export * from './types/intelligence';
 export * from './types/strategy';
+export * from './types/research-billing';
 export type { StreamInfo } from './services/gooddollar-service';
 
 // Export Config

@@ -393,6 +393,13 @@ export default function AIChat() {
     setInputValue("");
   };
 
+  const submitResearchConfirmation = () => {
+    if (isChatting) return;
+    addUserMessage("Confirm");
+    sendChatMessage("confirm");
+    setInputValue("");
+  };
+
   // Initialize background Celo event monitoring & proactive insights capability
   useProactiveAgent();
 
@@ -706,7 +713,7 @@ export default function AIChat() {
                                 </span>
                               )}
                             </div>
-                            {msg.x402Receipt && (
+                            {msg.x402Receipt?.explorer && (
                               <a
                                 href={msg.x402Receipt.explorer}
                                 target="_blank"
@@ -756,6 +763,38 @@ export default function AIChat() {
                         >
                           → Open {msg.action.tab}
                         </button>
+                      )}
+                      {msg.action?.type === 'confirm_research' && (
+                        <div className="mt-3 rounded-xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/80 dark:bg-amber-900/10 p-2.5">
+                          {msg.action.quoteSources && msg.action.quoteSources.length > 0 && (
+                            <div className="mb-2 space-y-1">
+                              {msg.action.quoteSources.map((source) => (
+                                <div key={source.label} className="flex items-center justify-between gap-3 text-[10px]">
+                                  <span className="truncate text-amber-800 dark:text-amber-200">{source.label}</span>
+                                  <span className={source.tier === "paid" ? "font-mono font-bold text-amber-700 dark:text-amber-300" : "font-mono text-amber-500"}>
+                                    ${source.cost.toFixed(3)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => submitResearchConfirmation()}
+                              disabled={isChatting}
+                              className="px-3 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+                            >
+                              Run ${Number.parseFloat(msg.action.quoteAmount || '0').toFixed(3)}
+                            </button>
+                            <button
+                              onClick={() => submitPrompt("skip")}
+                              disabled={isChatting}
+                              className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 text-gray-700 dark:text-gray-200 text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+                            >
+                              Skip
+                            </button>
+                          </div>
+                        </div>
                       )}
 
                       {/* SoSoValue Intelligence Card */}

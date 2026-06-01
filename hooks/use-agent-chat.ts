@@ -6,6 +6,8 @@ import { useAgentConfig } from "./use-agent-config";
 import { useMultichainBalances } from "./use-multichain-balances";
 import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@diversifi/shared";
 import { useX402Payment } from "./use-x402-payment";
+import { useAgentActivities } from "./use-agent-activities";
+import { useResearchPaymentSettings } from "./use-research-account";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -48,7 +50,9 @@ export function useAgentChat({
   const { chainId, address } = useWalletContext();
   const { config } = useAgentConfig();
   const portfolio = useMultichainBalances(address, config.goal);
-  const { payForSource, fetchPaidSource } = useX402Payment();
+  const { fetchPaidSource, quoteResearch } = useX402Payment();
+  const { addActivity } = useAgentActivities();
+  const { settings: paymentSettings } = useResearchPaymentSettings();
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
@@ -88,9 +92,31 @@ export function useAgentChat({
     async (content: string) => {
       if (!capabilities.chat) return;
 
+      let effectiveContent = content;
+      let forceResearchPayment = false;
       const normalizedContent = content.trim().toLowerCase();
       const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
       const isAffirmative = /^(yes|yeah|yep|sure|ok|okay|do it|go ahead|please do|confirm)$/i.test(normalizedContent);
+
+      if (isAffirmative && lastAssistantMessage?.action?.type === "confirm_research" && lastAssistantMessage.action.prompt) {
+        effectiveContent = lastAssistantMessage.action.prompt;
+        forceResearchPayment = true;
+      } else if (lastAssistantMessage?.action?.type === "confirm_research" && /^(no|nope|cancel|skip)$/i.test(normalizedContent)) {
+        addMessage({
+          role: "assistant",
+          content: "No paid Arc research run. I can still answer with free context whenever you're ready.",
+          timestamp: new Date(),
+          type: "text",
+          x402Receipt: {
+            status: "skipped",
+            amount: "0.000",
+            currency: "USDC",
+            sources: lastAssistantMessage.x402Receipt?.sources || [],
+            reason: "User skipped the quoted paid research bundle.",
+          },
+        });
+        return;
+      }
 
       if (isAffirmative && lastAssistantMessage?.action?.type === "guardian_review") {
         updateChatState({
@@ -155,8 +181,8 @@ export function useAgentChat({
         return;
       }
 
-      const intent = IntentDiscoveryService.discover(content);
-      const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+      const intent = IntentDiscoveryService.discover(effectiveContent);
+      const wordCount = effectiveContent.trim().split(/\s+/).filter(Boolean).length;
       const allowFastPath = wordCount <= 6;
       const effectiveIntent: AppIntent = allowFastPath
         ? intent
@@ -206,7 +232,7 @@ export function useAgentChat({
         updateChatState({ isChatting: true, thinkingStep: "Executing action..." });
 
         // Execute background side-effects (SocialConnect resolution, etc.) via consolidated service
-        await AgentActionService.execute(intent, content, {});
+        await AgentActionService.execute(intent, effectiveContent, {});
 
         // Determine the action for the UI component (AIChat) to execute after a delay
         let navAction: AIMessage["action"] | undefined;
@@ -262,7 +288,7 @@ export function useAgentChat({
 
       // Inject SoSoValue intelligence card for market/news queries before advisor reply
       const SOSOVALUE_TRIGGERS = /\b(news|market|sentiment|flash|sosovalue|ssi|signal|headline|crypto news|market intel)\b/i;
-      if (SOSOVALUE_TRIGGERS.test(content)) {
+      if (SOSOVALUE_TRIGGERS.test(effectiveContent)) {
         try {
           updateChatState({ thinkingStep: "Fetching SoSoValue market intelligence..." });
           const ssRes = await fetch(`${apiBase}/api/agent/sosovalue`);
@@ -291,15 +317,59 @@ export function useAgentChat({
 
         // Fetch the full research bundle (macro + portfolio opt + risk) in one call
         const bundleSources = "macro_analysis,portfolio_optimization,risk_assessment";
-        const { data: bundleData, payment } = await fetchPaidSource(bundleSources);
-
-        if (payment) {
-          x402Receipt = {
-            txHash: payment.txHash,
-            amount: payment.amount,
-            explorer: payment.explorer,
-          };
+        if (!forceResearchPayment) {
+          updateChatState({ thinkingStep: "Pricing Arc research..." });
+          const quote = await quoteResearch(bundleSources);
+          const quoteAmount = Number.parseFloat(quote.amount);
+          const shouldAutoPay = paymentSettings.autoPayEnabled && quoteAmount <= paymentSettings.autoPayMaxUSDC;
+          if (quote.status === "quoted" && quoteAmount > 0 && !shouldAutoPay) {
+            addMessage({
+              role: "assistant",
+              content: `Premium Arc research is available for this answer. It will cost $${Number.parseFloat(quote.amount).toFixed(3)} USDC for ${quote.sources.filter(source => source.tier === "paid").length} paid source${quote.sources.filter(source => source.tier === "paid").length === 1 ? "" : "s"}.`,
+              timestamp: new Date(),
+              type: "text",
+              x402Receipt: {
+                status: "quoted",
+                amount: quote.amount,
+                currency: "USDC",
+                sources: quote.sources,
+                reason: quote.reason,
+                remainingCredit: quote.currentBalance,
+              },
+              action: {
+                type: "confirm_research",
+                prompt: effectiveContent,
+                quoteAmount: quote.amount,
+                quoteSources: quote.sources.map((source) => ({
+                  label: source.label,
+                  cost: source.cost,
+                  tier: source.tier,
+                })),
+              },
+            });
+            updateChatState({ isChatting: false, thinkingStep: "" });
+            return;
+          } else if (quote.status === "quoted" && quoteAmount > 0 && shouldAutoPay) {
+            addMessage({
+              role: "assistant",
+              content: `Auto-paying $${quoteAmount.toFixed(3)} USDC for Arc research under your $${paymentSettings.autoPayMaxUSDC.toFixed(3)} cap.`,
+              timestamp: new Date(),
+              type: "text",
+              x402Receipt: {
+                status: "quoted",
+                amount: quote.amount,
+                currency: "USDC",
+                sources: quote.sources,
+                reason: quote.reason,
+                remainingCredit: quote.currentBalance,
+              },
+            });
+          }
         }
+
+        const { data: bundleData, receipt } = await fetchPaidSource(bundleSources);
+
+        x402Receipt = receipt;
 
         // Merge gateway response into macroData for the advisor
         if (bundleData) {
@@ -310,7 +380,16 @@ export function useAgentChat({
           if (bundleData.sources) macroData.sources = bundleData.sources;
           if (bundleData._billing) macroData._billing = bundleData._billing;
         }
-      } catch {
+      } catch (error: any) {
+        const errorMessage = error?.message || "Premium research payment failed";
+        x402Receipt = {
+          status: "failed",
+          amount: "0.000",
+          currency: "USDC",
+          sources: [],
+          reason: "Advisor answered without premium Arc research.",
+          error: errorMessage,
+        };
         // Payment failed or gateway unreachable — advisor uses built-in context only
       }
 
@@ -364,7 +443,7 @@ export function useAgentChat({
           },
           body: JSON.stringify({
             mode: "conversation",
-            message: content,
+            message: effectiveContent,
             history: messages,
             chainId,
             address,
@@ -387,6 +466,36 @@ export function useAgentChat({
             researchSources: result.researchSources || [],
           };
           addMessage(assistantMessage);
+
+          if (x402Receipt) {
+            const spent = Number.parseFloat(x402Receipt.amount || "0");
+            const isSpendEvent = x402Receipt.status === "paid" || x402Receipt.status === "credit";
+            const isResearchEvent = isSpendEvent || x402Receipt.status === "failed";
+            if (isResearchEvent) {
+              addActivity({
+                type: "research_payment",
+                tier: "ADVISOR",
+                status: x402Receipt.status === "failed" ? "failed" : "success",
+                description: x402Receipt.status === "failed"
+                  ? "Premium Arc research skipped"
+                  : `Premium Arc research ${x402Receipt.status === "credit" ? "used credits" : "paid"}`,
+                details: {
+                  query: effectiveContent,
+                  cost: spent,
+                  amount: spent.toFixed(3),
+                  txHash: x402Receipt.txHash,
+                  x402Hash: x402Receipt.txHash,
+                  explorer: x402Receipt.explorer,
+                  remainingCredit: x402Receipt.remainingCredit,
+                  sources: x402Receipt.sources.map((source) => ({
+                    label: source.label,
+                    cost: source.cost,
+                    tier: source.tier,
+                  })),
+                },
+              });
+            }
+          }
 
           if (config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
             try {
@@ -451,8 +560,13 @@ export function useAgentChat({
       portfolio.chainCount,
       portfolio.chains,
       portfolio.totalValue,
+      paymentSettings.autoPayEnabled,
+      paymentSettings.autoPayMaxUSDC,
       messages,
       addMessage,
+      addActivity,
+      fetchPaidSource,
+      quoteResearch,
     ],
   );
 

@@ -17,6 +17,7 @@ import { ethers } from 'ethers';
 import { useWallets } from '@privy-io/react-auth';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { ARC_TOKENS, NETWORKS } from '../config';
+import type { ResearchQuote, ResearchReceipt, ResearchSourceLineItem } from '@diversifi/shared';
 
 const GATEWAY_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 const ARC_CHAIN_ID = NETWORKS.ARC_TESTNET.chainId; // 5042002
@@ -34,6 +35,22 @@ export interface X402PaymentResult {
     nonce: string;
 }
 
+type X402Challenge = {
+    status?: 'free' | 'quoted';
+    recipient: string;
+    amount: string;
+    nonce: string;
+    currency: 'USDC';
+    chainId: number;
+    expires: number;
+    current_balance?: string;
+    required_cost?: number;
+    requested_sources?: string[];
+    bundle_requested?: boolean;
+    reason?: string;
+    sources?: Array<ResearchSourceLineItem & { freeRemaining?: number }>;
+};
+
 export interface X402PaymentState {
     isPaying: boolean;
     lastPayment: X402PaymentResult | null;
@@ -49,30 +66,66 @@ export function useX402Payment() {
         error: null,
     });
 
-    /**
-     * Pay for a source and return the proof headers to attach to the real request.
-     * Returns null if the source is free-tier (no payment needed).
-     */
-    const payForSource = useCallback(async (
-        source: string,
-    ): Promise<{ headers: Record<string, string>; payment: X402PaymentResult | null }> => {
+    const toQuote = (challenge: X402Challenge): ResearchQuote => ({
+        status: challenge.status === 'free' ? 'free' : 'quoted',
+        amount: challenge.amount,
+        currency: challenge.currency,
+        chainId: challenge.chainId,
+        recipient: challenge.recipient,
+        nonce: challenge.nonce,
+        expires: challenge.expires,
+        currentBalance: challenge.current_balance || '0.0000',
+        requiredCost: challenge.required_cost ?? parseFloat(challenge.amount),
+        requestedSources: challenge.requested_sources || [],
+        bundleRequested: Boolean(challenge.bundle_requested),
+        reason: challenge.reason || 'Premium research requires Arc USDC.',
+        sources: challenge.sources || [],
+    });
 
-        // Step 1: probe the gateway — if 200 (free tier), no payment needed
-        const probe = await fetch(
-            `${GATEWAY_BASE}/api/agent/x402-gateway?source=${source}`,
-            { method: 'GET' },
-        );
+    const buildReceipt = (
+        gatewayData: any,
+        payment: X402PaymentResult | null,
+        fallbackStatus: ResearchReceipt['status'] = 'free',
+    ): ResearchReceipt => {
+        const sources = ((gatewayData?.sources || (gatewayData?._research?.source ? [gatewayData._research.source] : [])) as any[])
+            .map((source): ResearchSourceLineItem => ({
+                sourceId: source.sourceId || source.id || source.source_id || source.label,
+                label: source.label || source.sourceId || source.id || 'Research source',
+                tier: source.tier === 'paid' ? 'paid' : 'free',
+                cost: Number(source.cost || 0),
+                dataType: source.dataType,
+                category: source.category,
+                freshnessMinutes: source.freshnessMinutes,
+                reputation: source.reputation,
+            }));
+        const billing = gatewayData?._billing || {};
+        const sourceCost = sources.reduce((sum, source) => sum + source.cost, 0);
+        const amount = payment?.amount || Number(billing.cost ?? sourceCost ?? 0).toFixed(3);
+        const status: ResearchReceipt['status'] = payment
+            ? 'paid'
+            : Number(billing.cost || sourceCost) > 0
+                ? 'credit'
+                : fallbackStatus;
 
-        if (probe.ok) {
-            // Free tier — no payment required
-            return { headers: {}, payment: null };
-        }
+        return {
+            status,
+            amount,
+            currency: 'USDC',
+            sources,
+            txHash: payment?.txHash,
+            explorer: payment?.explorer,
+            nonce: payment?.nonce,
+            remainingCredit: billing.remaining_credit,
+            reason: billing.reason,
+            arcSettled: Boolean(billing.arcSettled),
+            settlementTxHashes: billing.txHashes,
+            settlementExplorers: billing.explorer,
+        };
+    };
 
-        if (probe.status !== 402) {
-            throw new Error(`Gateway returned unexpected status ${probe.status}`);
-        }
-
-        const challenge = await probe.json();
+    const payChallenge = useCallback(async (
+        challenge: X402Challenge,
+    ): Promise<{ headers: Record<string, string>; payment: X402PaymentResult }> => {
         const { recipient, amount, nonce, currency } = challenge;
 
         if (currency !== 'USDC') {
@@ -142,12 +195,53 @@ export function useX402Payment() {
     }, [address, wallets]);
 
     /**
+     * Pay for a source and return the proof headers to attach to the real request.
+     * Returns null if the source is free-tier (no payment needed).
+     */
+    const payForSource = useCallback(async (
+        source: string,
+    ): Promise<{ headers: Record<string, string>; payment: X402PaymentResult | null; quote?: ResearchQuote }> => {
+
+        // Step 1: probe the gateway — if 200 (free tier), no payment needed
+        const probe = await fetch(
+            `${GATEWAY_BASE}/api/agent/x402-gateway?source=${source}`,
+            { method: 'GET' },
+        );
+
+        if (probe.ok) {
+            // Free tier — no payment required
+            return { headers: {}, payment: null };
+        }
+
+        if (probe.status !== 402) {
+            throw new Error(`Gateway returned unexpected status ${probe.status}`);
+        }
+
+        const challenge = await probe.json() as X402Challenge;
+        const quote = toQuote(challenge);
+        const result = await payChallenge(challenge);
+        return { ...result, quote };
+    }, [payChallenge]);
+
+    const quoteResearch = useCallback(async (source: string): Promise<ResearchQuote> => {
+        const paramKey = source.includes(',') ? 'sources' : 'source';
+        const url = `${GATEWAY_BASE}/api/agent/x402-gateway?${paramKey}=${encodeURIComponent(source)}&quote=1`;
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Research quote failed: ${response.status}`);
+        }
+        return toQuote(await response.json() as X402Challenge);
+    }, []);
+
+    /**
      * Fetch a paid source end-to-end: handle 402 → pay → re-fetch with proof.
      * Drop-in replacement for a plain fetch() call to the gateway.
      */
     const fetchPaidSource = useCallback(async (source: string): Promise<{
         data: any;
         payment: X402PaymentResult | null;
+        quote: ResearchQuote | null;
+        receipt: ResearchReceipt;
     }> => {
         // Use 'sources' param for comma-separated bundles, 'source' for single
         const paramKey = source.includes(',') ? 'sources' : 'source';
@@ -158,16 +252,19 @@ export function useX402Payment() {
 
         if (firstAttempt.ok) {
             // Free tier — return data directly
-            return { data: await firstAttempt.json(), payment: null };
+            const data = await firstAttempt.json();
+            return { data, payment: null, quote: null, receipt: buildReceipt(data, null) };
         }
 
         if (firstAttempt.status !== 402) {
             throw new Error(`Gateway returned unexpected status ${firstAttempt.status}`);
         }
 
-        // 402 — need payment. Use the first source in the bundle for the payment flow.
-        const primarySource = source.split(',')[0].trim();
-        const { headers, payment } = await payForSource(primarySource);
+        // 402 — pay the exact challenge amount for this request. For bundles, this
+        // must be the bundle quote, not the first source's single-source price.
+        const challenge = await firstAttempt.json() as X402Challenge;
+        const quote = toQuote(challenge);
+        const { headers, payment } = await payChallenge(challenge);
 
         // Re-fetch with payment proof
         const res = await fetch(url, { headers: { ...headers } });
@@ -176,12 +273,15 @@ export function useX402Payment() {
             throw new Error(`Gateway request failed after payment: ${res.status}`);
         }
 
-        return { data: await res.json(), payment };
-    }, [payForSource]);
+        const data = await res.json();
+        return { data, payment, quote, receipt: buildReceipt(data, payment) };
+    }, [payChallenge]);
 
     return {
         ...state,
         payForSource,
+        payChallenge,
+        quoteResearch,
         fetchPaidSource,
         isArcConnected: true, // Arc chain switching handled inside payForSource
     };
