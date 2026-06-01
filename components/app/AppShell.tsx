@@ -1,17 +1,16 @@
 /**
  * AppShell — The main application layout once the user has completed onboarding.
  * Handles header, tab navigation, tab content, and floating controls.
- * Keeps index.tsx focused on hook orchestration and the landing/app gate.
+ *
+ * All app-level state is aggregated via useAppShell() — no props needed.
+ * index.tsx handles only page-level concerns (onboarding gate, SEO, confetti).
  */
 import { type ReactNode, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import type { TabId } from "@/constants/tabs";
-import type { UserExperienceMode } from "@/context/app/types";
-import type { Region } from "@/hooks/use-user-region";
-import type { RegionalInflationData } from "@/hooks/use-inflation-data";
-import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 
+import { useAppShell } from "@/hooks/use-app-shell";
 import { NETWORKS } from "@/config";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import TabNavigation from "@/components/ui/TabNavigation";
@@ -87,47 +86,18 @@ function TabPane({ id, children }: TabPaneProps) {
 
 const TAB_DISPLAY_ORDER = ["overview", "exchange", "agent", "protect", "info"] as const;
 
-export interface AppShellProps {
-  activeTab: TabId;
-  setActiveTab: (tab: TabId) => void;
-  trackTabChange: (from: string, to: string) => void;
-  experienceMode: UserExperienceMode;
-  setExperienceMode: (mode: UserExperienceMode) => void;
-  address?: string | null;
-  isWhitelisted: boolean;
-  isMiniPay: boolean;
-  isFarcaster: boolean;
-  walletChainId: number | null | undefined;
-  connectWallet: () => Promise<void>;
-  openAdvisor: () => void;
-  unreadCount: number;
-  multichainPortfolio: MultichainPortfolio;
-  isRegionLoading: boolean;
-  userRegion: Region;
-  setUserRegion: (r: Region) => void;
-  REGIONS: readonly Region[];
-  inflationData: Record<string, RegionalInflationData>;
-  isMultichainLoading: boolean;
-  refresh: () => Promise<void>;
-  currencyPerformanceData?: any;
-  availableTokens: any[];
-  openWalletTutorial: () => void;
-  closeTutorial: () => void;
-  isTutorialOpen: boolean;
-  handleTranscription: (text: string) => void;
-}
-
-export default function AppShell({
-  activeTab, setActiveTab, trackTabChange,
-  experienceMode, setExperienceMode,
-  address, isWhitelisted, isMiniPay, isFarcaster, walletChainId,
-  connectWallet, openAdvisor, unreadCount,
-  multichainPortfolio, isRegionLoading, userRegion, setUserRegion, REGIONS,
-  inflationData, isMultichainLoading, refresh, currencyPerformanceData,
-  availableTokens,
-  openWalletTutorial, closeTutorial, isTutorialOpen,
-  handleTranscription,
-}: AppShellProps) {
+export default function AppShell() {
+  const {
+    activeTab, setActiveTab, trackTabChange,
+    experienceMode, setExperienceMode,
+    address, isWhitelisted, isMiniPay, isFarcaster, walletChainId,
+    connectWallet, openAdvisor, unreadCount,
+    multichainPortfolio, isRegionLoading, userRegion, setUserRegion, REGIONS,
+    inflationData, isMultichainLoading, refresh, currencyPerformanceData,
+    availableTokens,
+    openWalletTutorial, closeTutorial, isTutorialOpen,
+    handleTranscription,
+  } = useAppShell();
   const isTestnet = !!(
     walletChainId &&
     (walletChainId === NETWORKS.CELO_SEPOLIA.chainId ||
