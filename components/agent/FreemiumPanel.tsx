@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCredits } from "../../hooks/use-credits";
 import { useResearchAccount } from "../../hooks/use-research-account";
+import { REWARD_ACTIONS } from "../../constants/credits";
+import type { RewardActionKey } from "../../constants/credits";
 
 interface FreemiumPanelProps {
   onGoodDollarClaim: () => void;
@@ -13,12 +15,29 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
   const [showFreemium, setShowFreemium] = useState(false);
   const [proofInput, setProofInput] = useState("");
   const [claimingKey, setClaimingKey] = useState<string | null>(null);
+  const [shareStep, setShareStep] = useState<"idle" | "shared" | "claimed">("idle");
 
   if (!creditsStatus) return null;
   const arcBalance = researchAccount.arcWalletBalance;
   const spentToday = researchAccount.spentToday;
   const lastResearchPayment = researchAccount.lastResearchPayment;
   const { paymentSettings, updatePaymentSettings } = researchAccount;
+
+  const handleShare = async () => {
+    setShareStep("shared");
+    const url = "https://diversifiapp.vercel.app";
+    const text = "Protecting my savings from inflation with DiversiFi 🌍 — AI-powered portfolio diversification for emerging markets. Try it free:";
+    if (navigator.share) {
+      await navigator.share({ title: "DiversiFi", text, url });
+    } else {
+      await navigator.clipboard.writeText(`${text} ${url}`);
+    }
+  };
+
+  const handleShareConfirm = async () => {
+    await claimReward("share_app");
+    setShareStep("claimed");
+  };
 
   return (
     <div className="px-4 pt-1 pb-2">
@@ -110,9 +129,7 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
                   {lastResearchPayment && (
                     <div className="mb-2 rounded-lg bg-white/70 dark:bg-black/20 border border-purple-100 dark:border-purple-800/30 px-2 py-1.5">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300">
-                          Last research
-                        </span>
+                        <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300">Last research</span>
                         <span className="text-[10px] font-mono text-purple-700 dark:text-purple-300">
                           ${(lastResearchPayment.details?.cost || 0).toFixed(3)}
                         </span>
@@ -133,26 +150,20 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
                 </div>
               )}
 
-              {/* Trial / Credits summary */}
-              <div className="px-3 py-2 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
-                    {creditsStatus.trial.active ? `Research trial — ${creditsStatus.trial.daysRemaining} days remaining` : "Research trial ended"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Bonus research credits: <span className="font-bold text-emerald-600 dark:text-emerald-400">${creditsStatus.credits.bonus.toFixed(3)} USDC</span>
-                    {creditsStatus.referral.totalEarned > 0 && (
-                      <span className="ml-2 text-amber-600 dark:text-amber-400">+${creditsStatus.referral.totalEarned.toFixed(2)} earned</span>
-                    )}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-400">Your referral code</p>
-                  <p className="text-xs font-mono font-bold text-gray-700 dark:text-gray-200">{creditsStatus.referral.code}</p>
-                </div>
+              {/* Credits summary — no referral code (referral tracking not built yet) */}
+              <div className="px-3 py-2">
+                <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
+                  {creditsStatus.trial.active ? `Research trial — ${creditsStatus.trial.daysRemaining} days remaining` : "Research trial ended"}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Bonus research credits: <span className="font-bold text-emerald-600 dark:text-emerald-400">${creditsStatus.credits.bonus.toFixed(3)} USDC</span>
+                  {creditsStatus.referral.totalEarned > 0 && (
+                    <span className="ml-2 text-amber-600 dark:text-amber-400">+${creditsStatus.referral.totalEarned.toFixed(2)} earned</span>
+                  )}
+                </p>
               </div>
 
-              {/* Earn more actions */}
+              {/* Available actions */}
               {creditsStatus.referral.availableActions.length > 0 && (
                 <div className="px-3 py-2">
                   <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">Earn research credits:</p>
@@ -165,21 +176,31 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
                         <div className="flex items-center gap-1.5 shrink-0">
                           <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">+${action.credits.toFixed(2)}</span>
                           {action.key === "share_app" ? (
-                            <button
-                              onClick={async () => { setClaimingKey(action.key); await shareApp(); setClaimingKey(null); }}
-                              disabled={claimingKey === action.key}
-                              className="px-2 py-0.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg disabled:opacity-50 transition-colors"
-                            >
-                              {claimingKey === action.key ? "…" : "Share"}
-                            </button>
+                            shareStep === "claimed" ? (
+                              <span className="px-2 py-0.5 text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg">Claimed ✓</span>
+                            ) : shareStep === "shared" ? (
+                              <button
+                                onClick={handleShareConfirm}
+                                className="px-2 py-0.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
+                              >
+                                Confirm share
+                              </button>
+                            ) : (
+                              <button
+                                onClick={handleShare}
+                                className="px-2 py-0.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg disabled:opacity-50 transition-colors"
+                              >
+                                Share
+                              </button>
+                            )
                           ) : action.key === "gooddollar_claim" ? (
                             <button
-                              onClick={() => { onGoodDollarClaim(); }}
+                              onClick={onGoodDollarClaim}
                               className="px-2 py-0.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors"
                             >
                               Claim
                             </button>
-                          ) : ["blog_post", "youtube_video", "twitter_thread"].includes(action.key) ? (
+                          ) : (
                             <div className="flex items-center gap-1">
                               <input
                                 type="url"
@@ -190,25 +211,38 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
                                 className="w-24 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                               />
                               <button
-                                onClick={async () => { await claimReward(action.key, proofInput); setProofInput(""); setClaimingKey(null); }}
+                                onClick={async () => { await claimReward(action.key as RewardActionKey, proofInput); setProofInput(""); setClaimingKey(null); }}
                                 disabled={!proofInput}
                                 className="px-2 py-0.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg disabled:opacity-50 transition-colors"
                               >
                                 Claim
                               </button>
                             </div>
-                          ) : (
-                            <button
-                              onClick={async () => { setClaimingKey(action.key); await claimReward(action.key); setClaimingKey(null); }}
-                              disabled={claimingKey === action.key}
-                              className="px-2 py-0.5 text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg disabled:opacity-50 transition-colors"
-                            >
-                              {claimingKey === action.key ? "…" : "Claim"}
-                            </button>
                           )}
                         </div>
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Completed actions — claimed history */}
+              {creditsStatus.referral.completedActions.length > 0 && (
+                <div className="px-3 py-2">
+                  <p className="text-xs font-bold text-gray-400 dark:text-gray-500 mb-1.5">Claimed:</p>
+                  <div className="flex flex-col gap-1">
+                    {creditsStatus.referral.completedActions.map(actionKey => {
+                      const reward = REWARD_ACTIONS[actionKey as keyof typeof REWARD_ACTIONS];
+                      if (!reward) return null;
+                      return (
+                        <div key={actionKey} className="flex items-center justify-between text-xs">
+                          <span className="text-gray-400 dark:text-gray-500">
+                            {reward.emoji} {reward.label}
+                          </span>
+                          <span className="text-emerald-500 font-bold">Claimed ✓</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -1,14 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { useToast } from '../components/ui/Toast';
-import type { RewardActionKey } from '../models/CreditClaim';
-
-export { REWARD_ACTIONS } from '../pages/api/agent/credits';
-import { REWARD_ACTIONS } from '../pages/api/agent/credits';
-
-const FREE_TRIAL_DAYS = 7;
-const FREE_TRIAL_CREDITS = 0.5;
-const STORAGE_KEY = 'diversifi-credits';
+import type { RewardActionKey } from '../constants/credits';
+import { REWARD_ACTIONS, FREE_TRIAL_DAYS, FREE_TRIAL_CREDITS, STORAGE_KEY, REQUIRES_PROOF } from '../constants/credits';
 
 export interface CreditsStatus {
   trial: {
@@ -55,7 +49,6 @@ function saveStored(data: StoredCredits, address?: string | null) {
   } catch {}
 }
 
-/** Sync claims from MongoDB — returns the merged StoredCredits */
 async function syncFromServer(address: string, local: StoredCredits): Promise<StoredCredits> {
   try {
     const res = await fetch(`/api/agent/credits?userAddress=${encodeURIComponent(address)}`);
@@ -64,7 +57,6 @@ async function syncFromServer(address: string, local: StoredCredits): Promise<St
     const serverActions: RewardActionKey[] = completedActions || [];
     const totalEarnedServer = totalEarned || 0;
 
-    // Merge: server actions + local actions that aren't on the server yet
     const mergedActions = [...new Set([...serverActions, ...local.completedActions])];
     const mergedCredits = Math.max(local.bonusCredits, FREE_TRIAL_CREDITS + totalEarnedServer);
 
@@ -80,7 +72,6 @@ export function useCredits() {
   const [stored, setStoredState] = useState<StoredCredits | null>(null);
   const [claimingAction, setClaimingAction] = useState<RewardActionKey | null>(null);
 
-  // Load from localStorage on mount / address change, then sync with server
   useEffect(() => {
     const init = async () => {
       let data = loadStored(address);
@@ -129,14 +120,12 @@ export function useCredits() {
       showToast('You\'ve already claimed this reward.', 'info');
       return { success: false, creditsEarned: 0 };
     }
-    const requiresProof: RewardActionKey[] = ['blog_post', 'youtube_video', 'twitter_thread'];
-    if (requiresProof.includes(action) && !proof) {
+    if (REQUIRES_PROOF.includes(action) && !proof) {
       showToast('Please provide a URL as proof for this action.', 'error');
       return { success: false, creditsEarned: 0 };
     }
     setClaimingAction(action);
     try {
-      // Validate claim server-side (URL verification + dedup + persistence)
       const res = await fetch('/api/agent/credits', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -145,7 +134,6 @@ export function useCredits() {
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Verification failed' }));
         if (err.alreadyClaimed) {
-          // Server says already claimed — sync local state
           updateStored(prev => ({
             ...prev,
             completedActions: [...new Set([...prev.completedActions, action])],

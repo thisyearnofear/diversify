@@ -7,13 +7,7 @@
  */
 
 import mongoose, { Schema, Document } from 'mongoose';
-
-export type RewardActionKey =
-  | 'share_app'
-  | 'blog_post'
-  | 'youtube_video'
-  | 'twitter_thread'
-  | 'gooddollar_claim';
+import type { RewardActionKey } from '../constants/credits';
 
 export interface ICreditClaim extends Document {
   userAddress: string;

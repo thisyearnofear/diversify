@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { CreditClaim } from '../../../models/CreditClaim';
-import type { RewardActionKey } from '../../../models/CreditClaim';
+import type { RewardActionKey } from '../../../constants/credits';
+import { REWARD_ACTIONS, REQUIRES_PROOF } from '../../../constants/credits';
 
 /**
  * Credits & Freemium Status API
@@ -13,16 +14,6 @@ import type { RewardActionKey } from '../../../models/CreditClaim';
  * URL-based rewards (blog, video, tweet) are verified by fetching the URL
  * and checking for "DiversiFi" in the page text before granting credits.
  */
-
-export const REWARD_ACTIONS = {
-  share_app:       { label: 'Share the app',                    credits: 0.05, emoji: '📣' },
-  blog_post:       { label: 'Write a blog post',                credits: 0.25, emoji: '✍️' },
-  youtube_video:   { label: 'Make a YouTube video',             credits: 0.50, emoji: '🎥' },
-  twitter_thread:  { label: 'Post a Twitter/X thread',          credits: 0.10, emoji: '🐦' },
-  gooddollar_claim:{ label: 'Claim your daily G$',              credits: 0.02, emoji: '🌱' },
-} as const;
-
-const requiresProof: RewardActionKey[] = ['blog_post', 'youtube_video', 'twitter_thread'];
 
 /** Verify a proof URL actually contains DiversiFi content */
 async function verifyProofUrl(urlStr: string): Promise<boolean> {
@@ -71,7 +62,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Invalid action' });
     }
 
-    if (requiresProof.includes(action) && !proof) {
+    // ── Rate limiting: max 3 POST claims per user per hour ──
+    if (userAddress) {
+      try {
+        await dbConnect();
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+        const recentCount = await CreditClaim.countDocuments({
+          userAddress: userAddress.toLowerCase(),
+          claimedAt: { $gte: oneHourAgo },
+        });
+        if (recentCount >= 3) {
+          return res.status(429).json({
+            error: 'Rate limit reached. You can claim up to 3 rewards per hour.',
+          });
+        }
+      } catch {
+        // DB unavailable — skip rate limiting
+      }
+    }
+
+    if (REQUIRES_PROOF.includes(action) && !proof) {
       return res.status(400).json({ error: 'Proof URL required for this action' });
     }
 
@@ -116,7 +126,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ── URL content verification ──
     let proofVerified = false;
-    if (proof && requiresProof.includes(action)) {
+    if (proof && REQUIRES_PROOF.includes(action)) {
       proofVerified = await verifyProofUrl(proof);
       if (!proofVerified) {
         return res.status(400).json({
