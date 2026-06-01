@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { useToast } from '../components/ui/Toast';
+import type { RewardActionKey } from '../models/CreditClaim';
+
+export { REWARD_ACTIONS } from '../pages/api/agent/credits';
 import { REWARD_ACTIONS } from '../pages/api/agent/credits';
-import type { RewardActionKey } from '../pages/api/agent/credits';
 
 const FREE_TRIAL_DAYS = 7;
 const FREE_TRIAL_CREDITS = 0.5;
@@ -53,17 +55,42 @@ function saveStored(data: StoredCredits, address?: string | null) {
   } catch {}
 }
 
+/** Sync claims from MongoDB — returns the merged StoredCredits */
+async function syncFromServer(address: string, local: StoredCredits): Promise<StoredCredits> {
+  try {
+    const res = await fetch(`/api/agent/credits?userAddress=${encodeURIComponent(address)}`);
+    if (!res.ok) return local;
+    const { completedActions, totalEarned } = await res.json();
+    const serverActions: RewardActionKey[] = completedActions || [];
+    const totalEarnedServer = totalEarned || 0;
+
+    // Merge: server actions + local actions that aren't on the server yet
+    const mergedActions = [...new Set([...serverActions, ...local.completedActions])];
+    const mergedCredits = Math.max(local.bonusCredits, FREE_TRIAL_CREDITS + totalEarnedServer);
+
+    return { ...local, completedActions: mergedActions, bonusCredits: mergedCredits };
+  } catch {
+    return local;
+  }
+}
+
 export function useCredits() {
   const { address } = useWalletContext();
   const { showToast } = useToast();
   const [stored, setStoredState] = useState<StoredCredits | null>(null);
   const [claimingAction, setClaimingAction] = useState<RewardActionKey | null>(null);
 
-  // Load from localStorage on mount / address change
+  // Load from localStorage on mount / address change, then sync with server
   useEffect(() => {
-    const data = loadStored(address);
-    setStoredState(data);
-    saveStored(data, address); // persist on first visit
+    const init = async () => {
+      let data = loadStored(address);
+      if (address) {
+        data = await syncFromServer(address, data);
+      }
+      setStoredState(data);
+      saveStored(data, address);
+    };
+    init();
   }, [address]);
 
   const updateStored = useCallback((updater: (prev: StoredCredits) => StoredCredits) => {
@@ -88,7 +115,10 @@ export function useCredits() {
         code: stored.referralCode,
         completedActions: stored.completedActions,
         availableActions,
-        totalEarned: stored.completedActions.reduce((sum, key) => sum + REWARD_ACTIONS[key].credits, 0),
+        totalEarned: stored.completedActions.reduce((sum, key) => {
+          const reward = REWARD_ACTIONS[key as keyof typeof REWARD_ACTIONS];
+          return sum + (reward ? reward.credits : 0);
+        }, 0),
       },
     };
   })() : null;
@@ -106,20 +136,26 @@ export function useCredits() {
     }
     setClaimingAction(action);
     try {
-      // For verifiable actions, validate proof URL server-side first
-      if (requiresProof.includes(action)) {
-        const res = await fetch('/api/agent/credits', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, proof }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: 'Verification failed' }));
-          showToast(`❌ ${err.error}`, 'error');
-          return { success: false, creditsEarned: 0 };
+      // Validate claim server-side (URL verification + dedup + persistence)
+      const res = await fetch('/api/agent/credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, proof, userAddress: address }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Verification failed' }));
+        if (err.alreadyClaimed) {
+          // Server says already claimed — sync local state
+          updateStored(prev => ({
+            ...prev,
+            completedActions: [...new Set([...prev.completedActions, action])],
+          }));
         }
+        showToast(`❌ ${err.error}`, 'error');
+        return { success: false, creditsEarned: 0 };
       }
-      const reward = REWARD_ACTIONS[action];
+      const reward = REWARD_ACTIONS[action as keyof typeof REWARD_ACTIONS];
+      if (!reward) return { success: false, creditsEarned: 0 };
       updateStored(prev => ({
         ...prev,
         completedActions: [...prev.completedActions, action],
@@ -133,7 +169,7 @@ export function useCredits() {
       setClaimingAction(null);
     }
     return { success: false, creditsEarned: 0 };
-  }, [stored, updateStored, showToast]);
+  }, [stored, address, updateStored, showToast]);
 
   const shareApp = useCallback(async () => {
     const url = 'https://diversifiapp.vercel.app';
@@ -159,7 +195,7 @@ export function useCredits() {
     status,
     loading: stored === null,
     claimingAction,
-    fetchStatus: () => {}, // no-op — state is local
+    fetchStatus: () => {},
     claimReward,
     deductCredits,
     shareApp,
