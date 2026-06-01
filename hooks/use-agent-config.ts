@@ -9,7 +9,7 @@ const DEFAULT_CONFIG: AIConfig = {
   timeHorizon: "3 months",
   spendingLimit: 5.0,
   voiceResponsesEnabled: false,
-  walletProvider: "CIRCLE_MPC", // Default to Circle MPC (Agent Fuel Model)
+  walletProvider: "CIRCLE_MPC", // Default to Circle MPC (Guardian Wallet model)
 };
 
 let cachedConfig: AIConfig = DEFAULT_CONFIG;

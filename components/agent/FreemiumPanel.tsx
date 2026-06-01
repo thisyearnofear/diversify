@@ -29,7 +29,7 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
         <span className="flex items-center gap-2">
           {arcBalance !== null ? (
             <span className="font-bold text-purple-700 dark:text-purple-300">
-              ⚡ Arc: ${parseFloat(arcBalance).toFixed(3)} USDC
+              Research Balance: ${parseFloat(arcBalance).toFixed(3)} USDC
               {spentToday > 0 && (
                 <span className="ml-1 text-purple-500 dark:text-purple-400">
                   · ${spentToday.toFixed(3)} spent today
@@ -37,9 +37,9 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
               )}
             </span>
           ) : creditsStatus.trial.active ? (
-            <span className="font-bold text-emerald-700 dark:text-emerald-300">🎁 Free Trial — {creditsStatus.trial.daysRemaining}d left</span>
+            <span className="font-bold text-emerald-700 dark:text-emerald-300">Research Trial — {creditsStatus.trial.daysRemaining}d left</span>
           ) : (
-            <span className="font-bold text-teal-700 dark:text-teal-300">💳 Credits: ${creditsStatus.credits.bonus.toFixed(3)} USDC</span>
+            <span className="font-bold text-teal-700 dark:text-teal-300">Research Credits: ${creditsStatus.credits.bonus.toFixed(3)} USDC</span>
           )}
           {creditsStatus.referral.availableActions.length > 0 && (
             <span className="bg-amber-400 text-amber-900 font-bold px-1.5 py-0.5 rounded-full text-xs">
@@ -60,22 +60,22 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
             className="overflow-hidden"
           >
             <div className="mt-2 rounded-xl border border-emerald-200/60 dark:border-emerald-700/40 bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-              {/* Arc balance + research cost breakdown */}
+              {/* Research balance + cost controls */}
               {arcBalance !== null && (
                 <div className="px-3 py-2 bg-purple-50 dark:bg-purple-900/20 rounded-t-xl">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-black text-purple-700 dark:text-purple-300">⚡ Arc Research Balance</span>
+                    <span className="text-xs font-black text-purple-700 dark:text-purple-300">Research Balance</span>
                     <span className="text-xs font-bold text-purple-700 dark:text-purple-300">${parseFloat(arcBalance).toFixed(4)} USDC</span>
                   </div>
                   <div className="text-[10px] text-purple-600 dark:text-purple-400 mb-2">
-                    Research quotes show before payment. Premium bundles typically cost $0.004–$0.015 USDC.
-                    {!researchAccount.isOnArc && " Payments switch to Arc automatically when your wallet supports it."}
+                    Used only for paid evidence in AI chat. Quotes show before payment, and bundles typically cost $0.004–$0.015 USDC.
+                    {!researchAccount.isOnArc && " Wallet payments switch to Arc automatically when supported."}
                   </div>
                   <div className="mb-2 rounded-lg bg-white/70 dark:bg-black/20 border border-purple-100 dark:border-purple-800/30 px-2 py-2">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-wider text-purple-700 dark:text-purple-300">
-                          Auto-pay research
+                          Auto-pay paid research
                         </p>
                         <p className="text-[10px] text-purple-600 dark:text-purple-400">
                           {paymentSettings.autoPayEnabled
@@ -137,10 +137,10 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
               <div className="px-3 py-2 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-bold text-gray-800 dark:text-gray-100">
-                    {creditsStatus.trial.active ? `Free trial — ${creditsStatus.trial.daysRemaining} days remaining` : "Trial ended"}
+                    {creditsStatus.trial.active ? `Research trial — ${creditsStatus.trial.daysRemaining} days remaining` : "Research trial ended"}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Bonus credits: <span className="font-bold text-emerald-600 dark:text-emerald-400">${creditsStatus.credits.bonus.toFixed(3)} USDC</span>
+                    Bonus research credits: <span className="font-bold text-emerald-600 dark:text-emerald-400">${creditsStatus.credits.bonus.toFixed(3)} USDC</span>
                     {creditsStatus.referral.totalEarned > 0 && (
                       <span className="ml-2 text-amber-600 dark:text-amber-400">+${creditsStatus.referral.totalEarned.toFixed(2)} earned</span>
                     )}
@@ -155,7 +155,7 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
               {/* Earn more actions */}
               {creditsStatus.referral.availableActions.length > 0 && (
                 <div className="px-3 py-2">
-                  <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">Earn free credits:</p>
+                  <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">Earn research credits:</p>
                   <div className="flex flex-col gap-1.5">
                     {creditsStatus.referral.availableActions.map(action => (
                       <div key={action.key} className="flex items-center justify-between gap-2">

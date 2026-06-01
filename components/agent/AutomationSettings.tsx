@@ -495,7 +495,7 @@ export default function AutomationSettings({
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                  Fully managed "Fuel Tank" using USDC for gas. Powered by Circle
+                  Fully managed Guardian Wallet using USDC for execution. Powered by Circle
                   Programmable Wallets.
                 </p>
               </button>
@@ -1068,7 +1068,7 @@ export default function AutomationSettings({
               automations when it detects wealth protection opportunities that
               meet your configured thresholds.
               {isDev &&
-                " All analysis costs are paid autonomously by the agent using x402 micropayments on Arc Network."}
+                " Paid research uses your Research Balance; Guardian execution uses the configured Guardian Wallet."}
             </p>
           </div>
         </div>

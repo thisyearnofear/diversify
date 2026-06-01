@@ -619,7 +619,7 @@ export const AgentTierStatus: React.FC<{
                     </div>
                   )}
 
-                  {/* Agent Fuel Gauge or Permission Info */}
+                  {/* Guardian Wallet or Permission Info */}
                   {autonomousStatus?.walletType === "agent-fuel" ? (
                     <AgentFuelGauge status={autonomousStatus} />
                   ) : hasValidPermission ? (

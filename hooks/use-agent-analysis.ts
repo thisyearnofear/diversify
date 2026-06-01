@@ -413,7 +413,7 @@ export function useAgentAnalysis({
               zapier: userZapierPrefs // Phase 5D: Inject user-driven Zapier config map
             },
             useAutonomousMode: true,
-            userId: user?.id, // Pass authenticated user ID for "Agent Fuel" flow
+            userId: user?.id, // Pass authenticated user ID for Guardian Wallet flow
             signedPermission: signedPermission || undefined, // Phase 2A: Thread session permission
           }),
         });

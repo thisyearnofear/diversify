@@ -44,9 +44,9 @@ interface AgentFuelGaugeProps {
 }
 
 /**
- * AgentFuelGauge - Visualizes the user's dedicated Agent Wallet (MPC)
+ * AgentFuelGauge - Visualizes the user's dedicated Guardian Wallet (MPC)
  * 
- * Part of the 2026 "Agent Fuel" architecture.
+ * Part of the Guardian execution wallet architecture.
  * - Shows real-time USDC balance in the agent-specific vault.
  * - Provides "Top Up" capability with guided deposit flow.
  * - Transparently displays the agent's on-chain address.
@@ -81,8 +81,8 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
   const isHedgeActive = accountStatus?.hasPositions ?? false;
   const hedgeValue = accountStatus?.totalPositionValue ?? 0;
   
-  // Fuel level logic (how much USDC is left for nanopayments)
-  // We assume a "full tank" is the daily limit or a fixed threshold like $10
+  // Wallet level logic (how much USDC is left for Guardian execution)
+  // We assume a full wallet is the daily limit or a fixed threshold like $10.
   const fuelCapacity = Math.max(totalLimit, 10);
   const fuelPercentage = Math.min((balance / fuelCapacity) * 100, 100);
   
@@ -95,7 +95,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
     if (status.address) {
       navigator.clipboard.writeText(status.address);
       setIsCopying(true);
-      showToast('Protection wallet address copied', 'info');
+      showToast('Guardian wallet address copied', 'info');
       
       // Record activity for gamification
       await recordActivity({
@@ -133,7 +133,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
           </div>
           <div>
             <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest leading-none">
-              Protection Balance
+              Guardian Wallet
             </h4>
             <div className="text-lg font-black text-gray-900 dark:text-white mt-1">
               ${balance.toFixed(2)} <span className="text-[10px] text-gray-400 font-bold uppercase">USDC</span>
@@ -202,7 +202,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="font-black text-blue-500">3.</span>
-                  <span>Your protection balance updates automatically</span>
+                  <span>Your Guardian Wallet updates automatically</span>
                 </div>
               </div>
 
@@ -210,7 +210,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
               <div className="mt-3 pt-2 border-t border-blue-200/50 dark:border-blue-700/50">
                 <div className="flex items-center gap-1 text-[9px] text-blue-500/70 dark:text-blue-400/70">
                   <span>💡</span>
-                  <span>Minimum recommended: $5 USDC • Gas is auto-sponsored</span>
+                  <span>Minimum recommended: $5 USDC • execution gas is auto-sponsored</span>
                 </div>
               </div>
             </div>
@@ -218,7 +218,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
         )}
       </AnimatePresence>
 
-      {/* Fuel Tank Visualizer */}
+      {/* Guardian wallet level */}
       <div className="space-y-2 mb-4">
         <div className="flex justify-between text-[10px] font-bold text-gray-500">
           <span>BALANCE LEVEL</span>

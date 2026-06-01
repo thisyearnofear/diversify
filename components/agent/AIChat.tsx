@@ -117,7 +117,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
            <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">⛽</span>
-           <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Protection Balance</span>
+           <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Guardian Wallet</span>
         </div>
         <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
           {action.network}
@@ -252,7 +252,7 @@ const STARTER_PROMPTS = [
     badge: "Free",
   },
   {
-    label: "Paid macro bundle",
+    label: "Paid research",
     prompt: "Run a paid premium research bundle using macro analysis, portfolio optimization, and risk assessment, then explain the result simply.",
     badge: "$0.015 Arc",
   },
@@ -621,7 +621,7 @@ export default function AIChat() {
                         Ask for a clear next action
                       </p>
                       <p className="max-w-[300px] text-sm text-gray-600 dark:text-gray-300">
-                        Start with a portfolio summary, a protection plan, or a paid Arc research bundle with on-chain proof.
+                        Start with a portfolio summary, a protection plan, or a paid research bundle with on-chain proof.
                       </p>
                     </div>
 
@@ -630,7 +630,7 @@ export default function AIChat() {
                         Premium research
                       </p>
                       <p className="mt-1 text-xs text-amber-900 dark:text-amber-100">
-                        Paid evidence runs on Arc and costs between <span className="font-bold">$0.004</span> and <span className="font-bold">$0.015</span> USDC.
+                        Paid evidence uses your Research Balance and costs between <span className="font-bold">$0.004</span> and <span className="font-bold">$0.015</span> USDC.
                       </p>
                     </div>
 
@@ -908,8 +908,8 @@ export default function AIChat() {
             </form>
             <p className="px-1 text-[11px] text-gray-500 dark:text-gray-400">
               {address
-                ? "5 free premium queries/day. After that, research costs $0.004–$0.01 USDC on Arc."
-                : "Free analysis included. Connect a wallet to unlock premium research after daily limit."}
+                ? "Free research is included first. Paid evidence uses your Research Balance only after a quote."
+                : "Free analysis included. Connect a wallet to unlock paid research after the free tier."}
             </p>
           </div>
         </div>

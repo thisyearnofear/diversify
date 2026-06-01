@@ -40,7 +40,7 @@ export default function IntelligenceHistory() {
       <div className="sticky top-0 z-10 -mx-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur pb-2">
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="rounded-xl border border-purple-100 dark:border-purple-800/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-2">
-            <p className="text-[9px] font-black uppercase tracking-wider text-purple-500">Arc balance</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-purple-500">Research balance</p>
             <p className="text-xs font-black text-purple-800 dark:text-purple-200">
               ${Number.parseFloat(researchAccount.arcWalletBalance || "0").toFixed(3)}
             </p>
@@ -52,7 +52,7 @@ export default function IntelligenceHistory() {
             </p>
           </div>
           <div className="rounded-xl border border-emerald-100 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
-            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600">Bonus credits</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600">Research credits</p>
             <p className="text-xs font-black text-emerald-800 dark:text-emerald-200">
               ${researchAccount.bonusCredits.toFixed(3)}
             </p>
@@ -78,7 +78,7 @@ export default function IntelligenceHistory() {
         {view === 'research' && researchPayments.length === 0 && (
           <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center">
             <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No research payments yet.</p>
-            <p className="mt-1 text-xs text-gray-400">Run or quote a premium Arc research bundle from chat.</p>
+            <p className="mt-1 text-xs text-gray-400">Run or quote a paid research bundle from chat.</p>
           </div>
         )}
 
