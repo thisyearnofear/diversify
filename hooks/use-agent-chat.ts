@@ -8,6 +8,7 @@ import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@div
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useResearchPaymentSettings } from "./use-research-account";
+import { useCredits } from "./use-credits";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -53,6 +54,7 @@ export function useAgentChat({
   const { fetchPaidSource, quoteResearch } = useX402Payment();
   const { addActivity } = useAgentActivities();
   const { settings: paymentSettings } = useResearchPaymentSettings();
+  const { deductCredits } = useCredits();
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
   const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
@@ -471,6 +473,11 @@ export function useAgentChat({
             const spent = Number.parseFloat(x402Receipt.amount || "0");
             const isSpendEvent = x402Receipt.status === "paid" || x402Receipt.status === "credit";
             const isResearchEvent = isSpendEvent || x402Receipt.status === "failed";
+
+            if (isSpendEvent && spent > 0) {
+              deductCredits(spent);
+            }
+
             if (isResearchEvent) {
               addActivity({
                 type: "research_payment",

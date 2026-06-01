@@ -147,12 +147,21 @@ export function useCredits() {
     return claimReward('share_app');
   }, [claimReward, showToast]);
 
+  const deductCredits = useCallback((amount: number) => {
+    if (amount <= 0) return;
+    updateStored(prev => ({
+      ...prev,
+      bonusCredits: Math.max(0, prev.bonusCredits - amount),
+    }));
+  }, [updateStored]);
+
   return {
     status,
     loading: stored === null,
     claimingAction,
     fetchStatus: () => {}, // no-op — state is local
     claimReward,
+    deductCredits,
     shareApp,
   };
 }
