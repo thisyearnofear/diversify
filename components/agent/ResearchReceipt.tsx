@@ -17,6 +17,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
     receipt.status === 'quoted' ? 'Research quote' :
     receipt.status === 'paid' ? 'Paid research' :
     receipt.status === 'credit' ? 'Credits used' :
+    hasSpend ? 'Research' :
     'Free research';
   const statusColor =
     receipt.status === 'failed' || receipt.status === 'skipped' || receipt.status === 'quoted'

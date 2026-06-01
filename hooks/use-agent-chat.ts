@@ -26,6 +26,9 @@ const defaultChatState: ChatStoreState = {
   thinkingStep: "",
 };
 
+// macro_analysis(0.004) + portfolio_optimization(0.005) + risk_assessment(0.006)
+const RESEARCH_BUNDLE_PRICE = 0.015;
+
 let cachedChatState: ChatStoreState = defaultChatState;
 const listeners = new Set<(state: ChatStoreState) => void>();
 
@@ -457,6 +460,11 @@ export function useAgentChat({
 
         if (response.ok) {
           const result = await response.json();
+          // Patch receipt amount to reflect true cost to user's research allowance
+          const patchedReceipt = x402Receipt && x402Receipt.status !== "failed" && x402Receipt.sources.length > 0
+            ? { ...x402Receipt, amount: (Number.parseFloat(x402Receipt.amount || "0") || RESEARCH_BUNDLE_PRICE).toFixed(3) }
+            : x402Receipt;
+
           const assistantMessage: AIMessage = {
             role: "assistant",
             content: result.response,
@@ -464,7 +472,7 @@ export function useAgentChat({
             type: result.type || "text",
             action: result.action,
             provider: result.provider,
-            x402Receipt,
+            x402Receipt: patchedReceipt,
             researchSources: result.researchSources || [],
           };
           addMessage(assistantMessage);
@@ -474,22 +482,26 @@ export function useAgentChat({
             const isSpendEvent = x402Receipt.status === "paid" || x402Receipt.status === "credit";
             const isResearchEvent = isSpendEvent || x402Receipt.status === "failed";
 
-            if (isSpendEvent && spent > 0) {
-              deductCredits(spent);
+            // Always deduct from bonus credits when research sources are consumed.
+            // The gateway may grant free-tier access (cost=0 in receipt) but the
+            // user's research allowance should still reflect usage.
+            const effectiveCost = spent > 0 ? spent : (x402Receipt.status !== "failed" && x402Receipt.sources.length > 0 ? RESEARCH_BUNDLE_PRICE : 0);
+            if (effectiveCost > 0) {
+              deductCredits(effectiveCost);
             }
 
-            if (isResearchEvent) {
+            if (isResearchEvent || (x402Receipt.status !== "failed" && x402Receipt.sources.length > 0)) {
               addActivity({
                 type: "research_payment",
                 tier: "ADVISOR",
                 status: x402Receipt.status === "failed" ? "failed" : "success",
                 description: x402Receipt.status === "failed"
                   ? "Premium Arc research skipped"
-                  : `Premium Arc research ${x402Receipt.status === "credit" ? "used credits" : "paid"}`,
+                  : `Premium Arc research ${x402Receipt.status === "credit" ? "used credits" : x402Receipt.status === "paid" ? "paid" : "from allowance"}`,
                 details: {
                   query: effectiveContent,
-                  cost: spent,
-                  amount: spent.toFixed(3),
+                  cost: effectiveCost,
+                  amount: effectiveCost.toFixed(3),
                   txHash: x402Receipt.txHash,
                   x402Hash: x402Receipt.txHash,
                   explorer: x402Receipt.explorer,

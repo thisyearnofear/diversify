@@ -252,9 +252,9 @@ const STARTER_PROMPTS = [
     badge: "Free",
   },
   {
-    label: "Paid research",
+    label: "Deep research",
     prompt: "Run a paid premium research bundle using macro analysis, portfolio optimization, and risk assessment, then explain the result simply.",
-    badge: "$0.015 Arc",
+    badge: "3 sources",
   },
 ] as const;
 

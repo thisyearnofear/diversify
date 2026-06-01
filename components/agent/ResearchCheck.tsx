@@ -1,5 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useState } from 'react';
+import { useCredits } from '../../hooks/use-credits';
+import { FREE_TRIAL_CREDITS } from '../../constants/credits';
 
 const SOURCES = ['World Bank', 'CoinGecko', 'IMF', 'DeFi Llama', 'FRED'];
 
@@ -8,7 +10,9 @@ interface ResearchCheckProps {
   spent?: number;
 }
 
-export function ResearchCheck({ isResearching, spent = 0 }: ResearchCheckProps) {
+export function ResearchCheck({ isResearching }: ResearchCheckProps) {
+  const { status } = useCredits();
+  const spent = status ? Math.max(0, FREE_TRIAL_CREDITS + status.referral.totalEarned - status.credits.bonus) : 0;
   const reducedMotion = useReducedMotion();
   const [visibleSources, setVisibleSources] = useState<string[]>([]);
   const [sourceIndex, setSourceIndex] = useState(0);
