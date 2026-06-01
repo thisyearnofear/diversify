@@ -1,16 +1,14 @@
 /**
  * TabContentRouter — Renders the active tab content with swipe navigation.
  *
- * Receives only the subset of AppShell state needed for tab rendering.
- * Extracted from AppShell.tsx per the 9/10 roadmap (Task 3).
+ * Consumes useAppShell() directly — no prop relay needed.
  */
 import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import type { TabId } from "@/constants/tabs";
-import type { Region } from "@/hooks/use-user-region";
-import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 
+import { useAppShell } from "@/hooks/use-app-shell";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { GuardianStreakWidget } from "@/components/agent/GuardianStreakWidget";
@@ -85,48 +83,17 @@ function TabPane({ id, children }: TabPaneProps) {
 
 const TAB_DISPLAY_ORDER = ["overview", "exchange", "agent", "protect", "info"] as const;
 
-// ── Props ──
-
-export interface TabContentRouterProps {
-  activeTab: TabId;
-  setActiveTab: (tab: TabId) => void;
-  trackTabChange: (from: string, to: string) => void;
-  // Data passed to tab components
-  multichainPortfolio: MultichainPortfolio;
-  isMultichainLoading: boolean;
-  refresh: () => Promise<void>;
-  isRegionLoading: boolean;
-  userRegion: Region;
-  setUserRegion: (r: Region) => void;
-  REGIONS: readonly Region[];
-  inflationData: Record<string, any>;
-  currencyPerformanceData?: any;
-  availableTokens: any[];
-  walletChainId: number | null | undefined;
-  isMiniPay: boolean;
-  isFarcaster: boolean;
-}
-
 // ── Component ──
 
-export default function TabContentRouter({
-  activeTab,
-  setActiveTab,
-  trackTabChange,
-  multichainPortfolio,
-  isMultichainLoading,
-  refresh,
-  isRegionLoading,
-  userRegion,
-  setUserRegion,
-  REGIONS,
-  inflationData,
-  currencyPerformanceData,
-  availableTokens,
-  walletChainId,
-  isMiniPay,
-  isFarcaster,
-}: TabContentRouterProps) {
+export default function TabContentRouter() {
+  const {
+    activeTab, setActiveTab, trackTabChange,
+    multichainPortfolio, isMultichainLoading, refresh,
+    isRegionLoading, userRegion, setUserRegion, REGIONS,
+    inflationData, currencyPerformanceData, availableTokens,
+    walletChainId, isMiniPay, isFarcaster,
+  } = useAppShell();
+
   return (
     <motion.div
       className="pt-2 pb-20"

@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface GuardianOnboardingWizardProps {
   onActivate: () => void;
+  onSkip: () => void;
   spendingLimit?: number;
 }
 
@@ -44,6 +45,7 @@ const STEPS: { step: Step; emoji: string; title: string; body: string }[] = [
 
 export default function GuardianOnboardingWizard({
   onActivate,
+  onSkip,
   spendingLimit = 5.0,
 }: GuardianOnboardingWizardProps) {
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -126,6 +128,18 @@ export default function GuardianOnboardingWizard({
           )}
         </motion.div>
       </AnimatePresence>
+
+      {/* Skip link — shown on step 1 for users who already understand */}
+      {currentStep === 1 && (
+        <div className="px-6 pb-3 text-center">
+          <button
+            onClick={onSkip}
+            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline transition-colors"
+          >
+            Skip intro — I know what a Guardian is
+          </button>
+        </div>
+      )}
 
       {/* Navigation — hidden on step 4 (it has its own CTA) */}
       {currentStep !== 4 && (

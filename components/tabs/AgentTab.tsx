@@ -70,6 +70,7 @@ export default function AgentTab({
   const { askAdvisor } = useAdvisor();
   const { navigateToSwap } = useNavigation();
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [skipWizard, setSkipWizard] = useState(false);
 
   const handleAskAgent = () => {
     askAdvisor(
@@ -101,6 +102,7 @@ export default function AgentTab({
   const needsGuardianOnboarding =
     !!address &&
     !isStatusLoading &&
+    !skipWizard &&
     (!autonomousStatus || !autonomousStatus.enabled);
 
   if (needsGuardianOnboarding) {
@@ -120,6 +122,7 @@ export default function AgentTab({
               "I want to activate my Guardian to protect my savings. Help me set up a daily spending limit and choose which tokens to allow."
             );
           }}
+          onSkip={() => setSkipWizard(true)}
           spendingLimit={config.spendingLimit}
         />
       </div>

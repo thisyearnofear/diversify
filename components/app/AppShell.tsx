@@ -17,19 +17,15 @@ import TabContentRouter from "./TabContentRouter";
 import FloatingControls from "./FloatingControls";
 
 export default function AppShell() {
-  const shell = useAppShell();
-
   const {
-    activeTab, setActiveTab, trackTabChange,
+    activeTab, setActiveTab,
     experienceMode, setExperienceMode,
     address, isWhitelisted, isFarcaster, walletChainId,
     connectWallet, openAdvisor, unreadCount,
-    multichainPortfolio, isRegionLoading, userRegion, setUserRegion, REGIONS,
-    inflationData, isMultichainLoading, refresh, currencyPerformanceData,
-    availableTokens, isMiniPay,
+    isMiniPay,
     openWalletTutorial, closeTutorial, isTutorialOpen,
     handleTranscription,
-  } = shell;
+  } = useAppShell();
 
   const isTestnet = !!(
     walletChainId &&
@@ -92,24 +88,7 @@ export default function AppShell() {
       />
 
       {/* Tab content */}
-      <TabContentRouter
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        trackTabChange={trackTabChange}
-        multichainPortfolio={multichainPortfolio}
-        isMultichainLoading={isMultichainLoading}
-        refresh={refresh}
-        isRegionLoading={isRegionLoading}
-        userRegion={userRegion}
-        setUserRegion={setUserRegion}
-        REGIONS={REGIONS}
-        inflationData={inflationData}
-        currencyPerformanceData={currencyPerformanceData}
-        availableTokens={availableTokens}
-        walletChainId={walletChainId}
-        isMiniPay={isMiniPay}
-        isFarcaster={isFarcaster}
-      />
+      <TabContentRouter />
 
       <WalletTutorial
         isOpen={isTutorialOpen}
