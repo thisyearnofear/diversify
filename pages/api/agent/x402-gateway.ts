@@ -16,6 +16,8 @@ import {
     type ArcResearchDataType,
     type ArcResearchSourceDefinition,
     type SettlementResult,
+    type BrightDataBankCode,
+    type BrightDataCommodity,
     x402Analytics
 } from '@diversifi/shared';
 
@@ -905,7 +907,7 @@ const BRIGHT_DATA_TIMEOUT_MS = 6000; // 6s max for a fresh scrape, fall back to 
 
 async function getBrightDataCentralBanks(isFreeTier: boolean): Promise<Record<string, unknown>> {
     try {
-        const banks = isFreeTier ? ['FED'] : ['FED', 'ECB', 'BOE', 'BOJ'];
+        const banks: BrightDataBankCode[] = isFreeTier ? ['FED'] : ['FED', 'ECB', 'BOE', 'BOJ'];
         const announcements = await BrightDataService.getCentralBankAnnouncements({ banks, maxAgeHours: isFreeTier ? 48 : 24 });
         return {
             announcements: announcements || [],
@@ -923,7 +925,7 @@ async function getBrightDataCentralBanks(isFreeTier: boolean): Promise<Record<st
 
 async function getBrightDataCommodities(isFreeTier: boolean): Promise<Record<string, unknown>> {
     try {
-        const commodities = isFreeTier ? ['gold', 'crude_oil'] : ['gold', 'crude_oil', 'copper', 'wheat'];
+        const commodities: BrightDataCommodity[] = isFreeTier ? ['gold', 'crude_oil'] : ['gold', 'crude_oil', 'copper', 'wheat'];
         const prices = await BrightDataService.getCommodityPrices({ commodities });
         return {
             prices: prices || [],
