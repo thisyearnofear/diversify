@@ -2,91 +2,69 @@
 
 ## Core Story
 
-DiversiFi is a **savings protection app** for people in volatile economies. For the Arc submission, the narrow claim is simpler: the advisor buys fresh evidence before recommending any allocation change.
+DiversiFi is a **savings protection app** for people in volatile economies. A proactive AI Guardian monitors markets, detects inflation shifts, and protects stablecoin savings by diversifying across stronger economies — with on-chain proof of every decision.
 
-**What it is**: A calm, simple savings protection experience.
-**What it is not**: A trading terminal, DeFi control panel, or yield farming dashboard.
-
-## Advanced Capabilities
-
-DiversiFi uses **LI.FI Composer** to execute atomic, multi-step DeFi workflows in a single user transaction. By abstracting complex cross-chain bridges, swaps, and contract interactions (such as vault deposits), we deliver a "DeFi Mullet" experience: consumer-grade simplicity in the front, and powerful cross-chain orchestration in the back.
-
-## Hackathon Direction
-
-DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Payments hackathon:
-
-- The user asks whether to hold, rebalance, or hedge.
-- The advisor gates premium evidence behind an x402-style `402 Payment Required` challenge and accepts real Arc USDC payment proofs.
-- Each premium purchase triggers a real USDC micro-transaction on Arc, returned as a tx hash.
-- Evidence is scored for freshness, reputation, and source agreement before a recommendation is made.
-- The payment is part of the decision loop, not a separate product surface.
-- Judge-facing observability is backed by Arc transfer evidence, so payment counts and usage telemetry stay coherent after deploys.
-
-### What Was Shipped
-
-| Area | What's live |
-|------|-------------|
-| **x402 gateway** | HTTP 402 challenge → payment proof → data, with nonce/replay protection and rate limiting |
-| **Real Arc settlement** | Every paid request fires `USDC.transfer` on Arc via EOA; tx hash returned in `_billing` |
-| **Gemini synthesis** | `macro_analysis`, `portfolio_optimization`, `risk_assessment` call Gemini Flash with live data |
-| **Live data sources** | World Bank, FRED, CoinGecko, DeFiLlama, Yearn, Alpha Vantage — real API calls |
-| **Evidence bundles** | Single request can fetch multiple sources; bundle scored for confidence and agreement |
-| **Provider badge** | Chat UI shows "Powered by Gemini" / "✦ Venice" per message |
-| **User API key** | ⚙️ modal lets users supply their own Gemini key; forwarded via `x-gemini-key` header |
-| **Metrics endpoint** | `/api/agent/x402-metrics` — payment count, pricing proof, agent wallet balance, Arc Explorer link |
-| **0G full-stack** | Serving (inference) → Storage (evidence CID) → DA (state) → Chain `RecommendationLedger` ([`0x8b85…3740f`](https://chainscan-galileo.0g.ai/address/0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f)) records every recommendation on-chain |
-| **0G ledger API** | `/api/agent/zero-g-ledger` — total recommendations + recent on-chain records with explorer links |
-| **Verifiable AI dashboard** | In-app modal renders full Serving → Storage → Chain trace per recommendation |
-
-### Out of Scope
-
-- New payment protocol layers that do not replace existing x402 plumbing
-- New chain support unless it directly improves the research or settlement story
-- Separate research dashboards that duplicate advisor output
-
-
-## How It Works
-
-1. **User connects** → Privy creates Safe smart account
-2. **User picks a Protection Plan** → Signs spending permission ($50/day, 7 days)
-3. **User deposits stablecoins** → Agent diversifies per plan
-4. **User monitors** → Real-time receipts, allocations, P&L
-5. **User withdraws anytime** → Fees settled at withdrawal
+**What it is:** A calm, simple savings protection experience guided by verifiable AI.
+**What it is not:** A trading terminal, DeFi control panel, or yield farming dashboard.
 
 ## Primary Persona
 
-- A stablecoin saver who wants to protect purchasing power but does not want to manually monitor macro data, risk signals, and yield opportunities.
-- They want one practical answer: hold, rebalance, or de-risk.
-- They value attached proof more than a verbose AI explanation.
+A stablecoin saver who wants to protect purchasing power but does not want to manually monitor macro data, risk signals, and yield opportunities. They want one practical answer — hold, rebalance, or de-risk — with attached proof, not a verbose AI explanation.
 
-## Validation Status
+## How It Works
 
-- **What is validated now:** the payment loop, settlement proof, source pricing, and end-to-end advisor flow all work live on Arc.
-- **What the current UX optimizes for:** a calm research-to-recommendation flow rather than power-user trading behavior.
-- **What remains after the hackathon:** broader user interviews and retention testing; the current submission proves economic and technical viability first.
+1. **Connect** — Privy creates a Safe smart account (email, social login, or existing wallet)
+2. **Pick a Protection Plan** — Sign an ERC-7715 spending permission (e.g., $50/day, 7 days)
+3. **Deposit stablecoins** — The Guardian diversifies per plan across regions and asset types
+4. **Monitor** — Real-time receipts, allocations, P&L in a single dashboard
+5. **Withdraw anytime** — Fees settled at withdrawal
 
-## Financial Strategies (Protection Plans)
+## Protection Plans
 
 | Plan | Philosophy | Focus |
 |------|-----------|-------|
 | **Africapitalism** | African prosperity | Keep wealth in African economies (cUSD, KESm, COPm) |
-| **Buen Vivir** | Latin American balance | Balance material wealth with community (LatAm stablecoins) |
+| **Buen Vivir** | Latin American balance | Balance material wealth with community |
 | **Confucian** | East Asian prudence | Long-term stability, low volatility |
-| **Gotong Royong** | Southeast Asian mutual aid | Community-first, shared risk (PHPm, regional) |
-| **Islamic Finance** | Sharia-compliant | No interest-bearing assets, ethical screening |
+| **Gotong Royong** | Southeast Asian mutual aid | Community-first, shared risk |
+| **Islamic Finance** | Sharia-compliant | No interest-bearing assets, ethical screening (excludes perp strategies) |
 | **Global Diversification** | Maximum spread | Geographic diversification across all regions |
 | **Custom** | User-defined | Set your own allocation targets |
+
+## What Makes It Different
+
+1. **Verifiable AI.** Every recommendation is anchored to 0G Storage (evidence CID) and recorded on-chain via `RecommendationLedger`. Users can inspect the raw data behind every decision in the in-app Verifiable AI Dashboard — it's not a black box.
+
+2. **Autonomous Guardian.** A server-side cron loop monitors markets 24/7 via Firecrawl, synthesizes signals with multi-provider AI (Gemini → Venice → 0G Serving → Modal), and auto-executes rebalancing within user-signed permission bounds — no manual intervention needed.
+
+3. **Regional inflation awareness.** Protection plans are culturally aligned (Africapitalism, Buen Vivir, etc.) and target specific emerging-market inflation profiles, not generic "crypto yields."
+
+4. **Calm UX.** Designed as a savings protection app, not a trading terminal. The Guardian proposes one clear action at a time. Advanced controls are hidden behind an experience mode toggle.
 
 ## Terminology Guide
 
 | Internal Term | User-Facing Term |
 |--------------|-----------------|
-| Agent | Advisor |
+| Agent | Advisor / Guardian |
 | Strategy | Protection Plan |
 | Exchange | Protect |
 | Agent Fuel | Protection Balance |
 | Rebalance | Re-protect |
 | Vault | Savings |
+
+## Core Capabilities (What's Shipped)
+
+| Area | Status |
+|------|--------|
+| **AI inference** | Multi-provider chain: Gemini Flash → Venice → Featherless → 0G Serving → Modal, with circuit breakers and 5-min caching |
+| **Swap execution** | 13 strategies: Mento, LiFi, 1inch, Uniswap V3, Hyperliquid perps, direct RWA, Robinhood AMM, Curve Arc, Emerging Markets |
+| **Guardian loop** | Cron-driven autonomous execution with ERC-7715 permission enforcement, confidence thresholds, and daily caps |
+| **x402 payments** | HTTP 402 challenge → real Arc USDC settlement → paid evidence with on-chain tx proof |
+| **0G verifiability** | Full stack: Serving (inference) → Storage (evidence CID) → DA (state) → Chain (RecommendationLedger) |
+| **Live data** | World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
+| **Agent memory** | Cognee for cross-session persistent context |
+| **Multi-chain** | Celo, Arbitrum, Arc Testnet, Robinhood Chain |
+| **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |
 
 ## Product Principles
 
@@ -95,44 +73,26 @@ DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Paymen
 3. **Prevent bloat** — Say no to features that don't serve the core story
 4. **DRY, clean, modular** — Code quality enables product clarity
 5. **Performant** — Fast loads, smooth interactions
-6. **Delete, don’t deprecate** — Remove unused code paths once the replacement is live
+6. **Delete, don't deprecate** — Remove unused code paths once the replacement is live
 
-## What to Cut
+## What We Cut / Deferred
 
 - Trading-terminal identity (no charts, no order books)
 - Protocol-first messaging (user outcomes first)
-- Duplicate recommendation surfaces (consolidate into Advisor)
-- Advanced controls (hide behind "Advanced" toggle until core flow is complete)
 - Voice/automation features (until core flow is polished)
+- Separate research dashboards that duplicate advisor output
 
 ## Ideal Navigation
 
 | Tab | Purpose |
 |-----|---------|
-| **Home** | Portfolio overview, protection status, quick actions |
-| **Protect** | Deposit, choose plan, view allocation |
-| **Advisor** | AI recommendations, explanations, market context |
-| **Learn** | Inflation education, strategy guides, glossary |
+| **Overview** | Portfolio summary, inflation impact, quick actions |
+| **Protection** | Choose plan, view allocation, deposit |
+| **Exchange** | Swap stablecoins across regions and chains |
+| **Agent** | AI Guardian recommendations, verifiable proof, backtesting |
+| **Info** | Inflation education, strategy guides, glossary |
 
-## Priority Roadmap
-
-### P0 (Now)
-- Demote trading-terminal identity
-- Rename Agent → Advisor throughout UI
-- Merge deposit + plan selection into single flow
-
-### P1 (Next)
-- Rewrite all copy to match calm, savings-first tone
-- Move advanced controls behind toggle
-- Consolidate recommendation surfaces
-
-### P2 (Later)
-- Reassess secondary systems (voice, automation, social)
-- Expand to additional emerging market stablecoins
-- Farcaster mini-app
-- Open agent registry
-
-## Fee Structure
+## Fees
 
 | Fee | Amount | When |
 |-----|--------|------|
@@ -140,19 +100,14 @@ DiversiFi presents as a **proof-of-research rebalancer** for the Arc Nano Paymen
 | Performance | 10% above high-water mark | Only on gains above previous peak |
 | Swap spread | 0.10% | Per swap |
 
-## Hackathon Pedigree
-
-DiversiFi was built across multiple hackathons:
-- **Celo "Build Agents for the Real World"** — Financial inclusion, autonomous operations, UX innovation
-- **Auth0 "Authorized to Act"** — Dual permission model (on-chain + off-chain consent)
-- **Arc "Agentic Economy on Arc"** — Real on-chain settlement, Gemini-powered evidence synthesis, x402 per-request monetisation
-
-Key accomplishments: culturally-aligned strategies, Agent Fuel Model, inflation-first design, proactive monitoring, privacy-first AI, real Arc settlement loop.
-
 ## Target Users
 
 People in emerging markets who:
 - Experience high local inflation (>10% annually)
 - Want to protect savings, not speculate
-- Need guidance, not DeFi complexity
+- Need guidance without DeFi complexity
 - Value cultural alignment with their financial philosophy
+
+## Current Priorities
+
+See `roadmap.md` for the 14-day improvement plan targeting 9/10 across Product Design, UI/UX, Cogency, Performance, and Architecture.

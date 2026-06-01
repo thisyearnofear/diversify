@@ -1,34 +1,220 @@
 # Architecture
 
-DiversiFi is a curator-led strategy marketplace built for MiniPay, focused on protecting wealth from volatility using stablecoin-based baskets.
+DiversiFi is an AI-powered autonomous financial advisor that protects stablecoin savings from currency debasement. It combines multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — all anchored to on-chain verifiability via 0G and Arc.
 
-## Core Value Proposition
+## High-Level Architecture
 
-- **The Recovery Trap**: We educate users on the mathematical asymmetry of losses (e.g., a 50% drop requires a 100% gain to recover).
-- **Anti-Volatility Engine**: Curators build and maintain stable-asset baskets ('Baskets') to shield users from market drawdowns.
-- **Curator-led Marketplace**: Expert users curate, stake collateral on, and market their strategies to the DiversiFi community.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Frontend (Next.js 15 + React 19 + Tailwind)                │
+│  pages/index.tsx → AppShell → {Overview,Protect,Exchange,   │
+│                                Agent,Info} tabs             │
+│  27 hooks, dynamic imports, Framer Motion transitions       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│  @diversifi/shared (monorepo package, 33K+ lines)           │
+│                                                             │
+│  ┌─────────────────────┐  ┌───────────────────────────┐     │
+│  │ AI Layer            │  │ Swap Layer                │     │
+│  │ • 8 providers       │  │ • SwapOrchestratorService │     │
+│  │ • FallbackOrch.     │  │ • 13 strategy impls       │     │
+│  │ • CircuitBreaker    │  │ • ChainDetectionService   │     │
+│  │ • CachingDecorator  │  │ • LiFi, 1inch, UniswapV3  │     │
+│  │ • 0G Anchoring      │  │ • Hyperliquid, Mento, RWA│     │
+│  │ • LedgerDecorator   │  └───────────────────────────┘     │
+│  └─────────────────────┘                                    │
+│                                                             │
+│  ┌─────────────────────┐  ┌───────────────────────────┐     │
+│  │ Guardian Services   │  │ Data Services             │     │
+│  │ • AnalysisData      │  │ • marketPulseService      │     │
+│  │ • Recommendation    │  │ • inflationService        │     │
+│  │ • Execution         │  │ • unifiedCache            │     │
+│  │ • PostAnalysis      │  │ • BrightDataService       │     │
+│  └─────────────────────┘  │ • CogneeMemoryService     │     │
+│                           └───────────────────────────┘     │
+│                                                             │
+│  Types, Config, Utils, Wallet adapters, Streak rewards      │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│  API Layer (pages/api/)                                     │
+│                                                             │
+│  /api/agent/guardian-loop   → Cron-driven auto-execution    │
+│  /api/agent/advisor         → AI-powered recommendations    │
+│  /api/agent/x402-gateway    → Payment-gated evidence        │
+│  /api/agent/zero-g-ledger   → 0G on-chain proof            │
+│  /api/vault/*               → Smart account + fee ops       │
+│  /api/agent/firecrawl-*     → Macro signal webhooks         │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│  External Services                                          │
+│  • MongoDB (user state, permissions, guardian-state)        │
+│  • 0G: Storage (evidence CID) + DA + Chain (RecLedger)      │
+│  • Arc: x402 nanopayment settlement                         │
+│  • Cognee: cross-session agent memory                       │
+│  • Hetzner: always-on cron runtime (no cold starts)         │
+└─────────────────────────────────────────────────────────────┘
+```
 
-## Core Components
+## AI Provider Chain
 
-| Component | Responsibility |
-|-----------|----------------|
-| `StrategyVault.sol` | Celo Mainnet contract managing stakes, deposits, and 'Shield' actions. |
-| `components/portfolio/ProtectionAnalysis.tsx` | Dashboard surface for the 'Recovery Trap' calculator and Strategy discovery. |
-| `hooks/use-strategy-shield.ts` | Frontend hook managing on-chain deposits into curator vaults. |
+Requests flow through a 5-deep fallback with circuit breakers at each step:
 
-## Contract Architecture (Celo Mainnet)
+```
+Gemini Flash → Venice AI → Featherless → 0G Serving → Modal (GLM)
+    │              │            │             │            │
+    └── CircuitBreaker ────────┴─────────────┴────────────┘
+                  │
+          CachingDecorator (5-min TTL)
+                  │
+          ZeroGAnchoringDecorator (evidence → 0G Storage)
+                  │
+          RecommendationLedgerDecorator (on-chain record)
+```
 
-- **Curator Staking**: Curators must stake `cUSD` to ensure performance alignment.
-- **Shielding**: Users deposit `cUSD` into a Curator's vault to participate in a basket.
-- **Traceability**: Strategies are anchored to narratives, ensuring transparent auditability.
+Each provider implements `BaseAIProvider` (abstract class with `initialize()`, `isAvailable()`, `generateChatCompletion()`, `generateSpeech()`, `transcribeAudio()`). The `FallbackOrchestrator` tries providers in order until one succeeds, with per-operation timeouts and circuit breaker trip/reset via `CircuitBreakerDecorator`.
 
-### Deployed Contracts (Celo Mainnet)
+## Swap Orchestrator
 
-| Contract | Address |
-|----------|---------|
-| `StrategyVault` | [`0x8c4804fd65d722536fb0c4eb4632e030962293a7`](https://explorer.celo.org/address/0x8c4804fd65d722536fb0c4eb4632e030962293a7) |
+The `SwapOrchestratorService` routes swaps through an ordered list of `BaseSwapStrategy` implementations:
 
-## Development Status
+| # | Strategy | Use case |
+|---|----------|----------|
+| 1 | MentoSwapStrategy | Celo same-chain stablecoins |
+| 2 | EmergingMarketsStrategy | Celo Sepolia fictional companies |
+| 3 | CurveArcStrategy | Curve on Arc Testnet |
+| 4 | ArcTestnetStrategy | Arc Testnet guidance |
+| 5 | RobinhoodAMMStrategy | Stock token testnet |
+| 6 | HyperliquidPerpStrategy | Commodity perps (GOLD, SILVER, OIL) |
+| 7 | OneInchSwapStrategy | Multi-chain best rates |
+| 8 | UniswapV3Strategy | Direct Uniswap V3 fallback |
+| 9 | LiFiEarnStrategy | Vault deposits |
+| 10 | LiFiSwapStrategy | LiFi same-chain |
+| 11 | LiFiBridgeStrategy | Cross-chain bridging |
+| 12 | DirectRWAStrategy | RWA swaps (final fallback) |
 
-- **Mainnet**: Deployed and active on Celo Mainnet.
-- **Activity Tracking**: Real-time on-chain events (`ShieldApplied`, `CuratorStaked`) are indexed by Talent App for Proof of Ship leaderboard scoring.
+Strategies are tried in order. The orchestrator tracks per-strategy performance (success rate, average time) and can promote/demote. Islamic Finance mode excludes HyperliquidPerpStrategy.
+
+## Guardian Autonomous Loop
+
+The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes within user-signed ERC-7715 permission bounds:
+
+```
+1. Firecrawl detects macro change
+   → webhook /api/agent/firecrawl-webhook
+   → AI extracts signal
+   → stored in guardian-state (MongoDB)
+
+2. Cron ticks → /api/agent/guardian-loop
+   → DB query: find active, non-expired permissions
+   → Check pending recommendations in guardian-state
+   → Validate: confidence > GUARDIAN_CONFIDENCE_THRESHOLD (0.6)
+   → Validate: within daily limit, allowed tokens not exceeded
+   → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
+   → Execute via /api/vault/rebalance
+   → Anchor to 0G Storage + Cognee memory
+   → Record on 0G RecommendationLedger
+   → Clear recommendation from guardian-state
+```
+
+**Security:** Server-to-server auth via `GUARDIAN_LOOP_SECRET` header. DB unavailability returns `200` with status (never `500` — graceful degradation).
+
+## State Management (Frontend)
+
+### Context Providers (nested in `AppProviders`)
+
+| Provider | Scope |
+|----------|-------|
+| `NavigationProvider` | Active tab, tab history |
+| `ThemeProvider` | Dark/light mode |
+| `ExperienceProvider` | Simple/Standard/Advanced mode |
+| `StrategyProvider` | Protection plan selection |
+| `BacktestProvider` | Shared backtest simulation state |
+| `TourProvider` | Guided tour state |
+| `DemoModeProvider` | Demo mode toggle + mock data |
+
+### Hooks: Domain-Driven React Hooks
+
+All 40+ hooks live in `/hooks/`. Key patterns:
+
+- **Data hooks** (`use-inflation-data`, `use-multichain-balances`, `use-currency-performance`) — fetch and cache external data
+- **Agent hooks** (`use-proactive-agent`, `use-agent-chat`, `use-agent-config`) — Guardian interaction
+- **Wallet hooks** (`use-session-key`, `use-arc-balance`) — wallet operations
+- **UI hooks** (`use-mobile`, `use-in-view`, `use-animated-counter`) — responsive/UX helpers
+
+### Known issue: Prop drilling
+
+`pages/index.tsx` passes 27 props through `AppShell`. This will be resolved via a `useAppShell()` hook (see `roadmap.md`).
+
+## 0G Verifiability Stack
+
+Every AI recommendation traces through the full 0G pipeline:
+
+| 0G Component | Purpose |
+|---|---|
+| **0G Serving** | Decentralized inference via 0G Router (part of AI fallback chain) |
+| **0G Storage** | Evidence bundles (prompt, reasoning, data sources) hashed → CID |
+| **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
+| **0G Chain — RecommendationLedger** | On-chain record: `user → action → evidence CID → model → tx → confidence` |
+
+**Contract:** `0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f` on 0G Galileo Testnet (chainId `16602`)
+
+## Arc x402 Payment Loop
+
+Paid research flows through an HTTP 402 challenge/response:
+
+```
+Client → GET /api/agent/x402-gateway?source=macro_analysis
+       ← 402 { nonce, amount, currency: "USDC", recipient, expires }
+
+Client → USDC.transfer on Arc (real on-chain tx)
+Client → GET /api/agent/x402-gateway?source=macro_analysis
+         + x-payment-proof: 0x{tx_hash}
+         + x-payment-nonce: {challenge_nonce}
+       ← 200 { data, _billing: { arcSettled: true, txHashes, explorer } }
+```
+
+Agent wallet: `0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8` (Arc Testnet)
+
+## Deployment
+
+| Component | Host | Why |
+|-----------|------|------|
+| Frontend | Vercel | CDN, edge functions, free tier |
+| Heavy API routes | Hetzner VPS | No 15s timeout, no cold starts |
+| Agent runtime | Hetzner VPS + PM2 | Always-on cron + process management |
+| Database | MongoDB Atlas | Managed, IP-whitelisted |
+
+Heavy routes (`/api/agent/status`, `/api/agent/advisor`, `/api/agent/deep-analyze`, `/api/agent/x402-gateway`, `/api/vault/*`) are proxied from Vercel to Hetzner via `next.config.js` rewrites.
+
+## Monorepo Structure
+
+```
+diversifi/
+  pages/                    # Next.js pages router
+  components/               # React components (agent, app, tabs, onboarding, swap, ui, wallet)
+  hooks/                    # Domain-driven React hooks
+  context/                  # React context providers
+  config/                   # Chain configs, contract addresses
+  constants/                # Tab IDs, token addresses, inflation data
+  lib/                      # MongoDB client, demo data, OZ contracts (submodule)
+  models/                   # Mongoose models (Permission, Vault, etc.)
+  packages/
+    shared/                 # Core business logic (33K+ lines) — AI, swaps, Guardian, data
+    shared-0g/              # 0G Storage + DA integration
+    mento-utils/            # Mento Protocol helpers
+  scripts/                  # Firecrawl setup, wallet creation, volume generation
+  tests/                    # x402 + integration test harnesses
+```
+
+## Key Design Patterns
+
+| Pattern | Where | Why |
+|---------|-------|------|
+| **Strategy** | 13 swap strategies under `SwapOrchestratorService` | New DEX = new class, no existing code changes |
+| **Provider** | 8 AI providers under `BaseAIProvider` | Add/remove providers without touching orchestration |
+| **Decorator** | AI service wraps providers in caching → circuit breaker → 0G anchoring → ledger | Cross-cutting concerns are independently testable |
+| **Orchestrator** | `FallbackOrchestrator` and `SwapOrchestratorService` | Ordered fallback with performance tracking |
+| **Observer** | `agentEventBus` for proactive yield/rebalance alerts | Decoupled pub/sub between detection and notification |
