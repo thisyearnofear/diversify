@@ -69,5 +69,5 @@ export function useAgentConfig() {
     [],
   );
 
-  return { config, updateConfig };
+  return { config, updateConfig, needsGuardianOnboarding: config.walletProvider !== 'TETHER_WDK' };
 }

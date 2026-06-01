@@ -12,6 +12,7 @@ import dynamic from "next/dynamic";
 import { AgentTierStatus } from "../agent/AgentTierStatus";
 import AutomationSettings from "../agent/AutomationSettings";
 import ActionableRecommendation from "../agent/ActionableRecommendation";
+import GuardianOnboardingWizard from "../agent/GuardianOnboardingWizard";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 const BacktestPanel = dynamic(() => import("../agent/BacktestPanel").then(m => ({ default: m.BacktestPanel })), {
   ssr: false,
@@ -91,6 +92,35 @@ export default function AgentTab({
           icon="🤖"
           title="AI Advisor"
           description="Connect a wallet to get personalized financial advice."
+        />
+      </div>
+    );
+  }
+
+  // Guardian onboarding: show wizard if wallet connected but no active Guardian
+  const needsGuardianOnboarding =
+    !!address &&
+    !isStatusLoading &&
+    (!autonomousStatus || !autonomousStatus.enabled);
+
+  if (needsGuardianOnboarding) {
+    return (
+      <div className="space-y-4 pb-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white">
+            Your Guardian
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Set up your AI protection in one minute
+          </p>
+        </div>
+        <GuardianOnboardingWizard
+          onActivate={() => {
+            askAdvisor(
+              "I want to activate my Guardian to protect my savings. Help me set up a daily spending limit and choose which tokens to allow."
+            );
+          }}
+          spendingLimit={config.spendingLimit}
         />
       </div>
     );
