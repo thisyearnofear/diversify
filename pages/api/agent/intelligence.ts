@@ -10,10 +10,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const pulse = await marketPulseService.getMarketPulse();
-    const [inflationResult, macroResult] = await Promise.all([
+    // allSettled so a single upstream failure doesn't drop the other result.
+    // Both services use circuit breakers internally, so rejections are rare,
+    // but the pattern is more defensive than Promise.all.
+    const [inflationSettled, macroSettled] = await Promise.allSettled([
       inflationService.getInflationData(),
       macroService.getMacroData(),
     ]);
+    const inflationResult = inflationSettled.status === 'fulfilled'
+      ? inflationSettled.value
+      : { data: { countries: [] }, source: 'fallback' };
+    const macroResult = macroSettled.status === 'fulfilled'
+      ? macroSettled.value
+      : { data: {}, source: 'fallback' };
 
     const insights = await IntelligenceService.generateGuardianInsights(
       pulse,
@@ -24,13 +33,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Calculate regional risk heatmap for UI (Top 1% enhancement)
     const regionalRisk: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {};
     const regions = ['Africa', 'LatAm', 'Asia', 'USA', 'Europe'];
-    
+
     regions.forEach(region => {
       // Find representative inflation for region
       const countryData = inflationResult.data.countries.filter((c: any) => c.region === region || c.region === region.toLowerCase());
-      const avgInflation = countryData.length > 0 
+      // No data for a region: do NOT default to a high/critical level.
+      // Absence of evidence is not evidence of hyperinflation. UI shows 'low'.
+      const avgInflation = countryData.length > 0
         ? countryData.reduce((acc: number, c: any) => acc + (c.value || 0), 0) / countryData.length
-        : (region === 'LatAm' ? 35 : region === 'Africa' ? 15 : 4);
+        : 0;
 
       if (avgInflation > 30) regionalRisk[region] = 'critical';
       else if (avgInflation > 15) regionalRisk[region] = 'high';

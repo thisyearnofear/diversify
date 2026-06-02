@@ -53,8 +53,13 @@ export interface ITransaction extends Document {
 
 const TransactionSchema = new Schema<ITransaction>(
   {
+    // Field-level `index: true` removed for userAddress; the compound index
+    // `TransactionSchema.index({ userAddress: 1, createdAt: -1 })` below
+    // already creates a single-field userAddress index as a prefix, so
+    // Mongoose was warning about a duplicate. vaultId is the only field-level
+    // index that has no schema-level counterpart, so it stays.
     vaultId: { type: Schema.Types.ObjectId, ref: 'Vault', required: true, index: true },
-    userAddress: { type: String, required: true, lowercase: true, index: true },
+    userAddress: { type: String, required: true, lowercase: true },
 
     type: {
       type: String,
@@ -68,7 +73,10 @@ const TransactionSchema = new Schema<ITransaction>(
     },
 
     chainId: { type: Number, required: true },
-    txHash: { type: String, sparse: true },
+    // Index is declared in TransactionSchema.index() below; leaving
+    // `sparse: true` here also creates an index, which Mongoose warns about
+    // as a duplicate. Field-level option removed.
+    txHash: { type: String },
     explorerUrl: { type: String },
     blockNumber: { type: Number },
 

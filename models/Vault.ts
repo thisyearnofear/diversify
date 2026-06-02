@@ -82,7 +82,10 @@ const VaultAllocationSchema = new Schema<IVaultAllocation>(
 
 const VaultSchema = new Schema<IVault>(
   {
-    userAddress: { type: String, required: true, lowercase: true, index: true },
+    // Field-level `index: true` removed; the unique index declared in
+    // VaultSchema.index({ userAddress: 1 }, { unique: true }) below already
+    // covers this. Mongoose was warning about the duplicate.
+    userAddress: { type: String, required: true, lowercase: true },
     vaultType: { type: String, enum: ['circle', 'erc4626'], default: 'circle' },
 
     circleWalletId: { type: String, sparse: true },
