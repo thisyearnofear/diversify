@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
@@ -50,7 +50,33 @@ export default function OverviewTab({
   const { demoMode, disableDemoMode, enableDemoMode } = useDemoMode();
 
   const isDemo = demoMode.isActive;
-  const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
+  const hasHoldings = (portfolio?.totalValue ?? 0) > 0;
+
+  // Cold start: when a wallet is connected but has no holdings on supported chains,
+  // auto-enable demo mode so the user immediately sees what protection looks like.
+  // They can exit via the "Exit Demo" button in the demo banner.
+  const autoEnabledRef = useRef(false);
+  useEffect(() => {
+    if (
+      address &&
+      !isConnecting &&
+      !hasHoldings &&
+      !demoMode.isActive &&
+      !autoEnabledRef.current
+    ) {
+      autoEnabledRef.current = true;
+      enableDemoMode();
+    }
+  }, [address, isConnecting, hasHoldings, demoMode.isActive, enableDemoMode]);
+
+  // If user explicitly disabled demo, don't auto-re-enable in this session.
+  useEffect(() => {
+    if (!demoMode.isActive) {
+      autoEnabledRef.current = false;
+    }
+  }, [demoMode.isActive]);
+
+  const activePortfolio = isDemo || (!hasHoldings && address && !isConnecting) ? DEMO_PORTFOLIO : portfolio;
 
   if (isLoading && address) {
     return <OverviewSkeleton />;

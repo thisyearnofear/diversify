@@ -4,6 +4,7 @@ import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import { useAnalytics } from "@/hooks/use-analytics";
+import { useColdStart } from "@/hooks/use-cold-start";
 import { useExperience } from "../../../context/app/ExperienceContext";
 import { useProtectionProfile } from "../../../hooks/use-protection-profile";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
@@ -87,6 +88,7 @@ export function ConnectedOverview({
   const marketRegime = useMarketRegime();
   const { trackAssetDetailsToggle, trackRegimeTip } = useAnalytics();
   const hasTrackedRegimeTip = useRef(false);
+  const coldStart = useColdStart(chainId);
 
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
@@ -338,70 +340,82 @@ export function ConnectedOverview({
         </Card>
       )}
 
-      {/* EMPTY WALLET */}
+      {/* COLD-START — context-aware empty state when wallet is connected but no holdings */}
       {!isDemo && address && !hasHoldings && (
         <Card padding="p-0" className="overflow-hidden border-2 border-amber-200 dark:border-amber-900">
           <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-6">
             <div className="flex items-start gap-3 mb-4">
-              <span className="text-2xl">👋</span>
-              <div>
+              <span className="text-2xl">{coldStart.emoji}</span>
+              <div className="flex-1">
                 <h3 className="text-lg font-black text-amber-900 dark:text-amber-100">
-                  Welcome! Fund Your Protection
+                  {coldStart.headline}
                 </h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mt-1">
-                  Your wallet is connected but empty. Add crypto to start protecting your savings.
+                  {coldStart.body}
                 </p>
+                {coldStart.currentChainName && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-bold">
+                    Current network: {coldStart.currentChainName}
+                  </p>
+                )}
               </div>
             </div>
-            <div className="space-y-4 mt-2">
-              <div className="space-y-2">
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">
-                  Recommended
-                </p>
-                <NetworkOptimizedOnramp variant="white" defaultAmount="100" className="w-full" />
-                <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                  💳 Buy with card or bank transfer • Low KYC
-                </p>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-amber-200 dark:border-amber-700" />
+
+            {/* Primary action: contextual based on wallet state */}
+            <div className="space-y-2">
+              {!coldStart.isOnSupportedChain && coldStart.suggestedChainId ? (
+                // Wallet is on the wrong chain — primary action is to switch
+                <button
+                  onClick={() => {
+                    // Open the swap/exchange tab to make it easy to bridge,
+                    // or trigger wallet switch directly
+                    setActiveTab("exchange");
+                  }}
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black transition-colors flex items-center justify-center gap-2"
+                >
+                  {coldStart.emoji} {coldStart.suggestedChainName === 'Arbitrum'
+                    ? 'Switch to Arbitrum to start'
+                    : `Switch to ${coldStart.suggestedChainName}`}
+                </button>
+              ) : (
+                // On a supported chain but no funds — primary action is to fund
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">
+                    Get started
+                  </p>
+                  <NetworkOptimizedOnramp variant="white" defaultAmount="100" className="w-full" />
+                  <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
+                    💳 Buy with card or bank transfer • Low KYC
+                  </p>
                 </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-amber-50 dark:bg-amber-900/20 px-2 text-amber-700 dark:text-amber-300">or</span>
-                </div>
-              </div>
-              <div className="p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
-                <p className="text-xs text-amber-700 dark:text-amber-400 uppercase font-bold mb-2">
+              )}
+
+              {/* Address copy — collapsed by default to reduce visual noise */}
+              <details className="mt-2">
+                <summary className="text-xs text-amber-700 dark:text-amber-300 cursor-pointer font-medium hover:text-amber-900 dark:hover:text-amber-100">
                   Transfer from another wallet or exchange
-                </p>
-                <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-inner">
-                  <code className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
-                    {address}
-                  </code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(address)}
-                    className="p-1 px-2 text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 transition-colors"
-                  >
-                    Copy
-                  </button>
+                </summary>
+                <div className="mt-2 p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
+                  <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-inner">
+                    <code className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
+                      {address}
+                    </code>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(address)}
+                      className="p-1 px-2 text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 transition-colors"
+                    >
+                      Copy
+                    </button>
+                  </div>
                 </div>
-              </div>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-amber-200 dark:border-amber-700" />
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-amber-50 dark:bg-amber-900/20 px-2 text-amber-700 dark:text-amber-300">
-                    just exploring?
-                  </span>
-                </div>
-              </div>
+              </details>
+
+              {/* Demo mode — always available as a low-pressure alternative */}
               <button
                 onClick={onEnableDemo}
-                className="w-full py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm font-bold transition-colors"
+                className="w-full py-2.5 bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 text-amber-900 dark:text-amber-100 border border-amber-200 dark:border-amber-800 rounded-xl text-sm font-bold transition-colors"
               >
-                🎮 Try Demo Mode
+                🎮 See it with sample data
               </button>
             </div>
           </div>
