@@ -85,7 +85,7 @@ check_regex "AKIA[0-9A-Z]{16}" "AWS Access Key"
 
 # Google API Key
 # Starts with AIza, followed by 35 characters
-check_regex "AIza[0-9A-Za-z\\-_]{35}" "Google API Key"
+check_regex "AIza[0-9A-Za-z_-]{35}" "Google API Key"
 
 # Stripe Secret Key
 # Starts with sk_live_

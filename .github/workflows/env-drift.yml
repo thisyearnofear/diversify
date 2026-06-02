@@ -1,0 +1,26 @@
+name: Env Drift Detection
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '*.ts'
+      - '*.tsx'
+      - '*.js'
+      - '*.mjs'
+      - '*.jsx'
+      - '.env.example'
+      - 'scripts/check-env-drift-ci.sh'
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for merge-base comparison
+
+      - name: Run env drift check
+        run: |
+          chmod +x scripts/check-env-drift-ci.sh
+          ./scripts/check-env-drift-ci.sh --base-branch origin/${{ github.base_ref }}

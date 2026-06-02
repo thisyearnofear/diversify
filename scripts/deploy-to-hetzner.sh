@@ -126,8 +126,10 @@ fi
 # can restore them. This is the deploy's safety net.
 SNAPSHOT_DIR="$RUNTIME_DIR.bak-latest"
 info "Snapshotting current server state to $(basename "$SNAPSHOT_DIR")..."
-# Remove the previous snapshot (this is fine — we only ever need ONE rollback
-# point, and storing many would just waste disk on a 200 MB build).
+# If the previous deploy compressed its snapshot, decompress it first so
+# we have the uncompressed directory to base the snapshot on.
+ssh "$REMOTE" "if [ -f '$RUNTIME_DIR/.next.bak-latest.tar.gz' ]; then tar xzf '$RUNTIME_DIR/.next.bak-latest.tar.gz' -C '$RUNTIME_DIR'; fi" 2>/dev/null || true
+# Remove the previous uncompressed snapshot (if any) and create a fresh one
 ssh "$REMOTE" "rm -rf '$SNAPSHOT_DIR' && mkdir -p '$SNAPSHOT_DIR'"
 # Copy the current .next/ and .env (if present). This runs ON THE SERVER so
 # it doesn't tax the local machine or the network. The standalone bundle
@@ -135,6 +137,8 @@ ssh "$REMOTE" "rm -rf '$SNAPSHOT_DIR' && mkdir -p '$SNAPSHOT_DIR'"
 ssh "$REMOTE" "[ -d '$RUNTIME_DIR/.next' ] && cp -a '$RUNTIME_DIR/.next' '$SNAPSHOT_DIR/.next' || true"
 ssh "$REMOTE" "[ -f '$RUNTIME_DIR/.env' ] && cp -a '$RUNTIME_DIR/.env' '$SNAPSHOT_DIR/.env' || true"
 ssh "$REMOTE" "[ -f '$RUNTIME_DIR/.env.local' ] && cp -a '$RUNTIME_DIR/.env.local' '$SNAPSHOT_DIR/.env.local' || true"
+# Remove the old compressed archive now that we have an uncompressed snapshot
+ssh "$REMOTE" "rm -f '$RUNTIME_DIR/.next.bak-latest.tar.gz'" 2>/dev/null || true
 ok "snapshot taken"
 
 # ── 4. Rsync standalone build to Hetzner runtime dir ────────────────────────
@@ -283,6 +287,14 @@ else
     warn "x402-metrics returned HTTP $X402_CODE"
 fi
 
+# ── 10. Compress snapshot to save disk ──────────────────────────────────────
+# The snapshot is only needed if the healthz gate fails. Once the deploy
+# succeeds, compress it to reclaim ~36 MB. If a rollback IS needed, the
+# deploy script will decompress it automatically on the next deploy.
+info "Compressing snapshot to save disk..."
+ssh "$REMOTE" "cd '$RUNTIME_DIR' && tar czf '.next.bak-latest.tar.gz' -C '$(dirname "$SNAPSHOT_DIR")' '$(basename "$SNAPSHOT_DIR")' 2>/dev/null && rm -rf '$SNAPSHOT_DIR' && ls -lh '.next.bak-latest.tar.gz'" || warn "Snapshot compression skipped (non-fatal)"
+ok "snapshot compressed"
+
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}═══════════════════════════════════════════════════════════════${NC}"
@@ -294,6 +306,7 @@ info "API:      https://api.diversifi.famile.xyz/api/agent/status"
 info "Metrics:  https://api.diversifi.famile.xyz/api/agent/x402-metrics"
 info "Ledger:   https://api.diversifi.famile.xyz/api/agent/zero-g-ledger"
 echo ""
-info "Snapshot (for manual rollback if needed): $SNAPSHOT_DIR"
-info "To roll back manually: ssh $REMOTE 'rm -rf $RUNTIME_DIR/.next && cp -a $SNAPSHOT_DIR/.next $RUNTIME_DIR/.next && pm2 restart $APP_NAME'"
+info "Compressed snapshot (for manual rollback if needed): $RUNTIME_DIR/.next.bak-latest.tar.gz"
+info "To roll back manually:"
+info "  ssh $REMOTE 'cd $RUNTIME_DIR && tar xzf .next.bak-latest.tar.gz && pm2 restart $APP_NAME'"
 echo ""
