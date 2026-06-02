@@ -836,13 +836,23 @@ export class AgentService {
 
     private parseRecommendation(content: unknown): any {
         if (typeof content === 'object' && content !== null) {
+            if (Array.isArray(content) && content.length > 0) {
+                return content[0];
+            }
             return content;
         }
 
         const raw = typeof content === 'string' ? content : '';
 
         try {
-            return JSON.parse(raw);
+            const parsed = JSON.parse(raw);
+            // LLMs sometimes wrap a single recommendation in an array
+            // (especially when the surrounding system prompt mentions lists).
+            // The downstream code expects a single object, so unwrap.
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                return parsed[0];
+            }
+            return parsed;
         } catch (error) {
             const start = raw.indexOf('{');
             const end = raw.lastIndexOf('}');

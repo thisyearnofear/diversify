@@ -2,12 +2,14 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { marketPulseService } from '@diversifi/shared/src/utils/market-pulse-service';
 import { IntelligenceService } from '@diversifi/shared/src/services/ai/intelligence.service';
 import { inflationService, macroService } from '@diversifi/shared/src/utils/improved-data-services';
+import { recordIntelligenceSuccess, recordIntelligenceFailure } from '../healthz';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  const startedAt = Date.now();
   try {
     const pulse = await marketPulseService.getMarketPulse();
     // allSettled so a single upstream failure doesn't drop the other result.
@@ -49,6 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       else regionalRisk[region] = 'low';
     });
 
+    recordIntelligenceSuccess(Date.now() - startedAt);
     return res.status(200).json({
       pulse,
       insights,
@@ -57,6 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error: any) {
     console.error('[API Intelligence] Error:', error);
+    recordIntelligenceFailure(error?.message ?? String(error), Date.now() - startedAt);
     return res.status(500).json({ error: error.message });
   }
 }
