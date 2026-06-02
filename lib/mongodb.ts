@@ -42,6 +42,13 @@ async function connectDB() {
   if (!cached!.promise) {
     const opts = {
       bufferCommands: false,
+      // Fail fast on Atlas outages instead of hanging the API route.
+      serverSelectionTimeoutMS: 5000,
+      // Cap socket idle time so dead connections don't accumulate.
+      socketTimeoutMS: 45000,
+      // Connection pool sized for the cron tick + concurrent API calls.
+      maxPoolSize: 10,
+      minPoolSize: 1,
     };
 
     cached!.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
