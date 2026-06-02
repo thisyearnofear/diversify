@@ -237,7 +237,7 @@ export const PortfolioRiskWidget: React.FC<PortfolioRiskWidgetProps> = ({
       {/* Footer */}
       <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <span className="text-[10px] text-gray-400">
-          via SynthData Risk Engine
+          via Market Pulse Engine
         </span>
         <button
           onClick={refetch}

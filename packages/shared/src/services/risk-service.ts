@@ -3,7 +3,7 @@
  * Handles risk monitoring, alerts, and portfolio protection logic
  */
 
-import { SynthDataService } from './synth-data-service';
+import { marketPulseService } from '../utils/market-pulse-service';
 import { hyperliquidService } from './hyperliquid.service';
 
 export class RiskService {
@@ -31,32 +31,29 @@ export class RiskService {
         portfolioValue: number
     ): Promise<{ hedgeTx?: string; status: string }> {
         await this.ensureWalletInitialized();
-        
-        try {
-            // Check risk signals from SynthData
-            const btcForecast = await SynthDataService.getPredictions('BTC');
-            const ethForecast = await SynthDataService.getPredictions('ETH');
 
-            // Use volatility as a risk indicator (High volatility = high drawdown risk)
-            const btcVol = btcForecast?.forecast_future?.average_volatility || 0;
-            const ethVol = ethForecast?.forecast_future?.average_volatility || 0;
-            
-            const isHighRisk = btcVol > 0.08 || ethVol > 0.08;
+        try {
+            // Use market pulse forecast volatility as a risk indicator.
+            // High forecast_vol relative to realized_vol = high drawdown risk.
+            const pulse = await marketPulseService.getMarketPulse();
+            const forecastVol = pulse.forecastVol ?? 0;
+            const realizedVol = pulse.realizedVol ?? 0;
+            const isHighRisk = forecastVol > 0.08 || realizedVol > 0.08;
 
             if (isHighRisk && this.canSpend()) {
                 steps.push("⚠ High Drawdown Risk Detected: Initializing autonomous hedge...");
-                
+
                 // Open 1x Short Hedge on Hyperliquid
                 // We use 10% of portfolio value for the hedge
                 const hedgeAmount = portfolioValue * 0.1;
-                
+
                 try {
                     const txId = await hyperliquidService.openHedge(
                         this.wallet as any,
                         'ETH',
                         hedgeAmount
                     );
-                    
+
                     steps.push(`✓ Protection Active: 1x ETH Short Hedge opened on Hyperliquid`);
                     return { hedgeTx: txId, status: 'PROTECTED' };
                 } catch (hedgeError: any) {

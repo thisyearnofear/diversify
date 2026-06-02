@@ -229,7 +229,7 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
           rel="noopener noreferrer"
           className="text-xs font-bold text-gray-400 hover:text-blue-500 transition-colors uppercase tracking-[0.2em] flex items-center gap-1"
         >
-          Risk Intelligence by <span className="text-blue-500 dark:text-blue-400">SynthData.co</span>
+          Risk Intelligence
           <svg className="w-2 h-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>

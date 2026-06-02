@@ -7,7 +7,6 @@ import { SocialConnectService } from './services/social-connect-service';
 import { SessionKeyProvider } from "./services/wallet-service";
 
 import { RWAService, rwaService } from './services/rwa-service';
-import { SynthDataService } from './services/synth-data-service';
 import { ZapierMCPService, zapierMCPService } from './services/zapier-mcp-service';
 import { StrategyService } from './services/strategy/strategy.service';
 import { AutomationService } from './services/automation-service';
@@ -47,7 +46,6 @@ export {
   SocialConnectService,
   RWAService,
   rwaService,
-  SynthDataService,
   ZapierMCPService,
   zapierMCPService,
   StrategyService,

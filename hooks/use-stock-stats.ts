@@ -120,22 +120,10 @@ export function useStockStats(
       const peRatioMock = 10 + (seed % 30) + (seed % 100) / 100;
       const divYieldMock = (seed % 5) + (seed % 10) / 10;
 
-      // 5. Fetch Synth Volatility Data via API route (server-side only)
-      let forecastVol: number | undefined;
-      let realizedVol: number | undefined;
-      try {
-        const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-        const response = await fetch(`${apiBase}/api/trading/stock-stats?stock=${selectedStock}`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            forecastVol = data.volatility?.forecast;
-            realizedVol = data.volatility?.realized;
-          }
-        }
-      } catch (e) {
-        console.warn("[Stats] Could not fetch volatility data:", e);
-      }
+      // 5. Synth Data API was sunset; forecast/realized vol are no longer
+      // available. UI falls back to "—" until a replacement source is wired in.
+      const forecastVol: number | undefined = undefined;
+      const realizedVol: number | undefined = undefined;
 
       setStats({
         marketCapETH,

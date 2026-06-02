@@ -2,7 +2,6 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { marketPulseService } from '@diversifi/shared/src/utils/market-pulse-service';
 import { IntelligenceService } from '@diversifi/shared/src/services/ai/intelligence.service';
 import { inflationService, macroService } from '@diversifi/shared/src/utils/improved-data-services';
-import { SynthDataService } from '@diversifi/shared/src/services/synth-data-service';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
@@ -16,21 +15,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       macroService.getMacroData(),
     ]);
 
-    const synthSettled = await Promise.allSettled([
-      SynthDataService.getPredictions('BTC'),
-      SynthDataService.getPredictions('ETH'),
-    ]);
-
-    const synthData = {
-      BTC: synthSettled[0].status === 'fulfilled' ? synthSettled[0].value : null,
-      ETH: synthSettled[1].status === 'fulfilled' ? synthSettled[1].value : null,
-    };
-
     const insights = await IntelligenceService.generateGuardianInsights(
       pulse,
       inflationResult.data,
-      macroResult.data,
-      synthData
+      macroResult.data
     );
 
     // Calculate regional risk heatmap for UI (Top 1% enhancement)

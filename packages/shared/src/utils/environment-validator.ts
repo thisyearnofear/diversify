@@ -12,7 +12,6 @@ export interface ValidationResult {
 
 export class EnvironmentValidator {
   private static requiredKeys = [
-    'SYNTH_API_KEY',
     'GEMINI_API_KEY',
     'VENICE_API_KEY'
   ];
@@ -49,12 +48,6 @@ export class EnvironmentValidator {
       }
     }
 
-    // Check for common misconfigurations
-    if (process.env.SYNTH_API_KEY === 'your-synth-api-key-here') {
-      warnings.push('SYNTH_API_KEY appears to be a placeholder value');
-      suggestions.push('Get a real Synth API key from docs.synthdata.co');
-    }
-
     return {
       isValid: missingKeys.length === 0,
       missingKeys,
@@ -68,7 +61,6 @@ export class EnvironmentValidator {
    */
   private static getSuggestion(key: string): string {
     const suggestions: Record<string, string> = {
-      'SYNTH_API_KEY': 'Get your Synth API key from docs.synthdata.co',
       'GEMINI_API_KEY': 'Get your Gemini API key from Google AI Studio',
       'VENICE_API_KEY': 'Get your Venice API key from the Venice platform',
       'ALPHA_VANTAGE_API_KEY': 'Get your Alpha Vantage API key from alphavantage.co',

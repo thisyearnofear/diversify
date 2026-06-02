@@ -1,5 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { SynthDataService } from '@diversifi/shared';
 
 export interface StockStatsResponse {
     success: boolean;
@@ -8,7 +7,6 @@ export interface StockStatsResponse {
         forecast?: number;
         realized?: number;
     };
-    synthData?: any;
     error?: string;
 }
 
@@ -20,39 +18,13 @@ export default async function handler(
         return res.status(405).json({ success: false, error: 'Method not allowed' });
     }
 
-    try {
-        const { stock } = req.query;
-
-        if (!stock || typeof stock !== 'string') {
-            return res.status(400).json({ success: false, error: 'Stock symbol required' });
-        }
-
-        // Map stock to Synth asset
-        const synthAsset = SynthDataService.mapStockToSynthAsset(stock);
-
-        // Fetch both predictions and volatility data from Synth API (cached on server)
-        const [synthData, volData] = await Promise.all([
-            SynthDataService.getPredictions(synthAsset),
-            SynthDataService.getVolatility(synthAsset)
-        ]);
-
-        const forecast = volData?.forecast_vol;
-        const realized = volData?.realized_vol;
-
-        res.status(200).json({
-            success: true,
-            stock,
-            volatility: {
-                forecast,
-                realized,
-            },
-            synthData,
-        });
-    } catch (error: any) {
-        console.error('[Stock Stats API] Error:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message || 'Failed to fetch stock stats',
-        });
-    }
+    // Synth Data API was sunset 2026-06-02; this endpoint previously proxied
+    // forecast/realized volatility. Clients should rely on on-chain stats only
+    // (market cap, TVL, volume) until a replacement price/forecast source is wired in.
+    const { stock } = req.query;
+    res.status(200).json({
+        success: true,
+        stock: typeof stock === 'string' ? stock : undefined,
+        volatility: {},
+    });
 }

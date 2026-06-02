@@ -32,9 +32,6 @@ TRUFLATION / MACRO:
 ${JSON.stringify(context.inflationResult.data, null, 2)}
 ${JSON.stringify(context.economicResult.data, null, 2)}
 
-SYNTHDATA FORECASTS:
-${JSON.stringify(context.synthPredictions, null, 2)}
-
 YIELD OPPORTUNITIES:
 ${JSON.stringify(context.yieldResult.data, null, 2)}
 

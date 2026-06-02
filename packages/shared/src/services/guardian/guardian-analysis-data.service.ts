@@ -1,4 +1,3 @@
-import { SynthDataService } from '../synth-data-service';
 import { marketPulseService } from '../../utils/market-pulse-service';
 import { getDefaultArcResearchBundleSources, type ArcResearchBundle } from '../../utils/arc-research-sources';
 
@@ -10,7 +9,6 @@ export type GuardianAnalysisContext = {
   inflationResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> };
   economicResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> };
   yieldResult: { data: any; hashes: Record<string, string>; storageCids?: Record<string, string> };
-  synthPredictions: Record<string, any>;
   pulse: Awaited<ReturnType<typeof marketPulseService.getMarketPulse>>;
   riskStatus: any;
 };
@@ -150,13 +148,7 @@ export class GuardianAnalysisDataService {
       Object.assign(paymentHashes, yieldResult.hashes);
     }
 
-    steps.push("Analyzing probabilistic price forecasts (SynthData)...");
-    const synthPredictions: Record<string, any> = {};
-    const assetsToAnalyze = ['BTC', 'ETH', 'NVDAX', 'SPYX'];
-    await Promise.all(assetsToAnalyze.map(async (asset) => {
-      const pred = await SynthDataService.getPredictions(asset);
-      if (pred) synthPredictions[asset] = pred;
-    }));
+    steps.push("Synth sunset: probabilistic forecasts removed (was SynthData)...");
 
     const riskStatus = await monitorRiskExposure(steps, parseFloat(unifiedBalance.totalUSDC));
     if (riskStatus.status === 'PROTECTED') {
@@ -174,7 +166,6 @@ export class GuardianAnalysisDataService {
         inflationResult,
         economicResult,
         yieldResult,
-        synthPredictions,
         pulse,
         riskStatus,
       }

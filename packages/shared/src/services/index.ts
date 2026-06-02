@@ -1,7 +1,6 @@
 // Service Exports
 export { circleService, CircleService } from './circle-service';
 export { RWAService, rwaService } from './rwa-service';
-export { SynthDataService } from './synth-data-service';
 export { ZapierMCPService, zapierMCPService } from './zapier-mcp-service';
 export { StrategyService } from './strategy/strategy.service';
 export { AutomationService } from './automation-service';

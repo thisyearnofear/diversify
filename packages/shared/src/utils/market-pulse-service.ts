@@ -1,4 +1,4 @@
-import { SynthDataService } from "../services/synth-data-service";
+import { getBtcPrice } from "./btc-price-service";
 import { MacroEconomicService } from "./macro-economic-service";
 import { IntelligenceService } from "../services/ai/intelligence.service";
 import type { IntelligenceItem } from "../types/intelligence";
@@ -16,8 +16,8 @@ export interface MarketPulse {
   defenseSpending: number;
   liquidationRisk?: number;
   impliedVolatility?: number;
-  realizedVol?: number;      // From Synthdata: realized volatility
-  forecastVol?: number;      // From Synthdata: forecast volatility
+  realizedVol?: number;      // Static default: realized volatility estimate
+  forecastVol?: number;      // Static default: forecast volatility estimate
   horizon: "1h" | "24h";     // Time horizon for risk assessment
   lastUpdated: number;
   source: string; // "api" | "fallback" | "mixed"
@@ -67,9 +67,9 @@ export class MarketPulseService {
   private static cache: { data: MarketPulse; timestamp: number; horizon: string } | null = null;
   private static readonly CACHE_TTL = 60000;
   private static serviceStatus = {
-    synthWorking: true,
+    btcPriceSource: "coingecko" as "coingecko" | "coinpaprika" | "static" | "unknown",
     macroWorking: true,
-    lastSynthError: 0,
+    lastBtcPriceError: 0,
     lastMacroError: 0
   };
 
@@ -83,27 +83,21 @@ export class MarketPulseService {
       return this.cache.data;
     }
 
-    // Fetch data with error handling (pass horizon to SynthDataService)
-    const [synthBTC, synthVol, synthLiq, synthOpt, macroData] = await Promise.allSettled([
-      SynthDataService.getPredictions("BTC", horizon),
-      SynthDataService.getVolatility("BTC", horizon),
-      SynthDataService.getLiquidation("BTC"),
-      SynthDataService.getOptionPricing("BTC"),
+    // Fetch BTC price (CoinGecko -> CoinPaprika -> static) and macro in parallel
+    const [btcPriceResult, macroData] = await Promise.allSettled([
+      getBtcPrice(),
       macroService.getMacroData(),
     ]);
 
-    // Determine data sources
-    const synthSuccess = synthBTC.status === 'fulfilled' && synthBTC.value !== null;
-    const volSuccess = synthVol.status === 'fulfilled' && synthVol.value !== null;
-    const liqSuccess = synthLiq.status === 'fulfilled' && synthLiq.value !== null;
-    const optSuccess = synthOpt.status === 'fulfilled' && synthOpt.value !== null;
+    const btcPriceSuccess = btcPriceResult.status === 'fulfilled';
     const macroSuccess = macroData.status === 'fulfilled' && macroData.value.data && Object.keys(macroData.value.data).length > 0;
 
     // Update service status
-    if (!synthSuccess) {
-      this.serviceStatus.synthWorking = false;
-      this.serviceStatus.lastSynthError = Date.now();
-      console.warn("[Market Pulse] Synth API failed, using fallback data");
+    if (btcPriceSuccess) {
+      this.serviceStatus.btcPriceSource = btcPriceResult.value.source;
+    } else {
+      this.serviceStatus.lastBtcPriceError = Date.now();
+      console.warn("[Market Pulse] BTC price fetch failed, using static fallback");
     }
     if (!macroSuccess) {
       this.serviceStatus.macroWorking = false;
@@ -111,51 +105,37 @@ export class MarketPulseService {
       console.warn("[Market Pulse] Macro API failed, using fallback data");
     }
 
-    // Extract data with fallbacks
-    const btcData = synthSuccess ? synthBTC.value : null;
-    const volData = volSuccess ? synthVol.value : null;
-    const liqData = liqSuccess ? (synthLiq as PromiseFulfilledResult<any>).value : null;
-    const optData = optSuccess ? (synthOpt as PromiseFulfilledResult<any>).value : null;
+    const btc = btcPriceSuccess ? btcPriceResult.value : { price: 67000, change24h: 0, source: "static" as const };
     const macroResult = macroSuccess ? macroData.value : { data: {}, source: "fallback" };
 
-    // Calculate metrics with fallback logic
-    const btcPrice = btcData?.current_price || this.generateFallbackPrice();
-    // Support both new API format (forecast_future) and legacy format (24H)
-    const forecastData = btcData?.forecast_future || btcData?.["24H"];
-    const percentiles = forecastData?.percentiles;
-    // Handle percentiles as either Record<string, number> or array
-    const medianPrice = percentiles
-      ? (typeof percentiles === 'object' && !Array.isArray(percentiles)
-        ? percentiles.p50 || percentiles["0.5"]
-        : undefined)
-      : undefined;
-    const btcChange24h = medianPrice
-      ? ((medianPrice - btcPrice) / btcPrice) * 100
-      : this.generateFallbackChange();
-    const sentiment = volData?.forecast_vol ? 50 + (volData.forecast_vol * 100) : this.generateFallbackSentiment();
+    // Synth formerly provided probabilistic forecasts; without it, we use
+    // a neutral baseline so downstream triggers (volatility, AI momentum)
+    // still produce sensible values.
+    const forecastVol = 0.05;
+    const realizedVol = 0.04;
 
     const warRisk = this.calculateWarRisk(macroResult.data);
-    const aiMomentum = this.calculateAIMomentum(btcData, volData);
+    const aiMomentum = this.calculateAIMomentum(forecastVol, realizedVol);
     const defenseSpending = this.calculateDefenseSpending(warRisk);
     const goldPrice = 2650;
     const goldChange24h = 0.3;
-    const liquidationRisk = liqData?.risk_score || 50;
-    const impliedVolatility = optData?.implied_vol ? optData.implied_vol * 100 : 45;
+    const liquidationRisk = 50;
+    const impliedVolatility = 45;
 
     // Determine source
     let source: string;
-    if (synthSuccess && macroSuccess) {
+    if (btcPriceSuccess && macroSuccess) {
       source = "api";
-    } else if (!synthSuccess && !macroSuccess) {
+    } else if (!btcPriceSuccess && !macroSuccess) {
       source = "fallback";
     } else {
       source = "mixed";
     }
 
     const pulse: MarketPulse = {
-      sentiment: Math.min(100, Math.max(0, sentiment)),
-      btcPrice,
-      btcChange24h,
+      sentiment: 50,
+      btcPrice: btc.price,
+      btcChange24h: btc.change24h,
       goldPrice,
       goldChange24h,
       warRisk,
@@ -163,8 +143,8 @@ export class MarketPulseService {
       defenseSpending,
       liquidationRisk,
       impliedVolatility,
-      realizedVol: volData?.realized_vol,
-      forecastVol: volData?.forecast_vol,
+      realizedVol,
+      forecastVol,
       horizon,
       lastUpdated: Date.now(),
       source,
@@ -172,31 +152,6 @@ export class MarketPulseService {
 
     this.cache = { data: pulse, timestamp: Date.now(), horizon };
     return pulse;
-  }
-
-  /**
-   * Generate fallback BTC price with some randomness
-   */
-  private static generateFallbackPrice(): number {
-    const basePrice = 67500;
-    const randomFactor = 0.95 + Math.random() * 0.1;
-    return Math.round(basePrice * randomFactor);
-  }
-
-  /**
-   * Generate fallback 24h change with some randomness
-   */
-  private static generateFallbackChange(): number {
-    // Random change between -5% and +5%
-    return (Math.random() - 0.5) * 10;
-  }
-
-  /**
-   * Generate fallback sentiment score
-   */
-  private static generateFallbackSentiment(): number {
-    // Random sentiment between 40 and 60 (neutral range)
-    return 40 + Math.random() * 20;
   }
 
   private static calculateWarRisk(data: Record<string, any>): number {
@@ -213,16 +168,9 @@ export class MarketPulseService {
     return Math.max(0, Math.min(100, 100 - avgStability));
   }
 
-  private static calculateAIMomentum(btc: any, vol: any): number {
-    if (!btc || !vol) return 50;
-
-    const volScore = vol.forecast_vol > vol.realized_vol ? 60 : 45;
-    // Support both new API format (forecast_future) and legacy format (24H)
-    const forecastData = btc.forecast_future || btc["24H"];
-    const lastPercentile = forecastData?.percentiles?.[forecastData.percentiles.length - 1];
-    const priceMomentum = lastPercentile?.["0.5"] || 0;
-
-    return Math.min(100, Math.max(0, 50 + priceMomentum * 10 + volScore - 50));
+  private static calculateAIMomentum(forecastVol: number, realizedVol: number): number {
+    const volScore = forecastVol > realizedVol ? 60 : 45;
+    return Math.min(100, Math.max(0, 50 + volScore - 50));
   }
 
   private static calculateDefenseSpending(warRisk: number): number {
@@ -326,25 +274,14 @@ export class MarketPulseService {
     const pulse = await this.getMarketPulse();
     const triggers = this.generateTriggers(pulse);
 
-    // Add real-time macro, inflation, and synth data for AI synthesis
+    // Add real-time macro and inflation data for AI synthesis
     const { inflationService } = await import('./improved-data-services');
-    const { SynthDataService } = await import('../services/synth-data-service');
 
-    // Fetch BTC and ETH forecasts for the intelligence engine
+    // Fetch inflation and macro for the intelligence engine
     const [inflationResult, macroResult] = await Promise.all([
       inflationService.getInflationData(),
       macroService.getMacroData(),
     ]);
-
-    const synthSettled = await Promise.allSettled([
-      SynthDataService.getPredictions('BTC'),
-      SynthDataService.getPredictions('ETH'),
-    ]);
-
-    const synthData = {
-      BTC: synthSettled[0].status === 'fulfilled' ? synthSettled[0].value : null,
-      ETH: synthSettled[1].status === 'fulfilled' ? synthSettled[1].value : null,
-    };
 
     const items: IntelligenceItem[] = [];
 
@@ -353,7 +290,7 @@ export class MarketPulseService {
       pulse,
       inflationResult.data,
       macroResult.data,
-      synthData
+      undefined
     );
     items.push(...guardianInsights);
 

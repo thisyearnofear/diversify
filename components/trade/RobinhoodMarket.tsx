@@ -762,13 +762,12 @@ export default function RobinhoodMarket({
                   { label: "Holders", value: holderData?.holdersCount != null ? holderData.holdersCount.toLocaleString() : "—" },
                   { label: "Div Yield", value: stockStats?.divYieldMock != null && stockStats.divYieldMock > 0 ? `${stockStats.divYieldMock.toFixed(2)}%` : "—" },
                   { label: "24h Volume", value: stockStats?.volume24hETH != null ? `${stockStats.volume24hETH.toFixed(2)} ETH` : "—" },
-                  { label: "Forecast Vol", value: stockStats?.forecastVol != null ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—", isSynth: true },
-                  { label: "Realized Vol", value: stockStats?.realizedVol != null ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—", isSynth: true },
+                  { label: "Forecast Vol", value: stockStats?.forecastVol != null ? `${(stockStats.forecastVol * 100).toFixed(1)}%` : "—" },
+                  { label: "Realized Vol", value: stockStats?.realizedVol != null ? `${(stockStats.realizedVol * 100).toFixed(1)}%` : "—" },
                 ].map((stat: any, i) => (
-                  <div key={i} className={`group bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30 transition-all hover:shadow-sm ${stat.isSynth ? 'ring-1 ring-blue-500/10 hover:ring-blue-500/30' : ''}`}>
+                  <div key={i} className="group bg-gray-50/50 dark:bg-gray-800/40 rounded-xl p-2.5 border border-gray-100/50 dark:border-gray-700/30 transition-all hover:shadow-sm">
                     <div className="flex items-center justify-between mb-0.5">
                       <div className="text-xs font-bold text-gray-400 uppercase tracking-tight">{stat.label}</div>
-                      {stat.isSynth && <span className="text-[7px] font-black text-blue-500 uppercase tracking-tighter bg-blue-50 dark:bg-blue-900/30 px-1 rounded-sm">SN50</span>}
                     </div>
                     <div className="text-sm font-bold text-gray-900 dark:text-white">{stat.value}</div>
                   </div>
