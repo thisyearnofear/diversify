@@ -27,7 +27,18 @@ import { VaultService, type RebalanceRecommendation } from '../../../packages/sh
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, recommendationLedgerService } from '@diversifi/shared';
 
-const GUARDIAN_LOOP_SECRET = process.env.GUARDIAN_LOOP_SECRET || 'dev-guardian-loop';
+const GUARDIAN_LOOP_SECRET = (() => {
+  const secret = process.env.GUARDIAN_LOOP_SECRET;
+  if (secret && secret.length > 0) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'GUARDIAN_LOOP_SECRET environment variable is required in production. ' +
+      'Set it in /home/deploy/diversifi-api-runtime/.env and restart the runtime.',
+    );
+  }
+  console.warn('[guardian-loop] GUARDIAN_LOOP_SECRET not set — using insecure dev fallback. Do NOT use in production.');
+  return 'dev-guardian-loop';
+})();
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
 const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
 
