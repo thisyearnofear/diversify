@@ -38,7 +38,11 @@ export default function AppHeader({
           <span className="text-white text-sm font-black">D</span>
         </div>
         <div className="flex items-center gap-1.5 min-w-0">
-          <h1 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+          {/* Brand name hidden on mobile (the 'D' logo + status dot already
+              convey the brand + state). The full word reappears at the
+              'sm' breakpoint (≥640px) where there's room alongside the
+              right-side controls. */}
+          <h1 className="hidden sm:inline text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
             DiversiFi
           </h1>
           {address && (
@@ -47,7 +51,7 @@ export default function AppHeader({
                 className={`w-1.5 h-1.5 rounded-full ${isWhitelisted ? "bg-emerald-500" : "bg-amber-500"} animate-pulse`}
               />
               {isWhitelisted && (
-                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
+                <span className="hidden sm:inline-flex items-center text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
                   Verified
                 </span>
               )}
