@@ -7,6 +7,7 @@ import type { UserExperienceMode } from "@/context/app/types";
 import VoiceButton from "@/components/ui/VoiceButton";
 import WalletButton from "@/components/wallet/WalletButton";
 import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
+import { ChainPill } from "./ChainPill";
 
 interface AppHeaderProps {
   experienceMode: UserExperienceMode;
@@ -128,6 +129,8 @@ export default function AppHeader({
           onSuggestionsChange={(open) => setActiveHint(open ? "voice" : null)}
           onTranscription={handleTranscription}
         />
+
+        <ChainPill />
 
         {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
       </div>

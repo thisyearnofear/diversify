@@ -22,6 +22,11 @@ vi.mock('@/components/wallet/WalletButton', () => ({
 vi.mock('@/components/wallet/FarcasterWalletButton', () => ({
   default: () => <div data-testid="farcaster-wallet-button" />,
 }));
+// ChainPill pulls in useWalletContext → use-wallet → @diversifi/shared → dist → @diversifi/shared-0g
+// (not built). Mock it here so the AppHeader layout test stays focused.
+vi.mock('../ChainPill', () => ({
+  ChainPill: () => <div data-testid="chain-pill" />,
+}));
 
 const baseProps = {
   experienceMode: 'intermediate' as const,
