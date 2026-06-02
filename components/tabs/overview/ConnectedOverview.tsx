@@ -6,6 +6,9 @@ import { useInflationData } from "@/hooks/use-inflation-data";
 import { useExperience } from "../../../context/app/ExperienceContext";
 import { useProtectionProfile } from "../../../hooks/use-protection-profile";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
+import { useMarketRegime } from "@/hooks/use-market-regime";
+import { getRegimeTip } from "@/lib/market-regime";
+import { classifyAssets } from "../../portfolio/asset-classification";
 import RegionalIconography from "../../regional/RegionalIconography";
 import WalletButton from "../../wallet/WalletButton";
 import CurrencyPerformanceChart from "../../portfolio/CurrencyPerformanceChart";
@@ -80,6 +83,7 @@ export function ConnectedOverview({
   const { experienceMode } = useExperience();
   const { canClaim, isWhitelisted, streak } = useStreakRewards();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
+  const marketRegime = useMarketRegime();
 
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
@@ -140,6 +144,19 @@ export function ConnectedOverview({
       }
     } else {
       tips = diversificationTips;
+    }
+
+    // Regime tip: only when the market signal is extreme AND the user's
+    // portfolio is mismatched against it. null otherwise (silent).
+    if (marketRegime) {
+      const groups = classifyAssets(activePortfolio.allTokens || []);
+      const totalValue = groups.totalValue;
+      const stableRatio = totalValue > 0 ? groups.trackedValue / totalValue : 0;
+      const regimeTip = getRegimeTip(marketRegime.regime, stableRatio);
+      if (regimeTip) {
+        // Prepend so it leads the list (most time-sensitive)
+        tips = [regimeTip, ...tips];
+      }
     }
 
     return tips;
