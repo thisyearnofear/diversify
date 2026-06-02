@@ -60,13 +60,6 @@ export interface StreamInfo {
   isActive: boolean;
 }
 
-export interface ReserveInfo {
-  currentPrice: string;
-  reserveBalance: string;
-  reserveRatio: number;
-  isAvailable: boolean;
-}
-
 const CFA_FORWARDER_ABI = [
   {
     type: 'function',
@@ -238,16 +231,6 @@ export class GoodDollarService {
       console.warn('[GoodDollar] getGBalance failed:', err);
       return '0';
     }
-  }
-
-  /**
-   * Reserve info is intentionally a no-op stub. The legacy Reserve
-   * contract is no longer referenced in current docs; the protocol
-   * moved to Mento-based reserves. Wire this up if/when a Mento
-   * reserve UI surface is added.
-   */
-  async getReserveInfo(): Promise<ReserveInfo> {
-    return { currentPrice: '0', reserveBalance: '0', reserveRatio: 0, isAvailable: false };
   }
 
   // ─── Write paths (need wallet + SDK) ───────────────────────────────────
