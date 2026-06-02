@@ -674,6 +674,12 @@ export default function AIChat() {
                           : "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md border border-gray-200 dark:border-gray-700 shadow-sm"
                       }`}
                     >
+                      {msg.role === "assistant" && msg.portfolioContext && (
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono mb-2 pb-1.5 border-b border-gray-100 dark:border-gray-700">
+                          {msg.portfolioContext}
+                        </p>
+                      )}
+
                       {msg.type === 'insight' && msg.insights ? (
                         <div className="space-y-3 py-1">
                           <p className="font-bold leading-tight">{msg.insights.summary}</p>
@@ -728,12 +734,22 @@ export default function AIChat() {
                             )}
                           </div>
                           <div className="flex flex-wrap gap-1">
-                            {msg.researchSources.map((s, j) => (
-                              <span key={j} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${s.tier === 'paid' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${s.tier === 'paid' ? 'bg-amber-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                                {s.label}
-                              </span>
-                            ))}
+                            {msg.researchSources.map((s, j) => {
+                              const badge = (
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${s.tier === 'paid' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'} ${s.url ? 'hover:opacity-80 cursor-pointer' : ''}`}>
+                                  <span className={`w-1.5 h-1.5 rounded-full ${s.tier === 'paid' ? 'bg-amber-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                                  {s.label}
+                                  {s.url && <span className="opacity-60">↗</span>}
+                                </span>
+                              );
+                              return s.url ? (
+                                <a key={j} href={s.url} target="_blank" rel="noopener noreferrer">
+                                  {badge}
+                                </a>
+                              ) : (
+                                <span key={j}>{badge}</span>
+                              );
+                            })}
                           </div>
                         </div>
                       )}

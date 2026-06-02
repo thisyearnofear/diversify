@@ -420,6 +420,17 @@ export function useAgentChat({
             ? { ...x402Receipt, amount: (Number.parseFloat(x402Receipt.amount || "0") || RESEARCH_BUNDLE_PRICE).toFixed(3) }
             : x402Receipt;
 
+          // Build compact portfolio context line for grounding proof
+          let portfolioContext: string | undefined;
+          if (portfolioSnapshot && portfolioSnapshot.holdings.length > 0) {
+            const holdingParts = portfolioSnapshot.holdings
+              .filter((h) => h.value >= 0.01)
+              .slice(0, 5)
+              .map((h) => `${h.value.toFixed(2)} ${h.symbol}`);
+            const chainNames = portfolioSnapshot.chains.map((c) => c.chainName).join(" + ");
+            portfolioContext = `Analyzing: ${holdingParts.join(" · ")}${portfolioSnapshot.holdings.length > 5 ? " …" : ""} on ${chainNames}`;
+          }
+
           const assistantMessage: AIMessage = {
             role: "assistant",
             content: result.response,
@@ -428,6 +439,7 @@ export function useAgentChat({
             action: result.action,
             provider: result.provider,
             x402Receipt: patchedReceipt,
+            portfolioContext,
             researchSources: result.researchSources || [],
           };
           addMessage(assistantMessage);

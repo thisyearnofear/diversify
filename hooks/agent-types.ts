@@ -264,6 +264,8 @@ export interface AIMessage {
   type?: "text" | "recommendation" | "insight" | "sosovalue_intelligence";
   provider?: "gemini" | "venice" | "modal" | "openai";
   x402Receipt?: ResearchReceipt | null;
+  /** Compact portfolio context shown above the response as proof of grounding */
+  portfolioContext?: string;
   /** Research evidence sources shown below the message for transparency */
   researchSources?: Array<{
     label: string;

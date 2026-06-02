@@ -526,11 +526,22 @@ export async function runAdvisorConversation(input: ConversationRequest) {
   }
 
   // Assemble research evidence for transparency in the chat UI
+  const SOURCE_REFERENCE_URLS: Record<string, string> = {
+    macro_analysis: 'https://fred.stlouisfed.org/series/DFF',
+    portfolio_optimization: 'https://defillama.com/yields',
+    risk_assessment: 'https://www.coingecko.com/en/global-charts',
+    world_bank_analytics: 'https://data.worldbank.org/indicator/FP.CPI.TOTL.ZG',
+    coingecko_analytics: 'https://www.coingecko.com/en/global-charts',
+    defillama_realtime: 'https://defillama.com/yields',
+    fred_insights: 'https://fred.stlouisfed.org/series/DFF',
+    alpha_vantage_enhanced: 'https://www.alphavantage.co/documentation/',
+    yearn_optimizer: 'https://yearn.fi/v3',
+  };
   const evidence = buildResearchEvidenceSummary(input.macroData);
   const gatewaySourcesList = evidence?.sources?.map(s => ({
     label: s.label,
     tier: s.tier || 'free',
-    url: (s as any).url || '',
+    url: (s as any).url || SOURCE_REFERENCE_URLS[s.sourceId] || '',
     cost: s.cost || 0,
   })) || [];
 
