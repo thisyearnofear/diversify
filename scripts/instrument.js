@@ -2,11 +2,18 @@
  * Production runtime instrument for diversifi-api.
  *
  * Loaded via `node --require ./instrument.js server.js` from start-runtime.sh.
- * Sets up structured logging for unhandled promise rejections and uncaught
- * exceptions so they show up in PM2's stderr as single-line, parseable
- * records. Next.js's own default listeners stay in place and continue to
- * emit their verbose stacks for forensics — this adds a single summary line
- * on top so a log scraper can alert without parsing a multi-line stack.
+ *
+ * Two responsibilities, in order:
+ *   1. Validate required env vars (via ./required-env.js). This runs first
+ *      and exits the process if anything critical is missing in production.
+ *      Why first? We want a missing secret to surface as "process did not
+ *      start" rather than as a 500 on the first request.
+ *   2. Install structured logging for unhandled promise rejections and
+ *      uncaught exceptions so they show up in PM2's stderr as single-line,
+ *      parseable records. Next.js's own default listeners stay in place and
+ *      continue to emit their verbose stacks for forensics — this adds a
+ *      single summary line on top so a log scraper can alert without
+ *      parsing a multi-line stack.
  *
  * Why --require and not just `require()` at the top of server.js?
  * server.js is a Next.js standalone build artifact (auto-generated from
@@ -14,6 +21,8 @@
  * next `next build`. --require runs *before* any other code in the
  * process, which is what we need to catch the earliest rejections.
  */
+
+require("./required-env");
 
 const MAX_STACK_LINES = 5;
 const MAX_ERROR_NAME = 80;

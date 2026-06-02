@@ -1,0 +1,20 @@
+{
+  "_comment": "Single source of truth for required environment variables. Read by both scripts/required-env.js (boot-time validator) and scripts/check-env-drift.sh (pre-deploy drift detector). When you add a new required var, add it here AND to .env.example — drift detection will then fail any deploy that hasn't propagated the value to .env.local.",
+
+  "required": [
+    "MONGODB_URI",
+    "GUARDIAN_LOOP_SECRET",
+    "VENICE_API_KEY"
+  ],
+
+  "_oneOfComment": "Each group is an array. The validator passes if AT LEAST ONE group has all of its keys present and non-empty. Use this for cases like 'PRIVATE_KEY OR (CIRCLE_API_KEY + CIRCLE_ENTITY_SECRET)' where multiple configurations are valid.",
+  "oneOf": [
+    ["PRIVATE_KEY"],
+    ["CIRCLE_API_KEY", "CIRCLE_ENTITY_SECRET"]
+  ],
+
+  "_expectedValueComment": "Keys whose presence is required to equal one of these values. Use sparingly — only for hard constraints like NODE_ENV=production.",
+  "expectedValues": {
+    "NODE_ENV": ["production"]
+  }
+}
