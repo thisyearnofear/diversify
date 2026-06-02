@@ -64,59 +64,17 @@ export function classifyAssets(tokens: TokenBalance[]): AssetGroups {
 
 /**
  * Peer-comparison copy for the social-proof line at the bottom of the
- * Asset Inventory. The brackets are sourced from internal telemetry as
- * of 2026-06; replace with a real aggregate endpoint when one exists.
+ * Asset Inventory.
  *
- * TODO(review-2026-07): replace with /api/metrics/peer-stable-ratio
+ * The canonical source of bracket data is now /api/metrics/peer-stable-ratio
+ * (see lib/peer-brackets.ts for the fallback constants and getPeerBracket
+ * function that this re-exports).
+ *
+ * The hook usePeerStableRatio fetches the live API and passes the result
+ * to getPeerBracket, falling back to the local constants on error.
  */
-export interface PeerBracket {
-    label: string;
-    copy: string;
-    percentile: number;
-}
 
-const PEER_BRACKETS: ReadonlyArray<{
-    minRatio: number;
-    bracket: PeerBracket;
-}> = [
-    {
-        minRatio: 0.75,
-        bracket: {
-            label: 'top 10% of protectors',
-            copy: 'You\u2019re in the top 10% of protectors \u2014 most users have far less stablecoin coverage than you.',
-            percentile: 90,
-        },
-    },
-    {
-        minRatio: 0.5,
-        bracket: {
-            label: 'top 30% of protectors',
-            copy: 'You\u2019re in the top 30% of protectors \u2014 most users have less stablecoin coverage than you.',
-            percentile: 70,
-        },
-    },
-    {
-        minRatio: 0.25,
-        bracket: {
-            label: 'above average',
-            copy: 'You\u2019re above average. Push above 50% to be in the top half of protectors.',
-            percentile: 55,
-        },
-    },
-    {
-        minRatio: 0,
-        bracket: {
-            label: 'most users are ahead of you',
-            copy: 'Most users have more in stables than you. Adding USDm or USDC protects against local inflation.',
-            percentile: 30,
-        },
-    },
-];
-
-export function getPeerBracket(stableRatio: number): PeerBracket | null {
-    if (!Number.isFinite(stableRatio) || stableRatio < 0) return null;
-    for (const entry of PEER_BRACKETS) {
-        if (stableRatio >= entry.minRatio) return entry.bracket;
-    }
-    return PEER_BRACKETS[PEER_BRACKETS.length - 1].bracket;
-}
+// Re-export from the shared library so existing imports in AssetInventory
+// and tests continue to work without changes.
+export type { PeerBracket, BracketEntry } from '@/lib/peer-brackets';
+export { getPeerBracket, PEER_BRACKETS_FALLBACK } from '@/lib/peer-brackets';

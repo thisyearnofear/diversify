@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { TokenBalance } from '@/hooks/use-multichain-balances';
 import { usePaperPortfolio } from '@/hooks/use-paper-portfolio';
 import { classifyAssets, getPeerBracket } from './asset-classification';
+import { usePeerStableRatio } from '@/hooks/use-peer-stable-ratio';
 
 interface AssetInventoryProps {
     tokens: TokenBalance[];
@@ -228,12 +229,18 @@ const AssetGroupSection: React.FC<{
 /**
  * One-line peer comparison: "You're in the top 30% of protectors..."
  * Hidden when there's nothing to compare (empty wallet, demo, paper view).
+ *
+ * Fetches bracket definitions from /api/metrics/peer-stable-ratio on mount
+ * and falls back to hardcoded constants if the API is unreachable. The
+ * API data is cached server-side for 1 hour, so this is a lightweight
+ * background fetch — no loading state needed for a cosmetic line.
  */
 const SocialProofLine: React.FC<{ tokens: TokenBalance[] }> = ({ tokens }) => {
     const { trackedValue, totalValue } = classifyAssets(tokens);
+    const { brackets } = usePeerStableRatio();
     if (totalValue <= 0) return null;
     const ratio = trackedValue / totalValue;
-    const bracket = getPeerBracket(ratio);
+    const bracket = getPeerBracket(ratio, brackets);
     if (!bracket) return null;
     return (
         <div className="pt-2 mt-1 border-t border-gray-100 dark:border-gray-800">

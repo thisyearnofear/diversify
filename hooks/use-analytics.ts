@@ -76,5 +76,37 @@ export function useAnalytics() {
     track('deep_link_used', params);
   };
 
-  return { track, trackTabChange, trackOnboardingStep, trackSwapInitiated, trackDeepLink };
+  // UX interaction events for the new clarity features (added 2026-06)
+  const trackChainPillSwitch = (fromChain: string, toChain: string) => {
+    track('chainpill_switch', { fromChain, toChain });
+  };
+
+  const trackTooltipView = (label: string) => {
+    track('tooltip_view', { label });
+  };
+
+  const trackAssetDetailsToggle = (open: boolean) => {
+    track('asset_details_toggle', { open: open ? 'true' : 'false' });
+  };
+
+  const trackRegimeTip = (regime: string, stableRatio: number) => {
+    track('regime_tip', { regime, stableRatio: stableRatio.toFixed(3) });
+  };
+
+  const trackHeroTap = (label: string) => {
+    track('hero_tap', { label });
+  };
+
+  return {
+    track,
+    trackTabChange,
+    trackOnboardingStep,
+    trackSwapInitiated,
+    trackDeepLink,
+    trackChainPillSwitch,
+    trackTooltipView,
+    trackAssetDetailsToggle,
+    trackRegimeTip,
+    trackHeroTap,
+  };
 }

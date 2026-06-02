@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
 import { useInflationData } from "@/hooks/use-inflation-data";
+import { useAnalytics } from "@/hooks/use-analytics";
 import { useExperience } from "../../../context/app/ExperienceContext";
 import { useProtectionProfile } from "../../../hooks/use-protection-profile";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
@@ -84,6 +85,8 @@ export function ConnectedOverview({
   const { canClaim, isWhitelisted, streak } = useStreakRewards();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
   const marketRegime = useMarketRegime();
+  const { trackAssetDetailsToggle, trackRegimeTip } = useAnalytics();
+  const hasTrackedRegimeTip = useRef(false);
 
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
@@ -97,6 +100,20 @@ export function ConnectedOverview({
   } = activePortfolio;
 
   const hasHoldings = totalValue > 0;
+
+  // Track regime tip once per session
+  useEffect(() => {
+    if (marketRegime && !hasTrackedRegimeTip.current) {
+      const groups = classifyAssets(activePortfolio.allTokens || []);
+      const totalVal = groups.totalValue;
+      const stableRatio = totalVal > 0 ? groups.trackedValue / totalVal : 0;
+      const tip = getRegimeTip(marketRegime.regime, stableRatio);
+      if (tip) {
+        hasTrackedRegimeTip.current = true;
+        trackRegimeTip(marketRegime.regime, stableRatio);
+      }
+    }
+  }, [marketRegime, activePortfolio, trackRegimeTip]);
 
   const handleRefresh = async () => {
     if (refreshChainId) await refreshChainId();
@@ -194,6 +211,7 @@ export function ConnectedOverview({
           />
           <div className="mt-2 flex justify-center">
             <Tooltip
+              analyticsLabel="whats_this_score"
               content={
                 isBeginner
                   ? "We track USDm, cUSD, EURm, USDC, USDT, PAXG across Celo and Arbitrum. Volatile tokens (CELO, ETH) appear in your mix but don't count toward this score."
@@ -421,7 +439,11 @@ export function ConnectedOverview({
                   Improve My Protection
                 </button>
                 <button
-                  onClick={() => setShowAssetDetails(!showAssetDetails)}
+                  onClick={() => {
+                    const newVal = !showAssetDetails;
+                    setShowAssetDetails(newVal);
+                    trackAssetDetailsToggle(newVal);
+                  }}
                   className="w-full flex items-center justify-between py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
                 >
                   <span>{showAssetDetails ? "Hide" : "View"} Asset Details</span>

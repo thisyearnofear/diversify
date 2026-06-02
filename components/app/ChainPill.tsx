@@ -10,6 +10,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useWalletContext } from "@/components/wallet/WalletProvider";
 import { useToast } from "@/components/ui/Toast";
+import { useAnalytics } from "@/hooks/use-analytics";
 import { NETWORKS } from "../../config";
 
 interface ChainMeta {
@@ -35,6 +36,7 @@ function findChainMeta(chainId: number | null | undefined): ChainMeta | null {
 export function ChainPill() {
     const { chainId, switchNetwork } = useWalletContext();
     const { showToast } = useToast();
+    const { trackChainPillSwitch } = useAnalytics();
     const [open, setOpen] = useState(false);
     const [pending, setPending] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
@@ -60,6 +62,7 @@ export function ChainPill() {
         if (pending || target.id === current.id) return;
         setOpen(false);
         setPending(true);
+        trackChainPillSwitch(current.short, target.short);
         showToast(`Switching to ${target.short}…`, "info");
         try {
             await switchNetwork(target.id);
