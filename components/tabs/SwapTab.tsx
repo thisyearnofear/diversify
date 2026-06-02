@@ -26,6 +26,7 @@ import {
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
+import { useClaimFlow, ClaimFlowOverlay } from "../../hooks/use-claim-flow";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
@@ -45,13 +46,6 @@ import { useSocialResolve } from "../../hooks/use-social-resolve";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
-
-const GoodDollarClaimFlow = dynamic(
-  () => import("../gooddollar/GoodDollarClaimFlow"),
-  {
-    ssr: false,
-  },
-);
 
 interface SwapTabProps {
   userRegion: Region;
@@ -73,6 +67,7 @@ export default function SwapTab({
   const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
   const { demoMode } = useDemoMode();
   const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
+  const flow = useClaimFlow();
   const { resolveIdentifier } = useSocialResolve();
   const [searchQuery, setSearchQuery] = useState("");
   const [showSocialPicker, setShowSocialPicker] = useState(false);
@@ -103,9 +98,6 @@ export default function SwapTab({
   const [aiRecommendationReason, setAiRecommendationReason] = useState<
     string | null
   >(null);
-
-  // G$ claim flow state (triggered from swap success celebration)
-  const [showClaimFlow, setShowClaimFlow] = useState(false);
 
   // Success celebration state
   const [showCelebration, setShowCelebration] = useState(false);
@@ -219,13 +211,7 @@ export default function SwapTab({
     setPreviousGoalScore(undefined);
   }, []);
 
-  const handleClaimG = useCallback(() => {
-    setShowClaimFlow(true);
-  }, []);
-
-  const handleCloseClaimFlow = useCallback(() => {
-    setShowClaimFlow(false);
-  }, []);
+  const handleClaimG = flow.handleClaim;
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId ?? null);
   const activeNetworkName = useMemo(() => {
@@ -846,12 +832,7 @@ export default function SwapTab({
         />
       )}
 
-      {showClaimFlow && (
-        <GoodDollarClaimFlow
-          onClose={handleCloseClaimFlow}
-          onClaimSuccess={handleCloseClaimFlow}
-        />
-      )}
+      <ClaimFlowOverlay flow={flow} />
     </div>
   );
 }

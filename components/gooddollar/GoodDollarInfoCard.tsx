@@ -5,10 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useWalletContext } from "../wallet/WalletProvider";
 
-const GoodDollarClaimFlow = dynamic(() => import("./GoodDollarClaimFlow"), {
-    ssr: false,
-});
-
 const GStreamingWidget = dynamic(() => import("./GStreamingWidget"), {
     ssr: false,
 });
@@ -105,7 +101,6 @@ export default function GoodDollarInfoCard({
 }: GoodDollarInfoCardProps) {
     const { isConnected } = useWalletContext();
     const [openSection, setOpenSection] = useState<string | null>(null);
-    const [showClaimFlow, setShowClaimFlow] = useState(false);
     const [reserveState, setReserveState] = useState<ReserveState>({
         price: '0',
         balance: '0',
@@ -227,7 +222,7 @@ export default function GoodDollarInfoCard({
                                 </button>
                             ) : canClaim ? (
                                 <button
-                                    onClick={() => setShowClaimFlow(true)}
+                                    onClick={onClaim}
                                     className="text-xs font-black px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all shadow-sm"
                                 >
                                     Claim →
@@ -407,13 +402,6 @@ export default function GoodDollarInfoCard({
                     </div>
                 </div>
             </DashboardCard>
-
-            {showClaimFlow && (
-                <GoodDollarClaimFlow
-                    onClose={() => setShowClaimFlow(false)}
-                    onClaimSuccess={() => setShowClaimFlow(false)}
-                />
-            )}
         </>
     );
 }

@@ -16,17 +16,13 @@ import { StreakProgressVisualizer } from './streak/StreakProgressVisualizer';
 import { GraduationProgressExplainer } from './GraduationProgressExplainer';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
+import { useClaimFlow, ClaimFlowOverlay } from '../../hooks/use-claim-flow';
 import { useWalletContext } from '../wallet/WalletProvider';
 import { AchievementBadge, AchievementToast, ACHIEVEMENTS, type Badge } from './AchievementBadge';
 import { NETWORKS } from '../../config';
 import dynamic from 'next/dynamic';
 
 const DISMISSED_KEY = 'diversifi_streak_dismissed';
-
-// Lazy load claim flow for better performance
-const GoodDollarClaimFlow = dynamic(() => import('../gooddollar/GoodDollarClaimFlow'), {
-  ssr: false,
-});
 
 // Lazy load graduation modal
 const GraduationModal = dynamic(() => import('./GraduationModal'), {
@@ -85,7 +81,7 @@ interface StreakRewardsCardProps {
 }
 
 export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardProps) {
-  const { isConnected, switchNetwork } = useWalletContext();
+  const { isConnected, chainId } = useWalletContext();
   const {
     streak,
     canClaim,
@@ -94,7 +90,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     entitlement,
     estimatedReward,
     nextClaimTime,
-    verifyIdentity,
+    refresh,
     isLoading,
     crossChainActivity,
     achievements,
@@ -102,10 +98,12 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     eligibleForGraduation,
   } = useStreakRewards();
 
-  const [showClaimFlow, setShowClaimFlow] = useState(false);
+  // Claim/verify state machine shared with ProtectionTab, SwapTab, AIChat.
+  const flow = useClaimFlow();
+  const { claimStatus, claimError, verifyStatus, handleClaim, handleVerify } = flow;
+
   const [showGraduationModal, setShowGraduationModal] = useState(false);
   const [showGraduationExplainer, setShowGraduationExplainer] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
   // Start compact when an active streak exists but claiming isn't available yet —
   // prevents the card from occupying full height in the banner stack by default.
   // The useEffect below auto-expands it as soon as canClaim becomes true.
@@ -147,17 +145,6 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     return `${hours}h ${minutes}m`;
   };
 
-  const handleVerify = async () => {
-    setIsVerifying(true);
-    try {
-      await verifyIdentity();
-      // Keep loading for a bit while they are redirected
-      setTimeout(() => setIsVerifying(false), 5000);
-    } catch {
-      setIsVerifying(false);
-    }
-  };
-
   // Reset dismissed state when claim becomes available
   React.useEffect(() => {
     if (canClaim && isWhitelisted) {
@@ -194,8 +181,8 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     );
   }
 
-  // No streak yet — enhance the existing InsightCard with a secondary testnet link.
-  // Deliberately ONE card (PREVENT BLOAT / ENHANCEMENT FIRST).
+  // No streak yet — one InsightCard, G$ carrot only. Testnet teases live in
+  // the graduation system, not here.
   if (!isEligible) {
     return (
       <>
@@ -210,18 +197,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
               : undefined
           }
           variant="default"
-        >
-          {/* Secondary option — one line, no new card */}
-          <div className="mt-2 pt-2 border-t border-black/5 flex items-center justify-between">
-            <span className="text-xs text-gray-400">Not ready to use real money?</span>
-            <button
-              onClick={() => switchNetwork?.(NETWORKS.CELO_SEPOLIA.chainId)}
-              className="text-xs font-black text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
-            >
-              🧪 Try Testnet →
-            </button>
-          </div>
-        </InsightCard>
+        />
 
         {pendingToast && (
           <AchievementToast badge={pendingToast} onClose={() => setPendingToast(null)} />
@@ -244,36 +220,63 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
   }
 
   // Has streak - show claim status (full card)
+  const rewardLabel = entitlement !== '0' ? `${entitlement} G$` : estimatedReward;
+  const claimButtonLabel =
+    claimStatus === 'claiming'
+      ? 'Claiming...'
+      : canClaim
+        ? 'Claim G$'
+        : nextClaimTime
+          ? `Next claim in ${formatTimeUntil(nextClaimTime)}`
+          : 'Unlock Daily G$';
+  const verifyButtonLabel =
+    verifyStatus === 'opening'
+      ? 'Opening Verification...'
+      : verifyStatus === 'awaiting'
+        ? 'Awaiting Approval...'
+        : 'Verify with Face Scan';
+
   return (
     <>
       <div className="relative">
         <InsightCard
           icon={!isWhitelisted ? '🛡️' : (canClaim ? '💚' : '🔥')}
-          title={!isWhitelisted ? 'Verification Required' : (canClaim ? 'Claim Your G$' : `${streak?.daysActive || 0}-Day Streak`)}
+          title={
+            !isWhitelisted
+              ? verifyStatus === 'awaiting'
+                ? 'Awaiting Verification'
+                : 'Verification Required'
+              : canClaim
+                ? 'Claim Your G$'
+                : `${streak?.daysActive || 0}-Day Streak`
+          }
           description={
             !isWhitelisted
-              ? "Your streak is active! Now complete face verification on GoodDollar to start claiming your daily UBI."
+              ? verifyStatus === 'awaiting'
+                ? 'Complete face verification on GoodDollar, then return here. We check automatically when you come back.'
+                : "Verify once on GoodDollar to start claiming your daily UBI. Takes about a minute."
               : canClaim
-                ? `Your daily G$ is ready! Claim ${entitlement !== '0' ? entitlement + ' G$' : estimatedReward} now.`
-                : `Swap $1+ to maintain your streak and unlock your daily G$ claim.`
+                ? `Your daily G$ is ready — claim ${rewardLabel} now.`
+                : `Swap $1+ to maintain your streak and unlock tomorrow's claim.`
           }
-          impact={!isWhitelisted ? "Identity Pending" : (canClaim ? (entitlement !== '0' ? entitlement + ' G$' : estimatedReward) : `${streak?.daysActive} days active`)}
+          impact={!isWhitelisted ? (verifyStatus === 'awaiting' ? 'Checking every 30s' : 'Identity Pending') : (canClaim ? rewardLabel : `${streak?.daysActive} days active`)}
           action={
             !isWhitelisted
               ? {
-                label: 'Verify with Face Scan',
-                onClick: handleVerify,
-                loading: isVerifying,
+                label: verifyButtonLabel,
+                onClick: verifyStatus === 'awaiting' ? () => void refresh() : handleVerify,
+                loading: verifyStatus === 'opening' || verifyStatus === 'awaiting',
+                disabled: verifyStatus === 'awaiting',
               }
               : canClaim
                 ? {
-                  label: 'Claim G$',
-                  onClick: () => setShowClaimFlow(true),
-                  loading: isLoading,
+                  label: claimButtonLabel,
+                  onClick: handleClaim,
+                  loading: claimStatus === 'claiming',
                 }
                 : nextClaimTime
                   ? {
-                    label: `Next claim in ${formatTimeUntil(nextClaimTime)}`,
+                    label: claimButtonLabel,
                     onClick: () => { },
                     disabled: true,
                   }
@@ -284,6 +287,23 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
           {/* Enhanced Streak Visualizer */}
           {isEligible && streak && isWhitelisted && (
             <StreakProgressVisualizer daysActive={streak.daysActive} />
+          )}
+
+          {/* Inline claim error — disappears after 6s */}
+          {claimStatus === 'error' && claimError && (
+            <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+              <span className="text-sm">⚠️</span>
+              <p className="text-xs text-red-700 dark:text-red-300 leading-relaxed flex-1">
+                {claimError}
+              </p>
+            </div>
+          )}
+
+          {/* Faucet footnote — first-time claimers may need a free CELO top-up */}
+          {canClaim && claimStatus !== 'claiming' && (
+            <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 text-center">
+              Free to claim · first time may sign a one-time gas top-up
+            </p>
           )}
         </InsightCard>
         
@@ -317,42 +337,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
         <MilestoneProgress daysActive={streak.daysActive} />
       )}
 
-      {/* Test Drive Teaser — shown when user has a streak but hasn't tried testnet yet */}
-      {isEligible && !isCompact && crossChainActivity &&
-        crossChainActivity.testnet.totalSwaps === 0 &&
-        crossChainActivity.testnet.totalClaims === 0 &&
-        !crossChainActivity.graduation.isGraduated && (
-        <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/10 dark:to-indigo-900/10 rounded-lg border border-violet-200 dark:border-violet-900/30">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl mt-0.5">🧪</span>
-            <div className="flex-1 min-w-0">
-              <div className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wider mb-1">
-                Test Drive Available
-              </div>
-              <p className="text-xs text-violet-600 dark:text-violet-500 leading-relaxed mb-2">
-                Explore 3 testnets risk-free. Earn badges. Graduate to mainnet when ready.
-              </p>
-              {/* Direct network switch — one tap, no chain-selector hunting */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <button
-                  onClick={() => switchNetwork?.(NETWORKS.CELO_SEPOLIA.chainId)}
-                  className="px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-xs font-black rounded-lg transition-colors active:scale-95"
-                >
-                  🧪 Try Testnet →
-                </button>
-                <button
-                  onClick={() => setShowGraduationExplainer(true)}
-                  className="text-xs font-bold text-violet-500 dark:text-violet-400 hover:underline"
-                >
-                  How it works →
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Graduation Progress Explainer — expandable guide */}
+      {/* Graduation Progress Explainer — opened from the Cross-Chain card below */}
       {showGraduationExplainer && (
         <div className="mt-3">
           <GraduationProgressExplainer />
@@ -424,13 +409,8 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
         </div>
       )}
 
-      {/* Claim Flow Modal */}
-      {showClaimFlow && (
-        <GoodDollarClaimFlow
-          onClose={() => setShowClaimFlow(false)}
-          onClaimSuccess={() => setShowClaimFlow(false)}
-        />
-      )}
+      {/* Claim celebration overlay — shown after a successful direct claim */}
+      <ClaimFlowOverlay flow={flow} />
 
       {/* Graduation Modal */}
       {showGraduationModal && (

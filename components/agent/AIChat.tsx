@@ -8,6 +8,7 @@ import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
 import { useProactiveAgent } from "../../hooks/use-proactive-agent";
+import { useClaimFlow, ClaimFlowOverlay } from "../../hooks/use-claim-flow";
 import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";
@@ -18,10 +19,6 @@ import SimpleMarkdown from "../shared/SimpleMarkdown";
 import { ResearchCheck } from "./ResearchCheck";
 import { ResearchReceipt } from "./ResearchReceipt";
 import { TrustFlow } from "./TrustFlow";
-
-const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
-  ssr: false,
-});
 
 const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
   ssr: false,
@@ -380,8 +377,21 @@ export default function AIChat() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
-  const [showClaimFlow, setShowClaimFlow] = useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
+  // Direct-claim flow: closes the drawer on success so the celebration can
+  // overlay the full screen, and awards credits via the existing XP system.
+  const flow = useClaimFlow({
+    onClaimSuccess: () => {
+      claimReward('gooddollar_claim');
+    },
+  });
+  // When the user initiates a claim from inside the drawer, close the drawer
+  // immediately so the celebration overlay (z-50) can render above the
+  // background instead of being hidden behind the drawer (z-100).
+  const handleClaimFromChat = () => {
+    setDrawerOpen(false);
+    void flow.handleClaim();
+  };
   const [showSettings, setShowSettings] = useState(false);
   const [soSoModalOpen, setSoSoModalOpen] = useState(false);
   const [soSoTradeProposal, setSoSoTradeProposal] = useState<SoSoTradeProposal | null>(null);
@@ -435,7 +445,7 @@ export default function AIChat() {
   // Actions are now user-initiated via buttons below each AI response.
   // No auto-triggers — no tab switches, no claim popups, no navigation.
 
-  if (!isDrawerOpen && !showClaimFlow) return null;
+  if (!isDrawerOpen && flow.claimStatus === 'idle' && flow.verifyStatus === 'idle') return null;
 
   const handleConfirmClear = () => {
     clearMessages();
@@ -444,15 +454,8 @@ export default function AIChat() {
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
-      {/* GoodDollar Claim Modal Triggered by AI */}
-      {showClaimFlow && (
-        <div className="pointer-events-auto">
-          <GoodDollarClaimFlow 
-            onClose={() => setShowClaimFlow(false)} 
-            onClaimSuccess={() => { setShowClaimFlow(false); claimReward('gooddollar_claim'); }} 
-          />
-        </div>
-      )}
+      {/* Direct-claim celebration overlay — shown after the flow completes */}
+      <ClaimFlowOverlay flow={flow} />
 
       {/* Backdrop */}
       {isDrawerOpen && (
@@ -519,7 +522,7 @@ export default function AIChat() {
         </div>
 
         {/* Freemium Status Banner */}
-        <FreemiumPanel onGoodDollarClaim={() => { setShowClaimFlow(true); }} />
+        <FreemiumPanel onGoodDollarClaim={handleClaimFromChat} />
 
         {/* Header */}
         <div className="px-6 pb-4 flex justify-between items-center border-b border-amber-200/30 dark:border-amber-800/20 bg-gradient-to-r from-amber-50/50 via-yellow-50/30 to-amber-50/50 dark:from-amber-900/10 dark:via-yellow-900/5 dark:to-amber-900/10">
@@ -761,7 +764,7 @@ export default function AIChat() {
                       {/* Visible action buttons for claim / verify / navigate */}
                       {msg.action?.type === 'claim_ubi' && (
                         <button
-                          onClick={() => setShowClaimFlow(true)}
+                          onClick={handleClaimFromChat}
                           className="mt-3 w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
                         >
                           🪙 Claim Daily G$ UBI

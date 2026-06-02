@@ -492,7 +492,7 @@ export const CELO_SEPOLIA_TOKENS = {
     CADm: '0x02EC9E0D2Fd73e89168C1709e542a48f58d7B133',
     AUDm: '0x84CBD49F5aE07632B6B88094E81Cce8236125Fe0',
     NGNm: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71',
-    'G$': '0x62B8B11039FcfE5aB0C56E502b1C372A3d2a9c7A', // GoodDollar UBI token (checksummed, same on testnet)
+    'G$': '0x61FA0fB802fd8345C06da558240E0651886fec69', // GoodDollar staging G$ (Celo). GoodDollar does not publish a Celo Sepolia deployment; using staging so the token list is functional for testing. Override to mainnet (0x62B8...9c7A) for production.
     USDT: '0xd077A400968890Eacc75cdc901F0356c943e4fDb',
 } as const;
 

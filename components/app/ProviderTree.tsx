@@ -10,6 +10,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { AppProviders } from "@/context/app/AppProviders";
 import { AIConversationProvider } from "@/context/AIConversationContext";
 import { PrivyProvider } from "@/context/PrivyProvider";
+import { StreakRewardsProvider } from "@/hooks/use-streak-rewards";
 
 interface ProviderTreeProps {
   children: ReactNode;
@@ -23,7 +24,9 @@ export default function ProviderTree({ children }: ProviderTreeProps) {
           <AIConversationProvider>
             <ToastProvider>
               <WalletProvider>
-                {children}
+                <StreakRewardsProvider>
+                  {children}
+                </StreakRewardsProvider>
               </WalletProvider>
             </ToastProvider>
           </AIConversationProvider>

@@ -258,10 +258,10 @@ export default function SwapSuccessCelebration({
                   <div className="text-lg">💚</div>
                   <div className="flex-1">
                     <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mb-1">
-                      Daily UBI Unlocked
+                      Streak started
                     </p>
                     <p className="text-xs text-emerald-600/80 dark:text-emerald-500/80 leading-relaxed">
-                      Daily G$ rewards activated! Complete face verification to start claiming.
+                      Verify your identity once to start claiming daily G$ — takes about a minute.
                     </p>
                   </div>
                 </div>

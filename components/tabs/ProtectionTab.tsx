@@ -29,15 +29,11 @@ import OptimizationInsight from "./protect/OptimizationInsight";
 import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
-import { useStreakRewards } from "@/hooks/use-streak-rewards";
+import { useClaimFlow, ClaimFlowOverlay } from "@/hooks/use-claim-flow";
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
-
-const GoodDollarClaimFlow = dynamic(() => import("../gooddollar/GoodDollarClaimFlow"), {
-  ssr: false,
-});
 
 // ============================================================================
 // MAIN COMPONENT
@@ -70,6 +66,11 @@ export default function ProtectionTab({
 
   // Use demo data if in demo mode
   const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
+
+  // Hooks must be called unconditionally and in stable order, so the claim
+  // flow hook lives before any early return. The hook itself short-circuits
+  // safely when the wallet is disconnected.
+  const flow = useClaimFlow();
 
   if (isLoading && address && !isDemo) {
     return <ProtectionSkeleton />;
@@ -116,8 +117,6 @@ export default function ProtectionTab({
   const { showToast } = useToast();
 
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
-  const [showClaimFlow, setShowClaimFlow] = useState(false);
-  const { streak, canClaim, isWhitelisted, estimatedReward } = useStreakRewards();
 
   // Current regions for recommendations
   const currentRegions = useMemo(() => {
@@ -449,7 +448,7 @@ export default function ProtectionTab({
         userRegion={userRegion}
         isComplete={isComplete}
         currentGoalLabel={currentGoalLabel}
-        onClaim={() => setShowClaimFlow(true)}
+        onClaim={flow.handleClaim}
       />}
 
       {/* =================================================================
@@ -669,12 +668,7 @@ export default function ProtectionTab({
 
       {/* GoodDollar streak now integrated into ProtectionDashboard header */}
 
-      {showClaimFlow && (
-        <GoodDollarClaimFlow
-          onClose={() => setShowClaimFlow(false)}
-          onClaimSuccess={() => setShowClaimFlow(false)}
-        />
-      )}
+      <ClaimFlowOverlay flow={flow} />
     </div>
   );
 }
