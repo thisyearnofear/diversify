@@ -19,6 +19,7 @@ import DashboardCard from "../../shared/DashboardCard";
 import { AgentTierStatus } from "../../agent/AgentTierStatus";
 import { GoalAlignmentBanner } from "./GoalAlignmentBanner";
 import { InflationTooltip } from "./InflationTooltip";
+import { Tooltip } from "../../shared/Tooltip";
 import { GuardianPulse } from "../../agent/GuardianPulse";
 
 const EMERGING_MARKETS = {
@@ -174,6 +175,20 @@ export function ConnectedOverview({
             value={isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
             label={isBeginner ? "Protection Score" : "Total Value"}
           />
+          <div className="mt-2 flex justify-center">
+            <Tooltip
+              content={
+                isBeginner
+                  ? "We track USDm, cUSD, EURm, USDC, USDT, PAXG across Celo and Arbitrum. Volatile tokens (CELO, ETH) appear in your mix but don't count toward this score."
+                  : "Score reflects diversification across tracked stablecoin regions. Volatile tokens (CELO, ETH, WBTC) are shown in your asset mix but don't count. Open 'View Asset Details' below to see the split."
+              }
+              side="bottom"
+            >
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 cursor-help">
+                What&apos;s this?
+              </span>
+            </Tooltip>
+          </div>
           <div
             className={`mt-3 text-sm font-bold px-4 py-1.5 rounded-full inline-block shadow-sm ${
               diversificationScore >= 80
