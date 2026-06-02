@@ -100,6 +100,7 @@ rsync -az --delete --no-owner --no-group \
     --exclude='.env' \
     --exclude='.env.local' \
     --exclude='start-runtime.sh' \
+    --exclude='instrument.js' \
     .next/standalone/ \
     "$REMOTE:$RUNTIME_DIR/" 2>&1 | tail -5
 
@@ -122,13 +123,18 @@ if [ "$SYNC_ENV" = "true" ]; then
     fi
 fi
 
-# ── 5. Ensure start-runtime.sh exists on server ─────────────────────────────
-ssh "$REMOTE" "test -f $RUNTIME_DIR/start-runtime.sh" || {
-    warn "start-runtime.sh missing on server — creating from template"
-    scp "scripts/start-runtime.sh" "$REMOTE:$RUNTIME_DIR/start-runtime.sh"
-    ssh "$REMOTE" "chmod +x $RUNTIME_DIR/start-runtime.sh"
-    ok "start-runtime.sh created"
-}
+# ── 5. Sync start-runtime.sh + instrument.js (always, not just on first run) ──
+# These are the runtime entry point and a pre-required module respectively.
+# Both ship from the repo on every deploy so handler changes don't get stuck
+# behind an `if [ -f ]` guard.
+info "Syncing scripts/start-runtime.sh..."
+scp "scripts/start-runtime.sh" "$REMOTE:$RUNTIME_DIR/start-runtime.sh"
+ssh "$REMOTE" "chmod +x $RUNTIME_DIR/start-runtime.sh"
+ok "start-runtime.sh synced"
+
+info "Syncing scripts/instrument.js..."
+scp "scripts/instrument.js" "$REMOTE:$RUNTIME_DIR/instrument.js"
+ok "instrument.js synced"
 
 # ── 6. Restart PM2 ──────────────────────────────────────────────────────────
 info "Restarting PM2 ($APP_NAME)..."
