@@ -84,33 +84,53 @@ else
     ok "Build artifacts verified (.next/BUILD_ID present)"
 fi
 
-# ── 3. Rsync .next/ to Hetzner runtime dir ──────────────────────────────────
-info "Syncing .next/ to $REMOTE:$RUNTIME_DIR/.next/ ..."
+# ── 3. Rsync standalone build to Hetzner runtime dir ────────────────────────
+if [ ! -f ".next/standalone/server.js" ]; then
+    fail "Standalone output not found at .next/standalone/server.js — ensure next.config uses output: 'standalone'"
+fi
 
-# Show size before transfer
-LOCAL_SIZE=$(du -sh .next 2>/dev/null | cut -f1)
-info "Local .next size: $LOCAL_SIZE"
+info "Syncing standalone build to $REMOTE:$RUNTIME_DIR/ ..."
 
-# Use rsync with --delete to mirror exactly (removes stale files on server)
-rsync -avz --delete --no-owner --no-group \
-    .next/ \
-    "$REMOTE:$RUNTIME_DIR/.next/" 2>&1 | tail -5
+LOCAL_SIZE=$(du -sh .next/standalone 2>/dev/null | cut -f1)
+info "Local standalone size: $LOCAL_SIZE"
+
+# Sync the standalone server, excluding server-managed files that must not be
+# overwritten (env vars, startup script). --delete removes stale build files.
+rsync -az --delete --no-owner --no-group \
+    --exclude='.env' \
+    --exclude='.env.local' \
+    --exclude='start-runtime.sh' \
+    .next/standalone/ \
+    "$REMOTE:$RUNTIME_DIR/" 2>&1 | tail -5
+
+# Static assets live inside .next/static/ which standalone doesn't include
+info "Syncing static assets..."
+rsync -az --delete --no-owner --no-group \
+    .next/static/ \
+    "$REMOTE:$RUNTIME_DIR/.next/static/" 2>&1 | tail -3
 
 ok "Rsync complete"
 
 # ── 4. Optionally sync .env.local ───────────────────────────────────────────
 if [ "$SYNC_ENV" = "true" ]; then
     if [ -f ".env.local" ]; then
-        info "Syncing .env.local to server..."
-        scp ".env.local" "$REMOTE:/tmp/diversifi-env.tmp"
-        ssh "$REMOTE" "sudo cp /tmp/diversifi-env.tmp $RUNTIME_DIR/.env && rm /tmp/diversifi-env.tmp"
+        info "Syncing .env.local → $RUNTIME_DIR/.env on server..."
+        scp ".env.local" "$REMOTE:$RUNTIME_DIR/.env"
         ok "Environment synced"
     else
         warn ".env.local not found locally — skipping env sync"
     fi
 fi
 
-# ── 5. Restart PM2 ──────────────────────────────────────────────────────────
+# ── 5. Ensure start-runtime.sh exists on server ─────────────────────────────
+ssh "$REMOTE" "test -f $RUNTIME_DIR/start-runtime.sh" || {
+    warn "start-runtime.sh missing on server — creating from template"
+    scp "scripts/start-runtime.sh" "$REMOTE:$RUNTIME_DIR/start-runtime.sh"
+    ssh "$REMOTE" "chmod +x $RUNTIME_DIR/start-runtime.sh"
+    ok "start-runtime.sh created"
+}
+
+# ── 6. Restart PM2 ──────────────────────────────────────────────────────────
 info "Restarting PM2 ($APP_NAME)..."
 ssh "$REMOTE" "pm2 restart $APP_NAME --update-env" || {
     warn "PM2 restart failed — trying to start fresh"
@@ -139,7 +159,7 @@ else
     ssh "$REMOTE" "pm2 logs $APP_NAME --lines 15 --nostream 2>&1 | tail -10"
 fi
 
-# ── 6. Verify endpoints ──────────────────────────────────────────────────────
+# ── 7. Verify endpoints ──────────────────────────────────────────────────────
 info "Verifying local endpoint on server..."
 HTTP_CODE=$(ssh "$REMOTE" "curl -s -o /dev/null -w '%{http_code}' --max-time 10 http://127.0.0.1:6174/api/agent/status 2>&1" || echo "000")
 if [ "$HTTP_CODE" = "200" ]; then
