@@ -56,6 +56,12 @@ export class VeniceProvider extends BaseAIProvider {
       // Add other Venice-specific parameters as needed
     };
 
+    // Note: we intentionally do NOT pass response_format to Venice.
+    // Most Venice models (e.g. llama-3.3-70b) reject response_format with 400.
+    // The system prompt already asks for JSON, and cleanJsonResponse extracts it
+    // from the model's text output. This works across all Venice models.
+    // Cast to any to include Venice-specific `venice_parameters` field
+    // (the OpenAI SDK types don't know about Venice's extensions).
     const completion = await withTimeout(
       this.client!.chat.completions.create({
         model: options.model ?? "llama-3.3-70b",
@@ -63,16 +69,13 @@ export class VeniceProvider extends BaseAIProvider {
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens,
         stream: false,
-        ...(options.responseFormat?.type === "json_object" 
-          ? { response_format: { type: "json_object" }, venice_parameters: veniceParameters }
-          : { venice_parameters: veniceParameters })
-      }),
+        venice_parameters: veniceParameters,
+      } as any),
       30000 // 30 second timeout
     );
 
-    const content = completion.choices[0]?.message?.content || "";
-    
-    // Validate JSON if requested
+    const content = (completion as any).choices?.[0]?.message?.content || "";
+
     if (options.responseFormat?.type === "json_object") {
       try {
         JSON.parse(this.cleanJsonResponse(content));
