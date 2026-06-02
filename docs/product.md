@@ -61,7 +61,7 @@ A stablecoin saver who wants to protect purchasing power but does not want to ma
 | **Guardian loop** | Cron-driven autonomous execution with ERC-7715 permission enforcement, confidence thresholds, and daily caps |
 | **x402 payments** | HTTP 402 challenge → real Arc USDC settlement → paid evidence with on-chain tx proof |
 | **0G verifiability** | Full stack: Serving (inference) → Storage (evidence CID) → DA (state) → Chain (RecommendationLedger) |
-| **Live data** | World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
+| **Live data** | 12+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
 | **Agent memory** | Cognee for cross-session persistent context |
 | **Multi-chain** | Celo, Arbitrum, Arc Testnet, Robinhood Chain |
 | **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |

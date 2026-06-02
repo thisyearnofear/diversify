@@ -27,6 +27,27 @@ export interface SoSoMarketSentiment {
   source: string;
 }
 
+export interface SoSoMacroEvent {
+    id: string;
+    title: string;
+    content: string;
+    event_type: 'central_bank' | 'cpi' | 'employment' | 'gdp' | 'other';
+    country: string;
+    currency: string;
+    impact: 'high' | 'medium' | 'low';
+    event_date: string;
+    actual?: string;
+    forecast?: string;
+    previous?: string;
+    source: string;
+}
+
+export interface SoSoMacroEventsResult {
+    events: SoSoMacroEvent[];
+    fetched_at: string;
+    fallback?: boolean;
+}
+
 export interface SoSoSSIIndex {
   protocol: string;
   total_value: number;
@@ -171,4 +192,39 @@ export function toCardData(result: SoSoIntelligenceResult) {
     timestamp: result.fetched_at,
     tier: result.tier,
   };
+}
+
+// ── Macro Events ──────────────────────────────────────────────────────────
+
+const MAX_MACRO_EVENTS = 10;
+
+export async function getSoSoMacroEvents(): Promise<SoSoMacroEventsResult> {
+  const apiKey = process.env.SOSOVALUE_API_KEY;
+  if (!apiKey) {
+    return { events: [], fetched_at: new Date().toISOString(), fallback: true };
+  }
+
+  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+
+  try {
+    // Fetch upcoming high-impact macro events (central bank decisions, CPI, employment)
+    // SoSoValue API: /v1/macro/events?impact=high,medium&limit=10
+    const res = await fetch(`${BASE_URL}/v1/macro/events?impact=high,medium&limit=${MAX_MACRO_EVENTS}`, {
+      headers,
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) {
+      console.warn(`[SoSoValue Macro] HTTP ${res.status}`);
+      return { events: [], fetched_at: new Date().toISOString(), fallback: true };
+    }
+
+    const raw = await res.json();
+    // Normalise: the API may return { data: [...] } or [...] directly
+    const events: SoSoMacroEvent[] = Array.isArray(raw) ? raw : raw?.data ?? [];
+    return { events, fetched_at: new Date().toISOString() };
+  } catch (err) {
+    console.warn('[SoSoValue Macro] fetch failed:', err);
+    return { events: [], fetched_at: new Date().toISOString(), fallback: true };
+  }
 }

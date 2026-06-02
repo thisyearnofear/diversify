@@ -48,7 +48,7 @@
 | **CoinGecko** | Exchange rates | 50k req/month |
 | **DeFiLlama** | TVL, yields | 100 req/day |
 | **GoodDollar** | UBI distribution | — |
-| **SoSoValue** | Flash news, market sentiment, SSI Protocol index | Free tier + API key for live data |
+| **SoSoValue** | Flash news + market sentiment → feeds Guardian AI macro awareness (one source among 12+) | Free tier + API key for live data |
 | **Firecrawl** | Event-driven macro page monitoring (ECB, Fed, yield trackers) | 500 credits/month free |
 | **Cognee** | Agent memory — cross-session persistent context | Tenant API (REST) |
 

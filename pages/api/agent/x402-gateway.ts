@@ -1,7 +1,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
-import { getSoSoValueIntelligence } from '../../../lib/sosovalue';
+import { getSoSoValueIntelligence, getSoSoMacroEvents } from '../../../lib/sosovalue';
 import {
     ARC_DATA_HUB_CONFIG,
     buildArcResearchBundle,
@@ -616,6 +616,7 @@ async function getActualPremiumData(source: string, isFreeTier: boolean = false)
         'agent_execution': await getMacroAnalysis(isFreeTier),
         'real_time_inflation': await getWorldBankData(isFreeTier),
         'sosovalue_intelligence': await getSoSoValueIntelligence(!isFreeTier) as unknown as Record<string, unknown>,
+        'sosovalue_macro_events': await getSoSoMacroEvents() as unknown as Record<string, unknown>,
         'brightdata_central_banks': await getBrightDataCentralBanks(isFreeTier),
         'brightdata_commodities': await getBrightDataCommodities(isFreeTier),
         'brightdata_financial_news': await getBrightDataFinancialNews(isFreeTier),
