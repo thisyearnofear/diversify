@@ -18,11 +18,24 @@
 # Usage:
 #   ./scripts/test-guardian-loop.sh
 #   SECRET=... ./scripts/test-guardian-loop.sh https://api.diversifi.famile.xyz
+#
+# IMPORTANT: this script does NOT default GUARDIAN_LOOP_SECRET. The secret
+# was previously hardcoded as a fallback here, but committing that value to
+# the public repo would expose the cron endpoint to anyone who reads the
+# source. Now the operator must explicitly provide the secret:
+#   - $SECRET (preferred), or
+#   - $GUARDIAN_LOOP_SECRET from your local .env.local
 # =============================================================================
 set -euo pipefail
 
 URL="${1:-${GUARDIAN_LOOP_URL:-https://api.diversifi.famile.xyz}}"
-SECRET="${SECRET:-${GUARDIAN_LOOP_SECRET:-guardian-loop-xk92mf7z}}"
+SECRET="${SECRET:-${GUARDIAN_LOOP_SECRET:-}}"
+
+if [ -z "$SECRET" ]; then
+    echo "error: GUARDIAN_LOOP_SECRET is required" >&2
+    echo "  set it in your local .env.local, or pass SECRET=... to this script" >&2
+    exit 1
+fi
 
 info() { printf "\033[1;34m▸\033[0m %s\n" "$*"; }
 ok() { printf "\033[1;32m✓\033[0m %s\n" "$*"; }
