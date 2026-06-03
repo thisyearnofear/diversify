@@ -4,7 +4,7 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useAgentConfig } from "./use-agent-config";
 import { useMultichainBalances } from "./use-multichain-balances";
-import { IntentDiscoveryService, AgentActionService, type AppIntent } from "@diversifi/shared";
+import { IntentDiscoveryService, AgentActionService, type AppIntent, type ResponseFormat } from "@diversifi/shared";
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
@@ -280,26 +280,55 @@ export function useAgentChat({
         return;
       }
 
+      // Determine response format intent before choosing card vs text vs action
+      const lastAssistantMsgType: 'card' | 'text' | 'action' | undefined =
+        lastAssistantMessage?.type === 'sosovalue_intelligence' || lastAssistantMessage?.type === 'recommendation'
+          ? 'card'
+          : lastAssistantMessage?.action
+            ? 'action'
+            : lastAssistantMessage
+              ? 'text'
+              : undefined;
+
+      const responseFormat = IntentDiscoveryService.recommendResponseFormat(effectiveContent, lastAssistantMsgType);
+
+      // Short-circuit ambiguous follow-ups with a clarifying question
+      if (responseFormat === 'clarify') {
+        addMessage({
+          role: 'assistant',
+          content: "Are you asking about the news I just showed, or something else?",
+          timestamp: new Date(),
+          type: 'text',
+        });
+        updateChatState({ isChatting: false, thinkingStep: '' });
+        return;
+      }
+
       updateChatState({
         isChatting: true,
         thinkingStep: "Consulting Advisor...",
       });
 
-      // Inject SoSoValue intelligence card for market/news queries before advisor reply
+      // SoSoValue intelligence: show card for data requests, fetch silently for synthesis
       const SOSOVALUE_TRIGGERS = /\b(news|market|sentiment|flash|sosovalue|ssi|signal|headline|crypto news|market intel)\b/i;
-      if (SOSOVALUE_TRIGGERS.test(effectiveContent)) {
+      const isMarketQuery = SOSOVALUE_TRIGGERS.test(effectiveContent);
+      let sosovalueData: any = undefined;
+
+      if (isMarketQuery) {
         try {
           updateChatState({ thinkingStep: "Fetching SoSoValue market intelligence..." });
           const ssRes = await fetch(`${apiBase}/api/agent/sosovalue`);
           if (ssRes.ok) {
-            const ssData = await ssRes.json();
-            addMessage({
-              role: 'assistant',
-              content: 'Here\'s the latest market intelligence from SoSoValue:',
-              timestamp: new Date(),
-              type: 'sosovalue_intelligence',
-              sosovalueData: ssData,
-            });
+            sosovalueData = await ssRes.json();
+            if (responseFormat === 'card') {
+              addMessage({
+                role: 'assistant',
+                content: "Here's the latest market intelligence from SoSoValue:",
+                timestamp: new Date(),
+                type: 'sosovalue_intelligence',
+                sosovalueData,
+              });
+            }
           }
         } catch {
           // Non-blocking — advisor still runs below
@@ -311,19 +340,31 @@ export function useAgentChat({
       // The returned data becomes macroData for the advisor (provides evidence context).
       let x402Receipt: AIMessage["x402Receipt"] = null;
       let macroData: Record<string, any> = {};
-      // Check credits before fetching research
+
+      // Inject silently-fetched SoSoValue data as macro context for synthesis responses
+      if (sosovalueData) {
+        macroData.sosovalue = sosovalueData;
+      }
+
+      // Gate paid research: only fetch when user wants data/action or explicitly requests research
+      const explicitResearchRequest = /\b(deep research|premium research|research bundle|run research|paid research|evidence backed|with evidence)\b/i.test(normalizedContent);
+      const shouldFetchResearch = (responseFormat === 'card' || responseFormat === 'action') || explicitResearchRequest;
       const currentCredits = creditsStatus?.credits.bonus ?? 0;
       const hasCredits = currentCredits >= RESEARCH_BUNDLE_PRICE;
 
-      if (!hasCredits) {
-        // No credits — skip research, advisor uses built-in context only
+      if (!hasCredits || !shouldFetchResearch) {
+        // No credits or synthesis-only query — skip paid research, advisor uses built-in context only
         x402Receipt = {
           status: "failed",
           amount: "0.000",
           currency: "USDC",
           sources: [],
-          reason: "Advisor answered without research evidence.",
-          error: "Insufficient research credits. Earn more or add funds to unlock evidence-backed responses.",
+          reason: shouldFetchResearch
+            ? "Advisor answered without research evidence."
+            : "Synthesis question — answered with free context only.",
+          error: !hasCredits
+            ? "Insufficient research credits. Earn more or add funds to unlock evidence-backed responses."
+            : undefined,
         };
       } else {
         try {
@@ -335,7 +376,7 @@ export function useAgentChat({
           x402Receipt = receipt;
 
           if (bundleData) {
-            macroData = bundleData.data || bundleData;
+            macroData = { ...macroData, ...(bundleData.data || bundleData) };
             if (bundleData.bundle) macroData._research = { bundle: bundleData.bundle };
             if (bundleData.sources) macroData.sources = bundleData.sources;
             if (bundleData._billing) macroData._billing = bundleData._billing;

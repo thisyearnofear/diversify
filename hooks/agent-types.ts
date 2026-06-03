@@ -263,6 +263,8 @@ export interface AIMessage {
   timestamp: Date;
   type?: "text" | "recommendation" | "insight" | "sosovalue_intelligence";
   provider?: "gemini" | "venice" | "modal" | "openai";
+  /** Intent-derived recommended delivery format (card, text, action, clarify) */
+  responseFormat?: "card" | "text" | "action" | "clarify";
   x402Receipt?: ResearchReceipt | null;
   /** Compact portfolio context shown above the response as proof of grounding */
   portfolioContext?: string;

@@ -22,12 +22,15 @@ export type AppIntent =
     | { type: 'QUERY'; context: 'market' | 'portfolio' | 'general' }
     | { type: 'UNKNOWN' };
 
+export type ResponseFormat = 'card' | 'text' | 'action' | 'clarify';
+
 export interface ScoredIntent {
     intent: AppIntent;
     confidence: number;           // 0.0 to 1.0
     source: 'regex' | 'ai';
     matchedPatterns: string[];    // which keywords/patterns hit
     originalText: string;
+    responseFormat?: ResponseFormat;
 }
 
 export const CONFIDENCE_THRESHOLDS = {
@@ -72,6 +75,50 @@ export class IntentDiscoveryService {
      */
     static discover(text: string): AppIntent {
         return this.discoverScored(text).intent;
+    }
+
+    /**
+     * Recommend how the response should be delivered based on linguistic patterns in the query.
+     * Pure regex heuristic — no LLM call, fast path only.
+     */
+    static recommendResponseFormat(
+        text: string,
+        lastMessageType?: 'card' | 'text' | 'action' | undefined
+    ): ResponseFormat {
+        const r = text.toLowerCase().trim();
+
+        // --- CLARIFY: ambiguous pronouns with no clear antecedent ---
+        const ambiguousPronouns = /\b(this|that|those|these|it|them)\b/;
+        const hasAntecedent = /\b(the stats|the news|the data|the numbers|the card|the market|the feed|that report|those signals)\b/;
+        if (ambiguousPronouns.test(r) && !hasAntecedent.test(r) && lastMessageType === 'card') {
+            return 'clarify';
+        }
+
+        // --- CARD: user explicitly asks for data display ---
+        const cardTriggers = /\b(show me|display|latest|what's the\s+\w+|current\s+\w+|stats|numbers|feed|headlines|market cap|dominance|tvl|sentiment score|give me the|pull up|open the)\b/;
+        if (cardTriggers.test(r)) {
+            return 'card';
+        }
+
+        // --- ACTION: user explicitly asks to execute something ---
+        const actionTriggers = /\b(protect my|swap\s+\d+|buy\s+\d+|sell\s+\d+|execute|rebalance|run (a )?research|do it|go ahead|confirm|approve|run the|initiate|start the)\b/;
+        if (actionTriggers.test(r)) {
+            return 'action';
+        }
+
+        // --- TEXT: synthesis, interpretation, reasoning, "why", "what does this mean" ---
+        const synthesisTriggers = /\b(what can we learn|why|explain|what does this mean|interpret|insights|takeaways|learn from|meaning|implications|what do you think|how should i|should i|what about|what if|analyze|reasoning|what's your view|how do you read)\b/;
+        if (synthesisTriggers.test(r)) {
+            return 'text';
+        }
+
+        // Fallback: if last message was a card and user asks a short follow-up, assume text synthesis
+        if (lastMessageType === 'card' && r.length < 40 && !cardTriggers.test(r) && !actionTriggers.test(r)) {
+            return 'text';
+        }
+
+        // Default to text for safety — avoid over-using cards
+        return 'text';
     }
 
     /**

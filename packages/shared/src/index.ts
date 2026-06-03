@@ -92,7 +92,7 @@ export {
   type LedgerRecommendation,
   type LedgerConfig,
 } from './services/recommendation-ledger.service';
-export { IntentDiscoveryService, type AppIntent, type AppTab } from './services/ai/intent-discovery.service';
+export { IntentDiscoveryService, type AppIntent, type AppTab, type ResponseFormat } from './services/ai/intent-discovery.service';
 export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';
 export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent-action.service';
 export { getYieldRecommendations, yieldAdvisorService } from './services/ai/yield-advisor.service';
