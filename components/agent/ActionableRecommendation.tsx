@@ -15,6 +15,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { type PortfolioAnalysis, type RebalancingOpportunity } from '@diversifi/shared';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
+import { useJunoStatus } from '../../hooks/use-juno-status';
 
 interface ActionableRecommendationProps {
     analysis: PortfolioAnalysis | null;
@@ -41,6 +42,7 @@ export default function ActionableRecommendation({
     onExecuteBridge
 }: ActionableRecommendationProps) {
     const portfolioTotalValue = portfolio?.totalValue ?? 0;
+    const { status: junoStatus } = useJunoStatus();
 
     if (!analysis && portfolioTotalValue > 0) {
         return (
@@ -83,6 +85,15 @@ export default function ActionableRecommendation({
                     onExecute={onExecuteSwap}
                 />
             )}
+
+            {/* Bitso/Juno MXNB Opportunity */}
+            <BitsoMxnbOpportunity
+                analysis={analysis}
+                portfolio={portfolio}
+                junoConfigured={junoStatus?.configured ?? false}
+                junoMutationsEnabled={junoStatus?.mutationsEnabled ?? false}
+                onExecuteSwap={onExecuteSwap}
+            />
 
             {/* Cross-Chain Opportunities */}
             {crossChainOps.length > 0 && (
@@ -172,6 +183,84 @@ function PrimaryRecommendation({
                                 Execute
                             </button>
                         )}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function BitsoMxnbOpportunity({
+    analysis,
+    portfolio,
+    junoConfigured,
+    junoMutationsEnabled,
+    onExecuteSwap
+}: {
+    analysis: PortfolioAnalysis;
+    portfolio: MultichainPortfolio | null;
+    junoConfigured: boolean;
+    junoMutationsEnabled: boolean;
+    onExecuteSwap: (from: string, to: string, amount: string, reason: string) => void;
+}) {
+    const totalValue = analysis.totalValue || portfolio?.totalValue || 0;
+    const suggestedAmount = Math.max(10, Math.min(250, totalValue > 0 ? totalValue * 0.2 : 100));
+    const hasMxnb = portfolio?.chains.some((chain) =>
+        chain.balances.some((token) => token.symbol.toUpperCase() === 'MXNB' && Number(token.value || 0) > 0)
+    ) ?? false;
+
+    return (
+        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-200">
+            <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-emerald-200 flex items-center justify-center text-xl font-black text-emerald-900">
+                    $
+                </div>
+                <div className="flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <div>
+                            <h4 className="font-bold text-sm text-emerald-950">
+                                Bitso MXNB Peso Hedge
+                            </h4>
+                            <p className="text-xs mt-1 text-emerald-800">
+                                MXNB is available on Arbitrum as a Mexican peso stablecoin. DiversiFi can route a Mexico hedge into MXNB, then use Juno for sandbox balances, SPEI issuance, USD stablecoin conversion, or redemption.
+                            </p>
+                        </div>
+                        <span className={`shrink-0 px-2 py-1 rounded text-[10px] font-black uppercase ${
+                            junoConfigured ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700 border border-emerald-200'
+                        }`}>
+                            {junoConfigured ? 'Juno API ready' : 'Keys needed'}
+                        </span>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="bg-white rounded-lg border border-emerald-100 px-3 py-2">
+                            <p className="text-[10px] font-black uppercase text-emerald-600">On-chain leg</p>
+                            <p className="text-xs font-bold text-gray-900 mt-0.5">USDC to MXNB</p>
+                        </div>
+                        <div className="bg-white rounded-lg border border-emerald-100 px-3 py-2">
+                            <p className="text-[10px] font-black uppercase text-emerald-600">Juno leg</p>
+                            <p className="text-xs font-bold text-gray-900 mt-0.5">
+                                {junoMutationsEnabled ? 'Conversion/redeem enabled' : 'Read-only sandbox'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <ImpactBadge impact={hasMxnb ? 'MXNB detected' : 'Mexico coverage'} />
+                            <ConfidenceBadge level={junoConfigured ? 'HIGH' : 'MEDIUM'} />
+                        </div>
+                        <button
+                            onClick={() => onExecuteSwap(
+                                'USDC',
+                                'MXNB',
+                                suggestedAmount.toFixed(2),
+                                'Bitso/Juno MXNB hedge: use Arbitrum MXNB for Mexico peso exposure, with Juno API support for balances, SPEI issuance, USD stablecoin conversion, and redemption.'
+                            )}
+                            className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all"
+                        >
+                            Review Swap
+                        </button>
                     </div>
                 </div>
             </div>
@@ -512,7 +601,7 @@ function getTokenForRegion(region: string): string {
         'USA': 'USDm',
         'Asia': 'PHPm',
         'Africa': 'KESm',
-        'LatAm': 'BRLm',
+        'LatAm': 'MXNB',
         'Global': 'PAXG'
     };
     return map[region] || 'USDm';

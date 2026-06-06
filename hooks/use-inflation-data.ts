@@ -27,7 +27,7 @@ export interface RegionalInflationData {
 // Region to stablecoins mapping (UPPERCASE symbols to match TOKEN_METADATA)
 const REGION_STABLECOINS: Record<string, string[]> = {
   Africa: ['KESm', 'GHSm', 'XOFm', 'ZARm', 'NGNm'],
-  LatAm: ['BRLm', 'COPm'],
+  LatAm: ['BRLm', 'COPm', 'MXNB'],
   Asia: ['PHPm', 'AUDm', 'JPYm'],
   Europe: ['EURm', 'GBPm', 'EURC', 'CHFm'],
   USA: ['USDm', 'CADm', 'USDC', 'USDT', 'USDY', 'SYRUPUSDC'],
@@ -38,7 +38,7 @@ const REGION_STABLECOINS: Record<string, string[]> = {
 // Currency to stablecoin mapping (UPPERCASE symbols)
 const CURRENCY_TO_STABLECOIN: Record<string, string> = {
   'KES': 'KESm', 'GHS': 'GHSm', 'XOF': 'XOFm', 'ZAR': 'ZARm', 'NGN': 'NGNm',
-  'BRL': 'BRLm', 'COP': 'COPm',
+  'BRL': 'BRLm', 'COP': 'COPm', 'MXN': 'MXNB',
   'PHP': 'PHPm', 'AUD': 'AUDm', 'JPY': 'JPYm',
   'EUR': 'EURm', 'GBP': 'GBPm', 'CHF': 'CHFm',
   'USD': 'USDm', 'CAD': 'CADm',

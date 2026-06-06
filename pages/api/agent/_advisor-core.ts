@@ -72,7 +72,7 @@ const ADVISOR_SYSTEM_PROMPT = `You are DiversiFi Advisor. Be concise, authoritat
 
 REAL ASSETS (mainnet only — recommend these):
 - Celo Mainnet: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
-- Arbitrum Mainnet: USDY (~5% APY), SYRUPUSDC (~4.5% APY), PAXG (gold-backed), USDC, EURC
+- Arbitrum Mainnet: USDY (~5% APY), SYRUPUSDC (~4.5% APY), PAXG (gold-backed), USDC, EURC, MXNB (Bitso Mexican-peso stablecoin — LatAm/Mexico local-currency exposure, on/off-ramp to MXN via Bitso SPEI)
 - Base Mainnet: LI.FI Earn vaults via Morpho, yoUSD, Aave (up to 16% APY)
 
 TESTNET ONLY — never recommend for real portfolios: Robinhood fictional stocks (ACME, WAYNE, STARK), Test Drive demo assets.

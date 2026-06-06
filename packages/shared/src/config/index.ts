@@ -222,6 +222,9 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     USDC: { name: 'USD Coin', region: REGIONS.GLOBAL, decimals: 6 },
     EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
 
+    // Bitso MXNB — Mexican Peso stablecoin, native ERC-20 on Arbitrum (exposed to local MXN inflation)
+    MXNB: { name: 'Bitso Mexican Peso', region: REGIONS.LATAM, decimals: 6 },
+
     // Yield-Bearing Assets (Arbitrum RWAs)
     USDY: { name: 'Ondo US Dollar Yield', region: REGIONS.USA, decimals: 18, apy: 5.0 },
     SYRUPUSDC: { name: 'Syrup USDC', region: REGIONS.USA, decimals: 18, apy: 4.5 },
@@ -283,7 +286,7 @@ export function getTokenRegion(symbol: string): RegionValue {
 export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.CELO_MAINNET.chainId]: ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'G$', 'USDT'],
     [NETWORKS.CELO_SEPOLIA.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT', 'CELO', 'WAKANDA', 'DAKAR', 'SHADOW', 'KUBERA', 'SANTA', 'SHADALOO', 'MISHIMA', 'ARASAKA', 'SURA'],
-    [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'PAXG', 'USDY', 'SYRUPUSDC'],
+    [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'MXNB', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH', 'ACME', 'SPACELY', 'WAYNE', 'OSCORP', 'STARK'],
     [NETWORKS.HYPERLIQUID.chainId]: ['GOLD', 'SILVER', 'OIL', 'COPPER'],
@@ -322,6 +325,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     USDT: 1,
     USDC: 1,
     EURC: 1.08,
+    MXNB: 0.054, // ~1 MXN; fallback only, live MXN/USD fetched when available
     PAXG: 2650,
     GOLD: 3200,
     SILVER: 32,
@@ -501,6 +505,8 @@ export const ARBITRUM_TOKENS = {
     PAXG: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
     USDY: '0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d',
     SYRUPUSDC: '0x41CA7586cC1311807B4605fBB748a3B8862b42b5',
+    // Bitso MXNB (Mexican Peso) — Arbitrum One proxy contract, 6 decimals
+    MXNB: '0xF197FFC28c23E0309B5559e7a166f2c6164C80aA',
 } as const;
 
 export const ARC_TOKENS = {

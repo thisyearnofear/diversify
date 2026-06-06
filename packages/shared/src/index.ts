@@ -14,6 +14,7 @@ import { GoodDollarService } from './services/gooddollar-service';
 import { emergingMarketsPriceService, getEmergingMarketsPriceService, EmergingMarketsPriceService } from './services/price/emerging-markets-price.service';
 import { hyperliquidService, HyperliquidService } from './services/hyperliquid.service';
 import { earnService, EarnService } from './services/earn-service';
+import { junoService, JunoService } from './services/juno-service';
 import { VaultService } from './services/vault/vault.service';
 import { FeeEngine, feeEngine } from './services/vault/fee-engine';
 import {
@@ -58,6 +59,8 @@ export {
   HyperliquidService,
   earnService,
   EarnService,
+  junoService,
+  JunoService,
   VaultService,
   FeeEngine,
   feeEngine,
@@ -75,6 +78,23 @@ export type {
   EarnQuote,
   EarnQuoteParams,
 } from './services/earn-service';
+export type {
+  JunoAsset,
+  JunoBalance,
+  JunoBankAccount,
+  JunoClabe,
+  JunoConversionAsset,
+  JunoConversionQuote,
+  JunoConversionQuoteRequest,
+  JunoConversionTransaction,
+  JunoEnvironment,
+  JunoMockDeposit,
+  JunoMockDepositRequest,
+  JunoRedemption,
+  JunoRedemptionRequest,
+  JunoTransactionStatus,
+  JunoTransactionType,
+} from './services/juno-service';
 
 // Export AI Services
 export { AIService, generateChatCompletion, getAIServiceStatus, cacheSystemPrompt, getCachedSystemPrompt, getAdaptiveTokenLimit } from './services/ai/ai-service';

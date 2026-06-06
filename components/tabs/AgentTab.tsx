@@ -31,6 +31,7 @@ import { Skeleton } from "../shared/TabComponents";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import AgentQuickActions from "../agent/AgentQuickActions";
 import EmptyState from "../ui/EmptyState";
+import BitsoJunoCard from "../agent/BitsoJunoCard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -85,10 +86,26 @@ export default function AgentTab({
     );
   };
 
+  const prepareMxnbSwap = () => {
+    const amount = portfolio?.totalValue
+      ? Math.max(10, Math.min(250, portfolio.totalValue * 0.2)).toFixed(2)
+      : "100.00";
+
+    navigateToSwap({
+      fromToken: "USDC",
+      toToken: "MXNB",
+      amount,
+      fromChainId: 42161,
+      toChainId: 42161,
+      reason: "Bitso/Juno MXNB hedge: Mexican peso exposure on Arbitrum with Juno support for balances, SPEI issuance, USD stablecoin conversion, and redemption.",
+    });
+  };
+
   // Empty state when wallet not connected
   if (!address) {
     return (
       <div className="space-y-4 pb-6">
+        <BitsoJunoCard walletConnected={false} />
         <EmptyState
           icon="🤖"
           title="AI Advisor"
@@ -168,6 +185,11 @@ export default function AgentTab({
           />
         )}
       </ErrorBoundary>
+
+      <BitsoJunoCard
+        walletConnected={!!address}
+        onPrepareSwap={prepareMxnbSwap}
+      />
 
       {/* Actionable Recommendations — non-beginner only, shown when analysis exists */}
       {experienceMode !== "beginner" && (

@@ -318,6 +318,18 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         ],
     },
     {
+        symbol: 'MXNB',
+        name: 'Bitso Mexican Peso',
+        region: 'LatAm',
+        chains: [
+            {
+                chainId: NETWORKS.ARBITRUM_ONE.chainId,
+                address: ARBITRUM_TOKENS.MXNB,
+                decimals: 6,
+            },
+        ],
+    },
+    {
         symbol: 'PAXG',
         name: 'Paxos Gold',
         region: 'Global',
