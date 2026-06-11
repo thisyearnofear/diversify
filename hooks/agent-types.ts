@@ -408,4 +408,11 @@ export interface AgentChatActions {
   sendChatMessage: (content: string) => Promise<void>;
   addMessage: (message: AIMessage) => void;
   clearMessages: () => void;
+  /**
+   * Patch an existing message in place. Matched by `id` (preferred) or
+   * `timestamp` fallback. Routes to the global conversation context
+   * when one is mounted, or to the per-component local state otherwise.
+   * Used by background tasks like the 0G ledger anchor.
+   */
+  patchMessage: (match: { id?: string; timestamp: Date }, patch: Partial<AIMessage>) => void;
 }

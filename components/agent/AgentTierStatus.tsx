@@ -299,6 +299,23 @@ export const AgentTierStatus: React.FC<{
       .slice(0, 10);
   }, [wdkReceipts, sessionInfo?.recentExecutions]);
 
+  // Index the rolling 0G anchor history by txHash so the proof feed
+  // can attach a small "Anchored on 0G" chip to the row whose txHash
+  // matches an anchor. The history is already bounded to
+  // MAX_ANCHOR_HISTORY on the server; the Map lookup is O(1).
+  const anchorByTxHash = useMemo(() => {
+    const anchors = sessionInfo?.latestAnchors ?? [];
+    const map = new Map<
+      string,
+      (typeof anchors)[number]
+    >();
+    for (const anchor of anchors) {
+      if (!anchor.txHash) continue;
+      map.set(anchor.txHash.toLowerCase(), anchor);
+    }
+    return map;
+  }, [sessionInfo?.latestAnchors]);
+
   // Filter activities by tier
   const getActivitiesForTier = (tier: "ADVISOR" | "GUARDIAN") => {
     return activities.filter((a) => a.tier === tier).slice(0, 5);
@@ -859,7 +876,15 @@ export const AgentTierStatus: React.FC<{
                     <p className="text-sm text-gray-500">Scanning for agent actions...</p>
                   </div>
                 ) : (
-                  guardianProofEvents.map((event, index) => (
+                  guardianProofEvents.map((event, index) => {
+                      // Match the event's txHash against the rolling 0G
+                      // anchor history. When the match exists, render a
+                      // small chip so the user can see at a glance that
+                      // the on-chain ledger has a record of this row.
+                      const anchor = event.txHash
+                        ? anchorByTxHash.get(event.txHash.toLowerCase())
+                        : undefined;
+                      return (
                       <div key={event.id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
                         <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
                           {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
@@ -878,6 +903,37 @@ export const AgentTierStatus: React.FC<{
                               {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
+                          {anchor && anchor.status === 'anchored' && (
+                            <a
+                              href={anchor.explorerUrl ?? event.explorerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              data-testid="anchor-chip"
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
+                              title={anchor.id && anchor.id > 0 ? `0G RecommendationLedger #${anchor.id}` : 'Anchored on 0G (awaiting event index)'}
+                            >
+                              <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                              {anchor.id && anchor.id > 0 ? `0G #${anchor.id}` : '0G anchored'}
+                            </a>
+                          )}
+                          {anchor && anchor.status === 'pending' && (
+                            <span
+                              data-testid="anchor-chip-pending"
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
+                            >
+                              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
+                              0G pending
+                            </span>
+                          )}
+                          {anchor && anchor.status === 'failed' && (
+                            <span
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-black uppercase tracking-wider text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
+                              title={anchor.error ?? '0G anchor failed'}
+                            >
+                              <span className="w-1 h-1 rounded-full bg-red-500" />
+                              0G failed
+                            </span>
+                          )}
                           <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
                             {event.subtitle}
                           </p>
@@ -921,7 +977,8 @@ export const AgentTierStatus: React.FC<{
                           )}
                         </div>
                       </div>
-                    ))
+                    );
+                    })
                 )}
               </div>
             </div>
