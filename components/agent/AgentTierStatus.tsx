@@ -732,22 +732,6 @@ export const AgentTierStatus: React.FC<{
                             e.stopPropagation();
                             setIsRunningLoop(true);
                             try {
-                              const result = await triggerExecutionLoop(true);
-                              setLoopResult(result);
-                            } finally {
-                              setIsRunningLoop(false);
-                            }
-                          }}
-                          disabled={isRunningLoop}
-                          className="flex-1 text-xs font-bold text-purple-600 border border-purple-200 dark:border-purple-800 rounded-xl py-2 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors disabled:opacity-50"
-                        >
-                          {isRunningLoop ? "Analyzing..." : "🔍 Dry Run"}
-                        </button>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            setIsRunningLoop(true);
-                            try {
                               const result = await triggerExecutionLoop(false);
                               setLoopResult(result);
                             } finally {
@@ -755,9 +739,9 @@ export const AgentTierStatus: React.FC<{
                             }
                           }}
                           disabled={isRunningLoop}
-                          className="flex-1 text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-2 transition-colors disabled:opacity-50"
+                          className="w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-2 transition-colors disabled:opacity-50"
                         >
-                          {isRunningLoop ? "Executing..." : "⚡ Execute Now"}
+                          {isRunningLoop ? "Executing..." : "⚡ Execute Now (Live)"}
                         </button>
                       </div>
                       {loopResult && (
