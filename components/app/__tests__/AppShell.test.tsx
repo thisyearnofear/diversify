@@ -3,23 +3,34 @@ import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
-vi.mock("framer-motion", () => ({
-  AnimatePresence: ({ children }: any) =>
-    React.createElement("div", null, children),
-  motion: {
-    div: React.forwardRef((props: any, ref: any) =>
-      React.createElement("div", { ...props, ref }),
-    ),
-    button: React.forwardRef((props: any, ref: any) => {
-      const { whileHover, whileTap, animate, initial, transition, key, ...rest } = props;
-      return React.createElement("button", { ...rest, ref });
-    }),
-    span: React.forwardRef((props: any, ref: any) => {
-      const { animate, initial, transition, ...rest } = props;
-      return React.createElement("span", { ...rest, ref });
-    }),
-  },
-}));
+vi.mock("framer-motion", () => {
+  const MotionDiv = React.forwardRef((props: any, ref: any) =>
+    React.createElement("div", { ...props, ref }),
+  );
+  MotionDiv.displayName = "MotionDiv";
+
+  const MotionButton = React.forwardRef((props: any, ref: any) => {
+    const { whileHover, whileTap, animate, initial, transition, key, ...rest } = props;
+    return React.createElement("button", { ...rest, ref });
+  });
+  MotionButton.displayName = "MotionButton";
+
+  const MotionSpan = React.forwardRef((props: any, ref: any) => {
+    const { animate, initial, transition, ...rest } = props;
+    return React.createElement("span", { ...rest, ref });
+  });
+  MotionSpan.displayName = "MotionSpan";
+
+  return {
+    AnimatePresence: ({ children }: any) =>
+      React.createElement("div", null, children),
+    motion: {
+      div: MotionDiv,
+      button: MotionButton,
+      span: MotionSpan,
+    },
+  };
+});
 
 vi.mock("next/dynamic", () => ({
   default: () => {

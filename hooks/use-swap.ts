@@ -160,7 +160,7 @@ export function useSwap() {
             console.error('Failed to get estimate:', error);
             return null;
         }
-    }, [chainId, isMiniPay]);
+    }, [isMiniPay]);
 
     const swap = async (params: HookSwapParams): Promise<SwapResult> => {
         const {

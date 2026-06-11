@@ -34,7 +34,6 @@ export function useWallet() {
   const [chainId, setChainId] = useState<number | null>(null);
   const [isMiniPay, setIsMiniPay] = useState(false);
   const [isFarcaster, setIsFarcaster] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [farcasterContext, setFarcasterContext] = useState<any>(null);
   const [userDisconnected, setUserDisconnected] = useState(false);
 
@@ -245,7 +244,6 @@ export function useWallet() {
       if (
         provider &&
         typeof window !== "undefined" &&
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (window as any).ethereum
       ) {
         // Injected wallet detected - use it directly (no Privy modal)
@@ -318,7 +316,6 @@ export function useWallet() {
           // After login, check if wallet needs to be created
           // The useEffect will handle syncing
           return;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (privyError: any) {
           // Handle user cancellation
           if (
@@ -342,7 +339,6 @@ export function useWallet() {
     } catch (connectError: unknown) {
       console.error("[Wallet] Connect error:", connectError);
       const message =
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (connectError as any)?.message || "Failed to connect wallet";
       setError(message);
     } finally {
@@ -387,7 +383,6 @@ export function useWallet() {
         setChainId(targetChainId);
         cacheChainId(targetChainId);
         return;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } catch (switchError: any) {
         console.warn("[Wallet] wallet_switchEthereumChain failed:", switchError?.code, switchError?.message);
 
@@ -489,7 +484,6 @@ export function useWallet() {
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getFarcasterErrorMessage = (farcasterError: any) => {
     if (!isFarcaster) return null;
 

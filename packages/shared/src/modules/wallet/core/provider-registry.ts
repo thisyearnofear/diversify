@@ -3,7 +3,6 @@ import { getFarcasterProvider } from "../adapters/farcaster";
 import { getInjectedProvider } from "../adapters/injected";
 
 // Flexible provider type for EIP-1193 compatible providers (MetaMask, Farcaster, etc)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type WalletProviderType = any;
 
 export interface WalletProviderCache {

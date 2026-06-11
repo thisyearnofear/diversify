@@ -33,6 +33,7 @@ module.exports = [
       'out/**',
       'build/**',
       'dist/**',
+      '**/dist/**',
       'coverage/**',
       'cache/**',
       '.cache/**',

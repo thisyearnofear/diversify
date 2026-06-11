@@ -112,9 +112,7 @@ export function getSmartAccountProvider(): SmartAccountProvider {
   // Lazy registration — ensures providers are available even if the
   // side-effect import was tree-shaken by webpack.
   if (!initialized) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { PrivySafeProvider } = require('./providers/privy-safe-provider');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Safe4337Provider } = require('./providers/safe-4337-provider');
     if (!providers.has('privy')) providers.set('privy', () => new PrivySafeProvider());
     if (!providers.has('safe4337')) providers.set('safe4337', () => new Safe4337Provider());

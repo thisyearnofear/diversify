@@ -13,7 +13,6 @@ export default function WealthJourneyWidget({
   setActiveTab,
   userRegion, // Unused but kept for API compatibility
 }: WealthJourneyWidgetProps) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _userRegion = userRegion; // Mark as intentionally unused
   const { chainId } = useWalletContext();
 

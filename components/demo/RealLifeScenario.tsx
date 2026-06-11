@@ -27,7 +27,6 @@ export default function RealLifeScenario({
   amount = 1000,  // Unused but kept for API compatibility
   monthlyAmount = 100,
 }: RealLifeScenarioProps) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _amount = amount; // Mark as intentionally unused
   // Calculate the impact of inflation on the amount over 1 year
   // const yearlyAmount = monthlyAmount * 12;
