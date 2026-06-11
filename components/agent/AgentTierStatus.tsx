@@ -503,6 +503,63 @@ export const AgentTierStatus: React.FC<{
               <span className="text-xs text-gray-400">· Tap to view journal</span>
             </div>
           )}
+
+          {/* Dry-run preview — closes the trust gap between "permission
+              signed" and "first cron auto-execution" by letting the user
+              see exactly what the Guardian would do, without moving funds. */}
+          {hasValidPermission && (
+            <div className="mt-3 pt-3 border-t border-purple-100 dark:border-purple-900/50">
+              <button
+                type="button"
+                data-testid="guardian-dry-run-button"
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  setIsRunningLoop(true);
+                  try {
+                    const result = await triggerExecutionLoop(true);
+                    setLoopResult(result);
+                  } catch (err) {
+                    setLoopResult({
+                      dryRun: true,
+                      status: 'failed',
+                      message: (err as Error)?.message ?? 'Dry-run request failed',
+                      summary: { total: 0, executed: 0, skipped: 0, failed: 0 },
+                    });
+                  } finally {
+                    setIsRunningLoop(false);
+                  }
+                }}
+                disabled={isRunningLoop}
+                aria-label="Run Guardian dry-run"
+                className="w-full text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors px-3 py-2 rounded-xl"
+              >
+                {isRunningLoop ? 'Running dry-run…' : 'Run dry-run now'}
+              </button>
+              {loopResult && (
+                <div className="mt-2 text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
+                  <span className="font-bold text-purple-700 dark:text-purple-300">
+                    {loopResult.status === 'ready' && 'Ready'}
+                    {loopResult.status === 'executed' && 'Executed'}
+                    {loopResult.status === 'partial' && 'Partial'}
+                    {loopResult.status === 'blocked' && 'Blocked'}
+                    {loopResult.status === 'noop' && 'No-op'}
+                    {loopResult.status === 'failed' && 'Failed'}
+                  </span>
+                  <span> · {loopResult.message}</span>
+                  {loopResult.summary && loopResult.summary.total > 0 && (
+                    <span>
+                      {' '}
+                      ({loopResult.summary.total} action
+                      {loopResult.summary.total === 1 ? '' : 's'}:{' '}
+                      {loopResult.summary.executed} executed,{' '}
+                      {loopResult.summary.skipped} skipped,{' '}
+                      {loopResult.summary.failed} failed)
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </motion.div>
       </div>
 
