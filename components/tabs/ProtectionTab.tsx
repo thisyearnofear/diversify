@@ -72,10 +72,6 @@ export default function ProtectionTab({
   // safely when the wallet is disconnected.
   const flow = useClaimFlow();
 
-  if (isLoading && address && !isDemo) {
-    return <ProtectionSkeleton />;
-  }
-
   const {
     totalValue,
     chainCount,
@@ -383,6 +379,10 @@ export default function ProtectionTab({
   // ============================================================================
   // RENDER: Not Connected
   // ============================================================================
+
+  if (isLoading && address && !isDemo) {
+    return <ProtectionSkeleton />;
+  }
 
   if (!address && !isDemo) {
     return <ProtectionNotConnected experienceMode={experienceMode} />;
