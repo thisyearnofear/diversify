@@ -146,14 +146,27 @@ Every advisor recommendation is recorded on the 0G Galileo Testnet via the `Reco
 ### Verifying the contract
 
 ```bash
-# Confirm the contract is deployed
+# Confirm the contract is deployed (use the address printed by
+# docs/architecture.md — the live value is 0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED)
 curl -s -X POST https://evmrpc-testnet.0g.ai \
   -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f","latest"],"id":1}'
+  -d '{"jsonrpc":"2.0","method":"eth_getCode","params":["0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED","latest"],"id":1}'
 
 # Read live stats + recent recommendations through the API
 curl -s https://api.diversifi.famile.xyz/api/agent/zero-g-ledger | python3 -m json.tool
 ```
+
+### Anchor observability
+
+`recommendationLedgerService.recordRecommendation` returns a discriminated `AnchorResult`. Callers must inspect `result.status` and surface it to the user — never ignore `failed` results.
+
+| Status | Meaning | Surface |
+|---|---|---|
+| `anchored` | Tx mined, `RecommendationRecorded` event parsed, `id` known | `AIMessage.x402Receipt.anchor` patched in place; `GuardianState.latestAnchor`; `GET /api/vault/permission?userAddress=…` returns it. |
+| `pending`  | Tx broadcast but receipt not confirmed within 60 s (network congestion) | Same surfaces; the `txHash` is included so a later re-query by hash can resolve. |
+| `failed`   | Broadcast failed, write contract unavailable, or tx reverted | Same surfaces; the `error` text is included. |
+
+The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a 0G Galileo network stall should never block the user-visible chat reply, so the function returns `pending` rather than failing the call. The recommendation may still land on-chain; callers can re-query by `txHash` later.
 
 ## DEX & Routing
 

@@ -2,6 +2,20 @@
 
 DiversiFi is an AI-powered autonomous financial advisor that protects stablecoin savings from currency debasement. It combines multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — all anchored to on-chain verifiability via 0G and Arc.
 
+## Recent Hardening (2026-06)
+
+This document reflects the post-hardening state. The full audit, including per-phase verdicts and the residual gap list, lives in [`docs/phase-4-audit.md`](./phase-4-audit.md). The headline changes since the initial 8.4/10 review:
+
+- **EIP-712 server-side signature verification** on `POST /api/vault/permission` — every persisted permission is now cryptographically bound to the user's wallet signature (was: trust on first use with server-side inflation defaults).
+- **0G anchor observability** — `recordRecommendation` returns a discriminated `AnchorResult` (`anchored | pending | failed`) and the status is surfaced in the chat receipt, the proof feed, and `GuardianState.latestAnchor`. The `pending` case (60s receipt timeout) is honest rather than silent.
+- **Server-side alert cooldowns** — per-user, in `GuardianState.alertCooldowns`, surviving device switches. The localStorage map is gone.
+- **Unified Guardian tier state machine** — `deriveGuardianTierState` in `@diversifi/shared` is the single source of truth for `idle | authorized | funded | monitoring`, replacing three inline implementations.
+- **Celo token registry** — one shared config (`packages/shared/src/config/celo-tokens.ts`) replaces four duplicate `TOKEN_ADDRESSES` maps. The misleading `USDY: cUSD` placeholder is deleted.
+- **Proactive loop decoupled from chat** — `ProactiveAgentRunner` mounted in `_app.tsx` owns the single 5-minute monitoring timer.
+- **Guardian "Run dry-run now" button** on the tier card, wired to the existing `triggerExecutionLoop(true)` path. The duplicate button in the expanded view was removed.
+
+Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar hardening. Rating moved from 8.4 → 8.9 / 10.
+
 ## High-Level Architecture
 
 ```

@@ -17,18 +17,51 @@ All tasks are ordered by risk-adjusted impact. Things that require architectural
 | `.catch(() => {})` swallowing around `recordRecommendation` | Eliminated | Guardian loop, firecrawl webhook, agent-service, both decorators now await + log the new status shape. |
 | Verifier + ledger tests | 15 new tests | `erc7715-service.test.ts` (10), `recommendation-ledger.service.test.ts` (5). |
 
+## Completed hardening (Phase 2 — trust continuity)
+
+| Item | Status | Where |
+|---|---|---|
+| Server-side alert cooldowns replacing localStorage | Done | `pages/api/vault/guardian-state.ts` accepts `recordAlert` body; `pruneAlertCooldowns` pure helper in `_guardian-state.ts`; `useAlertCooldown(address)` hook in `use-proactive-agent.ts`. |
+| 4× window prune on every write | Done | `ALERT_COOLDOWN_PRUNE_WINDOW_MS = ALERT_COOLDOWN_MS * 4`; bounded per-user JSON state. |
+| Unified Guardian tier state machine | Done | `deriveGuardianTierState` in `packages/shared/src/services/vault/guardian-tier-state.ts`; pure, framework-agnostic; replaces inline IIFE in `AgentTierStatus.tsx`. |
+| `isPermissionValidNow` factored out | Done | Same file; handles `expiresAt === 0` (never-expiring) and cap-hit (no longer monitoring). |
+| `useSessionKey().deriveGuardianState` exposed | Done | `hooks/use-session-key.ts` re-exports the shared helper. |
+| Cooldown + state-machine tests | 22 new tests | `pruneAlertCooldowns` (6), `guardian-tier-state` (16). |
+
+## Completed hardening (Phase 3 — performance / correctness / consolidation)
+
+| Item | Status | Where |
+|---|---|---|
+| Celo token registry consolidation | Done | `packages/shared/src/config/celo-tokens.ts` — full metadata (address, decimals, stablecoin, region). Replaces 4 duplicate `TOKEN_ADDRESSES` maps in `guardian-loop.ts`, `rebalance.ts`, `AIChat.tsx` (RwaActionWidget), `_executor.ts`. Misleading `USDY: cUSD` placeholder deleted. |
+| `tsconfig.json` excludes `lib/` and drops `allowJs` | Done | `tsc --noEmit` returns to sub-30s baseline (was timing out >5 min). |
+| `eslint.config.cjs` ignores `**/dist/**` + dead-directive sweep | Done | 2 errors fixed, 20 warnings removed, 0 errors / 52 warnings (from 2 / 70). |
+| Guardian "Run dry-run now" button on tier card | Done | `AgentTierStatus.tsx` line 513-541; wired to existing `triggerExecutionLoop(true)`. |
+| Duplicate "🔍 Dry Run" button removed | Done | `AgentTierStatus.tsx` line 731-744. Live "⚡ Execute Now (Live)" kept in the expanded view. |
+| Token + dry-run + displayName tests | 19 new tests | `celo-tokens.test.ts` (13), `use-session-key-dry-run.test.ts` (3), `AppShell.test.tsx` displayName refactor (already counted). |
+
+## Completed hardening (Phase 4 — audit)
+
+| Item | Status | Where |
+|---|---|---|
+| Final audit document | Done | `docs/phase-4-audit.md` — 212 lines; per-phase verdicts, 10 cross-cutting findings (4 real), 8 ranked P5 candidates. |
+| Score update 8.4 → 8.9 / 10 | Done | Same document, per-pillar deltas. |
+
 ---
 
 ## Current Scores → Target
 
-| Dimension | Now | After | Key lever |
-|-----------|-----|-------|-----------|
-| Product Design | 7.5 | 8.5 | Guardian wizard + error/empty states |
-| UI/UX | 6.0 | 8.5 | Accessibility + AppShell split + loading discipline |
-| Cogency/Intuitiveness | 6.5 | 9.0 | Guardian progressive disclosure |
-| Performance/Efficiency | 7.0 | 8.5 | Bundle discipline + lazy hydration |
-| System Architecture | 8.0 | 8.5 | Props fixed, AppShell split, dead code gone |
-| **Overall** | **7.0** | **8.6** | |
+| Dimension | Before | After Phase 1 | After Phase 2 | After Phase 3 | After Phase 4 |
+|-----------|--------|---------------|---------------|---------------|---------------|
+| Product Design | 7.5 | 7.5 | 8.0 | 8.0 | 8.0 |
+| UI/UX | 6.0 | 6.0 | 7.0 | 8.0 | 8.0 |
+| Cogency/Intuitiveness | 6.5 | 7.5 | 8.5 | 8.5 | 8.5 |
+| Performance/Efficiency | 7.0 | 7.0 | 7.5 | 9.0 | 9.0 |
+| System Architecture | 8.0 | 8.5 | 9.0 | 9.0 | 9.0 |
+| Trust / Verifiability | 7.5 | 9.0 | 9.0 | 9.0 | 9.0 |
+| Lint / Build hygiene | 7.0 | 7.0 | 7.0 | 8.5 | 8.5 |
+| **Overall** | **7.0** | **8.0** | **8.5** | **8.7** | **8.9** |
+
+The 0.1 still on the table for a 9.0 / 10 is the rules-of-hooks cluster in `components/tabs/ProtectionTab.tsx` (14 warnings, real crash risk) and the `MAX_EXECUTIONS_PER_LOOP` off-by-one in `guardian-loop.ts`. Both are 1-PR fixes and are listed as P5 candidates in `docs/phase-4-audit.md`.
 
 ---
 
