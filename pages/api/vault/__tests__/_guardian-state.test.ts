@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { pruneAlertCooldowns } from '../_guardian-state';
+import {
+    MAX_ANCHOR_HISTORY,
+    pruneAlertCooldowns,
+    pushAnchorHistory,
+    type GuardianAnchorRecord,
+} from '../_guardian-state';
 
 describe('pruneAlertCooldowns', () => {
     const ONE_HOUR = 60 * 60 * 1000;
@@ -62,5 +67,50 @@ describe('pruneAlertCooldowns', () => {
             now,
         );
         expect(result).toEqual({ live: now });
+    });
+});
+
+describe('pushAnchorHistory', () => {
+    const anchor = (capturedAt: string, id = 1): GuardianAnchorRecord => ({
+        status: 'anchored',
+        txHash: `0x${capturedAt.slice(-4)}`,
+        capturedAt,
+        id,
+    });
+
+    it('treats an empty history as [] and seeds it with the new anchor', () => {
+        const result = pushAnchorHistory(undefined, anchor('2026-06-11T10:00:00Z'));
+        expect(result).toHaveLength(1);
+        expect(result[0].capturedAt).toBe('2026-06-11T10:00:00Z');
+    });
+
+    it('prepends the new anchor so the newest entry is always at index 0', () => {
+        const history = [anchor('2026-06-10T10:00:00Z', 1), anchor('2026-06-09T10:00:00Z', 2)];
+        const result = pushAnchorHistory(history, anchor('2026-06-11T10:00:00Z', 3));
+        expect(result.map((a) => a.id)).toEqual([3, 1, 2]);
+    });
+
+    it('caps the result at MAX_ANCHOR_HISTORY entries', () => {
+        const history = Array.from({ length: MAX_ANCHOR_HISTORY }, (_, i) =>
+            anchor(`2026-06-${10 - i}T10:00:00Z`, i + 1),
+        );
+        const result = pushAnchorHistory(history, anchor('2026-06-11T10:00:00Z', 999));
+        expect(result).toHaveLength(MAX_ANCHOR_HISTORY);
+        expect(result[0].id).toBe(999);
+        // The oldest entry was the one originally at index MAX-1; it
+        // is now dropped.
+        expect(result.find((a) => a.id === MAX_ANCHOR_HISTORY)).toBeUndefined();
+    });
+
+    it('respects an explicit cap smaller than the default', () => {
+        const history = [anchor('a', 1), anchor('b', 2), anchor('c', 3)];
+        const result = pushAnchorHistory(history, anchor('d', 4), 2);
+        expect(result).toHaveLength(2);
+        expect(result.map((a) => a.id)).toEqual([4, 1]);
+    });
+
+    it('respects a cap of zero (defensive: should not throw, returns [])', () => {
+        const result = pushAnchorHistory([anchor('a', 1)], anchor('b', 2), 0);
+        expect(result).toEqual([]);
     });
 });

@@ -111,6 +111,19 @@ export interface GuardianSessionInfo {
         error?: string;
         capturedAt: string;
     };
+    /**
+     * Rolling history of the last N anchor records, newest-first. The
+     * proof feed renders the most recent entries; `latestAnchor`
+     * remains the pointer for callers that only need the most recent.
+     */
+    latestAnchors?: Array<{
+        status: 'pending' | 'anchored' | 'failed';
+        txHash?: string;
+        explorerUrl?: string;
+        id?: number;
+        error?: string;
+        capturedAt: string;
+    }>;
     latestRecommendation?: {
         capturedAt: string;
         source: string;

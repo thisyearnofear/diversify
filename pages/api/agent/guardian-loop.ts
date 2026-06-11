@@ -22,7 +22,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { Permission } from '../../../models/Permission';
 import { vaultStore } from '../vault/_store';
-import { getGuardianState, updateGuardianState } from '../vault/_guardian-state';
+import { getGuardianState, pushAnchorHistory, updateGuardianState } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared';
@@ -225,15 +225,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             confidence: Math.round(confidence * 10000), // Contract uses basis points
           });
 
+          // Persist the new anchor to BOTH the pointer field and the
+          // rolling history. The pointer is the single-source-of-truth
+          // for callers that only need the most recent entry; the
+          // history powers the proof feed's "last N" surface.
+          const newAnchor = {
+            status: anchor.status,
+            txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
+            explorerUrl: anchor.status === 'failed' ? undefined : anchor.explorerUrl,
+            id: anchor.status === 'anchored' ? anchor.id : undefined,
+            error: anchor.status === 'failed' ? anchor.error : undefined,
+            capturedAt: new Date().toISOString(),
+          };
+
+          // Compute the updated history. We re-read state once so the
+          // history reflects anything that has landed in the meantime
+          // (e.g. a parallel firecrawl-webhook writing a recent anchor).
+          const currentState = await getGuardianState(userAddress);
+          const nextHistory = pushAnchorHistory(currentState?.latestAnchors, newAnchor);
+
           await updateGuardianState(userAddress, {
-            latestAnchor: {
-              status: anchor.status,
-              txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
-              explorerUrl: anchor.status === 'failed' ? undefined : anchor.explorerUrl,
-              id: anchor.status === 'anchored' ? anchor.id : undefined,
-              error: anchor.status === 'failed' ? anchor.error : undefined,
-              capturedAt: new Date().toISOString(),
-            },
+            latestAnchor: newAnchor,
+            latestAnchors: nextHistory,
           });
 
           // Persist to Cognee memory (fire-and-forget)

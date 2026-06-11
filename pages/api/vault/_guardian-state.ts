@@ -51,12 +51,27 @@ export interface GuardianStateRecord {
   latestRecommendation?: GuardianRecommendationSnapshot;
   latestAnchor?: GuardianAnchorRecord;
   /**
+   * Last N anchor records, newest-first. Bounded to `MAX_ANCHOR_HISTORY`
+   * entries on every write via `pushAnchorHistory`. The proof feed
+   * renders the most recent entries; `latestAnchor` remains the
+   * single-source-of-truth pointer for callers that only need the
+   * most recent one.
+   */
+  latestAnchors?: GuardianAnchorRecord[];
+  /**
    * Map of alertId → unix epoch ms when the alert was last emitted.
    * Per-user (server-side) cooldowns for the proactive monitoring loop.
    * Pruned to a 4× cooldown window on every write.
    */
   alertCooldowns?: Record<string, number>;
 }
+
+/**
+ * Upper bound on `latestAnchors`. Five entries is enough to show a
+ * rolling recent history in the proof feed without bloating the
+ * per-user JSON file.
+ */
+export const MAX_ANCHOR_HISTORY = 5;
 
 type GuardianStateStore = Record<string, GuardianStateRecord>;
 
@@ -89,6 +104,20 @@ export function pruneAlertCooldowns(
   return Object.fromEntries(
     Object.entries(cooldowns).filter(([, timestamp]) => now - timestamp <= windowMs),
   );
+}
+
+/**
+ * Pure helper: prepend `next` to `history` and cap the result at
+ * `MAX_ANCHOR_HISTORY` entries (newest first). Empty `history` is
+ * treated as `[]` so the caller does not have to special-case the
+ * first anchor for a user.
+ */
+export function pushAnchorHistory(
+  history: GuardianAnchorRecord[] | undefined,
+  next: GuardianAnchorRecord,
+  cap: number = MAX_ANCHOR_HISTORY,
+): GuardianAnchorRecord[] {
+  return [next, ...(history ?? [])].slice(0, Math.max(0, cap));
 }
 
 export async function getGuardianState(userAddress: string): Promise<GuardianStateRecord | null> {

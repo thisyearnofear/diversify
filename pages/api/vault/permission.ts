@@ -150,6 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         recentExecutions,
         latestRecommendation: guardianState?.latestRecommendation || null,
         latestAnchor: guardianState?.latestAnchor || null,
+        latestAnchors: guardianState?.latestAnchors || [],
       });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
