@@ -99,6 +99,14 @@ export interface GuardianSessionInfo {
     remainingTodayUSD: number;
     executionCount: number;
     recentExecutions: GuardianExecution[];
+    latestAnchor?: {
+        status: 'pending' | 'anchored' | 'failed';
+        txHash?: string;
+        explorerUrl?: string;
+        id?: number;
+        error?: string;
+        capturedAt: string;
+    };
     latestRecommendation?: {
         capturedAt: string;
         source: string;

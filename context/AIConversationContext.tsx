@@ -11,6 +11,12 @@ interface AIConversationContextType {
   addMessage: (message: AIMessage) => void;
   addUserMessage: (content: string) => void;
   addAssistantMessage: (content: string, type?: 'text' | 'recommendation' | 'insight') => void;
+  /**
+   * Patch an existing message in place. Matched by `id` (preferred) or
+   * `timestamp` fallback. Used by background tasks like the 0G ledger
+   * anchor to update the receipt after the user already sees the message.
+   */
+  patchMessage: (match: { id?: string; timestamp: Date }, patch: Partial<AIMessage>) => void;
   clearMessages: () => void;
   
   // Unread tracking
@@ -99,6 +105,18 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     addMessage(message);
   }, [addMessage]);
 
+  const patchMessage = useCallback((match: { id?: string; timestamp: Date }, patch: Partial<AIMessage>) => {
+    setMessages((prev) =>
+      prev.map((m) => {
+        const matchesId = match.id && m.id && m.id === match.id;
+        const matchesTimestamp =
+          !match.id && m.timestamp.getTime() === match.timestamp.getTime();
+        if (!matchesId && !matchesTimestamp) return m;
+        return { ...m, ...patch };
+      }),
+    );
+  }, []);
+
   const clearMessages = useCallback(() => {
     setMessages([]);
     setLastReadTimestamp(null);
@@ -132,6 +150,7 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     addMessage,
     addUserMessage,
     addAssistantMessage,
+    patchMessage,
     clearMessages,
     unreadCount,
     markAsRead,

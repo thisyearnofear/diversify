@@ -78,18 +78,23 @@ export default async function handler(
         confidence: typeof confidence === 'number' ? Math.round(confidence * 10000) : 9000,
       });
 
-      if (!result) {
-        return res.status(500).json({ error: 'Failed to record recommendation to on-chain ledger' });
+      if (result.status === 'failed') {
+        return res.status(500).json({ error: result.error });
       }
 
-      console.log(`[0G Ledger API] User attestation recorded #${result.id} for ${user}: ${action} (tx: ${result.txHash})`);
+      const id = result.status === 'anchored' ? result.id : -1;
+      console.log(`[0G Ledger API] User attestation ${result.status} for ${user}: ${action} (tx: ${result.txHash})`);
 
       return res.status(200).json({
-        success: true,
-        id: result.id,
+        success: result.status === 'anchored',
+        status: result.status,
+        id,
         txHash: result.txHash,
-        explorerUrl: `https://chainscan-galileo.0g.ai/tx/${result.txHash}`,
-        message: `Recommendation recorded on-chain as #${result.id}`,
+        explorerUrl: result.explorerUrl,
+        message:
+          result.status === 'anchored'
+            ? `Recommendation recorded on-chain as #${id}`
+            : 'Recommendation broadcast — waiting for confirmation',
       });
     } catch (error: any) {
       console.error('[0G Ledger API] POST failed:', error.message);

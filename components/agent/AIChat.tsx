@@ -7,7 +7,6 @@ import { useAgentChat } from "../../hooks/use-agent-chat";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
-import { useProactiveAgent } from "../../hooks/use-proactive-agent";
 import { useClaimFlow, ClaimFlowOverlay } from "../../hooks/use-claim-flow";
 import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
@@ -410,8 +409,9 @@ export default function AIChat() {
     setInputValue("");
   };
 
-  // Initialize background Celo event monitoring & proactive insights capability
-  useProactiveAgent();
+  // The proactive monitoring loop is mounted at the app root
+  // (ProactiveAgentRunner in _app.tsx), not here, so it survives the
+  // chat surface being closed.
 
   // Track user-message count via ref so the auto-open effect only fires when
   // a NEW user message is added — not when the user simply closes the drawer.

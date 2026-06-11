@@ -35,6 +35,32 @@ export interface LedgerConfig {
     chainId: number;
 }
 
+/**
+ * Observable result of anchoring a recommendation to the on-chain ledger.
+ *
+ * The function never throws — every failure mode is captured as a `status`
+ * so call sites can surface it to the user instead of silently dropping it.
+ *
+ * - `anchored` — the tx was mined, the `RecommendationRecorded` event was
+ *   parsed, and `id` is the on-chain recommendation id.
+ * - `pending`  — the tx was broadcast (we have a `txHash`) but the receipt
+ *   could not be confirmed in the configured timeout. The recommendation
+ *   may still land on-chain; callers can re-query by `txHash` later.
+ * - `failed`   — the tx reverted, the write contract was unavailable
+ *   (no signer / no contract address), or the RPC threw. The `error`
+ *   field carries the reason.
+ */
+export type AnchorStatus = 'anchored' | 'pending' | 'failed';
+
+export type AnchorResult =
+    | { status: 'anchored'; id: number; txHash: string; chainId: number; explorerUrl: string }
+    | { status: 'pending'; txHash: string; chainId: number; explorerUrl: string }
+    | { status: 'failed'; error: string; chainId: number };
+
+export function buildLedgerExplorerUrl(txHash: string): string {
+    return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
+}
+
 // ============================================================================
 // ABI
 // ============================================================================
@@ -149,7 +175,11 @@ export function getLedgerContractAddress(): string {
 }
 
 /**
- * Record a recommendation on-chain
+ * Record a recommendation on-chain.
+ *
+ * The return value is the single source of truth for anchor status. Callers
+ * must inspect `result.status` and surface it to the user — never ignore
+ * `failed` results.
  */
 export async function recordRecommendation(params: {
     user: string;
@@ -160,15 +190,21 @@ export async function recordRecommendation(params: {
     servingModel: string;
     settlementTxHash?: string;
     confidence: number;
-}): Promise<{ id: number; txHash: string } | null> {
-    try {
-        const contract = getWriteContract();
-        if (!contract) {
-            console.warn('[RecommendationLedger] Write contract not available, skipping on-chain record');
-            return null;
-        }
+}): Promise<AnchorResult> {
+    const chainId = DEFAULT_CONFIG.chainId;
 
-        const tx = await contract.recordRecommendation(
+    const contract = getWriteContract();
+    if (!contract) {
+        return {
+            status: 'failed',
+            error: 'RecommendationLedger write contract unavailable (signer or contract address missing)',
+            chainId,
+        };
+    }
+
+    let tx;
+    try {
+        tx = await contract.recordRecommendation(
             params.user,
             params.action,
             params.targetToken,
@@ -179,46 +215,64 @@ export async function recordRecommendation(params: {
             params.confidence,
             { gasLimit: 300_000 }
         );
-
-        const receipt = await tx.wait();
-
-        // Check if the transaction reverted
-        if (receipt && receipt.status === 0) {
-            console.error(`[RecommendationLedger] ❌ Transaction reverted for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
-            return null;
-        }
-
-        // ethers v6: parse the RecommendationRecorded event from receipt logs
-        let id = -1;
-        if (receipt) {
-            for (const log of receipt.logs) {
-                try {
-                    const parsed = contract.interface.parseLog({
-                        topics: [...log.topics],
-                        data: log.data
-                    });
-                    if (!parsed || parsed.name !== 'RecommendationRecorded') continue;
-                    id = Number(parsed.args.id);
-                    break;
-                } catch {
-                    // Skip logs that don't match our ABI
-                }
-            }
-            // Fallback: read totalRecommendations stat if event parsing didn't yield an ID
-            if (id < 1) {
-                try {
-                    id = Number(await contract.totalRecommendations());
-                } catch {}
-            }
-        }
-
-        console.log(`[RecommendationLedger] ✅ Recorded #${id} for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
-
-        return { id, txHash: tx.hash };
     } catch (error: any) {
-        console.error('[RecommendationLedger] Failed to record recommendation:', error.message);
-        return null;
+        console.error(`[RecommendationLedger] ❌ Failed to broadcast for ${params.user}: ${error.message}`);
+        return { status: 'failed', error: error.message || 'Broadcast failed', chainId };
     }
+
+    const explorerUrl = buildLedgerExplorerUrl(tx.hash);
+
+    let receipt;
+    try {
+        // Wait for one confirmation so the event can be parsed. If the
+        // network is congested this may time out — in that case we return
+        // 'pending' rather than failing the whole call, because the tx
+        // is still on its way and the user can re-query by txHash.
+        receipt = await tx.wait(1, 60_000);
+    } catch (error: any) {
+        console.warn(`[RecommendationLedger] ⏳ Broadcast but receipt not confirmed for ${params.user}: ${tx.hash} — ${error.message}`);
+        return { status: 'pending', txHash: tx.hash, chainId, explorerUrl };
+    }
+
+    if (receipt && receipt.status === 0) {
+        console.error(`[RecommendationLedger] ❌ Transaction reverted for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
+        return { status: 'failed', error: 'On-chain transaction reverted', chainId };
+    }
+
+    // Parse the RecommendationRecorded event from the receipt logs.
+    let id = -1;
+    if (receipt) {
+        for (const log of receipt.logs) {
+            try {
+                const parsed = contract.interface.parseLog({
+                    topics: [...log.topics],
+                    data: log.data,
+                });
+                if (!parsed || parsed.name !== 'RecommendationRecorded') continue;
+                id = Number(parsed.args.id);
+                break;
+            } catch {
+                // Skip logs that don't match our ABI.
+            }
+        }
+        if (id < 1) {
+            try {
+                id = Number(await contract.totalRecommendations());
+            } catch {
+                // Fall through with id = -1; the receipt itself is the
+                // ground truth and the caller can re-query by txHash.
+            }
+        }
+    }
+
+    if (id < 1) {
+        // Tx was mined but the event was not parseable. Still treat the
+        // anchor as resolved — the receipt is on-chain proof.
+        return { status: 'anchored', id: -1, txHash: tx.hash, chainId, explorerUrl };
+    }
+
+    console.log(`[RecommendationLedger] ✅ Recorded #${id} for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
+    return { status: 'anchored', id, txHash: tx.hash, chainId, explorerUrl };
 }
 
 /**

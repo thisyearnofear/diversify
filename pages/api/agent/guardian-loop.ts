@@ -221,8 +221,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           // Clear the recommendation so it doesn't re-fire
           await updateGuardianState(userAddress, { latestRecommendation: undefined });
 
-          // Anchor to 0G RecommendationLedger on-chain (fire-and-forget)
-          recommendationLedgerService.recordRecommendation({
+          // Anchor to 0G RecommendationLedger on-chain and persist the
+          // observable status. Awaited so a failure is recorded, not
+          // swallowed — the Guardian proof feed surfaces this status.
+          const anchor = await recommendationLedgerService.recordRecommendation({
             user: userAddress,
             action: 'AUTONOMOUS_REBALANCE',
             targetToken,
@@ -231,7 +233,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             servingModel: 'guardian-loop',
             settlementTxHash: txHash,
             confidence: Math.round(confidence * 10000), // Contract uses basis points
-          }).catch(() => {});
+          });
+
+          await updateGuardianState(userAddress, {
+            latestAnchor: {
+              status: anchor.status,
+              txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
+              explorerUrl: anchor.status === 'failed' ? undefined : anchor.explorerUrl,
+              id: anchor.status === 'anchored' ? anchor.id : undefined,
+              error: anchor.status === 'failed' ? anchor.error : undefined,
+              capturedAt: new Date().toISOString(),
+            },
+          });
 
           // Persist to Cognee memory (fire-and-forget)
           cogneeMemoryService.persistInteraction(

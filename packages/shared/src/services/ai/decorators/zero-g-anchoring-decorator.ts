@@ -86,7 +86,7 @@ export class ZeroGAnchoringDecorator {
         const { recommendationLedgerService } = await import('../../recommendation-ledger.service');
         
         // Extract basic info for the ledger
-        await recommendationLedgerService.recordRecommendation({
+        const anchor = await recommendationLedgerService.recordRecommendation({
           user: options.user || 'unknown',
           action: 'UNKNOWN',
           targetToken: '',
@@ -95,6 +95,11 @@ export class ZeroGAnchoringDecorator {
           servingModel: options.model ?? 'unknown',
           confidence: 8000
         });
+        if (anchor.status === 'failed') {
+          console.warn('[ZeroG Anchoring] Ledger anchor failed:', anchor.error);
+        } else if (anchor.status === 'pending') {
+          console.warn('[ZeroG Anchoring] Ledger anchor pending confirmation:', anchor.txHash);
+        }
       } catch (error: any) {
         console.warn('[ZeroG Anchoring] Failed to record recommendation:', error);
       }

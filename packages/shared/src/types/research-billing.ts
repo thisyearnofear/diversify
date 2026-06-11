@@ -47,4 +47,16 @@ export interface ResearchReceipt {
   settlementTxHashes?: string[];
   settlementExplorers?: string[];
   error?: string;
+  /**
+   * On-chain 0G RecommendationLedger anchor for this receipt.
+   * Surfaces the verifiable state of the recommendation that
+   * produced this receipt — pending | anchored | failed.
+   */
+  anchor?: {
+    status: 'pending' | 'anchored' | 'failed';
+    txHash?: string;
+    explorerUrl?: string;
+    id?: number;
+    error?: string;
+  };
 }

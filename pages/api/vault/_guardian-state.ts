@@ -38,8 +38,18 @@ export interface GuardianRecommendationSnapshot {
   };
 }
 
+export interface GuardianAnchorRecord {
+  status: 'pending' | 'anchored' | 'failed';
+  txHash?: string;
+  explorerUrl?: string;
+  id?: number;
+  error?: string;
+  capturedAt: string;
+}
+
 export interface GuardianStateRecord {
   latestRecommendation?: GuardianRecommendationSnapshot;
+  latestAnchor?: GuardianAnchorRecord;
 }
 
 type GuardianStateStore = Record<string, GuardianStateRecord>;

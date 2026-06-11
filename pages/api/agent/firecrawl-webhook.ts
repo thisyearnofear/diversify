@@ -142,8 +142,10 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       usersUpdated++;
     }
 
-    // Anchor signal to 0G RecommendationLedger on-chain (verifiable evidence trail)
-    recommendationLedgerService.recordRecommendation({
+    // Anchor signal to 0G RecommendationLedger on-chain (verifiable evidence trail).
+    // Awaited and surfaced in the response so the caller can see whether
+    // the macro signal made it to the ledger.
+    const anchor = await recommendationLedgerService.recordRecommendation({
       user: '0x0000000000000000000000000000000000000000', // System-level signal
       action: `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`,
       targetToken: parsed.targetToken || '',
@@ -151,7 +153,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       evidenceCid: '', // Could store full page content in 0G Storage
       servingModel: 'firecrawl-monitor',
       confidence: Math.round((parsed.confidence || 0) * 10000),
-    }).catch(() => {});
+    });
 
     // Persist the signal to Cognee for long-term memory
     cogneeMemoryService.remember(
@@ -167,6 +169,13 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       confidence: parsed.confidence,
       targetToken: parsed.targetToken,
       usersUpdated,
+      anchor: {
+        status: anchor.status,
+        txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
+        explorerUrl: anchor.status === 'failed' ? undefined : anchor.explorerUrl,
+        id: anchor.status === 'anchored' ? anchor.id : undefined,
+        error: anchor.status === 'failed' ? anchor.error : undefined,
+      },
     });
   } catch (error: any) {
     console.error('[Firecrawl Webhook] Error:', error.message);

@@ -25,6 +25,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Missing required fields: userAddress, permission.dailyLimitUSD, permission.allowedTokens' });
     }
 
+    if (typeof permission.signature !== 'string' || !/^0x[0-9a-fA-F]+$/.test(permission.signature)) {
+      return res.status(400).json({
+        error: 'Invalid permission.signature — expected an EIP-712 0x-hex signature from the user wallet',
+      });
+    }
+
+    if (typeof permission.nonce !== 'string' || !/^0x[0-9a-fA-F]{64}$/.test(permission.nonce)) {
+      return res.status(400).json({
+        error: 'Invalid permission.nonce — expected a 32-byte 0x-hex value matching the signed payload',
+      });
+    }
+
+    const signedPermission = {
+      permission: {
+        sessionKeyAddress: permission.sessionKeyAddress,
+        userAddress,
+        spendingLimitUSD: permission.spendingLimitUSD,
+        dailyLimitUSD: permission.dailyLimitUSD,
+        allowedActions: permission.allowedActions || [],
+        allowedTokens: permission.allowedTokens,
+        expiresAt: permission.expiresAt,
+        autonomyLevel: permission.autonomyLevel || 'GUARDIAN',
+        chainId: permission.chainId || 42220,
+        nonce: permission.nonce,
+      },
+      signature: permission.signature,
+      signedAt: permission.signedAt || new Date().toISOString(),
+    };
+
+    const validation = erc7715.verifySignedPermission(signedPermission, signedPermission.permission.chainId);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        error: 'EIP-712 signature verification failed',
+        details: validation.errors,
+        warnings: validation.warnings,
+      });
+    }
+
     try {
       const vault = await vaultStore.findVaultByUser(userAddress);
       if (!vault) return res.status(404).json({ error: 'No vault found. Create one first.' });
@@ -35,23 +73,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         await vaultStore.updatePermission(existing._id, { status: 'revoked' });
       }
 
-      // Create new permission
-      // Enforcement happens in VaultService.rebalance() — checks daily limit, allowed tokens, expiry.
-      // EIP-712 signature verification is deferred to the smart account layer (Privy policies).
-      const permission = await vaultStore.createPermission({
+      const created = await vaultStore.createPermission({
         vaultId: vault._id,
         userAddress: userAddress.toLowerCase(),
-        sessionKeyAddress: req.body.permission.sessionKeyAddress || userAddress,
-        spendingLimitUSD: req.body.permission.spendingLimitUSD || req.body.permission.dailyLimitUSD * 30,
-        dailyLimitUSD: req.body.permission.dailyLimitUSD,
-        allowedActions: req.body.permission.allowedActions || ['swap', 'rebalance'],
-        allowedTokens: req.body.permission.allowedTokens,
-        expiresAt: req.body.permission.expiresAt || Math.floor(Date.now() / 1000) + 7 * 86400,
-        autonomyLevel: req.body.permission.autonomyLevel || 'GUARDIAN',
-        chainId: req.body.permission.chainId || 42220,
-        nonce: req.body.permission.nonce || Date.now().toString(),
-        signature: req.body.permission.signature || 'unsigned',
-        signedAt: req.body.permission.signedAt || new Date().toISOString(),
+        sessionKeyAddress: permission.sessionKeyAddress,
+        spendingLimitUSD: permission.spendingLimitUSD,
+        dailyLimitUSD: permission.dailyLimitUSD,
+        allowedActions: permission.allowedActions || ['swap', 'rebalance'],
+        allowedTokens: permission.allowedTokens,
+        expiresAt: permission.expiresAt,
+        autonomyLevel: permission.autonomyLevel || 'GUARDIAN',
+        chainId: permission.chainId || 42220,
+        nonce: permission.nonce,
+        signature: permission.signature,
+        signedAt: permission.signedAt || new Date().toISOString(),
         spentTodayUSD: 0,
         spentDate: new Date().toISOString().slice(0, 10),
         totalSpentUSD: 0,
@@ -60,8 +95,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       return res.status(200).json({
         success: true,
-        permission,
-        summary: `${permission.dailyLimitUSD}/day, ${permission.allowedTokens.join(', ')}, expires ${new Date(permission.expiresAt * 1000).toLocaleDateString()}`,
+        permission: created,
+        summary: `${created.dailyLimitUSD}/day, ${created.allowedTokens.join(', ')}, expires ${new Date(created.expiresAt * 1000).toLocaleDateString()}`,
+        warnings: validation.warnings,
       });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
@@ -113,6 +149,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         executionCount: recentExecutions.length,
         recentExecutions,
         latestRecommendation: guardianState?.latestRecommendation || null,
+        latestAnchor: guardianState?.latestAnchor || null,
       });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });

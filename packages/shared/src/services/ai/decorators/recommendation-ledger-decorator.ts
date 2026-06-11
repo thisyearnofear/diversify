@@ -58,14 +58,20 @@ export class RecommendationLedgerDecorator {
       
       // Extract basic info for the ledger from the result
       // In a real implementation, we'd parse the result to determine action, token, etc.
-      await recommendationLedgerService.recordRecommendation({
+      const anchor = await recommendationLedgerService.recordRecommendation({
         user: options.user || 'unknown',
         action: 'UNKNOWN',
         targetToken: '',
         reasoning: result.substring(0, 500),
         evidenceCid: '', // Would be from 0G anchoring if applied
-        servingModel: options.model ?? 'unknown',          confidence: 8000
-        });
+        servingModel: options.model ?? 'unknown',
+        confidence: 8000
+      });
+      if (anchor.status === 'failed') {
+        console.warn('[Recommendation Ledger] Anchor failed:', anchor.error);
+      } else if (anchor.status === 'pending') {
+        console.warn('[Recommendation Ledger] Anchor pending confirmation:', anchor.txHash);
+      }
     } catch (error: any) {
       console.warn('[Recommendation Ledger] Failed to record recommendation:', error);
     }

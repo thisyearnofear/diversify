@@ -18,7 +18,7 @@ async function main() {
   console.log('');
 
   try {
-    const result = await recordRecommendation({
+    const anchor = await recordRecommendation({
       user: testUser,
       action: 'swap',
       targetToken: 'USDC',
@@ -29,16 +29,16 @@ async function main() {
       confidence: 8500,
     });
 
-    if (!result) {
-      throw new Error('Recommendation was not recorded');
+    if (anchor.status === 'failed') {
+      throw new Error(`Recommendation was not recorded: ${anchor.error}`);
     }
 
-    console.log('✅ Recommendation recorded successfully!');
-    console.log(`  Recommendation ID: ${result.id}`);
-    console.log(`  Transaction Hash: ${result.txHash}`);
-    console.log(`  Explorer: https://chainscan-galileo.0g.ai/tx/${result.txHash}`);
+    console.log(`✅ Recommendation ${anchor.status} successfully!`);
+    console.log(`  Recommendation ID: ${anchor.status === 'anchored' ? anchor.id : '(pending)'}`);
+    console.log(`  Transaction Hash: ${anchor.txHash}`);
+    console.log(`  Explorer: ${anchor.explorerUrl}`);
     
-    return result;
+    return anchor;
   } catch (error: any) {
     console.error('❌ Failed to record recommendation:', error.message);
     if (error.code === 'CALL_EXCEPTION') {

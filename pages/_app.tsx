@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 
 import { useAppInit } from "../hooks/use-app-init";
 import ProviderTree from "../components/app/ProviderTree";
+import { ProactiveAgentRunner } from "../components/agent/ProactiveAgentRunner";
 
 const AIChat = dynamic(() => import("../components/agent/AIChat"), {
   ssr: false,
@@ -42,6 +43,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <>
       {headMeta}
       <ProviderTree>
+        <ProactiveAgentRunner />
         <Component {...pageProps} isInMiniPay={isInMiniPay} />
         <AIChat />
       </ProviderTree>

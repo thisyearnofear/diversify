@@ -26,6 +26,25 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
         ? 'text-emerald-600 dark:text-emerald-400'
         : 'text-gray-500 dark:text-gray-400';
 
+  // The 0G anchor status is the verifiable side of the receipt. It can
+  // be absent (older receipts), pending (broadcast but not yet confirmed),
+  // anchored (event parsed), or failed (revert or RPC error).
+  const anchor = receipt.anchor;
+  const anchorLabel = anchor
+    ? anchor.status === 'anchored'
+      ? `0G anchored${anchor.id && anchor.id > 0 ? ` #${anchor.id}` : ''}`
+      : anchor.status === 'pending'
+        ? '0G anchor pending'
+        : '0G anchor failed'
+    : null;
+  const anchorColor = anchor
+    ? anchor.status === 'anchored'
+      ? 'text-emerald-600 dark:text-emerald-400'
+      : anchor.status === 'pending'
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-rose-600 dark:text-rose-400'
+    : null;
+
   return (
     <div className="mt-2">
       <button
@@ -38,6 +57,9 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
           {statusLabel} · ${Number.parseFloat(receipt.amount || '0').toFixed(3)} USDC
           {receipt.status === 'failed' && receipt.error && (
             <span className="ml-1 normal-case font-normal opacity-70">— {receipt.error}</span>
+          )}
+          {anchorLabel && (
+            <span className={`ml-1 ${anchorColor} opacity-90`}>· {anchorLabel}</span>
           )}
         </span>
         <motion.span
@@ -90,6 +112,28 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                       </span>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {anchor && (
+                <div className="border-t border-white/10 pt-2 space-y-1">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-slate-400">0G Recommendation Ledger</span>
+                    <span className={`font-bold ${anchorColor}`}>{anchorLabel}</span>
+                  </div>
+                  {anchor.status === 'failed' && anchor.error && (
+                    <p className="text-[10px] text-rose-400">{anchor.error}</p>
+                  )}
+                  {anchor.txHash && anchor.explorerUrl && (
+                    <a
+                      href={anchor.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block text-[10px] font-mono text-blue-400 hover:text-blue-300 truncate"
+                    >
+                      {anchor.txHash.slice(0, 18)}...{anchor.txHash.slice(-6)} ↗
+                    </a>
+                  )}
                 </div>
               )}
 

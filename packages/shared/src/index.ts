@@ -109,8 +109,11 @@ export {
   getRecommendation,
   getUserRecommendations,
   getLedgerStats,
+  buildLedgerExplorerUrl,
   type LedgerRecommendation,
   type LedgerConfig,
+  type AnchorStatus,
+  type AnchorResult,
 } from './services/recommendation-ledger.service';
 export { IntentDiscoveryService, type AppIntent, type AppTab, type ResponseFormat } from './services/ai/intent-discovery.service';
 export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';

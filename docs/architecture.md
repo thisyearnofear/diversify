@@ -115,11 +115,13 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
    → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
    → Execute via /api/vault/rebalance
    → Anchor to 0G Storage + Cognee memory
-   → Record on 0G RecommendationLedger
+   → Record on 0G RecommendationLedger (awaited, status persisted to GuardianState)
    → Clear recommendation from guardian-state
 ```
 
 **Security:** Server-to-server auth via `GUARDIAN_LOOP_SECRET` header. DB unavailability returns `200` with status (never `500` — graceful degradation).
+
+**Permission integrity:** The ERC-7715 permission posted to `/api/vault/permission` is verified server-side via `ERC7715Service.verifySignedPermission` (EIP-712 typed-data recovery against the expected `userAddress` and `chainId`). The previous "deferred to Privy policies" posture is gone — every persisted permission is cryptographically bound to the user's wallet signature. Permission objects without a valid 0x-hex signature and 32-byte nonce are rejected with `400`.
 
 ## State Management (Frontend)
 
@@ -144,6 +146,8 @@ All 40+ hooks live in `/hooks/`. Key patterns:
 - **Wallet hooks** (`use-session-key`, `use-arc-balance`) — wallet operations
 - **UI hooks** (`use-mobile`, `use-in-view`, `use-animated-counter`) — responsive/UX helpers
 
+The `useProactiveAgent` monitoring loop is mounted once at the app root via `components/agent/ProactiveAgentRunner.tsx` (inside `ProviderTree` in `pages/_app.tsx`), so the 5-minute market + yield + UBI check survives chat-surface open/close transitions.
+
 ### Known issue: Prop drilling
 
 `pages/index.tsx` passes 27 props through `AppShell`. This will be resolved via a `useAppShell()` hook (see `roadmap.md`).
@@ -159,7 +163,19 @@ Every AI recommendation traces through the full 0G pipeline:
 | **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
 | **0G Chain — RecommendationLedger** | On-chain record: `user → action → evidence CID → model → tx → confidence` |
 
-**Contract:** `0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f` on 0G Galileo Testnet (chainId `16602`)
+**Contract:** `0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED` on 0G Galileo Testnet (chainId `16602`) — overridable via `ZERO_G_LEDGER_CONTRACT`
+
+### Anchor observability
+
+`recordRecommendation` returns a discriminated `AnchorResult`:
+
+| Status | Meaning | UI behaviour |
+|---|---|---|
+| `anchored` | Tx mined, `RecommendationRecorded` event parsed, `id` known | "0G anchored #N" + explorer link |
+| `pending`  | Tx broadcast but receipt not confirmed within 60 s | "0G anchor pending" + tx hash, may resolve later |
+| `failed`   | Revert, missing signer, RPC throw, or missing contract | "0G anchor failed" with `error` text |
+
+The status is patched into the corresponding `AIMessage.x402Receipt.anchor` in place via `AIConversationContext.patchMessage`, so the user sees the verifier surface in the receipt itself. The Guardian cron persists the same shape to `GuardianState.latestAnchor` and surfaces it on the proof feed. `firecrawl-webhook` includes the anchor in its response, and `zero-g-ledger` POST returns `status`, `txHash`, `explorerUrl`, and (when available) `id`.
 
 ## Arc x402 Payment Loop
 

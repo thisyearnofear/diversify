@@ -4,7 +4,7 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useAgentConfig } from "./use-agent-config";
 import { useMultichainBalances } from "./use-multichain-balances";
-import { IntentDiscoveryService, AgentActionService, type AppIntent, type ResponseFormat } from "@diversifi/shared";
+import { IntentDiscoveryService, AgentActionService, recordRecommendation, type AppIntent, type ResponseFormat } from "@diversifi/shared";
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
@@ -472,10 +472,12 @@ export function useAgentChat({
             portfolioContext = `Analyzing: ${holdingParts.join(" · ")}${portfolioSnapshot.holdings.length > 5 ? " …" : ""} on ${chainNames}`;
           }
 
+          const messageTimestamp = new Date();
           const assistantMessage: AIMessage = {
+            id: `assistant-${messageTimestamp.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
             role: "assistant",
             content: result.response,
-            timestamp: new Date(),
+            timestamp: messageTimestamp,
             type: result.type || "text",
             action: result.action,
             provider: result.provider,
@@ -484,6 +486,71 @@ export function useAgentChat({
             researchSources: result.researchSources || [],
           };
           addMessage(assistantMessage);
+
+          // Anchor this advice to the 0G RecommendationLedger so the user
+          // sees verifiable on-chain state. Fire-and-patch: we don't block
+          // the reply, but we DO update the message in place once the
+          // anchor status resolves. Only anchor when we have a wallet and
+          // the response was a real recommendation (not free synthesis).
+          if (
+            patchedReceipt &&
+            patchedReceipt.status !== "failed" &&
+            patchedReceipt.status !== "skipped" &&
+            address
+          ) {
+            const messageId = assistantMessage.id;
+            const anchorTimestamp = messageTimestamp;
+            void recordRecommendation({
+              user: address,
+              action: String(result.action?.type ?? result.type ?? "ADVICE"),
+              targetToken: result.targetToken ?? "",
+              reasoning: String(result.response ?? "").slice(0, 500),
+              evidenceCid: "",
+              servingModel: result.provider ?? "diversifi-agent",
+              settlementTxHash: patchedReceipt.txHash ?? "",
+              confidence: Math.round(
+                Number.isFinite(result.confidence)
+                  ? Number(result.confidence) * 10000
+                  : 8000,
+              ),
+            })
+              .then((anchor) => {
+                if (isUsingGlobal && globalConversation?.patchMessage) {
+                  globalConversation.patchMessage(
+                    { id: messageId, timestamp: anchorTimestamp },
+                    {
+                      x402Receipt: {
+                        ...patchedReceipt,
+                        anchor: {
+                          status: anchor.status,
+                          txHash: anchor.status === "failed" ? undefined : anchor.txHash,
+                          explorerUrl: anchor.status === "failed" ? undefined : anchor.explorerUrl,
+                          id: anchor.status === "anchored" ? anchor.id : undefined,
+                          error: anchor.status === "failed" ? anchor.error : undefined,
+                        },
+                      },
+                    },
+                  );
+                }
+              })
+              .catch((err) => {
+                console.warn("[useAgentChat] Ledger anchor failed:", err);
+                if (isUsingGlobal && globalConversation?.patchMessage) {
+                  globalConversation.patchMessage(
+                    { id: messageId, timestamp: anchorTimestamp },
+                    {
+                      x402Receipt: {
+                        ...patchedReceipt,
+                        anchor: {
+                          status: "failed",
+                          error: err?.message ?? "Anchor broadcast failed",
+                        },
+                      },
+                    },
+                  );
+                }
+              });
+          }
 
           if (x402Receipt) {
             const spent = Number.parseFloat(x402Receipt.amount || "0");

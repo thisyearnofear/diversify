@@ -17,7 +17,7 @@
 | `/api/agent/x402-gateway` | GET | Payment challenge + paid evidence retrieval |
 | `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
 | `/api/agent/sosovalue` | GET | SoSoValue market intelligence (news, sentiment, SSI index); `?tier=premium` for SSI |
-| `/api/agent/zero-g-ledger` | GET | 0G `RecommendationLedger` on-chain recommendations + stats; `?user=0x...` to filter |
+| `/api/agent/zero-g-ledger` | GET/POST | 0G `RecommendationLedger` on-chain recommendations + stats; `?user=0x...` to filter. POST returns `{ status: 'anchored' \| 'pending' \| 'failed', txHash, explorerUrl, id? }`. |
 | `/api/agent/guardian-loop` | POST | Autonomous execution cron (server-to-server, secret-protected) |
 | `/api/agent/firecrawl-webhook` | POST | Receives Firecrawl Monitor macro signal webhooks |
 
@@ -75,6 +75,7 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 - `FIRECRAWL_WEBHOOK_SECRET` authenticates incoming Firecrawl webhooks
 - User's ERC-7715 permission bounds are always enforced (daily limit, allowed tokens, expiry)
 - `GUARDIAN_CONFIDENCE_THRESHOLD` (default 0.6) prevents low-confidence auto-execution
+- **ERC-7715 permission integrity:** `/api/vault/permission` POST verifies the EIP-712 typed-data signature against the user's wallet on the server (`ERC7715Service.verifySignedPermission`). Requests with a missing, malformed, or non-recovering signature are rejected with `400` before any permission is persisted. The `signature: 'unsigned'` fallback has been removed.
 
 ## Arc Research Payments
 
@@ -122,7 +123,7 @@ Every advisor recommendation is recorded on the 0G Galileo Testnet via the `Reco
 | Field | Value |
 |-------|-------|
 | **Network** | 0G Galileo Testnet (chainId `16602`) |
-| **Contract** | [`0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f`](https://chainscan-galileo.0g.ai/address/0x8b8528dE95178b77d46CF5A9612C1C9FCc53740f) |
+| **Contract** | [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
 | **RPC** | `https://evmrpc-testnet.0g.ai` |
 | **Explorer** | `https://chainscan-galileo.0g.ai` |
 | **Write authority** | EOA configured via `VAULT_PRIVATE_KEY` (automatically authorised on deploy; admin can grant via `setAgentAuthorization`) |

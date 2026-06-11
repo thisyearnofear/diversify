@@ -353,10 +353,12 @@ export class AgentService {
                 executionTxHash,
             });
 
-            // Phase 5E: Record to 0G Recommendation Ledger (non-blocking)
+            // Phase 5E: Record to 0G Recommendation Ledger. The result
+            // is observable — we log every status so failures are not
+            // silently lost, but we do not block the analysis response.
             import('./recommendation-ledger.service').then(async (ledger) => {
                 try {
-                    await ledger.recordRecommendation({
+                    const anchor = await ledger.recordRecommendation({
                         user: this.agentAddress,
                         action: finalResult.action,
                         targetToken: finalResult.targetToken || '',
@@ -367,6 +369,11 @@ export class AgentService {
                         // Convert 0-1 confidence from analysis to basis points (0-10000) for the contract
                         confidence: Math.round((finalResult.confidence || 0) * 10000),
                     });
+                    if (anchor.status === 'failed') {
+                        console.warn('[RecommendationLedger] Anchor failed:', anchor.error);
+                    } else if (anchor.status === 'pending') {
+                        console.warn('[RecommendationLedger] Anchor pending confirmation:', anchor.txHash);
+                    }
                 } catch (err) {
                     console.warn('[RecommendationLedger] Background recording failed:', err);
                 }

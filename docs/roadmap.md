@@ -6,6 +6,19 @@ All tasks are ordered by risk-adjusted impact. Things that require architectural
 
 ---
 
+## Completed hardening (Phase 1 — trust posture)
+
+| Item | Status | Where |
+|---|---|---|
+| EIP-712 server-side signature verification on `POST /api/vault/permission` | Done | `pages/api/vault/permission.ts` calls `ERC7715Service.verifySignedPermission`. `signature: 'unsigned'` fallback removed. |
+| 0G anchor observability: discriminated `anchored \| pending \| failed` result | Done | `packages/shared/src/services/recommendation-ledger.service.ts` returns `AnchorResult`; patched into `AIMessage.x402Receipt.anchor` via `AIConversationContext.patchMessage`; rendered in `ResearchReceipt`. |
+| Guardian proof feed: `latestAnchor` persisted in `GuardianState` | Done | `pages/api/vault/_guardian-state.ts`; surfaced via `GuardianSessionInfo.latestAnchor`. |
+| Proactive monitoring loop decoupled from chat surface | Done | `components/agent/ProactiveAgentRunner.tsx` mounted in `pages/_app.tsx`; removed from `AIChat.tsx`. |
+| `.catch(() => {})` swallowing around `recordRecommendation` | Eliminated | Guardian loop, firecrawl webhook, agent-service, both decorators now await + log the new status shape. |
+| Verifier + ledger tests | 15 new tests | `erc7715-service.test.ts` (10), `recommendation-ledger.service.test.ts` (5). |
+
+---
+
 ## Current Scores → Target
 
 | Dimension | Now | After | Key lever |
