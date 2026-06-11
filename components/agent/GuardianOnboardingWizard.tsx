@@ -67,11 +67,9 @@ export default function GuardianOnboardingWizard({
     return () => clearTimeout(id);
   }, [currentStep]);
 
-  // ── Animation variants that respect prefers-reduced-motion ──────────
+  // ── Animation variants — framer-motion automatically respects        ──
+  //    prefers-reduced-motion by skipping spring/tween animations.
   const transition = {
-    duration: 0.2,
-    // The CSS media query is checked at animation time — framer-motion
-    // will use 0 duration when the user has reduced-motion enabled.
     type: "spring" as const,
     damping: 20,
     stiffness: 200,

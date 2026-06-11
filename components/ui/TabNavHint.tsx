@@ -36,8 +36,22 @@ export function TabNavHint() {
                     aria-live="polite"
                 >
                     <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl flex items-center gap-2">
-                        <span aria-hidden="true">Swipe or tap to explore navigation tabs</span>
+                        <motion.span
+                            aria-hidden="true"
+                            animate={prefersReducedMotion ? { x: 0 } : { x: [-2, 2, -2] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                            ←
+                        </motion.span>
+                        <span aria-hidden="true">Swipe or tap to explore</span>
                         <span className="sr-only">You can swipe left or right or tap tabs to switch between sections.</span>
+                        <motion.span
+                            aria-hidden="true"
+                            animate={prefersReducedMotion ? { x: 0 } : { x: [2, -2, 2] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                        >
+                            →
+                        </motion.span>
                         <button
                             onClick={dismiss}
                             className="text-white/60 hover:text-white ml-1 pointer-events-auto"

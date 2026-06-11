@@ -373,7 +373,7 @@ export default function AgentTab({
     return (
       <div className="space-y-4 pb-6">
         {/* Dismissed state card */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-6" role="alert" aria-live="polite">
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-6" aria-live="polite">
           <div className="flex items-start gap-4">
             <span className="text-3xl shrink-0" aria-hidden="true">🛡️</span>
             <div className="min-w-0">
