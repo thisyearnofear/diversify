@@ -34,7 +34,7 @@ function getExecutableTargetToken(symbol: string): string | null {
  *
  * Per-user alert cooldowns backed by `GuardianState.alertCooldowns` on the
  * server. Replaces the old per-browser `localStorage` map. Returns a
- * `shouldSend(alertId)` check and a `markSent(alertId)` writer.
+ * `shouldSend(alertId, cooldownMs?)` check and a `markSent(alertId)` writer.
  *
  * Behaviour:
  *  - On mount (and on address change) the current cooldown map is fetched
@@ -42,11 +42,15 @@ function getExecutableTargetToken(symbol: string): string | null {
  *  - `markSent` POSTs `{ recordAlert: { alertId, firedAt } }` and updates
  *    local state optimistically so the rest of the loop doesn't have to
  *    wait for the round-trip.
+ *  - `shouldSend` accepts an optional `cooldownMs` per call so different
+ *    alert types can use different windows (yield is 6h, UBI is 24h, etc.)
+ *    without changing the hook signature. The default is 6h to match the
+ *    historical behaviour.
  *  - When no wallet is connected, both helpers are no-ops. This matches
  *    the previous behaviour (the loop was guarded by `if (targetToken && address)`).
  */
 function useAlertCooldown(userAddress: string | null | undefined): {
-    shouldSend: (alertId: string) => boolean;
+    shouldSend: (alertId: string, cooldownMs?: number) => boolean;
     markSent: (alertId: string) => void;
 } {
     const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -75,11 +79,11 @@ function useAlertCooldown(userAddress: string | null | undefined): {
     }, [API_BASE, userAddress]);
 
     const shouldSend = useCallback(
-        (alertId: string) => {
+        (alertId: string, cooldownMs: number = YIELD_ALERT_COOLDOWN_MS) => {
             if (!userAddress) return true;
             const lastSentAt = cooldowns[alertId];
             if (!lastSentAt) return true;
-            return Date.now() - lastSentAt > YIELD_ALERT_COOLDOWN_MS;
+            return Date.now() - lastSentAt > cooldownMs;
         },
         [cooldowns, userAddress],
     );
@@ -137,14 +141,24 @@ export function useProactiveAgent() {
   const yieldThreshold = (config as any).yieldAlertThreshold ?? 10;
 
   // Prevent duplicate triggers within a session
-  const ubiPrompted = useRef(false);
   const yieldAlerted = useRef(false);
   const volatilityAlerted = useRef(false);
 
   // Monitor GoodDollar Claim Status
   useEffect(() => {
-    if (canClaim && !alreadyClaimedOnChain && !ubiPrompted.current) {
-        ubiPrompted.current = true;
+    if (canClaim && !alreadyClaimedOnChain) {
+        // Per-day cooldown, so a page reload within the same 24h claim
+        // window does not re-prompt, but a fresh day does. The 24h
+        // window is the natural granularity of a daily UBI claim; using
+        // a shorter window (the default 6h yield cooldown) would let
+        // the same insight re-fire after lunch, which is annoying.
+        const today = new Date().toISOString().slice(0, 10);
+        const ubiAlertId = `ubi-claim:${today}`;
+        const UBI_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+        if (!shouldSendAlert(ubiAlertId, UBI_COOLDOWN_MS)) {
+            return;
+        }
 
         const ubiInsight = `✨ Good news! I've been monitoring your on-chain status, and your daily Universal Basic Income of ${estimatedReward} is ready to claim on Celo.`;
 
@@ -158,11 +172,12 @@ export function useProactiveAgent() {
                  delay: 3500,
                }
              }).catch(() => {});
+             markAlertSent(ubiAlertId);
         };
 
         setTimeout(triggerUbiAlert, 4000);
     }
-  }, [canClaim, alreadyClaimedOnChain, estimatedReward, publishAdvisorUpdate]);
+  }, [canClaim, alreadyClaimedOnChain, estimatedReward, publishAdvisorUpdate, shouldSendAlert, markAlertSent]);
 
   // Real Market & Yield Monitoring Loop
   useEffect(() => {
