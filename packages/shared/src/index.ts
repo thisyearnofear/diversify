@@ -115,6 +115,13 @@ export {
   type AnchorStatus,
   type AnchorResult,
 } from './services/recommendation-ledger.service';
+export {
+  deriveGuardianTierState,
+  isPermissionValidNow,
+  GUARDIAN_TIER_STATE_LABELS,
+  type GuardianTierState,
+  type DeriveGuardianTierStateInput,
+} from './services/vault/guardian-tier-state';
 export { IntentDiscoveryService, type AppIntent, type AppTab, type ResponseFormat } from './services/ai/intent-discovery.service';
 export { VoiceInsightsService, type VoiceInsightResult } from './services/ai/voice-insights.service';
 export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent-action.service';

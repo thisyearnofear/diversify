@@ -10,3 +10,10 @@ export { earnService, EarnService } from './earn-service';
 export { VaultService } from './vault/vault.service';
 export { feeEngine, FeeEngine } from './vault/fee-engine';
 export { BrightDataService } from './bright-data-service';
+export {
+  deriveGuardianTierState,
+  isPermissionValidNow,
+  GUARDIAN_TIER_STATE_LABELS,
+  type GuardianTierState,
+  type DeriveGuardianTierStateInput,
+} from './vault/guardian-tier-state';

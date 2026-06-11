@@ -23,6 +23,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { motion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
+import { GUARDIAN_TIER_STATE_LABELS } from "@diversifi/shared";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianWDKStatus from "./GuardianWDKStatus";
@@ -126,6 +127,7 @@ export const AgentTierStatus: React.FC<{
     isPermissionValid,
     sessionInfo,
     triggerExecutionLoop,
+    deriveGuardianState,
   } = useSessionKey();
   const hasValidPermission = isPermissionValid();
   const isRequesting = sessionStatus === "requesting";
@@ -143,27 +145,36 @@ export const AgentTierStatus: React.FC<{
   const [showWizard, setShowWizard] = useState(false);
 
   // Tier 3: The Guardian (Autonomous) — Real State Machine
-  // Vault-aware: checks vault existence, deposit, and permission
-  type GuardianState = "idle" | "authorized" | "funded" | "monitoring";
-  const guardianState: GuardianState = (() => {
-    const hasVault = !!vault.vault;
-    const hasVaultDeposit = hasVault && vault.vault!.totalDepositedUSD > 0;
-    const hasPermission = hasValidPermission;
-    const isMonitoring = hasVaultDeposit && hasPermission;
+  // The state machine itself lives in @diversifi/shared (see
+  // deriveGuardianTierState). Both the label map and the boolean checks
+  // derive from the same source, so this component renders the same
+  // state any other surface (status page, CLI, future widget) would.
+  const guardianState = useMemo(() => {
+    const totalDepositedUSD = vault.vault?.totalDepositedUSD ?? 0;
+    return deriveGuardianState({
+      vault: vault.vault ? { totalDepositedUSD } : null,
+      permission: signedPermission
+        ? {
+            status: 'active',
+            expiresAt: signedPermission.permission.expiresAt,
+            spentTodayUSD: sessionInfo?.spentTodayUSD ?? 0,
+            dailyLimitUSD: signedPermission.permission.dailyLimitUSD,
+          }
+        : (sessionInfo && {
+            status: sessionInfo.active ? 'active' : 'revoked',
+            expiresAt: sessionInfo.dailyLimitUSD > 0 ? Math.floor(Date.now() / 1000) + 86400 : 0,
+            spentTodayUSD: sessionInfo.spentTodayUSD,
+            dailyLimitUSD: sessionInfo.dailyLimitUSD,
+          }),
+    });
+  }, [
+    deriveGuardianState,
+    vault.vault,
+    signedPermission,
+    sessionInfo,
+  ]);
 
-    if (isMonitoring) return "monitoring";
-    if (hasVaultDeposit) return "funded";
-    if (hasPermission || hasVault) return "authorized";
-    return "idle";
-  })();
-
-  const guardianStatusLabel: Record<GuardianState, string> = {
-    idle: "Get Started",
-    authorized: "Awaiting Deposit",
-    funded: "Funded",
-    monitoring: "Protecting",
-  };
-  const guardianStatus = guardianStatusLabel[guardianState];
+  const guardianStatus = GUARDIAN_TIER_STATE_LABELS[guardianState];
   const guardianActive = guardianState === "monitoring";
 
   useEffect(() => {

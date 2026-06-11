@@ -23,6 +23,10 @@ import {
     type SignedSessionPermission,
     type SessionPermission,
 } from '../packages/shared/src/services/erc7715-service';
+import {
+    deriveGuardianTierState,
+    type GuardianTierState,
+} from '../packages/shared/src/services/vault/guardian-tier-state';
 
 const service = new ERC7715Service();
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -156,6 +160,23 @@ export interface UseSessionKeyReturn {
     revokePermission: () => void;
     isPermissionValid: () => boolean;
     triggerExecutionLoop: (dryRun?: boolean) => Promise<GuardianLoopResult>;
+    /**
+     * Pure Guardian tier state machine. Exposed so the Agent Tier card
+     * (and any other surface) reads from a single derivation function
+     * instead of inlining the boolean checks.
+     */
+    deriveGuardianState: (input: {
+        vault: { totalDepositedUSD: number } | null | undefined;
+        permission:
+            | {
+                  status: 'active' | 'expired' | 'revoked';
+                  expiresAt: number;
+                  spentTodayUSD: number;
+                  dailyLimitUSD: number;
+              }
+            | null
+            | undefined;
+    }) => GuardianTierState;
 }
 
 export function useSessionKey(): UseSessionKeyReturn {
@@ -323,6 +344,30 @@ export function useSessionKey(): UseSessionKeyReturn {
         ? service.describePermission(signedPermission.permission)
         : null;
 
+    // Pure derivation — the Agent Tier card uses this to render the
+    // Guardian status label and the active/inactive flag. Centralised
+    // here so the same logic powers any future surface (e.g. a server-
+    // side status page or a CLI check).
+    const deriveGuardianState = useCallback(
+        (input: {
+            vault: { totalDepositedUSD: number } | null | undefined;
+            permission:
+                | {
+                      status: 'active' | 'expired' | 'revoked';
+                      expiresAt: number;
+                      spentTodayUSD: number;
+                      dailyLimitUSD: number;
+                  }
+                | null
+                | undefined;
+        }) =>
+            deriveGuardianTierState({
+                vault: input.vault,
+                permission: input.permission,
+            }),
+        [],
+    );
+
     return {
         status,
         signedPermission,
@@ -333,5 +378,6 @@ export function useSessionKey(): UseSessionKeyReturn {
         revokePermission,
         isPermissionValid,
         triggerExecutionLoop,
+        deriveGuardianState,
     };
 }
