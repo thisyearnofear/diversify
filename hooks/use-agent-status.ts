@@ -10,6 +10,7 @@ type StatusState = {
   autonomousStatus: AutonomousStatus | null;
   initialized: boolean;
   isLoading: boolean;
+  statusError: string | null;
 };
 
 const defaultCapabilities: AICapabilities = {
@@ -25,6 +26,7 @@ const defaultState: StatusState = {
   autonomousStatus: null,
   initialized: false,
   isLoading: true,
+  statusError: null,
 };
 
 export function useAgentStatus() {
@@ -35,13 +37,23 @@ export function useAgentStatus() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 6000);
     try {
-      setState(prev => ({ ...prev, isLoading: true }));
+      setState(prev => ({ ...prev, isLoading: true, statusError: null }));
       
       const userId = user?.id ? encodeURIComponent(user.id) : '';
       const response = await fetch(`${API_BASE}/api/agent/status${userId ? `?userId=${userId}` : ''}`, {
         signal: controller.signal,
       });
       
+      if (!response.ok) {
+        setState(prev => ({
+          ...prev,
+          initialized: true,
+          isLoading: false,
+          statusError: `Status check failed (${response.status})`,
+        }));
+        return;
+      }
+
       if (response.ok) {
         const status = await response.json();
 
@@ -86,20 +98,17 @@ export function useAgentStatus() {
           autonomousStatus,
           initialized: true,
           isLoading: false,
+          statusError: null,
         });
-      } else {
-        setState(prev => ({
-          ...prev,
-          initialized: true,
-          isLoading: false,
-        }));
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to check status';
       console.error("[useAgentStatus] Failed to initialize:", error);
       setState(prev => ({
         ...prev,
         initialized: true,
         isLoading: false,
+        statusError: message,
       }));
     } finally {
       clearTimeout(timeout);
@@ -114,6 +123,7 @@ export function useAgentStatus() {
     capabilities: state.capabilities,
     autonomousStatus: state.autonomousStatus,
     isLoading: state.isLoading,
+    statusError: state.statusError,
     initializeAI: fetchStatus,
   };
 }

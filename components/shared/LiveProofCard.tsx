@@ -25,7 +25,7 @@
  */
 
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useProofFeed, type LedgerRecommendation } from '@/hooks/use-proof-feed';
 
 const SHORT_ADDRESS_RE = /^(0x[0-9a-fA-F]{4})[0-9a-fA-F]+(0x[0-9a-fA-F]{4})$/;
@@ -51,6 +51,7 @@ function timeAgo(iso: string, nowMs: number = Date.now()): string {
 
 export function LiveProofCard() {
     const { data, isLoading, isStale, error } = useProofFeed();
+    const prefersReducedMotion = useReducedMotion();
 
     const stats = data?.stats;
     const contractExplorer = data?.contractExplorer;
@@ -58,7 +59,11 @@ export function LiveProofCard() {
     // ── Skeleton ──
     if (isLoading && !data) {
         return (
-            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/60 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/20 p-4 animate-pulse">
+            <div
+                className={`rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/60 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/20 p-4 ${prefersReducedMotion ? '' : 'animate-pulse'}`}
+                role="status"
+                aria-label="Loading on-chain statistics"
+            >
                 <div className="flex items-center gap-3 mb-3">
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40" />
                     <div className="flex-1 space-y-2">
@@ -96,14 +101,14 @@ export function LiveProofCard() {
         <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
             className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/60 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/20 p-4"
             data-testid="live-proof-card"
         >
             <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
-                        <span className="text-base">🔗</span>
+                        <span className="text-base" aria-hidden="true">🔗</span>
                     </div>
                     <div>
                         <h3 className="text-sm font-black text-emerald-900 dark:text-emerald-100">
@@ -115,11 +120,11 @@ export function LiveProofCard() {
                     </div>
                 </div>
                 {stats && (
-                    <div className="text-right">
-                        <div className="text-2xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums">
+                    <div className="text-right" role="status" aria-label={`${stats.totalRecommendations.toLocaleString()} on-chain receipts recorded`}>
+                        <div className="text-2xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums" aria-hidden="true">
                             {stats.totalRecommendations.toLocaleString()}
                         </div>
-                        <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                        <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider" aria-hidden="true">
                             on-chain receipts
                         </div>
                     </div>
@@ -143,7 +148,7 @@ export function LiveProofCard() {
             </div>
 
             {isStale && data?.capturedAt && (
-                <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold" role="status">
                     Showing last known data ({timeAgo(data.capturedAt)}).
                 </p>
             )}
@@ -158,11 +163,16 @@ export function LiveProofCard() {
  */
 export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
     const { data, isLoading } = useProofFeed();
+    const prefersReducedMotion = useReducedMotion();
     const recent: LedgerRecommendation[] = (data?.recent ?? []).slice(0, limit);
 
     if (isLoading && !data) {
         return (
-            <div className="rounded-xl border border-gray-100 dark:border-gray-800 p-3 space-y-2 animate-pulse">
+            <div
+                className={`rounded-xl border border-gray-100 dark:border-gray-800 p-3 space-y-2 ${prefersReducedMotion ? '' : 'animate-pulse'}`}
+                role="status"
+                aria-label="Loading recent activity"
+            >
                 <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-1/3" />
                 <div className="h-2 bg-gray-100/60 dark:bg-gray-800/60 rounded w-2/3" />
             </div>
@@ -181,7 +191,7 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
             <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-2">
                 Recent on-chain activity
             </h4>
-            <ul className="space-y-1.5">
+            <ul className="space-y-1.5" aria-live="polite" aria-atomic="true">
                 {recent.map((rec) => (
                     <li
                         key={rec.id}

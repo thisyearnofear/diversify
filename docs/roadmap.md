@@ -59,16 +59,16 @@ All tasks are ordered by risk-adjusted impact. Things that require architectural
 
 | Dimension | Before | After Phase 1 | After Phase 2 | After Phase 3 | After Phase 4 |
 |-----------|--------|---------------|---------------|---------------|---------------|
-| Product Design | 7.5 | 7.5 | 8.0 | 8.0 | 8.0 |
-| UI/UX | 6.0 | 6.0 | 7.0 | 8.0 | 8.0 |
+| Product Design | 7.5 | 7.5 | 8.0 | 7.5 | 8.0 |
+| UI/UX | 6.0 | 6.0 | 7.0 | 7.0 | 8.0 |
 | Cogency/Intuitiveness | 6.5 | 7.5 | 8.5 | 8.5 | 8.5 |
 | Performance/Efficiency | 7.0 | 7.0 | 7.5 | 9.0 | 9.0 |
 | System Architecture | 8.0 | 8.5 | 9.0 | 9.0 | 9.0 |
 | Trust / Verifiability | 7.5 | 9.0 | 9.0 | 9.0 | 9.0 |
 | Lint / Build hygiene | 7.0 | 7.0 | 7.0 | 8.5 | 8.5 |
-| **Overall** | **7.0** | **8.0** | **8.5** | **8.7** | **8.9** |
+| **Overall** | **7.0** | **8.0** | **8.5** | **8.4** | **8.7** |
 
-The 0.1 still on the table for a 9.0 / 10 is the rules-of-hooks cluster in `components/tabs/ProtectionTab.tsx` (14 warnings, real crash risk) and the `MAX_EXECUTIONS_PER_LOOP` off-by-one in `guardian-loop.ts`. Both are 1-PR fixes and are listed as P5 candidates in `docs/phase-4-audit.md`.
+The 0.3 gap to 9.0 breaks down as: ~0.1 from the rules-of-hooks cluster in `ProtectionTab.tsx` and the `MAX_EXECUTIONS_PER_LOOP` off-by-one in `guardian-loop.ts` (both 1-PR fixes, listed as P5 in `docs/phase-4-audit.md`). The remaining ~0.2 requires the three highest-leverage UX tasks from the roadmap: Guardian progressive-disclosure wizard (Task 7), error/empty states for all tabs (Task 8), and the accessibility pass (Task 6).
 
 ---
 

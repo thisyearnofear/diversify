@@ -14,37 +14,30 @@
  */
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTabDiscovery } from '@/hooks/use-tab-discovery';
 
 export function TabNavHint() {
     const { showHint, dismiss } = useTabDiscovery();
+    const prefersReducedMotion = useReducedMotion();
+
+    const motionProps = prefersReducedMotion
+      ? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 0 }, transition: { duration: 0 } }
+      : { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 8 }, transition: { duration: 0.3, ease: 'easeOut' as const } };
 
     return (
         <AnimatePresence>
             {showHint && (
                 <motion.div
                     key="tab-nav-hint"
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 8 }}
-                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    {...motionProps}
                     className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+                    role="status"
+                    aria-live="polite"
                 >
                     <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl flex items-center gap-2">
-                        <motion.span
-                            animate={{ x: [-2, 2, -2] }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            ←
-                        </motion.span>
-                        <span>Swipe or tap to explore</span>
-                        <motion.span
-                            animate={{ x: [2, -2, 2] }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                        >
-                            →
-                        </motion.span>
+                        <span aria-hidden="true">Swipe or tap to explore navigation tabs</span>
+                        <span className="sr-only">You can swipe left or right or tap tabs to switch between sections.</span>
                         <button
                             onClick={dismiss}
                             className="text-white/60 hover:text-white ml-1 pointer-events-auto"
@@ -54,7 +47,7 @@ export function TabNavHint() {
                         </button>
                     </div>
                     {/* Arrow pointing down to the tab bar */}
-                    <div className="flex justify-center mt-1">
+                    <div className="flex justify-center mt-1" aria-hidden="true">
                         <div className="w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45 -translate-y-1/2" />
                     </div>
                 </motion.div>

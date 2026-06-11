@@ -13,8 +13,8 @@
  *   - ORGANIZED: Steps map to vault lifecycle
  */
 
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMobile } from "@/hooks/use-mobile";
 import { LiveProofCard } from "../shared/LiveProofCard";
 
@@ -98,6 +98,23 @@ export function GuardianMobileWizard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isMobile = useMobile();
+  const prefersReducedMotion = useReducedMotion();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+
+  // Focus the step heading and trap focus in the modal
+  useEffect(() => {
+    const id = setTimeout(() => headingRef.current?.focus(), 50);
+    return () => clearTimeout(id);
+  }, [currentStep]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onCancel]);
 
   const steps: WizardStep[] = ["strategy", "limits", "sign", "deposit"];
   const currentIndex = steps.indexOf(currentStep);
@@ -386,26 +403,40 @@ export function GuardianMobileWizard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col">
+    <div
+      className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Guardian setup wizard"
+    >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={goBack}
           className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700"
+          aria-label={currentStep === "strategy" ? "Cancel and close" : "Go back to the previous step"}
         >
           ← Back
         </button>
-        <h2 className="font-bold text-gray-900 dark:text-white">Enable Guardian</h2>
+        <h2 ref={headingRef} tabIndex={-1} className="font-bold text-gray-900 dark:text-white outline-none">
+          {stepConfig[currentStep].icon} {stepConfig[currentStep].title}
+        </h2>
         <button
           onClick={onCancel}
           className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700"
+          aria-label="Close wizard"
         >
           ✕
         </button>
       </div>
 
+      {/* Screen-reader live region for step changes */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        Step {currentIndex + 1} of {steps.length}: {stepConfig[currentStep].title}
+      </div>
+
       {/* Step indicators */}
-      <div className="flex items-center justify-center gap-2 p-4">
+      <div className="flex items-center justify-center gap-2 p-4" aria-hidden="true">
         {steps.map((step, idx) => (
           <div key={step} className="flex items-center">
             <div
