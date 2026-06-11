@@ -21,7 +21,6 @@
         "./*"
       ]
     },
-    "allowJs": true,
     "incremental": true,
     "moduleResolution": "node"
   },
@@ -37,6 +36,7 @@
     "out",
     "cache",
     "contracts",
-    "script"
+    "script",
+    "lib"
   ]
 }
