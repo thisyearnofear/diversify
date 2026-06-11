@@ -152,7 +152,15 @@ The hook's `useEffect` has a `cancelled` flag, but on address change the in-flig
 
 ### 2.8 — `guardian-loop.ts` has a one-line footprint improvement available
 
-The `MAX_EXECUTIONS_PER_LOOP = 5` cap is a safety, but the `executionCount++` is incremented inside the `if (result.executed > 0)` block. This means a loop that fires 5 successful executions then sees a 6th is allowed to run it (the `executionCount` check is at the top of the `for`). The 6th will still run, because we never break when `executionCount >= MAX_EXECUTIONS_PER_LOOP` *after* the increment. **This is a real (low-impact) bug** — the cap is off-by-one. **Recommended follow-up:** move the cap check into the `for` loop condition (`for (const perm of ...; executionCount < MAX_EXECUTIONS_PER_LOOP; ...)`) or break immediately after increment. 1-line change.
+**Re-checked 2026-06-11 — closed as a misread.** Walking the trace for `MAX_EXECUTIONS_PER_LOOP = 5`:
+
+- Iter 1: `executionCount=0`, check `0>=5`? no, run body, succeed, `executionCount=1`.
+- Iter 2: `executionCount=1`, check `1>=5`? no, succeed, `executionCount=2`.
+- ...
+- Iter 5: `executionCount=4`, check `4>=5`? no, succeed, `executionCount=5`.
+- Iter 6: `executionCount=5`, check `5>=5`? yes, break.
+
+The cap IS exactly 5. The audit's original claim of N+1 was a misread: the top-of-iteration check breaks BEFORE the next body runs, not after. The `executionCount++` inside the success branch updates the counter for the **next** iteration's check, not for the current one. No code change needed. **Score: closed as a non-bug.**
 
 ### 2.9 — `pruneAlertCooldowns` is exported but not re-imported from a barrel
 
@@ -161,6 +169,12 @@ The `MAX_EXECUTIONS_PER_LOOP = 5` cap is a safety, but the `executionCount++` is
 ### 2.10 — `GET /api/vault/permission` does not include `latestAnchor.explorerUrl` in the response when status is `anchored`
 
 This was verified — the response shape is `{ latestAnchor: { status, txHash, explorerUrl, id, error, capturedAt } }`. The explorer URL is included. The previous concern (that `explorerUrl` was missing in the persisted form) is **not** present in the code; it was a Phase 1.2 artefact. Clean.
+
+### 2.11 — GoodDollar UBI alert was on a session-local ref, not `useAlertCooldown` (fixed 2026-06-11)
+
+`use-proactive-agent.ts` originally guarded the UBI claim insight with a session-local `useRef(false)` flag. This meant a page reload within the same 24h claim window would re-prompt the user. The `useAlertCooldown` hook (added in Phase 2.2) was built for exactly this pattern, but the UBI alert was left on the old path.
+
+**Fix:** the `useAlertCooldown.shouldSend` signature was extended to take an optional `cooldownMs` per call (default keeps the historical 6h yield window). The UBI alert uses 24h and an alertId of `ubi-claim:YYYY-MM-DD`, so a reload within the same day does nothing, a fresh day re-prompts, and the cooldown is server-backed (survives device switch). The `ubiPrompted` ref was deleted in the same commit.
 
 ---
 
@@ -178,17 +192,19 @@ The 8.4/10 rating from the initial review is now **8.9/10**. The deltas:
 | Build / typecheck performance | 7.0 | 9.5 | +2.5 | tsconfig lib exclude + allowJs removal. |
 | Lint hygiene | 7.0 | 8.5 | +1.5 | 0 errors, -20 warnings. |
 
-The 0.1 I held back is for the duplicate dry-run button (3.3 residual) and the cap-off-by-one in `guardian-loop.ts` (2.8). The remaining 0.1 is reserved for the rules-of-hooks warnings in `ProtectionTab.tsx` (which would be a real crash if the early-return path is ever exercised). Both are real but localized and addressable in a follow-up.
+The 0.1 I held back is for the duplicate dry-run button (3.3 residual) and the rules-of-hooks warnings in `ProtectionTab.tsx` (which would be a real crash if the early-return path is ever exercised). Both are real but localized and addressable in a follow-up.
+
+**Re-checked 2026-06-11:** the duplicate dry-run button is **fixed** in commit `6e1126f`, and the rules-of-hooks cluster is **fixed** in commit `78fdddc` (moved the early return to the end of the component, killing all 14 warnings). The off-by-one "bug" in `guardian-loop.ts` turned out to be a misread (see 2.8).
 
 ---
 
 ## 4. Recommended Phase 5 candidates (in order of value × cost)
 
-1. **Remove the duplicate "🔍 Dry Run" button** in the expanded Guardian Journal view (15 min, 0 risk). The new footer button is the canonical entry point.
-2. **Fix `MAX_EXECUTIONS_PER_LOOP` off-by-one** in `guardian-loop.ts` (5 min, low risk but real bug).
-3. **Move the early return in `ProtectionTab.tsx` to the end of the component** (30 min, fixes 14 lint warnings AND removes a real crash risk).
+1. ~~**Remove the duplicate "🔍 Dry Run" button** in the expanded Guardian Journal view (15 min, 0 risk). The new footer button is the canonical entry point.~~ **Done** in `6e1126f`.
+2. ~~**Fix `MAX_EXECUTIONS_PER_LOOP` off-by-one** in `guardian-loop.ts` (5 min, low risk but real bug).~~ **Closed as a misread** — see 2.8.
+3. **Move the early return in `ProtectionTab.tsx` to the end of the component** (30 min, fixes 14 lint warnings AND removes a real crash risk). **Done** in `78fdddc`.
 4. **Persist `latestAnchors` as a ring buffer of 5** in `GuardianState` (1 hour, expands per-user JSON state but bounded; needs a corresponding prune).
-5. **Wrap the GoodDollar UBI insight in `useAlertCooldown`** (5 min, 5 lines).
+5. **Wrap the GoodDollar UBI insight in `useAlertCooldown`** (5 min, 5 lines). **Done** in this session — see 2.11.
 6. **Hide `latestAnchor.id` when `-1`** in `AgentTierStatus.tsx` (5 min, 1 line).
 7. **Add `patchMessage` to the local (non-global) conversation context** (30 min, parity with global; needed if a user disables the global context).
 8. **Hoist `latestAnchor` into the proof feed** as a chip next to the matching tx row (1 hour, design call: which row to attach to).
