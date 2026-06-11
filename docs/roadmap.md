@@ -259,6 +259,28 @@ Reserve 2 days for:
 
 ---
 
+## Post-9/0 — Full-stack fintech infrastructure
+
+DiversiFi's current product is savings protection (hold → protect → monitor). A natural
+expansion is completing the financial lifecycle: onramp → protect + grow → offramp.
+The following providers map to DiversiFi's chains (Celo, Arbitrum) and target markets
+(Africa, LatAm, SE Asia).
+
+| Layer | Target | Priority providers | Why |
+|---|---|---|---|
+| **Onramp** (fiat → stablecoins) | Kenya, Nigeria, Ghana | **Fonbnk** (Celo-native, M-Pesa), **Kotani Pay** (Celo-native), **Yellow Card** (Africa) | Without onramp, users need existing crypto — biggest UX gap. Fonbnk + Kotani are Celo-native. |
+| **Onramp** (LatAm) | Mexico, Brazil, Colombia | **Bitso**, **TransFi**, **dLocal** | Maps to Buen Vivir / Global Diversification plans. Bitso is the largest LatAm exchange. |
+| **Onramp** (SE Asia) | Philippines, Singapore | **StraitsX**, **Coins.ph** | Maps to Gotong Royong plan. |
+| **Earn / Yield** (protocol) | Global | **Ethena** (sUSDe), **Ondo Finance** (USDY — already a swap target), **Aave** (Arbitrum), **Fluid** (Arbitrum), **Morpho** (Base) | Turns idle protection into active growth. The Guardian already has permission infrastructure — it needs a yield strategy. |
+| **Earn / Yield** (managed) | Global | **Yield.xyz**, **Veda Labs** | Alternative to self-directed DeFi yield if a managed vault suits the UX better. |
+| **Offramp** (stablecoins → fiat) | Africa, LatAm, SE Asia | **Kotani Pay** (Celo-native), **MoneyGram** (via Stellar), **Yellow Card** (via Polygon USDC) | Users need to exit to local currency. Kotani does mobile-money cash-out on Celo. |
+| **Card** | Global | **Rain**, **Wirex**, **Bridge** | Post-revenue milestone. Requires card-issuing partner + compliance infrastructure. |
+
+No commitment to integrate any specific provider. Listed here so the integration surface
+area is visible and decisions are intentional rather than reactive.
+
+---
+
 ## Deferred (Correct but Wrong Timing)
 
 | Task | Why deferred |

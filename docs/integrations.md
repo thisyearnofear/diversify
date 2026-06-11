@@ -237,6 +237,35 @@ The following files are git-ignored and must be configured from `.example` templ
 | CoinGecko | 50k/month | 1 min |
 | DeFiLlama | 100/day | 6 hrs |
 
+## Planned / Explored
+
+The following providers have been evaluated but not yet integrated. See `docs/roadmap.md` →
+"Post-9/0 — Full-stack fintech infrastructure" for the strategic rationale.
+
+| Provider | Layer | Chain compatibility | Celo-native? | Relevant regions |
+|---|---|---|---|---|
+| **Fonbnk** | Onramp | Celo + EVM | ✅ Yes | KE, NG, GH, ZA |
+| **Kotani Pay** | Onramp + Offramp | Celo + EVM | ✅ Yes | KE, GH, ZM, NG |
+| **Yellow Card** | Onramp + Offramp | Polygon + EVM | ❌ (bridges via USDC) | NG, KE, GH, ZA |
+| **Bitso** | Onramp + Offramp | Polygon + EVM | ❌ (bridges via USDC) | MX, BR, AR, CO |
+| **Ethena** | Earn (sUSDe) | Ethereum | ❌ | Global |
+| **Ondo Finance** | Earn (USDY) | Ethereum + Polygon | ❌ | Global |
+| **Aave** | Earn (lending) | Arbitrum + EVM | ❌ | Global |
+| **Fluid** | Earn (lending) | Arbitrum + EVM | ❌ | Global |
+| **Morpho** | Earn (lending) | Ethereum + Base | ❌ | Global |
+| **Yield.xyz** | Earn (managed) | EVM | ❌ | Global |
+| **Veda Labs** | Earn (managed) | EVM | ❌ | Global |
+| **TransFi** | Onramp + Offramp | Polygon + EVM | ❌ | Global, AE, IN, BR |
+| **StraitsX** | Onramp | EVM | ❌ | SG, ID |
+| **Coins.ph** | Onramp | EVM | ❌ | PH |
+| **MoneyGram** | Offramp | Stellar | ❌ (via Stablecoin bridge) | Global |
+| **dLocal** | Onramp + Offramp | EVM | ❌ | BR, MX, AR, CO |
+| **Rain** | Card | EVM | ❌ | Global |
+| **Wirex** | Card | EVM | ❌ | GB, EU, Global |
+| **Bridge** | Card + Virtual ACH + Stablecoin | EVM | ❌ | Global |
+
+---
+
 ## Tech Stack Summary
 
 | Category | Technology |
