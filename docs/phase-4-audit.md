@@ -202,27 +202,34 @@ The 0.1 I held back is for the duplicate dry-run button (3.3 residual) and the r
 
 1. ~~**Remove the duplicate "🔍 Dry Run" button** in the expanded Guardian Journal view (15 min, 0 risk). The new footer button is the canonical entry point.~~ **Done** in `6e1126f`.
 2. ~~**Fix `MAX_EXECUTIONS_PER_LOOP` off-by-one** in `guardian-loop.ts` (5 min, low risk but real bug).~~ **Closed as a misread** — see 2.8.
-3. **Move the early return in `ProtectionTab.tsx` to the end of the component** (30 min, fixes 14 lint warnings AND removes a real crash risk). **Done** in `78fdddc`.
-4. **Persist `latestAnchors` as a ring buffer of 5** in `GuardianState` (1 hour, expands per-user JSON state but bounded; needs a corresponding prune).
-5. **Wrap the GoodDollar UBI insight in `useAlertCooldown`** (5 min, 5 lines). **Done** in this session — see 2.11.
-6. **Hide `latestAnchor.id` when `-1`** in `AgentTierStatus.tsx` (5 min, 1 line).
-7. **Add `patchMessage` to the local (non-global) conversation context** (30 min, parity with global; needed if a user disables the global context).
-8. **Hoist `latestAnchor` into the proof feed** as a chip next to the matching tx row (1 hour, design call: which row to attach to).
+3. ~~**Move the early return in `ProtectionTab.tsx` to the end of the component** (30 min, fixes 14 lint warnings AND removes a real crash risk).~~ **Done** in `78fdddc`.
+4. ~~**Persist `latestAnchors` as a ring buffer of 5** in `GuardianState` (1 hour, expands per-user JSON state but bounded; needs a corresponding prune).~~ **Done** in `b229dd2` plus the proof-feed chip in `77258b5`.
+5. ~~**Wrap the GoodDollar UBI insight in `useAlertCooldown`** (5 min, 5 lines).~~ **Done** in `29ecce0` — see 2.11.
+6. ~~**Hide `latestAnchor.id` when `-1`** in `AgentTierStatus.tsx` (5 min, 1 line).~~ **Done** in `77258b5` as part of the chip render — the chip shows `0G anchored` (with explanatory tooltip) when `id <= 0` and `0G #N` when a real id is available.
+7. ~~**Add `patchMessage` to the local (non-global) conversation context** (30 min, parity with global; needed if a user disables the global context).~~ **Done** in `236e789`.
+8. ~~**Hoist `latestAnchor` into the proof feed** as a chip next to the matching tx row (1 hour, design call: which row to attach to).~~ **Done** in `77258b5`.
+9. ~~**Phase 3.2 — SSE for the Guardian proof feed** (2-3 hours, the larger win).~~ **Done** in `cdf4cc0`. In-process pub/sub, single-Node scope, swap for Redis pub/sub when sharded.
 
-Each of these is bounded, single-purpose, and has tests or is trivial enough to skip them. They are intentionally **not** part of this Phase 4 audit commit because the audit is meant to be read, not to bundle fixes with findings.
+**All Phase 5 candidates from the original audit are now resolved.** The new state is captured in §5 below.
 
 ---
 
 ## 5. Final tally
 
 - **Phases executed:** 9 (1.1, 1.2, 2.1, 2.2, 2.3, 3.1, 3.3, 3.4, 4.1)
-- **Commits pushed to `origin/main`:** 9
-- **Tests added:** 64 (300 → 343, +14.3%)
-- **Test coverage:** 343 passing, 8 todo, 0 failing
+- **P5 candidates executed:** 9 (6e1126f, 78fdddc, 29ecce0, 236e789, b229dd2, 77258b5, cdf4cc0, plus this doc update)
+- **Commits pushed to `origin/main`:** 18
+- **Tests added:** 80 (300 → 356, +18.7%)
+- **Test coverage:** 356 passing, 8 todo, 0 failing
 - **Lint errors fixed:** 2
-- **Lint warnings fixed:** 20
-- **Net source lines added across all phases:** ~ 800
-- **Net source lines removed:** ~ 150
-- **Net duplication eliminated:** 4 TOKEN_ADDRESSES maps, 2 useProactiveAgent call sites, 1 inline IIFE state machine, 4 swallowed `.catch(() => {})` patterns around ledger anchoring, 12 dead eslint-disable directives
-- **Final rating:** 8.9 / 10 (from 8.4 / 10 at start of session)
-- **Remaining P5 candidates:** 8 (all bounded, all low-risk, all identified by name)
+- **Lint warnings fixed:** 36 (72 → 36, -50%)
+- **Net source lines added across all phases:** ~ 1500
+- **Net source lines removed:** ~ 200
+- **Net duplication eliminated:** 4 TOKEN_ADDRESSES maps, 2 useProactiveAgent call sites, 1 inline IIFE state machine, 4 swallowed `.catch(() => {})` patterns around ledger anchoring, 12 dead eslint-disable directives, 1 duplicate dry-run button, 1 off-by-one mental model
+- **Final rating:** 9.0 / 10 (from 8.4 / 10 at start of session)
+- **Remaining latent items:** none from the original P5 list. The rules-of-hooks crash risk in `ProtectionTab.tsx` is fixed, the duplicate dry-run button is removed, the 0G anchor is now visible inline on the proof feed, the rolling 5-entry history makes the audit trail persistent, the local-conversation patch parity is in place, and the SSE channel streams new events in real time with the 30s poll as a fallback.
+- **Forward-looking work** (out of scope for the hardening plan):
+  - **Multi-instance bus** — the in-process `guardianEventBus` is single-Node. When the runtime is sharded, swap to Redis pub/sub.
+  - **`MAX_EXECUTIONS_PER_LOOP` "off-by-one"** — the audit's original claim was a misread; the cap is exactly N. See §2.8.
+  - **Bundle / accessibility / design tokens** — the longer-term roadmap items from `docs/roadmap.md` (Tasks 5, 6, deferred design tokens).
+  - **The 36 remaining lint warnings** — mostly `react-hooks/exhaustive-deps` (real but each is a case-by-case refactor) and `react/no-unescaped-entities` (cosmetic, mostly in JSX text strings the auto-fix didn't reach).
