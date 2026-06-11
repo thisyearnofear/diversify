@@ -41,6 +41,12 @@ A stablecoin saver who wants to protect purchasing power but does not want to ma
 
 4. **Calm UX.** Designed as a savings protection app, not a trading terminal. The Guardian proposes one clear action at a time. Advanced controls are hidden behind an experience mode toggle.
 
+5. **Guided first run.** A 5-step GuidedTour replaces three separate onboarding surfaces. New users pick their region and protection goal inline during the tour, persisted via `useProtectionProfile`. No modal wizard, no duplicate inline onboarding.
+
+6. **Tab discoverability.** First-visit users get an animated swipe hint above the tab bar. Tab visits and swipe gestures are tracked via a shared `useTabDiscovery` context — the hint auto-dismisses after 3 tabs or the first swipe.
+
+7. **Verifiable trust surface.** The LiveProofCard shows recent 0G-anchored Guardian actions (recommendations, rebalances) on the Protect and Overview tabs before the user connects a wallet — proof-first, not splash-first.
+
 ## Terminology Guide
 
 | Internal Term | User-Facing Term |
@@ -87,10 +93,12 @@ A stablecoin saver who wants to protect purchasing power but does not want to ma
 | Tab | Purpose |
 |-----|---------|
 | **Overview** | Portfolio summary, inflation impact, quick actions |
-| **Protection** | Choose plan, view allocation, deposit |
+| **Protect** | Choose plan, view allocation, deposit — with 4-state Guardian pipeline scrollytelling before connect |
 | **Exchange** | Swap stablecoins across regions and chains |
-| **Agent** | AI Guardian recommendations, verifiable proof, backtesting |
-| **Info** | Inflation education, strategy guides, glossary |
+| **Pilot** | AI Guardian recommendations, verifiable proof, backtesting, Guardian tier state |
+| **Learn** | Inflation education, strategy guides, glossary |
+
+New users see this order (Protect second). Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 3 tabs visited or first swipe gesture.
 
 ## Fees
 

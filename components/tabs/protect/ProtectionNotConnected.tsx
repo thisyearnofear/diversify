@@ -1,38 +1,76 @@
 /**
  * ProtectionNotConnected — Shown when the user has no wallet connected.
- * Single-purpose, self-contained, zero logic.
+ * Uses the shared UnconnectedStateShell for consistent layout.
  */
 import React from "react";
 import { Card, ConnectWalletPrompt } from "../../shared/TabComponents";
 import WalletButton from "../../wallet/WalletButton";
 import { USER_GOALS } from "@/hooks/use-protection-profile";
 import type { UserExperienceMode } from "@/context/app/types";
+import { LiveProofTicker } from "../../shared/LiveProofCard";
+import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
+import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
+import { GuardianStateScrollytelling } from "./GuardianStateScrollytelling";
 
 interface Props {
   experienceMode: UserExperienceMode;
+  onEnableDemo?: () => void;
 }
 
-export function ProtectionNotConnected({ experienceMode }: Props) {
-  return (
-    <div className="space-y-4">
-      <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-black uppercase tracking-tight">
-              Protection Plan
-            </h3>
-            <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-              Build your inflation protection plan
-            </p>
-          </div>
-          <span className="text-3xl">🤖</span>
+const HOW_IT_WORKS: HowItWorksStep[] = [
+  {
+    icon: "📈",
+    title: "Analyze Your Risk",
+    text: "Your portfolio is scanned against real-time global inflation data.",
+  },
+  {
+    icon: "🎯",
+    title: "Set Your Goal",
+    text: "Choose a protection strategy that fits your needs and risk tolerance.",
+  },
+  {
+    icon: "🔄",
+    title: "Diversify Assets",
+    text: "Move into stable currencies and real-world assets to preserve value.",
+  },
+];
+
+export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) {
+  const heroCard = (
+    <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h3 className="text-xl font-black uppercase tracking-tight">
+            Protection Plan
+          </h3>
+          <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
+            Build your inflation protection plan
+          </p>
         </div>
-        <ConnectWalletPrompt
-          message="Connect your wallet to analyze your portfolio across Arbitrum and Celo against real-time global inflation data."
-          WalletButtonComponent={<WalletButton variant="inline" />}
-          experienceMode={experienceMode}
-        />
-      </Card>
+        <span className="text-3xl">🤖</span>
+      </div>
+      <ConnectWalletPrompt
+        message="Connect your wallet to analyze your portfolio across Arbitrum and Celo against real-time global inflation data."
+        WalletButtonComponent={<WalletButton variant="inline" />}
+        experienceMode={experienceMode}
+      />
+    </Card>
+  );
+
+  return (
+    <UnconnectedStateShell
+      heroCard={heroCard}
+      showProofCard={true}
+      proofCardSide="above"
+      showDemoCta={true}
+      onEnableDemo={onEnableDemo}
+      howItWorks={HOW_IT_WORKS}
+    >
+      {/* Guardian 4-state pipeline scrollytelling — preview before connect */}
+      <GuardianStateScrollytelling />
+
+      {/* Live activity ticker — "what's been verified recently" */}
+      <LiveProofTicker limit={3} />
 
       {/* Preview of goals */}
       <Card className="bg-gray-50 border-dashed border-2 p-4">
@@ -53,6 +91,6 @@ export function ProtectionNotConnected({ experienceMode }: Props) {
           ))}
         </div>
       </Card>
-    </div>
+    </UnconnectedStateShell>
   );
 }

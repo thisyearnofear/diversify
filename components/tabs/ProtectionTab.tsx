@@ -58,7 +58,7 @@ export default function ProtectionTab({
 }: ProtectionTabProps) {
   const { address, chainId } = useWalletContext();
   const { navigateToSwap } = useNavigation();
-  const { demoMode } = useDemoMode();
+  const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
   const { askAdvisor } = useAdvisor();
   const isDemo = demoMode.isActive;
@@ -385,7 +385,7 @@ export default function ProtectionTab({
   }
 
   if (!address && !isDemo) {
-    return <ProtectionNotConnected experienceMode={experienceMode} />;
+    return <ProtectionNotConnected experienceMode={experienceMode} onEnableDemo={enableDemoMode} />;
   }
 
   // ============================================================================

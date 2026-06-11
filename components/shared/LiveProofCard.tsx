@@ -1,0 +1,210 @@
+/**
+ * LiveProofCard — Visible "this product is real" surface.
+ *
+ * Shows the live 0G RecommendationLedger stats so the unconnected user
+ * sees verifiable on-chain activity before they connect a wallet. Renders
+ * the contract address, the total number of recommendations recorded,
+ * and a link to the 0G Galileo Testnet explorer.
+ *
+ * Pure presentational component. The data hook is `useProofFeed` from
+ * `@/hooks/use-proof-feed`; the data is read from a page-level
+ * `ProofFeedProvider` if mounted, or fetched by the hook standalone.
+ *
+ * Per the Core Principles:
+ *   - ENHANCEMENT FIRST: reuses the existing gradient-card pattern from
+ *     the Protect hero card and the Overview "Protect Your Savings" card.
+ *   - CLEAN: explicit props for every visible state. No implicit state.
+ *   - MODULAR: no fetches, no side effects. Easy to test in isolation.
+ *   - ORGANIZED: lives in components/shared/ so any tab can import it.
+ *
+ * Visual states (driven by the hook):
+ *   - loading + no data: skeleton row
+ *   - loaded: full card with stats
+ *   - error + no cache: degraded card with explorer link only
+ *   - error + cache: card with stats and a "cached 2 min ago" hint
+ */
+
+import React from 'react';
+import { motion } from 'framer-motion';
+import { useProofFeed, type LedgerRecommendation } from '@/hooks/use-proof-feed';
+
+const SHORT_ADDRESS_RE = /^(0x[0-9a-fA-F]{4})[0-9a-fA-F]+(0x[0-9a-fA-F]{4})$/;
+
+function shortAddress(addr: string | null | undefined): string {
+    if (!addr) return '';
+    const m = SHORT_ADDRESS_RE.exec(addr);
+    return m ? `${m[1]}…${m[2]}` : addr;
+}
+
+function timeAgo(iso: string, nowMs: number = Date.now()): string {
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return '';
+    const seconds = Math.max(0, Math.floor((nowMs - t) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} d ago`;
+}
+
+export function LiveProofCard() {
+    const { data, isLoading, isStale, error } = useProofFeed();
+
+    const stats = data?.stats;
+    const contractExplorer = data?.contractExplorer;
+
+    // ── Skeleton ──
+    if (isLoading && !data) {
+        return (
+            <div className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/60 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/20 p-4 animate-pulse">
+                <div className="flex items-center gap-3 mb-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-emerald-100 dark:bg-emerald-900/40 rounded w-2/3" />
+                        <div className="h-2 bg-emerald-100/60 dark:bg-emerald-900/30 rounded w-1/3" />
+                    </div>
+                </div>
+                <div className="h-3 bg-emerald-100/60 dark:bg-emerald-900/30 rounded w-1/2" />
+            </div>
+        );
+    }
+
+    // ── Degraded (no data, no cache, fetch failed) ──
+    if (!data && error) {
+        return (
+            <div className="rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/10 p-4">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-300">
+                    <span>⚠️</span>
+                    <span>Live receipts unavailable</span>
+                </div>
+                <a
+                    href="https://chainscan-galileo.0g.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-xs font-bold text-amber-700 dark:text-amber-300 underline"
+                >
+                    View 0G Galileo Testnet explorer →
+                </a>
+            </div>
+        );
+    }
+
+    // ── Loaded (or stale) ──
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/60 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/20 p-4"
+            data-testid="live-proof-card"
+        >
+            <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">
+                        <span className="text-base">🔗</span>
+                    </div>
+                    <div>
+                        <h3 className="text-sm font-black text-emerald-900 dark:text-emerald-100">
+                            0G Galileo Testnet
+                        </h3>
+                        <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                            {isStale ? 'Cached' : 'Live'} · chain {stats?.chainId ?? 16602}
+                        </p>
+                    </div>
+                </div>
+                {stats && (
+                    <div className="text-right">
+                        <div className="text-2xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums">
+                            {stats.totalRecommendations.toLocaleString()}
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                            on-chain receipts
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="flex items-center justify-between gap-2 text-xs">
+                <div className="font-mono text-emerald-700 dark:text-emerald-300">
+                    {shortAddress(contractExplorer ?? stats?.contractAddress)}
+                </div>
+                {contractExplorer && (
+                    <a
+                        href={contractExplorer}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-700 dark:text-emerald-300 font-bold underline hover:no-underline whitespace-nowrap"
+                    >
+                        View on-chain →
+                    </a>
+                )}
+            </div>
+
+            {isStale && data?.capturedAt && (
+                <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                    Showing last known data ({timeAgo(data.capturedAt)}).
+                </p>
+            )}
+        </motion.div>
+    );
+}
+
+/**
+ * LiveProofTicker — A compact "what's been verified recently" list.
+ * Shows the most recent N recommendations from the proof feed so the
+ * unconnected user sees live activity without a wallet.
+ */
+export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
+    const { data, isLoading } = useProofFeed();
+    const recent: LedgerRecommendation[] = (data?.recent ?? []).slice(0, limit);
+
+    if (isLoading && !data) {
+        return (
+            <div className="rounded-xl border border-gray-100 dark:border-gray-800 p-3 space-y-2 animate-pulse">
+                <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded w-1/3" />
+                <div className="h-2 bg-gray-100/60 dark:bg-gray-800/60 rounded w-2/3" />
+            </div>
+        );
+    }
+
+    if (recent.length === 0) {
+        return null;
+    }
+
+    return (
+        <div
+            className="rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-white/40 dark:bg-gray-900/40 p-3"
+            data-testid="live-proof-ticker"
+        >
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-2">
+                Recent on-chain activity
+            </h4>
+            <ul className="space-y-1.5">
+                {recent.map((rec) => (
+                    <li
+                        key={rec.id}
+                        className="flex items-center gap-2 text-[11px] text-emerald-900 dark:text-emerald-100"
+                    >
+                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                            #{rec.id}
+                        </span>
+                        <span className="font-bold uppercase tracking-wider">
+                            {rec.action.replace(/_/g, ' ')}
+                        </span>
+                        {rec.targetToken && (
+                            <span className="text-emerald-700 dark:text-emerald-300">
+                                → {rec.targetToken}
+                            </span>
+                        )}
+                        <span className="ml-auto text-emerald-600/60 dark:text-emerald-400/60 font-bold tabular-nums">
+                            {Math.round(rec.confidence * 100)}%
+                        </span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+}

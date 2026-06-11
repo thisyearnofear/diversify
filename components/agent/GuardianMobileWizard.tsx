@@ -16,6 +16,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useMobile } from "@/hooks/use-mobile";
+import { LiveProofCard } from "../shared/LiveProofCard";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -360,6 +361,10 @@ export function GuardianMobileWizard({
           <li>4. You can withdraw anytime — fees settled at withdrawal</li>
         </ul>
       </div>
+
+      {/* Trust surface right before the user signs the EIP-712 permission:
+          show them what other Guardian actions have been verified on-chain. */}
+      <LiveProofCard />
 
       <div className="text-center">
         <div className="text-xs text-gray-400">

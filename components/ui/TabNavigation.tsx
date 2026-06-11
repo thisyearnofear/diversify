@@ -2,6 +2,8 @@ import React, { useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
 import type { UserExperienceMode } from "@/context/app/types";
+import { TabNavHint } from "./TabNavHint";
+import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 
 interface TabItem {
   id: TabId;
@@ -28,6 +30,15 @@ const TABS: TabItem[] = [
     ),
   },
   {
+    id: "protect",
+    label: "Protect",
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+      </svg>
+    ),
+  },
+  {
     id: "exchange",
     label: "Exchange",
     icon: (
@@ -48,15 +59,6 @@ const TABS: TabItem[] = [
     ),
   },
   {
-    id: "protect",
-    label: "Protect",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-      </svg>
-    ),
-  },
-  {
     id: "info",
     label: "Learn",
     icon: (
@@ -67,8 +69,9 @@ const TABS: TabItem[] = [
   },
 ];
 
-// Tabs shown in beginner mode (primary tabs only)
-const BEGINNER_TAB_IDS: TabId[] = ["overview", "exchange", "protect"];
+// Tabs shown in beginner mode — includes Pilot so new users see the
+// autonomous Guardian (the single most differentiated product feature).
+const BEGINNER_TAB_IDS: TabId[] = ["overview", "protect", "exchange", "agent"];
 
 // Tabs only available in advanced mode
 const ADVANCED_ONLY_TAB_IDS: TabId[] = [];
@@ -81,6 +84,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     : TABS.filter(t => isAdvanced || !ADVANCED_ONLY_TAB_IDS.includes(t.id));
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const { recordTabVisit, recordTabBar } = useTabDiscovery();
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, currentIndex: number) => {
     const tabCount = visibleTabs.length;
@@ -104,16 +108,19 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
 
     const nextTab = visibleTabs[newIndex];
     setActiveTab(nextTab.id);
+    recordTabVisit(nextTab.id);
     tabRefs.current[newIndex]?.focus();
   }, [visibleTabs, setActiveTab]);
 
   return (
-    <div
-      role="tablist"
-      aria-label="Main navigation"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe"
-    >
-      <div className="max-w-md mx-auto flex">
+    <>
+      <TabNavHint />
+      <div
+        role="tablist"
+        aria-label="Main navigation"
+        className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe"
+      >
+        <div className="max-w-md mx-auto flex">
         {visibleTabs.map((tab, index) => {
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
@@ -131,6 +138,8 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
                   window.navigator.vibrate(10);
                 }
                 setActiveTab(tab.id);
+                recordTabBar();
+                recordTabVisit(tab.id);
               }}
               onKeyDown={(e) => handleKeyDown(e, index)}
               whileTap={{ scale: 0.9 }}
@@ -173,5 +182,6 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
         })}
       </div>
     </div>
+    </>
   );
 }

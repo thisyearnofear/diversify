@@ -9,6 +9,7 @@ import dynamic from "next/dynamic";
 import type { TabId } from "@/constants/tabs";
 
 import { useAppShell } from "@/hooks/use-app-shell";
+import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { GuardianStreakWidget } from "@/components/agent/GuardianStreakWidget";
@@ -81,7 +82,7 @@ function TabPane({ id, children }: TabPaneProps) {
   );
 }
 
-const TAB_DISPLAY_ORDER = ["overview", "exchange", "agent", "protect", "info"] as const;
+const TAB_DISPLAY_ORDER = ["overview", "protect", "exchange", "agent", "info"] as const;
 
 // ── Component ──
 
@@ -93,6 +94,7 @@ export default function TabContentRouter() {
     inflationData, currencyPerformanceData, availableTokens,
     walletChainId, isMiniPay, isFarcaster,
   } = useAppShell();
+  const { recordSwipe, recordTabVisit } = useTabDiscovery();
 
   return (
     <motion.div
@@ -107,10 +109,14 @@ export default function TabContentRouter() {
           const newTab = TAB_DISPLAY_ORDER[idx + 1];
           trackTabChange(activeTab, newTab);
           setActiveTab(newTab as TabId);
+          recordSwipe();
+          recordTabVisit(newTab as TabId);
         } else if (info.offset.x > SWIPE_THRESHOLD && idx > 0) {
           const newTab = TAB_DISPLAY_ORDER[idx - 1];
           trackTabChange(activeTab, newTab);
           setActiveTab(newTab as TabId);
+          recordSwipe();
+          recordTabVisit(newTab as TabId);
         }
       }}
     >

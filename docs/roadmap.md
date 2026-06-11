@@ -39,12 +39,19 @@ All tasks are ordered by risk-adjusted impact. Things that require architectural
 | Duplicate "🔍 Dry Run" button removed | Done | `AgentTierStatus.tsx` line 731-744. Live "⚡ Execute Now (Live)" kept in the expanded view. |
 | Token + dry-run + displayName tests | 19 new tests | `celo-tokens.test.ts` (13), `use-session-key-dry-run.test.ts` (3), `AppShell.test.tsx` displayName refactor (already counted). |
 
-## Completed hardening (Phase 4 — audit)
+## Completed hardening (Phase 4 — UX frontend)
 
 | Item | Status | Where |
 |---|---|---|
 | Final audit document | Done | `docs/phase-4-audit.md` — 212 lines; per-phase verdicts, 10 cross-cutting findings (4 real), 8 ranked P5 candidates. |
-| Score update 8.4 → 8.9 / 10 | Done | Same document, per-pillar deltas. |
+| Tab reorder (new-user first-run) | Done | `TabNavigation.tsx` — Home → Protect → Exchange → Pilot → Learn. Beginner mode includes Pilot. |
+| GuardianStateScrollytelling component | Done | `components/tabs/protect/GuardianStateScrollytelling.tsx` — 4-state pipeline (idle → authorized → funded → monitoring) on Protect tab. |
+| TabNavHint + useTabDiscovery | Done | `components/ui/TabNavHint.tsx`, `hooks/use-tab-discovery.tsx` — animated swipe hint above tab bar, shared context via `TabDiscoveryProvider`, auto-dismiss after 3 tabs or first swipe. |
+| Shared TabDiscovery context (fix dual-instance) | Done | `TabDiscoveryProvider` in `AppShell.tsx` wraps both `TabNavigation` and `TabContentRouter`. Both read from the same context — a swipe immediately suppresses the hint. |
+| GuidedTour consolidation (Phase 3 UX) | Done | `components/tour/GuidedTour.tsx` expanded to 5 steps. Step 4 = interactive region/goal picker. `InlineOnboarding.tsx` deleted. |
+| UnconnectedStateShell prop expansion | Done | Added `proofCardSide` (above/below hero), `className`, `howItWorksCardClassName`, `demoCtaCardClassName`. |
+| LiveProofCard trust surface on Protect | Done | `ProtectionNotConnected.tsx` — `proofCardSide="above"` so 0G proof feed renders before hero card. |
+| Score update 8.4 → 8.9 / 10 | Done | `docs/phase-4-audit.md`, per-pillar deltas. |
 
 ---
 

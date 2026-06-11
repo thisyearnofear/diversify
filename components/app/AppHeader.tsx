@@ -24,7 +24,7 @@ export default function AppHeader({
   const [activeHint, setActiveHint] = useState<"mode" | "voice" | null>(null);
   const [showModeTip, setShowModeTip] = useState(() => {
     if (typeof window === "undefined") return false;
-    return !localStorage.getItem("seenModeTip") && !!localStorage.getItem("inlineOnboardingDismissed");
+    return !localStorage.getItem("seenModeTip");
   });
   const dismissModeTip = () => {
     setShowModeTip(false);

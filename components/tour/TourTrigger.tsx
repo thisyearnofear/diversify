@@ -5,21 +5,44 @@ import { useWalletContext } from "../wallet/WalletProvider";
 
 const TOUR_ID = "first-time-user-tour";
 
+/**
+ * TourTrigger — Auto-starts the first-run tour on first-time visit.
+ *
+ * Consolidates InlineOnboarding's localStorage key into the tour's dismiss
+ * system via migration: if a user previously dismissed InlineOnboarding,
+ * we migrate that to the tour dismiss key so they don't see the tour.
+ */
+function migrateOldDismiss(): void {
+    if (typeof window === "undefined") return;
+    try {
+        const oldKey = "inlineOnboardingDismissed";
+        if (localStorage.getItem(oldKey) && !localStorage.getItem("dismissedTours")) {
+            localStorage.setItem("dismissedTours", JSON.stringify([TOUR_ID]));
+            localStorage.removeItem(oldKey);
+        }
+    } catch {
+        // Ignore storage errors
+    }
+}
+
 export default function TourTrigger() {
     const { startTour, isTourDismissed } = useTour();
     const { userActivity } = useExperience();
     const { address } = useWalletContext();
 
+    // Migrate old InlineOnboarding dismiss key on mount
     useEffect(() => {
-        // ENHANCED: Show tour immediately for first-time users (no delay - urgency!)
+        migrateOldDismiss();
+    }, []);
+
+    useEffect(() => {
         if (
             !address && // Not connected yet
             userActivity.swapCount === 0 && // Never made a swap
             !isTourDismissed(TOUR_ID) // Haven't dismissed the tour
         ) {
-            // Shorter delay - create urgency
             const timer = setTimeout(() => {
-                startTour(TOUR_ID, 4, "overview", "welcome");
+                startTour(TOUR_ID, 5, "overview", "welcome");
             }, 800);
 
             return () => clearTimeout(timer);

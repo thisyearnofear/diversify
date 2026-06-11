@@ -12,6 +12,7 @@ import { NETWORKS } from "@/config";
 import TabNavigation from "@/components/ui/TabNavigation";
 import { WalletTutorial } from "@/components/wallet/WalletTutorial";
 import AppHeader from "@/components/app/AppHeader";
+import { TabDiscoveryProvider } from "@/hooks/use-tab-discovery";
 
 import TabContentRouter from "./TabContentRouter";
 import FloatingControls from "./FloatingControls";
@@ -80,15 +81,17 @@ export default function AppShell() {
         handleTranscription={handleTranscription}
       />
 
-      <TabNavigation
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        badges={{}}
-        experienceMode={experienceMode}
-      />
+      <TabDiscoveryProvider>
+        <TabNavigation
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          badges={{}}
+          experienceMode={experienceMode}
+        />
 
-      {/* Tab content */}
-      <TabContentRouter />
+        {/* Tab content */}
+        <TabContentRouter />
+      </TabDiscoveryProvider>
 
       <WalletTutorial
         isOpen={isTutorialOpen}

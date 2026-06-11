@@ -22,7 +22,8 @@
       ]
     },
     "incremental": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "allowJs": true
   },
   "include": [
     "**/*.ts",

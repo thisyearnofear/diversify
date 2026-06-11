@@ -30,7 +30,6 @@ import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { Skeleton } from "../shared/TabComponents";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import AgentQuickActions from "../agent/AgentQuickActions";
-import EmptyState from "../ui/EmptyState";
 import BitsoJunoCard from "../agent/BitsoJunoCard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -42,6 +41,28 @@ interface AgentTabProps {
 }
 
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
+import { UnconnectedStateShell } from "../shared/UnconnectedStateShell";
+import type { HowItWorksStep } from "../shared/UnconnectedStateShell";
+import WalletButton from "../wallet/WalletButton";
+import { useDemoMode } from "../../context/app/DemoModeContext";
+
+const HOW_IT_WORKS: HowItWorksStep[] = [
+  {
+    icon: "🔑",
+    title: "Sign a Permission",
+    text: "Set a daily spending limit and authorize the Guardian to act on your behalf.",
+  },
+  {
+    icon: "🤖",
+    title: "Guardian Monitors",
+    text: "Your portfolio is watched 24/7 for inflation risks and rebalancing opportunities.",
+  },
+  {
+    icon: "⚡",
+    title: "Automatic Protection",
+    text: "Within your limits, the Guardian executes protection swaps autonomously.",
+  },
+];
 
 export default function AgentTab({
   isMiniPay,
@@ -49,6 +70,7 @@ export default function AgentTab({
   portfolio,
 }: AgentTabProps) {
   const { address } = useWalletContext();
+  const { enableDemoMode } = useDemoMode();
   const {
     capabilities,
     autonomousStatus,
@@ -103,15 +125,38 @@ export default function AgentTab({
 
   // Empty state when wallet not connected
   if (!address) {
-    return (
-      <div className="space-y-4 pb-6">
-        <BitsoJunoCard walletConnected={false} />
-        <EmptyState
-          icon="🤖"
-          title="AI Advisor"
-          description="Connect a wallet to get personalized financial advice."
-        />
+    const heroCard = (
+      <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6 rounded-2xl">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-xl font-black uppercase tracking-tight">
+              Your AI Guardian
+            </h3>
+            <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
+              Autonomous protection, verifiable on-chain
+            </p>
+          </div>
+          <span className="text-3xl">🤖</span>
+        </div>
+        <p className="text-indigo-100 text-xs font-bold leading-relaxed mb-4">
+          The Guardian monitors your portfolio 24/7, executes protection swaps within
+          the limits you set, and records every action on the 0G blockchain for total
+          transparency.
+        </p>
+        <WalletButton variant="inline" className="w-full" />
       </div>
+    );
+
+    return (
+      <UnconnectedStateShell
+        heroCard={heroCard}
+        showProofCard={true}
+        showDemoCta={true}
+        onEnableDemo={enableDemoMode}
+        howItWorks={HOW_IT_WORKS}
+      >
+        <BitsoJunoCard walletConnected={false} />
+      </UnconnectedStateShell>
     );
   }
 
