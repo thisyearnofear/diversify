@@ -26,6 +26,7 @@ import { getGuardianState, pushAnchorHistory, updateGuardianState } from '../vau
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared';
+import { guardianEventBus } from './_guardian-event-bus';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -248,6 +249,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             latestAnchor: newAnchor,
             latestAnchors: nextHistory,
           });
+
+          // Notify any open SSE subscribers for this user. This is
+          // best-effort: a missing subscriber is not an error.
+          guardianEventBus.publish({
+            type: 'anchor',
+            address: userAddress,
+            anchor: newAnchor,
+          });
+          if (txHash) {
+            guardianEventBus.publish({
+              type: 'execution',
+              address: userAddress,
+              txHash,
+              status: 'confirmed',
+            });
+          }
 
           // Persist to Cognee memory (fire-and-forget)
           cogneeMemoryService.persistInteraction(

@@ -22,6 +22,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateChatCompletion, cogneeMemoryService, recommendationLedgerService } from '@diversifi/shared';
 import { updateGuardianState } from '../vault/_guardian-state';
+import { guardianEventBus } from './_guardian-event-bus';
 import { Permission } from '../../../models/Permission';
 import dbConnect from '../../../lib/mongodb';
 
@@ -127,9 +128,10 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
 
     let usersUpdated = 0;
     for (const perm of activePermissions) {
+      const capturedAt = new Date().toISOString();
       await updateGuardianState(perm.userAddress, {
         latestRecommendation: {
-          capturedAt: new Date().toISOString(),
+          capturedAt,
           source: 'advisor-analysis',
           action: 'REBALANCE',
           targetToken: parsed.targetToken || 'cEUR',
@@ -138,6 +140,11 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
           confidence: parsed.confidence,
           riskLevel: parsed.confidence > 0.8 ? 'LOW' : 'MEDIUM',
         },
+      });
+      guardianEventBus.publish({
+        type: 'recommendation',
+        address: perm.userAddress,
+        capturedAt,
       });
       usersUpdated++;
     }

@@ -198,6 +198,7 @@ export function useSessionKey(): UseSessionKeyReturn {
     const [error, setError] = useState<string | null>(null);
     const [sessionInfo, setSessionInfo] = useState<GuardianSessionInfo | null>(null);
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const streamRef = useRef<EventSource | null>(null);
 
     // Poll server for session status + execution receipts when active
     const pollSession = useCallback(async (userAddress: string) => {
@@ -221,13 +222,45 @@ export function useSessionKey(): UseSessionKeyReturn {
             const userAddress = signedPermission.permission.userAddress;
             // Initial fetch
             pollSession(userAddress);
-            // Poll every 30 seconds
+            // Poll every 30 seconds as a fallback for the SSE channel
+            // (SSE is the primary path; the poll is the safety net in
+            // case EventSource fails to connect in this browser/network).
             pollingRef.current = setInterval(() => pollSession(userAddress), 30_000);
+
+            // Open the SSE stream. On every real event we receive
+            // (anchor, execution, recommendation), trigger an immediate
+            // re-fetch so the proof feed and session info update
+            // without waiting up to 30s. EventSource handles reconnect
+            // automatically; we just dispose on unmount or address change.
+            if (typeof EventSource !== 'undefined') {
+                const url = `${API_BASE}/api/agent/guardian-events?userAddress=${encodeURIComponent(userAddress)}`;
+                const es = new EventSource(url);
+                const handler = () => {
+                    pollSession(userAddress);
+                };
+                es.addEventListener('anchor', handler);
+                es.addEventListener('execution', handler);
+                es.addEventListener('recommendation', handler);
+                // The 'hello' event is the stream-is-up confirmation;
+                // we don't need to re-fetch on it, just ignore.
+                streamRef.current = es;
+                return () => {
+                    es.removeEventListener('anchor', handler);
+                    es.removeEventListener('execution', handler);
+                    es.removeEventListener('recommendation', handler);
+                    es.close();
+                    streamRef.current = null;
+                };
+            }
         }
         return () => {
             if (pollingRef.current) {
                 clearInterval(pollingRef.current);
                 pollingRef.current = null;
+            }
+            if (streamRef.current) {
+                streamRef.current.close();
+                streamRef.current = null;
             }
         };
     }, [status, signedPermission, pollSession]);
