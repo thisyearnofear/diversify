@@ -8,6 +8,7 @@ import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
 import { useClaimFlow, ClaimFlowOverlay } from "../../hooks/use-claim-flow";
+import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from "@diversifi/shared";
 import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";
@@ -51,15 +52,6 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
       const tokenIn = assetParts.length > 1 ? assetParts[1] : 'cUSD';
       const tokenOut = assetParts[0] || action.targetAsset || 'cUSD';
 
-      const TOKEN_ADDRESSES: Record<string, string> = {
-        cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-        cEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
-        cREAL: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787',
-        KESm: '0x456a3D042C0DbD3db53D5489e98dFb038553B0d0',
-        COPm: '0x8A567e2aE79CA692Bd748aB832081C45de4041eA',
-        PHPm: '0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B',
-      };
-
       const amountIn = action.amount?.toString() || '500';
 
       // Route through vault system: permission check → fee calc → smart account execution
@@ -72,9 +64,9 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
             action: 'swap',
             urgency: 'high',
             tokenIn,
-            tokenInAddress: TOKEN_ADDRESSES[tokenIn] || TOKEN_ADDRESSES.cUSD,
+            tokenInAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[tokenIn] || CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
             tokenOut,
-            tokenOutAddress: TOKEN_ADDRESSES[tokenOut] || TOKEN_ADDRESSES.cUSD,
+            tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[tokenOut] || CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
             amountIn: (parseFloat(amountIn) * 1e18).toString(),
             reason: action.reason || `AI-recommended rebalance to ${tokenOut}`,
             estimatedAmountUSD: parseFloat(amountIn),

@@ -24,6 +24,7 @@ import {
   getSmartAccountProvider,
   type SmartAccountProvider,
 } from '../../../packages/shared/src/services/vault/smart-account-provider';
+import { CELO_TOKEN_ADDRESSES } from '../../../packages/shared/src/config/celo-tokens';
 
 // Register providers (ensures they're available)
 import '../../../packages/shared/src/services/vault/providers';
@@ -31,15 +32,9 @@ import '../../../packages/shared/src/services/vault/providers';
 const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org';
 const VAULT_KEY = process.env.VAULT_PRIVATE_KEY;
 
-const TOKENS: Record<string, { address: `0x${string}`; decimals: number; stablecoin: boolean; region?: string }> = {
-  CELO:  { address: '0x471EcE3750Da237f93B8E339c536989b8978a438' as `0x${string}`, decimals: 18, stablecoin: false },
-  cUSD:  { address: '0x765DE816845861e75A25fCA122bb6898B8B1282a' as `0x${string}`, decimals: 18, stablecoin: true, region: 'US' },
-  cEUR:  { address: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73' as `0x${string}`, decimals: 18, stablecoin: true, region: 'EU' },
-  cREAL: { address: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787' as `0x${string}`, decimals: 18, stablecoin: true, region: 'BR' },
-  KESm:  { address: '0x456a3D042C0DbD3db53D5489e98dFb038553B0d0' as `0x${string}`, decimals: 18, stablecoin: true, region: 'KE' },
-  COPm:  { address: '0x8A567e2aE79CA692Bd748aB832081C45de4041eA' as `0x${string}`, decimals: 18, stablecoin: true, region: 'CO' },
-  PHPm:  { address: '0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B' as `0x${string}`, decimals: 18, stablecoin: true, region: 'PH' },
-};
+// CELO token metadata is sourced from the shared config so the executor
+// can never drift from the rest of the codebase.
+const TOKENS = CELO_TOKEN_ADDRESSES;
 
 const MENTO_BROKER = '0x777A8255cA72412f0d706dc03C9D1987306B4CaD';
 

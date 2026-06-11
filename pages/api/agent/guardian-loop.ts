@@ -25,7 +25,7 @@ import { vaultStore } from '../vault/_store';
 import { getGuardianState, updateGuardianState } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
-import { cogneeMemoryService, recommendationLedgerService } from '@diversifi/shared';
+import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -41,16 +41,6 @@ const GUARDIAN_LOOP_SECRET = (() => {
 })();
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
 const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
-
-const TOKEN_ADDRESSES: Record<string, string> = {
-  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-  cEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
-  cREAL: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787',
-  KESm: '0x456a3D042C0DbD3db53D5489e98dFb038553B0d0',
-  COPm: '0x8A567e2aE79CA692Bd748aB832081C45de4041eA',
-  PHPm: '0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B',
-  USDY: '0x765DE816845861e75A25fCA122bb6898B8B1282a', // placeholder for Celo
-};
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -195,9 +185,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         action: 'swap',
         urgency: 'high',
         tokenIn: 'cUSD',
-        tokenInAddress: TOKEN_ADDRESSES.cUSD,
+        tokenInAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
         tokenOut: targetToken,
-        tokenOutAddress: TOKEN_ADDRESSES[targetToken] || TOKEN_ADDRESSES.cEUR,
+        tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[targetToken] || CELO_TOKEN_ADDRESS_BY_SYMBOL.cEUR,
         amountIn: `${Math.max(1, Math.round(estimatedCost))}000000000000000000`,
         reason: recommendation.oneLiner || `Guardian auto-execute: ${recommendation.reasoning || 'AI-recommended rebalance'}`,
         estimatedAmountUSD: estimatedCost,

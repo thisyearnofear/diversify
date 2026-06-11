@@ -3,6 +3,7 @@ import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from './_store';
 import { circleExecutor } from './_executor';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
+import { CELO_TOKEN_ADDRESS_BY_SYMBOL, isKnownCeloToken } from '../../../packages/shared/src/config/celo-tokens';
 import {
   getGuardianState,
 } from './_guardian-state';
@@ -11,28 +12,19 @@ type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' 
 
 const rebalanceRateMap = new Map<string, number>();
 
-const TOKEN_ADDRESSES: Record<string, string> = {
-  cUSD: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
-  cEUR: '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73',
-  cREAL: '0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787',
-  KESm: '0x456a3D042C0DbD3db53D5489e98dFb038553B0d0',
-  COPm: '0x8A567e2aE79CA692Bd748aB832081C45de4041eA',
-  PHPm: '0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B',
-};
-
 function buildDemoRecommendation(
   targetToken: string,
   amountUSD: number,
   reason: string,
 ): RebalanceRecommendation[] {
-  const normalizedTarget = TOKEN_ADDRESSES[targetToken] ? targetToken : 'cEUR';
+  const normalizedTarget = isKnownCeloToken(targetToken) ? targetToken : 'cEUR';
   return [{
     action: 'swap',
     urgency: 'high',
     tokenIn: 'cUSD',
-    tokenInAddress: TOKEN_ADDRESSES.cUSD,
+    tokenInAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
     tokenOut: normalizedTarget,
-    tokenOutAddress: TOKEN_ADDRESSES[normalizedTarget],
+    tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[normalizedTarget],
     amountIn: `${Math.max(1, Math.round(amountUSD))}000000000000000000`,
     reason,
     estimatedAmountUSD: Math.max(1, Math.round(amountUSD)),
