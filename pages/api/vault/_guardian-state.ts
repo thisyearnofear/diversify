@@ -50,6 +50,12 @@ export interface GuardianAnchorRecord {
 export interface GuardianStateRecord {
   latestRecommendation?: GuardianRecommendationSnapshot;
   latestAnchor?: GuardianAnchorRecord;
+  /**
+   * Map of alertId → unix epoch ms when the alert was last emitted.
+   * Per-user (server-side) cooldowns for the proactive monitoring loop.
+   * Pruned to a 4× cooldown window on every write.
+   */
+  alertCooldowns?: Record<string, number>;
 }
 
 type GuardianStateStore = Record<string, GuardianStateRecord>;
@@ -68,6 +74,21 @@ async function loadStore(): Promise<GuardianStateStore> {
 
 async function saveStore(store: GuardianStateStore): Promise<void> {
   await writeJsonFile(STORAGE_PATH, store);
+}
+
+/**
+ * Pure helper: prune an alertCooldowns map down to entries fired within
+ * the most recent `windowMs`. Older entries are dropped to keep the
+ * per-user JSON file bounded.
+ */
+export function pruneAlertCooldowns(
+  cooldowns: Record<string, number>,
+  windowMs: number,
+  now: number = Date.now(),
+): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(cooldowns).filter(([, timestamp]) => now - timestamp <= windowMs),
+  );
 }
 
 export async function getGuardianState(userAddress: string): Promise<GuardianStateRecord | null> {

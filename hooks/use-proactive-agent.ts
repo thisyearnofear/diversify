@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { agentEventBus } from './agent-event-bus';
 import { marketPulseService } from '@diversifi/shared';
 import { useStreakRewards } from './use-streak-rewards';
@@ -18,7 +18,7 @@ type YieldOpportunity = {
 };
 
 const EXECUTABLE_YIELD_TOKENS = new Set(['USDY', 'PAXG', 'SYRUPUSDC', 'CUSD', 'CEUR', 'USDC', 'USDT']);
-const YIELD_ALERT_STORAGE_KEY = 'diversifi-proactive-yield-alerts';
+/** Must match the server-side cooldown in `pages/api/vault/guardian-state.ts`. */
 const YIELD_ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 
 function getExecutableTargetToken(symbol: string): string | null {
@@ -29,55 +29,91 @@ function getExecutableTargetToken(symbol: string): string | null {
   return EXECUTABLE_YIELD_TOKENS.has(normalized) ? normalized : null;
 }
 
-function getYieldAlertMap(): Record<string, number> {
-  if (typeof window === 'undefined') return {};
+/**
+ * useAlertCooldown
+ *
+ * Per-user alert cooldowns backed by `GuardianState.alertCooldowns` on the
+ * server. Replaces the old per-browser `localStorage` map. Returns a
+ * `shouldSend(alertId)` check and a `markSent(alertId)` writer.
+ *
+ * Behaviour:
+ *  - On mount (and on address change) the current cooldown map is fetched
+ *    once via GET /api/vault/guardian-state.
+ *  - `markSent` POSTs `{ recordAlert: { alertId, firedAt } }` and updates
+ *    local state optimistically so the rest of the loop doesn't have to
+ *    wait for the round-trip.
+ *  - When no wallet is connected, both helpers are no-ops. This matches
+ *    the previous behaviour (the loop was guarded by `if (targetToken && address)`).
+ */
+function useAlertCooldown(userAddress: string | null | undefined): {
+    shouldSend: (alertId: string) => boolean;
+    markSent: (alertId: string) => void;
+} {
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+    const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
 
-  try {
-    const raw = localStorage.getItem(YIELD_ALERT_STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as Record<string, number>;
-  } catch {
-    return {};
-  }
-}
+    useEffect(() => {
+        if (!userAddress) {
+            setCooldowns({});
+            return;
+        }
 
-function setYieldAlertMap(alerts: Record<string, number>) {
-  if (typeof window === 'undefined') return;
+        let cancelled = false;
+        fetch(`${API_BASE}/api/vault/guardian-state?userAddress=${encodeURIComponent(userAddress)}`)
+            .then((res) => res.ok ? res.json() : null)
+            .then((data) => {
+                if (cancelled || !data?.state?.alertCooldowns) return;
+                setCooldowns(data.state.alertCooldowns);
+            })
+            .catch(() => {
+                // Best-effort only — missing cooldown state should not block alerts.
+            });
 
-  try {
-    localStorage.setItem(YIELD_ALERT_STORAGE_KEY, JSON.stringify(alerts));
-  } catch {
-    // Best-effort only.
-  }
-}
+        return () => {
+            cancelled = true;
+        };
+    }, [API_BASE, userAddress]);
 
-function shouldSendYieldAlert(alertId: string): boolean {
-  const alerts = getYieldAlertMap();
-  const lastSentAt = alerts[alertId];
+    const shouldSend = useCallback(
+        (alertId: string) => {
+            if (!userAddress) return true;
+            const lastSentAt = cooldowns[alertId];
+            if (!lastSentAt) return true;
+            return Date.now() - lastSentAt > YIELD_ALERT_COOLDOWN_MS;
+        },
+        [cooldowns, userAddress],
+    );
 
-  if (!lastSentAt) return true;
-  return Date.now() - lastSentAt > YIELD_ALERT_COOLDOWN_MS;
-}
+    const markSent = useCallback(
+        (alertId: string) => {
+            if (!userAddress) return;
+            const firedAt = Date.now();
+            setCooldowns((prev) => ({ ...prev, [alertId]: firedAt }));
+            fetch(`${API_BASE}/api/vault/guardian-state`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userAddress,
+                    recordAlert: { alertId, firedAt },
+                }),
+            }).catch(() => {
+                // Best-effort only.
+            });
+        },
+        [API_BASE, userAddress],
+    );
 
-function markYieldAlertSent(alertId: string) {
-  const alerts = getYieldAlertMap();
-  alerts[alertId] = Date.now();
-
-  const pruned = Object.fromEntries(
-    Object.entries(alerts).filter(([, timestamp]) => Date.now() - timestamp <= YIELD_ALERT_COOLDOWN_MS * 4)
-  );
-
-  setYieldAlertMap(pruned);
+    return { shouldSend, markSent };
 }
 
 /**
  * useProactiveAgent
- * 
+ *
  * CORE PRINCIPLES:
  * - PROACTIVE: Monitors REAL on-chain and market data in the background.
  * - MODULAR: Decoupled from the Chat UI. It emits events or pushes to existing context.
  * - HONEST: No fabricated data. Alerts only when real thresholds are crossed.
- * 
+ *
  * Monitoring Loop:
  * 1. GoodDollar UBI claim status (via useStreakRewards)
  * 2. Market volatility (via marketPulseService)
@@ -88,6 +124,10 @@ export function useProactiveAgent() {
   const { publishAdvisorUpdate } = useAdvisor();
   const { address } = useWalletContext();
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
+  // Per-user alert cooldowns. Server-backed, so the 6h guarantee survives
+  // device switches, not just session reloads.
+  const { shouldSend: shouldSendAlert, markSent: markAlertSent } = useAlertCooldown(address);
 
   // GoodDollar Integration
   const { canClaim, estimatedReward, alreadyClaimedOnChain } = useStreakRewards();
@@ -105,9 +145,9 @@ export function useProactiveAgent() {
   useEffect(() => {
     if (canClaim && !alreadyClaimedOnChain && !ubiPrompted.current) {
         ubiPrompted.current = true;
-        
+
         const ubiInsight = `✨ Good news! I've been monitoring your on-chain status, and your daily Universal Basic Income of ${estimatedReward} is ready to claim on Celo.`;
-        
+
         const triggerUbiAlert = () => {
              publishAdvisorUpdate({
                content: ubiInsight,
@@ -120,7 +160,7 @@ export function useProactiveAgent() {
              }).catch(() => {});
         };
 
-        setTimeout(triggerUbiAlert, 4000); 
+        setTimeout(triggerUbiAlert, 4000);
     }
   }, [canClaim, alreadyClaimedOnChain, estimatedReward, publishAdvisorUpdate]);
 
@@ -130,24 +170,24 @@ export function useProactiveAgent() {
       try {
         // 1. Market Volatility Check (real data from marketPulseService)
         const pulse = await marketPulseService.getMarketPulse('1h');
-        
+
         if (pulse.impliedVolatility && pulse.impliedVolatility > volatilityThreshold && !volatilityAlerted.current) {
           volatilityAlerted.current = true;
-          
+
           const volMessage = `⚠️ Market volatility has spiked to ${Math.round(pulse.impliedVolatility)}% (your threshold: ${volatilityThreshold}%). Sentiment: ${pulse.sentiment}. Would you like me to bridge your crypto to stable assets on Celo?`;
-          
+
           agentEventBus.emit('proactive:insight', {
             title: 'High Volatility Detected',
             message: volMessage,
             type: 'alert'
           });
-          
+
           publishAdvisorUpdate({
             content: volMessage,
             type: 'recommendation',
             openDrawer: false,
           }).catch(() => {});
-          
+
           // Reset alert after 30 minutes so it can fire again
           setTimeout(() => { volatilityAlerted.current = false; }, 30 * 60 * 1000);
         }
@@ -165,7 +205,7 @@ export function useProactiveAgent() {
               const spikes = yieldData.opportunities?.filter(
                 (o: YieldOpportunity) => o.apy > yieldThreshold && o.chain?.toLowerCase().includes('celo')
               ) || [];
-              
+
               if (spikes.length > 0) {
                 const sortedSpikes = [...spikes].sort((a: YieldOpportunity, b: YieldOpportunity) => {
                   const aExecutable = a.isExecutable ? 1 : 0;
@@ -180,7 +220,7 @@ export function useProactiveAgent() {
                 const targetToken = best.executableTargetToken ?? getExecutableTargetToken(best.symbol);
                 const alertId = `yield:${best.pool}:${Math.round(best.apy)}`;
 
-                if (!shouldSendYieldAlert(alertId)) {
+                if (!shouldSendAlert(alertId)) {
                   return;
                 }
 
@@ -224,7 +264,7 @@ export function useProactiveAgent() {
                       type: 'guardian_review',
                     },
                   }).catch(() => {});
-                  markYieldAlertSent(alertId);
+                  markAlertSent(alertId);
                 } else {
                   const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold, but it is not currently supported as an automatic protection action. Treat this as a research alert, not an executable action.`;
 
@@ -233,9 +273,9 @@ export function useProactiveAgent() {
                     type: 'recommendation',
                     openDrawer: false,
                   }).catch(() => {});
-                  markYieldAlertSent(alertId);
+                  markAlertSent(alertId);
                 }
-                
+
                 // Reset after 1 hour
                 setTimeout(() => { yieldAlerted.current = false; }, 60 * 60 * 1000);
               }
@@ -253,5 +293,5 @@ export function useProactiveAgent() {
     return () => {
       clearInterval(monitoringInterval);
     };
-  }, [API_BASE, address, publishAdvisorUpdate, volatilityThreshold, yieldThreshold]);
+  }, [API_BASE, address, publishAdvisorUpdate, shouldSendAlert, markAlertSent, volatilityThreshold, yieldThreshold]);
 }
