@@ -91,6 +91,31 @@ export function useAgentChat({
     }
   }, [globalConversation, isUsingGlobal]);
 
+  /**
+   * Patch an existing message in place. Matched by `id` (preferred) or
+   * `timestamp` fallback. Mirrors `globalConversation.patchMessage` so
+   * the anchor-status patch path works the same way whether the chat is
+   * on the global context or a per-component local one.
+   */
+  const patchMessage = useCallback(
+    (match: { id?: string; timestamp: Date }, patch: Partial<AIMessage>) => {
+      if (isUsingGlobal) {
+        globalConversation!.patchMessage(match, patch);
+        return;
+      }
+      setLocalMessages((prev) =>
+        prev.map((m) => {
+          const matchesId = match.id && m.id && m.id === match.id;
+          const matchesTimestamp =
+            !match.id && m.timestamp.getTime() === match.timestamp.getTime();
+          if (!matchesId && !matchesTimestamp) return m;
+          return { ...m, ...patch };
+        }),
+      );
+    },
+    [globalConversation, isUsingGlobal],
+  );
+
   const sendChatMessage = useCallback(
     async (content: string) => {
       if (!capabilities.chat) return;
@@ -515,40 +540,36 @@ export function useAgentChat({
               ),
             })
               .then((anchor) => {
-                if (isUsingGlobal && globalConversation?.patchMessage) {
-                  globalConversation.patchMessage(
-                    { id: messageId, timestamp: anchorTimestamp },
-                    {
-                      x402Receipt: {
-                        ...patchedReceipt,
-                        anchor: {
-                          status: anchor.status,
-                          txHash: anchor.status === "failed" ? undefined : anchor.txHash,
-                          explorerUrl: anchor.status === "failed" ? undefined : anchor.explorerUrl,
-                          id: anchor.status === "anchored" ? anchor.id : undefined,
-                          error: anchor.status === "failed" ? anchor.error : undefined,
-                        },
+                patchMessage(
+                  { id: messageId, timestamp: anchorTimestamp },
+                  {
+                    x402Receipt: {
+                      ...patchedReceipt,
+                      anchor: {
+                        status: anchor.status,
+                        txHash: anchor.status === "failed" ? undefined : anchor.txHash,
+                        explorerUrl: anchor.status === "failed" ? undefined : anchor.explorerUrl,
+                        id: anchor.status === "anchored" ? anchor.id : undefined,
+                        error: anchor.status === "failed" ? anchor.error : undefined,
                       },
                     },
-                  );
-                }
+                  },
+                );
               })
               .catch((err) => {
                 console.warn("[useAgentChat] Ledger anchor failed:", err);
-                if (isUsingGlobal && globalConversation?.patchMessage) {
-                  globalConversation.patchMessage(
-                    { id: messageId, timestamp: anchorTimestamp },
-                    {
-                      x402Receipt: {
-                        ...patchedReceipt,
-                        anchor: {
-                          status: "failed",
-                          error: err?.message ?? "Anchor broadcast failed",
-                        },
+                patchMessage(
+                  { id: messageId, timestamp: anchorTimestamp },
+                  {
+                    x402Receipt: {
+                      ...patchedReceipt,
+                      anchor: {
+                        status: "failed",
+                        error: err?.message ?? "Anchor broadcast failed",
                       },
                     },
-                  );
-                }
+                  },
+                );
               });
           }
 
@@ -659,6 +680,7 @@ export function useAgentChat({
       addMessage,
       addActivity,
       fetchPaidSource,
+      patchMessage,
       deductCredits,
     ],
   );
@@ -670,5 +692,6 @@ export function useAgentChat({
     sendChatMessage,
     addMessage,
     clearMessages,
+    patchMessage,
   };
 }
