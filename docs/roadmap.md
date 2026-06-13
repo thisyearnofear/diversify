@@ -9,9 +9,9 @@ This section overrides the general improvement plan while the hackathon submissi
 | # | Task | Why | Owner Files |
 |---|---|---|---|
 | 1 | Add Arbitrum Sepolia to `foundry.toml` and env | Required to deploy qualifying contracts | `foundry.toml`, `.env.example` |
-| 2 | Deploy `RecommendationLedger` on Arbitrum Sepolia | Canonical prize-eligible ledger | `scripts/DeployArbitrumLedger.s.sol` |
-| 3 | Deploy `StrategyVault` on Arbitrum Sepolia | Arbitrum-facing vault for liquidity/RWA actions | `scripts/DeployArbitrumVault.s.sol` |
-| 4 | Deploy `AgenticHub` on Arbitrum Sepolia | Arbitrum execution coordinator | `scripts/DeployArbitrumHub.s.sol` |
+| 2 | Deploy `RecommendationLedger` on Arbitrum Sepolia | Canonical prize-eligible ledger | `scripts/deploy-all.sh arbitrum_sepolia --verify` → `scripts/DeployArbitrum.s.sol` |
+| 3 | Deploy `StrategyVault` on Arbitrum Sepolia | Arbitrum-facing vault for liquidity/RWA actions | `scripts/deploy-all.sh arbitrum_sepolia --verify` → `scripts/DeployArbitrum.s.sol` |
+| 4 | Deploy `AgenticHub` on Arbitrum Sepolia | Arbitrum execution coordinator | `scripts/deploy-all.sh arbitrum_sepolia --verify` → `scripts/DeployArbitrum.s.sol` |
 | 5 | Record deployed addresses in config | Frontend/services need deterministic addresses | `config/index.ts`, `.env.example` |
 | 6 | Make `RecommendationLedger` service chain-aware | Support both 0G mirror and Arbitrum canonical ledger | `packages/shared/src/services/recommendation-ledger.service.ts` |
 | 7 | Add Arbitrum to wagmi/Privy frontend config | Judges' wallets must connect to the right network | `components/app/ProviderTree.tsx`, `context/PrivyProvider.tsx` |

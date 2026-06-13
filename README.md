@@ -42,9 +42,11 @@ DiversiFi is built on a deliberate chain split that matches real user needs:
 ## 🔑 Judge Verification Proofs
 
 ### Arbitrum Deployment (Prize Eligibility)
-- **RecommendationLedger Contract** (Arbitrum Sepolia, chainId `421614`): *Deployment in progress — address will be updated after `scripts/DeployArbitrumLedger.s.sol` is run.*
-- **StrategyVault Contract** (Arbitrum Sepolia, chainId `421614`): *Deployment in progress.*
-- **AgenticHub Contract** (Arbitrum Sepolia, chainId `421614`): *Deployment in progress.*
+- **Deployment script**: `./scripts/deploy-all.sh arbitrum_sepolia --verify` uses the unified `scripts/DeployArbitrum.s.sol` script and deploys all three Arbitrum Sepolia contracts in one run.
+- **RecommendationLedger Contract** (Arbitrum Sepolia, chainId `421614`): set from `ARBITRUM_LEDGER_CONTRACT` after deployment.
+- **StrategyVault Contract** (Arbitrum Sepolia, chainId `421614`): set from `ARBITRUM_VAULT_CONTRACT` after deployment.
+- **AgenticHub Contract** (Arbitrum Sepolia, chainId `421614`): set from `ARBITRUM_HUB_CONTRACT` after deployment.
+- **Payment token**: Arbitrum Sepolia USDC `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` (baked into `DeployArbitrum.s.sol` for the hackathon testnet deployment).
 - **Arbitrum Frontend RPC**: Configured in `components/app/ProviderTree.tsx` / `context/PrivyProvider.tsx`.
 
 ### 0G Stack (Verifiable AI)

@@ -4,7 +4,6 @@
 #
 # Usage:
 #   export PRIVATE_KEY=<deployer_private_key>
-#   export PAYMENT_TOKEN_ADDRESS=0xaf88d065e77c8cC2239327C5EDb3A432268e5831
 #
 #   # Option A: x402 proxy (pay-per-request with testnet USDC — no API key)
 #   # Get testnet USDC from Circle Faucet on Base Sepolia, then:
@@ -20,6 +19,8 @@
 #
 #   # Option C: Arbitrum Sepolia (hackathon / testnet)
 #   export ARBITRUM_SEPOLIA_RPC_URL=<your_rpc_url>
+#   # Uses Arbitrum Sepolia USDC from scripts/DeployArbitrum.s.sol; no
+#   # PAYMENT_TOKEN_ADDRESS export is required for this unified testnet deploy.
 #   ./scripts/deploy-all.sh arbitrum_sepolia --verify
 #
 # Examples:
@@ -38,7 +39,7 @@ RPC_NAME="${1:-arbitrum_one}"
 VERIFY="${2:-}"
 
 # ── Paths ───────────────────────────────────────────────────────────────────
-FORGE="${FORGE:-~/.foundry/bin/forge}"
+FORGE="${FORGE:-$HOME/.foundry/bin/forge}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
@@ -54,7 +55,7 @@ if [ -z "${PRIVATE_KEY:-}" ]; then
   exit 1
 fi
 
-if [ -z "${PAYMENT_TOKEN_ADDRESS:-}" ]; then
+if [[ "$RPC_NAME" != "arbitrum_sepolia" && -z "${PAYMENT_TOKEN_ADDRESS:-}" ]]; then
   echo "⚠️  PAYMENT_TOKEN_ADDRESS not set. AgenticHub and StrategyVault will fail."
   echo "   Set it to your chain's stablecoin address."
   echo "   Arbitrum One:   0xaf88d065e77c8cC2239327C5EDb3A432268e5831 (USDC)"
