@@ -115,10 +115,10 @@ export function ProtectionPlanCard({
         score={protectionScore}
         strategy={config?.userGoal || "global"}
         factors={[
-          { label: "Portfolio Coverage", value: portfolio?.tokenCount > 0 ? 95 : 50, status: portfolio?.tokenCount > 0 ? `${portfolio.tokenCount} tokens` : "No data", icon: "💰" },
-          { label: "Chain Diversification", value: displayChainCount > 1 ? 90 : 60, status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`, icon: "🔗" },
-          { label: "Regional Diversification", value: currentRegions.length > 2 ? 90 : 70, status: `${currentRegions.length} regions`, icon: "🌍" },
-          { label: "Inflation Risk", value: Math.max(0, 100 - (portfolio?.weightedInflationRisk ?? 0) * 10), status: `${Math.round(portfolio?.weightedInflationRisk ?? 0)}% weighted`, icon: "🛡️" },
+          { label: "Portfolio Coverage", value: Math.round(portfolio?.tokenCount > 0 ? 95 : 50), status: portfolio?.tokenCount > 0 ? `${portfolio.tokenCount} tokens` : "No data", icon: "💰", description: "How many distinct tokens you hold. More tokens = less concentration risk. 95% when you hold at least one token." },
+          { label: "Chain Diversification", value: Math.round(displayChainCount > 1 ? 90 : 60), status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`, icon: "🔗", description: "Spread across multiple blockchains reduces single-chain risk. 90% when you hold assets on 2+ chains, 60% for a single chain." },
+          { label: "Regional Diversification", value: Math.round(currentRegions.length > 2 ? 90 : 70), status: `${currentRegions.length} regions`, icon: "🌍", description: "Exposure to multiple economic regions hedges against local downturns. 90% for 3+ regions, 70% otherwise." },
+          { label: "Inflation Risk", value: Math.round(Math.max(0, 100 - (portfolio?.weightedInflationRisk ?? 0) * 10)), status: `${Math.round(portfolio?.weightedInflationRisk ?? 0)}% weighted`, icon: "🛡️", description: "Measures how much purchasing power your holdings may lose to inflation. Calculated from the weighted inflation rate of your regional token exposures." },
         ]}
         isLoading={isMultichainLoading} isStale={isStale}
         streak={streak} canClaim={canClaim} estimatedReward={estimatedReward}

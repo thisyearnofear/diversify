@@ -369,6 +369,7 @@ export interface DashboardFactor {
   value: number; // 0-100
   status: string;
   icon: string;
+  description?: string;
 }
 
 export const ProtectionDashboard = ({
@@ -406,6 +407,7 @@ export const ProtectionDashboard = ({
 }) => {
   const isGood = score >= 80;
   const isOk = score >= 60;
+  const [activeFactor, setActiveFactor] = useState<number | null>(null);
 
   const ringColor = strategy === 'halo' ? '#fbbf24' : strategy === 'taco' ? '#22c55e' : isGood ? '#10b981' : isOk ? '#f59e0b' : '#ef4444';
   const statusText = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
@@ -587,13 +589,20 @@ export const ProtectionDashboard = ({
               className="group"
             >
               <div className="flex items-center gap-2 mb-2">
-                <div className="size-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-center text-xs group-hover:scale-110 transition-transform">
+                <button
+                  type="button"
+                  onClick={() => factor.description ? setActiveFactor(activeFactor === idx ? null : idx) : undefined}
+                  className={`size-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-center text-xs transition-all shrink-0 ${
+                    factor.description ? 'cursor-pointer hover:scale-125 hover:bg-indigo-50 dark:hover:bg-indigo-900/40' : ''
+                  } ${activeFactor === idx ? 'scale-125 bg-indigo-50 dark:bg-indigo-900/40 ring-2 ring-indigo-400' : ''}`}
+                  title={factor.description ? 'Tap for details' : undefined}
+                >
                   {factor.icon}
-                </div>
+                </button>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
                     <span className="text-xs font-black text-gray-700 dark:text-gray-300 truncate uppercase tracking-tight">{factor.label}</span>
-                    <span className={`text-xs font-bold ${
+                    <span className={`text-xs font-bold shrink-0 ${
                       factor.value >= 80 ? 'text-emerald-500' :
                       factor.value >= 60 ? 'text-amber-500' : 'text-red-500'
                     }`}>{factor.value}%</span>
@@ -614,6 +623,21 @@ export const ProtectionDashboard = ({
             </motion.div>
           ))}
         </div>
+
+        {activeFactor !== null && factors[activeFactor]?.description && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="flex items-start gap-2 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800"
+          >
+            <span className="text-sm mt-0.5">{factors[activeFactor].icon}</span>
+            <div>
+              <p className="text-xs font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-tight">{factors[activeFactor].label}</p>
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5 leading-relaxed">{factors[activeFactor].description}</p>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {children && (
