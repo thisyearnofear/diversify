@@ -94,7 +94,7 @@ export default function AgentTab({
 
   const handleAskAgent = () => {
     askAdvisor(
-      "Give me a summary of my portfolio protection status and any recommended actions.",
+      "Give me a summary of my portfolio status and any recommended actions.",
     );
   };
 
@@ -147,13 +147,11 @@ export default function AgentTab({
     return (
       <UnconnectedStateShell
         heroCard={heroCard}
-        showProofCard={true}
+        showProofCard={false}
         showDemoCta={true}
         onEnableDemo={enableDemoMode}
         howItWorks={HOW_IT_WORKS}
-      >
-        <BitsoJunoCard walletConnected={false} />
-      </UnconnectedStateShell>
+      />
     );
   }
 

@@ -49,9 +49,7 @@ const TABS: TabItem[] = [
   },
   {
     id: "agent",
-    // "Pilot" matches the "Proactive Pilot" brand and distinguishes the agent
-    // control center (settings, automation, backtests) from the chat FAB.
-    label: "Pilot",
+    label: "Advisor",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5" />
@@ -69,7 +67,7 @@ const TABS: TabItem[] = [
   },
 ];
 
-// Tabs shown in beginner mode — includes Pilot so new users see the
+// Tabs shown in beginner mode — includes Advisor so new users see the
 // autonomous Guardian (the single most differentiated product feature).
 const BEGINNER_TAB_IDS: TabId[] = ["overview", "protect", "exchange", "agent"];
 

@@ -28,7 +28,6 @@ import { GUARDIAN_TIER_STATE_LABELS } from "@diversifi/shared";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianWDKStatus from "./GuardianWDKStatus";
-import GuardianMobileWizard from "./GuardianMobileWizard";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -143,7 +142,6 @@ export const AgentTierStatus: React.FC<{
   const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
   const [isRunningLoop, setIsRunningLoop] = useState(false);
   const [loopResult, setLoopResult] = useState<GuardianLoopResult | null>(null);
-  const [showWizard, setShowWizard] = useState(false);
 
   // Tier 3: The Guardian (Autonomous) — Real State Machine
   // The state machine itself lives in @diversifi/shared (see
@@ -448,11 +446,7 @@ export const AgentTierStatus: React.FC<{
           whileHover={{ scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-purple-100 dark:border-purple-900 shadow-sm relative cursor-pointer"
           onClick={() => {
-            if (guardianState === "idle") {
-              setShowWizard(true);
-            } else {
-              setExpandedTier(expandedTier === "guardian" ? null : "guardian");
-            }
+            setExpandedTier(expandedTier === "guardian" ? null : "guardian");
           }}
         >
           <div className="flex justify-between items-start mb-2">
@@ -492,14 +486,14 @@ export const AgentTierStatus: React.FC<{
                   ? "Funded — enable monitoring to start."
                   : guardianState === "authorized"
                     ? "Permission granted — deposit to activate."
-                    : "Create a vault to get started."
+                    : "Set up Guardian on the Protect tab."
               : guardianState === "monitoring"
                 ? "Autonomous protection active."
                 : guardianState === "funded"
                   ? "Deposited — awaiting enablement."
                   : guardianState === "authorized"
                     ? "Permission granted — deposit stablecoins."
-                    : "Create a vault and deposit to start."}
+                    : "Set up Guardian on the Protect tab."}
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
             <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
@@ -1038,51 +1032,6 @@ export const AgentTierStatus: React.FC<{
             </div>
           </div>
         </div>
-      )}
-      {/* Guardian Setup Wizard */}
-      {showWizard && address && (
-        <GuardianMobileWizard
-          userAddress={address}
-          vaultAddress={vault.vault?.circleWalletAddress}
-          onComplete={() => {
-            setShowWizard(false);
-            if (address) vault.refresh(address);
-          }}
-          onCancel={() => setShowWizard(false)}
-          onCreateVault={async (strategy) => {
-            return vault.createVault(address, strategy);
-          }}
-          onRequestPermission={async (dailyLimit, tokens) => {
-            // requestPermission handles EIP-712 signing + server registration
-            if (!address || !chainId) return false;
-            try {
-              const provider = (window as any).ethereum;
-              if (!provider) return false;
-              const { ethers } = await import("ethers");
-              const ethersProvider = new ethers.providers.Web3Provider(provider);
-              const signer = ethersProvider.getSigner();
-
-              const result = await requestPermission(
-                "GUARDIAN",
-                address,
-                signer,
-                chainId,
-                {
-                  spendingLimitUSD: dailyLimit * 30,
-                  dailyLimitUSD: dailyLimit,
-                }
-              );
-              if (result) {
-                // Refresh vault data so the permission shows immediately
-                await vault.refresh(address);
-                return true;
-              }
-              return false;
-            } catch {
-              return false;
-            }
-          }}
-        />
       )}
     </div>
   );

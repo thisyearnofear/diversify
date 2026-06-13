@@ -34,8 +34,11 @@ import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import GuardianOnboardingWizard from "../agent/GuardianOnboardingWizard";
+import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
 import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useAgentConfig } from "@/hooks/use-agent-config";
+import { useVault } from "@/hooks/use-vault";
+import { useSessionKey } from "@/hooks/use-session-key";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 
 // ============================================================================
@@ -79,6 +82,9 @@ export default function ProtectionTab({
   const { autonomousStatus, isLoading: isGuardianStatusLoading } = useAgentStatus();
   const { config: agentConfig } = useAgentConfig();
   const [guardianDismissed, setGuardianDismissed] = useState(false);
+  const [showMobileWizard, setShowMobileWizard] = useState(false);
+  const vault = useVault();
+  const { requestPermission } = useSessionKey();
 
   const {
     totalValue,
@@ -464,11 +470,7 @@ export default function ProtectionTab({
           ================================================================= */}
       {address && !isGuardianStatusLoading && !guardianDismissed && (!autonomousStatus || !autonomousStatus.enabled) && (
         <GuardianOnboardingWizard
-          onActivate={() => {
-            askAdvisor(
-              "I want to activate my Guardian to protect my savings. Help me set up a daily spending limit and choose which tokens to allow.",
-            );
-          }}
+          onActivate={() => setShowMobileWizard(true)}
           onSkip={() => setGuardianDismissed(true)}
           spendingLimit={agentConfig.spendingLimit}
         />
@@ -692,6 +694,49 @@ export default function ProtectionTab({
       {/* GoodDollar streak now integrated into ProtectionDashboard header */}
 
       <ClaimFlowOverlay flow={flow} />
+
+      {/* Guardian Setup Mobile Wizard — full activation flow inline */}
+      {showMobileWizard && address && (
+        <GuardianMobileWizard
+          userAddress={address}
+          vaultAddress={vault.vault?.circleWalletAddress}
+          onComplete={() => {
+            setShowMobileWizard(false);
+            if (address) vault.refresh(address);
+          }}
+          onCancel={() => setShowMobileWizard(false)}
+          onCreateVault={async (strategy) => {
+            return vault.createVault(address, strategy);
+          }}
+          onRequestPermission={async (dailyLimit, tokens) => {
+            if (!address || !chainId) return false;
+            try {
+              const provider = (window as any).ethereum;
+              if (!provider) return false;
+              const { ethers } = await import("ethers");
+              const ethersProvider = new ethers.providers.Web3Provider(provider);
+              const signer = ethersProvider.getSigner();
+              const result = await requestPermission(
+                "GUARDIAN",
+                address,
+                signer,
+                chainId,
+                {
+                  spendingLimitUSD: dailyLimit * 30,
+                  dailyLimitUSD: dailyLimit,
+                }
+              );
+              if (result) {
+                await vault.refresh(address);
+                return true;
+              }
+              return false;
+            } catch {
+              return false;
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
