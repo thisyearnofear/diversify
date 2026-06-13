@@ -12,6 +12,7 @@ export const SUPPORTED_CHAIN_IDS = [
   NETWORKS.CELO_MAINNET.chainId,
   NETWORKS.CELO_SEPOLIA.chainId,
   NETWORKS.ARBITRUM_ONE.chainId,
+  NETWORKS.ARBITRUM_SEPOLIA.chainId,
   NETWORKS.ARC_TESTNET.chainId,
   NETWORKS.RH_TESTNET.chainId,
 ] as const;
@@ -60,6 +61,16 @@ export function getAddChainParameter(targetChainId: number): AddEthereumChainPar
       nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
       rpcUrls: [NETWORKS.ARBITRUM_ONE.rpcUrl],
       blockExplorerUrls: [NETWORKS.ARBITRUM_ONE.explorerUrl],
+    };
+  }
+
+  if (targetChainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) {
+    return {
+      chainId: toHexChainId(NETWORKS.ARBITRUM_SEPOLIA.chainId),
+      chainName: NETWORKS.ARBITRUM_SEPOLIA.name,
+      nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+      rpcUrls: [NETWORKS.ARBITRUM_SEPOLIA.rpcUrl],
+      blockExplorerUrls: [NETWORKS.ARBITRUM_SEPOLIA.explorerUrl],
     };
   }
 

@@ -39,6 +39,7 @@
     "@privy-io/node": "0.11.0",
     "@privy-io/react-auth": "3.13.1",
     "@privy-io/wagmi": "4.0.1",
+    "@quicknode/x402": "0.1.3",
     "@stable-station/mento-utils": "workspace:*",
     "@tanstack/react-query": "5.90.21",
     "@vercel/og": "0.8.6",

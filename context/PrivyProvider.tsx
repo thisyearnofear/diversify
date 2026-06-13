@@ -4,7 +4,7 @@ import { PrivyProvider as BasePrivyProvider } from '@privy-io/react-auth'
 import { WagmiProvider } from '@privy-io/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactNode, useMemo } from 'react'
-import { celo, celoSepolia, arbitrum } from 'viem/chains'
+import { celo, celoSepolia, arbitrum, arbitrumSepolia } from 'viem/chains'
 import { createConfig, http } from 'wagmi'
 import { WALLET_FEATURES } from '../config/features'
 
@@ -34,11 +34,12 @@ export function PrivyProvider({ children }: { children: ReactNode }) {
     const appId = WALLET_FEATURES.PRIVY_APP_ID
     const queryClient = useMemo(() => new QueryClient(), [])
     const wagmiConfig = useMemo(() => createConfig({
-        chains: [celo, celoSepolia, arbitrum, arcTestnet],
+        chains: [celo, celoSepolia, arbitrum, arbitrumSepolia, arcTestnet],
         transports: {
             [celo.id]: http(),
             [celoSepolia.id]: http(),
             [arbitrum.id]: http(),
+            [arbitrumSepolia.id]: http(),
             [arcTestnet.id]: http(),
         },
     }), [])

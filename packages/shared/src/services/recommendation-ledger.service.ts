@@ -2,7 +2,9 @@
  * Recommendation Ledger Service
  *
  * Records and queries AI recommendations on-chain via the RecommendationLedger
- * contract deployed on 0G Galileo Testnet.
+ * contract. The canonical ledger for the Arbitrum hackathon submission lives on
+ * Arbitrum Sepolia (chainId 421614); the previous 0G Galileo Testnet deployment
+ * is retained as an optional audit mirror.
  *
  * Each recommendation is linked to:
  *   - 0G Storage evidence CID (AI reasoning + source data)
@@ -21,7 +23,7 @@ export interface LedgerRecommendation {
     user: string;
     action: string;
     targetToken: string;
-    reasoning: string;
+    reasoningHash: string;
     evidenceCid: string;
     servingModel: string;
     settlementTxHash: string;
@@ -57,7 +59,11 @@ export type AnchorResult =
     | { status: 'pending'; txHash: string; chainId: number; explorerUrl: string }
     | { status: 'failed'; error: string; chainId: number };
 
-export function buildLedgerExplorerUrl(txHash: string): string {
+export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string {
+    const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+    if (resolvedChainId === 42161) return `https://arbiscan.io/tx/${txHash}`;
+    if (resolvedChainId === 421614) return `https://sepolia.arbiscan.io/tx/${txHash}`;
+    if (resolvedChainId === 16602) return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
     return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
 }
 
@@ -67,7 +73,7 @@ export function buildLedgerExplorerUrl(txHash: string): string {
 
 const RECOMMENDATION_LEDGER_ABI = [
     // Events
-    'event RecommendationRecorded(uint256 indexed id, address indexed user, string action, string targetToken, string evidenceCid, string servingModel, uint256 confidence, uint256 timestamp)',
+    'event RecommendationRecorded(uint256 indexed id, address indexed user, string action, string targetToken, bytes32 reasoningHash, string evidenceCid, string servingModel, uint256 confidence, uint256 timestamp)',
     'event AgentAuthorized(address indexed agent, bool authorized)',
     'event OwnershipTransferred(address indexed previousOwner, address indexed newOwner)',
 
@@ -81,76 +87,145 @@ const RECOMMENDATION_LEDGER_ABI = [
     'function owner() view returns (address)',
 
     // Core
-    'function recordRecommendation(address user, string action, string targetToken, string reasoning, string evidenceCid, string servingModel, string settlementTxHash, uint256 confidence) external returns (uint256)',
+    'function recordRecommendation(address user, string action, string targetToken, bytes32 reasoningHash, string evidenceCid, string servingModel, string settlementTxHash, uint256 confidence) external returns (uint256)',
 
     // Views
-    'function getRecommendation(uint256 id) view returns (tuple(address user, string action, string targetToken, string reasoning, string evidenceCid, string servingModel, string settlementTxHash, uint256 timestamp, uint256 confidence))',
+    'function getRecommendation(uint256 id) view returns (tuple(address user, string action, string targetToken, bytes32 reasoningHash, string evidenceCid, string servingModel, string settlementTxHash, uint256 timestamp, uint256 confidence))',
     'function getUserRecommendationIds(address user) view returns (uint256[])',
-    'function getUserRecommendations(address user, uint256 offset, uint256 limit) view returns (tuple(address user, string action, string targetToken, string reasoning, string evidenceCid, string servingModel, string settlementTxHash, uint256 timestamp, uint256 confidence)[] results, uint256 total)',
+    'function getUserRecommendations(address user, uint256 offset, uint256 limit) view returns (tuple(address user, string action, string targetToken, bytes32 reasoningHash, string evidenceCid, string servingModel, string settlementTxHash, uint256 timestamp, uint256 confidence)[] results, uint256 total)',
     'function getUserRecommendationCount(address user) view returns (uint256)',
     'function recommendationExists(uint256 id) view returns (bool)',
 ] as const;
 
+/**
+ * Compute the keccak256 hash used by the on-chain ledger as the reasoning
+ * commitment. The full reasoning text lives in 0G Storage; only this hash is
+ * stored on-chain.
+ */
+export function computeReasoningHash(reasoning: string): string {
+    return ethers.keccak256(ethers.toUtf8Bytes(reasoning));
+}
+
 // ============================================================================
-// SERVICE
+// CHAIN-AWARE CONFIG REGISTRY
 // ============================================================================
 
-// Default config for 0G Galileo Testnet
-const DEFAULT_CONFIG: LedgerConfig = {
-    contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
-    rpcUrl: process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai',
-    chainId: 16602,
+const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
+const ZERO_G_GALILEO_CHAIN_ID = 16602;
+
+/**
+ * Registry of supported ledger deployments. The Arbitrum deployment is the
+ * canonical source of truth for the hackathon submission; 0G Galileo is kept
+ * as an optional mirror for cross-chain auditability.
+ */
+const LEDGER_REGISTRY: Record<number, LedgerConfig> = {
+    [ARBITRUM_SEPOLIA_CHAIN_ID]: {
+        contractAddress: process.env.ARBITRUM_LEDGER_CONTRACT || '',
+        rpcUrl: process.env.ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
+        chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
+    },
+    [ZERO_G_GALILEO_CHAIN_ID]: {
+        contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
+        rpcUrl: process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai',
+        chainId: ZERO_G_GALILEO_CHAIN_ID,
+    },
 };
 
-// Lazily initialised provider, signer, and contract
-let _provider: ethers.JsonRpcProvider | null = null;
-let _signer: ethers.Wallet | null = null;
-let _readOnlyContract: ethers.Contract | null = null;
-let _writeContract: ethers.Contract | null = null;
-
-function getProvider(): ethers.JsonRpcProvider {
-    if (!_provider) {
-        _provider = new ethers.JsonRpcProvider(DEFAULT_CONFIG.rpcUrl);
+/**
+ * Returns the canonical chain ID used when callers do not specify one.
+ * Prefers Arbitrum Sepolia when the contract address is configured; otherwise
+ * falls back to the 0G Galileo mirror for backward compatibility.
+ */
+export function getDefaultLedgerChainId(): number {
+    const arbitrum = LEDGER_REGISTRY[ARBITRUM_SEPOLIA_CHAIN_ID];
+    if (arbitrum.contractAddress) {
+        return ARBITRUM_SEPOLIA_CHAIN_ID;
     }
-    return _provider;
+    return ZERO_G_GALILEO_CHAIN_ID;
 }
 
-function getReadOnlyContract(): ethers.Contract {
-    if (!_readOnlyContract) {
-        if (!DEFAULT_CONFIG.contractAddress) {
-            throw new Error('RecommendationLedger contract not deployed. Set ZERO_G_LEDGER_CONTRACT env var.');
+export function getLedgerConfig(chainId?: number): LedgerConfig | null {
+    const id = chainId ?? getDefaultLedgerChainId();
+    return LEDGER_REGISTRY[id] || null;
+}
+
+export function setLedgerContractAddress(address: string, chainId?: number): void {
+    const id = chainId ?? getDefaultLedgerChainId();
+    if (!LEDGER_REGISTRY[id]) {
+        throw new Error(`[RecommendationLedger] Unsupported chainId: ${id}`);
+    }
+    LEDGER_REGISTRY[id].contractAddress = address;
+    // Reset cached contracts for this chain to force re-initialization
+    delete _readOnlyContracts[id];
+    delete _writeContracts[id];
+}
+
+export function getLedgerContractAddress(chainId?: number): string {
+    return getLedgerConfig(chainId)?.contractAddress || '';
+}
+
+export function listSupportedLedgerChains(): number[] {
+    return Object.keys(LEDGER_REGISTRY).map(Number);
+}
+
+// ============================================================================
+// PER-CHAIN PROVIDER / CONTRACT CACHE
+// ============================================================================
+
+const _providers: Record<number, ethers.JsonRpcProvider> = {};
+const _signers: Record<number, ethers.Wallet> = {};
+const _readOnlyContracts: Record<number, ethers.Contract> = {};
+const _writeContracts: Record<number, ethers.Contract> = {};
+
+function getProvider(chainId: number): ethers.JsonRpcProvider {
+    if (!_providers[chainId]) {
+        const config = getLedgerConfig(chainId);
+        if (!config) {
+            throw new Error(`[RecommendationLedger] Unsupported chainId: ${chainId}`);
         }
-        _readOnlyContract = new ethers.Contract(
-            DEFAULT_CONFIG.contractAddress,
+        _providers[chainId] = new ethers.JsonRpcProvider(config.rpcUrl);
+    }
+    return _providers[chainId];
+}
+
+function getReadOnlyContract(chainId: number): ethers.Contract {
+    if (!_readOnlyContracts[chainId]) {
+        const config = getLedgerConfig(chainId);
+        if (!config?.contractAddress) {
+            throw new Error(`RecommendationLedger contract not deployed for chain ${chainId}. Set ARBITRUM_LEDGER_CONTRACT or ZERO_G_LEDGER_CONTRACT env var.`);
+        }
+        _readOnlyContracts[chainId] = new ethers.Contract(
+            config.contractAddress,
             RECOMMENDATION_LEDGER_ABI,
-            getProvider()
+            getProvider(chainId)
         );
     }
-    return _readOnlyContract;
+    return _readOnlyContracts[chainId];
 }
 
-function getWriteContract(): ethers.Contract | null {
+function getWriteContract(chainId: number): ethers.Contract | null {
     const privateKey = process.env.VAULT_PRIVATE_KEY;
     if (!privateKey) {
         console.warn('[RecommendationLedger] VAULT_PRIVATE_KEY not set — write operations disabled');
         return null;
     }
 
-    if (!_writeContract) {
-        if (!DEFAULT_CONFIG.contractAddress) {
-            console.warn('[RecommendationLedger] Contract address not set — write operations disabled');
+    if (!_writeContracts[chainId]) {
+        const config = getLedgerConfig(chainId);
+        if (!config?.contractAddress) {
+            console.warn(`[RecommendationLedger] Contract address not set for chain ${chainId} — write operations disabled`);
             return null;
         }
-        if (!_signer) {
-            _signer = new ethers.Wallet(privateKey, getProvider());
+        if (!_signers[chainId]) {
+            _signers[chainId] = new ethers.Wallet(privateKey, getProvider(chainId));
         }
-        _writeContract = new ethers.Contract(
-            DEFAULT_CONFIG.contractAddress,
+        _writeContracts[chainId] = new ethers.Contract(
+            config.contractAddress,
             RECOMMENDATION_LEDGER_ABI,
-            _signer
+            _signers[chainId]
         );
     }
-    return _writeContract;
+    return _writeContracts[chainId];
 }
 
 // ============================================================================
@@ -158,46 +233,45 @@ function getWriteContract(): ethers.Contract | null {
 // ============================================================================
 
 /**
- * Update the contract address (called after deployment or from config)
- */
-export function setLedgerContractAddress(address: string): void {
-    DEFAULT_CONFIG.contractAddress = address;
-    // Reset cached contracts to force re-initialization
-    _readOnlyContract = null;
-    _writeContract = null;
-}
-
-/**
- * Get the current contract address
- */
-export function getLedgerContractAddress(): string {
-    return DEFAULT_CONFIG.contractAddress;
-}
-
-/**
  * Record a recommendation on-chain.
  *
  * The return value is the single source of truth for anchor status. Callers
  * must inspect `result.status` and surface it to the user — never ignore
  * `failed` results.
+ *
+ * @param params.recommendation data
+ * @param params.chainId optional target chain; defaults to Arbitrum Sepolia when configured, else 0G Galileo
  */
 export async function recordRecommendation(params: {
     user: string;
     action: string;
     targetToken: string;
-    reasoning: string;
+    /** On-chain keccak256 commitment. Provide either this or `reasoning`. */
+    reasoningHash?: string;
+    /** Full reasoning text; the service will hash it if `reasoningHash` is omitted. */
+    reasoning?: string;
     evidenceCid: string;
     servingModel: string;
     settlementTxHash?: string;
     confidence: number;
+    chainId?: number;
 }): Promise<AnchorResult> {
-    const chainId = DEFAULT_CONFIG.chainId;
+    const reasoningHash = params.reasoningHash
+        ? params.reasoningHash
+        : params.reasoning
+            ? computeReasoningHash(params.reasoning)
+            : ethers.ZeroHash;
+    const chainId = params.chainId ?? getDefaultLedgerChainId();
+    const config = getLedgerConfig(chainId);
+    if (!config) {
+        return { status: 'failed', error: `Unsupported ledger chainId: ${chainId}`, chainId };
+    }
 
-    const contract = getWriteContract();
+    const contract = getWriteContract(chainId);
     if (!contract) {
         return {
             status: 'failed',
-            error: 'RecommendationLedger write contract unavailable (signer or contract address missing)',
+            error: `RecommendationLedger write contract unavailable for chain ${chainId} (signer or contract address missing)`,
             chainId,
         };
     }
@@ -208,19 +282,19 @@ export async function recordRecommendation(params: {
             params.user,
             params.action,
             params.targetToken,
-            params.reasoning,
+            reasoningHash,
             params.evidenceCid,
             params.servingModel,
             params.settlementTxHash || '',
             params.confidence,
-            { gasLimit: 300_000 }
+            { gasLimit: 500_000 }
         );
     } catch (error: any) {
-        console.error(`[RecommendationLedger] ❌ Failed to broadcast for ${params.user}: ${error.message}`);
+        console.error(`[RecommendationLedger] ❌ Failed to broadcast for ${params.user} on chain ${chainId}: ${error.message}`);
         return { status: 'failed', error: error.message || 'Broadcast failed', chainId };
     }
 
-    const explorerUrl = buildLedgerExplorerUrl(tx.hash);
+    const explorerUrl = buildLedgerExplorerUrl(tx.hash, chainId);
 
     let receipt;
     try {
@@ -230,12 +304,12 @@ export async function recordRecommendation(params: {
         // is still on its way and the user can re-query by txHash.
         receipt = await tx.wait(1, 60_000);
     } catch (error: any) {
-        console.warn(`[RecommendationLedger] ⏳ Broadcast but receipt not confirmed for ${params.user}: ${tx.hash} — ${error.message}`);
+        console.warn(`[RecommendationLedger] ⏳ Broadcast but receipt not confirmed for ${params.user} on chain ${chainId}: ${tx.hash} — ${error.message}`);
         return { status: 'pending', txHash: tx.hash, chainId, explorerUrl };
     }
 
     if (receipt && receipt.status === 0) {
-        console.error(`[RecommendationLedger] ❌ Transaction reverted for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
+        console.error(`[RecommendationLedger] ❌ Transaction reverted for ${params.user} on chain ${chainId}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
         return { status: 'failed', error: 'On-chain transaction reverted', chainId };
     }
 
@@ -271,16 +345,27 @@ export async function recordRecommendation(params: {
         return { status: 'anchored', id: -1, txHash: tx.hash, chainId, explorerUrl };
     }
 
-    console.log(`[RecommendationLedger] ✅ Recorded #${id} for ${params.user}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
+    console.log(`[RecommendationLedger] ✅ Recorded #${id} for ${params.user} on chain ${chainId}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
     return { status: 'anchored', id, txHash: tx.hash, chainId, explorerUrl };
+}
+
+/**
+ * Mirror a recommendation to the 0G Galileo ledger after it has been anchored
+ * on Arbitrum. Returns the mirror result without affecting the canonical result.
+ */
+export async function mirrorRecommendationToZeroG(
+    params: Omit<Parameters<typeof recordRecommendation>[0], 'chainId'>
+): Promise<AnchorResult> {
+    return recordRecommendation({ ...params, chainId: ZERO_G_GALILEO_CHAIN_ID });
 }
 
 /**
  * Get a recommendation by ID
  */
-export async function getRecommendation(id: number): Promise<LedgerRecommendation | null> {
+export async function getRecommendation(id: number, chainId?: number): Promise<LedgerRecommendation | null> {
     try {
-        const contract = getReadOnlyContract();
+        const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+        const contract = getReadOnlyContract(resolvedChainId);
         const result = await contract.getRecommendation(id);
 
         return {
@@ -288,7 +373,7 @@ export async function getRecommendation(id: number): Promise<LedgerRecommendatio
             user: result.user,
             action: result.action,
             targetToken: result.targetToken,
-            reasoning: result.reasoning,
+            reasoningHash: result.reasoningHash,
             evidenceCid: result.evidenceCid,
             servingModel: result.servingModel,
             settlementTxHash: result.settlementTxHash,
@@ -304,9 +389,10 @@ export async function getRecommendation(id: number): Promise<LedgerRecommendatio
 /**
  * Get all recommendation IDs for a user
  */
-export async function getUserRecommendationIds(user: string): Promise<number[]> {
+export async function getUserRecommendationIds(user: string, chainId?: number): Promise<number[]> {
     try {
-        const contract = getReadOnlyContract();
+        const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+        const contract = getReadOnlyContract(resolvedChainId);
         const ids = await contract.getUserRecommendationIds(user);
         return ids.map((id: any) => Number(id));
     } catch (error: any) {
@@ -321,10 +407,12 @@ export async function getUserRecommendationIds(user: string): Promise<number[]> 
 export async function getUserRecommendations(
     user: string,
     offset: number = 0,
-    limit: number = 10
+    limit: number = 10,
+    chainId?: number
 ): Promise<{ recommendations: LedgerRecommendation[]; total: number }> {
     try {
-        const contract = getReadOnlyContract();
+        const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+        const contract = getReadOnlyContract(resolvedChainId);
         const [results, total] = await contract.getUserRecommendations(user, offset, limit);
 
         return {
@@ -333,7 +421,7 @@ export async function getUserRecommendations(
                 user: r.user,
                 action: r.action,
                 targetToken: r.targetToken,
-                reasoning: r.reasoning,
+                reasoningHash: r.reasoningHash,
                 evidenceCid: r.evidenceCid,
                 servingModel: r.servingModel,
                 settlementTxHash: r.settlementTxHash,
@@ -351,29 +439,33 @@ export async function getUserRecommendations(
 /**
  * Get recommendation ledger stats
  */
-export async function getLedgerStats(): Promise<{
+export async function getLedgerStats(chainId?: number): Promise<{
     totalRecommendations: number;
     contractAddress: string;
     chainId: number;
     isDeployed: boolean;
 }> {
     try {
-        const contract = getReadOnlyContract();
+        const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+        const contract = getReadOnlyContract(resolvedChainId);
         const total = await contract.totalRecommendations();
         const actualOwner = await contract.owner();
+        const config = getLedgerConfig(resolvedChainId);
 
         return {
             totalRecommendations: Number(total),
-            contractAddress: DEFAULT_CONFIG.contractAddress,
-            chainId: DEFAULT_CONFIG.chainId,
+            contractAddress: config?.contractAddress || '',
+            chainId: resolvedChainId,
             isDeployed: true,
         };
     } catch (error: any) {
-        console.warn('[RecommendationLedger] Failed to get stats:', error.message);
+        const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+        const config = getLedgerConfig(resolvedChainId);
+        console.warn(`[RecommendationLedger] Failed to get stats for chain ${resolvedChainId}:`, error.message);
         return {
             totalRecommendations: 0,
-            contractAddress: DEFAULT_CONFIG.contractAddress,
-            chainId: DEFAULT_CONFIG.chainId,
+            contractAddress: config?.contractAddress || '',
+            chainId: resolvedChainId,
             isDeployed: false,
         };
     }
@@ -382,9 +474,10 @@ export async function getLedgerStats(): Promise<{
 /**
  * Get the total number of recommendations
  */
-export async function getTotalRecommendations(): Promise<number> {
+export async function getTotalRecommendations(chainId?: number): Promise<number> {
     try {
-        const contract = getReadOnlyContract();
+        const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+        const contract = getReadOnlyContract(resolvedChainId);
         const total = await contract.totalRecommendations();
         return Number(total);
     } catch {
@@ -394,6 +487,7 @@ export async function getTotalRecommendations(): Promise<number> {
 
 export const recommendationLedgerService = {
     recordRecommendation,
+    mirrorRecommendationToZeroG,
     getRecommendation,
     getUserRecommendationIds,
     getUserRecommendations,
@@ -401,6 +495,10 @@ export const recommendationLedgerService = {
     getTotalRecommendations,
     setLedgerContractAddress,
     getLedgerContractAddress,
+    getDefaultLedgerChainId,
+    listSupportedLedgerChains,
+    buildLedgerExplorerUrl,
+    computeReasoningHash,
 };
 
 export default recommendationLedgerService;

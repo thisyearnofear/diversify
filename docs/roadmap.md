@@ -1,5 +1,62 @@
 # Roadmap — 9/10 Quality Plan
 
+## Arbitrum Submission Roadmap (Active)
+
+This section overrides the general improvement plan while the hackathon submission is in flight. The goal is to qualify for the Arbitrum "Overall" and "Best Agentic Project" prizes while preserving the dual-chain savings thesis: **Celo/Mento for local stablecoin savings** and **Arbitrum for deep liquidity + RWA yield + canonical on-chain ledger**.
+
+### Phase 1 — Arbitrum Qualification (Must-Do)
+
+| # | Task | Why | Owner Files |
+|---|---|---|---|
+| 1 | Add Arbitrum Sepolia to `foundry.toml` and env | Required to deploy qualifying contracts | `foundry.toml`, `.env.example` |
+| 2 | Deploy `RecommendationLedger` on Arbitrum Sepolia | Canonical prize-eligible ledger | `scripts/DeployArbitrumLedger.s.sol` |
+| 3 | Deploy `StrategyVault` on Arbitrum Sepolia | Arbitrum-facing vault for liquidity/RWA actions | `scripts/DeployArbitrumVault.s.sol` |
+| 4 | Deploy `AgenticHub` on Arbitrum Sepolia | Arbitrum execution coordinator | `scripts/DeployArbitrumHub.s.sol` |
+| 5 | Record deployed addresses in config | Frontend/services need deterministic addresses | `config/index.ts`, `.env.example` |
+| 6 | Make `RecommendationLedger` service chain-aware | Support both 0G mirror and Arbitrum canonical ledger | `packages/shared/src/services/recommendation-ledger.service.ts` |
+| 7 | Add Arbitrum to wagmi/Privy frontend config | Judges' wallets must connect to the right network | `components/app/ProviderTree.tsx`, `context/PrivyProvider.tsx` |
+| 8 | Add Arbitrum executor to Guardian loop | Route liquidity/RWA actions to Arbitrum | `pages/api/agent/guardian-loop.ts`, `packages/shared/src/services/execution/` |
+
+**Definition of done for Phase 1:**
+- Contracts deployed on Arbitrum Sepolia with verified addresses in README/config.
+- Frontend connects to Arbitrum Sepolia.
+- Guardian loop can record recommendations on the Arbitrum ledger.
+- `pnpm build` and `forge build` pass.
+
+### Phase 2 — Contract Hardening
+
+| # | Task | Why | Owner Files |
+|---|---|---|---|
+| 9 | Add `withdraw`/`redeem` to `StrategyVault` | Users must be able to exit; current vault is one-way | `contracts/StrategyVault.sol` |
+| 10 | Add slippage + deadline parameters to vault swaps | MEV / price-movement protection | `contracts/StrategyVault.sol` |
+| 11 | Use OpenZeppelin `SafeERC20` in `AgenticHub` | Ignore return-value bugs on non-standard ERC-20s | `contracts/AgenticHub.sol` |
+| 12 | Replace custom `onlyOwner` with OpenZeppelin `Ownable2Step` | Best practice, safer ownership transfer | `contracts/RecommendationLedger.sol` |
+| 13 | Store hashes/CIDs instead of full recommendation strings | Cheaper, more scalable on-chain records | `contracts/RecommendationLedger.sol` + services |
+| 14 | Add Foundry unit tests for all contracts | Submission credibility under "Smart contract quality" | `contracts/test/*.t.sol` |
+| 15 | Run `slither .` and fix or document findings | Security hygiene | CI / local |
+
+### Phase 3 — Deeper 0G Integration
+
+| # | Task | Why | Owner Files |
+|---|---|---|---|
+| 16 | Fix `ZeroGAnchoringDecorator` to return real CID to ledger | Currently discards CID; breaks verifiability chain | `packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts` |
+| 17 | Encrypt evidence bundles before 0G Storage upload | User strategy privacy + still verifiable | `packages/shared-0g/src/services/storage-service.ts` |
+| 18 | Add 0G Compute Direct / TEE-verified inference path | Strong "Innovation and Creativity" signal | `packages/shared/src/services/ai/providers/zero-g-provider.ts` |
+| 19 | (Stretch) Minimal ERC-7857 Agentic ID per user | Turns personal Guardian into an ownable asset | new `contracts/AgenticID.sol` |
+
+### Phase 4 — Submission Hygiene
+
+| # | Task | Why | Owner Files |
+|---|---|---|---|
+| 20 | Commit or revert the 80-file uncommitted diff | Clean working tree before judging | git |
+| 21 | Fix the 5 failing Vitest tests | Build/test gate | test suite |
+| 22 | Update README with Arbitrum addresses + demo flow | Judge verification | `README.md` |
+| 23 | Record short demo video (agent executing on Arbitrum) | Submission material | external |
+
+---
+
+## General 9/10 Quality Plan
+
 **14-day plan to bring DiversiFi from 7.0 → 8.6 across Product Design, UI/UX, Cogency, Performance, and System Architecture.** Based on a comprehensive review that identified structural gaps (prop drilling, monolithic shared package, no accessibility, unconditional heavy component hydration, suppressed type errors).
 
 All tasks are ordered by risk-adjusted impact. Things that require architectural upheaval with uncertain ROI (package split, Turbopack migration, API versioning, CSS design tokens) are explicitly deferred.

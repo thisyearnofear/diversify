@@ -18,6 +18,9 @@ vi.mock('ethers6', () => {
             Contract: vi.fn().mockImplementation(() => mockContract),
             Wallet: vi.fn().mockImplementation(() => wallet),
             utils: { hexlify: vi.fn(), randomBytes: vi.fn() },
+            keccak256: vi.fn().mockImplementation(() => '0x' + '99'.repeat(32)),
+            toUtf8Bytes: vi.fn().mockImplementation((s: string) => s),
+            ZeroHash: '0x' + '00'.repeat(32),
         },
     };
 });
@@ -145,5 +148,53 @@ describe('RecommendationLedgerService.recordRecommendation — return shape', ()
         }
 
         process.env = { ...ORIGINAL_ENV, VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32) };
+    });
+});
+
+describe('RecommendationLedgerService — chain-aware config', () => {
+    const ORIGINAL_ENV = process.env;
+
+    beforeEach(() => {
+        vi.resetModules();
+    });
+
+    afterEach(() => {
+        process.env = ORIGINAL_ENV;
+    });
+
+    it('defaults to 0G Galileo when Arbitrum contract is not configured', async () => {
+        process.env = {
+            ...ORIGINAL_ENV,
+            VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32),
+            ARBITRUM_LEDGER_CONTRACT: '',
+            ZERO_G_LEDGER_CONTRACT: '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
+        };
+        const { getDefaultLedgerChainId, getLedgerContractAddress } = await import('../recommendation-ledger.service');
+        expect(getDefaultLedgerChainId()).toBe(16602);
+        expect(getLedgerContractAddress()).toBe('0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED');
+    });
+
+    it('prefers Arbitrum Sepolia when its contract address is configured', async () => {
+        process.env = {
+            ...ORIGINAL_ENV,
+            VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32),
+            ARBITRUM_LEDGER_CONTRACT: '0x' + 'ab'.repeat(20),
+        };
+        const { getDefaultLedgerChainId, getLedgerContractAddress, buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        expect(getDefaultLedgerChainId()).toBe(421614);
+        expect(getLedgerContractAddress()).toBe('0x' + 'ab'.repeat(20));
+        expect(buildLedgerExplorerUrl('0x1234')).toContain('sepolia.arbiscan.io');
+    });
+
+    it('allows setting a custom Arbitrum Sepolia contract address at runtime', async () => {
+        process.env = {
+            ...ORIGINAL_ENV,
+            VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32),
+            ARBITRUM_LEDGER_CONTRACT: '0x' + 'ab'.repeat(20),
+        };
+        const { setLedgerContractAddress, getLedgerContractAddress } = await import('../recommendation-ledger.service');
+        const newAddress = '0x' + 'cd'.repeat(20);
+        setLedgerContractAddress(newAddress, 421614);
+        expect(getLedgerContractAddress(421614)).toBe(newAddress);
     });
 });

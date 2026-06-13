@@ -18,6 +18,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import {
   recommendationLedgerService,
   getLedgerContractAddress,
+  getDefaultLedgerChainId,
+  buildLedgerExplorerUrl,
 } from '@diversifi/shared';
 
 interface LedgerStats {
@@ -32,7 +34,7 @@ interface LedgerRecommendation {
   user: string;
   action: string;
   targetToken: string;
-  reasoning: string;
+  reasoningHash: string;
   evidenceCid: string;
   servingModel: string;
   settlementTxHash: string;
@@ -109,15 +111,16 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { user, limit: limitParam, offset: offsetParam } = req.query;
+  const { user, limit: limitParam, offset: offsetParam, chainId: chainIdParam } = req.query;
   const limit = Math.min(50, parseInt(String(limitParam || '10'), 10));
   const offset = parseInt(String(offsetParam || '0'), 10);
-  const contractAddress = getLedgerContractAddress();
+  const chainId = chainIdParam ? parseInt(String(chainIdParam), 10) : getDefaultLedgerChainId();
+  const contractAddress = getLedgerContractAddress(chainId);
   const isConfigured = !!contractAddress;
 
   try {
-    // Fetch global ledger stats
-    const stats = await recommendationLedgerService.getLedgerStats();
+    // Fetch global ledger stats for the active chain
+    const stats = await recommendationLedgerService.getLedgerStats(chainId);
 
     // If a user address is provided, fetch their recommendations
     let recent: LedgerRecommendation[] = [];
@@ -127,6 +130,7 @@ export default async function handler(
         user,
         offset,
         limit,
+        chainId,
       );
       recent = result.recommendations;
     } else if (isConfigured && stats.totalRecommendations > 0) {
@@ -138,7 +142,7 @@ export default async function handler(
       const batch: LedgerRecommendation[] = [];
 
       for (let id = total; id >= startId && batch.length < batchSize; id--) {
-        const rec = await recommendationLedgerService.getRecommendation(id);
+        const rec = await recommendationLedgerService.getRecommendation(id, chainId);
         if (rec) batch.push(rec);
       }
 
@@ -148,7 +152,7 @@ export default async function handler(
     return res.status(200).json({
       stats,
       recent,
-      explorerBase: 'https://chainscan-galileo.0g.ai',
+      explorerBase: buildLedgerExplorerUrl('', chainId).replace(/\/tx\/$/, ''),
       contractExplorer: contractAddress || null,
     } satisfies LedgerResponse);
   } catch (error: any) {
@@ -158,11 +162,11 @@ export default async function handler(
       stats: {
         totalRecommendations: 0,
         contractAddress: contractAddress || '',
-        chainId: 16602,
+        chainId,
         isDeployed: !!contractAddress,
       },
       recent: [],
-      explorerBase: 'https://chainscan-galileo.0g.ai',
+      explorerBase: buildLedgerExplorerUrl('', chainId).replace(/\/tx\/$/, ''),
       contractExplorer: contractAddress || null,
     });
   }
