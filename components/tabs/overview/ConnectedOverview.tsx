@@ -19,8 +19,7 @@ import { StreakRewardsCard, RewardsStats } from "../../rewards/StreakRewardsCard
 import SimplePieChart from "../../portfolio/SimplePieChart";
 import { NetworkOptimizedOnramp } from "../../onramp";
 import { AssetInventory } from "../../portfolio/AssetInventory";
-import { Card, DataError, EmptyState, HeroValue } from "../../shared/TabComponents";
-import DashboardCard from "../../shared/DashboardCard";
+import { Card, Section, DataError, EmptyState, HeroValue } from "../../shared/TabComponents";
 import { AgentTierStatus } from "../../agent/AgentTierStatus";
 import { GoalAlignmentBanner } from "./GoalAlignmentBanner";
 import { InflationTooltip } from "./InflationTooltip";
@@ -210,7 +209,7 @@ export function ConnectedOverview({
         className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/10 dark:via-gray-900 dark:to-indigo-900/10 border border-blue-100/80 dark:border-blue-900/60 shadow-[0_20px_50px_-20px_rgba(37,99,235,0.25)]"
       >
         <div className="relative z-10 p-7 sm:p-8">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400 shadow-sm">
+          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 shadow-sm">
             <span className="size-1.5 rounded-full bg-blue-500" />
             Home Overview
           </div>
@@ -228,7 +227,7 @@ export function ConnectedOverview({
               }
               side="bottom"
             >
-              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 cursor-help">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 cursor-help">
                 What&apos;s this?
               </span>
             </Tooltip>
@@ -254,7 +253,7 @@ export function ConnectedOverview({
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => setActiveTab(hasHoldings ? "exchange" : "protect")}
-              className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
+              className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
             >
               {hasHoldings ? "Review My Protection" : "Set Up My Plan"}
             </button>
@@ -270,7 +269,7 @@ export function ConnectedOverview({
 
           {isBeginner && primaryTip && hasHoldings && (
             <div className="mt-5 p-4 rounded-2xl bg-white/85 dark:bg-gray-900/85 border border-blue-100 dark:border-blue-900 text-left max-w-md mx-auto shadow-sm backdrop-blur-sm">
-              <div className="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-blue-400 mb-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">
                 Next Best Move
               </div>
               <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
@@ -304,7 +303,7 @@ export function ConnectedOverview({
           <div className="flex items-center gap-3">
             <span className="text-2xl animate-bounce">🎁</span>
             <div className="text-left">
-              <div className="text-xs font-black uppercase tracking-widest">
+              <div className="text-xs font-bold uppercase tracking-wide">
                 Daily Reward Ready
               </div>
               <div className="text-xs text-emerald-100 font-medium">
@@ -313,7 +312,7 @@ export function ConnectedOverview({
               </div>
             </div>
           </div>
-          <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap">
+          <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap">
             Claim Now
           </div>
         </button>
@@ -327,7 +326,7 @@ export function ConnectedOverview({
               <div className="flex items-center gap-3">
                 <span className="text-2xl">🎮</span>
                 <div>
-                  <h3 className="text-sm font-black text-white">Preview Mode Active</h3>
+                  <h3 className="text-sm font-bold text-white">Preview Mode Active</h3>
                   <p className="text-xs text-blue-100">
                     Exploring with sample data • Connect wallet for real portfolio
                   </p>
@@ -354,7 +353,7 @@ export function ConnectedOverview({
             <div className="flex items-start gap-3 mb-4">
               <span className="text-2xl">{coldStart.emoji}</span>
               <div className="flex-1">
-                <h3 className="text-lg font-black text-amber-900 dark:text-amber-100">
+                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">
                   {coldStart.headline}
                 </h3>
                 <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mt-1">
@@ -378,7 +377,7 @@ export function ConnectedOverview({
                     // or trigger wallet switch directly
                     setActiveTab("exchange");
                   }}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-black transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
                 >
                   {coldStart.emoji} {coldStart.suggestedChainName === 'Arbitrum'
                     ? 'Switch to Arbitrum to start'
@@ -432,9 +431,9 @@ export function ConnectedOverview({
       {/* 2. PROTECTION ANALYSIS */}
       {hasHoldings && (
         isBeginner ? (
-          <Card className="border border-gray-100 dark:border-gray-800 shadow-[0_12px_30px_-18px_rgba(15,23,42,0.35)]">
+          <Section>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
                 Your Protection Mix
               </h3>
               <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
@@ -455,7 +454,7 @@ export function ConnectedOverview({
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => setActiveTab("exchange")}
-                  className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+                  className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
                 >
                   Improve My Protection
                 </button>
@@ -465,7 +464,7 @@ export function ConnectedOverview({
                     setShowAssetDetails(newVal);
                     trackAssetDetailsToggle(newVal);
                   }}
-                  className="w-full flex items-center justify-between py-2 text-xs font-black uppercase tracking-widest text-gray-400 hover:text-blue-500 transition-colors"
+                  className="w-full flex items-center justify-between py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-blue-500 transition-colors"
                 >
                   <span>{showAssetDetails ? "Hide" : "View"} Asset Details</span>
                   <span>{showAssetDetails ? "↑" : "↓"}</span>
@@ -477,7 +476,7 @@ export function ConnectedOverview({
                 </div>
               )}
             </div>
-          </Card>
+          </Section>
         ) : (
           <ProtectionAnalysis
             regionData={regionData}
@@ -517,7 +516,7 @@ export function ConnectedOverview({
                   </div>
                 </div>
                 <div>
-                  <h3 className="text-sm font-black">Two Chains, One Mission</h3>
+                  <h3 className="text-sm font-bold">Two Chains, One Mission</h3>
                   <p className="text-xs text-gray-500">Celo for regional diversity • Arbitrum for yield</p>
                 </div>
               </div>
@@ -532,19 +531,22 @@ export function ConnectedOverview({
 
       {/* 4. MARKET INTELLIGENCE */}
       {!isBeginner && (
-      <DashboardCard
-        title={isBeginner ? "Global Opportunities" : "Guardian Pulse"}
-        icon={<span>🌍</span>}
-        color="blue"
-        size="lg"
-      >
-        <GuardianPulse />
-      </DashboardCard>
+        <Section>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="size-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-lg">🌍</div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Guardian Pulse</h3>
+          </div>
+          <GuardianPulse />
+        </Section>
       )}
 
       {/* 5. SMART RECOMMENDATIONS */}
       {tips.length > 0 && !isBeginner && (
-        <DashboardCard title="Smart Recommendations" icon={<span>💡</span>} color="amber" size="md">
+        <Section>
+          <div className="flex items-center gap-2 mb-3">
+            <div className="size-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center text-lg">💡</div>
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Smart Recommendations</h3>
+          </div>
           <div className="space-y-2">
             {tips.slice(0, 3).map((tip, idx) => (
               <div key={idx} className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg">
@@ -555,17 +557,16 @@ export function ConnectedOverview({
               </div>
             ))}
           </div>
-        </DashboardCard>
+        </Section>
       )}
 
       {/* 6. REGION SELECTOR (Advanced only) */}
       {!isBeginner && (
-        <DashboardCard
-          title="Your Home Region"
-          icon={<RegionalIconography region={userRegion} size="sm" />}
-          color="purple"
-          size="sm"
-        >
+        <Section>
+          <div className="flex items-center gap-2 mb-3">
+            <RegionalIconography region={userRegion} size="sm" />
+            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Your Home Region</h3>
+          </div>
           <div className="flex flex-wrap gap-2">
             {REGIONS.map((region) => (
               <button
@@ -581,7 +582,7 @@ export function ConnectedOverview({
               </button>
             ))}
           </div>
-        </DashboardCard>
+        </Section>
       )}
 
       {/* 7. EMPTY STATE FUNNEL */}

@@ -39,7 +39,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
   const isUrgent = variant === 'urgent';
   
   return (
-    <div className={`rounded-3xl overflow-hidden border transition-all duration-500 shadow-xl ${
+    <div className={`rounded-2xl overflow-hidden border transition-all duration-500 shadow-sm ${
       isUrgent 
         ? 'border-orange-200 bg-white dark:bg-gray-800 dark:border-orange-900/30 shadow-orange-500/5' 
         : 'border-blue-100 bg-white dark:bg-gray-800 dark:border-blue-900/30 shadow-blue-500/5'
@@ -58,11 +58,11 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
         </motion.div>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h4 className="font-black text-gray-900 dark:text-white uppercase tracking-tight leading-tight">
+            <h4 className="font-bold text-gray-900 dark:text-white uppercase tracking-tight leading-tight">
               {title}
             </h4>
             {isUrgent && (
-              <span className="bg-orange-500 text-white text-xs font-black px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
+              <span className="bg-orange-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse">
                 Action Required
               </span>
             )}

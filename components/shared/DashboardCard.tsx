@@ -59,9 +59,9 @@ export default function DashboardCard({
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             className={`
         bg-gradient-to-br ${colorClasses[color]}
-        rounded-2xl shadow-lg backdrop-blur-sm
+        rounded-xl shadow-sm backdrop-blur-sm
         ${sizeClasses[size]}
-        ${isInteractive ? "cursor-pointer hover:shadow-xl transition-shadow" : ""}
+        ${isInteractive ? "cursor-pointer hover:shadow-md transition-shadow" : ""}
         ${className}
       `}
         >
@@ -69,7 +69,7 @@ export default function DashboardCard({
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                     {icon && <span className="text-xl">{icon}</span>}
-                    <h3 className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                    <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                         {title}
                     </h3>
                 </div>

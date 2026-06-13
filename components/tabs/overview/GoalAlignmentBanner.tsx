@@ -67,10 +67,10 @@ export function GoalAlignmentBanner({
         <span className="text-2xl">{meta.icon}</span>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className={`text-xs font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${meta.badge}`}>
+            <span className={`text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full ${meta.badge}`}>
               Your Goal
             </span>
-            <span className="text-xs font-black text-gray-900 dark:text-white">{meta.label}</span>
+            <span className="text-xs font-bold text-gray-900 dark:text-white">{meta.label}</span>
             {riskTolerance && (
               <span className="text-xs text-gray-500">
                 • {riskTolerance} risk{timeHorizon ? ` • ${timeHorizon}` : ""}
@@ -80,8 +80,8 @@ export function GoalAlignmentBanner({
           <p className="text-xs text-gray-600 dark:text-gray-400">{meta.description}</p>
           <div className="mt-2">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-black uppercase text-gray-400 tracking-widest">Goal Progress</span>
-              <span className="text-xs font-black text-gray-700 dark:text-gray-300">{score}%</span>
+              <span className="text-xs font-semibold uppercase text-gray-400 tracking-wide">Goal Progress</span>
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{score}%</span>
             </div>
             <div className="h-1.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
               <div
@@ -94,7 +94,7 @@ export function GoalAlignmentBanner({
       </div>
       <button
         onClick={onAction}
-        className="mt-3 w-full py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-black uppercase tracking-widest text-gray-800 dark:text-gray-200 transition-colors flex items-center justify-center gap-2 shadow-md"
+        className="mt-3 w-full py-2 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl text-xs font-bold uppercase tracking-wide text-gray-800 dark:text-gray-200 transition-colors flex items-center justify-center gap-2 shadow-md"
       >
         <span>{meta.nextAction}</span>
         <span>→</span>

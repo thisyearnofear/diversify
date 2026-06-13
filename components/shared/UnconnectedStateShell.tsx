@@ -17,7 +17,7 @@
  */
 
 import React from 'react';
-import { Card } from './TabComponents';
+import { Card, Section } from './TabComponents';
 import { LiveProofCard } from './LiveProofCard';
 
 export interface HowItWorksStep {
@@ -76,8 +76,8 @@ export function UnconnectedStateShell({
 
       {/* 3. How it works steps */}
       {howItWorks && howItWorks.length > 0 && !hideHowItWorks && (
-        <Card padding="p-4" className={howItWorksCardClassName}>
-          <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest mb-3">
+        <Section className={howItWorksCardClassName}>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
             How It Works
           </h3>
           <div className="space-y-3">
@@ -87,7 +87,7 @@ export function UnconnectedStateShell({
                   {item.icon}
                 </div>
                 <div>
-                  <p className="text-xs font-black text-gray-900 dark:text-white">
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">
                     {item.title}
                   </p>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -97,29 +97,27 @@ export function UnconnectedStateShell({
               </div>
             ))}
           </div>
-        </Card>
+        </Section>
       )}
 
-      {/* 4. Demo mode CTA */}
+      {/* 4. Demo mode CTA — strip pattern, no container */}
       {showDemoCta && onEnableDemo && (
-        <Card padding="p-4" className={`border border-blue-200 dark:border-blue-800 ${demoCtaCardClassName}`.trim()}>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-black text-gray-900 dark:text-white">
-                🎮 Try Demo Mode
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                Explore the full flow with sample data — no wallet needed
-              </p>
-            </div>
-            <button
-              onClick={onEnableDemo}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
-            >
-              Open Demo
-            </button>
+        <div className={`flex items-center justify-between gap-3 px-1 ${demoCtaCardClassName}`}>
+          <div>
+            <p className="text-sm font-bold text-gray-900 dark:text-white">
+              🎮 Try Demo Mode
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Explore the full flow with sample data — no wallet needed
+            </p>
           </div>
-        </Card>
+          <button
+            onClick={onEnableDemo}
+            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+          >
+            Open Demo
+          </button>
+        </div>
       )}
 
       {/* 5. Additional tab-specific content */}

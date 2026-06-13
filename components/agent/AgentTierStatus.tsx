@@ -325,7 +325,7 @@ export const AgentTierStatus: React.FC<{
       {/* Performance Summary (only when showActivityFeed is true) */}
       {showActivityFeed && metrics.totalActions > 0 && (
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800">
-          <h3 className="text-xs font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider mb-3">
+          <h3 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 tracking-wide mb-3">
             Protection Performance
           </h3>
           <div className="grid grid-cols-3 gap-3">
@@ -388,7 +388,7 @@ export const AgentTierStatus: React.FC<{
             </span>
           </div>
           <div className="mt-1 flex items-center gap-2 relative z-10">
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
               Think
             </span>
             <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
@@ -468,7 +468,7 @@ export const AgentTierStatus: React.FC<{
             </span>
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-full">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-full">
               Act
             </span>
             <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
@@ -608,7 +608,7 @@ export const AgentTierStatus: React.FC<{
         >
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">Guardian Journal</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Guardian Journal</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">Recommendation handoff, execution, and verifiable evidence</p>
             </div>
             <div className="flex items-center gap-3">
@@ -627,7 +627,7 @@ export const AgentTierStatus: React.FC<{
             {/* Left Column: Management & Permissions */}
             <div className="space-y-6">
               <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
-                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider mb-4">Guardian Controls</h4>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-4">Guardian Controls</h4>
                 
                 <GuardianWDKStatus
                   agentStatus={wdkStatus}
@@ -641,7 +641,7 @@ export const AgentTierStatus: React.FC<{
                 {sessionInfo?.latestRecommendation && (
                   <div className="mt-6 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-blue-100 dark:border-blue-900/50">
                     <div className="flex items-center justify-between mb-2">
-                      <h5 className="text-xs font-black uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">
+                      <h5 className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-300">
                         Advisor Intent
                       </h5>
                       <span className="text-[10px] text-gray-400">
@@ -730,7 +730,7 @@ export const AgentTierStatus: React.FC<{
                       </div>
                       {sessionInfo && sessionInfo.recentExecutions.length > 0 && (
                         <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
-                          <div className="text-[10px] font-black uppercase tracking-[0.16em] text-purple-600 dark:text-purple-300">
+                          <div className="text-[10px] font-bold uppercase tracking-wide text-purple-600 dark:text-purple-300">
                             Recent Executions
                           </div>
                           <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
@@ -831,7 +831,7 @@ export const AgentTierStatus: React.FC<{
             <div className="space-y-6">
               {sessionInfo?.latestRecommendation && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl border border-blue-100 dark:border-purple-900 p-4">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 mb-2">
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
                     Proof Chain
                   </div>
                   <div className="space-y-2 text-sm">
@@ -859,7 +859,7 @@ export const AgentTierStatus: React.FC<{
                 </div>
               )}
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-wider">Proof of Execution</h4>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Proof of Execution</h4>
                 <span className="text-xs text-gray-400 italic">Sorted by Recency</span>
               </div>
               
@@ -891,7 +891,7 @@ export const AgentTierStatus: React.FC<{
                           </div>
 
                           <div className="flex justify-between items-start mb-1 pr-8">
-                            <span className="text-sm font-black text-gray-900 dark:text-gray-100">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
                               {event.title}
                             </span>
                             <span className="text-xs text-gray-400 whitespace-nowrap">
@@ -904,7 +904,7 @@ export const AgentTierStatus: React.FC<{
                               target="_blank"
                               rel="noopener noreferrer"
                               data-testid="anchor-chip"
-                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
                               title={anchor.id && anchor.id > 0 ? `0G RecommendationLedger #${anchor.id}` : 'Anchored on 0G (awaiting event index)'}
                             >
                               <span className="w-1 h-1 rounded-full bg-emerald-500" />
@@ -914,7 +914,7 @@ export const AgentTierStatus: React.FC<{
                           {anchor && anchor.status === 'pending' && (
                             <span
                               data-testid="anchor-chip-pending"
-                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
                             >
                               <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
                               0G pending
@@ -922,7 +922,7 @@ export const AgentTierStatus: React.FC<{
                           )}
                           {anchor && anchor.status === 'failed' && (
                             <span
-                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-black uppercase tracking-wider text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
+                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
                               title={anchor.error ?? '0G anchor failed'}
                             >
                               <span className="w-1 h-1 rounded-full bg-red-500" />
@@ -952,7 +952,7 @@ export const AgentTierStatus: React.FC<{
                                   No explorer receipt
                                 </span>
                               )}
-                              <span className={`text-[10px] uppercase font-black px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
+                              <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
                                 event.status === "confirmed"
                                   ? "text-green-500 bg-green-50 dark:bg-green-900/20"
                                   : event.status === "failed"

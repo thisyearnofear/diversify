@@ -82,7 +82,7 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
         <div className="flex items-center gap-2 mb-4 px-1">
           <div className="size-8 bg-red-100 dark:bg-red-900/30 rounded-lg flex items-center justify-center text-lg">🛡️</div>
           <div>
-            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400">Wealth Protection</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Wealth Protection</h3>
             <p className="text-sm font-bold text-gray-900 dark:text-white">Why Diversify?</p>
           </div>
         </div>
@@ -107,7 +107,7 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
             )}
           </div>
           <div className="flex-1">
-            <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 flex items-center gap-1.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400 flex items-center gap-1.5">
               Universal Basic Income
               {canClaim && <span className="text-emerald-500 text-xs">• Ready</span>}
             </h3>
@@ -151,14 +151,14 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
             {address ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-gray-400">ACTIVE NETWORK</span>
+                  <span className="text-xs font-semibold text-gray-400">ACTIVE NETWORK</span>
                   <div className="flex items-center gap-1.5">
                     <span className="size-2 bg-green-500 rounded-full animate-pulse" />
                     <span className="text-xs font-bold text-gray-900 dark:text-white">{networkName}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-gray-400">WALLET</span>
+                  <span className="text-xs font-semibold text-gray-400">WALLET</span>
                   <code className="text-xs font-mono bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
                     {formatAddress(address)}
                   </code>
@@ -169,7 +169,7 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
             )}
 
             <div className="pt-3 border-t border-gray-100 dark:border-gray-700">
-              <h4 className="text-xs font-black text-gray-400 mb-3 uppercase tracking-tighter">Available Tokens on {networkName}</h4>
+              <h4 className="text-xs font-semibold text-gray-400 mb-3 uppercase tracking-wide">Available Tokens on {networkName}</h4>
               <div className="flex flex-wrap gap-2">
                 {displayTokens.map((token) => (
                   <div
@@ -225,27 +225,27 @@ function VerifiabilitySection() {
             </p>
 
             <div className="grid grid-cols-2 gap-2 text-[10px]">
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">0G Storage</div>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+                <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">0G Storage</div>
                 <p className="text-gray-600 dark:text-gray-400">Evidence CIDs anchored to decentralized storage</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">0G Serving</div>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+                <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">0G Serving</div>
                 <p className="text-gray-600 dark:text-gray-400">Decentralized AI inference via Router API</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">0G Chain</div>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+                <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">0G Chain</div>
                 <p className="text-gray-600 dark:text-gray-400">RecommendationLedger contract on Galileo testnet</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-                <div className="font-black text-gray-400 uppercase tracking-wider mb-1">Arc x402</div>
+              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+                <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">Arc x402</div>
                 <p className="text-gray-600 dark:text-gray-400">Nanopayment settlement for premium data access</p>
               </div>
             </div>
 
             <button
               onClick={() => setShowDashboard(true)}
-              className="w-full py-3 bg-indigo-600 text-white text-xs font-black rounded-xl hover:bg-indigo-700 transition-colors active:scale-95"
+              className="w-full py-3 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-colors active:scale-95"
             >
               Open Verifiable AI Dashboard →
             </button>

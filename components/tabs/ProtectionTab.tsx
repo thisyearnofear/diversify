@@ -5,9 +5,9 @@ import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
 import {
   Card,
+  Section,
   InsightCard,
 } from "../shared/TabComponents";
-import DashboardCard from "../shared/DashboardCard";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useDemoMode } from "@/context/app/DemoModeContext";
@@ -428,7 +428,7 @@ export default function ProtectionTab({
           <GuardianMascot size={40} mood={strategyAlignmentScore > 80 ? 'happy' : 'thinking'} />
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-black uppercase tracking-wide text-indigo-700 dark:text-indigo-300 truncate">
+              <span className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300 truncate">
                 {selectedStrategyData.name}
               </span>
 ...
@@ -620,13 +620,14 @@ export default function ProtectionTab({
 
       {/* Chain Distribution - Non-beginner only */}
       {!isBeginner && displayTotalValue > 0 && (
-        <DashboardCard
-          title="Chain Distribution"
-          icon={<span>🔗</span>}
-          subtitle={`${displayChainCount} Chain${displayChainCount !== 1 ? "s" : ""}`}
-          color="blue"
-          size="lg"
-        >
+        <Section>
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <div className="size-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-lg">🔗</div>
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Chain Distribution</h3>
+            </div>
+            <span className="text-xs font-bold text-gray-500">{displayChainCount} Chain{displayChainCount !== 1 ? "s" : ""}</span>
+          </div>
           <MultichainPortfolioBreakdown
             regionData={displayRegionData.map((r) => ({
               region: r.region,
@@ -641,7 +642,7 @@ export default function ProtectionTab({
               tokenCount: c.tokenCount,
             }))}
           />
-        </DashboardCard>
+        </Section>
       )}
 
 

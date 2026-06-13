@@ -162,7 +162,7 @@ export default function AgentTab({
     <>
       {/* Header */}
       <div className="text-center">
-        <h2 className="text-2xl font-black text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {experienceMode === "beginner"
             ? "Your Advisor"
             : "Advisor"}
@@ -267,14 +267,14 @@ export default function AgentTab({
       <div className="rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/10 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-black uppercase tracking-wider text-amber-800 dark:text-amber-200">
+            <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
               Premium research bundle
             </p>
             <p className="mt-1 text-sm text-amber-900 dark:text-amber-100">
               Run macro analysis, portfolio optimization, and risk assessment with one Arc payment.
             </p>
           </div>
-          <span className="rounded-full bg-white/80 dark:bg-black/20 px-2 py-1 text-[11px] font-black text-amber-700 dark:text-amber-300">
+          <span className="rounded-full bg-white/80 dark:bg-black/20 px-2 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-300">
             $0.015
           </span>
         </div>
@@ -319,7 +319,7 @@ export default function AgentTab({
           <div className="flex items-start gap-4">
             <span className="text-3xl shrink-0" aria-hidden="true">⚠️</span>
             <div className="min-w-0">
-              <h3 className="text-lg font-black text-red-800 dark:text-red-200" tabIndex={-1}>
+              <h3 className="text-lg font-bold text-red-800 dark:text-red-200" tabIndex={-1}>
                 Connection issue
               </h3>
               <p className="text-sm text-red-700 dark:text-red-300 mt-1 leading-relaxed">

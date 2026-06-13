@@ -71,7 +71,7 @@ export const StepCard = ({
             </svg>
           </button>
         )}
-        <span className="text-xs font-black uppercase text-blue-600 tracking-widest">
+        <span className="text-xs font-bold uppercase text-blue-600 tracking-widest">
           Step {step} of {totalSteps}
         </span>
         <div className="flex gap-1">
@@ -93,13 +93,13 @@ export const StepCard = ({
         </button>
       )}
     </div>
-    <h4 className="text-sm font-black text-gray-900 mb-4">{title}</h4>
+    <h4 className="text-sm font-bold text-gray-900 mb-4">{title}</h4>
     {children}
     {onNext && (
       <button
         onClick={onNext}
         disabled={!canProceed}
-        className={`w-full mt-4 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${canProceed
+        className={`w-full mt-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${canProceed
             ? 'bg-blue-600 text-white hover:bg-blue-700'
             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
@@ -176,7 +176,7 @@ export const InsightCard = ({
         <button
           onClick={action.onClick}
           disabled={action.disabled || action.loading}
-          className={`w-full mt-3 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${action.disabled
+          className={`w-full mt-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${action.disabled
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : variant === 'reward'
                 ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -231,7 +231,7 @@ export const QuickSelect = <T extends string>({
             }`}
         >
           {opt.icon && <div className="text-xl mb-1">{opt.icon}</div>}
-          <div className="text-xs font-black uppercase text-gray-900 leading-tight">
+          <div className="text-xs font-bold uppercase text-gray-900 leading-tight">
             {opt.label}
           </div>
           {opt.description && (
@@ -463,7 +463,7 @@ export const ProtectionDashboard = ({
                 </h3>
               )}
               {subtitle && (
-                <p className="text-indigo-100/70 text-xs font-bold uppercase tracking-widest mt-1">
+                <p className="text-indigo-100/70 text-xs font-semibold uppercase tracking-wider mt-1">
                   {subtitle}
                 </p>
               )}
@@ -523,7 +523,7 @@ export const ProtectionDashboard = ({
               <span className="text-xl font-black leading-none drop-shadow-md" style={{ color: ringColor }}>
                 {score}%
               </span>
-              <span className="text-xs font-black uppercase tracking-tighter opacity-90 drop-shadow-sm mt-0.5" style={{ color: ringColor }}>
+              <span className="text-xs font-bold uppercase tracking-tight opacity-90 drop-shadow-sm mt-0.5" style={{ color: ringColor }}>
                 {statusText}
               </span>
             </div>
@@ -548,7 +548,7 @@ export const ProtectionDashboard = ({
                 💚
               </div>
               <div className="text-left">
-                <span className="text-xs font-black text-white tracking-tight block">
+                <span className="text-xs font-bold text-white tracking-tight block">
                   {canClaim ? "G$ Reward Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
                 </span>
                 <p className="text-xs text-white/60 font-medium">
@@ -575,7 +575,7 @@ export const ProtectionDashboard = ({
       {/* Factors Section */}
       <div className="bg-white dark:bg-gray-800 p-5 space-y-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-black uppercase text-gray-400 tracking-widest">Protection Factors</span>
+          <span className="text-xs font-semibold uppercase text-gray-400 tracking-wide">Protection Factors</span>
           <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full flex items-center gap-1.5">
             <span className="relative flex size-1.5">
               <span className="absolute inline-flex size-full rounded-full bg-indigo-400 opacity-75 animate-ping" />
@@ -784,8 +784,8 @@ export const Card = ({
   aiIconOnly?: boolean;
 } & React.HTMLAttributes<HTMLDivElement>) => {
   const variants = {
-    default: "bg-white dark:bg-gray-800 rounded-2xl shadow-lg",
-    bordered: "bg-white dark:bg-gray-800 rounded-2xl shadow-xl",
+    default: "bg-white dark:bg-gray-800 rounded-2xl shadow-sm",
+    bordered: "bg-white dark:bg-gray-800 rounded-2xl shadow-md",
     flat: "bg-gray-50 dark:bg-gray-900 rounded-2xl",
   };
   
@@ -1104,7 +1104,7 @@ export const ConnectWalletPrompt = ({
       {!isBeginner && availableTokens && availableTokens.length > 0 && (
         <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between mb-3">
-            <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest">Available Assets</h4>
+            <h4 className="text-xs font-semibold uppercase text-gray-400 tracking-wide">Available Assets</h4>
             <span className="text-xs text-gray-500 font-bold">{availableTokens.length} tokens</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -1148,7 +1148,7 @@ export const ConnectWalletPrompt = ({
           </div>
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <div className="text-xs font-black uppercase text-gray-400 mb-1">Your Region</div>
+              <div className="text-xs font-semibold uppercase text-gray-400 mb-1">Your Region</div>
               <div className="text-2xl font-black text-gray-900 dark:text-white">{homeInflation.toFixed(1)}%</div>
               <div className="text-xs text-gray-500 mt-1">{userRegion}</div>
             </div>
@@ -1159,7 +1159,7 @@ export const ConnectWalletPrompt = ({
               </div>
             </div>
             <div className="text-center flex-1">
-              <div className="text-xs font-black uppercase text-gray-400 mb-1">Stablecoins</div>
+              <div className="text-xs font-semibold uppercase text-gray-400 mb-1">Stablecoins</div>
               <div className="text-2xl font-black text-emerald-700 dark:text-emerald-300">0.5-3.1%</div>
               <div className="text-xs text-gray-500 mt-1">Global avg</div>
             </div>
@@ -1185,13 +1185,23 @@ export const ConnectWalletPrompt = ({
 export const Section = ({
   children,
   className = '',
+  title,
+  icon,
   divider = false,
 }: {
   children: React.ReactNode;
   className?: string;
+  title?: string;
+  icon?: React.ReactNode;
   divider?: boolean;
 }) => (
-  <div className={`${divider ? 'pt-4 mt-4 border-t border-gray-100 dark:border-gray-800' : ''} ${className}`}>
+  <div className={`bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 ${divider ? 'pt-4 mt-4 border-t border-gray-100 dark:border-gray-800' : ''} ${className}`}>
+    {title && (
+      <div className="flex items-center gap-2 mb-3">
+        {icon && <span className="text-lg">{icon}</span>}
+        <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>
+      </div>
+    )}
     {children}
   </div>
 );

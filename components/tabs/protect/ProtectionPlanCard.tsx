@@ -63,7 +63,7 @@ export function ProtectionPlanCard({
           <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-3xl" />
           <div className="flex justify-between items-start mb-6">
             <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-50 backdrop-blur-sm">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-indigo-50 backdrop-blur-sm">
                 <span className="size-1.5 rounded-full bg-white" />
                 Plan Setup
               </div>
