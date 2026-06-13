@@ -576,7 +576,13 @@ export const ProtectionDashboard = ({
       <div className="bg-white dark:bg-gray-800 p-5 space-y-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-black uppercase text-gray-400 tracking-widest">Protection Factors</span>
-          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">Live Scan</span>
+          <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full flex items-center gap-1.5">
+            <span className="relative flex size-1.5">
+              <span className="absolute inline-flex size-full rounded-full bg-indigo-400 opacity-75 animate-ping" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-indigo-500" />
+            </span>
+            Live
+          </span>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
