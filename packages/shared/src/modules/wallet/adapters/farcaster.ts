@@ -1,7 +1,6 @@
-import sdk from '@farcaster/miniapp-sdk';
-
 export async function getFarcasterProvider(): Promise<any | null> {
   try {
+    const { default: sdk } = await import('@farcaster/miniapp-sdk');
     if (!sdk?.wallet?.getEthereumProvider) {
       return null;
     }

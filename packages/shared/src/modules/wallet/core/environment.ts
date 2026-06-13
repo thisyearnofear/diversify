@@ -1,4 +1,3 @@
-import sdk from '@farcaster/miniapp-sdk';
 import { isMiniPayEnvironment } from '../../../utils/environment';
 
 export interface WalletEnvironment {
@@ -22,6 +21,8 @@ export async function detectWalletEnvironment(): Promise<WalletEnvironment> {
   const isMiniPay = isMiniPayEnvironment();
 
   try {
+    const { default: sdk } = await import('@farcaster/miniapp-sdk');
+
     if (sdk?.actions?.ready) {
       sdk.actions.ready();
     }
