@@ -20,7 +20,6 @@ import { OneInchSwapStrategy } from './strategies/oneinch-swap.strategy';
 import { UniswapV3Strategy } from './strategies/uniswap-v3.strategy';
 import { DirectRWAStrategy } from './strategies/direct-rwa.strategy';
 import { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
-import { RobinhoodAMMStrategy } from './strategies/robinhood-amm.strategy';
 import { EmergingMarketsStrategy } from './strategies/emerging-markets.strategy';
 import { CurveArcStrategy } from './strategies/curve-arc.strategy';
 import { HyperliquidPerpStrategy } from './strategies/hyperliquid-perp.strategy';
@@ -42,7 +41,6 @@ export class SwapOrchestratorService {
         new EmergingMarketsStrategy(),    // Celo Sepolia fictional companies
         new CurveArcStrategy(),           // Curve Finance on Arc Testnet (direct integration)
         new ArcTestnetStrategy(),         // Arc Testnet fallback (guidance)
-        new RobinhoodAMMStrategy(),       // Robinhood Chain testnet (stock tokens)
         new HyperliquidPerpStrategy(),    // Hyperliquid commodity perps (GOLD, SILVER, OIL, COPPER)
         new OneInchSwapStrategy(),        // Multi-chain same-chain (best rates)
         new UniswapV3Strategy(),          // Direct Uniswap V3 (reliable fallback)

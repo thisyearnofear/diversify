@@ -592,49 +592,6 @@ export class AgentService {
     }
 
     /**
-     * Robinhood Simulation Spoke - Backtesting & Paper Trading
-     * Enables autonomous simulation of stock token swaps on Robinhood testnet.
-     * Part of the 2026 "Autonomous" architecture for agent-led backtesting.
-     */
-    async simulateRobinhoodSwap(params: {
-        fromToken: 'ETH' | 'ACME' | 'SPACELY' | 'WAYNE' | 'OSCORP' | 'STARK';
-        toToken: 'ETH' | 'ACME' | 'SPACELY' | 'WAYNE' | 'OSCORP' | 'STARK';
-        amount: string;
-    }): Promise<{
-        success: boolean;
-        estimate?: {
-            expectedOutput: string;
-            minimumOutput: string;
-            priceImpact: number;
-        };
-        simulationId?: string;
-        error?: string;
-    }> {
-        await this.initialize();
-        return await this.strategyService.simulateRobinhoodSwap(params);
-    }
-
-    /**
-     * Run autonomous backtesting sequence on Robinhood testnet
-     * Simulates a series of swaps to evaluate strategy performance.
-     */
-    async runBacktestSequence(scenarios: Array<{
-        fromToken: 'ETH' | 'ACME' | 'SPACELY' | 'WAYNE' | 'OSCORP' | 'STARK';
-        toToken: 'ETH' | 'ACME' | 'SPACELY' | 'WAYNE' | 'OSCORP' | 'STARK';
-        amount: string;
-    }>): Promise<{
-        totalSimulations: number;
-        successful: number;
-        results: Array<{
-            scenario: typeof scenarios[0];
-            result: Awaited<ReturnType<AgentService['simulateRobinhoodSwap']>>;
-        }>;
-    }> {
-        await this.initialize();
-        return await this.strategyService.runBacktestSequence(scenarios);
-    }
-
-    /**
      * Celo Social Autonomy - Resolve social identifiers to addresses
      * Enables the agent to interact with users via phone/email instead of addresses.
      * Part of the 2026 "Social Autonomy" architecture.

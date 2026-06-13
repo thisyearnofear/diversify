@@ -365,66 +365,6 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
             },
         ],
     },
-    {
-        symbol: 'ACME',
-        name: 'Acme Corporation',
-        region: 'USA',
-        chains: [
-            {
-                chainId: NETWORKS.RH_TESTNET.chainId,
-                address: RH_TESTNET_TOKENS.ACME,
-                decimals: 18,
-            },
-        ],
-    },
-    {
-        symbol: 'SPACELY',
-        name: 'Spacely Sprockets',
-        region: 'USA',
-        chains: [
-            {
-                chainId: NETWORKS.RH_TESTNET.chainId,
-                address: RH_TESTNET_TOKENS.SPACELY,
-                decimals: 18,
-            },
-        ],
-    },
-    {
-        symbol: 'WAYNE',
-        name: 'Wayne Industries',
-        region: 'USA',
-        chains: [
-            {
-                chainId: NETWORKS.RH_TESTNET.chainId,
-                address: RH_TESTNET_TOKENS.WAYNE,
-                decimals: 18,
-            },
-        ],
-    },
-    {
-        symbol: 'OSCORP',
-        name: 'Oscorp Industries',
-        region: 'USA',
-        chains: [
-            {
-                chainId: NETWORKS.RH_TESTNET.chainId,
-                address: RH_TESTNET_TOKENS.OSCORP,
-                decimals: 18,
-            },
-        ],
-    },
-    {
-        symbol: 'STARK',
-        name: 'Stark Industries',
-        region: 'USA',
-        chains: [
-            {
-                chainId: NETWORKS.RH_TESTNET.chainId,
-                address: RH_TESTNET_TOKENS.STARK,
-                decimals: 18,
-            },
-        ],
-    },
 ];
 
 /**

@@ -372,9 +372,6 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
             {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ARC_TESTNET.chainId) && (
               <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-full">Arc</span>
             )}
-            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.RH_TESTNET.chainId) && (
-              <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-xs font-bold rounded-full">Robinhood</span>
-            )}
             {crossChainActivity.graduation.isGraduated && (
               <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-full">Mainnet 🚀</span>
             )}

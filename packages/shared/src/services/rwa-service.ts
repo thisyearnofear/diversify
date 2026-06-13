@@ -97,68 +97,6 @@ export const RWA_TOKENS: Record<string, RWAToken[]> = {
             riskLevel: 'low'
         }
     ],
-    'robinhood-testnet': [
-        {
-            address: '0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E',
-            symbol: 'ACME',
-            name: 'Acme Corporation',
-            type: 'credit', // closest existing type for equities
-            apy: 0,
-            tvl: 0,
-            chain: 'robinhood-testnet',
-            description: 'Tokenized Acme Corporation stock on Robinhood Chain testnet',
-            minInvestment: 0,
-            riskLevel: 'medium'
-        },
-        {
-            address: '0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02',
-            symbol: 'SPACELY',
-            name: 'Spacely Sprockets',
-            type: 'credit',
-            apy: 0,
-            tvl: 0,
-            chain: 'robinhood-testnet',
-            description: 'Tokenized Spacely Sprockets stock on Robinhood Chain testnet',
-            minInvestment: 0,
-            riskLevel: 'medium'
-        },
-        {
-            address: '0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0',
-            symbol: 'WAYNE',
-            name: 'Wayne Industries',
-            type: 'credit',
-            apy: 0,
-            tvl: 0,
-            chain: 'robinhood-testnet',
-            description: 'Tokenized Wayne Industries stock on Robinhood Chain testnet',
-            minInvestment: 0,
-            riskLevel: 'medium'
-        },
-        {
-            address: '0x3b8262A63d25f0477c4DDE23F83cfe22Cb768C93',
-            symbol: 'OSCORP',
-            name: 'Oscorp Industries',
-            type: 'credit',
-            apy: 0,
-            tvl: 0,
-            chain: 'robinhood-testnet',
-            description: 'Tokenized Oscorp Industries stock on Robinhood Chain testnet',
-            minInvestment: 0,
-            riskLevel: 'medium'
-        },
-        {
-            address: '0x71178BAc73cBeb415514eB542a8995b82669778d',
-            symbol: 'STARK',
-            name: 'Stark Industries',
-            type: 'credit',
-            apy: 0,
-            tvl: 0,
-            chain: 'robinhood-testnet',
-            description: 'Tokenized Stark Industries stock on Robinhood Chain testnet',
-            minInvestment: 0,
-            riskLevel: 'medium'
-        },
-    ],
     celo: [
         {
             address: '0xcebA9300f2b948710d2653dD7B07f33A8B32118C',
@@ -232,14 +170,6 @@ export const RWA_NETWORKS = {
         blockExplorer: 'https://etherscan.io',
         nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
         avgGasCost: 25.0 // USD
-    },
-    'robinhood-testnet': {
-        chainId: 46630,
-        name: 'Robinhood Chain Testnet',
-        rpcUrl: process.env.NEXT_PUBLIC_RH_RPC || 'https://rpc.testnet.chain.robinhood.com',
-        blockExplorer: 'https://explorer.testnet.chain.robinhood.com',
-        nativeCurrency: { name: 'Ethereum', symbol: 'ETH', decimals: 18 },
-        avgGasCost: 0.01
     },
     celo: {
         chainId: 42220,

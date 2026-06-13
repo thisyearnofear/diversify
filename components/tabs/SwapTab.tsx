@@ -30,7 +30,6 @@ import { useClaimFlow, ClaimFlowOverlay } from "../../hooks/use-claim-flow";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
-import { TestnetSimulationBanner } from "../swap/TestnetSimulationBanner";
 import { StreakRewardsSection } from "../rewards/StreakRewardsCard";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { MobileCollapsible } from "../ui/MobileCollapsible";
@@ -45,7 +44,6 @@ import { SocialContactPicker } from "../swap/SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import DepositHub from "../onramp/DepositHub";
-import dynamic from "next/dynamic";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -62,7 +60,7 @@ export default function SwapTab({
   refreshChainId,
   isBalancesLoading,
 }: SwapTabProps) {
-  const { address, chainId: walletChainId, switchNetwork } = useWalletContext();
+  const { address, chainId: walletChainId, switchNetwork, isMiniPay } = useWalletContext();
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
   const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
   const { demoMode } = useDemoMode();
@@ -159,7 +157,7 @@ export default function SwapTab({
     useTradeableTokens(walletChainId);
 
   const networkTokens = useMemo(() => {
-    return getChainAssets(walletChainId || NETWORKS.CELO_MAINNET.chainId);
+    return getChainAssets(walletChainId || NETWORKS.ARBITRUM_ONE.chainId);
   }, [walletChainId]);
 
   // Filter to only show tokens that Mento actually supports
@@ -215,7 +213,7 @@ export default function SwapTab({
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId ?? null);
   const activeNetworkName = useMemo(() => {
-    const activeChainId = walletChainId ?? NETWORKS.CELO_MAINNET.chainId;
+    const activeChainId = walletChainId ?? NETWORKS.ARBITRUM_ONE.chainId;
     return (
       Object.values(NETWORKS).find((network) => network.chainId === activeChainId)
         ?.name ?? "this chain"
@@ -569,37 +567,6 @@ export default function SwapTab({
               </Card>
             )}
 
-            {/* Testnet simulation banner — shown on Arc/RH when contracts aren't deployed yet */}
-            <ErrorBoundary moduleName="Testnet Banner">
-              <TestnetSimulationBanner
-                chainId={walletChainId}
-                onSimulated={() => {
-                  // Trigger the same celebration modal as a real swap so Arc/RH users
-                  // get the same dopamine hit. Use $10 USDC→EURC as the mock trade.
-                  if (profileConfig.userGoal && goalScores) {
-                    const currentScore =
-                      profileConfig.userGoal === "inflation_protection"
-                        ? goalScores.hedge
-                        : profileConfig.userGoal === "geographic_diversification"
-                          ? goalScores.diversify
-                          : profileConfig.userGoal === "rwa_access"
-                            ? goalScores.rwa
-                            : 0;
-                    setPreviousGoalScore(Math.round(currentScore));
-                  }
-                  setCelebrationData({
-                    fromToken: "USDC",
-                    toToken: "EURC",
-                    amount: "10",
-                    fromTokenInflation: 3.1,
-                    toTokenInflation: 2.3,
-                    chainId: walletChainId || 42161, // Default to Arbitrum if unknown
-                  });
-                  setShowCelebration(true);
-                }}
-              />
-            </ErrorBoundary>
-
             {/* GoodDollar UBI Streak — collapsible on mobile */}
             <ErrorBoundary moduleName="Streak Rewards">
               <MobileCollapsible 
@@ -740,8 +707,8 @@ export default function SwapTab({
         )}
       </Card>
 
-      {/* Yield opportunities — dynamic from LI.FI Earn */}
-      {!isArbitrum && address && (
+      {/* Yield opportunities — dynamic from LI.FI Earn. In MiniPay, these show Arbitrum/Base vaults, so skip */}
+      {!isMiniPay && !isArbitrum && address && (
         <div ref={yieldInViewRef.ref}>
           {yieldInViewRef.inView ? (
             <div id="yield-opportunities">
@@ -751,7 +718,7 @@ export default function SwapTab({
                 defaultCollapsedOnMobile={true}
               >
                 <YieldDiscoverySection
-                  chainId={walletChainId || 42220}
+                  chainId={walletChainId || NETWORKS.ARBITRUM_ONE.chainId}
                   description="Ranked vaults with route context so you can review the destination before selecting token amount."
                   actionLabel="Review in Swap"
                   onSelectVault={(vault) => {
@@ -760,7 +727,7 @@ export default function SwapTab({
                         vault.asset.symbol,
                         `lifi-earn:${vault.id}`,
                         "",
-                        walletChainId || 42220,
+                        walletChainId || NETWORKS.ARBITRUM_ONE.chainId,
                         vault.chainId
                       );
                     }
@@ -774,8 +741,8 @@ export default function SwapTab({
         </div>
       )}
 
-      {/* Advanced: Regional Hedge & Action Guidance (collapsible on mobile, lazy-loaded) */}
-      {!isArbitrum && address && !isBeginner && (
+      {/* Advanced: Regional Hedge & Action Guidance (collapsible on mobile, lazy-loaded). Skip in MiniPay */}
+      {!isMiniPay && !isArbitrum && address && !isBeginner && (
         <div ref={insightsInViewRef.ref}>
           {insightsInViewRef.inView ? (
             <MobileCollapsible 

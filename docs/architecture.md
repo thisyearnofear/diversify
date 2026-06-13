@@ -1,6 +1,6 @@
 # Architecture
 
-DiversiFi is an AI-powered autonomous financial advisor that protects stablecoin savings from currency debasement. It combines multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — all anchored to on-chain verifiability via 0G and Arc.
+DiversiFi is an AI-powered autonomous savings guardian. It protects stablecoin savings from local inflation by routing capital between **Celo/Mento** (local stablecoins, low-cost savings) and **Arbitrum** (deep liquidity, RWA yield). The architecture combines multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — all anchored to on-chain verifiability via 0G and bounded by user-signed ERC-7715 permissions.
 
 ## Recent Hardening (2026-06)
 
@@ -71,7 +71,10 @@ Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar har
 ┌──────────────────────────▼──────────────────────────────────┐
 │  External Services                                          │
 │  • MongoDB (user state, permissions, guardian-state)        │
-│  • 0G: Storage (evidence CID) + DA + Chain (RecLedger)      │
+│  • Arbitrum: canonical `RecommendationLedger`, vaults,      │
+│    deep-liquidity execution (Uniswap V3 / Aave / RWA)       │
+│  • Celo/Mento: local stablecoin savings + Mento swaps       │
+│  • 0G: Storage (evidence CID) + DA + Compute (TEE proofs)   │
 │  • Arc: x402 nanopayment settlement                         │
 │  • Cognee: cross-session agent memory                       │
 │  • Hetzner: always-on cron runtime (no cold starts)         │
@@ -106,7 +109,7 @@ The `SwapOrchestratorService` routes swaps through an ordered list of `BaseSwapS
 | 2 | EmergingMarketsStrategy | Celo Sepolia fictional companies |
 | 3 | CurveArcStrategy | Curve on Arc Testnet |
 | 4 | ArcTestnetStrategy | Arc Testnet guidance |
-| 5 | RobinhoodAMMStrategy | Stock token testnet |
+| 5 | ArbitrumSwapStrategy | Arbitrum-native DEX liquidity (Uniswap V3, Camelot) |
 | 6 | HyperliquidPerpStrategy | Commodity perps (GOLD, SILVER, OIL) |
 | 7 | OneInchSwapStrategy | Multi-chain best rates |
 | 8 | UniswapV3Strategy | Direct Uniswap V3 fallback |
@@ -132,10 +135,14 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
    → Check pending recommendations in guardian-state
    → Validate: confidence > GUARDIAN_CONFIDENCE_THRESHOLD (0.6)
    → Validate: within daily limit, allowed tokens not exceeded
+   → Route action to execution chain:
+      - Stable-savings / Mento actions → Celo executor
+      - Deep-liquidity / RWA yield actions → Arbitrum executor
    → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
    → Execute via /api/vault/rebalance
-   → Anchor to 0G Storage + Cognee memory
-   → Record on 0G RecommendationLedger (awaited, status persisted to GuardianState)
+   → Anchor evidence bundle to 0G Storage + Cognee memory
+   → Record hash/CID on **Arbitrum RecommendationLedger** (canonical)
+   → Mirror optionally to 0G Galileo testnet ledger
    → Clear recommendation from guardian-state
 ```
 
@@ -181,9 +188,11 @@ Every AI recommendation traces through the full 0G pipeline:
 | **0G Serving** | Decentralized inference via 0G Router (part of AI fallback chain) |
 | **0G Storage** | Evidence bundles (prompt, reasoning, data sources) hashed → CID |
 | **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
-| **0G Chain — RecommendationLedger** | On-chain record: `user → action → evidence CID → model → tx → confidence` |
+| **0G Compute Direct** | Optional TEE-verified inference for high-impact Guardian decisions |
 
-**Contract:** `0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED` on 0G Galileo Testnet (chainId `16602`) — overridable via `ZERO_G_LEDGER_CONTRACT`
+**Canonical Contract:** `RecommendationLedger` on **Arbitrum Sepolia** (chainId `421614`) — address set after deployment via `ARBITRUM_LEDGER_CONTRACT`.
+
+**Mirror Contract:** `0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED` on 0G Galileo Testnet (chainId `16602`) — optional audit replica; overridable via `ZERO_G_LEDGER_CONTRACT`.
 
 ### Anchor observability
 

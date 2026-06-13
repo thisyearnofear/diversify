@@ -323,12 +323,6 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
       newAchievements.push('speed-demon');
     }
 
-    // Stock Trader (Robinhood)
-    if (streak.crossChainActivity.testnet.chainsUsed.includes(NETWORKS.RH_TESTNET.chainId) && !hasAchievement('stock-trader')) {
-      streak.achievements.push('stock-trader');
-      newAchievements.push('stock-trader');
-    }
-
     // Mento Master (Celo Sepolia)
     if (streak.crossChainActivity.testnet.chainsUsed.includes(NETWORKS.CELO_SEPOLIA.chainId) && !hasAchievement('mento-master')) {
       streak.achievements.push('mento-master');

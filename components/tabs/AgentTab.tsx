@@ -14,9 +14,6 @@ import AutomationSettings from "../agent/AutomationSettings";
 import ActionableRecommendation from "../agent/ActionableRecommendation";
 import GuardianOnboardingWizard from "../agent/GuardianOnboardingWizard";
 import { useAgentStatus } from "../../hooks/use-agent-status";
-const BacktestPanel = dynamic(() => import("../agent/BacktestPanel").then(m => ({ default: m.BacktestPanel })), {
-  ssr: false,
-});
 
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
@@ -259,14 +256,6 @@ export default function AgentTab({
           />
         </ErrorBoundary>
       )}
-
-      {/* Backtest Lab (standard/advanced) - Dev only */}
-      {experienceMode !== "beginner" &&
-        process.env.NODE_ENV === "development" && (
-          <ErrorBoundary moduleName="Backtest Lab">
-            <BacktestPanel />
-          </ErrorBoundary>
-        )}
 
       {/* Automation Settings (only in advanced mode) */}
       {experienceMode === "advanced" && (

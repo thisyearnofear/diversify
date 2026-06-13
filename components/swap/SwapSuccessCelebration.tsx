@@ -52,8 +52,6 @@ export default function SwapSuccessCelebration({
   const { canClaim, isEligible, estimatedReward } = useStreakRewards();
   const router = useRouter();
 
-  const isArbitrum = chainId === NETWORKS.ARBITRUM_ONE.chainId;
-
   useEffect(() => {
     if (isVisible) {
       // Generate confetti pieces
@@ -297,38 +295,6 @@ export default function SwapSuccessCelebration({
                   >
                     Claim →
                   </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* ENHANCEMENT: Robinhood Trade Nudge on Arbitrum */}
-            {isArbitrum && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.85, type: "spring" }}
-                className="bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl p-5 mb-4 shadow-xl border-2 border-violet-300 dark:border-violet-700"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="text-4xl">📈</div>
-                  <div className="flex-1">
-                    <p className="text-base font-black text-white mb-1">
-                      Ready for more action?
-                    </p>
-                    <p className="text-xs text-violet-50 mb-3 leading-relaxed">
-                      Practice your trading strategies risk-free with fictional
-                      stocks on the Robinhood Chain testnet (Arbitrum Orbit).
-                    </p>
-                    <button
-                      onClick={() => {
-                        onClose();
-                        router.push("/trade");
-                      }}
-                      className="inline-block text-sm font-black px-4 py-2 bg-white hover:bg-violet-50 text-violet-700 rounded-lg transition-all shadow-md hover:shadow-lg"
-                    >
-                      Trade Stocks →
-                    </button>
-                  </div>
                 </div>
               </motion.div>
             )}

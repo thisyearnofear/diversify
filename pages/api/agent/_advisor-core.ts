@@ -75,7 +75,7 @@ REAL ASSETS (mainnet only — recommend these):
 - Arbitrum Mainnet: USDY (~5% APY), SYRUPUSDC (~4.5% APY), PAXG (gold-backed), USDC, EURC, MXNB (Bitso Mexican-peso stablecoin — LatAm/Mexico local-currency exposure, on/off-ramp to MXN via Bitso SPEI)
 - Base Mainnet: LI.FI Earn vaults via Morpho, yoUSD, Aave (up to 16% APY)
 
-TESTNET ONLY — never recommend for real portfolios: Robinhood fictional stocks (ACME, WAYNE, STARK), Test Drive demo assets.
+TESTNET ONLY — testing purposes only. Do not recommend testnet assets for real portfolio allocation.
 
 TONE RULES:
 1. No filler. Strip: "I'd be happy to", "Consider", "You might want to", "Let me explain", "As DiversiFi Advisor..."
@@ -168,11 +168,7 @@ function getTestDriveContext(chainId?: number): string {
   if (!chainId || !isTestnetChain(chainId)) return '';
 
   let chainSpecifics = '';
-  if (chainId === NETWORKS.RH_TESTNET.chainId) {
-    chainSpecifics = `- ROBINHOOD TESTNET: You are running on the Robinhood Arbitrum Orbit chain.
-- FICTIONAL STOCKS: These are TESTNET ONLY (ACME, SPACELY, WAYNE, OSCORP, STARK) - for experimentation, not real money.
-- Important: Do NOT recommend fictional stocks for real portfolios. They cannot be accessed with real funds.`;
-  } else if (chainId === NETWORKS.ARC_TESTNET.chainId) {
+  if (chainId === NETWORKS.ARC_TESTNET.chainId) {
     chainSpecifics = "- ARC TESTNET: Encourage users to test swap speeds vs Celo.";
   } else if (chainId === NETWORKS.CELO_SEPOLIA.chainId) {
     chainSpecifics = "- CELO SEPOLIA: Mento stablecoins (USDm, EURm) are functional here.";
@@ -632,8 +628,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
 
       normalizedPortfolio = {
         chains: [{
-          chainId: networkContext?.chainId || 42220,
-          chainName: networkContext?.name || 'Celo',
+          chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
+          chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name,
           totalValue,
           tokenCount: holdings.length,
           isLoading: false,
@@ -645,8 +641,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
             formattedBalance: "0",
             value: perTokenValue,
             region: 'Global',
-            chainId: networkContext?.chainId || 42220,
-            chainName: networkContext?.name || 'Celo'
+            chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
+            chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name
           })),
         }],
         totalValue
@@ -660,8 +656,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
     const perTokenValue = holdings.length > 0 ? totalValue / holdings.length : 0;
 
     const chains: ChainBalance[] = [{
-      chainId: networkContext?.chainId || 42220,
-      chainName: networkContext?.name || 'Celo',
+      chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
+      chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name,
       totalValue,
       tokenCount: holdings.length,
       isLoading: false,
@@ -673,8 +669,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
         formattedBalance: "0",
         value: perTokenValue,
         region: 'Global',
-        chainId: networkContext?.chainId || 42220,
-        chainName: networkContext?.name || 'Celo'
+        chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
+        chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name
       })),
     }];
 

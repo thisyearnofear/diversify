@@ -24,7 +24,6 @@ export const ACHIEVEMENTS: Badge[] = [
   { id: 'first-swap', name: 'First Swap', description: 'Completed your first swap', icon: '🔄', color: 'from-emerald-500 to-teal-500', rarity: 'common' },
   { id: 'multi-chain-explorer', name: 'Multi-Chain Explorer', description: 'Used 2+ testnet chains', icon: '⛓️', color: 'from-blue-500 to-indigo-500', rarity: 'rare' },
   { id: 'speed-demon', name: 'Speed Demon', description: 'Tested on Arc', icon: '⚡', color: 'from-amber-500 to-orange-500', rarity: 'rare' },
-  { id: 'stock-trader', name: 'Stock Trader', description: 'Traded on Robinhood', icon: '📈', color: 'from-violet-500 to-purple-500', rarity: 'rare' },
   { id: 'mento-master', name: 'Mento Master', description: 'Used Celo Sepolia', icon: '💱', color: 'from-cyan-500 to-blue-500', rarity: 'common' },
   { id: 'power-tester', name: 'Power Tester', description: '5+ testnet actions', icon: '🧪', color: 'from-pink-500 to-rose-500', rarity: 'epic' },
   { id: 'volume-trader', name: 'Volume Trader', description: '$100+ testnet volume', icon: '💰', color: 'from-amber-500 to-yellow-500', rarity: 'epic' },

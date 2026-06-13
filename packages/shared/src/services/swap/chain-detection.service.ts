@@ -8,8 +8,8 @@ import { NETWORKS } from '../../config';
 // Helper to check if we're in development mode
 const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'robinhood' | 'unknown';
-export type SwapProtocol = 'mento' | 'lifi' | 'robinhood-amm' | 'none';
+export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'unknown';
+export type SwapProtocol = 'mento' | 'lifi' | 'none';
 
 export class ChainDetectionService {
     /**
@@ -36,20 +36,11 @@ export class ChainDetectionService {
     }
 
     /**
-     * Check if chain is Robinhood Chain testnet (only in development)
-     */
-    static isRobinhood(chainId: number | null): boolean {
-        if (!isDev) return false;
-        return chainId === NETWORKS.RH_TESTNET.chainId;
-    }
-
-    /**
      * Check if chain is a testnet
      */
     static isTestnet(chainId: number | null): boolean {
         if (chainId === NETWORKS.CELO_SEPOLIA.chainId) return true;
         if (isDev && chainId === NETWORKS.ARC_TESTNET.chainId) return true;
-        if (isDev && chainId === NETWORKS.RH_TESTNET.chainId) return true;
         return false;
     }
 
@@ -60,7 +51,6 @@ export class ChainDetectionService {
         if (this.isCelo(chainId)) return 'celo';
         if (this.isArbitrum(chainId)) return 'arbitrum';
         if (isDev && this.isArc(chainId)) return 'arc';
-        if (isDev && this.isRobinhood(chainId)) return 'robinhood';
         return 'unknown';
     }
 
@@ -71,7 +61,6 @@ export class ChainDetectionService {
         if (this.isCelo(chainId)) return 'mento';
         if (this.isArbitrum(chainId)) return 'lifi';
         if (isDev && this.isArc(chainId)) return 'lifi';
-        if (isDev && this.isRobinhood(chainId)) return 'robinhood-amm';
         return 'none';
     }
 
@@ -104,7 +93,7 @@ export class ChainDetectionService {
      */
     static getSupportedChainIds(): number[] {
         const devChains = isDev
-            ? [NETWORKS.ARC_TESTNET.chainId, NETWORKS.RH_TESTNET.chainId]
+            ? [NETWORKS.ARC_TESTNET.chainId]
             : [];
         return [
             NETWORKS.CELO_MAINNET.chainId,

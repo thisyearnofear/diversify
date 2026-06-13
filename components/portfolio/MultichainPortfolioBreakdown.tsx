@@ -1,5 +1,6 @@
 import React from "react";
 import { NETWORKS } from "../../config";
+import { useWalletContext } from "../wallet/WalletProvider";
 
 interface ChainBreakdown {
     chainId: number;
@@ -51,19 +52,6 @@ const NETWORK_INFO: Record<number, NetworkMetadata> = {
             "Deep liquidity"
         ]
     },
-    [NETWORKS.RH_TESTNET.chainId]: {
-        color: "#22C55E",
-        darkColor: "#4ADE80",
-        icon: "🏦",
-        description: "Tokenized Stock RWAs (Testnet)",
-        regions: ["USA"],
-        features: [
-            "Fictional stocks (ACME, WAYNE, STARK)",
-            "Arbitrum Orbit L2",
-            "Zero real-money risk",
-            "Equity diversification"
-        ]
-    },
 };
 
 export default function MultichainPortfolioBreakdown({
@@ -71,6 +59,8 @@ export default function MultichainPortfolioBreakdown({
     totalValue,
     chainBreakdown = [],
 }: MultichainPortfolioBreakdownProps) {
+    const { isMiniPay } = useWalletContext();
+
     // Calculate network allocations from actual chain data
     const networkAllocations = React.useMemo(() => {
         const allocations: Record<string, {
@@ -83,6 +73,8 @@ export default function MultichainPortfolioBreakdown({
         // Use real chain breakdown data if available
         if (chainBreakdown.length > 0) {
             chainBreakdown.forEach(chain => {
+                // In MiniPay, only show Celo
+                if (isMiniPay && chain.chainId !== NETWORKS.CELO_MAINNET.chainId) return;
                 const percentage = totalValue > 0 ? (chain.totalValue / totalValue) * 100 : 0;
                 allocations[chain.chainName] = {
                     percentage,
@@ -94,17 +86,13 @@ export default function MultichainPortfolioBreakdown({
         } else {
             // Fallback: derive from region data
             const celoRegions = ["Africa", "LatAm", "Asia", "Europe"];
-            const arbitrumRegions = ["Commodities", "USA", "Europe", "Global"];
 
             let celoValue = 0;
-            let arbitrumValue = 0;
 
             regionData.forEach(({ region, value }) => {
                 const usdValue = value;
                 if (celoRegions.includes(region)) {
                     celoValue += usdValue;
-                } else if (arbitrumRegions.includes(region)) {
-                    arbitrumValue += usdValue;
                 }
             });
 
@@ -116,18 +104,29 @@ export default function MultichainPortfolioBreakdown({
                     tokenCount: 0,
                 };
             }
-            if (arbitrumValue > 0) {
-                allocations["Arbitrum"] = {
-                    percentage: totalValue > 0 ? (arbitrumValue / totalValue) * 100 : 0,
-                    usdValue: arbitrumValue,
-                    chainId: NETWORKS.ARBITRUM_ONE.chainId,
-                    tokenCount: 0,
-                };
+
+            // In MiniPay, skip Arbitrum allocation (Celo-only)
+            if (!isMiniPay) {
+                const arbitrumRegions = ["Commodities", "USA", "Europe", "Global"];
+                let arbitrumValue = 0;
+                regionData.forEach(({ region, value }) => {
+                    if (arbitrumRegions.includes(region)) {
+                        arbitrumValue += value;
+                    }
+                });
+                if (arbitrumValue > 0) {
+                    allocations["Arbitrum"] = {
+                        percentage: totalValue > 0 ? (arbitrumValue / totalValue) * 100 : 0,
+                        usdValue: arbitrumValue,
+                        chainId: NETWORKS.ARBITRUM_ONE.chainId,
+                        tokenCount: 0,
+                    };
+                }
             }
         }
 
         return allocations;
-    }, [regionData, totalValue, chainBreakdown]);
+    }, [regionData, totalValue, chainBreakdown, isMiniPay]);
 
     const networkEntries = Object.entries(networkAllocations)
         .filter(([, data]) => data.percentage > 0)
@@ -140,7 +139,7 @@ export default function MultichainPortfolioBreakdown({
             <div className="bg-gray-50 rounded-2xl p-4 text-center shadow-inner">
                 <p className="text-sm text-gray-500">No multichain data available</p>
                 <p className="text-xs text-gray-400 mt-1">
-                    Deposit assets on Celo or Arbitrum to see your distribution
+                    {isMiniPay ? 'Deposit assets on Celo to see your distribution' : 'Deposit assets on Celo or Arbitrum to see your distribution'}
                 </p>
             </div>
         );
@@ -239,30 +238,40 @@ export default function MultichainPortfolioBreakdown({
                 })}
             </div>
 
-            {/* Why Multichain */}
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100 dark:border-blue-800">
-                <h4 className="text-xs font-bold text-blue-800 dark:text-blue-300 mb-2">Why Multichain?</h4>
-                <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
-                    <li className="flex items-start gap-2">
-                        <span>🌱</span>
-                        <span><strong className="text-blue-900 dark:text-blue-200">Celo:</strong> Regional stablecoins and everyday payments</span>
-                    </li>
-                    <li className="flex items-start gap-2">
-                        <span>🥇</span>
-                        <span><strong className="text-blue-900 dark:text-blue-200">Arbitrum:</strong> Yield-bearing assets and gold</span>
-                    </li>
-                    {networkAllocations['Robinhood Chain'] && (
+            {/* Why Multichain — in MiniPay, simplify to single-chain messaging */}
+            {isMiniPay ? (
+                <div className="p-3 bg-green-50 dark:bg-green-900/30 rounded-xl border border-green-100 dark:border-green-800">
+                    <h4 className="text-xs font-bold text-green-800 dark:text-green-300 mb-2">Why Celo?</h4>
+                    <ul className="text-xs text-green-700 dark:text-green-400 space-y-1">
                         <li className="flex items-start gap-2">
-                            <span>🏦</span>
-                            <span><strong className="text-blue-900 dark:text-blue-200">RH Chain:</strong> Tokenized equities (testnet)</span>
+                            <span>🌱</span>
+                            <span><strong className="text-green-900 dark:text-green-200">Celo:</strong> Regional stablecoins, ultra-low fees, mobile-first</span>
                         </li>
-                    )}
-                    <li className="flex items-start gap-2">
-                        <span>🛡️</span>
-                        <span><strong className="text-blue-900 dark:text-blue-200">Combined:</strong> Maximum protection through diversification</span>
-                    </li>
-                </ul>
-            </div>
+                        <li className="flex items-start gap-2">
+                            <span>🛡️</span>
+                            <span><strong className="text-green-900 dark:text-green-200">You're all set:</strong> Use Celo stablecoins to protect your savings from inflation</span>
+                        </li>
+                    </ul>
+                </div>
+            ) : (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl border border-blue-100 dark:border-blue-800">
+                    <h4 className="text-xs font-bold text-blue-800 dark:text-blue-300 mb-2">Why Multichain?</h4>
+                    <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
+                        <li className="flex items-start gap-2">
+                            <span>🌱</span>
+                            <span><strong className="text-blue-900 dark:text-blue-200">Celo:</strong> Regional stablecoins and everyday payments</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span>🥇</span>
+                            <span><strong className="text-blue-900 dark:text-blue-200">Arbitrum:</strong> Yield-bearing assets and gold</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                            <span>🛡️</span>
+                            <span><strong className="text-blue-900 dark:text-blue-200">Combined:</strong> Maximum protection through diversification</span>
+                        </li>
+                    </ul>
+                </div>
+            )}
         </div>
     );
 }

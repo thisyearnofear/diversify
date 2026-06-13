@@ -38,6 +38,13 @@ export const NETWORKS = {
         rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
         explorerUrl: 'https://arbiscan.io',
     },
+    ARBITRUM_SEPOLIA: {
+        chainId: 421614,
+        name: 'Arbitrum Sepolia',
+        rpcUrl: process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC || 'https://sepolia-rollup.arbitrum.io/rpc',
+        explorerUrl: 'https://sepolia.arbiscan.io',
+        devOnly: true,
+    },
     RH_TESTNET: {
         chainId: 46630,
         name: 'Robinhood Chain',
@@ -242,13 +249,6 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     // Native ETH (used as quote token on Robinhood Chain)
     ETH: { name: 'Ether', region: REGIONS.GLOBAL, decimals: 18, apy: 0 },
 
-    // Fictional Stock Tokens (Robinhood Chain Testnet)
-    ACME: { name: 'Acme Corporation', region: REGIONS.USA, decimals: 18, apy: 0 },
-    SPACELY: { name: 'Spacely Sprockets', region: REGIONS.USA, decimals: 18, apy: 0 },
-    WAYNE: { name: 'Wayne Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
-    OSCORP: { name: 'Oscorp Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
-    STARK: { name: 'Stark Industries', region: REGIONS.USA, decimals: 18, apy: 0 },
-
     // Fictional Emerging Market Companies (Celo Sepolia Testnet)
     // Africa
     WAKANDA: { name: 'Wakanda Design Group', region: REGIONS.AFRICA, decimals: 18, apy: 0 },
@@ -287,8 +287,9 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.CELO_MAINNET.chainId]: ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'G$', 'USDT'],
     [NETWORKS.CELO_SEPOLIA.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT', 'CELO', 'WAKANDA', 'DAKAR', 'SHADOW', 'KUBERA', 'SANTA', 'SHADALOO', 'MISHIMA', 'ARASAKA', 'SURA'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'MXNB', 'PAXG', 'USDY', 'SYRUPUSDC'],
+    [NETWORKS.ARBITRUM_SEPOLIA.chainId]: ['USDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
-    [NETWORKS.RH_TESTNET.chainId]: ['ETH', 'ACME', 'SPACELY', 'WAYNE', 'OSCORP', 'STARK'],
+    [NETWORKS.RH_TESTNET.chainId]: ['ETH'],
     [NETWORKS.HYPERLIQUID.chainId]: ['GOLD', 'SILVER', 'OIL', 'COPPER'],
 };
 
@@ -334,11 +335,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     USDY: 1,
     SYRUPUSDC: 1,
     ETH: 3500,
-    ACME: 42,
-    SPACELY: 18,
-    WAYNE: 95,
-    OSCORP: 35,
-    STARK: 120,
+
 } as const;
 
 // Transaction Configuration
@@ -447,6 +444,7 @@ export const SWAP_CONFIG = {
         [NETWORKS.CELO_SEPOLIA.chainId]: { 'MentoSwapStrategy': 100, 'LiFiSwapStrategy': 20 },
         [NETWORKS.ARC_TESTNET.chainId]: { 'CurveArcStrategy': 100, 'ArcTestnetStrategy': 90 },
         [NETWORKS.ARBITRUM_ONE.chainId]: { 'OneInchSwapStrategy': 90, 'UniswapV3Strategy': 80, 'LiFiSwapStrategy': 60, 'DirectRWAStrategy': 30 },
+        [NETWORKS.ARBITRUM_SEPOLIA.chainId]: { 'UniswapV3Strategy': 80, 'LiFiSwapStrategy': 60 },
     },
     TOKEN_PREFERENCES: {
         'PAXG': { 'OneInchSwapStrategy': 25 },
@@ -509,17 +507,17 @@ export const ARBITRUM_TOKENS = {
     MXNB: '0xF197FFC28c23E0309B5559e7a166f2c6164C80aA',
 } as const;
 
+export const ARBITRUM_SEPOLIA_TOKENS = {
+    // Arbitrum Sepolia USDC (Circle testnet faucet)
+    USDC: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+} as const;
+
 export const ARC_TOKENS = {
     USDC: '0x3600000000000000000000000000000000000000',
     EURC: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
 } as const;
 
 export const RH_TESTNET_TOKENS = {
-    ACME: '0x4390d881751a190C9B3539b052BA1FC7a0f517dc',
-    SPACELY: '0xe28F0fBc0777373fd80E932072033949ef73Fa5f',
-    WAYNE: '0xD91C15F9017c4Caa56825487ede1A701a94cE2a4',
-    OSCORP: '0xeacC2abf8C05bAc6870C16bEa5c4E3db7d8EA41d',
-    STARK: '0x1d3264F941Dc8d9b038245987078D249Df748c8D',
     WETH: '0x95fa0c32181d073FA9b07F0eC3961C845d00bE21',
 } as const;
 
@@ -528,7 +526,6 @@ export const BROKER_ADDRESSES = {
     CELO_SEPOLIA: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
     ARC_TESTNET: '0x0000000000000000000000000000000000000000',
     ZERO_G_TESTNET: '0x0000000000000000000000000000000000000000',
-    RH_TESTNET: '0xBD6a279E7b58000Ac01FBfba23a0bFbFCA8e43a3',
 } as const;
 
 // Helper: Get token addresses by chain
@@ -536,11 +533,13 @@ export function getTokenAddresses(chainId: number): Record<string, string> {
     if (chainId === NETWORKS.RH_TESTNET.chainId) return RH_TESTNET_TOKENS;
     if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
+    if (chainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) return ARBITRUM_SEPOLIA_TOKENS;
     return chainId === NETWORKS.CELO_SEPOLIA.chainId ? CELO_SEPOLIA_TOKENS : MAINNET_TOKENS;
 }
 
 export function getBrokerAddress(chainId: number) {
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return '0x0000000000000000000000000000000000000000';
+    if (chainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) return '0x0000000000000000000000000000000000000000';
     return chainId === NETWORKS.CELO_SEPOLIA.chainId ? '0xD3Dff18E465bCa6241A244144765b4421Ac14D09' : '0x777a8255ca72412f0d706dc03c9d1987306b4cad';
 }
 
