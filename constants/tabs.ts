@@ -14,6 +14,7 @@ export const LEGACY_TAB_MAP: Record<string, TabId> = {
   strategies: "overview",
   rewards: "overview",
   oracle: "protect",
+  guardian_setup: "protect",
   swap: "exchange",
   trade: "exchange",
 };

@@ -8,11 +8,9 @@
  */
 
 import React, { useCallback, useState } from "react";
-import dynamic from "next/dynamic";
 import { AgentTierStatus } from "../agent/AgentTierStatus";
 import AutomationSettings from "../agent/AutomationSettings";
 import ActionableRecommendation from "../agent/ActionableRecommendation";
-import GuardianOnboardingWizard from "../agent/GuardianOnboardingWizard";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 
 import { useAgentConfig } from "../../hooks/use-agent-config";
@@ -45,19 +43,19 @@ import { useDemoMode } from "../../context/app/DemoModeContext";
 
 const HOW_IT_WORKS: HowItWorksStep[] = [
   {
-    icon: "🔑",
-    title: "Sign a Permission",
-    text: "Set a daily spending limit and authorize the Guardian to act on your behalf.",
+    icon: "🔮",
+    title: "AI Analysis",
+    text: "The Advisor analyzes your portfolio 24/7 for inflation risks and rebalancing opportunities.",
   },
   {
-    icon: "🤖",
-    title: "Guardian Monitors",
-    text: "Your portfolio is watched 24/7 for inflation risks and rebalancing opportunities.",
+    icon: "⛓",
+    title: "Evidence-Backed",
+    text: "Premium research uses macro data, portfolio optimization, and risk assessment with on-chain proof.",
   },
   {
     icon: "⚡",
-    title: "Automatic Protection",
-    text: "Within your limits, the Guardian executes protection swaps autonomously.",
+    title: "One-Tap Actions",
+    text: "Execute recommended swaps, deposits, and protection moves directly from the chat.",
   },
 ];
 
@@ -92,7 +90,6 @@ export default function AgentTab({
   const { askAdvisor } = useAdvisor();
   const { navigateToSwap } = useNavigation();
   const [showQuickActions, setShowQuickActions] = useState(false);
-  const [skipWizard, setSkipWizard] = useState(false);
   const [dismissError, setDismissError] = useState(false);
 
   const handleAskAgent = () => {
@@ -130,18 +127,18 @@ export default function AgentTab({
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-xl font-black uppercase tracking-tight">
-              Your AI Guardian
+              Your AI Advisor
             </h3>
             <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-              Autonomous protection, verifiable on-chain
+              Portfolio intelligence, verifiable on-chain
             </p>
           </div>
-          <span className="text-3xl">🤖</span>
+          <span className="text-3xl">🔮</span>
         </div>
         <p className="text-indigo-100 text-xs font-bold leading-relaxed mb-4">
-          The Guardian monitors your portfolio 24/7, executes protection swaps within
-          the limits you set, and records every action on the 0G blockchain for total
-          transparency.
+          The Advisor analyzes your portfolio 24/7, surfaces inflation risks and
+          rebalancing opportunities, and lets you execute recommended actions with
+          a single tap.
         </p>
         <WalletButton variant="inline" className="w-full" />
       </div>
@@ -160,9 +157,9 @@ export default function AgentTab({
     );
   }
 
-  // Extract the dashboard into a helper so it can be rendered standalone
-  // in the wizard-dismissed state and as the main fallthrough content.
-  // Defined before the early-return blocks to avoid hoisting issues.
+  // Extract the dashboard into a helper so it can be rendered as the main
+  // fallthrough content. Defined before the early-return blocks to avoid
+  // hoisting issues.
   const renderDashboard = () => (
     <>
       {/* Header */}
@@ -357,115 +354,7 @@ export default function AgentTab({
     );
   }
 
-  // ─── Wizard dismissed: user skipped, guardian not active ─────────────
-  if (skipWizard && (!autonomousStatus || !autonomousStatus.enabled)) {
-    return (
-      <div className="space-y-4 pb-6">
-        {/* Dismissed state card */}
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-6" aria-live="polite">
-          <div className="flex items-start gap-4">
-            <span className="text-3xl shrink-0" aria-hidden="true">🛡️</span>
-            <div className="min-w-0">
-              <h3 className="text-lg font-black text-amber-900 dark:text-amber-200" tabIndex={-1}>
-                Guardian setup paused
-              </h3>
-              <p className="text-sm text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
-                You skipped the Guardian introduction. Your portfolio isn't being monitored
-                or protected automatically. You can restart the setup anytime.
-              </p>
-              <div className="flex gap-3 mt-4">
-                <button
-                  onClick={() => setSkipWizard(false)}
-                  className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
-                >
-                  Restart setup
-                </button>
-                <button
-                  onClick={() => {
-                    askAdvisor(
-                      "Guide me through setting up the Guardian protection step by step without the introduction wizard."
-                    );
-                  }}
-                  className="px-4 py-2.5 bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-300 text-sm font-bold rounded-xl border border-amber-300 dark:border-amber-700/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-                >
-                  Ask Advisor for help
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick-start options */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setSkipWizard(false)}
-            className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700 transition-colors text-center"
-          >
-            <span className="text-2xl">🛡️</span>
-            <span className="text-sm font-bold text-gray-900 dark:text-white">
-              Guardian setup
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              4-step introduction
-            </span>
-          </button>
-          <button
-            onClick={() => {
-              askAdvisor(
-                "Explain how the Guardian protects my savings from inflation and what I need to do to activate it."
-              );
-            }}
-            className="flex flex-col items-center gap-2 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-center"
-          >
-            <span className="text-2xl">🔮</span>
-            <span className="text-sm font-bold text-gray-900 dark:text-white">
-              Ask the Advisor
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Learn about protection
-            </span>
-          </button>
-        </div>
-
-        {/* Full dashboard below — so the user can explore even without Guardian */}
-        {renderDashboard()}
-      </div>
-    );
-  }
-
-  // ─── Guardian onboarding: show wizard if wallet connected but no active Guardian ─
-  const needsGuardianOnboarding =
-    !!address &&
-    !isStatusLoading &&
-    !skipWizard &&
-    !dismissError &&
-    (!autonomousStatus || !autonomousStatus.enabled);
-
-  if (needsGuardianOnboarding) {
-    return (
-      <div className="space-y-4 pb-6">
-        <div className="text-center">
-          <h2 className="text-2xl font-black text-gray-900 dark:text-white">
-            Your Guardian
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Set up your AI protection in one minute
-          </p>
-        </div>
-        <GuardianOnboardingWizard
-          onActivate={() => {
-            askAdvisor(
-              "I want to activate my Guardian to protect my savings. Help me set up a daily spending limit and choose which tokens to allow."
-            );
-          }}
-          onSkip={() => setSkipWizard(true)}
-          spendingLimit={config.spendingLimit}
-        />
-      </div>
-    );
-  }
-
-  // ─── Main fallthrough: Guardian active or standard dashboard ────────
+  // ─── Main fallthrough: standard dashboard ─────────────────────────────
   return (
     <div className="space-y-4 pb-6">
       {renderDashboard()}

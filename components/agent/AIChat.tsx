@@ -772,10 +772,10 @@ export default function AIChat() {
                       )}
                       {msg.action?.type === 'navigate' && msg.action.tab && (
                         <button
-                          onClick={() => { const t = msg.action?.tab || ''; if (isTabId(t)) setActiveTab(t); }}
+                          onClick={() => { const raw = msg.action?.tab || ''; const resolved = isTabId(raw) ? raw : LEGACY_TAB_MAP[raw]; if (resolved) setActiveTab(resolved); }}
                           className="mt-3 w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
                         >
-                          → Open {msg.action.tab}
+                          → Open {isTabId(msg.action.tab) ? msg.action.tab : LEGACY_TAB_MAP[msg.action.tab] || msg.action.tab}
                         </button>
                       )}
                       {msg.action?.type === 'confirm_research' && (

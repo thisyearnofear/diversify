@@ -33,6 +33,9 @@ import { useClaimFlow, ClaimFlowOverlay } from "@/hooks/use-claim-flow";
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 import { GuardianMascot } from "../shared/GuardianMascot";
+import GuardianOnboardingWizard from "../agent/GuardianOnboardingWizard";
+import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useAgentConfig } from "@/hooks/use-agent-config";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 
 // ============================================================================
@@ -71,6 +74,11 @@ export default function ProtectionTab({
   // flow hook lives before any early return. The hook itself short-circuits
   // safely when the wallet is disconnected.
   const flow = useClaimFlow();
+
+  // Guardian onboarding state — lives here so the Protect tab owns setup
+  const { autonomousStatus, isLoading: isGuardianStatusLoading } = useAgentStatus();
+  const { config: agentConfig } = useAgentConfig();
+  const [guardianDismissed, setGuardianDismissed] = useState(false);
 
   const {
     totalValue,
@@ -450,6 +458,21 @@ export default function ProtectionTab({
         currentGoalLabel={currentGoalLabel}
         onClaim={flow.handleClaim}
       />}
+
+      {/* =================================================================
+          GUARDIAN ONBOARDING — Setup lives on Protect tab
+          ================================================================= */}
+      {address && !isGuardianStatusLoading && !guardianDismissed && (!autonomousStatus || !autonomousStatus.enabled) && (
+        <GuardianOnboardingWizard
+          onActivate={() => {
+            askAdvisor(
+              "I want to activate my Guardian to protect my savings. Help me set up a daily spending limit and choose which tokens to allow.",
+            );
+          }}
+          onSkip={() => setGuardianDismissed(true)}
+          spendingLimit={agentConfig.spendingLimit}
+        />
+      )}
 
       {/* =================================================================
           PRIMARY INSIGHT CARD - Dynamic based on selected goal
