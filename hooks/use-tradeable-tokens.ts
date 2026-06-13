@@ -94,7 +94,7 @@ const FALLBACK_TRADEABLE_SYMBOLS: Record<number, string[]> = {
 export function useTradeableTokens(
   chainId: number | null,
 ): UseTradeableTokensResult {
-  const effectiveChainId = chainId || NETWORKS.ARBITRUM_ONE.chainId;
+  const effectiveChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
 
   // Start with fallback symbols for immediate display
   const [tradeableSymbols, setTradeableSymbols] = useState<string[]>(

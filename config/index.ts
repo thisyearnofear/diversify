@@ -65,6 +65,25 @@ export const NETWORKS = {
     },
 } as const;
 
+export type ProtectionGoal =
+    | 'inflation_protection'
+    | 'geographic_diversification'
+    | 'rwa_access'
+    | 'exploring'
+    | null
+    | undefined;
+
+export function getPreferredChainIdForGoal(goal?: ProtectionGoal, isMiniPay = false): number {
+    if (isMiniPay) return NETWORKS.CELO_MAINNET.chainId;
+    if (goal === 'rwa_access') return NETWORKS.ARBITRUM_ONE.chainId;
+    return NETWORKS.CELO_MAINNET.chainId;
+}
+
+export function getPreferredNetworkForGoal(goal?: ProtectionGoal, isMiniPay = false) {
+    const chainId = getPreferredChainIdForGoal(goal, isMiniPay);
+    return Object.values(NETWORKS).find((network) => network.chainId === chainId) ?? NETWORKS.CELO_MAINNET;
+}
+
 // Arc Data Hub Configuration (X402 Economy)
 export const ARC_DATA_HUB_CONFIG = {
     RECIPIENT_ADDRESS: '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B',

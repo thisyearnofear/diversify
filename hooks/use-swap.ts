@@ -98,8 +98,8 @@ export function useSwap() {
                         if (ChainDetectionService.isSupported(newChainId)) {
                             setChainId(newChainId);
                         } else {
-                            console.log('[useSwap] Unsupported chain detected, defaulting to Arbitrum');
-                            setChainId(NETWORKS.ARBITRUM_ONE.chainId);
+                            console.log('[useSwap] Unsupported chain detected, defaulting to Celo');
+                            setChainId(NETWORKS.CELO_MAINNET.chainId);
                         }
                     },
                     () => { } // No accounts changed handler needed here

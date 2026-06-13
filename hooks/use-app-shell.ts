@@ -15,7 +15,7 @@ import { useUserRegion, type Region, REGIONS } from "./use-user-region";
 import { useInflationData } from "./use-inflation-data";
 import { useCurrencyPerformance } from "./use-currency-performance";
 import { useMultichainBalances } from "./use-multichain-balances";
-import { getChainAssets, NETWORKS } from "../config";
+import { getChainAssets, getPreferredChainIdForGoal } from "../config";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial } from "../components/wallet/WalletTutorial";
 import { useVoiceIntent } from "./use-voice-intent";
@@ -58,8 +58,8 @@ export function useAppShell() {
 
   // ── Tokens ──
   const availableTokens = useMemo(
-    () => getChainAssets(walletChainId || NETWORKS.ARBITRUM_ONE.chainId),
-    [walletChainId],
+    () => getChainAssets(walletChainId || getPreferredChainIdForGoal(profileConfig.userGoal, isMiniPay)),
+    [walletChainId, profileConfig.userGoal, isMiniPay],
   );
 
   // ── Data ──

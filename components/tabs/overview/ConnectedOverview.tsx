@@ -158,12 +158,14 @@ export function ConnectedOverview({
           tips.push(`Good diversification (${Math.round(gs.diversify)}%). ${missing.length > 0 ? `Adding ${missing[0]} would push you above 80%.` : "Keep rebalancing as markets move."}`);
         tips.push(...diversificationTips.filter((t) => t.includes("region")));
       } else if (goal === "rwa_access") {
-        if (gs.rwa === 0) {
-          tips.push("No real-world assets detected. On Celo, focus on regional stablecoins for geographic diversification.");
+        if (isMiniPay) {
+          tips.push("MiniPay is Celo-native. Use Celo for regional stablecoin protection; connect a full wallet for Arbitrum RWA assets.");
+        } else if (gs.rwa === 0) {
+          tips.push("No real-world assets detected. Use Arbitrum when your goal is tokenized gold, Treasuries, or structured yield.");
         } else if (gs.rwa < 80) {
-          tips.push(`RWA score: ${Math.round(gs.rwa)}%. Continue diversifying across Celo stablecoins.`);
+          tips.push(`RWA score: ${Math.round(gs.rwa)}%. Add PAXG, USDY, or SYRUPUSDC on Arbitrum if RWA exposure is your priority.`);
         } else {
-          tips.push(`Strong Celo stablecoin position (${Math.round(gs.rwa)}%). Your regional diversification is solid.`);
+          tips.push(`Strong RWA position (${Math.round(gs.rwa)}%). Your Arbitrum assets are providing real-world exposure.`);
         }
       }
     } else {

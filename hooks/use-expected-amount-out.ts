@@ -184,7 +184,7 @@ export function useExpectedAmountOut({
       const isCeloSepolia = ChainDetectionService.isTestnet(chainId) && ChainDetectionService.isCelo(chainId);
 
       // Get configuration
-      const effectiveChainId = chainId || NETWORKS.ARBITRUM_ONE.chainId;
+      const effectiveChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
       const tokenList = getTokenAddresses(effectiveChainId) as Record<string, string>;
       const brokerAddress = getBrokerAddress(effectiveChainId);
       const networkConfig = getNetworkConfig(effectiveChainId);
@@ -201,11 +201,11 @@ export function useExpectedAmountOut({
 
         const amountNum = Number.parseFloat(amount);
         const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
+          chainId: effectiveChainId,
           symbol: fromToken
         });
         const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
+          chainId: effectiveChainId,
           symbol: toToken
         });
         let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
@@ -431,12 +431,12 @@ export function useExpectedAmountOut({
 
         const amountNum = Number.parseFloat(amount);
         const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
+          chainId: effectiveChainId,
           address: tokenList[fromToken as keyof typeof tokenList],
           symbol: fromToken
         });
         const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
+          chainId: effectiveChainId,
           address: tokenList[toToken as keyof typeof tokenList],
           symbol: toToken
         });
@@ -506,12 +506,12 @@ export function useExpectedAmountOut({
 
         const amountNum = Number.parseFloat(amount);
         const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
+          chainId: effectiveChainId,
           address: tokenList[fromToken as keyof typeof tokenList],
           symbol: fromToken
         });
         const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
+          chainId: effectiveChainId,
           address: tokenList[toToken as keyof typeof tokenList],
           symbol: toToken
         });

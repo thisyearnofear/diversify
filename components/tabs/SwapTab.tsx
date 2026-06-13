@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 import SwapInterface from "../swap/SwapInterface";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
-import { getChainAssets, NETWORKS, isTestnetChain } from "../../config";
+import { getChainAssets, getPreferredChainIdForGoal, NETWORKS, isTestnetChain } from "../../config";
 import { ChainDetectionService, StrategyService } from "@diversifi/shared";
 import { getPersistedStrategy } from "../../hooks/useFinancialStrategies";
 import { TabHeader, Card, ConnectWalletPrompt, Skeleton } from "../shared/TabComponents";
@@ -66,6 +66,12 @@ export default function SwapTab({
   const { demoMode } = useDemoMode();
   const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
   const flow = useClaimFlow();
+  const { config: profileConfig, isComplete: profileComplete } =
+    useProtectionProfile();
+  const preferredChainId = useMemo(
+    () => getPreferredChainIdForGoal(profileConfig.userGoal, isMiniPay),
+    [profileConfig.userGoal, isMiniPay],
+  );
   const { resolveIdentifier } = useSocialResolve();
   const [searchQuery, setSearchQuery] = useState("");
   const [showSocialPicker, setShowSocialPicker] = useState(false);
@@ -154,11 +160,11 @@ export default function SwapTab({
 
   // Fetch tradeable tokens from Mento
   const { tradeableSymbols, isLoading: isTradeableLoading } =
-    useTradeableTokens(walletChainId);
+    useTradeableTokens(walletChainId ?? preferredChainId);
 
   const networkTokens = useMemo(() => {
-    return getChainAssets(walletChainId || NETWORKS.ARBITRUM_ONE.chainId);
-  }, [walletChainId]);
+    return getChainAssets(walletChainId || preferredChainId);
+  }, [walletChainId, preferredChainId]);
 
   // Filter to only show tokens that Mento actually supports
   const tradeableTokens = useMemo(() => {
@@ -213,16 +219,12 @@ export default function SwapTab({
 
   const isArbitrum = ChainDetectionService.isArbitrum(walletChainId ?? null);
   const activeNetworkName = useMemo(() => {
-    const activeChainId = walletChainId ?? NETWORKS.ARBITRUM_ONE.chainId;
+    const activeChainId = walletChainId ?? preferredChainId;
     return (
       Object.values(NETWORKS).find((network) => network.chainId === activeChainId)
         ?.name ?? "this chain"
     );
-  }, [walletChainId]);
-
-  // Goal-aware swap defaults: read protection profile to personalise the experience
-  const { config: profileConfig, isComplete: profileComplete } =
-    useProtectionProfile();
+  }, [walletChainId, preferredChainId]);
 
   const targetRegion = profileConfig.userRegion;
 
@@ -718,7 +720,7 @@ export default function SwapTab({
                 defaultCollapsedOnMobile={true}
               >
                 <YieldDiscoverySection
-                  chainId={walletChainId || NETWORKS.ARBITRUM_ONE.chainId}
+                  chainId={walletChainId || preferredChainId}
                   description="Ranked vaults with route context so you can review the destination before selecting token amount."
                   actionLabel="Review in Swap"
                   onSelectVault={(vault) => {
@@ -727,7 +729,7 @@ export default function SwapTab({
                         vault.asset.symbol,
                         `lifi-earn:${vault.id}`,
                         "",
-                        walletChainId || NETWORKS.ARBITRUM_ONE.chainId,
+                        walletChainId || preferredChainId,
                         vault.chainId
                       );
                     }

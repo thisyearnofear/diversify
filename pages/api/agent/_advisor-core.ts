@@ -1,5 +1,5 @@
 import { AIService, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
-import { isTestnetChain, NETWORKS } from '../../../config';
+import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS } from '../../../config';
 
 type ConversationRequest = {
   message: string;
@@ -614,6 +614,7 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
   } = input;
 
   let portfolioAnalysis: PortfolioAnalysis;
+  const fallbackNetwork = getPreferredNetworkForGoal(config?.userGoal);
   if (analysis) {
     portfolioAnalysis = analysis;
   } else if (portfolio) {
@@ -628,8 +629,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
 
       normalizedPortfolio = {
         chains: [{
-          chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
-          chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name,
+          chainId: networkContext?.chainId || fallbackNetwork.chainId,
+          chainName: networkContext?.name || fallbackNetwork.name,
           totalValue,
           tokenCount: holdings.length,
           isLoading: false,
@@ -641,8 +642,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
             formattedBalance: "0",
             value: perTokenValue,
             region: 'Global',
-            chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
-            chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name
+            chainId: networkContext?.chainId || fallbackNetwork.chainId,
+            chainName: networkContext?.name || fallbackNetwork.name
           })),
         }],
         totalValue
@@ -656,8 +657,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
     const perTokenValue = holdings.length > 0 ? totalValue / holdings.length : 0;
 
     const chains: ChainBalance[] = [{
-      chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
-      chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name,
+      chainId: networkContext?.chainId || fallbackNetwork.chainId,
+      chainName: networkContext?.name || fallbackNetwork.name,
       totalValue,
       tokenCount: holdings.length,
       isLoading: false,
@@ -669,8 +670,8 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
         formattedBalance: "0",
         value: perTokenValue,
         region: 'Global',
-        chainId: networkContext?.chainId || NETWORKS.ARBITRUM_ONE.chainId,
-        chainName: networkContext?.name || NETWORKS.ARBITRUM_ONE.name
+        chainId: networkContext?.chainId || fallbackNetwork.chainId,
+        chainName: networkContext?.name || fallbackNetwork.name
       })),
     }];
 
