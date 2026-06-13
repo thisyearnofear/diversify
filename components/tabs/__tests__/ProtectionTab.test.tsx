@@ -67,6 +67,12 @@ vi.mock("@diversifi/shared", () => ({
     getRecommendedAssets: vi.fn(() => []),
     getConfig: vi.fn(() => ({ targetAllocations: [] })),
   },
+  GUARDIAN_TIER_STATE_LABELS: {
+    idle: "Get Started",
+    authorized: "Awaiting Deposit",
+    funded: "Funded",
+    monitoring: "Protecting",
+  },
 }));
 
 const mockNavigateToSwap = vi.fn();
