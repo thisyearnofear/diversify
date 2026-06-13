@@ -16,6 +16,7 @@ import { motion } from 'framer-motion';
 import { type PortfolioAnalysis, type RebalancingOpportunity } from '@diversifi/shared';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import { useJunoStatus } from '../../hooks/use-juno-status';
+import { NETWORKS } from '../../config';
 
 interface ActionableRecommendationProps {
     analysis: PortfolioAnalysis | null;
@@ -298,7 +299,7 @@ function CrossChainSection({
                                 </div>
                                 <p className="text-xs text-indigo-600 mt-1">{op.opportunity}</p>
                             </div>
-                            {onExecuteBridge && op.chainId !== 42220 && (
+                            {onExecuteBridge && op.chainId !== NETWORKS.CELO_MAINNET.chainId && (
                                 <button
                                     onClick={() => onExecuteBridge(op.chainId, 42161, 'USDC', op.value.toFixed(2))}
                                     className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors"
@@ -567,10 +568,10 @@ function generateCrossChainOpportunities(
         if (chain.totalValue === 0) continue;
 
         // Celo opportunities
-        if (chain.chainId === 42220 && chain.totalValue > 10) {
+        if (chain.chainId === NETWORKS.CELO_MAINNET.chainId && chain.totalValue > 10) {
             opportunities.push({
                 chainName: 'Celo',
-                chainId: 42220,
+                chainId: NETWORKS.CELO_MAINNET.chainId,
                 value: chain.totalValue,
                 opportunity: `${chain.totalValue.toFixed(2)} available to bridge for PAXG access`,
                 recommendedAction: 'Bridge to Arbitrum to access tokenized Gold (PAXG)'

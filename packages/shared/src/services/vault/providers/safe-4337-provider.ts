@@ -37,6 +37,11 @@ const safeAbi = [
 
 export class Safe4337Provider implements SmartAccountProvider {
   readonly name = 'safe4337';
+  private defaultChainId: number;
+
+  constructor(chainId: number = 42220) {
+    this.defaultChainId = chainId;
+  }
 
   isConfigured(): boolean {
     return !!(
@@ -45,13 +50,13 @@ export class Safe4337Provider implements SmartAccountProvider {
     );
   }
 
-  async getAccount(userId: string): Promise<SmartAccountInfo> {
+  async getAccount(userId: string, chainId?: number): Promise<SmartAccountInfo> {
     // In the generic model, the smart account address is derived from the signer
     // or configured explicitly. For now, use the signer's address.
     const signer = this.getSigner();
     return {
       address: signer.address,
-      chainId: 42220,
+      chainId: chainId || this.defaultChainId,
       isDeployed: true,
     };
   }

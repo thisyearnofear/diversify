@@ -19,7 +19,7 @@ import {
     getWalletProvider,
     setupWalletEventListenersForProvider
 } from '@diversifi/shared';
-import { TX_CONFIG } from '../config';
+import { NETWORKS, TX_CONFIG } from '../config';
 
 interface HookSwapParams {
     fromToken: string;
@@ -98,8 +98,8 @@ export function useSwap() {
                         if (ChainDetectionService.isSupported(newChainId)) {
                             setChainId(newChainId);
                         } else {
-                            console.log('[useSwap] Unsupported chain detected, defaulting to Celo');
-                            setChainId(42220);
+                            console.log('[useSwap] Unsupported chain detected, defaulting to Arbitrum');
+                            setChainId(NETWORKS.ARBITRUM_ONE.chainId);
                         }
                     },
                     () => { } // No accounts changed handler needed here

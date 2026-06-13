@@ -164,7 +164,7 @@ export interface VaultExecutor {
     amountIn: string,
     chainId: number
   ): Promise<{ txHash: string; amountOut?: string }>;
-  withdraw(vault: Vault, destinationAddress: string, amountUSD: number): Promise<{ txHash: string; amountReceived: number }>;
+  withdraw(vault: Vault, destinationAddress: string, amountUSD: number, chainId?: number): Promise<{ txHash: string; amountReceived: number }>;
 }
 
 // ─── Service ────────────────────────────────────────────────────────────
@@ -224,6 +224,8 @@ export class VaultService {
       lastDepositAt: new Date(),
     });
 
+    const explorerBase = chainId === 42161 ? 'https://arbiscan.io' : 'https://celoscan.io';
+
     return this.store.createTransaction({
       vaultId,
       userAddress: vault.userAddress,
@@ -231,7 +233,7 @@ export class VaultService {
       status: 'confirmed',
       chainId,
       txHash,
-      explorerUrl: `https://celoscan.io/tx/${txHash}`,
+      explorerUrl: `${explorerBase}/tx/${txHash}`,
       amountUSD,
       executionLayer: 'circle_sdk',
       feeUSD: 0,
@@ -268,8 +270,12 @@ export class VaultService {
       throw new Error('Withdrawal amount is less than pending fees');
     }
 
-    // Execute withdrawal via executor
-    const result = await this.executor.withdraw(vault, userAddress, netWithdrawal);
+    // Determine the chain from the vault's allocations, or default to Celo
+    const vaultChainId = vault.allocations?.[0]?.chainId || 42220;
+    const explorerBase = vaultChainId === 42161 ? 'https://arbiscan.io' : 'https://celoscan.io';
+
+    // Execute withdrawal via executor (pass chainId so executor can use the right RPC)
+    const result = await this.executor.withdraw(vault, userAddress, netWithdrawal, vaultChainId);
 
     // Update vault
     await this.store.updateVault(vaultId, {
@@ -287,9 +293,9 @@ export class VaultService {
       userAddress: vault.userAddress,
       type: 'withdraw',
       status: 'confirmed',
-      chainId: 42220,
+      chainId: vaultChainId,
       txHash: result.txHash,
-      explorerUrl: `https://celoscan.io/tx/${result.txHash}`,
+      explorerUrl: `${explorerBase}/tx/${result.txHash}`,
       amountUSD: netWithdrawal,
       executionLayer: 'circle_sdk',
       feeUSD: totalPendingFees,
@@ -302,7 +308,7 @@ export class VaultService {
         userAddress: vault.userAddress,
         type: 'fee_deduction',
         status: 'confirmed',
-        chainId: 42220,
+        chainId: vaultChainId,
         amountUSD: totalPendingFees,
         executionLayer: 'circle_sdk',
         feeUSD: totalPendingFees,
@@ -366,13 +372,16 @@ export class VaultService {
       // Calculate swap fee
       const swapFee = feeEngine.calculateSwapFee(rec.estimatedAmountUSD);
 
+      const executionChainId = permission.chainId || 42220;
+      const explorerBase = executionChainId === 42161 ? 'https://arbiscan.io' : 'https://celoscan.io';
+
       try {
         const result = await this.executor.executeSwap(
           vault,
           rec.tokenInAddress,
           rec.tokenOutAddress,
           rec.amountIn,
-          42220 // Celo
+          executionChainId
         );
 
         const tx: VaultTransaction = {
@@ -380,9 +389,9 @@ export class VaultService {
           userAddress: vault.userAddress,
           type: 'swap',
           status: 'confirmed',
-          chainId: 42220,
+          chainId: executionChainId,
           txHash: result.txHash,
-          explorerUrl: `https://celoscan.io/tx/${result.txHash}`,
+          explorerUrl: `${explorerBase}/tx/${result.txHash}`,
           tokenIn: rec.tokenIn,
           tokenOut: rec.tokenOut,
           amountIn: rec.amountIn,
@@ -419,7 +428,7 @@ export class VaultService {
           userAddress: vault.userAddress,
           type: 'swap',
           status: 'failed',
-          chainId: 42220,
+          chainId: executionChainId,
           tokenIn: rec.tokenIn,
           tokenOut: rec.tokenOut,
           amountIn: rec.amountIn,

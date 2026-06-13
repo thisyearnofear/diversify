@@ -71,10 +71,10 @@ export function useSwapController({
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
 
   const [fromChainId, setFromChainId] = useState<number>(
-    chainId || NETWORKS.CELO_MAINNET.chainId,
+    chainId || NETWORKS.ARBITRUM_ONE.chainId,
   );
   const [toChainId, setToChainId] = useState<number>(
-    chainId || NETWORKS.CELO_MAINNET.chainId,
+    chainId || NETWORKS.ARBITRUM_ONE.chainId,
   );
 
   const [status, setStatus] = useState<

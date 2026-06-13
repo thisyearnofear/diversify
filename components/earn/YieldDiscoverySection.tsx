@@ -2,13 +2,14 @@ import React, { useCallback, useEffect, useId, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EarnService, type EarnVault } from "@diversifi/shared";
 import { Card, StatBadge } from "../shared/TabComponents";
+import { NETWORKS } from "../../config";
 
 const CHAIN_NAMES: Record<number, string> = {
   1: "Ethereum",
   10: "Optimism",
   42161: "Arbitrum",
   8453: "Base",
-  42220: "Celo",
+  [NETWORKS.CELO_MAINNET.chainId]: "Celo",
   11155111: "Sepolia",
 };
 

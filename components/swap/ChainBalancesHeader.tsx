@@ -7,6 +7,7 @@
 
 import React from 'react';
 import { NETWORKS } from '../../config';
+import { useWalletContext } from '../wallet/WalletProvider';
 
 interface ChainBalance {
   chainId: number;
@@ -66,20 +67,29 @@ export default function ChainBalancesHeader({
   onSwitchChain,
   isLoading = false,
 }: ChainBalancesHeaderProps) {
+  const { isMiniPay } = useWalletContext();
+
   // Filter to only show chains with balances or the current chain
-  const relevantChains = chains.filter(
+  let relevantChains = chains.filter(
     c => c.totalValue > 0 || c.chainId === currentChainId
   );
+
+  // In MiniPay, only show Celo
+  if (isMiniPay) {
+    relevantChains = relevantChains.filter(c => c.chainId === NETWORKS.CELO_MAINNET.chainId);
+  }
 
   // If no chains have balance, show all supported chains as empty states
   const displayChains = relevantChains.length > 0
     ? relevantChains
-    : [
-      { chainId: NETWORKS.CELO_MAINNET.chainId, chainName: 'Celo', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.CELO_MAINNET.chainId },
-      { chainId: NETWORKS.ARBITRUM_ONE.chainId, chainName: 'Arbitrum', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.ARBITRUM_ONE.chainId },
-      { chainId: NETWORKS.BASE_MAINNET.chainId, chainName: 'Base', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.BASE_MAINNET.chainId },
-      { chainId: NETWORKS.ETHEREUM_MAINNET.chainId, chainName: 'Ethereum', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.ETHEREUM_MAINNET.chainId },
-    ];
+    : isMiniPay
+      ? [{ chainId: NETWORKS.CELO_MAINNET.chainId, chainName: 'Celo', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.CELO_MAINNET.chainId }]
+      : [
+        { chainId: NETWORKS.CELO_MAINNET.chainId, chainName: 'Celo', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.CELO_MAINNET.chainId },
+        { chainId: NETWORKS.ARBITRUM_ONE.chainId, chainName: 'Arbitrum', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.ARBITRUM_ONE.chainId },
+        { chainId: NETWORKS.BASE_MAINNET.chainId, chainName: 'Base', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.BASE_MAINNET.chainId },
+        { chainId: NETWORKS.ETHEREUM_MAINNET.chainId, chainName: 'Ethereum', totalValue: 0, tokenCount: 0, isActive: currentChainId === NETWORKS.ETHEREUM_MAINNET.chainId },
+      ];
 
   if (isLoading) {
     return (

@@ -15,10 +15,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   await dbConnect();
   const service = new VaultService(vaultStore, circleExecutor);
 
-  const { userAddress, amountUSD, txHash, chainId = 42220 } = req.body;
+  const { userAddress, amountUSD, txHash, chainId } = req.body;
 
-  if (!userAddress || !amountUSD || !txHash) {
-    return res.status(400).json({ error: 'Missing userAddress, amountUSD, or txHash' });
+  if (!userAddress || !amountUSD || !txHash || !chainId) {
+    return res.status(400).json({ error: 'Missing userAddress, amountUSD, txHash, or chainId' });
   }
 
   try {

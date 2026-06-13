@@ -1,6 +1,7 @@
 import React from "react";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { UnifiedOnramp, UnifiedOnrampProps } from "./UnifiedOnramp";
+import { NETWORKS } from "../../config";
 
 interface NetworkOptimizedOnrampProps extends Omit<UnifiedOnrampProps, "showProviderChoice"> {
     showNetworkInfo?: boolean;
@@ -24,7 +25,7 @@ export function NetworkOptimizedOnramp({
                     reason: "Optimized for ARB with no-KYC support",
                     icon: "⚡",
                 };
-            case 42220: // Celo
+            case NETWORKS.CELO_MAINNET.chainId: // Celo
                 return {
                     network: "Celo",
                     provider: isSmallAmount ? "Guardarian" : "Mt Pelerin",

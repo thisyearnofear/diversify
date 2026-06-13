@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { ArcAgent } from '@diversifi/shared';
 import { erc7715Service } from '../../../packages/shared/src/services/erc7715-service';
 import type { SignedSessionPermission } from '../../../packages/shared/src/services/erc7715-service';
+import { NETWORKS } from '../../../config';
 
 // Chain ID the server accepts permissions for
 const EXPECTED_CHAIN_ID = parseInt(process.env.ARC_CHAIN_ID || '5042002', 10);
@@ -108,8 +109,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // Also derive networkInfo if not explicitly sent
         const resolvedNetworkInfo = networkInfo ?? {
-            chainId: portfolio?.chains?.[0]?.chainId ?? 42220,
-            name: portfolio?.chains?.[0]?.chainName ?? 'Celo',
+            chainId: portfolio?.chains?.[0]?.chainId ?? NETWORKS.ARBITRUM_ONE.chainId,
+            name: portfolio?.chains?.[0]?.chainName ?? NETWORKS.ARBITRUM_ONE.name,
         };
 
         const result = await agent.analyzePortfolioAutonomously(agentPortfolio, config, resolvedNetworkInfo);

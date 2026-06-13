@@ -270,11 +270,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           cogneeMemoryService.persistInteraction(
             userAddress,
             `Guardian auto-executed: ${recommendation.oneLiner}`,
-            `Swapped ~$${estimatedCost} cUSD → ${targetToken}. Confidence: ${confidence}. Source: ${recommendation.source}. TX: ${txHash}`,
+            `Swapped ~$${estimatedCost} → ${targetToken}. Confidence: ${confidence}. Source: ${recommendation.source}. TX: ${txHash}`,
             {
               action: 'autonomous_rebalance',
               sources: [recommendation.source || 'guardian-loop'],
-              chainId: perm.chainId || 42220,
+              chainId: perm.chainId,
             }
           ).catch(() => {});
 

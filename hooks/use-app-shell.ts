@@ -58,7 +58,7 @@ export function useAppShell() {
 
   // ── Tokens ──
   const availableTokens = useMemo(
-    () => getChainAssets(walletChainId || NETWORKS.CELO_MAINNET.chainId),
+    () => getChainAssets(walletChainId || NETWORKS.ARBITRUM_ONE.chainId),
     [walletChainId],
   );
 

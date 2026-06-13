@@ -144,7 +144,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                                         ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${txHash}`
                                         : fromChainId === NETWORKS.ARBITRUM_ONE.chainId
                                             ? `${NETWORKS.ARBITRUM_ONE.explorerUrl}/tx/${txHash}`
-                                            : `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`
+                                            : `${NETWORKS.ARBITRUM_ONE.explorerUrl}/tx/${txHash}`
                             }
                             target="_blank"
                             rel="noopener noreferrer"

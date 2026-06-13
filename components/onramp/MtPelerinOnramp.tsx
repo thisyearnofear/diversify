@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
+import { NETWORKS } from "../../config";
 
 export interface MtPelerinOnrampProps {
   mode?: "buy" | "sell" | "swap";
@@ -17,7 +18,7 @@ const MTP_WIDGET_BASE = "https://widget.mtpelerin.com";
 
 function getNetworkName(chainId: number | null): string {
   switch (chainId) {
-    case 42220:
+    case NETWORKS.CELO_MAINNET.chainId:
       return "celo_mainnet";
     case 42161:
       return "arbitrum_mainnet";
@@ -410,7 +411,7 @@ export function MtPelerinWidget({
       tab: "buy",
       addr: address,
       lang: "en",
-      net: chainId === 42220 ? "celo" : chainId === 42161 ? "arbitrum" : "celo",
+      net: chainId === NETWORKS.CELO_MAINNET.chainId ? "celo" : chainId === NETWORKS.ARBITRUM_ONE.chainId ? "arbitrum" : "celo",
     });
 
     setWidgetUrl(`${MTP_WIDGET_BASE}/?${params.toString()}`);

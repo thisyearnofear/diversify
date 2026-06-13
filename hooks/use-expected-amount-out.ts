@@ -184,9 +184,10 @@ export function useExpectedAmountOut({
       const isCeloSepolia = ChainDetectionService.isTestnet(chainId) && ChainDetectionService.isCelo(chainId);
 
       // Get configuration
-      const tokenList = getTokenAddresses(chainId || 42220) as Record<string, string>;
-      const brokerAddress = getBrokerAddress(chainId || 42220);
-      const networkConfig = getNetworkConfig(chainId || 42220);
+      const effectiveChainId = chainId || NETWORKS.ARBITRUM_ONE.chainId;
+      const tokenList = getTokenAddresses(effectiveChainId) as Record<string, string>;
+      const brokerAddress = getBrokerAddress(effectiveChainId);
+      const networkConfig = getNetworkConfig(effectiveChainId);
 
 
       // Get token addresses
@@ -200,11 +201,11 @@ export function useExpectedAmountOut({
 
         const amountNum = Number.parseFloat(amount);
         const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
           symbol: fromToken
         });
         const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
           symbol: toToken
         });
         let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
@@ -430,12 +431,12 @@ export function useExpectedAmountOut({
 
         const amountNum = Number.parseFloat(amount);
         const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
           address: tokenList[fromToken as keyof typeof tokenList],
           symbol: fromToken
         });
         const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
           address: tokenList[toToken as keyof typeof tokenList],
           symbol: toToken
         });
@@ -505,12 +506,12 @@ export function useExpectedAmountOut({
 
         const amountNum = Number.parseFloat(amount);
         const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
           address: tokenList[fromToken as keyof typeof tokenList],
           symbol: fromToken
         });
         const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: chainId || NETWORKS.CELO_MAINNET.chainId,
+          chainId: chainId || NETWORKS.ARBITRUM_ONE.chainId,
           address: tokenList[toToken as keyof typeof tokenList],
           symbol: toToken
         });

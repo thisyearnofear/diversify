@@ -4,6 +4,7 @@ import type { AutonomousStatus } from '../../hooks/agent-types';
 import { useToast } from '../ui/Toast';
 import { useHyperliquid } from '../../hooks/use-hyperliquid';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
+import { NETWORKS } from '../../config';
 
 /**
  * Minimal QR Code Generator (SVG-based, no external dependency)
@@ -100,7 +101,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
       // Record activity for gamification
       await recordActivity({
         action: 'swap',
-        chainId: 42220,
+        chainId: NETWORKS.CELO_MAINNET.chainId,
         networkType: 'testnet',
         usdValue: 0,
       });

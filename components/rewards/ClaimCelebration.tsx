@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { NETWORKS } from "../../config";
 
 interface ClaimCelebrationProps {
   amount: string;
@@ -82,7 +83,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose }
 
         {txHash ? (
           <a
-            href={`https://celoscan.io/tx/${txHash}`}
+            href={`${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-2 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl text-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all border border-gray-100 dark:border-gray-700"

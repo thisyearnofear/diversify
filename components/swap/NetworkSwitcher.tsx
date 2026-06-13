@@ -17,7 +17,65 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
 }) => {
     const [isSwitching, setIsSwitching] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { switchNetwork: walletSwitchNetwork, isConnected } = useWalletContext();
+    const { switchNetwork: walletSwitchNetwork, isConnected, isMiniPay } = useWalletContext();
+
+    // In MiniPay, only show Celo (MiniPay is Celo-native)
+    if (isMiniPay) {
+        const celoNetwork = {
+            ...NETWORKS.CELO_MAINNET,
+            label: `${NETWORKS.CELO_MAINNET.name} (Stablecoins)`,
+            description: 'Mobile-first payments',
+            icon: '🌱',
+            color: 'green' as const,
+        };
+
+        if (compact) {
+            return (
+                <div className={`relative ${className}`}>
+                    <select
+                        value={currentChainId || ''}
+                        disabled={true}
+                        className="text-xs font-black uppercase tracking-tight bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 pr-6 text-gray-700 dark:text-gray-300 opacity-75 cursor-not-allowed min-w-[5.5rem]"
+                        style={{
+                            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+                            backgroundPosition: 'right 0.25rem center',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundSize: '1.2em 1.2em',
+                        }}
+                    >
+                        <option value={celoNetwork.chainId}>
+                            🌱 Celo
+                        </option>
+                    </select>
+                </div>
+            );
+        }
+
+        return (
+            <div className={className}>
+                <div className="grid grid-cols-1 gap-2">
+                    <div className="p-2 rounded-xl border-2 border-green-200/50 dark:border-green-800/50 bg-green-50/50 dark:bg-green-900/10 text-green-900 dark:text-green-100 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl leading-none">🌱</span>
+                            <div>
+                                <div className="font-bold text-xs uppercase tracking-wider leading-none">
+                                    Celo
+                                </div>
+                                <div className="text-xs opacity-60 leading-none mt-0.5">
+                                    Mobile-first payments
+                                </div>
+                            </div>
+                        </div>
+                        <div className="size-1.5 rounded-full bg-green-500 animate-pulse shrink-0" />
+                    </div>
+                </div>
+                <div className="mt-2 flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-500 bg-white/30 dark:bg-black/20 px-2 py-1.5 rounded-lg border border-gray-100/50 dark:border-white/5">
+                    <span className="shrink-0">🌱</span>
+                    <span>Celo is the only network available in MiniPay</span>
+                </div>
+            </div>
+        );
+    }
 
     const allNetworks = [
         {

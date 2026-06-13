@@ -26,6 +26,7 @@ import { GoalAlignmentBanner } from "./GoalAlignmentBanner";
 import { InflationTooltip } from "./InflationTooltip";
 import { Tooltip } from "../../shared/Tooltip";
 import { GuardianPulse } from "../../agent/GuardianPulse";
+import { useWalletContext } from "../../wallet/WalletProvider";
 
 const EMERGING_MARKETS = {
   Africa: { growth: 4.2, highlight: "Fastest growing mobile money market" },
@@ -89,6 +90,7 @@ export function ConnectedOverview({
   const { trackAssetDetailsToggle, trackRegimeTip } = useAnalytics();
   const hasTrackedRegimeTip = useRef(false);
   const coldStart = useColdStart(chainId);
+  const { isMiniPay } = useWalletContext();
 
   const isBeginner = experienceMode === "beginner";
   const isAdvanced = experienceMode === "advanced";
@@ -138,9 +140,13 @@ export function ConnectedOverview({
       if (goal === "inflation_protection") {
         if (gs.hedge < 60)
           tips.push(`Your hedge score is ${Math.round(gs.hedge)}%. Swap high-inflation tokens to USDm or EURm to improve it.`);
-        else if (gs.hedge >= 80)
-          tips.push(`Excellent inflation protection (${Math.round(gs.hedge)}%)! Consider adding PAXG on Arbitrum for long-term coverage.`);
-        else
+        else if (gs.hedge >= 80) {
+          if (isMiniPay) {
+            tips.push(`Excellent inflation protection (${Math.round(gs.hedge)}%)! Your Celo stablecoins are well-diversified.`);
+          } else {
+            tips.push(`Excellent inflation protection (${Math.round(gs.hedge)}%)! Consider adding PAXG on Arbitrum for long-term coverage.`);
+          }
+        } else
           tips.push(`Good hedge score (${Math.round(gs.hedge)}%). Reducing your most concentrated region exposure would improve it further.`);
         tips.push(...diversificationTips.filter((t) => t.includes("PAXG") || t.includes("inflation")));
       } else if (goal === "geographic_diversification") {
@@ -153,12 +159,11 @@ export function ConnectedOverview({
         tips.push(...diversificationTips.filter((t) => t.includes("region")));
       } else if (goal === "rwa_access") {
         if (gs.rwa === 0) {
-          tips.push("No real-world assets detected. Add PAXG (gold) or USDY (~5% APY Treasuries) on Arbitrum.");
-          tips.push("Bridge USDm → Arbitrum to access tokenized US Treasuries and gold without KYC.");
+          tips.push("No real-world assets detected. On Celo, focus on regional stablecoins for geographic diversification.");
         } else if (gs.rwa < 80) {
-          tips.push(`RWA score: ${Math.round(gs.rwa)}%. Consider adding SYRUPUSDC for additional structured yield (~4.5% APY).`);
+          tips.push(`RWA score: ${Math.round(gs.rwa)}%. Continue diversifying across Celo stablecoins.`);
         } else {
-          tips.push(`Strong RWA position (${Math.round(gs.rwa)}%). PAXG and yield tokens are providing solid inflation protection.`);
+          tips.push(`Strong Celo stablecoin position (${Math.round(gs.rwa)}%). Your regional diversification is solid.`);
         }
       }
     } else {
@@ -496,7 +501,7 @@ export function ConnectedOverview({
         </div>
       )}
 
-      {!isBeginner && (
+      {!isBeginner && !isMiniPay && (
         <div className="bg-gradient-to-r from-yellow-500 via-orange-500 to-blue-600 p-0.5 rounded-2xl">
           <div className="bg-white dark:bg-gray-900 rounded-[14px] p-4">
             <div className="flex items-center justify-between">

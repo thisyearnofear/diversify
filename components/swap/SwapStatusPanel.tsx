@@ -25,7 +25,7 @@ export default function SwapStatusPanel({
   if (!status || isCompleted) return null;
 
   const isError = status.includes('Error');
-  const explorerUrl = getNetworkConfig(chainId ?? NETWORKS.CELO_MAINNET.chainId).explorerUrl;
+  const explorerUrl = getNetworkConfig(chainId ?? NETWORKS.ARBITRUM_ONE.chainId).explorerUrl;
 
   return (
     <div

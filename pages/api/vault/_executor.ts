@@ -25,11 +25,21 @@ import {
   type SmartAccountProvider,
 } from '../../../packages/shared/src/services/vault/smart-account-provider';
 import { CELO_TOKEN_ADDRESSES } from '../../../packages/shared/src/config/celo-tokens';
+import { NETWORKS } from '../../../config';
 
 // Register providers (ensures they're available)
 import '../../../packages/shared/src/services/vault/providers';
 
-const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org';
+const NETWORK_RPCS: Record<number, string> = {
+  [NETWORKS.CELO_MAINNET.chainId]: process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org',
+  [NETWORKS.ARBITRUM_ONE.chainId]: process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
+};
+
+const NETWORK_EXPLORERS: Record<number, string> = {
+  [NETWORKS.CELO_MAINNET.chainId]: 'https://celoscan.io',
+  [NETWORKS.ARBITRUM_ONE.chainId]: 'https://arbiscan.io',
+};
+
 const VAULT_KEY = process.env.VAULT_PRIVATE_KEY;
 
 // CELO token metadata is sourced from the shared config so the executor
@@ -55,8 +65,15 @@ const erc20Abi = [
   'function allowance(address owner, address spender) view returns (uint256)',
 ];
 
-function getProvider(): ethers.providers.JsonRpcProvider {
-  return new ethers.providers.JsonRpcProvider(CELO_RPC);
+function getProvider(chainId: number = NETWORKS.CELO_MAINNET.chainId): ethers.providers.JsonRpcProvider {
+  const rpc = NETWORK_RPCS[chainId];
+  if (!rpc) throw new Error(`No RPC configured for chain ${chainId}`);
+  return new ethers.providers.JsonRpcProvider(rpc);
+}
+
+function getExplorerUrl(chainId: number, txHash: string): string {
+  const explorer = NETWORK_EXPLORERS[chainId];
+  return explorer ? `${explorer}/tx/${txHash}` : `${NETWORKS.ARBITRUM_ONE.explorerUrl}/tx/${txHash}`;
 }
 
 // ─── Chain Helpers ─────────────────────────────────────────────────────────
@@ -77,7 +94,7 @@ async function getCeloBalances(address: string): Promise<VaultAllocation[]> {
           amount: balance.toString(),
           valueUSD: info.stablecoin ? formatted : formatted * 0.5,
           region: info.region || 'CELO',
-          chainId: 42220,
+          chainId: NETWORKS.CELO_MAINNET.chainId,
           percentage: 0,
         });
       }
@@ -200,7 +217,8 @@ export const circleExecutor: VaultExecutor = {
   async withdraw(
     vault: Vault,
     destinationAddress: string,
-    amountUSD: number
+    amountUSD: number,
+    chainId: number = NETWORKS.CELO_MAINNET.chainId
   ): Promise<{ txHash: string; amountReceived: number }> {
     const cUSD = TOKENS.cUSD;
     const transferData = new ethers.utils.Interface(erc20Abi).encodeFunctionData('transfer', [
@@ -213,13 +231,13 @@ export const circleExecutor: VaultExecutor = {
       const result = await smartAccount.sendTransaction(
         userId,
         { to: cUSD.address, data: transferData },
-        42220
+        chainId
       );
       return { txHash: result.hash, amountReceived: amountUSD };
     }
 
     if (!VAULT_KEY) throw new Error('No execution method configured');
-    const signer = new ethers.Wallet(VAULT_KEY, getProvider());
+    const signer = new ethers.Wallet(VAULT_KEY, getProvider(chainId));
     const cUSDContract = new ethers.Contract(cUSD.address, erc20Abi, signer);
     const tx = await cUSDContract.transfer(
       destinationAddress,

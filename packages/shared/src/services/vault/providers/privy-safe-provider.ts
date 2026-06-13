@@ -19,6 +19,11 @@ import type {
 
 export class PrivySafeProvider implements SmartAccountProvider {
   readonly name = 'privy';
+  private defaultChainId: number;
+
+  constructor(chainId: number = 42220) {
+    this.defaultChainId = chainId;
+  }
 
   private getConfig() {
     const appId = process.env.PRIVY_APP_ID || process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
@@ -38,7 +43,7 @@ export class PrivySafeProvider implements SmartAccountProvider {
     return new PrivyClient({ appId, appSecret });
   }
 
-  async getAccount(userId: string): Promise<SmartAccountInfo> {
+  async getAccount(userId: string, chainId?: number): Promise<SmartAccountInfo> {
     const client = await this.getClient();
     const user = await client.getUser({ id: userId });
     const smartWallet = user?.linkedAccounts?.find(
@@ -51,7 +56,7 @@ export class PrivySafeProvider implements SmartAccountProvider {
 
     return {
       address: (smartWallet as any).address,
-      chainId: 42220, // Celo
+      chainId: chainId || this.defaultChainId,
       isDeployed: true,
     };
   }

@@ -47,12 +47,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         allowedTokens: permission.allowedTokens,
         expiresAt: permission.expiresAt,
         autonomyLevel: permission.autonomyLevel || 'GUARDIAN',
-        chainId: permission.chainId || 42220,
+        chainId: permission.chainId,
         nonce: permission.nonce,
       },
       signature: permission.signature,
       signedAt: permission.signedAt || new Date().toISOString(),
     };
+
+    if (!signedPermission.permission.chainId) {
+      return res.status(400).json({ error: 'Missing permission.chainId' });
+    }
 
     const validation = erc7715.verifySignedPermission(signedPermission, signedPermission.permission.chainId);
     if (!validation.isValid) {
@@ -83,7 +87,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         allowedTokens: permission.allowedTokens,
         expiresAt: permission.expiresAt,
         autonomyLevel: permission.autonomyLevel || 'GUARDIAN',
-        chainId: permission.chainId || 42220,
+        chainId: permission.chainId,
         nonce: permission.nonce,
         signature: permission.signature,
         signedAt: permission.signedAt || new Date().toISOString(),

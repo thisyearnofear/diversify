@@ -23,6 +23,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { motion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
+import { NETWORKS } from "../../config";
 import { GUARDIAN_TIER_STATE_LABELS } from "@diversifi/shared";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
@@ -267,7 +268,7 @@ export const AgentTierStatus: React.FC<{
         subtitle: `${receipt.amount} ${receipt.asset}`,
         timestamp: receipt.timestamp,
         status: receipt.status === "success" ? "confirmed" : receipt.status === "error" ? "failed" : "pending",
-        explorerUrl: receipt.txHash ? `https://celoscan.io/tx/${receipt.txHash}` : undefined,
+        explorerUrl: receipt.txHash ? `${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${receipt.txHash}` : undefined,
         txHash: receipt.txHash,
       })),
     ];
@@ -1144,7 +1145,7 @@ const ActivityFeed: React.FC<{
               </span>
               {activity.details?.txHash && (
                 <a
-                  href={`https://celoscan.io/tx/${activity.details.txHash}`}
+                  href={`${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${activity.details.txHash}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-xs text-blue-500 hover:underline"

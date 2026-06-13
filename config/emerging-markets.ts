@@ -4,8 +4,6 @@
  * Two-tier system:
  * - REAL_STOCKS: Trackable real emerging market stocks (price data only)
  * - FICTIONAL_COMPANIES: Tradeable tokens on Celo Sepolia AMM (seeded pools)
- * 
- * This mirrors the Robinhood testnet strategy: trade fictional, track real
  */
 
 // Real emerging market stocks for price tracking
@@ -275,8 +273,8 @@ export const EMERGING_MARKETS_CONFIG = {
   rpcUrl: "https://forno.celo-sepolia.celo-testnet.org",
   explorerUrl: "https://celo-sepolia.blockscout.com",
 
-  // Contracts
-  ammAddress: "0x983b3a94C8266310192135d60D77B871549B9CfF", // TestnetMarketMaker
+  // Contracts (deployed on Celo Sepolia)
+  ammAddress: "0x983b3a94C8266310192135d60D77B871549B9CfF",
   wethAddress: "0x95fa0c32181d073FA9b07F0eC3961C845d00bE21", // Wrapped CELO
 
   // Trading configuration

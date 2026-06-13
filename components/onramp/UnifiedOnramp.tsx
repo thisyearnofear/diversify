@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { GuardarianOnramp } from "./GuardarianOnramp";
 import { MtPelerinOnramp } from "./MtPelerinOnramp";
+import { NETWORKS } from "../../config";
 
 export interface UnifiedOnrampProps {
     mode?: "buy" | "sell";
@@ -36,7 +37,7 @@ export function UnifiedOnramp({
         switch (chainId) {
             case 42161: // Arbitrum - Guardarian excels with ARB support and no-KYC
                 return "guardarian";
-            case 42220: // Celo - For small amounts use Guardarian (no-KYC), larger amounts prefer Mt Pelerin
+            case NETWORKS.CELO_MAINNET.chainId: // Celo - For small amounts use Guardarian (no-KYC), larger amounts prefer Mt Pelerin
                 return isSmallAmount ? "guardarian" : "mtpelerin";
             default:
                 return "guardarian"; // Default to Guardarian for other networks
@@ -56,7 +57,7 @@ export function UnifiedOnramp({
             switch (chainId) {
                 case 42161: // Arbitrum
                     return "Recommended • ARB Support";
-                case 42220: // Celo
+                case NETWORKS.CELO_MAINNET.chainId: // Celo
                     return isSmallAmount ? "No KYC • Up to €700" : "No KYC • Up to €700";
                 default:
                     return "No KYC • Up to €700";
@@ -65,7 +66,7 @@ export function UnifiedOnramp({
             switch (chainId) {
                 case 42161: // Arbitrum
                     return "Swiss Regulated";
-                case 42220: // Celo
+                case NETWORKS.CELO_MAINNET.chainId: // Celo
                     return isSmallAmount ? "Swiss Regulated" : "Recommended • Higher Limits";
                 default:
                     return "Swiss Regulated";
