@@ -43,9 +43,9 @@ DiversiFi is built on a deliberate chain split that matches real user needs:
 
 ### Arbitrum Deployment (Prize Eligibility)
 - **Deployment script**: `./scripts/deploy-all.sh arbitrum_sepolia --verify` uses the unified `scripts/DeployArbitrum.s.sol` script and deploys all three Arbitrum Sepolia contracts in one run.
-- **RecommendationLedger Contract** (Arbitrum Sepolia, chainId `421614`): set from `ARBITRUM_LEDGER_CONTRACT` after deployment.
-- **StrategyVault Contract** (Arbitrum Sepolia, chainId `421614`): set from `ARBITRUM_VAULT_CONTRACT` after deployment.
-- **AgenticHub Contract** (Arbitrum Sepolia, chainId `421614`): set from `ARBITRUM_HUB_CONTRACT` after deployment.
+- **RecommendationLedger Contract** (Arbitrum Sepolia, chainId `421614`): [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996)
+- **StrategyVault Contract** (Arbitrum Sepolia, chainId `421614`): [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975)
+- **AgenticHub Contract** (Arbitrum Sepolia, chainId `421614`): [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92)
 - **Payment token**: Arbitrum Sepolia USDC `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` (baked into `DeployArbitrum.s.sol` for the hackathon testnet deployment).
 - **Arbitrum Frontend RPC**: Configured in `components/app/ProviderTree.tsx` / `context/PrivyProvider.tsx`.
 

@@ -190,7 +190,7 @@ Every AI recommendation traces through the full 0G pipeline:
 | **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
 | **0G Compute Direct** | Optional TEE-verified inference for high-impact Guardian decisions |
 
-**Canonical Contract:** `RecommendationLedger` on **Arbitrum Sepolia** (chainId `421614`) — address set after deployment via `ARBITRUM_LEDGER_CONTRACT`.
+**Canonical Contract:** [`RecommendationLedger`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) at `0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996` on **Arbitrum Sepolia** (chainId `421614`). StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975), AgenticHub: [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92).
 
 **Mirror Contract:** `0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED` on 0G Galileo Testnet (chainId `16602`) — optional audit replica; overridable via `ZERO_G_LEDGER_CONTRACT`.
 
