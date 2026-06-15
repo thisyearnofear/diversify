@@ -24,8 +24,15 @@ import dbConnect from '../../lib/mongodb';
 import { AIService } from '@diversifi/shared';
 
 const STARTED_AT = Date.now();
-const VENICE_PROBE_TIMEOUT_MS = 4000;
+const VENICE_PROBE_TIMEOUT_MS = 6000;
 const VENICE_PROMPT = 'Reply with the single word: ok';
+// The current default Venice model (deepseek-v4-flash) emits chain-of-thought
+// tokens before any visible content. A 5-token cap is consumed by thinking and
+// the response ships as content="" with finish_reason="length", which the
+// healthz probe (correctly) treats as a failure. 64 tokens is enough for
+// the model to finish thinking AND emit a short answer, and at ~$1/M tokens
+// the cost is well under $1/day even at 30s probe cadence.
+const VENICE_PROBE_MAX_TOKENS = 64;
 
 export type IntelligenceHealth = {
   ok: boolean;
@@ -116,7 +123,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       AIService.chat(
         {
           messages: [{ role: 'user', content: VENICE_PROMPT }],
-          maxTokens: 5,
+          maxTokens: VENICE_PROBE_MAX_TOKENS,
         },
         'venice'
       ),
