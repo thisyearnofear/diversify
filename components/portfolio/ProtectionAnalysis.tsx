@@ -226,7 +226,7 @@ export default function ProtectionAnalysis({
                             <div className="text-2xl font-black text-orange-600 dark:text-orange-400">
                                 {isFinite(recoveryNeeded) ? recoveryNeeded.toFixed(0) : '??'}%
                             </div>
-                            <span className="text-[9px] text-orange-500 font-black uppercase">to break even</span>
+                            <span className="text-[10px] text-orange-500 font-black uppercase">to break even</span>
                         </div>
                     </div>
                     <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 mt-4 font-medium italic leading-relaxed">

@@ -68,10 +68,10 @@ vi.mock("@diversifi/shared", () => ({
     getConfig: vi.fn(() => ({ targetAllocations: [] })),
   },
   GUARDIAN_TIER_STATE_LABELS: {
-    idle: "Get Started",
-    authorized: "Awaiting Deposit",
+    idle: "Not Started",
+    authorized: "Approved",
     funded: "Funded",
-    monitoring: "Protecting",
+    monitoring: "Active",
   },
 }));
 

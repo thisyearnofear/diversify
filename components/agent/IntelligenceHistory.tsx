@@ -40,19 +40,19 @@ export default function IntelligenceHistory() {
       <div className="sticky top-0 z-10 -mx-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur pb-2">
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="rounded-xl border border-purple-100 dark:border-purple-800/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-2">
-            <p className="text-[9px] font-black uppercase tracking-wider text-purple-500">Research balance</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-purple-500">Research balance</p>
             <p className="text-xs font-black text-purple-800 dark:text-purple-200">
               ${Number.parseFloat(researchAccount.arcWalletBalance || "0").toFixed(3)}
             </p>
           </div>
           <div className="rounded-xl border border-amber-100 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
-            <p className="text-[9px] font-black uppercase tracking-wider text-amber-600">Spent today</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">Spent today</p>
             <p className="text-xs font-black text-amber-800 dark:text-amber-200">
               ${researchAccount.spentToday.toFixed(3)}
             </p>
           </div>
           <div className="rounded-xl border border-emerald-100 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
-            <p className="text-[9px] font-black uppercase tracking-wider text-emerald-600">Research credits</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Research credits</p>
             <p className="text-xs font-black text-emerald-800 dark:text-emerald-200">
               ${researchAccount.bonusCredits.toFixed(3)}
             </p>

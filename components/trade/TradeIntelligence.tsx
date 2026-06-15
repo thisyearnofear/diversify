@@ -125,7 +125,7 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
               className="flex items-center gap-1 bg-blue-600 dark:bg-blue-500 px-1.5 py-0.5 rounded shadow-sm"
             >
               <span className="w-1 h-1 rounded-full bg-white"></span>
-              <span className="text-[7px] font-black text-white uppercase tracking-tighter">SN50 Active</span>
+              <span className="text-[9px] font-black text-white uppercase tracking-tighter">SN50 Active</span>
             </motion.div>
           )}
           <span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded uppercase tracking-tighter border border-blue-100 dark:border-blue-800">
@@ -154,11 +154,11 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
                 {item.id.startsWith("synth-") && (
                   <div className="absolute top-0 right-0 flex items-center">
                     {item.id.includes("guardian") && (
-                      <div className="bg-purple-600 text-white text-[7px] font-black px-2 py-0.5 uppercase tracking-widest shadow-sm">
+                      <div className="bg-purple-600 text-white text-[9px] font-black px-2 py-0.5 uppercase tracking-widest shadow-sm">
                         Guardian
                       </div>
                     )}
-                    <div className="bg-blue-600 text-white text-[7px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-widest shadow-sm">
+                    <div className="bg-blue-600 text-white text-[9px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-widest shadow-sm">
                       Synth
                     </div>
                   </div>

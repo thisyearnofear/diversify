@@ -42,7 +42,7 @@ export function GuardianPulse() {
         <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-4">
           <div className="w-12 h-12 bg-gray-300 rounded-full animate-pulse dark:bg-gray-600" />
           <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Guardian Pulse</h3>
-          <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Autonomous Market Synthesis</p>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Autonomous Market Synthesis</p>
         </div>
       </motion.div>
     );
@@ -72,7 +72,7 @@ export function GuardianPulse() {
       <div className="flex items-center justify-between">
         <div className="space-y-0.5">
           <motion.h3
-            className="text-[10px] font-black uppercase text-blue-500 dark:text-blue-400 tracking-widest flex items-center gap-2"
+            className="text-[11px] font-black uppercase text-blue-500 dark:text-blue-400 tracking-widest flex items-center gap-2"
             initial={{ scale: 0.8 }}
             animate={{ scale: 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
@@ -87,13 +87,13 @@ export function GuardianPulse() {
             </span>
             Guardian Pulse
           </motion.h3>
-          <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
             Autonomous Market Synthesis
           </p>
         </div>
         <button
           onClick={() => setIsAuditOpen(true)}
-          className="text-[9px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 uppercase tracking-wider transition-colors cursor-pointer active:scale-95"
+          className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 uppercase tracking-wider transition-colors cursor-pointer active:scale-95"
         >
           Verify on-chain ↗
         </button>
@@ -109,7 +109,7 @@ export function GuardianPulse() {
         >
           <div className={`absolute inset-0 ${sentimentBgClass}`} />
           <div className="relative z-10">
-            <div className="text-[9px] text-gray-400 font-bold uppercase mb-1 tracking-tighter">Market Sentiment</div>
+            <div className="text-[10px] text-gray-400 font-bold uppercase mb-1 tracking-tighter">Market Sentiment</div>
             <div className="flex items-baseline gap-1">
               <motion.span
                 className="text-xl font-black text-gray-900 dark:text-white"
@@ -118,7 +118,7 @@ export function GuardianPulse() {
               >
                 {Math.round(data.pulse.sentiment)}
               </motion.span>
-              <span className="text-[9px] font-bold text-gray-400">/100</span>
+              <span className="text-[10px] font-bold text-gray-400">/100</span>
             </div>
           </div>
         </motion.div>
@@ -132,7 +132,7 @@ export function GuardianPulse() {
         >
           <div className={`absolute inset-0 ${warRiskBgClass}`} />
           <div className="relative z-10">
-            <div className="text-[9px] text-gray-400 font-bold uppercase mb-1 tracking-tighter">War Risk Index</div>
+            <div className="text-[10px] text-gray-400 font-bold uppercase mb-1 tracking-tighter">War Risk Index</div>
             <div className="flex items-baseline gap-1">
               <motion.span
                 className={`text-xl font-black ${warRiskToneClass}`}
@@ -141,7 +141,7 @@ export function GuardianPulse() {
               >
                 {Math.round(data.pulse.warRisk)}
               </motion.span>
-              <span className="text-[9px] font-bold opacity-60">%</span>
+              <span className="text-[10px] font-bold opacity-60">%</span>
             </div>
           </div>
         </motion.div>
@@ -192,8 +192,8 @@ export function GuardianPulse() {
                 </p>
                 {insight.impactAsset && (
                   <div className="mt-2 flex items-center gap-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase">Target:</span>
-                    <span className="bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded-md text-[10px] font-black text-blue-600 dark:text-blue-400 shadow-sm border border-gray-100 dark:border-gray-800">
+                    <span className="text-[11px] font-bold text-gray-400 uppercase">Target:</span>
+                    <span className="bg-white dark:bg-gray-900 px-1.5 py-0.5 rounded-md text-[11px] font-black text-blue-600 dark:text-blue-400 shadow-sm border border-gray-100 dark:border-gray-800">
                       {insight.impactAsset}
                     </span>
                   </div>

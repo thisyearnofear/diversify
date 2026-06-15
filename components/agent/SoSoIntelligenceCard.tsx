@@ -133,7 +133,7 @@ export default function SoSoIntelligenceCard({
         <div className="flex items-center justify-between">
           <div className="flex flex-wrap gap-1">
             {topNews.tags.slice(0, 2).map(tag => (
-              <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400">
+              <span key={tag} className="text-[10px] font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400">
                 #{tag}
               </span>
             ))}
@@ -232,7 +232,7 @@ export default function SoSoIntelligenceCard({
                 <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1 line-clamp-2">
                   {item.title}
                 </h4>
-                <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${sentiment.className}`}>
+                <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${sentiment.className}`}>
                   {sentiment.emoji} {item.sentiment}
                 </span>
               </div>
@@ -240,12 +240,12 @@ export default function SoSoIntelligenceCard({
               <div className="flex items-center justify-between">
                 <div className="flex flex-wrap gap-1">
                   {item.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 bg-white dark:bg-gray-800 rounded text-gray-500 dark:text-gray-400">
+                    <span key={tag} className="text-[10px] font-medium px-1.5 py-0.5 bg-white dark:bg-gray-800 rounded text-gray-500 dark:text-gray-400">
                       #{tag}
                     </span>
                   ))}
                 </div>
-                <span className="text-[9px] text-gray-400">
+                <span className="text-[10px] text-gray-400">
                   {formatTimeAgo(item.publishedAt)}
                 </span>
               </div>
@@ -276,7 +276,7 @@ export default function SoSoIntelligenceCard({
       
       {/* Footer */}
       <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700/50">
-        <p className="text-[9px] text-gray-400 text-center">
+        <p className="text-[10px] text-gray-400 text-center">
           Powered by SoSoValue • {formatTimeAgo(data.timestamp)}
         </p>
       </div>

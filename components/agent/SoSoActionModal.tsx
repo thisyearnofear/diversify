@@ -132,7 +132,7 @@ export default function SoSoActionModal({
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {newsItem.tags.slice(0, 4).map(tag => (
-                      <span key={tag} className="text-[9px] font-medium px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-gray-500 dark:text-gray-400">
+                      <span key={tag} className="text-[10px] font-medium px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-gray-500 dark:text-gray-400">
                         #{tag}
                       </span>
                     ))}

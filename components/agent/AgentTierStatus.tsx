@@ -24,7 +24,7 @@ import { motion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { NETWORKS } from "../../config";
-import { GUARDIAN_TIER_STATE_LABELS } from "@diversifi/shared";
+import { GUARDIAN_TIER_STATE_LABELS, GUARDIAN_USER_COPY } from "@diversifi/shared";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianWDKStatus from "./GuardianWDKStatus";
@@ -208,8 +208,20 @@ export const AgentTierStatus: React.FC<{
   }, [addActivity, guardianActive]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showStrategySwitcher, setShowStrategySwitcher] = useState(false);
+  type GuardianTab = "setup" | "journal" | "proof";
+  const [guardianTab, setGuardianTab] = useState<GuardianTab>("setup");
+  const guardianSteps: { key: typeof guardianState; label: string }[] = [
+    { key: "idle", label: "Not Started" },
+    { key: "authorized", label: "Approved" },
+    { key: "funded", label: "Funded" },
+    { key: "monitoring", label: "Active" },
+  ];
   const [grantStatus, setGrantStatus] = useState<'idle' | 'requesting' | 'granted' | 'error'>('idle');
   const [grantError, setGrantError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setGuardianTab(guardianState === "monitoring" ? "journal" : "setup");
+  }, [guardianState]);
 
   const handleRequestPermission = useCallback(async () => {
     if (!address || !chainId) return;
@@ -453,10 +465,10 @@ export const AgentTierStatus: React.FC<{
             </span>
           </div>
           <div className="mt-1 flex items-center gap-2 relative z-10">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 px-2 py-1 rounded-full">
               Think
             </span>
-            <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.16em]">
               Recommends and explains
             </span>
           </div>
@@ -472,13 +484,13 @@ export const AgentTierStatus: React.FC<{
             Produces the recommendation, rationale, and next action for the user or Guardian.
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5 relative z-10">
-            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
               Analysis
             </span>
-            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
               Conversation
             </span>
-            <span className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
               Quick Actions
             </span>
           </div>
@@ -533,10 +545,10 @@ export const AgentTierStatus: React.FC<{
             </span>
           </div>
           <div className="mt-1 flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded-full">
               Act
             </span>
-            <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
+            <span className="text-[11px] text-gray-400 uppercase tracking-[0.16em]">
               Executes and verifies
             </span>
           </div>
@@ -544,30 +556,16 @@ export const AgentTierStatus: React.FC<{
             The Guardian
           </h4>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {isBeginner
-              ? guardianState === "monitoring"
-                ? "Actively protecting your savings."
-                : guardianState === "funded"
-                  ? "Funded — enable monitoring to start."
-                  : guardianState === "authorized"
-                    ? "Permission granted — deposit to activate."
-                    : "Set up Guardian on the Protect tab."
-              : guardianState === "monitoring"
-                ? "Autonomous protection active."
-                : guardianState === "funded"
-                  ? "Deposited — awaiting enablement."
-                  : guardianState === "authorized"
-                    ? "Permission granted — deposit stablecoins."
-                    : "Set up Guardian on the Protect tab."}
+            {GUARDIAN_USER_COPY[guardianState].description}
           </p>
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
               Policy Checks
             </span>
-            <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
               On-chain Actions
             </span>
-            <span className="text-[10px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
+            <span className="text-[11px] font-bold text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 px-2 py-1 rounded-full">
               Receipts
             </span>
           </div>
@@ -671,28 +669,54 @@ export const AgentTierStatus: React.FC<{
           animate={{ opacity: 1, height: "auto" }}
           className="mt-6 bg-white dark:bg-gray-900 rounded-3xl p-4 md:p-6 border-2 border-purple-100 dark:border-purple-900 shadow-xl overflow-hidden"
         >
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Guardian Journal</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Recommendation handoff, execution, and verifiable evidence</p>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Quick Status Pill */}
-              <div className="flex items-center gap-2 bg-purple-50 dark:bg-purple-900/30 px-3 py-1.5 rounded-full border border-purple-100 dark:border-purple-800">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                  <span className="relative rounded-full h-2 w-2 bg-purple-500"></span>
-                </span>
-                <span className="text-xs font-bold text-purple-700 dark:text-purple-300">Execution + Evidence</span>
-              </div>
+          {/* Progress Checklist — shows where the user is in the Guardian lifecycle */}
+          <div className="mb-5">
+            <div className="flex items-start justify-between gap-1">
+              {guardianSteps.map((step, i) => {
+                const isCurrent = step.key === guardianState;
+                const stepIndex = guardianSteps.findIndex(s => s.key === guardianState);
+                const isPast = i < stepIndex;
+                return (
+                  <div key={step.key} className="flex items-center flex-1 min-w-0">
+                    <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                      <div className={`w-2.5 h-2.5 rounded-full ${isCurrent ? "bg-purple-600 ring-4 ring-purple-100 dark:ring-purple-900/40" : isPast ? "bg-green-500" : "bg-gray-300 dark:bg-gray-700"}`} />
+                      <span className={`text-[10px] font-bold text-center leading-tight ${isCurrent ? "text-purple-700 dark:text-purple-300" : isPast ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {i < guardianSteps.length - 1 && (
+                      <div className={`flex-1 h-px mt-[5px] mx-1 ${isPast ? "bg-green-400" : "bg-gray-200 dark:bg-gray-700"}`} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Left Column: Management & Permissions */}
-            <div className="space-y-6">
-              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-4">Guardian Controls</h4>
+          {/* Tab Bar */}
+          <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl p-1" role="tablist">
+            {(["setup", "journal", "proof"] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={guardianTab === tab}
+                onClick={() => setGuardianTab(tab)}
+                className={`flex-1 text-xs font-bold py-2 px-3 rounded-lg transition-all capitalize ${
+                  guardianTab === tab
+                    ? "bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-300 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                {tab === "setup" ? "Setup" : tab === "journal" ? "Journal" : "Proof"}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Panels */}
+          {guardianTab === "setup" && (
+          <div className="space-y-6">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
+              <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-4">Guardian Controls</h4>
                 
                 <GuardianWDKStatus
                   agentStatus={wdkStatus}
@@ -707,9 +731,9 @@ export const AgentTierStatus: React.FC<{
                   <div className="mt-6 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-blue-100 dark:border-blue-900/50">
                     <div className="flex items-center justify-between mb-2">
                       <h5 className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-300">
-                        Advisor Intent
+                        Latest Advice
                       </h5>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-[11px] text-gray-400">
                         {new Date(sessionInfo.latestRecommendation.capturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </span>
                     </div>
@@ -723,7 +747,7 @@ export const AgentTierStatus: React.FC<{
                       {sessionInfo.latestRecommendation.oneLiner || sessionInfo.latestRecommendation.reasoning}
                     </p>
                     {sessionInfo.latestRecommendation.researchEvidence?.bundle && (
-                      <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold text-gray-600 dark:text-gray-300">
+                      <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-gray-600 dark:text-gray-300">
                         <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded-full">
                           Confidence {(sessionInfo.latestRecommendation.researchEvidence.bundle.confidence * 100).toFixed(0)}%
                         </span>
@@ -785,7 +809,7 @@ export const AgentTierStatus: React.FC<{
                   ) : hasValidPermission ? (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500">Session Limit</span>
+                        <span className="text-gray-500">Daily Limit</span>
                         <span className="font-bold">${dailyLimit}/day</span>
                       </div>
                       {sessionInfo && (
@@ -810,7 +834,7 @@ export const AgentTierStatus: React.FC<{
                       </div>
                       {sessionInfo && sessionInfo.recentExecutions.length > 0 && (
                         <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
-                          <div className="text-[10px] font-bold uppercase tracking-wide text-purple-600 dark:text-purple-300">
+                          <div className="text-[11px] font-bold uppercase tracking-wide text-purple-600 dark:text-purple-300">
                             Recent Executions
                           </div>
                           <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
@@ -892,34 +916,37 @@ export const AgentTierStatus: React.FC<{
                         onClick={(e) => { e.stopPropagation(); revokePermission(); }}
                         className="w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-2 mt-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                       >
-                        Revoke Guardian Access
+                        Turn off Guardian
                       </button>
                     </div>
                   ) : (
+                    <>
                     <button
                       onClick={(e) => { e.stopPropagation(); setShowPermissionModal(true); }}
                       className="w-full text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-3 transition-colors shadow-lg shadow-purple-200 dark:shadow-purple-900/20"
                     >
-                      🔐 Enable Autonomous Mode
+                      🛡️ Turn on Guardian
                     </button>
+                    <p className="text-[11px] text-gray-400 text-center mt-1.5">Approves Guardian to swap within your daily limit</p>
+                    </>
                   )}
 
-                  {/* ERC-7715 Advanced Permissions via MetaMask Smart Accounts Kit */}
+                  {/* On-Chain Permission via MetaMask */}
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
-                        ERC-7715
+                      <span className="text-[11px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+                        On-Chain
                       </span>
-                      <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
-                        MetaMask Smart Accounts
+                      <span className="text-[11px] text-gray-400 uppercase tracking-[0.16em]">
+                        via MetaMask
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      On-chain enforced delegation — the agent acts from your smart account without holding your keys.
+                      Stronger protection — enforced on-chain, your wallet keys never leave your device.
                     </p>
                     {grantStatus === 'granted' ? (
                       <div className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
-                        Advanced Permission active on Arbitrum
+                        On-chain permission active on Arbitrum
                       </div>
                     ) : (
                       <>
@@ -929,7 +956,7 @@ export const AgentTierStatus: React.FC<{
                           disabled={grantStatus === 'requesting'}
                           className="w-full text-xs font-bold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl py-2.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          {grantStatus === 'requesting' ? 'Waiting for MetaMask...' : 'Grant Advanced Permission'}
+                          {grantStatus === 'requesting' ? 'Waiting for MetaMask...' : 'Enable On-Chain Protection'}
                         </button>
                         {grantError && (
                           <p className="text-xs text-red-500 mt-2">{grantError}</p>
@@ -940,12 +967,130 @@ export const AgentTierStatus: React.FC<{
                 </div>
               </div>
             </div>
+          )}
 
-            {/* Right Column: High-End Activity Timeline */}
-            <div className="space-y-6">
+          {guardianTab === "journal" && (
+          <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Proof of Execution</h4>
+                <span className="text-xs text-gray-400 italic">Sorted by Recency</span>
+              </div>
+
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {guardianProofEvents.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
+                    <span className="text-3xl block mb-2">🔭</span>
+                    <p className="text-sm text-gray-500">Scanning for agent actions...</p>
+                  </div>
+                ) : (
+                  guardianProofEvents.map((event, index) => {
+                      const anchor = event.txHash
+                        ? anchorByTxHash.get(event.txHash.toLowerCase())
+                        : undefined;
+                      return (
+                      <div key={event.id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
+                        <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
+                          {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
+                        </div>
+                        <div className={`bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border ${index === 0 ? 'border-green-100 dark:border-green-900/50 ring-1 ring-green-50 dark:ring-green-900/20' : 'border-gray-100 dark:border-gray-700'} hover:shadow-md transition-shadow relative overflow-hidden`}>
+                          <div className="absolute top-3 right-3 opacity-20 text-xl grayscale pointer-events-none">
+                            {event.source === "wdk" ? "🌌" : "🛡️"}
+                          </div>
+
+                          <div className="flex justify-between items-start mb-1 pr-8">
+                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+                              {event.title}
+                            </span>
+                            <span className="text-xs text-gray-400 whitespace-nowrap">
+                              {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                          {anchor && anchor.status === 'anchored' && (
+                            <a
+                              href={anchor.explorerUrl ?? event.explorerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              data-testid="anchor-chip"
+                              className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
+                              title={anchor.id && anchor.id > 0 ? `0G RecommendationLedger #${anchor.id}` : 'Anchored on 0G (awaiting event index)'}
+                            >
+                              <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                              {anchor.id && anchor.id > 0 ? `0G #${anchor.id}` : '0G anchored'}
+                            </a>
+                          )}
+                          {anchor && anchor.status === 'pending' && (
+                            <span
+                              data-testid="anchor-chip-pending"
+                              className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
+                            >
+                              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
+                              0G pending
+                            </span>
+                          )}
+                          {anchor && anchor.status === 'failed' && (
+                            <span
+                              className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
+                              title={anchor.error ?? '0G anchor failed'}
+                            >
+                              <span className="w-1 h-1 rounded-full bg-red-500" />
+                              0G failed
+                            </span>
+                          )}
+                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+                            {event.subtitle}
+                          </p>
+                          {event.error && (
+                            <p className="mt-2 text-xs text-red-500">
+                              {event.error}
+                            </p>
+                          )}
+                          {(event.explorerUrl || event.status) && (
+                            <div className="mt-3 flex items-center justify-between gap-2">
+                              {event.explorerUrl ? (
+                              <a
+                                href={event.explorerUrl}
+                                target="_blank"
+                                className="text-xs font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md border border-blue-100 dark:border-blue-800 transition-colors whitespace-nowrap"
+                              >
+                                View Evidence
+                              </a>
+                              ) : (
+                                <span className="text-xs font-bold text-gray-400">
+                                  No explorer receipt
+                                </span>
+                              )}
+                              <span className={`text-[11px] uppercase font-bold px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
+                                event.status === "confirmed"
+                                  ? "text-green-500 bg-green-50 dark:bg-green-900/20"
+                                  : event.status === "failed"
+                                    ? "text-red-500 bg-red-50 dark:bg-red-900/20"
+                                    : "text-amber-500 bg-amber-50 dark:bg-amber-900/20"
+                              }`}>
+                                <span className={`w-1 h-1 rounded-full ${
+                                  event.status === "confirmed"
+                                    ? "bg-green-500 animate-pulse"
+                                    : event.status === "failed"
+                                      ? "bg-red-500"
+                                      : "bg-amber-500"
+                                }`} />
+                                {event.status}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                    })
+                )}
+              </div>
+          </div>
+          )}
+
+          {guardianTab === "proof" && (
+          <div className="space-y-6">
               {sessionInfo?.latestRecommendation && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl border border-blue-100 dark:border-purple-900 p-4">
-                  <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                  <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">
                     Proof Chain
                   </div>
                   <div className="space-y-2 text-sm">
@@ -972,126 +1117,8 @@ export const AgentTierStatus: React.FC<{
                   </div>
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Proof of Execution</h4>
-                <span className="text-xs text-gray-400 italic">Sorted by Recency</span>
-              </div>
-              
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {/* Unified Activity Stream */}
-                {guardianProofEvents.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
-                    <span className="text-3xl block mb-2">🔭</span>
-                    <p className="text-sm text-gray-500">Scanning for agent actions...</p>
-                  </div>
-                ) : (
-                  guardianProofEvents.map((event, index) => {
-                      // Match the event's txHash against the rolling 0G
-                      // anchor history. When the match exists, render a
-                      // small chip so the user can see at a glance that
-                      // the on-chain ledger has a record of this row.
-                      const anchor = event.txHash
-                        ? anchorByTxHash.get(event.txHash.toLowerCase())
-                        : undefined;
-                      return (
-                      <div key={event.id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
-                        <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
-                          {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
-                        </div>
-                        <div className={`bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border ${index === 0 ? 'border-green-100 dark:border-green-900/50 ring-1 ring-green-50 dark:ring-green-900/20' : 'border-gray-100 dark:border-gray-700'} hover:shadow-md transition-shadow relative overflow-hidden`}>
-                          {/* Source Watermark/Icon */}
-                          <div className="absolute top-3 right-3 opacity-20 text-xl grayscale pointer-events-none">
-                            {event.source === "wdk" ? "🌌" : "🛡️"}
-                          </div>
-
-                          <div className="flex justify-between items-start mb-1 pr-8">
-                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                              {event.title}
-                            </span>
-                            <span className="text-xs text-gray-400 whitespace-nowrap">
-                              {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          {anchor && anchor.status === 'anchored' && (
-                            <a
-                              href={anchor.explorerUrl ?? event.explorerUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              data-testid="anchor-chip"
-                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
-                              title={anchor.id && anchor.id > 0 ? `0G RecommendationLedger #${anchor.id}` : 'Anchored on 0G (awaiting event index)'}
-                            >
-                              <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                              {anchor.id && anchor.id > 0 ? `0G #${anchor.id}` : '0G anchored'}
-                            </a>
-                          )}
-                          {anchor && anchor.status === 'pending' && (
-                            <span
-                              data-testid="anchor-chip-pending"
-                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
-                            >
-                              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
-                              0G pending
-                            </span>
-                          )}
-                          {anchor && anchor.status === 'failed' && (
-                            <span
-                              className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold uppercase tracking-wide text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
-                              title={anchor.error ?? '0G anchor failed'}
-                            >
-                              <span className="w-1 h-1 rounded-full bg-red-500" />
-                              0G failed
-                            </span>
-                          )}
-                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                            {event.subtitle}
-                          </p>
-                          {event.error && (
-                            <p className="mt-2 text-xs text-red-500">
-                              {event.error}
-                            </p>
-                          )}
-                          {(event.explorerUrl || event.status) && (
-                            <div className="mt-3 flex items-center justify-between gap-2">
-                              {event.explorerUrl ? (
-                              <a
-                                href={event.explorerUrl}
-                                target="_blank" 
-                                className="text-xs font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md border border-blue-100 dark:border-blue-800 transition-colors whitespace-nowrap"
-                              >
-                                View Evidence
-                              </a>
-                              ) : (
-                                <span className="text-xs font-bold text-gray-400">
-                                  No explorer receipt
-                                </span>
-                              )}
-                              <span className={`text-[10px] uppercase font-bold px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
-                                event.status === "confirmed"
-                                  ? "text-green-500 bg-green-50 dark:bg-green-900/20"
-                                  : event.status === "failed"
-                                    ? "text-red-500 bg-red-50 dark:bg-red-900/20"
-                                    : "text-amber-500 bg-amber-50 dark:bg-amber-900/20"
-                              }`}>
-                                <span className={`w-1 h-1 rounded-full ${
-                                  event.status === "confirmed"
-                                    ? "bg-green-500 animate-pulse"
-                                    : event.status === "failed"
-                                      ? "bg-red-500"
-                                      : "bg-amber-500"
-                                }`} />
-                                {event.status}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                    })
-                )}
-              </div>
-            </div>
           </div>
+          )}
         </motion.div>
       )}
 
@@ -1237,19 +1264,19 @@ const ActivityFeed: React.FC<{
             </div>
             {activity.details?.researchEvidence?.bundle && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">
-                <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[10px] font-bold text-blue-700 dark:text-blue-300">
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[11px] font-bold text-blue-700 dark:text-blue-300">
                   {Math.round(activity.details.researchEvidence.bundle.confidence * 100)}% confidence
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
                   {Math.round(activity.details.researchEvidence.bundle.freshnessScore * 100)}% freshness
                 </span>
-                <span className="px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-[10px] font-bold text-violet-700 dark:text-violet-300">
+                <span className="px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-[11px] font-bold text-violet-700 dark:text-violet-300">
                   {activity.details.researchEvidence.bundle.sourceCount} sources
                 </span>
               </div>
             )}
             {activity.details?.researchEvidence?.summary && (
-              <p className="text-[10px] text-gray-400 mt-1 leading-relaxed">
+              <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
                 {activity.details.researchEvidence.summary}
               </p>
             )}

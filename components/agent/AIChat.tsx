@@ -146,7 +146,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
 
       {/* Error message */}
       {status === 'error' && errorMessage && (
-        <p className="text-[9px] text-center text-red-500 mt-2 font-medium">
+        <p className="text-[10px] text-center text-red-500 mt-2 font-medium">
           ⚠ {errorMessage}
         </p>
       )}
@@ -154,7 +154,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
       {/* Success with tx hash */}
       {status === 'success' && txHash && (
         <div className="mt-2 text-center">
-          <p className="text-[9px] text-gray-400 font-medium">
+          <p className="text-[10px] text-gray-400 font-medium">
             Tx: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </p>
           {explorerUrl && (
@@ -162,7 +162,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
               href={explorerUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[9px] text-blue-500 hover:text-blue-600 underline mt-0.5 inline-block"
+              className="text-[10px] text-blue-500 hover:text-blue-600 underline mt-0.5 inline-block"
             >
               View on Explorer →
             </a>
@@ -171,7 +171,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
       )}
 
       {status === 'idle' && (
-        <p className="text-[9px] text-center text-gray-400 mt-2 font-medium">
+        <p className="text-[10px] text-center text-gray-400 mt-2 font-medium">
           Gas covered autonomously via local MPC wallet
         </p>
       )}
@@ -263,13 +263,13 @@ function useUserGeminiKey() {
 function ProviderBadge({ provider }: { provider?: string }) {
   if (!provider) return null;
   if (provider === "gemini") return (
-    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-blue-500 dark:text-blue-400 opacity-70 mt-0.5">
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-500 dark:text-blue-400 opacity-70 mt-0.5">
       <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
       Gemini
     </span>
   );
   if (provider === "venice") return (
-    <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-purple-500 dark:text-purple-400 opacity-70 mt-0.5">
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-purple-500 dark:text-purple-400 opacity-70 mt-0.5">
       ✦ Venice
     </span>
   );
@@ -301,7 +301,7 @@ function ModelSettingsModal({ onClose, userGeminiKey, onSaveKey }: {
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 border border-blue-100 dark:border-blue-800/30">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-black text-blue-700 dark:text-blue-300">✦ Default: Gemini Flash</span>
-            <span className="text-[9px] bg-blue-100 dark:bg-blue-800/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>
+            <span className="text-[10px] bg-blue-100 dark:bg-blue-800/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>
           </div>
           <p className="text-[11px] text-blue-600 dark:text-blue-400">Powered by Google Gemini 3.1 Flash · No setup needed · Shared rate limits apply</p>
         </div>
@@ -712,7 +712,7 @@ export default function AIChat() {
                                 {msg.researchSources.length} source{msg.researchSources.length > 1 ? 's' : ''} consulted
                               </span>
                               {msg.researchSources.some(s => s.tier === 'paid') && (
-                                <span className="text-[9px] px-1 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold">
+                                <span className="text-[10px] px-1 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold">
                                   ${msg.researchSources.reduce((sum, s) => sum + (s.cost || 0), 0).toFixed(3)} USDC
                                 </span>
                               )}
@@ -722,7 +722,7 @@ export default function AIChat() {
                                 href={msg.x402Receipt.explorer}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[9px] text-blue-500 hover:text-blue-600 font-bold"
+                                className="text-[10px] text-blue-500 hover:text-blue-600 font-bold"
                               >
                                 tx ↗
                               </a>
@@ -731,7 +731,7 @@ export default function AIChat() {
                           <div className="flex flex-wrap gap-1">
                             {msg.researchSources.map((s, j) => {
                               const badge = (
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${s.tier === 'paid' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'} ${s.url ? 'hover:opacity-80 cursor-pointer' : ''}`}>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${s.tier === 'paid' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'} ${s.url ? 'hover:opacity-80 cursor-pointer' : ''}`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${s.tier === 'paid' ? 'bg-amber-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
                                   {s.label}
                                   {s.url && <span className="opacity-60">↗</span>}

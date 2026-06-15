@@ -28,7 +28,7 @@ const STEPS: GuardianStateStep[] = [
     {
         state: 'idle',
         icon: '🔒',
-        description: 'The Guardian is ready — sign an EIP-712 permission to start.',
+        description: 'The Guardian is ready — approve protection in your wallet to start.',
     },
     {
         state: 'authorized',
@@ -43,7 +43,7 @@ const STEPS: GuardianStateStep[] = [
     {
         state: 'monitoring',
         icon: '🛡️',
-        description: 'Active protection. Swaps execute within your limits autonomously.',
+        description: 'Active protection. Swaps execute within your limits automatically.',
     },
 ];
 
@@ -60,7 +60,7 @@ export function GuardianStateScrollytelling({
     return (
         <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/10 dark:to-purple-950/10 p-5">
             <h3 className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-4">
-                Guardian Lifecycle
+                Protection Setup Steps
             </h3>
             <div className="relative">
                 {/* Vertical connecting line */}

@@ -25,10 +25,42 @@ import type { Vault, VaultPermission } from './vault.service';
 export type GuardianTierState = 'idle' | 'authorized' | 'funded' | 'monitoring';
 
 export const GUARDIAN_TIER_STATE_LABELS: Record<GuardianTierState, string> = {
-    idle: 'Get Started',
-    authorized: 'Awaiting Deposit',
+    idle: 'Not Started',
+    authorized: 'Approved',
     funded: 'Funded',
-    monitoring: 'Protecting',
+    monitoring: 'Active',
+};
+
+export const GUARDIAN_USER_COPY: Record<GuardianTierState, {
+    headline: string;
+    description: string;
+    cta: string;
+    hint: string;
+}> = {
+    idle: {
+        headline: 'Set up Guardian',
+        description: 'Choose a strategy and approve protection to get started.',
+        cta: 'Turn on Guardian',
+        hint: 'Pick a strategy, set limits, and deposit stablecoins.',
+    },
+    authorized: {
+        headline: 'Add funds',
+        description: 'Guardian is approved — deposit stablecoins to activate protection.',
+        cta: 'Deposit now',
+        hint: 'Your Guardian is approved. Send stablecoins to start.',
+    },
+    funded: {
+        headline: 'Enable protection',
+        description: 'Vault is funded. Turn on Guardian to start automatic protection.',
+        cta: 'Turn on Guardian',
+        hint: 'Funds are ready. Enable Guardian to start monitoring.',
+    },
+    monitoring: {
+        headline: 'Protection active',
+        description: 'Guardian is monitoring markets and protecting your savings.',
+        cta: 'View activity',
+        hint: 'Auto-protection is active within your limits.',
+    },
 };
 
 export interface DeriveGuardianTierStateInput {

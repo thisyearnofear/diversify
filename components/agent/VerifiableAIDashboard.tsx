@@ -101,7 +101,7 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -117,7 +117,7 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.92, opacity: 0, y: 30 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-2xl max-h-[85vh] bg-white/95 dark:bg-gray-950/95 backdrop-blur-2xl rounded-[2.5rem] shadow-[0_32px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 dark:border-white/5 flex flex-col"
+            className="relative w-full max-w-2xl max-h-[85vh] bg-white/95 dark:bg-gray-950/95 backdrop-blur-2xl rounded-t-[2rem] sm:rounded-[2.5rem] shadow-[0_32px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 dark:border-white/5 flex flex-col"
           >
             {/* ================================================================ */}
             {/* HEADER */}
@@ -259,7 +259,7 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
               >
                 Close Dashboard
               </button>
-              <p className="text-center text-[9px] text-gray-400 dark:text-gray-600 font-bold uppercase tracking-widest mt-3">
+              <p className="text-center text-[10px] text-gray-400 dark:text-gray-600 font-bold uppercase tracking-widest mt-3">
                 Powered by 0G Foundation · Galileo Testnet
               </p>
             </div>
@@ -278,7 +278,7 @@ function StatusBadge({ label, status, tooltip }: { label: string; status: boolea
   return (
     <div
       title={tooltip}
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
         status
           ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/20'
           : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
@@ -364,7 +364,7 @@ function TraceView({
                   <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight">
                     {step.title}
                   </h4>
-                  <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                  <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
                     step.status === 'active'
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                       : step.status === 'fallback'
@@ -458,7 +458,7 @@ function StatusView({
             <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-tight">
               {entry.label}
             </h4>
-            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
+            <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${
               entry.status === 'active'
                 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                 : 'bg-gray-500/10 text-gray-500'
@@ -479,7 +479,7 @@ function StatusView({
                 }`}
               />
             </div>
-            <span className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase">
+            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase">
               {entry.status === 'active' ? '100%' : '0%'}
             </span>
           </div>
@@ -518,7 +518,7 @@ function LedgerView({
         <p className="text-xs text-gray-400 dark:text-gray-500 max-w-xs">
           Deploy the RecommendationLedger contract to 0G Galileo testnet to start recording recommendations on-chain.
         </p>
-        <span className="text-[9px] font-mono text-purple-600 dark:text-purple-400 bg-purple-500/5 px-3 py-1.5 rounded-xl border border-purple-500/20">
+        <span className="text-[10px] font-mono text-purple-600 dark:text-purple-400 bg-purple-500/5 px-3 py-1.5 rounded-xl border border-purple-500/20">
           forge create —rpc-url zero_g_testnet —broadcast
         </span>
       </div>
@@ -536,7 +536,7 @@ function LedgerView({
         ].map(stat => (
           <div key={stat.label} className="bg-gray-50 dark:bg-white/[0.04] p-3 rounded-2xl border border-gray-100 dark:border-white/5 text-center">
             <div className={`text-lg font-black ${stat.color}`}>{stat.value}</div>
-            <div className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-wider mt-0.5">
               {stat.label}
             </div>
           </div>
@@ -579,7 +579,7 @@ function LedgerView({
                     {rec.action}
                   </span>
                 </div>
-                <span className="text-[9px] text-gray-400 dark:text-gray-500 font-mono">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
                   {new Date(rec.timestamp * 1000).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -601,10 +601,10 @@ function LedgerView({
 
               {/* Expandable details */}
               <details className="mt-3 group">
-                <summary className="text-[9px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
+                <summary className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors">
                   View Evidence Chain →
                 </summary>
-                <div className="mt-2 space-y-1.5 text-[9px] font-mono">
+                <div className="mt-2 space-y-1.5 text-[10px] font-mono">
                   <div className="flex items-center gap-2">
                     <span className="text-purple-400 font-black">CID:</span>
                     <span className="text-gray-600 dark:text-gray-400 truncate">{rec.evidenceCid || '—'}</span>

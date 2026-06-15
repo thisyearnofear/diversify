@@ -42,10 +42,10 @@ export function RiskHeatMap({ riskData }: RiskHeatMapProps) {
 
             <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                    <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
+                    <h4 className="text-[11px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
                         Global Risk Heatmap
                     </h4>
-                    <p className="text-[8px] text-gray-500 font-bold uppercase tracking-tighter">
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tighter">
                         Live Cross-Regional Volatility Index
                     </p>
                 </div>
@@ -80,8 +80,8 @@ export function RiskHeatMap({ riskData }: RiskHeatMapProps) {
                                 />
                             )}
                             <div className="text-xl mb-1 filter drop-shadow-md">{region.icon}</div>
-                            <div className="text-[9px] font-black uppercase truncate tracking-tight">{region.label}</div>
-                            <div className="text-[7px] font-black opacity-80 uppercase leading-none mt-0.5">{risk}</div>
+                            <div className="text-[10px] font-black uppercase truncate tracking-tight">{region.label}</div>
+                            <div className="text-[9px] font-black opacity-80 uppercase leading-none mt-0.5">{risk}</div>
                         </motion.div>
                     );
                 })}

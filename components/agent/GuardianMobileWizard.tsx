@@ -157,7 +157,7 @@ export function GuardianMobileWizard({
   const stepConfig: Record<WizardStep, { title: string; icon: string }> = {
     strategy: { title: "Pick Strategy", icon: "🎯" },
     limits: { title: "Set Limits", icon: "📊" },
-    sign: { title: "Grant Permission", icon: "✍️" },
+    sign: { title: "Approve Guardian", icon: "✍️" },
     deposit: { title: "Deposit", icon: "💰" },
   };
 
@@ -395,9 +395,9 @@ export function GuardianMobileWizard({
   const SignStep = () => (
     <div className="space-y-4">
       <div className="text-center mb-4">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Review & Sign</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Review & Approve</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          You&apos;ll sign a permission in your wallet
+          Confirm Guardian limits in your wallet
         </p>
       </div>
 
@@ -425,7 +425,7 @@ export function GuardianMobileWizard({
           <span>⚠️</span>
           <p className="text-xs text-amber-800 dark:text-amber-200">
             The Guardian can swap your stablecoins within these limits. Your funds stay in your
-            smart account — the Guardian cannot withdraw. You can revoke anytime.
+            protection wallet — the Guardian cannot withdraw. You can revoke anytime.
           </p>
         </div>
       </div>
@@ -459,13 +459,13 @@ export function GuardianMobileWizard({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          Send stablecoins to your smart account to start diversifying
+          Send stablecoins to your protection wallet to start diversifying
         </motion.p>
       </div>
 
       {vaultAddress && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-2">Your Smart Account (Celo)</div>
+          <div className="text-xs text-gray-500 mb-2">Your Protection Wallet (Celo)</div>
           <div className="flex items-center gap-2">
             <code className="flex-1 text-sm font-mono text-gray-900 dark:text-white break-all">
               {vaultAddress}
@@ -612,7 +612,7 @@ export function GuardianMobileWizard({
           ) : currentStep === "sign" ? (
             <>
               <span>✍️</span>
-              <span>Sign Permission</span>
+              <span>Approve in Wallet</span>
             </>
           ) : currentStep === "deposit" ? (
             <span>Done — Open Dashboard</span>

@@ -183,7 +183,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                     </code>
                     <button
                       onClick={handleCopyAddress}
-                      className={`mt-2 px-2 py-1 rounded text-[9px] font-bold uppercase transition-all ${isCopying ? 'bg-green-100 text-green-600 dark:bg-green-900/40' : 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/40'}`}
+                      className={`mt-2 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${isCopying ? 'bg-green-100 text-green-600 dark:bg-green-900/40' : 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/40'}`}
                     >
                       {isCopying ? '✓ Copied' : 'Copy Address'}
                     </button>
@@ -209,7 +209,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
 
               {/* Minimum Deposit Note */}
               <div className="mt-3 pt-2 border-t border-blue-200/50 dark:border-blue-700/50">
-                <div className="flex items-center gap-1 text-[9px] text-blue-500/70 dark:text-blue-400/70">
+                <div className="flex items-center gap-1 text-[10px] text-blue-500/70 dark:text-blue-400/70">
                   <span>💡</span>
                   <span>Minimum recommended: $5 USDC • execution gas is auto-sponsored</span>
                 </div>
@@ -270,15 +270,15 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                   <div className="w-2 h-2 rounded-full bg-purple-600 relative" />
                 </div>
                 <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 uppercase tracking-widest">
-                  Protection Hedge Active
+                  Safety Net Active
                 </span>
               </div>
               <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400 bg-white dark:bg-purple-900/40 px-2 py-0.5 rounded-full shadow-sm">
                 ${hedgeValue.toFixed(2)} Protected
               </span>
             </div>
-            <p className="text-[9px] text-purple-600/70 dark:text-purple-400/70 mt-1 italic font-medium">
-              A protective hedge is helping stabilize your portfolio value in the background.
+            <p className="text-[10px] text-purple-600/70 dark:text-purple-400/70 mt-1 italic font-medium">
+              A safety net is helping protect your value in the background.
             </p>
           </motion.div>
         )}
@@ -316,7 +316,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
       <div className="mt-3 flex items-center gap-1.5">
         <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
         <span className="text-[10px] font-bold text-blue-600/70 uppercase tracking-widest">
-            Automatic protection funding is active
+            Auto-protection funding active
         </span>
       </div>
     </div>

@@ -62,7 +62,7 @@ export function ResearchCheck({ isResearching }: ResearchCheckProps) {
                 key={source}
                 initial={reducedMotion ? undefined : { opacity: 0, x: -4 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="text-[9px] font-bold px-1.5 py-0.5 bg-white/10 rounded-full text-emerald-300 border border-emerald-500/20"
+                className="text-[10px] font-bold px-1.5 py-0.5 bg-white/10 rounded-full text-emerald-300 border border-emerald-500/20"
               >
                 {source}
               </motion.span>

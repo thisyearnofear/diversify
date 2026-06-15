@@ -70,7 +70,7 @@ const RiskMetrics: React.FC<RiskMetricsProps> = ({
               Liquidation Risk
             </span>
             {liqLevel && (
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${getRiskColor(liqLevel)}`}>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${getRiskColor(liqLevel)}`}>
                 {liqLevel}
               </span>
             )}
@@ -104,7 +104,7 @@ const RiskMetrics: React.FC<RiskMetricsProps> = ({
               Implied Vol
             </span>
             {ivLevel && (
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${getRiskColor(ivLevel)}`}>
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${getRiskColor(ivLevel)}`}>
                 {ivLevel}
               </span>
             )}

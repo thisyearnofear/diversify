@@ -125,6 +125,7 @@ export {
   deriveGuardianTierState,
   isPermissionValidNow,
   GUARDIAN_TIER_STATE_LABELS,
+  GUARDIAN_USER_COPY,
   type GuardianTierState,
   type DeriveGuardianTierStateInput,
 } from './services/vault/guardian-tier-state';

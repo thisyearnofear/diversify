@@ -49,7 +49,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
   hasTokenVault = false,
 }) => {
   const { color, label } = statusIndicator[agentStatus];
-  const displayName = agentIdentity?.name ?? "Execution Service";
+  const displayName = agentIdentity?.name ?? "Protection Engine";
   const isMobile = useMobile();
   const [showWizard, setShowWizard] = useState(false);
 
@@ -132,7 +132,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
 
       {/* Management / Config Info */}
       <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
-        Execution service is {agentStatus === "online" ? "active and scanning" : "waiting for connection"}.
+        Protection is {agentStatus === "online" ? "active and monitoring" : "waiting to connect"}.
       </div>
 
       {/* Token Vault Badge */}
@@ -161,7 +161,7 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
           ) : (
             <span>🛸</span>
           )}
-          <span>{isExecuting ? "Checking Status…" : "Check Execution Service"}</span>
+          <span>{isExecuting ? "Checking…" : "Check Protection Status"}</span>
         </button>
       </div>
     </div>

@@ -65,7 +65,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
         <motion.span
           animate={reducedMotion ? undefined : { rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-[9px]"
+          className="text-[10px]"
         >
           ▾
         </motion.span>
@@ -139,7 +139,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
 
               <div className="flex items-center justify-between text-[10px] text-slate-400">
                 <div className="flex items-center gap-1">
-                  <span className="inline-block w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-[9px]">
+                  <span className="inline-block w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-[10px]">
                     {receipt.status === 'failed' ? '!' : '✓'}
                   </span>
                   <span className={`${statusColor} font-bold text-[10px]`}>

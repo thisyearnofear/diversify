@@ -56,7 +56,6 @@ export default function DiversiFiPage() {
     <div className="min-h-screen bg-white dark:bg-gray-950 p-2 sm:p-4 transition-colors relative">
       <Head>
         <title>DiversiFi - Protect Your Savings</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
         <meta name="description" content="Diversify your stablecoin savings across regions to protect against currency debasement" />
 
         <meta property="og:title" content="DiversiFi - Protect Your Savings" />
