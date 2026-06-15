@@ -214,6 +214,16 @@ export const AgentTierStatus: React.FC<{
   const handleRequestPermission = useCallback(async () => {
     if (!address || !chainId) return;
     setShowPermissionModal(false);
+    const SUPPORTED_CHAINS = [42220, 44787, 42161];
+    if (!SUPPORTED_CHAINS.includes(chainId)) {
+      addActivity({
+        type: "execution",
+        tier: "GUARDIAN",
+        description: "Please switch to Celo or Arbitrum to enable Autonomous Mode",
+        status: "failed",
+      });
+      return;
+    }
     try {
       const { ethers } = await import("ethers");
       const provider = new ethers.providers.Web3Provider(
@@ -237,13 +247,31 @@ export const AgentTierStatus: React.FC<{
         status: "failed",
       });
     }
-  }, [address, chainId, requestPermission]);
+  }, [address, chainId, requestPermission, addActivity]);
 
   const handleGrantAdvanced = useCallback(async () => {
     if (!address) return;
     setGrantStatus('requesting');
     setGrantError(null);
     try {
+      const ethereum = (window as any).ethereum;
+      if (!ethereum) {
+        throw new Error('Install MetaMask to use Advanced Permissions.');
+      }
+
+      const currentChainHex = await ethereum.request({ method: 'eth_chainId' });
+      const currentChainId = parseInt(currentChainHex, 16);
+      if (currentChainId !== 42161) {
+        try {
+          await ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xa4b1' }],
+          });
+        } catch {
+          throw new Error('Please switch to Arbitrum One in your wallet to grant Advanced Permissions.');
+        }
+      }
+
       const { requestAdvancedPermission, ARBITRUM_USDC } = await import('../../lib/erc7715-client-grant');
       const sessionAddress = (process.env.NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS || address) as `0x${string}`;
       const periodAmount = BigInt(Math.round(dailyLimit * 1_000_000));
@@ -261,7 +289,14 @@ export const AgentTierStatus: React.FC<{
       });
     } catch (e: any) {
       setGrantStatus('error');
-      setGrantError(e?.message || 'Grant failed');
+      const msg = e?.message || '';
+      if (e?.code === 4001 || msg.includes('rejected') || msg.includes('User rejected')) {
+        setGrantError('Permission request was rejected. Try again when ready.');
+      } else if (msg.includes('switch to Arbitrum') || msg.includes('Install MetaMask')) {
+        setGrantError(msg);
+      } else {
+        setGrantError('Advanced Permission request failed. Make sure you are on Arbitrum One.');
+      }
     }
   }, [address, dailyLimit, addActivity]);
 

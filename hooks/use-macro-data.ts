@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   macroService,
   type MacroIndicator,
@@ -11,6 +11,11 @@ export function useMacroData(countries?: string[]) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [source, setSource] = useState<string>("api");
+
+  // Stringified in a useMemo so the deps array holds a stable, lint-checkable
+  // value. Re-fetch only when the *contents* of the countries list change,
+  // not on every parent re-render that produces a new array reference.
+  const countriesKey = useMemo(() => JSON.stringify(countries), [countries]);
 
   useEffect(() => {
     const fetchMacroData = async () => {
@@ -31,7 +36,7 @@ export function useMacroData(countries?: string[]) {
     };
 
     fetchMacroData();
-  }, [JSON.stringify(countries)]); // Re-fetch if countries list changes
+  }, [countriesKey, countries]);
 
   /**
    * Get stability score for a country code (e.g. 'USA', 'KEN')

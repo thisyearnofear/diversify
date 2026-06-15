@@ -34,7 +34,9 @@ export function TrustFlow({ isActive, step }: TrustFlowProps) {
     } else if (step.includes('recommend') || step.includes('advis')) {
       setActiveIndex(2);
     } else {
-      setActiveIndex(Math.min(activeIndex + 1, 2));
+      // Use functional setState so we don't need `activeIndex` as a
+      // dependency, which would re-trigger the timer on every index change.
+      setActiveIndex((prev) => Math.min(prev + 1, 2));
     }
   }, [step, isActive]);
 

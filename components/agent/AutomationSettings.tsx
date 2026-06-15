@@ -156,7 +156,7 @@ export default function AutomationSettings({
     } finally {
       setLoading(false);
     }
-  }, [stableUserId]);
+  }, [stableUserId, showToast]);
 
   useEffect(() => {
     if (stableUserId) {

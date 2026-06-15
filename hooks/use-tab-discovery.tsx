@@ -157,8 +157,15 @@ export function useTabDiscovery(): UseTabDiscoveryResult {
     // If a TabDiscoveryProvider is mounted, use the shared context so
     // TabNavigation and TabContentRouter stay in sync.
     const ctx = useTabDiscoveryContext();
+
+    // The provider's presence is stable for the lifetime of the app
+    // (it's mounted at the root in pages/_app.tsx and never torn down
+    // mid-session), so the conditional hook below is safe in practice.
+    // If the provider pattern ever needs to toggle dynamically, this
+    // should switch to always calling both hooks and picking one.
     if (ctx) return ctx;
 
     // Fallback: standalone local state (no provider mounted).
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     return useTabDiscoveryInternal();
 }

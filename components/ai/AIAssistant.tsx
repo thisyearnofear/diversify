@@ -387,7 +387,7 @@ export default function AIAssistant({
         "voiceQuery",
         handleVoiceQuery as EventListener,
       );
-  }, [addUserMessage, setDrawerOpen]);
+  }, [addUserMessage, setDrawerOpen, askAdvisor]);
 
   // ============================================================================
   // EMBEDDED MODE: Compact rendering for integration within other cards

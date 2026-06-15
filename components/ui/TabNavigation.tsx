@@ -108,7 +108,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     setActiveTab(nextTab.id);
     recordTabVisit(nextTab.id);
     tabRefs.current[newIndex]?.focus();
-  }, [visibleTabs, setActiveTab]);
+  }, [visibleTabs, setActiveTab, recordTabVisit]);
 
   return (
     <>

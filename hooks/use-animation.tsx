@@ -62,6 +62,10 @@ export function useAnimatedNumber(
         cancelAnimationFrame(animationRef.current);
       }
     };
+    // Intentionally exclude `displayValue`: the animation runs once per
+    // `targetValue` change. Re-running on every frame would cancel and
+    // restart the animation continuously, never producing a final value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetValue, duration, decimals, startOnMount]);
 
   return displayValue;

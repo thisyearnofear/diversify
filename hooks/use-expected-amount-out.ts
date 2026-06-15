@@ -142,6 +142,10 @@ export function useExpectedAmountOut({
     };
 
     getExpectedOutput();
+    // getExpectedAmountOut is defined later in this hook as a useCallback
+    // with `[chainId]` deps, so adding it here would be a no-op (chainId
+    // is already in the deps and the callback is otherwise stable).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromToken, toToken, debouncedAmount, chainId]);
 
   // Get expected amount out for a swap

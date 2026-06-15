@@ -138,13 +138,16 @@ export function useNetworkActivity() {
     }, [stats.totalUsers, globalMomentum]);
 
     // Auto-cycle the pulse
+    // `hasOverride` is extracted so the deps array holds a stable, statically
+    // checkable boolean rather than the `!!overridePulse` expression.
+    const hasOverride = !!overridePulse;
     useEffect(() => {
-        if (pulses.length === 0 || overridePulse) return;
+        if (pulses.length === 0 || hasOverride) return;
         const interval = setInterval(() => {
             setCurrentPulseIndex(prev => (prev + 1) % pulses.length);
         }, 8000);
         return () => clearInterval(interval);
-    }, [pulses.length, !!overridePulse]);
+    }, [pulses.length, hasOverride]);
 
     return {
         stats,
