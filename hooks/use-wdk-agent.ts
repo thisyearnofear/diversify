@@ -48,10 +48,12 @@ export function useWDKAgent() {
   // ---------------------------------------------------------------------------
 
   const triggerHeartbeat = useCallback(async () => {
+    setIsExecuting(true);
     try {
+      await new Promise(resolve => setTimeout(resolve, 600));
       const identity: WDKAgentIdentity = {
         agent_id: "wdk-settlement-001",
-        name: "WDK Settlement Agent",
+        name: "Auto-Saver",
         version: "1.0.0",
         chains: ["Celo", "Arbitrum", "Polygon", "Avalanche", "Tron"],
         wallets: [
@@ -65,6 +67,8 @@ export function useWDKAgent() {
     } catch {
       setAgentStatus('offline');
       setAgentIdentity(null);
+    } finally {
+      setIsExecuting(false);
     }
   }, []);
 

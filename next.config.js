@@ -80,6 +80,7 @@ const nextConfig = {
       { source: '/api/agent/deep-analyze', destination: `${hetznerBase}/api/agent/deep-analyze` },
       { source: '/api/agent/x402-gateway', destination: `${hetznerBase}/api/agent/x402-gateway` },
       { source: '/api/vault/:path*', destination: `${hetznerBase}/api/vault/:path*` },
+      { source: '/api/streaks/:path*', destination: `${hetznerBase}/api/streaks/:path*` },
     ];
   },
 
@@ -128,7 +129,7 @@ const nextConfig = {
               "img-src 'self' data: https: blob:",
               "media-src 'self' data: blob:",
               "font-src 'self' data: https: fonts.googleapis.com https://fonts.gstatic.com https://fonts.reown.com",
-              "connect-src 'self' https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://privy.farcaster.xyz https://privy.warpcast.com https://auth.privy.io https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://rpc.walletconnect.org https://*.walletconnect.com https://*.walletconnect.org https://api.web3modal.org https://*.reown.com https://cca-lite.coinbase.com https://forno.celo.org https://forno.celo-sepolia.celo-testnet.org https://arb1.arbitrum.io https://rpc.testnet.arc.network https://rpc.arc.network https://*.arc.network https://rpc.testnet.chain.robinhood.com https://polygon-rpc.com https://eth.llamarpc.com https://rpc.ankr.com https://eth.publicnode.com https://ethereum.publicnode.com https://cloudflareinsights.com https://li.quest https://*.li.fi https://api.coingecko.com https://api.coinpaprika.com https://coins.llama.fi https://api.hyperliquid.xyz https://api.diversifi.famile.xyz",
+              "connect-src 'self' https://farcaster.xyz https://client.farcaster.xyz https://warpcast.com https://client.warpcast.com https://wrpcd.net https://*.wrpcd.net https://privy.farcaster.xyz https://privy.warpcast.com https://auth.privy.io https://*.rpc.privy.systems https://explorer-api.walletconnect.com https://rpc.walletconnect.org https://*.walletconnect.com https://*.walletconnect.org https://api.web3modal.org https://*.reown.com https://cca-lite.coinbase.com https://forno.celo.org https://forno.celo-sepolia.celo-testnet.org https://arb1.arbitrum.io https://rpc.testnet.arc.network https://rpc.arc.network https://*.arc.network https://rpc.testnet.chain.robinhood.com https://polygon-rpc.com https://eth.llamarpc.com https://rpc.ankr.com https://eth.publicnode.com https://ethereum.publicnode.com https://cloudflareinsights.com https://li.quest https://*.li.fi https://api.coingecko.com https://api.coinpaprika.com https://coins.llama.fi https://stablecoins.llama.fi https://api.llama.fi https://api.hyperliquid.xyz https://api.diversifi.famile.xyz https://www.imf.org https://api.worldbank.org https://api.frankfurter.app https://api.alternative.me",
               "frame-src 'self' https://auth.privy.io https://*.privy.io https://secure.walletconnect.org https://secure.walletconnect.com https://verify.walletconnect.org https://verify.walletconnect.com",
               "frame-ancestors 'self' https://*.minipay.app https://minipay.app https://*.celo.org https://*.opera.com https://*.warpcast.com https://warpcast.com https://*.farcaster.xyz https://farcaster.xyz",
             ].join("; "),
