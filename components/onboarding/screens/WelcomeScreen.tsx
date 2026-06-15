@@ -112,7 +112,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                         className="w-full px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-black rounded-2xl shadow-lg active:scale-95 transition-all"
                         whileHover={{ y: -1 }}
                     >
-                        Let's Get Started →
+                        Let&apos;s Get Started →
                     </motion.button>
 
                     {/* Chain complexity hidden behind toggle */}
@@ -180,7 +180,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                     className="w-full max-w-sm"
                 >
                     <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                        Here's the reality in <span className="text-blue-500">{selectedRegionData.flag} {selectedRegionData.label}</span>
+                        Here&apos;s the reality in <span className="text-blue-500">{selectedRegionData.flag} {selectedRegionData.label}</span>
                     </h2>
 
                     {/* The aha moment: personalized impact card */}
@@ -194,7 +194,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                         </p>
                         <div className="mt-3 pt-3 border-t border-red-200 dark:border-red-800">
                             <p className="text-xs text-red-500 dark:text-red-300">
-                                That's <strong>${(selectedRegionData.lossPer10k / 365).toFixed(1)}/day</strong> — gone. Every day you wait.
+                                That&apos;s <strong>${(selectedRegionData.lossPer10k / 365).toFixed(1)}/day</strong> — gone. Every day you wait.
                             </p>
                         </div>
                     </div>

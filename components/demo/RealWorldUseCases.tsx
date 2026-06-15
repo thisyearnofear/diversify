@@ -470,8 +470,8 @@ export default function RealWorldUseCases({
           </div>
           <p className="text-xs font-bold text-gray-500 dark:text-gray-400 leading-normal">
             <span className="text-gray-900 dark:text-white font-black uppercase tracking-tighter mr-1">Insider Insight:</span>
-            In emerging markets, local currencies lose <span className="text-purple-600 dark:text-purple-400">10-30% yearly</span>. 
-            Diversification isn't just a strategy; it's the ultimate hedge.
+            In emerging markets, local currencies lose <span className="text-purple-600 dark:text-purple-400">10-30% yearly</span>.
+            Diversification isn&apos;t just a strategy; it&apos;s the ultimate hedge.
           </p>
         </div>
       </div>

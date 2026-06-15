@@ -563,7 +563,7 @@ export default function SwapTab({
                 
                 <div className="mt-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    💡 <strong>Tip:</strong> Start with $10-20 to test the platform, then add more once you're comfortable.
+                    💡 <strong>Tip:</strong> Start with $10-20 to test the platform, then add more once you&apos;re comfortable.
                   </p>
                 </div>
               </Card>

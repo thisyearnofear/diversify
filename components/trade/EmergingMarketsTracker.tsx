@@ -263,7 +263,7 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
           Connection Issue
         </h3>
         <p className="text-sm text-red-600 dark:text-red-400 mb-4">
-          We're having trouble fetching the latest market data. This could be due to:
+          We&apos;re having trouble fetching the latest market data. This could be due to:
         </p>
         <ul className="text-xs text-gray-600 dark:text-gray-400 mb-6 space-y-1">
           <li>• Network connectivity problems</li>
@@ -409,7 +409,7 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
             ))}
           </div>
           <p className="text-xs text-gray-400 mt-2 text-center">
-            Tap "Trade Fictional" tab to practice with {FICTIONAL_EMERGING_MARKET_COMPANIES.length} companies
+            Tap &quot;Trade Fictional&quot; tab to practice with {FICTIONAL_EMERGING_MARKET_COMPANIES.length} companies
           </p>
         </div>
       )}

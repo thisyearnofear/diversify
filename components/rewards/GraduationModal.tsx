@@ -71,7 +71,7 @@ export default function GraduationModal({ isOpen, onClose, onGraduate }: Graduat
           <div className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-6 text-white text-center">
             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">🎓</div>
             <h2 className="text-2xl font-black mb-2">Ready to Graduate?</h2>
-            <p className="text-purple-100 text-sm">You've mastered the testnets. Time for the real thing.</p>
+            <p className="text-purple-100 text-sm">You&apos;ve mastered the testnets. Time for the real thing.</p>
           </div>
 
           <div className="p-6">
@@ -121,7 +121,7 @@ export default function GraduationModal({ isOpen, onClose, onGraduate }: Graduat
             🎉
           </div>
           <h2 className="text-3xl font-black text-gray-900 dark:text-white mb-2">Congratulations!</h2>
-          <p className="text-gray-600 dark:text-gray-400">You've completed your testnet journey</p>
+          <p className="text-gray-600 dark:text-gray-400">You&apos;ve completed your testnet journey</p>
         </div>
       </div>
     );

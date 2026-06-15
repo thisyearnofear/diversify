@@ -397,7 +397,7 @@ export function GuardianMobileWizard({
       <div className="text-center mb-4">
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">Review & Sign</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          You'll sign a permission in your wallet
+          You&apos;ll sign a permission in your wallet
         </p>
       </div>
 

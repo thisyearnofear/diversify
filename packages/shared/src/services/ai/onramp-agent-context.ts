@@ -225,9 +225,11 @@ export function getOnrampRecommendation(
     };
 }
 
-export default {
+const onrampAgentContext = {
     ONRAMP_PROVIDERS,
     NETWORK_OPTIMIZATION,
     getOnrampSystemPrompt,
     getOnrampRecommendation
 };
+
+export default onrampAgentContext;

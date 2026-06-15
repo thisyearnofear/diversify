@@ -230,7 +230,7 @@ export default function ProtectionAnalysis({
                         </div>
                     </div>
                     <p className="text-[11px] text-orange-700/70 dark:text-orange-400/70 mt-4 font-medium italic leading-relaxed">
-                        Volatility isn't just risk—it's a mathematical handicap. Our stable-baskets are designed to shield you from this asymmetry.
+                        Volatility isn&apos;t just risk—it&apos;s a mathematical handicap. Our stable-baskets are designed to shield you from this asymmetry.
                     </p>
                 </div>
 

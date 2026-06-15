@@ -249,7 +249,7 @@ export default function MultichainPortfolioBreakdown({
                         </li>
                         <li className="flex items-start gap-2">
                             <span>🛡️</span>
-                            <span><strong className="text-green-900 dark:text-green-200">You're all set:</strong> Use Celo stablecoins to protect your savings from inflation</span>
+                            <span><strong className="text-green-900 dark:text-green-200">You&apos;re all set:</strong> Use Celo stablecoins to protect your savings from inflation</span>
                         </li>
                     </ul>
                 </div>

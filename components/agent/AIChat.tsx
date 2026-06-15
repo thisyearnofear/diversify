@@ -476,7 +476,7 @@ export default function AIChat() {
               Clear chat?
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
-              This can't be undone.
+              This can&apos;t be undone.
             </p>
             <div className="flex gap-2">
               <button

@@ -117,7 +117,7 @@ export function MoreOptions({
 
               {isMiniPay && (
                 <p className="pt-3 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  You're using <strong>MiniPay</strong> — DiversiFi uses Celo
+                  You&apos;re using <strong>MiniPay</strong> — DiversiFi uses Celo
                   for your regional stablecoins. Connect a full wallet to
                   access Arbitrum RWA assets.
                 </p>

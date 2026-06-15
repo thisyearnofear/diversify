@@ -154,6 +154,12 @@ export default function YieldDiscoverySection({
                   {/* Icon */}
                   <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-100 bg-sky-50 dark:border-sky-900/60 dark:bg-sky-950/40">
                     {vault.asset.logoURI ? (
+                      // External token logo URL (e.g. CoinGecko, Onchain).
+                      // Using <img> instead of next/image because the URL
+                      // list is dynamic and configuring remotePatterns for
+                      // every possible token host would expand the Next.js
+                      // image config surface significantly.
+                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={vault.asset.logoURI}
                         alt=""

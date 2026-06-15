@@ -35,6 +35,9 @@ export default function FarcasterUserInfo() {
         {/* Farcaster Profile Picture */}
         {pfp?.url ? (
           <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-purple-300 dark:border-purple-600">
+            {/* Farcaster PFP is loaded from an arbitrary hub URL per user,
+                so configuring next/image for it isn't practical. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={pfp.url}
               alt={`${displayName}'s profile`}

@@ -142,7 +142,7 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
                     </span>
                   </div>
                   <p className="text-indigo-200/80 text-xs font-medium max-w-sm leading-relaxed">
-                    End-to-end verifiability across 0G's decentralized stack — from AI inference to on-chain settlement.
+                    End-to-end verifiability across 0G&apos;s decentralized stack — from AI inference to on-chain settlement.
                   </p>
                 </div>
               </div>
