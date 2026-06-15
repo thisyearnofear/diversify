@@ -90,6 +90,7 @@ export interface UseVaultReturn {
   revokePermission: (userAddress: string) => Promise<void>;
   refresh: (userAddress: string) => Promise<void>;
   triggerRebalance: (userAddress: string, dryRun?: boolean) => Promise<any>;
+  updateStrategy: (userAddress: string, strategy: string) => Promise<boolean>;
 }
 
 export function useVault(): UseVaultReturn {
@@ -233,6 +234,34 @@ export function useVault(): UseVaultReturn {
     return resp.json();
   }, []);
 
+  const updateStrategy = useCallback(async (userAddress: string, strategy: string): Promise<boolean> => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const resp = await fetch(`${API_BASE}/api/vault/strategy`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress, strategy }),
+      });
+
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to update strategy');
+      }
+
+      const data = await resp.json();
+      setVault(data.vault);
+      setStatus(deriveStatus(data.vault, permission));
+      return true;
+    } catch (e: any) {
+      setError(e.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [permission, deriveStatus]);
+
   return {
     status,
     vault,
@@ -246,5 +275,6 @@ export function useVault(): UseVaultReturn {
     revokePermission,
     refresh,
     triggerRebalance,
+    updateStrategy,
   };
 }

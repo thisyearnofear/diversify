@@ -101,6 +101,9 @@ interface GuardianMobileWizardProps {
   vaultAddress?: string;
   onComplete: () => void;
   onCancel: () => void;
+  mode?: "setup" | "change";
+  currentStrategy?: string;
+  onUpdateStrategy?: (strategy: string) => Promise<boolean>;
   /**
    * Create a vault with the given strategy. Return true on success, false on
    * generic failure, or throw an Error with a message to surface inline.
@@ -116,11 +119,15 @@ export function GuardianMobileWizard({
   vaultAddress,
   onComplete,
   onCancel,
+  mode = "setup",
+  currentStrategy,
+  onUpdateStrategy,
   onCreateVault,
   onRequestPermission,
 }: GuardianMobileWizardProps) {
+  const isChangeMode = mode === "change";
   const [currentStep, setCurrentStep] = useState<WizardStep>("strategy");
-  const [selectedStrategy, setSelectedStrategy] = useState<string>("global");
+  const [selectedStrategy, setSelectedStrategy] = useState<string>(currentStrategy || "global");
   const [dailyLimit, setDailyLimit] = useState(50);
   const [allowedTokens, setAllowedTokens] = useState<string[]>(["cUSD", "cEUR", "KESm"]);
   const [loading, setLoading] = useState(false);
@@ -144,7 +151,7 @@ export function GuardianMobileWizard({
     return () => window.removeEventListener('keydown', handleKey);
   }, [onCancel]);
 
-  const steps: WizardStep[] = ["strategy", "limits", "sign", "deposit"];
+  const steps: WizardStep[] = isChangeMode ? ["strategy"] : ["strategy", "limits", "sign", "deposit"];
   const currentIndex = steps.indexOf(currentStep);
 
   const stepConfig: Record<WizardStep, { title: string; icon: string }> = {
@@ -156,6 +163,25 @@ export function GuardianMobileWizard({
 
   const goNext = async () => {
     setError(null);
+
+    if (isChangeMode) {
+      if (!onUpdateStrategy) return;
+      setLoading(true);
+      try {
+        const ok = await onUpdateStrategy(selectedStrategy);
+        setLoading(false);
+        if (!ok) {
+          setError("Could not update strategy. Please try again.");
+          return;
+        }
+        onComplete();
+      } catch (e: any) {
+        setLoading(false);
+        setError(e?.message || "Could not update strategy. Please try again.");
+      }
+      return;
+    }
+
     const nextIndex = currentIndex + 1;
     if (nextIndex >= steps.length) {
       onComplete();
@@ -217,10 +243,13 @@ export function GuardianMobileWizard({
   const StrategyStep = () => (
     <div className="space-y-4">
       <div className="text-center mb-2">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Pick a strategy</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+          {isChangeMode ? "Switch strategy" : "Pick a strategy"}
+        </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          This shapes how the Guardian diversifies your stablecoins.
-          You can switch later.
+          {isChangeMode
+            ? "Choose a new allocation strategy for your vault."
+            : "This shapes how the Guardian diversifies your stablecoins. You can switch later."}
         </p>
       </div>
 
@@ -498,10 +527,10 @@ export function GuardianMobileWizard({
           className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700"
           aria-label={currentStep === "strategy" ? "Cancel and close" : "Go back to the previous step"}
         >
-          ← Back
+          {isChangeMode ? "Cancel" : "← Back"}
         </button>
         <h2 ref={headingRef} tabIndex={-1} className="font-bold text-gray-900 dark:text-white outline-none">
-          {stepConfig[currentStep].icon} {stepConfig[currentStep].title}
+          {stepConfig[currentStep].icon} {isChangeMode ? "Change Strategy" : stepConfig[currentStep].title}
         </h2>
         <button
           onClick={onCancel}
@@ -518,6 +547,7 @@ export function GuardianMobileWizard({
       </div>
 
       {/* Step indicators */}
+      {!isChangeMode && (
       <div className="flex items-center justify-center gap-2 p-4" aria-hidden="true">
         {steps.map((step, idx) => (
           <div key={step} className="flex items-center">
@@ -542,6 +572,7 @@ export function GuardianMobileWizard({
           </div>
         ))}
       </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4">
@@ -571,11 +602,13 @@ export function GuardianMobileWizard({
       >
         <button
           onClick={currentStep === "deposit" ? onComplete : goNext}
-          disabled={loading}
+          disabled={loading || (isChangeMode && selectedStrategy === currentStrategy)}
           className="w-full py-4 min-h-[56px] bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
           {loading ? (
             <span>Processing...</span>
+          ) : isChangeMode ? (
+            <span>Update Strategy</span>
           ) : currentStep === "sign" ? (
             <>
               <span>✍️</span>

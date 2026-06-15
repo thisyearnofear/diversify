@@ -28,6 +28,7 @@ import { GUARDIAN_TIER_STATE_LABELS } from "@diversifi/shared";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianWDKStatus from "./GuardianWDKStatus";
+import { GuardianMobileWizard } from "./GuardianMobileWizard";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -206,6 +207,7 @@ export const AgentTierStatus: React.FC<{
     };
   }, [addActivity, guardianActive]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showStrategySwitcher, setShowStrategySwitcher] = useState(false);
 
   const handleRequestPermission = useCallback(async () => {
     if (!address || !chainId) return;
@@ -705,6 +707,12 @@ export const AgentTierStatus: React.FC<{
                           ))}
                         </div>
                       )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setShowStrategySwitcher(true); }}
+                        className="w-full mt-3 text-xs font-bold text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/30 border border-purple-200 dark:border-purple-800 rounded-lg py-2 transition-colors"
+                      >
+                        Change Strategy
+                      </button>
                     </div>
                   )}
 
@@ -1041,6 +1049,23 @@ export const AgentTierStatus: React.FC<{
             </div>
           </div>
         </div>
+      )}
+
+      {/* Strategy Switcher Wizard */}
+      {showStrategySwitcher && vault.vault && address && (
+        <GuardianMobileWizard
+          userAddress={address}
+          mode="change"
+          currentStrategy={vault.vault.strategy}
+          onComplete={() => {
+            setShowStrategySwitcher(false);
+            vault.refresh(address);
+          }}
+          onCancel={() => setShowStrategySwitcher(false)}
+          onUpdateStrategy={async (strategy) => vault.updateStrategy(address, strategy)}
+          onCreateVault={async () => false}
+          onRequestPermission={async () => false}
+        />
       )}
     </div>
   );
