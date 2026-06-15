@@ -32,6 +32,10 @@ interface AgentTabProps {
   isMiniPay?: boolean;
   isFarcaster?: boolean;
   portfolio?: MultichainPortfolio;
+  /** Send the user to the Exchange tab where DepositHub + Swap live.
+   *  Wired by the parent shell so Auto-Saver's "Add funds" nudges resolve
+   *  to a real surface. */
+  onNavigateToFund?: () => void;
 }
 
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
@@ -62,6 +66,7 @@ export default function AgentTab({
   isMiniPay,
   isFarcaster,
   portfolio,
+  onNavigateToFund,
 }: AgentTabProps) {
   const { address } = useWalletContext();
   const { enableDemoMode } = useDemoMode();
@@ -179,6 +184,7 @@ export default function AgentTab({
             showActivityFeed={true}
             onNavigateToAgent={handleAskAgent}
             onAdvisorClick={handleAdvisorClick}
+            onNavigateToFund={onNavigateToFund}
           />
         )}
       </ErrorBoundary>

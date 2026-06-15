@@ -34,6 +34,11 @@ interface GuardianWDKStatusProps {
   walletStableBalanceUSD?: number;
   /** Threshold below which we treat the wallet as "empty enough to wait". */
   minRequiredFundsUSD?: number;
+  /** Optional callback to send the user to a top-up surface. When present,
+   *  the "Waiting for funds" banner gains an inline "Add funds" CTA. */
+  onAddFunds?: () => void;
+  /** When true, swap the CTA copy for MiniPay's native ramp hint. */
+  isMiniPay?: boolean;
 }
 
 function relativeTime(iso?: string): string | null {
@@ -55,6 +60,8 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
   hasTokenVault = false,
   walletStableBalanceUSD,
   minRequiredFundsUSD = 5,
+  onAddFunds,
+  isMiniPay = false,
 }) => {
   const isMobile = useMobile();
   const isWaitingForFunds =
@@ -127,9 +134,24 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
       </div>
 
       {isWaitingForFunds && (
-        <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-2.5 py-1.5 text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
-          Auto-Saver is on, but your wallet is empty. It'll start working when you deposit
-          stablecoins. No errors, no fees while it waits.
+        <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-2.5 py-2 space-y-1.5">
+          <p className="text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+            Auto-Saver is on, but your wallet is empty. It'll start working when you deposit
+            stablecoins. No errors, no fees while it waits.
+          </p>
+          {isMiniPay ? (
+            <p className="text-[11px] font-bold text-amber-800 dark:text-amber-200">
+              Tip: tap "Add Cash" in your MiniPay wallet.
+            </p>
+          ) : onAddFunds ? (
+            <button
+              type="button"
+              onClick={onAddFunds}
+              className="w-full text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg py-1.5 transition-colors"
+            >
+              Add funds
+            </button>
+          ) : null}
         </div>
       )}
 

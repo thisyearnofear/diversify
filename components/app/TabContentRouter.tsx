@@ -177,7 +177,12 @@ export default function TabContentRouter() {
         {activeTab === "agent" && (
           <TabPane id="agent">
             <ErrorBoundary>
-              <AgentTab isMiniPay={isMiniPay} isFarcaster={isFarcaster} portfolio={multichainPortfolio} />
+              <AgentTab
+                isMiniPay={isMiniPay}
+                isFarcaster={isFarcaster}
+                portfolio={multichainPortfolio}
+                onNavigateToFund={() => setActiveTab("exchange")}
+              />
             </ErrorBoundary>
           </TabPane>
         )}

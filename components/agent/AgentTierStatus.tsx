@@ -62,12 +62,18 @@ export const AgentTierStatus: React.FC<{
   showActivityFeed?: boolean;
   onNavigateToAgent?: () => void;
   onAdvisorClick?: () => void;
+  /** Send the user to wherever they top up / swap. Usually navigates to the
+   *  Exchange tab which already hosts DepositHub + SwapInterface. When the
+   *  prop is omitted (defensive) the nudges silently hide instead of
+   *  rendering dead buttons. */
+  onNavigateToFund?: () => void;
 }> = ({
   isMiniPay,
   isFarcaster: _isFarcaster,
   showActivityFeed = false,
   onNavigateToAgent,
   onAdvisorClick,
+  onNavigateToFund,
 }) => {
   type GuardianProofEvent = {
     id: string;
@@ -187,6 +193,34 @@ export const AgentTierStatus: React.FC<{
   }, [chainId, portfolio.allTokens]);
 
   const isLowOnFunds = stableBalanceOnChain.total < MIN_AUTO_SAVER_FUNDS_USD;
+
+  // If the user has non-stable balance on this chain (e.g., $30 in CELO with
+  // $0 in cUSD), nudge them to convert rather than blindly tell them to
+  // "deposit stablecoins" — they already have value here, just in the wrong
+  // shape for Auto-Saver to act on.
+  const chainTotalValueUSD = useMemo(() => {
+    if (!chainId) return 0;
+    const chain = portfolio.chains?.find((c) => c.chainId === chainId);
+    return chain?.totalValue ?? 0;
+  }, [chainId, portfolio.chains]);
+  const nonStableBalanceOnChain = Math.max(0, chainTotalValueUSD - stableBalanceOnChain.total);
+  const hasNonStableButNoStable = isLowOnFunds && nonStableBalanceOnChain >= MIN_AUTO_SAVER_FUNDS_USD;
+
+  // One-click chain switch for setup nudges. Mirror the pattern from the
+  // on-chain (ERC-7715) section so the same flow handles every "wrong
+  // network" case in the modal.
+  const switchToChain = useCallback(async (targetChainId: number) => {
+    const ethereum = (window as any).ethereum;
+    if (!ethereum) return;
+    try {
+      await ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+      });
+    } catch {
+      // User declined or chain not added; nothing more to do here.
+    }
+  }, []);
   const [isRunningLoop, setIsRunningLoop] = useState(false);
   const [loopResult, setLoopResult] = useState<GuardianLoopResult | null>(null);
 
@@ -784,6 +818,8 @@ export const AgentTierStatus: React.FC<{
                   hasTokenVault={hasTokenVault}
                   walletStableBalanceUSD={stableBalanceOnChain.total}
                   minRequiredFundsUSD={MIN_AUTO_SAVER_FUNDS_USD}
+                  onAddFunds={onNavigateToFund}
+                  isMiniPay={isMiniPay}
                 />
 
                 {sessionInfo?.latestRecommendation && (
@@ -1060,33 +1096,49 @@ export const AgentTierStatus: React.FC<{
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {guardianProofEvents.length === 0 ? (
                   <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 px-6 space-y-3">
-                    <span className="text-3xl block">🛡️</span>
+                    <span className="text-3xl block">{hasValidPermission && isLowOnFunds ? "💸" : "🛡️"}</span>
                     <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                      {hasValidPermission ? "Auto-Saver is watching. No moves yet." : "Nothing to show yet"}
+                      {!hasValidPermission
+                        ? "Nothing to show yet"
+                        : isLowOnFunds
+                          ? "Auto-Saver is waiting for funds before its first move."
+                          : "Auto-Saver is watching. No moves yet."}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
-                      {hasValidPermission
-                        ? "Once it makes its first move, every action will appear here with a verifiable receipt."
-                        : "Set up Auto-Saver to start tracking automatic moves and on-chain receipts."}
+                      {!hasValidPermission
+                        ? "Set up Auto-Saver to start tracking automatic moves and on-chain receipts."
+                        : isLowOnFunds
+                          ? "Top up with at least $5 in stables. Auto-Saver will use the next chance it sees."
+                          : "Once it makes its first move, every action will appear here with a verifiable receipt."}
                     </p>
                     {hasValidPermission && (
-                      <button
-                        type="button"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          setIsRunningLoop(true);
-                          try {
-                            const result = await triggerExecutionLoop(true);
-                            setLoopResult(result);
-                          } finally {
-                            setIsRunningLoop(false);
-                          }
-                        }}
-                        disabled={isRunningLoop}
-                        className="mt-2 text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                      >
-                        {isRunningLoop ? "Previewing…" : "Preview next move"}
-                      </button>
+                      isLowOnFunds && onNavigateToFund ? (
+                        <button
+                          type="button"
+                          onClick={onNavigateToFund}
+                          className="mt-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2 transition-colors"
+                        >
+                          Add funds
+                        </button>
+                      ) : !isLowOnFunds ? (
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            setIsRunningLoop(true);
+                            try {
+                              const result = await triggerExecutionLoop(true);
+                              setLoopResult(result);
+                            } finally {
+                              setIsRunningLoop(false);
+                            }
+                          }}
+                          disabled={isRunningLoop}
+                          className="mt-2 text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {isRunningLoop ? "Previewing…" : "Preview next move"}
+                        </button>
+                      ) : null
                     )}
                   </div>
                 ) : (
@@ -1325,14 +1377,65 @@ export const AgentTierStatus: React.FC<{
                   ) : null}
                 </div>
                 {!isChainSupported ? (
-                  <p className="text-red-700 dark:text-red-300">
-                    Switch to Celo or Arbitrum to set up Auto-Saver.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-red-700 dark:text-red-300">
+                      Switch to Celo or Arbitrum to set up Auto-Saver.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => switchToChain(42220)}
+                        className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg py-1.5 transition-colors"
+                      >
+                        Switch to Celo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => switchToChain(ARBITRUM_CHAIN_ID)}
+                        className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg py-1.5 transition-colors"
+                      >
+                        Switch to Arbitrum
+                      </button>
+                    </div>
+                  </div>
                 ) : isLowOnFunds ? (
-                  <p className="text-amber-700 dark:text-amber-300">
-                    Auto-Saver needs at least ${MIN_AUTO_SAVER_FUNDS_USD} in stables
-                    to act. You can still approve now and top up later — it'll just wait.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-amber-700 dark:text-amber-300">
+                      {hasNonStableButNoStable
+                        ? `You have $${nonStableBalanceOnChain.toFixed(0)} on ${currentChainName} but not in stables. Auto-Saver needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to act.`
+                        : `Auto-Saver needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to act. You can still approve now and top up later — it'll just wait.`}
+                    </p>
+                    {isMiniPay ? (
+                      <p className="text-[11px] text-amber-700 dark:text-amber-300 italic">
+                        Tap "Add Cash" in your MiniPay wallet — fastest way to top up.
+                      </p>
+                    ) : onNavigateToFund ? (
+                      <div className="flex gap-2">
+                        {hasNonStableButNoStable && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowPermissionModal(false);
+                              onNavigateToFund();
+                            }}
+                            className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg py-1.5 transition-colors"
+                          >
+                            Convert to stables
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowPermissionModal(false);
+                            onNavigateToFund();
+                          }}
+                          className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg py-1.5 transition-colors"
+                        >
+                          Add funds
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
                 ) : (
                   <p className="text-gray-500 dark:text-gray-400">
                     Auto-Saver only acts on funds it can see in your wallet on this chain.

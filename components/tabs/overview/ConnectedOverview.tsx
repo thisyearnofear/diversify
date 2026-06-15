@@ -470,6 +470,7 @@ export function ConnectedOverview({
               <AgentTierStatus
                 showActivityFeed={true}
                 onNavigateToAgent={() => setActiveTab("agent")}
+                onNavigateToFund={() => setActiveTab("exchange")}
               />
             )}
           </HomeSection>
