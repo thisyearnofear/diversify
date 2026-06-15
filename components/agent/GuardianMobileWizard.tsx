@@ -155,10 +155,10 @@ export function GuardianMobileWizard({
   const currentIndex = steps.indexOf(currentStep);
 
   const stepConfig: Record<WizardStep, { title: string; icon: string }> = {
-    strategy: { title: "Pick Strategy", icon: "🎯" },
-    limits: { title: "Set Limits", icon: "📊" },
-    sign: { title: "Approve Guardian", icon: "✍️" },
-    deposit: { title: "Deposit", icon: "💰" },
+    strategy: { title: "Pick a strategy", icon: "🎯" },
+    limits: { title: "Set your limits", icon: "📊" },
+    sign: { title: "Approve in wallet", icon: "✍️" },
+    deposit: { title: "Add funds", icon: "💰" },
   };
 
   const goNext = async () => {
@@ -249,7 +249,7 @@ export function GuardianMobileWizard({
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {isChangeMode
             ? "Choose a new allocation strategy for your vault."
-            : "This shapes how the Guardian diversifies your stablecoins. You can switch later."}
+            : "This shapes how Auto-Saver diversifies your stablecoins. You can change it later."}
         </p>
       </div>
 
@@ -329,14 +329,14 @@ export function GuardianMobileWizard({
   const LimitsStep = () => (
     <div className="space-y-4">
       <div className="text-center mb-4">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Set Your Limits</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Set your limits</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          How much can the Guardian trade per day?
+          How much can Auto-Saver move each day?
         </p>
       </div>
 
       <div>
-        <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Daily Budget (USD)</label>
+        <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Daily limit (USD)</label>
         <div className="flex items-center gap-2 mt-1">
           <span className="text-gray-500 text-lg">$</span>
           <input
@@ -349,11 +349,11 @@ export function GuardianMobileWizard({
             max={10000}
           />
         </div>
-        <p className="text-xs text-gray-400 mt-1">Maximum the Guardian can swap in 24 hours</p>
+        <p className="text-xs text-gray-400 mt-1">Most Auto-Saver can move in 24 hours.</p>
       </div>
 
       <div>
-        <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Allowed Tokens</label>
+        <label className="text-sm font-bold text-gray-700 dark:text-gray-300">Allowed tokens</label>
         <div className="flex flex-wrap gap-2 mt-2">
           {TOKENS.map((t) => (
             <button
@@ -377,14 +377,14 @@ export function GuardianMobileWizard({
           ))}
         </div>
         <p className="text-xs text-gray-400 mt-1">
-          Only these tokens can be swapped by the Guardian
+          Auto-Saver can only move into these tokens.
         </p>
       </div>
 
       <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
         <div className="text-xs text-gray-500 space-y-1">
-          <div>Permission valid for 7 days</div>
-          <div>Can be revoked anytime from the Guardian card</div>
+          <div>Valid for 7 days. Then expires automatically.</div>
+          <div>Pause or stop any time from the Auto-Saver card.</div>
         </div>
       </div>
     </div>
@@ -395,9 +395,9 @@ export function GuardianMobileWizard({
   const SignStep = () => (
     <div className="space-y-4">
       <div className="text-center mb-4">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Review & Approve</h3>
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Review and approve</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Confirm Guardian limits in your wallet
+          Confirm Auto-Saver's limits in your wallet
         </p>
       </div>
 
@@ -407,15 +407,15 @@ export function GuardianMobileWizard({
           <span className="font-bold text-gray-900 dark:text-white capitalize">{selectedStrategy}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Daily Limit</span>
+          <span className="text-gray-500">Daily limit</span>
           <span className="font-bold text-gray-900 dark:text-white">${dailyLimit}/day</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Allowed Tokens</span>
+          <span className="text-gray-500">Allowed tokens</span>
           <span className="font-bold text-gray-900 dark:text-white">{allowedTokens.join(", ")}</span>
         </div>
         <div className="flex justify-between text-sm">
-          <span className="text-gray-500">Valid For</span>
+          <span className="text-gray-500">Valid for</span>
           <span className="font-bold text-gray-900 dark:text-white">7 days</span>
         </div>
       </div>
@@ -424,8 +424,9 @@ export function GuardianMobileWizard({
         <div className="flex gap-2">
           <span>⚠️</span>
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            The Guardian can swap your stablecoins within these limits. Your funds stay in your
-            protection wallet — the Guardian cannot withdraw. You can revoke anytime.
+            Auto-Saver can swap your stablecoins within these limits. Your funds stay
+            in your protection wallet — Auto-Saver can't withdraw them. You can stop
+            it any time.
           </p>
         </div>
       </div>
@@ -451,7 +452,7 @@ export function GuardianMobileWizard({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          Guardian Active
+          Auto-Saver is on
         </motion.h3>
         <motion.p
           className="text-sm text-gray-500 dark:text-gray-400 mt-1"
@@ -483,10 +484,10 @@ export function GuardianMobileWizard({
       <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3">
         <div className="text-sm font-bold text-purple-700 dark:text-purple-300 mb-1">What happens next</div>
         <ul className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
-          <li>1. Send cUSD, cEUR, KESm, etc. to the address above</li>
-          <li>2. The Guardian monitors inflation rates 24/7</li>
-          <li>3. When conditions change, it rebalances automatically</li>
-          <li>4. You can withdraw anytime — fees settled at withdrawal</li>
+          <li>1. Send cUSD, cEUR, KESm, etc. to the address above.</li>
+          <li>2. Auto-Saver watches inflation around the clock.</li>
+          <li>3. When conditions change, it rebalances within your limit.</li>
+          <li>4. Withdraw any time — fees settle at withdrawal.</li>
         </ul>
       </div>
 
@@ -518,7 +519,7 @@ export function GuardianMobileWizard({
       className="fixed inset-0 z-50 bg-white dark:bg-gray-900 flex flex-col"
       role="dialog"
       aria-modal="true"
-      aria-label="Guardian setup wizard"
+      aria-label="Auto-Saver setup wizard"
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">

@@ -28,22 +28,22 @@ const STEPS: GuardianStateStep[] = [
     {
         state: 'idle',
         icon: '🔒',
-        description: 'The Guardian is ready — approve protection in your wallet to start.',
+        description: 'Set a daily limit and approve Auto-Saver to start protecting your savings.',
     },
     {
         state: 'authorized',
         icon: '✍️',
-        description: 'You set a daily spending cap. The Guardian waits for funding.',
+        description: 'Daily limit is set. Auto-Saver is waiting for funds.',
     },
     {
         state: 'funded',
         icon: '💰',
-        description: 'Funds are deposited. The Guardian is ready to act.',
+        description: 'Funds are in. Auto-Saver is ready to act on your behalf.',
     },
     {
         state: 'monitoring',
         icon: '🛡️',
-        description: 'Active protection. Swaps execute within your limits automatically.',
+        description: 'Auto-Saver is on. It swaps within your limits when conditions change.',
     },
 ];
 

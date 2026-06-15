@@ -27,25 +27,25 @@ const STEPS: { step: Step; emoji: string; title: string; body: string }[] = [
   {
     step: 1,
     emoji: "🛡️",
-    title: "Meet your Guardian",
-    body: "Your Guardian monitors markets 24/7 and suggests moves to protect your savings from inflation. It works while you sleep.",
+    title: "Meet Auto-Saver",
+    body: "Auto-Saver watches markets around the clock and suggests moves to protect your savings from inflation. It works while you sleep.",
   },
   {
     step: 2,
     emoji: "🤖",
-    title: "What it can do automatically",
-    body: "When inflation shifts in your region, the Guardian can rebalance your stablecoins into stronger economies. You approve once, it handles the rest.",
+    title: "What it can do for you",
+    body: "When inflation rises in your region, Auto-Saver can shift your stablecoins into stronger ones. You approve once — it handles the rest.",
   },
   {
     step: 3,
     emoji: "🔐",
-    title: "What you control",
-    body: "You set a daily spending limit and choose which tokens it can use. You can pause or stop it anytime — you're always in charge.",
+    title: "You stay in charge",
+    body: "You set the daily limit and choose which tokens it can use. You can pause or stop it any time.",
   },
   {
     step: 4,
     emoji: "🚀",
-    title: "Ready to activate?",
+    title: "Ready to set it up?",
     body: "",
   },
 ];
@@ -79,7 +79,7 @@ export default function GuardianOnboardingWizard({
     <div
       className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl border border-blue-200 dark:border-blue-800/40 overflow-hidden"
       role="region"
-      aria-label="Guardian setup wizard"
+      aria-label="Auto-Saver setup wizard"
     >
       {/* Progress bar — semantic progress indicator */}
       <div
@@ -152,9 +152,9 @@ export default function GuardianOnboardingWizard({
               <button
                 onClick={onActivate}
                 className="w-full py-3.5 px-6 rounded-2xl bg-blue-600 text-white font-bold text-base hover:bg-blue-700 active:scale-[0.98] motion-safe:transition-all shadow-lg shadow-blue-600/20"
-                aria-label="Enable Guardian protection"
+                aria-label="Turn on Auto-Saver protection"
               >
-                Enable Protection
+                Turn on protection
               </button>
               <p className="text-xs text-gray-400">
                 No funds move without your approval.
@@ -185,9 +185,9 @@ export default function GuardianOnboardingWizard({
           <button
             onClick={onSkip}
             className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline motion-safe:transition-colors"
-            aria-label="Skip the Guardian introduction"
+            aria-label="Skip the Auto-Saver introduction"
           >
-            Skip intro — I know what a Guardian is
+            Skip intro — I get it
           </button>
         </div>
       )}
@@ -215,7 +215,7 @@ export default function GuardianOnboardingWizard({
           <button
             onClick={() => setCurrentStep((Math.min(4, currentStep + 1)) as Step)}
             className="text-sm font-bold text-blue-600 hover:text-blue-700 motion-safe:transition-colors"
-            aria-label={currentStep === 3 ? "Set up Guardian" : "Go to the next step"}
+            aria-label={currentStep === 3 ? "Set up Auto-Saver" : "Go to the next step"}
           >
             {currentStep === 3 ? "Set up →" : "Next →"}
           </button>

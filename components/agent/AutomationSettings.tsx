@@ -363,10 +363,10 @@ export default function AutomationSettings({
               <span className="text-2xl">🛡️</span>
               <div>
                 <h3 className="font-black text-purple-900 dark:text-purple-100 uppercase tracking-tight text-sm">
-                  Guardian Autonomous Wallet
+                  Auto-Saver Wallet
                 </h3>
                 <p className="text-xs sm:text-xs text-purple-700 dark:text-purple-300">
-                  Agent pays for its own data access via x402 protocol
+                  Pays for its own market data — you don't get charged for research.
                 </p>
               </div>
             </div>
@@ -495,8 +495,8 @@ export default function AutomationSettings({
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                  Fully managed Guardian Wallet using USDC for execution. Powered by Circle
-                  Programmable Wallets.
+                  Hands-off wallet that pays gas + research fees in USDC. Powered by
+                  Circle Programmable Wallets.
                 </p>
               </button>
 
@@ -517,14 +517,13 @@ export default function AutomationSettings({
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                  Self-custodial agentic wallets. Native USD₮ and XAU₮ support
-                  for multi-chain economic sovereignty.
+                  You hold the keys. Built-in USD₮ and gold (XAU₮) support across
+                  Celo, Arbitrum, Polygon, Avalanche, and Tron.
                 </p>
               </button>
             </div>
             <p className="mt-3 text-[10px] text-gray-400 italic">
-              * Enabling Tether WDK provides global multi-chain settlement and
-              native gold-hedging capabilities.
+              * Tether Settlement (WDK) adds gold-hedging and cross-chain reach.
             </p>
           </div>
         </motion.div>
@@ -1068,7 +1067,7 @@ export default function AutomationSettings({
               automations when it detects wealth protection opportunities that
               meet your configured thresholds.
               {isDev &&
-                " Paid research uses your Research Balance; Guardian execution uses the configured Guardian Wallet."}
+                " Paid research uses your Research Balance; Auto-Saver execution uses the configured Auto-Saver Wallet."}
             </p>
           </div>
         </div>

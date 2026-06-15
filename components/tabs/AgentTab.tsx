@@ -343,8 +343,8 @@ export default function AgentTab({
                 Connection issue
               </h3>
               <p className="text-sm text-red-700 dark:text-red-300 mt-1 leading-relaxed">
-                Could not reach the Guardian service. Your portfolio protection status is
-                unavailable right now. This may be a temporary network issue.
+                We couldn't reach the protection service. Your Auto-Saver status is
+                unavailable right now — this is usually a temporary network issue.
               </p>
               {statusError && (
                 <p className="text-xs text-red-500 dark:text-red-400 mt-2 font-mono">

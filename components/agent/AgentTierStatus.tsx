@@ -86,13 +86,7 @@ export const AgentTierStatus: React.FC<{
     : chatThinkingStep;
   const { experienceMode } = useExperience();
   const [expandedTier, setExpandedTier] = useState<"advisor" | "guardian" | null>(null);
-  const {
-    agentStatus: wdkStatus,
-    agentIdentity: wdkIdentity,
-    recentReceipts: wdkReceipts,
-    isExecuting: wdkExecuting,
-    triggerHeartbeat: wdkHeartbeat,
-  } = useWDKAgent();
+  const { recentReceipts: wdkReceipts } = useWDKAgent();
   const { address, chainId } = useWalletContext();
 
   const isWDK = config.walletProvider === "TETHER_WDK";
@@ -140,7 +134,12 @@ export const AgentTierStatus: React.FC<{
         signedPermission.permission.expiresAt * 1000,
       ).toLocaleDateString()
     : null;
-  const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? 10;
+  // Pre-sign daily limit the user can adjust in the setup modal. Once a
+  // permission is signed, dailyLimit reflects the on-chain value so the
+  // ERC-7715 grant and UI agree without an extra round-trip.
+  const DAILY_LIMIT_PRESETS = [5, 10, 25, 50, 100] as const;
+  const [pendingDailyLimit, setPendingDailyLimit] = useState<number>(10);
+  const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? pendingDailyLimit;
   const [isRunningLoop, setIsRunningLoop] = useState(false);
   const [loopResult, setLoopResult] = useState<GuardianLoopResult | null>(null);
 
@@ -190,7 +189,7 @@ export const AgentTierStatus: React.FC<{
           tier: "GUARDIAN",
           description: hasExecuted
             ? `Autonomous execution: Swapped USDC to ${advice?.targetToken || "target asset"}`
-            : "Guardian received Advisor signal for follow-up review",
+            : "Auto-Saver received Advisor signal for follow-up review",
           status: hasExecuted ? "success" : "pending",
           details: {
             action: advice?.action,
@@ -207,6 +206,7 @@ export const AgentTierStatus: React.FC<{
     };
   }, [addActivity, guardianActive]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
+  const [showGrantConfirmModal, setShowGrantConfirmModal] = useState(false);
   const [showStrategySwitcher, setShowStrategySwitcher] = useState(false);
   type GuardianTab = "setup" | "journal" | "proof";
   const [guardianTab, setGuardianTab] = useState<GuardianTab>("setup");
@@ -231,7 +231,7 @@ export const AgentTierStatus: React.FC<{
       addActivity({
         type: "execution",
         tier: "GUARDIAN",
-        description: "Please switch to Celo or Arbitrum to enable Autonomous Mode",
+        description: "Switch to Celo or Arbitrum to set up Auto-Saver",
         status: "failed",
       });
       return;
@@ -242,12 +242,14 @@ export const AgentTierStatus: React.FC<{
         window.ethereum as any,
       );
       const signer = provider.getSigner();
-      await requestPermission("COPILOT", address, signer, chainId);
+      await requestPermission("COPILOT", address, signer, chainId, {
+        dailyLimitUSD: pendingDailyLimit,
+        spendingLimitUSD: pendingDailyLimit * 10,
+      });
       addActivity({
         type: "execution",
         tier: "GUARDIAN",
-        description:
-          "Autonomous Mode enabled — scoped session key granted (COPILOT, $10/day, 7 days)",
+        description: `Auto-Saver is on — up to $${pendingDailyLimit}/day for the next 7 days`,
         status: "success",
       });
     } catch (e) {
@@ -255,11 +257,11 @@ export const AgentTierStatus: React.FC<{
       addActivity({
         type: "execution",
         tier: "GUARDIAN",
-        description: "Autonomous Mode request cancelled or failed",
+        description: "Auto-Saver setup was cancelled",
         status: "failed",
       });
     }
-  }, [address, chainId, requestPermission, addActivity]);
+  }, [address, chainId, requestPermission, addActivity, pendingDailyLimit]);
 
   const handleGrantAdvanced = useCallback(async () => {
     if (!address) return;
@@ -296,7 +298,7 @@ export const AgentTierStatus: React.FC<{
       addActivity({
         type: 'execution',
         tier: 'GUARDIAN',
-        description: `ERC-7715 Advanced Permission granted via MetaMask ($${dailyLimit}/day on Arbitrum)`,
+        description: `Stronger protection is on — MetaMask is enforcing a $${dailyLimit}/day limit on Arbitrum`,
         status: 'success',
       });
     } catch (e: any) {
@@ -359,7 +361,7 @@ export const AgentTierStatus: React.FC<{
       .map((execution) => ({
         id: `vault-${execution.txHash || execution.timestamp}`,
         source: "vault" as const,
-        title: execution.action === "rebalance" ? "Guardian rebalance" : "Guardian swap",
+        title: execution.action === "rebalance" ? "Auto-Saver rebalance" : "Auto-Saver swap",
         subtitle: execution.tokenIn && execution.tokenOut
           ? `${execution.tokenIn} -> ${execution.tokenOut} · $${execution.amountUSD}`
           : `$${execution.amountUSD}`,
@@ -549,11 +551,11 @@ export const AgentTierStatus: React.FC<{
               Act
             </span>
             <span className="text-[11px] text-gray-400 uppercase tracking-[0.16em]">
-              Executes and verifies
+              Acts on your behalf, within your limits
             </span>
           </div>
           <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight mt-2">
-            The Guardian
+            Auto-Saver
           </h4>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {GUARDIAN_USER_COPY[guardianState].description}
@@ -605,10 +607,10 @@ export const AgentTierStatus: React.FC<{
                   }
                 }}
                 disabled={isRunningLoop}
-                aria-label="Run Guardian dry-run"
+                aria-label="Preview Auto-Saver's next move"
                 className="w-full text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors px-3 py-2 rounded-xl"
               >
-                {isRunningLoop ? 'Running dry-run…' : 'Run dry-run now'}
+                {isRunningLoop ? 'Previewing…' : 'Preview next move'}
               </button>
               {loopResult && (
                 <div className="mt-2 text-[11px] text-gray-600 dark:text-gray-400 leading-relaxed">
@@ -652,7 +654,7 @@ export const AgentTierStatus: React.FC<{
           <span className="text-xs text-gray-400">→</span>
           <div className="flex items-center gap-2 text-xs font-bold text-purple-700 dark:text-purple-300">
             <span className="w-2 h-2 rounded-full bg-purple-500" />
-            Guardian executes
+            Auto-Saver acts
           </div>
           <span className="text-xs text-gray-400">→</span>
           <div className="flex items-center gap-2 text-xs font-bold text-green-700 dark:text-green-300">
@@ -716,14 +718,22 @@ export const AgentTierStatus: React.FC<{
           {guardianTab === "setup" && (
           <div className="space-y-6">
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 border border-gray-100 dark:border-gray-800">
-              <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-4">Guardian Controls</h4>
+              <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide mb-4">Auto-Saver Controls</h4>
                 
                 <GuardianWDKStatus
-                  agentStatus={wdkStatus}
-                  agentIdentity={wdkIdentity}
-                  recentReceipts={[]}
-                  isExecuting={wdkExecuting}
-                  onTriggerHeartbeat={wdkHeartbeat}
+                  isGuardianActive={hasValidPermission || guardianActive}
+                  watchedAssets={["USDC", "EURC", "PAXG"]}
+                  watchedNetworks={["Celo", "Arbitrum"]}
+                  latestAdvice={
+                    sessionInfo?.latestRecommendation
+                      ? {
+                          oneLiner:
+                            sessionInfo.latestRecommendation.oneLiner ||
+                            sessionInfo.latestRecommendation.reasoning,
+                          capturedAt: sessionInfo.latestRecommendation.capturedAt,
+                        }
+                      : null
+                  }
                   hasTokenVault={hasTokenVault}
                 />
 
@@ -731,7 +741,7 @@ export const AgentTierStatus: React.FC<{
                   <div className="mt-6 p-4 bg-white dark:bg-gray-900 rounded-2xl border border-blue-100 dark:border-blue-900/50">
                     <div className="flex items-center justify-between mb-2">
                       <h5 className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-300">
-                        Latest Advice
+                        Latest suggestion
                       </h5>
                       <span className="text-[11px] text-gray-400">
                         {new Date(sessionInfo.latestRecommendation.capturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -809,13 +819,13 @@ export const AgentTierStatus: React.FC<{
                   ) : hasValidPermission ? (
                     <div className="space-y-3">
                       <div className="flex justify-between items-center text-sm">
-                        <span className="text-gray-500">Daily Limit</span>
+                        <span className="text-gray-500">Daily limit</span>
                         <span className="font-bold">${dailyLimit}/day</span>
                       </div>
                       {sessionInfo && (
                         <>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500">Spent Today</span>
+                            <span className="text-gray-500">Spent today</span>
                             <span className="font-bold text-amber-600">${sessionInfo.spentTodayUSD.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
@@ -823,7 +833,7 @@ export const AgentTierStatus: React.FC<{
                             <span className="font-bold text-green-600">${sessionInfo.remainingTodayUSD.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500">Executions</span>
+                            <span className="text-gray-500">Saves so far</span>
                             <span className="font-bold">{sessionInfo.executionCount}</span>
                           </div>
                         </>
@@ -835,10 +845,10 @@ export const AgentTierStatus: React.FC<{
                       {sessionInfo && sessionInfo.recentExecutions.length > 0 && (
                         <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-100 dark:border-purple-800">
                           <div className="text-[11px] font-bold uppercase tracking-wide text-purple-600 dark:text-purple-300">
-                            Recent Executions
+                            Recent saves
                           </div>
                           <div className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                            {sessionInfo.recentExecutions.length} action{sessionInfo.recentExecutions.length === 1 ? '' : 's'} recorded
+                            {sessionInfo.recentExecutions.length} move{sessionInfo.recentExecutions.length === 1 ? '' : 's'} recorded
                           </div>
                         </div>
                       )}
@@ -857,7 +867,7 @@ export const AgentTierStatus: React.FC<{
                           disabled={isRunningLoop}
                           className="w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-2 transition-colors disabled:opacity-50"
                         >
-                          {isRunningLoop ? "Executing..." : "⚡ Execute Now (Live)"}
+                          {isRunningLoop ? "Running…" : "Run Auto-Saver now"}
                         </button>
                       </div>
                       {loopResult && (
@@ -916,7 +926,7 @@ export const AgentTierStatus: React.FC<{
                         onClick={(e) => { e.stopPropagation(); revokePermission(); }}
                         className="w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-2 mt-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                       >
-                        Turn off Guardian
+                        Pause Auto-Saver
                       </button>
                     </div>
                   ) : (
@@ -925,38 +935,39 @@ export const AgentTierStatus: React.FC<{
                       onClick={(e) => { e.stopPropagation(); setShowPermissionModal(true); }}
                       className="w-full text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl py-3 transition-colors shadow-lg shadow-purple-200 dark:shadow-purple-900/20"
                     >
-                      🛡️ Turn on Guardian
+                      🛡️ Set up Auto-Saver
                     </button>
-                    <p className="text-[11px] text-gray-400 text-center mt-1.5">Approves Guardian to swap within your daily limit</p>
+                    <p className="text-[11px] text-gray-400 text-center mt-1.5">You choose the daily limit before signing</p>
                     </>
                   )}
 
-                  {/* On-Chain Permission via MetaMask */}
+                  {/* Stronger protection via MetaMask — opens a confirmation
+                      modal so the user sees the limit BEFORE the wallet pops. */}
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-[11px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
-                        On-Chain
+                        Optional
                       </span>
                       <span className="text-[11px] text-gray-400 uppercase tracking-[0.16em]">
-                        via MetaMask
+                        Stronger protection
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      Stronger protection — enforced on-chain, your wallet keys never leave your device.
+                      Have your wallet enforce the daily limit on-chain. Best if you already use MetaMask.
                     </p>
                     {grantStatus === 'granted' ? (
                       <div className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
-                        On-chain permission active on Arbitrum
+                        Stronger protection is active on Arbitrum
                       </div>
                     ) : (
                       <>
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); handleGrantAdvanced(); }}
+                          onClick={(e) => { e.stopPropagation(); setShowGrantConfirmModal(true); }}
                           disabled={grantStatus === 'requesting'}
                           className="w-full text-xs font-bold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl py-2.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                         >
-                          {grantStatus === 'requesting' ? 'Waiting for MetaMask...' : 'Enable On-Chain Protection'}
+                          {grantStatus === 'requesting' ? 'Waiting for MetaMask…' : 'Add stronger protection (MetaMask)'}
                         </button>
                         {grantError && (
                           <p className="text-xs text-red-500 mt-2">{grantError}</p>
@@ -1122,42 +1133,84 @@ export const AgentTierStatus: React.FC<{
         </motion.div>
       )}
 
-      {/* Advisor permission modal */}
+      {/* Auto-Saver setup modal — user picks their daily limit BEFORE any signature. */}
       {showPermissionModal && (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"
           onClick={() => setShowPermissionModal(false)}
         >
           <div
-            className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-6 shadow-2xl"
+            className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="text-center space-y-2">
-              <span className="text-4xl">🔐</span>
+              <span className="text-4xl">🛡️</span>
               <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
-                Grant Guardian Permission
+                Set up Auto-Saver
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                You are granting a scoped session key. The Guardian can only act within these limits:
+                Pick how much Auto-Saver can move each day. You can change or pause it any time.
               </p>
             </div>
 
-            <div className="space-y-3 bg-purple-50 dark:bg-purple-900/20 rounded-3xl p-5 border border-purple-100 dark:border-purple-800">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Daily limit</span>
-                <span className="font-black text-gray-900 dark:text-gray-100">$10 / day</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                  Daily limit
+                </span>
+                <span className="text-sm font-black text-purple-600 dark:text-purple-400">
+                  ${pendingDailyLimit} / day
+                </span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Expires</span>
-                <span className="font-black text-gray-900 dark:text-gray-100">7 days</span>
+              <div className="grid grid-cols-5 gap-2">
+                {DAILY_LIMIT_PRESETS.map((amount) => {
+                  const selected = amount === pendingDailyLimit;
+                  return (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setPendingDailyLimit(amount)}
+                      className={`py-2 text-xs font-bold rounded-xl border transition-colors ${
+                        selected
+                          ? "bg-purple-600 border-purple-600 text-white"
+                          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-400"
+                      }`}
+                    >
+                      ${amount}
+                    </button>
+                  );
+                })}
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500 dark:text-gray-400">Strategy</span>
-                <span className="font-black text-purple-600 dark:text-purple-400 underline decoration-dotted">Base Aggregator</span>
-              </div>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center">
+                Start small. You can raise the limit later.
+              </p>
             </div>
 
-            <div className="flex gap-4">
+            <div className="space-y-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 border border-purple-100 dark:border-purple-800">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
+                What you're approving
+              </p>
+              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">•</span>
+                  <span>Auto-Saver may swap up to <strong>${pendingDailyLimit}</strong> of your USDC each day.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">•</span>
+                  <span>Valid for <strong>7 days</strong>, then expires automatically.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">•</span>
+                  <span>Only into approved stablecoins or gold (USDC, EURC, PAXG).</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">•</span>
+                  <span>You can pause it from this screen any time.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
               <button
                 onClick={() => setShowPermissionModal(false)}
                 className="flex-1 text-sm font-bold text-gray-500 py-4"
@@ -1168,7 +1221,96 @@ export const AgentTierStatus: React.FC<{
                 onClick={handleRequestPermission}
                 className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 text-white rounded-2xl py-4 shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-all active:scale-95"
               >
-                Sign Wallet
+                Approve in wallet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* On-chain (ERC-7715) grant confirmation modal — user must see the
+          summary BEFORE MetaMask pops. Closes the anxiety gap between
+          "I clicked a button" and "MetaMask wants me to sign something". */}
+      {showGrantConfirmModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowGrantConfirmModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center space-y-2">
+              <span className="text-4xl">🦊</span>
+              <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
+                Stronger protection via MetaMask
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Your wallet will enforce the daily limit on-chain. Keys never leave your device.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                  Daily limit
+                </span>
+                <span className="text-sm font-black text-orange-600 dark:text-orange-400">
+                  ${pendingDailyLimit} / day
+                </span>
+              </div>
+              <div className="grid grid-cols-5 gap-2">
+                {DAILY_LIMIT_PRESETS.map((amount) => {
+                  const selected = amount === pendingDailyLimit;
+                  return (
+                    <button
+                      key={amount}
+                      type="button"
+                      onClick={() => setPendingDailyLimit(amount)}
+                      className={`py-2 text-xs font-bold rounded-xl border transition-colors ${
+                        selected
+                          ? "bg-orange-500 border-orange-500 text-white"
+                          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-orange-400"
+                      }`}
+                    >
+                      ${amount}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-2 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4 border border-orange-100 dark:border-orange-800">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-300">
+                What MetaMask will ask you to sign
+              </p>
+              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-500 mt-0.5">•</span>
+                  <span>Allow Auto-Saver to spend up to <strong>${pendingDailyLimit}</strong> of your USDC per day on Arbitrum.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-orange-500 mt-0.5">•</span>
+                  <span>You can revoke this permission in your wallet at any time.</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowGrantConfirmModal(false)}
+                className="flex-1 text-sm font-bold text-gray-500 py-4"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowGrantConfirmModal(false);
+                  handleGrantAdvanced();
+                }}
+                className="flex-1 text-sm font-black bg-orange-600 hover:bg-orange-700 text-white rounded-2xl py-4 shadow-lg shadow-orange-200 dark:shadow-orange-900/30 transition-all active:scale-95"
+              >
+                Continue to MetaMask
               </button>
             </div>
           </div>

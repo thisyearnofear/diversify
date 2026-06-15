@@ -1,198 +1,132 @@
 /**
- * GuardianWDKStatus - Inline status for the Tether WDK settlement agent.
- * On mobile, shows compact summary with option to open full wizard.
+ * GuardianWDKStatus — lifecycle-aware Auto-Saver summary card.
+ *
+ * When Guardian isn't set up yet, this is an informational primer (no
+ * buttons): the user is told what Auto-Saver does so the box delivers
+ * value even at rest. Once Guardian is set up, the card surfaces what's
+ * being watched and the most recent advice timestamp pulled from the
+ * vault session. Actions (preview / run now) live on the parent card so
+ * we don't duplicate buttons here.
  */
 
-import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import React from "react";
 import { useMobile } from "@/hooks/use-mobile";
-import GuardianMobileWizard from "./GuardianMobileWizard";
 
 interface GuardianWDKStatusProps {
-  agentStatus: "online" | "offline" | "uninitialized" | "loading";
-  hasTokenVault?: boolean;
-  agentIdentity: {
-    agent_id: string;
-    name: string;
-    version: string;
-    chains: string[];
+  /** Whether the user has an active Guardian permission. */
+  isGuardianActive: boolean;
+  /** Assets the Guardian will protect (e.g. ["USDC", "EURC"]). */
+  watchedAssets?: string[];
+  /** Networks the Guardian operates on (e.g. ["Celo", "Arbitrum"]). */
+  watchedNetworks?: string[];
+  /** Latest advice surfaced by the Advisor, if any. */
+  latestAdvice?: {
+    oneLiner?: string;
+    capturedAt?: string;
   } | null;
-  recentReceipts: Array<{
-    id: string;
-    timestamp: number;
-    action: string;
-    asset: string;
-    amount: string;
-    status: "success" | "error" | "pending";
-    txHash?: string;
-  }>;
-  isExecuting: boolean;
-  onTriggerHeartbeat: () => void;
+  /** Vault-enforced limit guarding the embedded token treasury. */
+  hasTokenVault?: boolean;
 }
 
-const statusIndicator: Record<
-  GuardianWDKStatusProps["agentStatus"],
-  { color: string; label: string }
-> = {
-  online: { color: "bg-green-500", label: "Protected" },
-  offline: { color: "bg-red-500", label: "Not Connected" },
-  uninitialized: { color: "bg-gray-400", label: "Not Set Up" },
-  loading: { color: "bg-amber-500", label: "Connecting…" },
-};
+function relativeTime(iso?: string): string | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  const diffSec = Math.round((Date.now() - then) / 1000);
+  if (diffSec < 60) return "just now";
+  if (diffSec < 3600) return `${Math.round(diffSec / 60)} min ago`;
+  if (diffSec < 86400) return `${Math.round(diffSec / 3600)} hr ago`;
+  return `${Math.round(diffSec / 86400)} day ago`;
+}
 
 const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
-  agentStatus,
-  agentIdentity,
-  recentReceipts,
-  isExecuting,
-  onTriggerHeartbeat,
+  isGuardianActive,
+  watchedAssets = ["USDC", "EURC"],
+  watchedNetworks = ["Celo", "Arbitrum"],
+  latestAdvice,
   hasTokenVault = false,
 }) => {
-  const { color, label } = statusIndicator[agentStatus];
-  const displayName = "Auto-Saver";
   const isMobile = useMobile();
-  const [showWizard, setShowWizard] = useState(false);
-  const [lastCheckedAt, setLastCheckedAt] = useState<number | null>(null);
-  const wasExecuting = React.useRef(false);
 
-  useEffect(() => {
-    if (wasExecuting.current && !isExecuting) {
-      setLastCheckedAt(Date.now());
-    }
-    wasExecuting.current = isExecuting;
-  }, [isExecuting]);
-
-  const handleCheckClick = () => {
-    onTriggerHeartbeat();
-  };
-
-  const lastCheckedLabel = lastCheckedAt
-    ? new Date(lastCheckedAt).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : null;
-
-  // Show mobile wizard when triggered
-  if (showWizard) {
+  // ── Inactive state ── short primer; no buttons, no opaque pings.
+  if (!isGuardianActive) {
     return (
-      <GuardianMobileWizard
-        userAddress=""
-        onComplete={() => setShowWizard(false)}
-        onCancel={() => setShowWizard(false)}
-        onCreateVault={async () => true}
-        onRequestPermission={async () => true}
-      />
-    );
-  }
-
-  // Mobile: Compact view with wizard trigger
-  if (isMobile) {
-    return (
-      <div className="bg-green-50/60 dark:bg-green-900/20 rounded-xl p-3 border border-green-100 dark:border-green-800/50">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-lg">🛡️</span>
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs font-black text-gray-900 dark:text-gray-100 truncate">
-                Auto-Saver {agentStatus === "online" ? "On" : "Off"}
-              </span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
-                {agentStatus === "online" ? "Protecting your savings" : "Tap to set up"}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              {agentStatus === "online" && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-              )}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${color}`} />
-            </span>
-            <button
-              onClick={() => setShowWizard(true)}
-              className="px-3 py-2 min-h-[44px] bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition-colors"
-            >
-              Configure
-            </button>
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+        <div className="flex items-start gap-3">
+          <span className="text-2xl flex-shrink-0" aria-hidden="true">🛡️</span>
+          <div className="min-w-0 space-y-1">
+            <p className="text-sm font-black text-gray-900 dark:text-gray-100">
+              Auto-Saver — your savings co-pilot
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+              Once set up, Auto-Saver watches {watchedAssets.slice(0, 2).join(" and ")} on
+              {" "}{watchedNetworks.slice(0, 2).join(" and ")} and rebalances when it
+              spots a better option — always within the daily limit you set.
+            </p>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 pt-1">
+              You stay in control. You can pause it any time.
+            </p>
           </div>
         </div>
       </div>
     );
   }
 
-  // Desktop: Full view
+  // ── Active state ── status + watched assets + latest advice.
+  const adviceRelative = relativeTime(latestAdvice?.capturedAt);
+  const adviceLine = latestAdvice?.oneLiner;
+
   return (
     <div className="bg-green-50/60 dark:bg-green-900/20 rounded-xl p-3 space-y-2 border border-green-100 dark:border-green-800/50">
-      {/* Status Bar */}
-      <div className="flex items-center justify-between">
+      {/* Status row */}
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-sm flex-shrink-0">🛡️</span>
+          <span className="text-sm flex-shrink-0" aria-hidden="true">🛡️</span>
           <div className="flex flex-col min-w-0">
-            <span className="text-xs font-black text-gray-900 dark:text-gray-100 truncate">
-              {displayName}
+            <span className="text-xs font-black text-gray-900 dark:text-gray-100">
+              Auto-Saver
             </span>
-            {agentIdentity && (
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate">
-                Works across {agentIdentity.chains.length} networks
-              </span>
-            )}
+            <span className="text-[10px] text-gray-500 dark:text-gray-400">
+              Watching {watchedAssets.join(" + ")} on{" "}
+              {watchedNetworks.length > 2
+                ? `${watchedNetworks.length} networks`
+                : watchedNetworks.join(" and ")}
+            </span>
           </div>
-          <span className="flex items-center gap-1 flex-shrink-0 ml-auto">
-            <span className="relative flex h-2 w-2">
-              {agentStatus === "online" && (
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-              )}
-              <span className={`relative inline-flex rounded-full h-2 w-2 ${color}`} />
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">{label}</span>
+        </div>
+        <span className="flex items-center gap-1 flex-shrink-0">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
           </span>
-        </div>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Protecting</span>
+        </span>
       </div>
 
-      {/* Management / Config Info */}
-      <div className="text-sm text-gray-500 dark:text-gray-400 py-1">
-        {agentStatus === "online"
-          ? "Watching your savings and ready to help."
-          : agentStatus === "loading"
-            ? "Getting ready…"
-            : "Tap below to wake it up."}
-      </div>
-
-      {/* Token Vault Badge */}
-      {hasTokenVault && (
-        <div className="flex items-center gap-1.5 py-1 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
-          <span className="text-xs">🛡️</span>
-          <span>Token Vault Enabled</span>
-        </div>
-      )}
-
-      {/* Trigger Heartbeat / WDK Ping */}
-      <div className="border-t border-green-200 dark:border-green-800 pt-2 space-y-1">
-        <button
-          onClick={handleCheckClick}
-          disabled={isExecuting}
-          className="w-full flex items-center justify-center gap-1.5 py-3 px-3 min-h-[44px] rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-colors"
-        >
-          {isExecuting ? (
-            <motion.span
-              animate={{ rotate: 360 }}
-              transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-              className="inline-block"
-            >
-              ⟳
-            </motion.span>
-          ) : (
-            <span>🛡️</span>
-          )}
-          <span>{isExecuting ? "Checking…" : "Check now"}</span>
-        </button>
-        {lastCheckedLabel && !isExecuting && (
-          <p className="text-[10px] text-center text-gray-500 dark:text-gray-400">
-            Last checked {lastCheckedLabel}
+      {/* Latest advice or fallback */}
+      <div className="border-t border-green-200/70 dark:border-green-800/70 pt-2">
+        {adviceLine ? (
+          <div className="space-y-0.5">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-300">
+              Latest suggestion {adviceRelative ? `· ${adviceRelative}` : ""}
+            </p>
+            <p className="text-xs text-gray-700 dark:text-gray-300 leading-snug">
+              {adviceLine}
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            No moves needed right now — your portfolio looks healthy.
           </p>
         )}
       </div>
+
+      {hasTokenVault && !isMobile && (
+        <div className="flex items-center gap-1.5 pt-1 text-[10px] font-black uppercase text-blue-600 dark:text-blue-400">
+          <span aria-hidden="true">🔒</span>
+          <span>Token Vault enabled</span>
+        </div>
+      )}
     </div>
   );
 };

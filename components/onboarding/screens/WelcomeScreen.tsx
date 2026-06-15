@@ -83,7 +83,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                     className="w-full max-w-sm"
                 >
                     <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                        Your Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Guardian</span>
+                        Your Personal <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Auto-Saver</span>
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
                         Where are you based? Inflation hits differently everywhere.

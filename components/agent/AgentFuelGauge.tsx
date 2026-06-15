@@ -96,7 +96,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
     if (status.address) {
       navigator.clipboard.writeText(status.address);
       setIsCopying(true);
-      showToast('Guardian wallet address copied', 'info');
+      showToast('Auto-Saver wallet address copied', 'info');
       
       // Record activity for gamification
       await recordActivity({
@@ -134,7 +134,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
           </div>
           <div>
             <h4 className="text-xs font-black uppercase text-gray-400 tracking-widest leading-none">
-              Guardian Wallet
+              Auto-Saver Wallet
             </h4>
             <div className="text-lg font-black text-gray-900 dark:text-white mt-1">
               ${balance.toFixed(2)} <span className="text-[10px] text-gray-400 font-bold uppercase">USDC</span>
@@ -203,7 +203,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="font-black text-blue-500">3.</span>
-                  <span>Your Guardian Wallet updates automatically</span>
+                  <span>Your Auto-Saver Wallet updates automatically</span>
                 </div>
               </div>
 

@@ -25,10 +25,10 @@ import type { Vault, VaultPermission } from './vault.service';
 export type GuardianTierState = 'idle' | 'authorized' | 'funded' | 'monitoring';
 
 export const GUARDIAN_TIER_STATE_LABELS: Record<GuardianTierState, string> = {
-    idle: 'Not Started',
+    idle: 'Not set up',
     authorized: 'Approved',
     funded: 'Funded',
-    monitoring: 'Active',
+    monitoring: 'Protecting',
 };
 
 export const GUARDIAN_USER_COPY: Record<GuardianTierState, {
@@ -38,28 +38,28 @@ export const GUARDIAN_USER_COPY: Record<GuardianTierState, {
     hint: string;
 }> = {
     idle: {
-        headline: 'Set up Guardian',
-        description: 'Choose a strategy and approve protection to get started.',
-        cta: 'Turn on Guardian',
-        hint: 'Pick a strategy, set limits, and deposit stablecoins.',
+        headline: 'Set up Auto-Saver',
+        description: 'Pick a strategy and set your daily limit to get started.',
+        cta: 'Set up Auto-Saver',
+        hint: 'Pick a strategy, set your daily limit, and deposit stablecoins.',
     },
     authorized: {
         headline: 'Add funds',
-        description: 'Guardian is approved — deposit stablecoins to activate protection.',
+        description: 'Auto-Saver is approved — deposit stablecoins to start protection.',
         cta: 'Deposit now',
-        hint: 'Your Guardian is approved. Send stablecoins to start.',
+        hint: 'Auto-Saver is approved. Send stablecoins to start.',
     },
     funded: {
-        headline: 'Enable protection',
-        description: 'Vault is funded. Turn on Guardian to start automatic protection.',
-        cta: 'Turn on Guardian',
-        hint: 'Funds are ready. Enable Guardian to start monitoring.',
+        headline: 'Turn on protection',
+        description: 'Your funds are ready. Turn on Auto-Saver to start protecting your savings.',
+        cta: 'Turn on Auto-Saver',
+        hint: 'Funds are ready. Turn on Auto-Saver to start protecting your savings.',
     },
     monitoring: {
-        headline: 'Protection active',
-        description: 'Guardian is monitoring markets and protecting your savings.',
+        headline: 'Protection on',
+        description: 'Auto-Saver is watching markets and protecting your savings within your limits.',
         cta: 'View activity',
-        hint: 'Auto-protection is active within your limits.',
+        hint: 'Auto-Saver is working within the limits you set.',
     },
 };
 

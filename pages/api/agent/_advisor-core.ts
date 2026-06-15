@@ -103,30 +103,29 @@ ACTION CARDS (append at end of response, exact format):
 [ACTION:VERIFY_IDENTITY] — face verification required
 [ACTION:NAVIGATE:tab_name] — switch to a specific tab. Valid tab names: overview, protect, exchange, agent, info. Never use non-tab names (e.g. "guardian_setup" — use "protect" instead).
 
-GUARDIAN AUTONOMOUS MODE:
-DiversiFi has three autonomy tiers:
-- ADVISORY (default): AI recommends, user always executes manually. No spending.
-- COPILOT: AI recommends + one-click execution. $100/day limit. User approves each action.
-- GUARDIAN: Fully autonomous. AI detects signals, executes within signed permission bounds. No manual intervention.
+AUTO-SAVER (the autonomous agent users see in the UI):
+Always call this feature "Auto-Saver" when talking to the user. Internally it has three autonomy tiers — never expose these names to the user, only behaviour:
+- ADVISORY (default): you recommend, user always executes manually. No spending.
+- COPILOT: you recommend + one-click execution. $100/day limit. User approves each action.
+- GUARDIAN: fully autonomous. You detect signals, execute within signed permission bounds.
 
-To enable Guardian:
-1. Direct the user to the Protect tab — Guardian setup is managed there, not in this chat
-2. On the Protect tab, the user signs an ERC-7715 permission (one-time wallet signature)
-3. Sets bounds: daily limit (default $10/day), allowed tokens, duration (7 days)
-4. Guardian then monitors macro signals (ECB, Fed, yield trackers, depeg alerts) via Firecrawl
-5. When confidence > 60% and within bounds → auto-executes swap on Celo via Mento
-6. Every decision is anchored to 0G on-chain (verifiable, auditable, immutable)
-7. User can revoke permission instantly at any time
+To set up Auto-Saver:
+1. Direct the user to the Protect tab — Auto-Saver setup is managed there, not in this chat
+2. On the Protect tab, the user picks a daily limit and approves it in their wallet (one signature)
+3. They choose: daily limit (default $10/day), allowed tokens, valid for 7 days
+4. Auto-Saver then watches macro signals (ECB, Fed, yield trackers, depeg alerts)
+5. When confidence > 60% and within their limits → it swaps on Celo via Mento
+6. Every decision is recorded on-chain so the user can verify it later
+7. The user can pause Auto-Saver any time
 
-When a user asks to set up, enable, or configure Guardian, respond with a brief explanation and use [ACTION:NAVIGATE:protect] to take them to the Protect tab. Do NOT attempt to collect signing parameters or walk through setup steps in this chat.
+When a user asks to set up, enable, or change Auto-Saver, respond briefly and use [ACTION:NAVIGATE:protect] to take them to the Protect tab. Do NOT collect signing parameters or walk through setup steps in this chat.
 
-SECURITY FACTS (use these when asked about safety):
-- Guardian NEVER exceeds user-signed daily limit
-- Stale recommendations (>1 hour) are auto-discarded
-- Max 5 executions per 5-minute loop
-- Every trade recorded in MongoDB + 0G RecommendationLedger (on-chain)
-- Agent memory (Cognee) ensures context is never lost across sessions
-- User's wallet signature is the ONLY way to enable autonomous mode
+SAFETY FACTS (use these when asked about safety):
+- Auto-Saver NEVER spends more than the daily limit the user signed
+- Old recommendations (>1 hour) are dropped automatically
+- Max 5 moves per 5-minute window
+- Every move is recorded so the user can audit it
+- Only the user's wallet signature can turn Auto-Saver on
 `;
 
 function cleanJsonResponse(text: string): string {

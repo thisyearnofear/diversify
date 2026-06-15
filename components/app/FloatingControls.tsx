@@ -38,12 +38,12 @@ export default function FloatingControls({ openAdvisor, unreadCount }: FloatingC
         <GuidedTour />
       </AnimatePresence>
 
-      {/* Ask Guardian FAB */}
+      {/* Ask the Advisor floating action button */}
       <motion.button
         key={bounceKey}
         onClick={openAdvisor}
-        aria-label="Ask Guardian — chat with your AI"
-        title="Ask Guardian"
+        aria-label="Ask the Advisor — chat about your savings"
+        title="Ask the Advisor"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         whileHover={{ scale: 1.04 }}

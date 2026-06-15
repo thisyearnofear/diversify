@@ -165,7 +165,7 @@ describe("AppShell AI Chat FAB", () => {
   it("renders the AI Chat FAB button", () => {
     render(<AppShell />);
 
-    expect(screen.getByLabelText("Ask Guardian — chat with your AI")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ask the Advisor — chat about your savings")).toBeInTheDocument();
   });
 
   it("calls openAdvisor when FAB is clicked", () => {
@@ -174,7 +174,7 @@ describe("AppShell AI Chat FAB", () => {
 
     render(<AppShell />);
 
-    fireEvent.click(screen.getByLabelText("Ask Guardian — chat with your AI"));
+    fireEvent.click(screen.getByLabelText("Ask the Advisor — chat about your savings"));
     expect(openAdvisor).toHaveBeenCalled();
   });
 
@@ -205,7 +205,7 @@ describe("AppShell AI Chat FAB", () => {
   it("renders the robot emoji in the FAB", () => {
     render(<AppShell />);
 
-    const button = screen.getByLabelText("Ask Guardian — chat with your AI");
+    const button = screen.getByLabelText("Ask the Advisor — chat about your savings");
     expect(button.textContent).toContain("💬");
   });
 });

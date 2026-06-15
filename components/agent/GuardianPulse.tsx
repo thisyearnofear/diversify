@@ -41,8 +41,8 @@ export function GuardianPulse() {
         <div className="absolute inset-0 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 bg-[length:200%_100%] animate-[skeleton-loading_1.5s_ease_in_out_infinite] dark:from-gray-700 dark:via-gray-600 dark:to-gray-700" />
         <div className="relative z-10 flex flex-col items-center justify-center h-full space-y-4">
           <div className="w-12 h-12 bg-gray-300 rounded-full animate-pulse dark:bg-gray-600" />
-          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Guardian Pulse</h3>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Autonomous Market Synthesis</p>
+          <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">Market Pulse</h3>
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Live signals from the markets</p>
         </div>
       </motion.div>
     );
@@ -85,10 +85,10 @@ export function GuardianPulse() {
               />
               <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
             </span>
-            Guardian Pulse
+            Market Pulse
           </motion.h3>
           <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-            Autonomous Market Synthesis
+            Live signals from the markets
           </p>
         </div>
         <button
