@@ -25,13 +25,22 @@ vi.mock('../LiveProofCard', () => ({
     LiveProofCard: () => <div data-testid="mock-proof-card">LiveProofCard</div>,
 }));
 
-// Mock TabComponents' Card (which chain-loads @diversifi/shared-0g and fails in test env).
+// Mock TabComponents' Card and Section (which chain-load @diversifi/shared-0g
+// and fail in the test environment). Both render as plain divs so the
+// structure-counting assertions in the test below remain accurate.
 vi.mock('../TabComponents', () => ({
     Card: ({ children, className = '', padding = 'p-4' }: {
         children: React.ReactNode;
         className?: string;
         padding?: string;
     }) => <div className={`${padding} ${className}`} data-testid="mock-card">{children}</div>,
+    Section: ({ children, className = '' }: {
+        children: React.ReactNode;
+        className?: string;
+        title?: React.ReactNode;
+        icon?: React.ReactNode;
+        divider?: boolean;
+    }) => <div className={className} data-testid="mock-section">{children}</div>,
 }));
 
 describe('UnconnectedStateShell', () => {
