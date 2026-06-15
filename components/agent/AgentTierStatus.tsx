@@ -677,6 +677,15 @@ export const AgentTierStatus: React.FC<{
                   {/* Vault Balance (shown when vault exists) */}
                   {vault.vault && (
                     <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                      {vault.vault.strategy && (
+                        <div className="flex justify-between items-center text-sm mb-2 pb-2 border-b border-purple-200/50 dark:border-purple-800/50">
+                          <span className="text-gray-500">Strategy</span>
+                          <span className="font-bold text-purple-700 dark:text-purple-300 capitalize flex items-center gap-1.5">
+                            <span className="size-1.5 rounded-full bg-purple-500" aria-hidden="true" />
+                            {vault.vault.strategy.replace(/-/g, ' ')}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center text-sm mb-1">
                         <span className="text-gray-500">Vault Value</span>
                         <span className="font-bold text-purple-700 dark:text-purple-300">

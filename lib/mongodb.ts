@@ -10,6 +10,24 @@ import mongoose from 'mongoose';
 const MONGODB_URI = process.env.MONGODB_URI;
 
 /**
+ * Force the database name to `DiversiFiCluster` regardless of what the
+ * MONGODB_URI env var says. The Atlas cluster already has a DB under that
+ * casing, and MongoDB refuses to create a second one with different casing
+ * ("db already exists with different case"). Rewriting here is safer than
+ * editing the env var across every deployment slot.
+ */
+function normalizeDbUri(uri: string): string {
+  try {
+    const url = new URL(uri);
+    url.pathname = '/DiversiFiCluster';
+    return url.toString();
+  } catch {
+    // Fallback: replace the DB segment between the host and the query string.
+    return uri.replace(/(mongodb(?:\+srv)?:\/\/[^/]+)\/[^?]+(\?.*)?$/i, '$1/DiversiFiCluster$2');
+  }
+}
+
+/**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections growing exponentially
  * during API Route usage.
@@ -34,6 +52,8 @@ async function connectDB() {
     throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
   }
 
+  const normalizedUri = normalizeDbUri(MONGODB_URI);
+
   if (cached!.conn) {
     return cached!.conn;
   }
@@ -50,7 +70,7 @@ async function connectDB() {
       minPoolSize: 1,
     };
 
-    cached!.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+    cached!.promise = mongoose.connect(normalizedUri, opts).then((mongoose) => {
       console.log('[MongoDB] Connected successfully');
       return mongoose;
     });

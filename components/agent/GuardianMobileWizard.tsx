@@ -28,6 +28,7 @@ interface Strategy {
   icon: string;
   description: string;
   regions: string[];
+  allocation: { token: string; region: string; percent: number }[];
 }
 
 const STRATEGIES: Strategy[] = [
@@ -37,6 +38,11 @@ const STRATEGIES: Strategy[] = [
     icon: "🌍",
     description: "Keep wealth in African economies. Prioritize KESm.",
     regions: ["KE", "US", "EU"],
+    allocation: [
+      { token: "KESm", region: "Kenya", percent: 60 },
+      { token: "cUSD", region: "US", percent: 25 },
+      { token: "cEUR", region: "EU", percent: 15 },
+    ],
   },
   {
     id: "islamic",
@@ -44,6 +50,11 @@ const STRATEGIES: Strategy[] = [
     icon: "☪️",
     description: "Sharia-compliant. No interest-bearing assets.",
     regions: ["US", "EU", "KE"],
+    allocation: [
+      { token: "PAXG", region: "Global", percent: 50 },
+      { token: "cUSD", region: "US", percent: 30 },
+      { token: "cEUR", region: "EU", percent: 20 },
+    ],
   },
   {
     id: "global",
@@ -51,6 +62,14 @@ const STRATEGIES: Strategy[] = [
     icon: "🌐",
     description: "Maximum geographic spread across all regions.",
     regions: ["US", "EU", "BR", "KE", "CO", "PH"],
+    allocation: [
+      { token: "cUSD", region: "US", percent: 25 },
+      { token: "cEUR", region: "EU", percent: 20 },
+      { token: "KESm", region: "Kenya", percent: 20 },
+      { token: "cREAL", region: "Brazil", percent: 15 },
+      { token: "COPm", region: "Colombia", percent: 10 },
+      { token: "PHPm", region: "Philippines", percent: 10 },
+    ],
   },
   {
     id: "buen-vivir",
@@ -58,6 +77,11 @@ const STRATEGIES: Strategy[] = [
     icon: "🌎",
     description: "Balance material wealth with community well-being.",
     regions: ["BR", "CO", "US"],
+    allocation: [
+      { token: "cREAL", region: "Brazil", percent: 45 },
+      { token: "COPm", region: "Colombia", percent: 35 },
+      { token: "cUSD", region: "US", percent: 20 },
+    ],
   },
 ];
 
@@ -77,6 +101,10 @@ interface GuardianMobileWizardProps {
   vaultAddress?: string;
   onComplete: () => void;
   onCancel: () => void;
+  /**
+   * Create a vault with the given strategy. Return true on success, false on
+   * generic failure, or throw an Error with a message to surface inline.
+   */
   onCreateVault: (strategy: string) => Promise<boolean>;
   onRequestPermission: (dailyLimit: number, tokens: string[]) => Promise<boolean>;
 }
@@ -139,10 +167,16 @@ export function GuardianMobileWizard({
     // Create vault when moving from strategy → limits
     if (nextStep === "limits") {
       setLoading(true);
-      const ok = await onCreateVault(selectedStrategy);
-      setLoading(false);
-      if (!ok) {
-        setError("Failed to create vault");
+      try {
+        const ok = await onCreateVault(selectedStrategy);
+        setLoading(false);
+        if (!ok) {
+          setError("Could not create vault. Please try again.");
+          return;
+        }
+      } catch (e: any) {
+        setLoading(false);
+        setError(e?.message || "Could not create vault. Please try again.");
         return;
       }
     }
@@ -150,10 +184,16 @@ export function GuardianMobileWizard({
     // Request permission when moving from sign → deposit
     if (nextStep === "deposit") {
       setLoading(true);
-      const ok = await onRequestPermission(dailyLimit, allowedTokens);
-      setLoading(false);
-      if (!ok) {
-        setError("Failed to grant permission");
+      try {
+        const ok = await onRequestPermission(dailyLimit, allowedTokens);
+        setLoading(false);
+        if (!ok) {
+          setError("Failed to grant permission");
+          return;
+        }
+      } catch (e: any) {
+        setLoading(false);
+        setError(e?.message || "Failed to grant permission");
         return;
       }
     }
@@ -172,44 +212,86 @@ export function GuardianMobileWizard({
 
   // ─── Step 1: Strategy ────────────────────────────────────────────────
 
+  const selectedStrategyData = STRATEGIES.find((s) => s.id === selectedStrategy) ?? STRATEGIES[0];
+
   const StrategyStep = () => (
-    <div className="space-y-3">
-      <div className="text-center mb-4">
-        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Choose Your Strategy</h3>
+    <div className="space-y-4">
+      <div className="text-center mb-2">
+        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Pick a strategy</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          This shapes how the Guardian diversifies your stablecoins
+          This shapes how the Guardian diversifies your stablecoins.
+          You can switch later.
         </p>
       </div>
 
-      {STRATEGIES.map((s) => (
-        <button
-          key={s.id}
-          onClick={() => setSelectedStrategy(s.id)}
-          className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-            selectedStrategy === s.id
-              ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20"
-              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">{s.icon}</span>
-            <div className="flex-1">
-              <div className="font-bold text-gray-900 dark:text-white">{s.name}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{s.description}</div>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {s.regions.map((r) => (
-                  <span key={r} className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-gray-600 dark:text-gray-300">
-                    {r}
+      <div className="grid grid-cols-2 gap-2">
+        {STRATEGIES.map((s) => {
+          const isSelected = selectedStrategy === s.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => setSelectedStrategy(s.id)}
+              aria-pressed={isSelected}
+              className={`relative text-left p-3 rounded-xl border-2 transition-all min-h-[104px] ${
+                isSelected
+                  ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-sm"
+                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
+            >
+              <div className="flex items-start justify-between mb-2">
+                <span className="text-2xl leading-none" aria-hidden="true">{s.icon}</span>
+                {isSelected && (
+                  <span className="size-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[11px] font-black">
+                    ✓
                   </span>
-                ))}
+                )}
               </div>
-            </div>
-            {selectedStrategy === s.id && (
-              <span className="text-purple-600 text-lg">✓</span>
-            )}
+              <div className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                {s.name}
+              </div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                {s.regions.length} regions
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Live allocation preview for selected strategy */}
+      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+              Target allocation
+            </p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+              {selectedStrategyData.name}
+            </p>
           </div>
-        </button>
-      ))}
+          <p className="text-[11px] text-gray-500 dark:text-gray-400 max-w-[55%] text-right leading-snug">
+            {selectedStrategyData.description}
+          </p>
+        </div>
+
+        <div className="space-y-1.5 pt-1">
+          {selectedStrategyData.allocation.map((a) => (
+            <div key={a.token} className="flex items-center gap-2 text-xs">
+              <span className="w-12 font-bold text-gray-900 dark:text-white truncate">
+                {a.token}
+              </span>
+              <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-purple-500"
+                  style={{ width: `${a.percent}%` }}
+                />
+              </div>
+              <span className="w-8 text-right text-gray-500 dark:text-gray-400 tabular-nums">
+                {a.percent}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 

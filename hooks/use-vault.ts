@@ -173,7 +173,7 @@ export function useVault(): UseVaultReturn {
       return true;
     } catch (e: any) {
       setError(e.message);
-      return false;
+      throw e;
     } finally {
       setLoading(false);
     }
