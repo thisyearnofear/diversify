@@ -49,17 +49,16 @@ export async function requestAdvancedPermission(
     method: 'wallet_requestExecutionPermissions',
     params: [
       {
-        chainId: ARBITRUM_CHAIN_ID,
+        chainId: `0x${ARBITRUM_CHAIN_ID.toString(16)}`,
         to: sessionAccountAddress,
-        from: null,
-        expiry,
+        expiry: `0x${expiry.toString(16)}`,
         permission: {
           type: 'erc20-token-periodic',
           isAdjustmentAllowed: false,
           data: {
             tokenAddress,
             periodAmount: `0x${periodAmount.toString(16)}`,
-            periodDuration,
+            periodDuration: `0x${periodDuration.toString(16)}`,
             justification,
           },
         },

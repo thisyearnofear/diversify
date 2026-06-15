@@ -75,7 +75,7 @@ export class UnifiedCacheService {
         return result;
       })();
 
-      this.pendingRequests.set(key, fetchPromise.then(r => r.data));
+      this.pendingRequests.set(key, fetchPromise.then(r => r.data).catch(() => null as any));
 
       // Fetch fresh data
       const result = await fetchPromise;

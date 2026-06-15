@@ -64,7 +64,9 @@ export class CircuitBreaker {
     try {
       return await this.call(fn);
     } catch (error) {
-      console.warn(`[CircuitBreaker] Call failed, using fallback. Error: ${error instanceof Error ? error.message : String(error)}`);
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(`[CircuitBreaker] Call failed, using fallback. Error: ${error instanceof Error ? error.message : String(error)}`);
+      }
       return await fallback();
     }
   }
@@ -201,13 +203,13 @@ export class CircuitBreaker {
   }
 
   private openCircuit(): void {
-    console.warn(`Opening circuit breaker after ${this.failureCount} failures`);
+    console.debug(`[CircuitBreaker] Opening circuit after ${this.failureCount} failures`);
     this.state = 'OPEN';
     this.successCount = 0;
   }
 
   private closeCircuit(): void {
-    console.info(`Closing circuit breaker after ${this.successCount} successful calls`);
+    console.debug(`[CircuitBreaker] Closing circuit after ${this.successCount} successful calls`);
     this.state = 'CLOSED';
     this.failureCount = 0;
     this.successCount = 0;
@@ -219,7 +221,7 @@ export class CircuitBreaker {
   }
 
   private transitionToHalfOpen(): void {
-    console.info('Transitioning circuit breaker to HALF_OPEN state');
+    console.debug('[CircuitBreaker] Transitioning to HALF_OPEN state');
     this.state = 'HALF_OPEN';
     this.successCount = 0;
     
@@ -227,7 +229,7 @@ export class CircuitBreaker {
     const timeout = this.config.halfOpenTimeout || this.config.timeout;
     this.halfOpenTimer = setTimeout(() => {
       if (this.state === 'HALF_OPEN') {
-        console.warn('Half-open timeout expired, opening circuit');
+        console.debug('[CircuitBreaker] Half-open timeout expired, opening circuit');
         this.openCircuit();
       }
     }, timeout);

@@ -86,7 +86,7 @@ export class ImprovedInflationService {
         }
       }
     } catch (e) {
-      console.warn('[Inflation] IMF failed:', e);
+      console.debug(`[Inflation] IMF failed: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     // Fall back to World Bank
@@ -125,7 +125,7 @@ export class ImprovedInflationService {
         }
       }
     } catch (e) {
-      console.warn('[Inflation] World Bank failed:', e);
+      console.debug(`[Inflation] World Bank failed: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     throw new Error('All inflation data sources failed');
@@ -135,7 +135,6 @@ export class ImprovedInflationService {
    * Fallback when API is unavailable
    */
   private getFallbackData(): { data: any; source: string } {
-    console.warn('[Inflation] Using static fallback data');
 
     // Get the fallback data organized by region
     const fallbackByRegion = getFallbackByRegion();
@@ -276,7 +275,7 @@ export class ExchangeRateService {
    * Fallback current rate
    */
   private getFallbackCurrentRate(fromCurrency: string, toCurrency: string): { data: any; source: string } {
-    console.warn(`[Exchange Rate] Using fallback for ${fromCurrency}-${toCurrency}`);
+    console.debug(`[ExchangeRate] Using fallback for ${fromCurrency}-${toCurrency}`);
     
     return {
       data: {
@@ -294,7 +293,7 @@ export class ExchangeRateService {
    * Fallback historical rates
    */
   private getFallbackHistoricalRates(fromCurrency: string, toCurrency: string): { data: any; source: string } {
-    console.warn(`[Exchange Rate] Using fallback historical data for ${fromCurrency}-${toCurrency}`);
+    console.debug(`[ExchangeRate] Using fallback historical data for ${fromCurrency}-${toCurrency}`);
     
     const dates: string[] = [];
     const rates: number[] = [];
