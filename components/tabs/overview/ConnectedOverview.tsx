@@ -1,39 +1,30 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
 import { useInflationData } from "@/hooks/use-inflation-data";
 import { useAnalytics } from "@/hooks/use-analytics";
-import { useColdStart } from "@/hooks/use-cold-start";
 import { useExperience } from "../../../context/app/ExperienceContext";
 import { useProtectionProfile } from "../../../hooks/use-protection-profile";
-import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import { useMarketRegime } from "@/hooks/use-market-regime";
 import { getRegimeTip } from "@/lib/market-regime";
 import { classifyAssets } from "../../portfolio/asset-classification";
-import RegionalIconography from "../../regional/RegionalIconography";
 import WalletButton from "../../wallet/WalletButton";
 import CurrencyPerformanceChart from "../../portfolio/CurrencyPerformanceChart";
 import ProtectionAnalysis from "../../portfolio/ProtectionAnalysis";
 import { StreakRewardsCard, RewardsStats } from "../../rewards/StreakRewardsCard";
 import SimplePieChart from "../../portfolio/SimplePieChart";
-import { NetworkOptimizedOnramp } from "../../onramp";
 import { AssetInventory } from "../../portfolio/AssetInventory";
-import { Card, Section, DataError, EmptyState, HeroValue } from "../../shared/TabComponents";
+import { Card, Section, DataError, HeroValue } from "../../shared/TabComponents";
 import { AgentTierStatus } from "../../agent/AgentTierStatus";
-import { GoalAlignmentBanner } from "./GoalAlignmentBanner";
-import { InflationTooltip } from "./InflationTooltip";
 import { Tooltip } from "../../shared/Tooltip";
 import { GuardianPulse } from "../../agent/GuardianPulse";
 import { useWalletContext } from "../../wallet/WalletProvider";
-
-const EMERGING_MARKETS = {
-  Africa: { growth: 4.2, highlight: "Fastest growing mobile money market" },
-  LatAm: { growth: 3.1, highlight: "Leading fintech adoption" },
-  Asia: { growth: 5.3, highlight: "60% of global digital payments" },
-  USA: { growth: 2.1, highlight: "World reserve currency" },
-  Europe: { growth: 1.8, highlight: "Strong regulatory framework" },
-};
+import { ContextualBanner } from "../../shared/ContextualBanner";
+import { HomeSection } from "../../shared/HomeSection";
+import { HomeNav } from "../../shared/HomeNav";
+import { MoreOptions } from "../../shared/MoreOptions";
+import { useHomeSections } from "@/hooks/use-home-sections";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -46,6 +37,11 @@ interface ConnectedOverviewProps {
   REGIONS: readonly Region[];
   setActiveTab: (tab: TabId) => void;
   refreshBalances?: () => Promise<void>;
+  /**
+   * Refreshes the wallet's current chain id. Returns the new chain id on
+   * success, or `null` if the wallet isn't connected / the chain couldn't
+   * be read. Matches the real signature exposed by `useAppShell()`.
+   */
   refreshChainId?: () => Promise<number | null>;
   onDisableDemo: () => void;
   onEnableDemo: () => void;
@@ -80,19 +76,21 @@ export function ConnectedOverview({
   currencyPerformanceData,
 }: ConnectedOverviewProps) {
   const { inflationData } = useInflationData();
-  const [selectedMarket, setSelectedMarket] = useState<Region>(userRegion);
-  const [showAssetDetails, setShowAssetDetails] = useState(false);
   const { experienceMode } = useExperience();
-  const { canClaim, isWhitelisted, streak } = useStreakRewards();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
   const marketRegime = useMarketRegime();
   const { trackAssetDetailsToggle, trackRegimeTip } = useAnalytics();
   const hasTrackedRegimeTip = useRef(false);
-  const coldStart = useColdStart(chainId);
   const { isMiniPay } = useWalletContext();
+  const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
-  const isBeginner = experienceMode === "beginner";
-  const isAdvanced = experienceMode === "advanced";
+  // ── Single source of truth for what the home page should show ──────────
+  const home = useHomeSections({
+    portfolio,
+    isDemo,
+    userRegion,
+    chainId,
+  });
 
   const {
     diversificationScore,
@@ -104,7 +102,7 @@ export function ConnectedOverview({
 
   const hasHoldings = totalValue > 0;
 
-  // Track regime tip once per session
+  // Track regime tip once per session (unchanged behaviour)
   useEffect(() => {
     if (marketRegime && !hasTrackedRegimeTip.current) {
       const groups = classifyAssets(activePortfolio.allTokens || []);
@@ -123,12 +121,9 @@ export function ConnectedOverview({
     if (refreshBalances) await refreshBalances();
   };
 
-  const selectedMarketData =
-    EMERGING_MARKETS[selectedMarket as keyof typeof EMERGING_MARKETS] ||
-    EMERGING_MARKETS.Africa;
-  const selectedMarketInflation = inflationData[selectedMarket]?.avgRate || 0;
-
-  // Build goal-aware tips
+  // Build the full tip list (used by the Smart Tips accordion section).
+  // Kept intact for parity with the original behaviour — `primaryTip` from
+  // the hook is what the hero shows, this list is what Smart Tips shows.
   const buildTips = (): string[] => {
     const gs = activePortfolio.goalScores;
     const missing = activePortfolio.missingRegions;
@@ -171,29 +166,46 @@ export function ConnectedOverview({
       tips = diversificationTips;
     }
 
-    // Regime tip: only when the market signal is extreme AND the user's
-    // portfolio is mismatched against it. null otherwise (silent).
     if (marketRegime) {
       const groups = classifyAssets(activePortfolio.allTokens || []);
       const totalValue = groups.totalValue;
       const stableRatio = totalValue > 0 ? groups.trackedValue / totalValue : 0;
       const regimeTip = getRegimeTip(marketRegime.regime, stableRatio);
-      if (regimeTip) {
-        // Prepend so it leads the list (most time-sensitive)
-        tips = [regimeTip, ...tips];
-      }
+      if (regimeTip) tips = [regimeTip, ...tips];
     }
 
     return tips;
   };
 
   const tips = buildTips();
-  const primaryTip = tips[0];
-
   const chainErrors = activePortfolio.errors ?? [];
 
+  // Resolve a one-line drift summary for the goal-drift banner.
+  const goalDriftMessage = React.useMemo(() => {
+    if (!profileComplete || !profileConfig.userGoal) return undefined;
+    const goal = profileConfig.userGoal;
+    const gs = activePortfolio.goalScores;
+    if (goal === "inflation_protection" && gs.hedge < 60) {
+      return `Hedge score ${Math.round(gs.hedge)}% — below your 60% goal.`;
+    }
+    if (goal === "geographic_diversification" && gs.diversify < 60) {
+      return `Diversification ${Math.round(gs.diversify)}% — below your 60% goal.`;
+    }
+    if (goal === "rwa_access" && gs.rwa === 0) {
+      return "No real-world assets yet — your RWA goal isn't being met.";
+    }
+    return undefined;
+  }, [profileComplete, profileConfig.userGoal, activePortfolio.goalScores]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Sticky in-page nav — appears once user scrolls past the hero.
+          Hidden when there are fewer than 2 nav items (e.g. beginner mode). */}
+      <HomeNav
+        sections={home.sections}
+        moreOptionsId="home-more-options"
+      />
+
       {/* Chain RPC errors — compact inline banner, one per failed chain */}
       {chainErrors.length > 0 && (
         <div className="space-y-1">
@@ -203,465 +215,326 @@ export function ConnectedOverview({
         </div>
       )}
 
-      {/* 1. HERO SCORE */}
-      <Card
-        padding="p-0"
-        className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/10 dark:via-gray-900 dark:to-indigo-900/10 border border-blue-100/80 dark:border-blue-900/60 shadow-[0_20px_50px_-20px_rgba(37,99,235,0.25)]"
-      >
-        <div className="relative z-10 p-7 sm:p-8">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 shadow-sm">
-            <span className="size-1.5 rounded-full bg-blue-500" />
-            Home Overview
-          </div>
-          <HeroValue
-            value={isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
-            label={isBeginner ? "Protection Score" : "Total Value"}
-          />
-          <div className="mt-2 flex justify-center">
-            <Tooltip
-              analyticsLabel="whats_this_score"
-              content={
-                isBeginner
-                  ? "We track USDm, cUSD, EURm, USDC, USDT, PAXG across Celo and Arbitrum. Volatile tokens (CELO, ETH) appear in your mix but don't count toward this score."
-                  : "Score reflects diversification across tracked stablecoin regions. Volatile tokens (CELO, ETH, WBTC) are shown in your asset mix but don't count. Open 'View Asset Details' below to see the split."
-              }
-              side="bottom"
-            >
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 cursor-help">
-                What&apos;s this?
-              </span>
-            </Tooltip>
-          </div>
-          <div
-            className={`mt-3 text-sm font-bold px-4 py-1.5 rounded-full inline-block shadow-sm ${
-              diversificationScore >= 80
-                ? "bg-green-100 text-green-800"
-                : diversificationScore >= 60
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-red-100 text-red-800"
-            }`}
-          >
-            {diversificationRating}
-          </div>
-          {isBeginner && (
-            <p className="text-sm text-gray-500 mt-4 max-w-xs mx-auto leading-relaxed">
-              Your savings are currently{" "}
-              <strong>{diversificationScore}% protected</strong> from local inflation.
-            </p>
-          )}
+      {/* ── 1. CONTEXTUAL BANNER (single slot, 4 variants) ────────────
+          Replaces the previous 4 competing full-bleed banners. */}
+      <ContextualBanner
+        kind={home.banner}
+        isDemo={isDemo}
+        demoValue={hasHoldings ? totalValue : undefined}
+        goalDriftMessage={goalDriftMessage}
+        goalDriftActionLabel="Rebalance"
+        dailyClaimText={
+          portfolio.goalScores && home.banner === "daily-claim"
+            ? "Tap to claim — keeps your streak alive"
+            : undefined
+        }
+        userRegion={userRegion}
+        chainId={chainId}
+        address={address}
+        setActiveTab={setActiveTab}
+        onDisableDemo={onDisableDemo}
+        onEnableDemo={onEnableDemo}
+      />
 
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => setActiveTab(hasHoldings ? "exchange" : "protect")}
-              className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
+      {/* ── 2. HERO ─────────────────────────────────────────────────────
+          id="home-hero" so HomeNav can scroll to the top of the page. */}
+      <section
+        id="home-hero"
+        data-home-section="home-hero"
+        aria-labelledby="home-hero-title"
+        className="scroll-mt-20"
+      >
+        <Card
+          padding="p-0"
+          className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/10 dark:via-gray-900 dark:to-indigo-900/10 border border-blue-100/80 dark:border-blue-900/60 shadow-[0_20px_50px_-20px_rgba(37,99,235,0.25)]"
+        >
+          <div className="relative z-10 p-6 sm:p-7">
+            <div
+              id="home-hero-title"
+              className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 shadow-sm"
             >
-              {hasHoldings ? "Review My Protection" : "Set Up My Plan"}
-            </button>
-            {hasHoldings && (
-              <button
-                onClick={() => setActiveTab("protect")}
-                className="px-5 py-3 rounded-2xl bg-white/90 dark:bg-gray-900/90 border border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-200 text-sm font-bold transition-all hover:bg-gray-50 dark:hover:bg-gray-800 hover:translate-y-[-1px]"
+              <span className="size-1.5 rounded-full bg-blue-500" />
+              Home Overview
+            </div>
+            <HeroValue
+              value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+              label={home.isBeginner ? "Protection Score" : "Total Value"}
+            />
+            <div className="mt-2 flex justify-center">
+              <Tooltip
+                analyticsLabel="whats_this_score"
+                content={
+                  home.isBeginner
+                    ? "We track USDm, cUSD, EURm, USDC, USDT, PAXG across Celo and Arbitrum. Volatile tokens (CELO, ETH) appear in your mix but don't count toward this score."
+                    : "Score reflects diversification across tracked stablecoin regions. Volatile tokens (CELO, ETH, WBTC) are shown in your asset mix but don't count. Open 'View Asset Details' below to see the split."
+                }
+                side="bottom"
               >
-                Adjust My Plan
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 cursor-help">
+                  What&apos;s this?
+                </span>
+              </Tooltip>
+            </div>
+            <div
+              className={`mt-3 text-sm font-bold px-4 py-1.5 rounded-full inline-block shadow-sm ${
+                diversificationScore >= 80
+                  ? "bg-green-100 text-green-800"
+                  : diversificationScore >= 60
+                    ? "bg-blue-100 text-blue-800"
+                    : "bg-red-100 text-red-800"
+              }`}
+            >
+              {diversificationRating}
+            </div>
+            {home.isBeginner && hasHoldings && (
+              <p className="text-sm text-gray-500 mt-4 max-w-xs mx-auto leading-relaxed">
+                Your savings are currently{" "}
+                <strong>{diversificationScore}% protected</strong> from local inflation.
+              </p>
+            )}
+
+            {/* Single primary CTA. Secondary CTAs are demoted to text links
+                so they don't compete with the hero action. */}
+            <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center">
+              <button
+                onClick={() =>
+                  setActiveTab(hasHoldings ? "exchange" : "protect")
+                }
+                className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
+              >
+                {hasHoldings ? "Review My Protection" : "Set Up My Plan"}
               </button>
+              {hasHoldings && (
+                <button
+                  onClick={() => setActiveTab("protect")}
+                  className="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                >
+                  Adjust plan →
+                </button>
+              )}
+            </div>
+
+            {/* Primary tip — only in beginner mode and only when we have one.
+                In standard/advanced, the tip moves to the Smart Tips section. */}
+            {home.isBeginner && home.primaryTip && hasHoldings && (
+              <div className="mt-4 p-3 rounded-2xl bg-white/85 dark:bg-gray-900/85 border border-blue-100 dark:border-blue-900 text-left max-w-md mx-auto shadow-sm backdrop-blur-sm">
+                <div className="text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">
+                  Next Best Move
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {home.primaryTip}
+                </p>
+              </div>
             )}
           </div>
-
-          {isBeginner && primaryTip && hasHoldings && (
-            <div className="mt-5 p-4 rounded-2xl bg-white/85 dark:bg-gray-900/85 border border-blue-100 dark:border-blue-900 text-left max-w-md mx-auto shadow-sm backdrop-blur-sm">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">
-                Next Best Move
-              </div>
-              <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                {primaryTip}
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-[-25%] left-[-10%] w-48 h-48 bg-indigo-500/8 rounded-full blur-3xl" />
-      </Card>
-
-      {/* 1b. GOAL ALIGNMENT */}
-      {profileComplete && profileConfig.userGoal && profileConfig.userGoal !== "exploring" && (
-        <GoalAlignmentBanner
-          goal={profileConfig.userGoal}
-          riskTolerance={profileConfig.riskTolerance}
-          timeHorizon={profileConfig.timeHorizon}
-          goalScores={activePortfolio.goalScores}
-          onAction={() => setActiveTab("exchange")}
-        />
-      )}
-
-      {/* DAILY CLAIM BANNER */}
-      {address && isWhitelisted && canClaim && (
-        <button
-          onClick={() => setActiveTab("protect")}
-          className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.01] active:scale-[0.99] transition-all"
-          aria-label="Claim your daily GoodDollar reward"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl animate-bounce">🎁</span>
-            <div className="text-left">
-              <div className="text-xs font-bold uppercase tracking-wide">
-                Daily Reward Ready
-              </div>
-              <div className="text-xs text-emerald-100 font-medium">
-                {streak?.daysActive ? `${streak.daysActive} day streak` : "Start your streak"}{" "}
-                — tap to claim →
-              </div>
-            </div>
-          </div>
-          <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap">
-            Claim Now
-          </div>
-        </button>
-      )}
-
-      {/* DEMO MODE BANNER */}
-      {isDemo && (
-        <Card padding="p-0" className="overflow-hidden border-2 border-blue-500 dark:border-blue-600">
-          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🎮</span>
-                <div>
-                  <h3 className="text-sm font-bold text-white">Preview Mode Active</h3>
-                  <p className="text-xs text-blue-100">
-                    Exploring with sample data • Connect wallet for real portfolio
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={onDisableDemo}
-                  className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
-                >
-                  Exit Demo
-                </button>
-                <WalletButton variant="inline" />
-              </div>
-            </div>
-          </div>
+          <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-[-25%] left-[-10%] w-48 h-48 bg-indigo-500/8 rounded-full blur-3xl" />
         </Card>
+      </section>
+
+      {/* ── 3. PROTECTION MIX (always-open in holdings; default-open is
+          the first thing a user sees below the hero) ─────────────── */}
+      {home.showProtectionMix && (
+        <section
+          id="protection-mix"
+          data-home-section="protection-mix"
+          aria-labelledby="protection-mix-title"
+          className="scroll-mt-20"
+        >
+          {home.isBeginner ? (
+            <Section>
+              <div className="flex items-center justify-between mb-4">
+                <h3 id="protection-mix-title" className="text-sm font-bold text-gray-900 dark:text-white">
+                  Your Protection Mix
+                </h3>
+                <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
+              </div>
+              <SimplePieChart data={regionData} />
+              <div className="mt-4 flex flex-wrap justify-center gap-2 mb-6">
+                {regionData.map((r) => (
+                  <div
+                    key={r.region}
+                    className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full shadow-sm"
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: r.color }}
+                    />
+                    <span className="text-xs font-bold text-gray-600 dark:text-gray-400">
+                      {r.region}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => setActiveTab("exchange")}
+                    className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+                  >
+                    Improve My Protection
+                  </button>
+                  <button
+                    onClick={() => {
+                      const newVal = !showAssetDetails;
+                      setShowAssetDetails(newVal);
+                      trackAssetDetailsToggle(newVal);
+                    }}
+                    className="w-full flex items-center justify-between py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-blue-500 transition-colors"
+                  >
+                    <span>{showAssetDetails ? "Hide" : "View"} Asset Details</span>
+                    <span>{showAssetDetails ? "↑" : "↓"}</span>
+                  </button>
+                </div>
+                {showAssetDetails && (
+                  <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <AssetInventory tokens={activePortfolio.allTokens || []} />
+                  </div>
+                )}
+              </div>
+            </Section>
+          ) : (
+            <ProtectionAnalysis
+              regionData={regionData}
+              totalValue={totalValue}
+              goalScores={portfolio.goalScores}
+              diversificationScore={diversificationScore}
+              diversificationRating={diversificationRating}
+              onOptimize={() => setActiveTab("protect")}
+              onSwap={() => setActiveTab("exchange")}
+              chainId={chainId}
+              onNetworkChange={refreshChainId ? handleRefresh : undefined}
+              refreshBalances={refreshBalances}
+              yieldSummary={portfolio}
+            />
+          )}
+        </section>
       )}
 
-      {/* COLD-START — context-aware empty state when wallet is connected but no holdings */}
-      {!isDemo && address && !hasHoldings && (
-        <Card padding="p-0" className="overflow-hidden border-2 border-amber-200 dark:border-amber-900">
-          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 dark:from-amber-900/20 dark:to-yellow-900/20 p-6">
-            <div className="flex items-start gap-3 mb-4">
-              <span className="text-2xl">{coldStart.emoji}</span>
-              <div className="flex-1">
-                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100">
-                  {coldStart.headline}
-                </h3>
-                <p className="text-sm text-amber-700 dark:text-amber-300 font-medium mt-1">
-                  {coldStart.body}
-                </p>
-                {coldStart.currentChainName && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 font-bold">
-                    Current network: {coldStart.currentChainName}
+      {/* ── 4. INSIGHT ACCORDION (deep sections, default-collapsed) ────
+          The user can pick which section to expand based on what they
+          came to the home page for: market context, personal tips, or
+          rewards. The teasers help them decide without expanding. */}
+      {home.showInsightAccordion &&
+        home.sections.map((section) => (
+          <HomeSection
+            key={section.id}
+            id={section.id}
+            title={section.title}
+            icon={section.icon}
+            teaser={section.teaser}
+            defaultOpen={section.defaultOpen}
+            badge={
+              section.id === "smart-tips" && tips.length > 0
+                ? (() => {
+                    const totalTips = tips.length;
+                    return (
+                      <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded-full">
+                        {totalTips}
+                      </span>
+                    );
+                  })()
+                : undefined
+            }
+          >
+            {section.id === "market-intel" && <GuardianPulse />}
+            {section.id === "smart-tips" && (
+              <div className="space-y-2">
+                {tips.slice(0, 3).map((tip, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg"
+                  >
+                    <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">
+                      •
+                    </span>
+                    <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
+                      {tip}
+                    </span>
+                  </div>
+                ))}
+                {tips.length === 0 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 italic">
+                    No tips right now. Check back as the market shifts.
                   </p>
                 )}
               </div>
-            </div>
-
-            {/* Primary action: contextual based on wallet state */}
-            <div className="space-y-2">
-              {!coldStart.isOnSupportedChain && coldStart.suggestedChainId ? (
-                // Wallet is on the wrong chain — primary action is to switch
-                <button
-                  onClick={() => {
-                    // Open the swap/exchange tab to make it easy to bridge,
-                    // or trigger wallet switch directly
-                    setActiveTab("exchange");
-                  }}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2"
-                >
-                  {coldStart.emoji} {coldStart.suggestedChainName === 'Arbitrum'
-                    ? 'Switch to Arbitrum to start'
-                    : `Switch to ${coldStart.suggestedChainName}`}
-                </button>
-              ) : (
-                // On a supported chain but no funds — primary action is to fund
-                <div className="space-y-2">
-                  <p className="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">
-                    Get started
-                  </p>
-                  <NetworkOptimizedOnramp variant="white" defaultAmount="100" className="w-full" />
-                  <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-                    💳 Buy with card or bank transfer • Low KYC
-                  </p>
-                </div>
-              )}
-
-              {/* Address copy — collapsed by default to reduce visual noise */}
-              <details className="mt-2">
-                <summary className="text-xs text-amber-700 dark:text-amber-300 cursor-pointer font-medium hover:text-amber-900 dark:hover:text-amber-100">
-                  Transfer from another wallet or exchange
-                </summary>
-                <div className="mt-2 p-3 bg-white/50 dark:bg-black/20 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
-                  <div className="flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-inner">
-                    <code className="text-xs font-mono text-gray-600 dark:text-gray-300 truncate flex-1">
-                      {address}
-                    </code>
-                    <button
-                      onClick={() => navigator.clipboard.writeText(address)}
-                      className="p-1 px-2 text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 rounded hover:bg-amber-200 transition-colors"
-                    >
-                      Copy
-                    </button>
-                  </div>
-                </div>
-              </details>
-
-              {/* Demo mode — always available as a low-pressure alternative */}
-              <button
-                onClick={onEnableDemo}
-                className="w-full py-2.5 bg-white/60 dark:bg-gray-800/60 hover:bg-white dark:hover:bg-gray-800 text-amber-900 dark:text-amber-100 border border-amber-200 dark:border-amber-800 rounded-xl text-sm font-bold transition-colors"
-              >
-                🎮 See it with sample data
-              </button>
-            </div>
-          </div>
-        </Card>
-      )}
-
-      {/* 2. PROTECTION ANALYSIS */}
-      {hasHoldings && (
-        isBeginner ? (
-          <Section>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                Your Protection Mix
-              </h3>
-              <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
-            </div>
-            <SimplePieChart data={regionData} />
-            <div className="mt-4 flex flex-wrap justify-center gap-2 mb-6">
-              {regionData.map((r) => (
-                <div
-                  key={r.region}
-                  className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full shadow-sm"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: r.color }} />
-                  <span className="text-xs font-bold text-gray-600 dark:text-gray-400">{r.region}</span>
-                </div>
-              ))}
-            </div>
-            <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => setActiveTab("exchange")}
-                  className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
-                >
-                  Improve My Protection
-                </button>
-                <button
-                  onClick={() => {
-                    const newVal = !showAssetDetails;
-                    setShowAssetDetails(newVal);
-                    trackAssetDetailsToggle(newVal);
-                  }}
-                  className="w-full flex items-center justify-between py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-blue-500 transition-colors"
-                >
-                  <span>{showAssetDetails ? "Hide" : "View"} Asset Details</span>
-                  <span>{showAssetDetails ? "↑" : "↓"}</span>
-                </button>
+            )}
+            {section.id === "rewards" && (
+              <div className="space-y-4">
+                <StreakRewardsCard onSaveClick={() => setActiveTab("exchange")} />
+                <RewardsStats />
               </div>
-              {showAssetDetails && (
-                <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <AssetInventory tokens={activePortfolio.allTokens || []} />
-                </div>
-              )}
-            </div>
-          </Section>
-        ) : (
-          <ProtectionAnalysis
-            regionData={regionData}
-            totalValue={totalValue}
-            goalScores={portfolio.goalScores}
-            diversificationScore={diversificationScore}
-            diversificationRating={diversificationRating}
-            onOptimize={() => setActiveTab("protect")}
-            onSwap={() => setActiveTab("exchange")}
-            chainId={chainId}
-            onNetworkChange={refreshChainId ? handleRefresh : undefined}
-            refreshBalances={refreshBalances}
-            yieldSummary={portfolio}
-          />
-        )
-      )}
+            )}
+            {section.id === "agent" && (
+              <AgentTierStatus
+                showActivityFeed={true}
+                onNavigateToAgent={() => setActiveTab("agent")}
+              />
+            )}
+          </HomeSection>
+        ))}
 
-      {/* 3. REWARDS */}
-      {hasHoldings && !isBeginner && (
-        <div className="space-y-4">
-          <StreakRewardsCard onSaveClick={() => setActiveTab("exchange")} />
-          <RewardsStats />
-        </div>
-      )}
-
-      {!isBeginner && !isMiniPay && (
-        <div className="bg-gradient-to-r from-yellow-500 via-orange-500 to-blue-600 p-0.5 rounded-2xl">
-          <div className="bg-white dark:bg-gray-900 rounded-[14px] p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex -space-x-2">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center text-white text-lg z-10 border-2 border-white dark:border-gray-900">
-                    🌍
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-lg border-2 border-white dark:border-gray-900">
-                    💰
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold">Two Chains, One Mission</h3>
-                  <p className="text-xs text-gray-500">Celo for regional diversity • Arbitrum for yield</p>
-                </div>
-              </div>
-              <div className="text-right hidden sm:block">
-                <div className="text-xs font-bold text-gray-400">Powered by</div>
-                <div className="text-xs font-black">LiFi</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 4. MARKET INTELLIGENCE */}
-      {!isBeginner && (
-        <Section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="size-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-lg">🌍</div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Guardian Pulse</h3>
-          </div>
-          <GuardianPulse />
-        </Section>
-      )}
-
-      {/* 5. SMART RECOMMENDATIONS */}
-      {tips.length > 0 && !isBeginner && (
-        <Section>
-          <div className="flex items-center gap-2 mb-3">
-            <div className="size-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center text-lg">💡</div>
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Smart Recommendations</h3>
-          </div>
-          <div className="space-y-2">
-            {tips.slice(0, 3).map((tip, idx) => (
-              <div key={idx} className="flex items-start gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg">
-                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-0.5">•</span>
-                <span className="text-xs text-gray-700 dark:text-gray-300 font-medium leading-relaxed">
-                  {tip}
-                </span>
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* 6. REGION SELECTOR (Advanced only) */}
-      {!isBeginner && (
-        <Section>
-          <div className="flex items-center gap-2 mb-3">
-            <RegionalIconography region={userRegion} size="sm" />
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Your Home Region</h3>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {REGIONS.map((region) => (
-              <button
-                key={region}
-                onClick={() => setUserRegion(region)}
-                className={`px-3 py-1.5 text-xs rounded-full transition-all font-bold ${
-                  userRegion === region
-                    ? "bg-purple-600 text-white shadow-md"
-                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100"
-                }`}
-              >
-                {region}
-              </button>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {/* 7. EMPTY STATE FUNNEL */}
-      {!hasHoldings && (
+      {/* ── 5. EMPTY-STATE FUNNEL (only when truly empty) ──────────────
+          Skipped if a contextual banner is already rendering the
+          cold-start or empty guidance. Avoids double-prompting. */}
+      {!hasHoldings && home.banner === null && (
         <Card
           padding="p-6"
           className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 border-2 border-blue-200 dark:border-blue-800"
         >
-          <EmptyState
-            icon="🛡️"
-            title={isBeginner ? "Ready to Protect Your Savings?" : "Start Your Protection"}
-            description={
-              isBeginner
-                ? "Your savings lose value every day due to inflation. Let&apos;s fix that by moving into more stable currencies."
-                : "Convert your local currency into diversified stablecoins to protect against inflation and currency debasement."
-            }
-            action={{
-              label: isBeginner ? "Protect My Savings" : "Open Protect Flow",
-              onClick: () => setActiveTab("exchange"),
-              icon: <span>→</span>,
-            }}
-          />
-          
-          {/* Milestone-oriented next steps */}
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-900">
-              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-black text-blue-600 dark:text-blue-400">1</div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-gray-900 dark:text-white">Connect wallet</p>
-                <p className="text-xs text-gray-500">Secure & takes 30 seconds</p>
-              </div>
-              <span className="text-emerald-500 text-sm">✓</span>
-            </div>
-            <div className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400">2</div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-gray-900 dark:text-white">Add funds</p>
-                <p className="text-xs text-gray-500">Use on-ramp or transfer</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400">3</div>
-              <div className="flex-1">
-                <p className="text-xs font-bold text-gray-900 dark:text-white">Make first swap</p>
-                <p className="text-xs text-gray-500">Make your first protection move</p>
-              </div>
-            </div>
+          <div className="text-center mb-4">
+            <div className="text-3xl mb-2">🛡️</div>
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+              {home.isBeginner ? "Ready to Protect Your Savings?" : "Start Your Protection"}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-xs mx-auto">
+              {home.isBeginner
+                ? "Your savings lose value every day due to inflation. Let's fix that."
+                : "Convert local currency into diversified stablecoins to protect against inflation."}
+            </p>
           </div>
 
-          {/* Alternative: Testnet for risk-free learning */}
-          {isBeginner && (
-            <div className="mt-4 p-3 bg-violet-50 dark:bg-violet-900/20 rounded-xl border border-violet-200 dark:border-violet-800">
-              <div className="flex items-start gap-2">
-                <span className="text-lg">🧪</span>
-                <div className="flex-1">
-                  <p className="text-xs font-bold text-violet-900 dark:text-violet-100 mb-1">
-                    Not ready to use real money?
-                  </p>
-                  <p className="text-xs text-violet-700 dark:text-violet-300 mb-2">
-                    Try testnet first — free tokens, same experience, no risk.
-                  </p>
-                  <button
-                    onClick={() => setActiveTab("exchange")}
-                    className="text-xs font-bold text-violet-600 dark:text-violet-400 hover:text-violet-800 dark:hover:text-violet-200 transition-colors"
-                  >
-                    Try Test Drive →
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Milestone-oriented next steps — collapsed to a single row of
+              chips to keep the empty state scannable. */}
+          <ol className="space-y-2">
+            <li className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-blue-100 dark:border-blue-900">
+              <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-black text-blue-600 dark:text-blue-400 shrink-0">1</div>
+              <span className="text-xs font-bold text-gray-900 dark:text-white flex-1">Connect wallet</span>
+              <span className="text-emerald-500 text-sm">✓</span>
+            </li>
+            <li className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400 shrink-0">2</div>
+              <span className="text-xs font-bold text-gray-900 dark:text-white flex-1">Add funds</span>
+            </li>
+            <li className="flex items-center gap-3 p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xs font-black text-gray-400 shrink-0">3</div>
+              <span className="text-xs font-bold text-gray-900 dark:text-white flex-1">Make your first swap</span>
+            </li>
+          </ol>
+
+          {home.isBeginner && (
+            <button
+              onClick={() => setActiveTab("exchange")}
+              className="mt-4 w-full py-2.5 bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 rounded-xl text-sm font-bold transition-colors hover:bg-violet-100"
+            >
+              🧪 Try the test drive first
+            </button>
           )}
         </Card>
       )}
 
-      {/* AGENT COMMAND CENTER (Standard/Advanced only) */}
-      {isAdvanced && (
-        <AgentTierStatus
-          showActivityFeed={true}
-          onNavigateToAgent={() => setActiveTab("agent")}
+      {/* ── 6. SETTINGS & REGION (collapsed by default) ───────────────
+          Region selector + Two Chains marketing + MiniPay footnote now
+          live in one disclosure row instead of three stacked cards. */}
+      {(home.showRegionSelector || home.showTwoChainsBanner) && (
+        <MoreOptions
+          id="home-more-options"
+          userRegion={userRegion}
+          setUserRegion={setUserRegion}
+          regions={REGIONS}
+          showTwoChainsBanner={home.showTwoChainsBanner}
+          isMiniPay={isMiniPay}
         />
       )}
     </div>
