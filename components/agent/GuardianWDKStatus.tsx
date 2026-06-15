@@ -26,6 +26,14 @@ interface GuardianWDKStatusProps {
   } | null;
   /** Vault-enforced limit guarding the embedded token treasury. */
   hasTokenVault?: boolean;
+  /**
+   * Stablecoin balance Auto-Saver can see on the connected chain. When this
+   * is below the minimum required, the active card surfaces a "Waiting for
+   * funds" chip so the user understands why no moves have happened.
+   */
+  walletStableBalanceUSD?: number;
+  /** Threshold below which we treat the wallet as "empty enough to wait". */
+  minRequiredFundsUSD?: number;
 }
 
 function relativeTime(iso?: string): string | null {
@@ -45,8 +53,14 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
   watchedNetworks = ["Celo", "Arbitrum"],
   latestAdvice,
   hasTokenVault = false,
+  walletStableBalanceUSD,
+  minRequiredFundsUSD = 5,
 }) => {
   const isMobile = useMobile();
+  const isWaitingForFunds =
+    isGuardianActive &&
+    typeof walletStableBalanceUSD === "number" &&
+    walletStableBalanceUSD < minRequiredFundsUSD;
 
   // ── Inactive state ── short primer; no buttons, no opaque pings.
   if (!isGuardianActive) {
@@ -95,13 +109,29 @@ const GuardianWDKStatus: React.FC<GuardianWDKStatusProps> = ({
           </div>
         </div>
         <span className="flex items-center gap-1 flex-shrink-0">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-          </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Protecting</span>
+          {isWaitingForFunds ? (
+            <>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+              <span className="text-xs text-amber-600 dark:text-amber-400">Waiting for funds</span>
+            </>
+          ) : (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Protecting</span>
+            </>
+          )}
         </span>
       </div>
+
+      {isWaitingForFunds && (
+        <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-2.5 py-1.5 text-[11px] text-amber-700 dark:text-amber-300 leading-snug">
+          Auto-Saver is on, but your wallet is empty. It'll start working when you deposit
+          stablecoins. No errors, no fees while it waits.
+        </div>
+      )}
 
       {/* Latest advice or fallback */}
       <div className="border-t border-green-200/70 dark:border-green-800/70 pt-2">

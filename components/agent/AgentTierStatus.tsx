@@ -30,8 +30,31 @@ import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianWDKStatus from "./GuardianWDKStatus";
 import { GuardianMobileWizard } from "./GuardianMobileWizard";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
+import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
+// Symbols Auto-Saver treats as "stable enough to act on" when computing the
+// readiness balance. Broader than the COPILOT default allowedTokens so the
+// user sees their Mento cash on Celo too — anything Auto-Saver could reach
+// without bridging.
+const AUTO_SAVER_STABLE_SYMBOLS = new Set([
+  "USDC", "USDT", "USDC.E", "USDCE",
+  "EURC",
+  "CUSD", "CEUR", "CREAL", "CKES",
+  "USDM", "EURM", "BRLM", "KESM", "COPM", "PHPM", "GHSM", "XOFM",
+  "GBPM", "ZARM", "CADM", "AUDM", "CHFM", "JPYM", "NGNM",
+  "PAXG", "XAU₮", "XAUT",
+]);
+
+const MIN_AUTO_SAVER_FUNDS_USD = 5;
+const ARBITRUM_CHAIN_ID = 42161;
+const SUPPORTED_AUTO_SAVER_CHAINS = [42220, 44787, 42161];
+const CHAIN_DISPLAY_NAMES: Record<number, string> = {
+  42220: "Celo",
+  44787: "Celo Alfajores",
+  42161: "Arbitrum",
+};
 
 export const AgentTierStatus: React.FC<{
   isMiniPay?: boolean;
@@ -140,6 +163,30 @@ export const AgentTierStatus: React.FC<{
   const DAILY_LIMIT_PRESETS = [5, 10, 25, 50, 100] as const;
   const [pendingDailyLimit, setPendingDailyLimit] = useState<number>(10);
   const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? pendingDailyLimit;
+
+  // Onchain awareness — what Auto-Saver can actually see in the user's
+  // wallet on the chain they're currently connected to. Drives the
+  // balance line, chip dimming, and the "Waiting for funds" runtime chip.
+  const portfolio = useMultichainBalances(address ?? undefined);
+  const currentChainName = chainId ? CHAIN_DISPLAY_NAMES[chainId] : null;
+  const isChainSupported = chainId ? SUPPORTED_AUTO_SAVER_CHAINS.includes(chainId) : false;
+  const isOnArbitrum = chainId === ARBITRUM_CHAIN_ID;
+
+  const stableBalanceOnChain = useMemo(() => {
+    if (!chainId || !portfolio.allTokens?.length) {
+      return { total: 0, tokens: [] as Array<{ symbol: string; value: number }> };
+    }
+    const tokens = portfolio.allTokens.filter(
+      (t) => t.chainId === chainId && AUTO_SAVER_STABLE_SYMBOLS.has(t.symbol.toUpperCase()),
+    );
+    const total = tokens.reduce((sum, t) => sum + (t.value || 0), 0);
+    return {
+      total,
+      tokens: tokens.map((t) => ({ symbol: t.symbol, value: t.value || 0 })),
+    };
+  }, [chainId, portfolio.allTokens]);
+
+  const isLowOnFunds = stableBalanceOnChain.total < MIN_AUTO_SAVER_FUNDS_USD;
   const [isRunningLoop, setIsRunningLoop] = useState(false);
   const [loopResult, setLoopResult] = useState<GuardianLoopResult | null>(null);
 
@@ -735,6 +782,8 @@ export const AgentTierStatus: React.FC<{
                       : null
                   }
                   hasTokenVault={hasTokenVault}
+                  walletStableBalanceUSD={stableBalanceOnChain.total}
+                  minRequiredFundsUSD={MIN_AUTO_SAVER_FUNDS_USD}
                 />
 
                 {sessionInfo?.latestRecommendation && (
@@ -954,11 +1003,32 @@ export const AgentTierStatus: React.FC<{
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
                       Have your wallet enforce the daily limit on-chain. Best if you already use MetaMask.
+                      {!isOnArbitrum && ' Available on Arbitrum.'}
                     </p>
                     {grantStatus === 'granted' ? (
                       <div className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
                         Stronger protection is active on Arbitrum
                       </div>
+                    ) : !isOnArbitrum ? (
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          const ethereum = (window as any).ethereum;
+                          if (!ethereum) return;
+                          try {
+                            await ethereum.request({
+                              method: 'wallet_switchEthereumChain',
+                              params: [{ chainId: '0xa4b1' }],
+                            });
+                          } catch {
+                            // User declined; nothing more to do.
+                          }
+                        }}
+                        className="w-full text-xs font-bold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl py-2.5 transition-colors"
+                      >
+                        Switch to Arbitrum to enable
+                      </button>
                     ) : (
                       <>
                         <button
@@ -983,15 +1053,41 @@ export const AgentTierStatus: React.FC<{
           {guardianTab === "journal" && (
           <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Proof of Execution</h4>
-                <span className="text-xs text-gray-400 italic">Sorted by Recency</span>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Activity</h4>
+                <span className="text-xs text-gray-400 italic">Newest first</span>
               </div>
 
               <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                 {guardianProofEvents.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800">
-                    <span className="text-3xl block mb-2">🔭</span>
-                    <p className="text-sm text-gray-500">Scanning for agent actions...</p>
+                  <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 px-6 space-y-3">
+                    <span className="text-3xl block">🛡️</span>
+                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                      {hasValidPermission ? "Auto-Saver is watching. No moves yet." : "Nothing to show yet"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
+                      {hasValidPermission
+                        ? "Once it makes its first move, every action will appear here with a verifiable receipt."
+                        : "Set up Auto-Saver to start tracking automatic moves and on-chain receipts."}
+                    </p>
+                    {hasValidPermission && (
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          setIsRunningLoop(true);
+                          try {
+                            const result = await triggerExecutionLoop(true);
+                            setLoopResult(result);
+                          } finally {
+                            setIsRunningLoop(false);
+                          }
+                        }}
+                        disabled={isRunningLoop}
+                        className="mt-2 text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {isRunningLoop ? "Previewing…" : "Preview next move"}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   guardianProofEvents.map((event, index) => {
@@ -1098,11 +1194,11 @@ export const AgentTierStatus: React.FC<{
           )}
 
           {guardianTab === "proof" && (
-          <div className="space-y-6">
-              {sessionInfo?.latestRecommendation && (
+          <div className="space-y-4">
+              {sessionInfo?.latestRecommendation ? (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl border border-blue-100 dark:border-purple-900 p-4">
                   <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">
-                    Proof Chain
+                    Proof chain
                   </div>
                   <div className="space-y-2 text-sm">
                     <div>
@@ -1118,14 +1214,62 @@ export const AgentTierStatus: React.FC<{
                       </span>
                     </div>
                     <div>
-                      <span className="font-bold text-purple-700 dark:text-purple-300">3. Guardian:</span>{" "}
+                      <span className="font-bold text-purple-700 dark:text-purple-300">3. Auto-Saver:</span>{" "}
                       <span className="text-gray-700 dark:text-gray-300">
                         {sessionInfo.recentExecutions.length > 0
-                          ? `${sessionInfo.recentExecutions.length} execution${sessionInfo.recentExecutions.length === 1 ? '' : 's'} on record`
-                          : "Awaiting execution"}
+                          ? `${sessionInfo.recentExecutions.length} move${sessionInfo.recentExecutions.length === 1 ? '' : 's'} on record`
+                          : "Waiting for the right moment"}
                       </span>
                     </div>
                   </div>
+                </div>
+              ) : (
+                // Empty-state primer — explains the proof chain BEFORE any
+                // data exists, so the user understands what will appear here
+                // and why it matters. Each row is rendered as a dimmed
+                // skeleton so the structure is visible at a glance.
+                <div className="bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 p-5 space-y-4">
+                  <div className="text-center space-y-1.5">
+                    <span className="text-3xl block">🔗</span>
+                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                      {hasValidPermission
+                        ? "Nothing to prove yet"
+                        : "How Auto-Saver proves its work"}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
+                      Every move Auto-Saver makes is backed by a chain of three steps. Once your first
+                      recommendation lands, this view will fill in.
+                    </p>
+                  </div>
+                  <ol className="space-y-2 text-xs">
+                    <li className="flex items-start gap-2 p-2 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800">
+                      <span className="font-black text-blue-500">1.</span>
+                      <div className="flex-1">
+                        <div className="font-bold text-blue-700 dark:text-blue-300">Advisor</div>
+                        <div className="text-gray-500 dark:text-gray-400">
+                          What signal triggered a suggestion (e.g., inflation rising, depeg risk).
+                        </div>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2 p-2 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800">
+                      <span className="font-black text-amber-500">2.</span>
+                      <div className="flex-1">
+                        <div className="font-bold text-amber-700 dark:text-amber-300">Permission</div>
+                        <div className="text-gray-500 dark:text-gray-400">
+                          The limit you signed (e.g., ${dailyLimit}/day, 7-day window).
+                        </div>
+                      </div>
+                    </li>
+                    <li className="flex items-start gap-2 p-2 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800">
+                      <span className="font-black text-purple-500">3.</span>
+                      <div className="flex-1">
+                        <div className="font-bold text-purple-700 dark:text-purple-300">Auto-Saver</div>
+                        <div className="text-gray-500 dark:text-gray-400">
+                          The actual on-chain transaction, with a receipt anyone can verify.
+                        </div>
+                      </div>
+                    </li>
+                  </ol>
                 </div>
               )}
           </div>
@@ -1153,6 +1297,50 @@ export const AgentTierStatus: React.FC<{
               </p>
             </div>
 
+            {/* Onchain awareness: which chain + what Auto-Saver can see in
+                the user's wallet. Sourced from useMultichainBalances so
+                the figure matches the portfolio shown elsewhere. */}
+            {address && (
+              <div
+                className={`rounded-2xl p-3 border text-xs space-y-1 ${
+                  !isChainSupported
+                    ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
+                    : isLowOnFunds
+                      ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
+                      : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-gray-700 dark:text-gray-300">
+                    {currentChainName
+                      ? `Network · ${currentChainName}`
+                      : "Network · Not connected"}
+                  </span>
+                  {portfolio.isLoading ? (
+                    <span className="text-gray-400">Checking balance…</span>
+                  ) : isChainSupported ? (
+                    <span className="font-black text-gray-900 dark:text-gray-100">
+                      ${stableBalanceOnChain.total.toFixed(2)} in stables
+                    </span>
+                  ) : null}
+                </div>
+                {!isChainSupported ? (
+                  <p className="text-red-700 dark:text-red-300">
+                    Switch to Celo or Arbitrum to set up Auto-Saver.
+                  </p>
+                ) : isLowOnFunds ? (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    Auto-Saver needs at least ${MIN_AUTO_SAVER_FUNDS_USD} in stables
+                    to act. You can still approve now and top up later — it'll just wait.
+                  </p>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">
+                    Auto-Saver only acts on funds it can see in your wallet on this chain.
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
@@ -1165,15 +1353,26 @@ export const AgentTierStatus: React.FC<{
               <div className="grid grid-cols-5 gap-2">
                 {DAILY_LIMIT_PRESETS.map((amount) => {
                   const selected = amount === pendingDailyLimit;
+                  // Dim (but don't disable) chips above the user's stable
+                  // balance so they understand the limit but can still pick
+                  // it if they plan to top up.
+                  const aboveBalance =
+                    isChainSupported &&
+                    !portfolio.isLoading &&
+                    stableBalanceOnChain.total > 0 &&
+                    amount > stableBalanceOnChain.total;
                   return (
                     <button
                       key={amount}
                       type="button"
                       onClick={() => setPendingDailyLimit(amount)}
+                      title={aboveBalance ? "More than what's in your wallet right now" : undefined}
                       className={`py-2 text-xs font-bold rounded-xl border transition-colors ${
                         selected
                           ? "bg-purple-600 border-purple-600 text-white"
-                          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-400"
+                          : aboveBalance
+                            ? "bg-white/40 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-purple-300"
+                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-400"
                       }`}
                     >
                       ${amount}
@@ -1193,7 +1392,7 @@ export const AgentTierStatus: React.FC<{
               <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 mt-0.5">•</span>
-                  <span>Auto-Saver may swap up to <strong>${pendingDailyLimit}</strong> of your USDC each day.</span>
+                  <span>Auto-Saver may swap up to <strong>${pendingDailyLimit}</strong> of your stables each day.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 mt-0.5">•</span>
@@ -1202,6 +1401,10 @@ export const AgentTierStatus: React.FC<{
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 mt-0.5">•</span>
                   <span>Only into approved stablecoins or gold (USDC, EURC, PAXG).</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-purple-500 mt-0.5">•</span>
+                  <span>If your wallet is empty when it runs, it just waits — no errors, no fees.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-purple-500 mt-0.5">•</span>
@@ -1219,9 +1422,10 @@ export const AgentTierStatus: React.FC<{
               </button>
               <button
                 onClick={handleRequestPermission}
-                className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 text-white rounded-2xl py-4 shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-all active:scale-95"
+                disabled={!isChainSupported}
+                className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-all active:scale-95"
               >
-                Approve in wallet
+                {isChainSupported ? "Approve in wallet" : "Switch network first"}
               </button>
             </div>
           </div>
