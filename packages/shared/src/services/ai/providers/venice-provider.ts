@@ -57,14 +57,14 @@ export class VeniceProvider extends BaseAIProvider {
     };
 
     // Note: we intentionally do NOT pass response_format to Venice.
-    // Most Venice models (e.g. llama-3.3-70b) reject response_format with 400.
+    // Most Venice models (e.g. deepseek-v4-flash) reject response_format with 400.
     // The system prompt already asks for JSON, and cleanJsonResponse extracts it
     // from the model's text output. This works across all Venice models.
     // Cast to any to include Venice-specific `venice_parameters` field
     // (the OpenAI SDK types don't know about Venice's extensions).
     const completion = await withTimeout(
       this.client!.chat.completions.create({
-        model: options.model ?? "llama-3.3-70b",
+        model: options.model ?? "deepseek-v4-flash",
         messages: options.messages,
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens,
@@ -87,7 +87,7 @@ export class VeniceProvider extends BaseAIProvider {
     return {
       data: this.cleanJsonResponse(content),
       provider: 'venice',
-      modelUsed: options.model ?? "llama-3.3-70b",
+      modelUsed: options.model ?? "deepseek-v4-flash",
       citations: this.extractCitations(content)
     };
   }

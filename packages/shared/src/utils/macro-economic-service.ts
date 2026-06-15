@@ -6,7 +6,7 @@
 
 import { unifiedCache } from "./unified-cache-service";
 import { circuitBreakerManager } from "./circuit-breaker-service";
-import { CURRENCY_TO_COUNTRY } from "../constants/inflation";
+import { CURRENCY_TO_COUNTRY, PRIORITY_COUNTRIES } from "../constants/inflation";
 
 export interface MacroIndicator {
   gdpGrowth: number | null; // % Annual Growth
@@ -139,7 +139,7 @@ export class MacroEconomicService {
       async () => {
         return unifiedCache.getOrFetch(
           cacheKey,
-          () => this.fetchFromProxy(countries),
+          () => this.fetchFromWorldBank(countries),
           "stable", // Macro data is very stable (yearly)
         );
       },
@@ -202,44 +202,92 @@ export class MacroEconomicService {
   /**
    * Fetch from API proxy with enhanced error handling
    */
-  private async fetchFromProxy(
+  private async fetchFromWorldBank(
     countries?: string[],
   ): Promise<{ data: Record<string, MacroIndicator>; source: string }> {
-    const query = countries ? `?countries=${countries.join(",")}` : "";
-    
-    // Determine the base URL based on environment
-    const isServer = typeof window === 'undefined';
-    const baseUrl = isServer 
-      ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
-      : '';
-    
-    const url = `${baseUrl}/api/macro${query}`;
-    
-    try {
-      const response = await fetch(url, {
-        signal: AbortSignal.timeout(15000),
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-        }
-      });
+    const countryCodes = countries && countries.length > 0 ? countries : PRIORITY_COUNTRIES;
+    const currentYear = new Date().getFullYear();
+    const dateRange = `${currentYear - 3}:${currentYear}`;
+    const countryParam = countryCodes.join(";");
+    const WORLD_BANK_URL = "https://api.worldbank.org/v2";
 
-      if (!response.ok) {
-        throw new Error(`Macro API error: ${response.status} ${response.statusText}`);
+    const indicators = {
+      gdpGrowth: "NY.GDP.MKTP.KD.ZG",
+      corruptionControl: "CC.PER",
+      politicalStability: "PV.PER",
+      ruleOfLaw: "RL.PER",
+      governmentEffectiveness: "GE.PER",
+    };
+
+    const result: Record<string, MacroIndicator> = {};
+
+    const requests = Object.entries(indicators).map(async ([field, id]) => {
+      try {
+        const source = field === "gdpGrowth" ? 2 : 3;
+        const res = await fetch(
+          `${WORLD_BANK_URL}/country/${countryParam}/indicator/${id}?format=json&per_page=1000&date=${dateRange}&source=${source}`,
+          { signal: AbortSignal.timeout(12000) },
+        );
+        if (!res.ok) return { field, data: null };
+        const data = await res.json();
+        return { field, data };
+      } catch (e) {
+        console.warn(`[Macro] Failed to fetch ${field}:`, e);
+        return { field, data: null };
       }
+    });
 
-      const data = await response.json();
-      
-      // Validate response structure
-      if (!data || typeof data !== 'object') {
-        throw new Error('Invalid response format from macro API');
-      }
+    const responses = await Promise.all(requests);
 
-      return { data, source: "api" };
-    } catch (error) {
-      console.error(`[Macro API] Failed to fetch data:`, error);
-      throw error;
+    interface WorldBankItem {
+      countryiso3code: string;
+      date: string;
+      value: number | null;
     }
+
+    responses.forEach(({ field, data }) => {
+      if (!Array.isArray(data) || data.length < 2 || !Array.isArray(data[1]))
+        return;
+
+      data[1].forEach((item: WorldBankItem) => {
+        const code = item.countryiso3code;
+        if (!code) return;
+
+        const year = parseInt(item.date);
+        const value = item.value;
+        if (value === null) return;
+
+        if (!result[code]) {
+          result[code] = {
+            gdpGrowth: null,
+            corruptionControl: null,
+            politicalStability: null,
+            ruleOfLaw: null,
+            governmentEffectiveness: null,
+            year: 0,
+          };
+        }
+
+        const val = parseFloat(Number(value).toFixed(1));
+        const record = result[code];
+
+        if (field === "gdpGrowth" && record.gdpGrowth === null) {
+          record.gdpGrowth = val;
+        } else if (field === "corruptionControl" && record.corruptionControl === null) {
+          record.corruptionControl = val;
+        } else if (field === "politicalStability" && record.politicalStability === null) {
+          record.politicalStability = val;
+        } else if (field === "ruleOfLaw" && record.ruleOfLaw === null) {
+          record.ruleOfLaw = val;
+        } else if (field === "governmentEffectiveness" && record.governmentEffectiveness === null) {
+          record.governmentEffectiveness = val;
+        }
+
+        if (year > record.year) record.year = year;
+      });
+    });
+
+    return { data: result, source: "api" };
   }
 
   /**
