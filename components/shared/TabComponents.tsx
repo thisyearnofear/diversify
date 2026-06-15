@@ -669,12 +669,19 @@ export const CollapsibleSection = ({
   children,
   defaultOpen = false,
   badge,
+  subtitle,
 }: {
   title: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
   defaultOpen?: boolean;
   badge?: React.ReactNode;
+  /**
+   * Optional one-line subtitle rendered next to the title in the header.
+   * Visible in both collapsed and expanded states. Used to give the user
+   * a teaser of what's inside without forcing them to expand the section.
+   */
+  subtitle?: React.ReactNode;
 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
@@ -683,13 +690,22 @@ export const CollapsibleSection = ({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           {icon}
-          <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{title}</span>
+          <div className="flex flex-col items-start min-w-0">
+            <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm truncate w-full text-left">
+              {title}
+            </span>
+            {subtitle && (
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-normal truncate w-full text-left">
+                {subtitle}
+              </span>
+            )}
+          </div>
           {badge}
         </div>
         <svg
-          className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+          className={`w-5 h-5 text-gray-500 dark:text-gray-400 transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
