@@ -114,8 +114,10 @@ export function getSmartAccountProvider(): SmartAccountProvider {
   if (!initialized) {
     const { PrivySafeProvider } = require('./providers/privy-safe-provider');
     const { Safe4337Provider } = require('./providers/safe-4337-provider');
+    const { MetaMaskDelegationProvider } = require('./providers/metamask-delegation-provider');
     if (!providers.has('privy')) providers.set('privy', () => new PrivySafeProvider());
     if (!providers.has('safe4337')) providers.set('safe4337', () => new Safe4337Provider());
+    if (!providers.has('metamask-delegation')) providers.set('metamask-delegation', () => new MetaMaskDelegationProvider());
     initialized = true;
   }
 

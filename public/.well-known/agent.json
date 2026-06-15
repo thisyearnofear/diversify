@@ -35,6 +35,11 @@
       "id": "cross_chain_rwa",
       "name": "Cross-Chain RWA Access",
       "description": "Automated access to tokenized Gold, Treasury yields, and Commodities across Celo and Arbitrum."
+    },
+    {
+      "id": "metamask_smart_accounts",
+      "name": "MetaMask Smart Accounts (ERC-7715/7710)",
+      "description": "Non-custodial agent delegation via MetaMask Smart Accounts Kit. Users grant scoped ERC-7715 permissions from their smart account; the agent redeems via ERC-7710 without ever holding user keys."
     }
   ],
   "api": {

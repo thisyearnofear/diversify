@@ -134,6 +134,20 @@ export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent
 export { getYieldRecommendations, yieldAdvisorService } from './services/ai/yield-advisor.service';
 export { BrightDataService } from './services/bright-data-service';
 export { cogneeMemoryService } from './services/cognee-memory-service';
+export {
+  requestGuardianAdvancedPermission,
+  isErc7715Supported,
+  ERC7715_SUPPORTED_CHAIN_IDS,
+  GUARDIAN_ADVANCED_PERMISSION_CHAIN_ID,
+  type RequestAdvancedPermissionParams,
+  type GrantedAdvancedPermission,
+} from './services/erc7715-grant';
+export {
+  MetaMaskDelegationProvider,
+  setDelegationContextResolver,
+  type ResolvedDelegationContext,
+  type DelegationContextResolver,
+} from './services/vault/providers/metamask-delegation-provider';
 export { startBrightDataWarming, stopBrightDataWarming } from './services/bright-data-warmer';
 export type {
   BrightDataCentralBankAnnouncement,

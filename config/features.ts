@@ -43,12 +43,18 @@ export const AUTONOMOUS_FEATURES = {
    */
   ARC_NETWORK: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true',
 
-  /** 
+  /**
    * Premium data via x402 payments
    * Status: Requires Arc Network
    */
   PREMIUM_DATA: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true' &&
     process.env.ENABLE_AUTONOMOUS_MODE === 'true',
+
+  /**
+   * MetaMask Smart Accounts Kit — ERC-7715/7710 delegation
+   * Status: Requires MetaMask Flask, EIP-7702 chains only (Arbitrum One)
+   */
+  METAMASK_DELEGATION: process.env.SMART_ACCOUNT_PROVIDER === 'metamask-delegation',
 
 } as const;
 

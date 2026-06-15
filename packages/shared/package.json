@@ -23,6 +23,7 @@
     "@goodsdks/citizen-sdk": "^1.2.5",
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",
+    "@metamask/smart-accounts-kit": "1.6.0",
     "abitype": "1.0.6",
     "axios": "1.13.2",
     "ethers": "^5.7",

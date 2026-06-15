@@ -12,7 +12,9 @@
 import { registerProvider } from '../smart-account-provider';
 import { PrivySafeProvider } from './privy-safe-provider';
 import { Safe4337Provider } from './safe-4337-provider';
+import { MetaMaskDelegationProvider } from './metamask-delegation-provider';
 
 // Register all providers
 registerProvider('privy', () => new PrivySafeProvider());
 registerProvider('safe4337', () => new Safe4337Provider());
+registerProvider('metamask-delegation', () => new MetaMaskDelegationProvider());

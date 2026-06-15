@@ -33,7 +33,7 @@ if (fs.existsSync(envPath)) {
 // Official Celo Agent Registry Address (Placeholder - replace with official hackathon address)
 // For the "Build Agents for the Real World" Hackathon, the registry is typically provided in the Notion/Discord
 const AGENT_REGISTRY_ADDRESS = (process.env.AGENT_REGISTRY_ADDRESS ||
-  "0x643194B69E66F4c85A5994f71a7dE7374092E146") as `0x${string}`;
+  "0x643194B69e66F4C85A5994f71a7DE7374092E146") as `0x${string}`;
 
 const REGISTRY_ABI = parseAbi([
   "function registerAgent(string name, string manifestUrl, string category, string[] capabilities) external",

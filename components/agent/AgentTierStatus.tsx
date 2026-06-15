@@ -208,6 +208,8 @@ export const AgentTierStatus: React.FC<{
   }, [addActivity, guardianActive]);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showStrategySwitcher, setShowStrategySwitcher] = useState(false);
+  const [grantStatus, setGrantStatus] = useState<'idle' | 'requesting' | 'granted' | 'error'>('idle');
+  const [grantError, setGrantError] = useState<string | null>(null);
 
   const handleRequestPermission = useCallback(async () => {
     if (!address || !chainId) return;
@@ -236,6 +238,32 @@ export const AgentTierStatus: React.FC<{
       });
     }
   }, [address, chainId, requestPermission]);
+
+  const handleGrantAdvanced = useCallback(async () => {
+    if (!address) return;
+    setGrantStatus('requesting');
+    setGrantError(null);
+    try {
+      const { requestAdvancedPermission, ARBITRUM_USDC } = await import('../../lib/erc7715-client-grant');
+      const sessionAddress = (process.env.NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS || address) as `0x${string}`;
+      const periodAmount = BigInt(Math.round(dailyLimit * 1_000_000));
+      await requestAdvancedPermission({
+        sessionAccountAddress: sessionAddress,
+        tokenAddress: ARBITRUM_USDC,
+        periodAmount,
+      });
+      setGrantStatus('granted');
+      addActivity({
+        type: 'execution',
+        tier: 'GUARDIAN',
+        description: `ERC-7715 Advanced Permission granted via MetaMask ($${dailyLimit}/day on Arbitrum)`,
+        status: 'success',
+      });
+    } catch (e: any) {
+      setGrantStatus('error');
+      setGrantError(e?.message || 'Grant failed');
+    }
+  }, [address, dailyLimit, addActivity]);
 
   // Calculate performance metrics
   const metrics = useMemo(() => {
@@ -840,6 +868,40 @@ export const AgentTierStatus: React.FC<{
                       🔐 Enable Autonomous Mode
                     </button>
                   )}
+
+                  {/* ERC-7715 Advanced Permissions via MetaMask Smart Accounts Kit */}
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2 py-1 rounded-full">
+                        ERC-7715
+                      </span>
+                      <span className="text-[10px] text-gray-400 uppercase tracking-[0.16em]">
+                        MetaMask Smart Accounts
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      On-chain enforced delegation — the agent acts from your smart account without holding your keys.
+                    </p>
+                    {grantStatus === 'granted' ? (
+                      <div className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
+                        Advanced Permission active on Arbitrum
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleGrantAdvanced(); }}
+                          disabled={grantStatus === 'requesting'}
+                          className="w-full text-xs font-bold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl py-2.5 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {grantStatus === 'requesting' ? 'Waiting for MetaMask...' : 'Grant Advanced Permission'}
+                        </button>
+                        {grantError && (
+                          <p className="text-xs text-red-500 mt-2">{grantError}</p>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

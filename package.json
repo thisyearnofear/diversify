@@ -91,5 +91,10 @@
   "packageManager": "pnpm@10.30.0",
   "peerDependencies": {
     "ethers": "^6.16.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "viem": "2.44.2"
+    }
   }
 }
