@@ -1,8 +1,18 @@
 # Roadmap — 9/10 Quality Plan
 
-## Arbitrum Submission Roadmap (Active)
+## 0G Bridge by AKINDO — Buildathon Plan (Active, 2026-06)
 
-This section overrides the general improvement plan while the hackathon submission is in flight. The goal is to qualify for the Arbitrum "Overall" and "Best Agentic Project" prizes while preserving the dual-chain savings thesis: **Celo/Mento for local stablecoin savings** and **Arbitrum for deep liquidity + RWA yield + canonical on-chain ledger**.
+**This is now the active track.** The 0G Bridge by AKINDO buildathon (10 weeks, 5 waves, up to $50K in 0G credits, Demo Day at Token2049 Singapore Oct 7-8 2026) is the current submission target. Arbitrum remains in scope as a settlement rail, not the canonical trust surface.
+
+The authoritative file-by-file, wave-by-wave implementation plan lives in [`docs/0g-bridge-plan.md`](./0g-bridge-plan.md). The headline principle: **enhance the existing 0G-aware modules** (already-present in `recommendation-ledger.service.ts`, `settlement-service.ts`, `storage-service.ts`, `persistence-service.ts`, `zero-g-provider.ts`, `ZeroGAnchoringDecorator`) rather than create parallel `0g-bridge/*` surfaces. The full plan, the principle-alignment table, the pre-Wave-1 audit, and the Wave 1-5 file deltas are in the linked doc.
+
+**Wave 1 deadline:** June 26, 2026 23:59 UTC. Submission is this week; the file deltas in `0g-bridge-plan.md` §4 (Wave 1) plus the §3 audit fixes are the entire Wave 1 scope.
+
+**Why this supersedes the Arbitrum track:** Wave 3 of the 0G Bridge buildathon carries 30% of the credit allocation ($15K) and explicitly requires a 0G mainnet contract deployment. Promoting `RecommendationLedger` to 0G mainnet canonical (and demoting Arbitrum to a settlement-receipt mirror) is the highest-leverage move. Arbitrum stays live for execution; the trust root moves.
+
+## Arbitrum Submission Roadmap (Paused)
+
+The Arbitrum "Overall" and "Best Agentic Project" submission shipped in Phase 1-3 below. The Arbitrum Sepolia deployment is now a settlement rail for liquidity / RWA actions, not the canonical trust surface. The "canonical ledger" language in `recommendation-ledger.service.ts` and `RecommendationLedger.sol` is being updated to reflect 0G mainnet canonical in Wave 3 (see `0g-bridge-plan.md` §3 audit finding A4).
 
 ### Phase 1 — Arbitrum Qualification (Must-Do)
 
