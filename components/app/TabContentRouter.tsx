@@ -168,6 +168,7 @@ export default function TabContentRouter() {
                 refreshBalances={refresh}
                 refreshChainId={async () => walletChainId ?? null}
                 isBalancesLoading={isMultichainLoading}
+                portfolio={multichainPortfolio}
               />
             </ErrorBoundary>
           </TabPane>

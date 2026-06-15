@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/router";
 import SwapTab from "./SwapTab";
+import BitsoJunoCard from "../agent/BitsoJunoCard";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useWalletContext } from "../wallet/WalletProvider";
@@ -12,6 +13,7 @@ import { UnconnectedStateShell } from "../shared/UnconnectedStateShell";
 import type { HowItWorksStep } from "../shared/UnconnectedStateShell";
 import type { Region } from "@/hooks/use-user-region";
 import type { RegionalInflationData } from "@/hooks/use-inflation-data";
+import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 
 interface ExchangeTabProps {
   userRegion: Region;
@@ -19,6 +21,7 @@ interface ExchangeTabProps {
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
   isBalancesLoading?: boolean;
+  portfolio?: MultichainPortfolio;
 }
 
 const STORAGE_KEY = "exchangeMode";
@@ -47,6 +50,7 @@ export default function ExchangeTab({
   refreshBalances,
   refreshChainId,
   isBalancesLoading,
+  portfolio,
 }: ExchangeTabProps) {
   const { address } = useWalletContext();
   const { experienceMode } = useExperience();
@@ -54,7 +58,22 @@ export default function ExchangeTab({
   const isBeginner = experienceMode === "beginner";
 
   const router = useRouter();
-  const { setSwapPrefill } = useNavigation();
+  const { setSwapPrefill, navigateToSwap } = useNavigation();
+
+  const prepareMxnbSwap = () => {
+    const amount = portfolio?.totalValue
+      ? Math.max(10, Math.min(250, portfolio.totalValue * 0.2)).toFixed(2)
+      : "100.00";
+
+    navigateToSwap({
+      fromToken: "USDC",
+      toToken: "MXNB",
+      amount,
+      fromChainId: 42161,
+      toChainId: 42161,
+      reason: "Bitso/Juno MXNB hedge: Mexican peso exposure on Arbitrum with Juno support for balances, SPEI issuance, USD stablecoin conversion, and redemption.",
+    });
+  };
 
   // PERFORMANT: Deep linking — parse URL params once on mount to restore user intent
   // Supports: ?exchange=swap&from=USDm&to=KESm&amount=100
@@ -159,6 +178,11 @@ export default function ExchangeTab({
         refreshBalances={refreshBalances}
         refreshChainId={refreshChainId}
         isBalancesLoading={isBalancesLoading}
+      />
+
+      <BitsoJunoCard
+        walletConnected={!!address}
+        onPrepareSwap={prepareMxnbSwap}
       />
     </div>
   );

@@ -25,7 +25,6 @@ import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { Skeleton } from "../shared/TabComponents";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import AgentQuickActions from "../agent/AgentQuickActions";
-import BitsoJunoCard from "../agent/BitsoJunoCard";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -90,6 +89,7 @@ export default function AgentTab({
   const { askAdvisor } = useAdvisor();
   const { navigateToSwap } = useNavigation();
   const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [dismissError, setDismissError] = useState(false);
 
   const handleAskAgent = () => {
@@ -103,21 +103,6 @@ export default function AgentTab({
     askAdvisor(
       "Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.",
     );
-  };
-
-  const prepareMxnbSwap = () => {
-    const amount = portfolio?.totalValue
-      ? Math.max(10, Math.min(250, portfolio.totalValue * 0.2)).toFixed(2)
-      : "100.00";
-
-    navigateToSwap({
-      fromToken: "USDC",
-      toToken: "MXNB",
-      amount,
-      fromChainId: 42161,
-      toChainId: 42161,
-      reason: "Bitso/Juno MXNB hedge: Mexican peso exposure on Arbitrum with Juno support for balances, SPEI issuance, USD stablecoin conversion, and redemption.",
-    });
   };
 
   // Empty state when wallet not connected
@@ -198,11 +183,6 @@ export default function AgentTab({
         )}
       </ErrorBoundary>
 
-      <BitsoJunoCard
-        walletConnected={!!address}
-        onPrepareSwap={prepareMxnbSwap}
-      />
-
       {/* Actionable Recommendations — non-beginner only, shown when analysis exists */}
       {experienceMode !== "beginner" && (
         <ErrorBoundary moduleName="Portfolio Recommendations">
@@ -252,18 +232,7 @@ export default function AgentTab({
         </ErrorBoundary>
       )}
 
-      {/* Automation Settings (only in advanced mode) */}
-      {experienceMode === "advanced" && (
-        <ErrorBoundary moduleName="Automation Settings">
-          <AutomationSettings
-            config={config}
-            onConfigChange={updateConfig}
-            autonomousStatus={autonomousStatus}
-          />
-        </ErrorBoundary>
-      )}
-
-      {/* Ask Agent CTA */}
+      {/* Premium research — full-width, always visible */}
       <div className="rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/10 p-4">
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -287,21 +256,72 @@ export default function AgentTab({
         </button>
       </div>
 
-      <button
-        onClick={handleAskAgent}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-      >
-        <span>💬</span>
-        <span>Ask your Advisor</span>
-      </button>
+      {/* Ask Advisor + Quick Actions — 2-column grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <button
+          onClick={handleAskAgent}
+          className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+        >
+          <span>💬</span>
+          <span>Ask Advisor</span>
+        </button>
+        <button
+          onClick={() => setShowQuickActions(true)}
+          className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-semibold text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          <span>⚡</span>
+          <span>Quick Actions</span>
+        </button>
+      </div>
 
-      <button
-        onClick={() => setShowQuickActions(true)}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-semibold text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-      >
-        <span>⚡</span>
-        <span>Open Quick Actions</span>
-      </button>
+      {/* Protection Settings — collapsible disclosure (advanced only) */}
+      {experienceMode === "advanced" && (
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
+          <button
+            onClick={() => setShowSettings((v) => !v)}
+            aria-expanded={showSettings}
+            className="w-full flex items-center justify-between gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="size-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-base shrink-0">
+                ⚙️
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  Protection settings
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                  AI strategy, notifications, automation thresholds
+                </p>
+              </div>
+            </div>
+            <svg
+              className={`size-5 text-gray-400 shrink-0 transition-transform duration-200 ${
+                showSettings ? "rotate-180" : ""
+              }`}
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </button>
+          {showSettings && (
+            <div className="border-t border-gray-100 dark:border-gray-800">
+              <ErrorBoundary moduleName="Automation Settings">
+                <AutomationSettings
+                  config={config}
+                  onConfigChange={updateConfig}
+                  autonomousStatus={autonomousStatus}
+                />
+              </ErrorBoundary>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Actions Modal */}
       <AgentQuickActions
