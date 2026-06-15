@@ -5,6 +5,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['**/*.test.{ts,tsx}'],
+    env: {
+      NODE_ENV: 'test',
+    },
     // Use jsdom for React component tests
     environmentMatchGlobs: [
       ['components/**/*.{test.ts,test.tsx}', 'jsdom'],
