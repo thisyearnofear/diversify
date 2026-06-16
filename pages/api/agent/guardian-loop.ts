@@ -22,7 +22,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { Permission } from '../../../models/Permission';
 import { vaultStore } from '../vault/_store';
-import { claimExecutionLock, getGuardianState, pushAnchorHistory, releaseExecutionLock, updateGuardianState } from '../vault/_guardian-state';
+import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, updateGuardianState, type GuardianAnchorRecord } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared';
@@ -47,6 +47,25 @@ const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
 // remaining daily limit below. NEVER derived from expectedSavings, which is
 // projected annual purchasing-power preserved, not a spend amount.
 const DEFAULT_TRADE_USD = parseFloat(process.env.GUARDIAN_DEFAULT_TRADE_USD || '10');
+
+/**
+ * Persist an anchor to BOTH the pointer field and the rolling history, then
+ * notify SSE subscribers. Used for successful executions AND failed ones, so
+ * the proof feed always reflects the most recent ATTEMPT — a background
+ * auto-execution that fails (swap reverted, RPC error, anchor failure) is no
+ * longer invisible to the user, who previously only saw a transient entry in
+ * the cron response. The state re-read keeps history consistent with anything
+ * a parallel writer (e.g. the firecrawl webhook) landed in the meantime.
+ */
+async function persistAnchorRecord(userAddress: string, anchor: GuardianAnchorRecord): Promise<void> {
+  const currentState = await getGuardianState(userAddress);
+  const nextHistory = pushAnchorHistory(currentState?.latestAnchors, anchor);
+  await updateGuardianState(userAddress, {
+    latestAnchor: anchor,
+    latestAnchors: nextHistory,
+  });
+  guardianEventBus.publish({ type: 'anchor', address: userAddress, anchor });
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -210,13 +229,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // double-execute the same recommendation. The recommendation is only
       // cleared AFTER a successful swap, so without this lock the window
       // between rebalance() and the clear is a double-spend risk.
-      const lockAcquired = await claimExecutionLock(userAddress, recommendation.capturedAt);
-      if (!lockAcquired) {
+      const lockToken = await claimExecutionLock(userAddress, recommendation.capturedAt);
+      if (!lockToken) {
         results.push({
           userAddress,
           action: 'skip',
           status: 'locked',
           reason: 'Another execution is already in progress for this user',
+        });
+        continue;
+      }
+
+      // Idempotency gate: atomically dequeue THIS exact recommendation before
+      // executing. If a slow rebalance() overran the lock's staleness window
+      // and a second tick reclaimed the lock, that tick finds the
+      // recommendation already gone and skips here — so the same recommendation
+      // can never execute twice, and a swap that may have landed on-chain
+      // before a post-submit failure is never blindly retried.
+      const claimed = await dequeueRecommendation(userAddress, recommendation.capturedAt).catch(() => false);
+      if (!claimed) {
+        await releaseExecutionLock(userAddress, lockToken).catch(() => {});
+        results.push({
+          userAddress,
+          action: 'skip',
+          status: 'already_claimed',
+          reason: 'Recommendation already claimed by a concurrent execution',
         });
         continue;
       }
@@ -257,8 +294,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             reason: recommendation.oneLiner,
           });
 
-          // Clear the recommendation so it doesn't re-fire
-          await updateGuardianState(userAddress, { latestRecommendation: undefined });
+          // (The recommendation was already atomically dequeued before
+          // execution by the idempotency gate above, so it can't re-fire.)
 
           // Anchor to 0G RecommendationLedger on-chain and persist the
           // observable status. Awaited so a failure is recorded, not
@@ -275,10 +312,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
 
           // Persist the new anchor to BOTH the pointer field and the
-          // rolling history. The pointer is the single-source-of-truth
-          // for callers that only need the most recent entry; the
-          // history powers the proof feed's "last N" surface.
-          const newAnchor = {
+          // rolling history (and notify SSE subscribers). The pointer is the
+          // single-source-of-truth for callers that only need the most recent
+          // entry; the history powers the proof feed's "last N" surface.
+          const newAnchor: GuardianAnchorRecord = {
             status: anchor.status,
             txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
             explorerUrl: anchor.status === 'failed' ? undefined : anchor.explorerUrl,
@@ -286,25 +323,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             error: anchor.status === 'failed' ? anchor.error : undefined,
             capturedAt: new Date().toISOString(),
           };
+          await persistAnchorRecord(userAddress, newAnchor);
 
-          // Compute the updated history. We re-read state once so the
-          // history reflects anything that has landed in the meantime
-          // (e.g. a parallel firecrawl-webhook writing a recent anchor).
-          const currentState = await getGuardianState(userAddress);
-          const nextHistory = pushAnchorHistory(currentState?.latestAnchors, newAnchor);
-
-          await updateGuardianState(userAddress, {
-            latestAnchor: newAnchor,
-            latestAnchors: nextHistory,
-          });
-
-          // Notify any open SSE subscribers for this user. This is
-          // best-effort: a missing subscriber is not an error.
-          guardianEventBus.publish({
-            type: 'anchor',
-            address: userAddress,
-            anchor: newAnchor,
-          });
           if (txHash) {
             guardianEventBus.publish({
               type: 'execution',
@@ -327,12 +347,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ).catch(() => {});
 
         } else {
+          const failureReason = result.results?.[0]?.reason || 'Unknown execution failure';
           results.push({
             userAddress,
             action: 'attempted',
             status: 'execution_failed',
-            reason: result.results?.[0]?.reason || 'Unknown execution failure',
+            reason: failureReason,
           });
+          // Surface the failed attempt in the proof feed so the user sees that
+          // a background auto-execution was tried and did not land.
+          await persistAnchorRecord(userAddress, {
+            status: 'failed',
+            error: failureReason,
+            capturedAt: new Date().toISOString(),
+          }).catch(() => {});
         }
       } catch (execError: any) {
         results.push({
@@ -341,10 +369,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'error',
           reason: execError.message,
         });
+        // Surface the errored attempt in the proof feed too (e.g. RPC failure,
+        // anchor write throw) so a silent background failure is still visible.
+        await persistAnchorRecord(userAddress, {
+          status: 'failed',
+          error: execError.message,
+          capturedAt: new Date().toISOString(),
+        }).catch(() => {});
       } finally {
         // Always release the lock so a failed tick doesn't wedge the user
-        // until the staleness window elapses.
-        await releaseExecutionLock(userAddress).catch(() => {});
+        // until the staleness window elapses. Pass the token so we only
+        // release the lock we own — if a stale-reclaim handed it to another
+        // tick mid-flight, this becomes a no-op instead of clobbering theirs.
+        await releaseExecutionLock(userAddress, lockToken).catch(() => {});
       }
     }
 

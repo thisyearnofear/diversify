@@ -1,8 +1,30 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// The lock functions touch Mongo. Mock the connection (no-op) and the model so
+// we can assert the atomic-query SHAPE in isolation — specifically that the
+// release is owner-checked (filters on the claim's timestamp), which is the
+// whole point of the lock-token round trip.
+vi.mock('../../../../lib/mongodb', () => ({ default: vi.fn(async () => {}) }));
+
+const findOneAndUpdate = vi.fn();
+vi.mock('../../../../models/GuardianState', () => ({
+    GuardianState: { findOneAndUpdate: (...args: unknown[]) => findOneAndUpdate(...args) },
+}));
+
+/** A query-like return value that satisfies both `await q` and `q.lean()`. */
+function queryResult(value: unknown) {
+    const p: any = Promise.resolve(value);
+    p.lean = () => Promise.resolve(value);
+    return p;
+}
+
 import {
     MAX_ANCHOR_HISTORY,
     pruneAlertCooldowns,
     pushAnchorHistory,
+    claimExecutionLock,
+    releaseExecutionLock,
+    dequeueRecommendation,
     type GuardianAnchorRecord,
 } from '../_guardian-state';
 
@@ -112,5 +134,85 @@ describe('pushAnchorHistory', () => {
     it('respects a cap of zero (defensive: should not throw, returns [])', () => {
         const result = pushAnchorHistory([anchor('a', 1)], anchor('b', 2), 0);
         expect(result).toEqual([]);
+    });
+});
+
+describe('execution lock (owner-checked release)', () => {
+    beforeEach(() => {
+        findOneAndUpdate.mockReset();
+    });
+
+    it('claim returns the lock token (claim timestamp) when it wins', async () => {
+        const now = 1_700_000_000_000;
+        findOneAndUpdate.mockReturnValue(queryResult({ userAddress: '0xabc' }));
+
+        const token = await claimExecutionLock('0xABC', 'rec-1', 5 * 60 * 1000, now);
+
+        expect(token).toBe(new Date(now).toISOString());
+        // The claim filter only reclaims a missing or STALE lock — never a live one.
+        const [filter, update] = findOneAndUpdate.mock.calls[0];
+        expect(filter.$or).toEqual([
+            { executionLock: null },
+            { 'executionLock.claimedAt': { $lt: new Date(now - 5 * 60 * 1000) } },
+        ]);
+        expect(update.$set.executionLock.claimedAt).toEqual(new Date(now));
+    });
+
+    it('claim returns null when another tick already holds a fresh lock', async () => {
+        findOneAndUpdate.mockReturnValue(queryResult(null));
+        const token = await claimExecutionLock('0xabc', 'rec-1', 5 * 60 * 1000, Date.now());
+        expect(token).toBeNull();
+    });
+
+    it('claim returns null on a duplicate-key upsert race (11000)', async () => {
+        const p: any = Promise.reject({ code: 11000 });
+        findOneAndUpdate.mockReturnValue({ lean: () => p });
+        const token = await claimExecutionLock('0xabc', 'rec-1', 5 * 60 * 1000, Date.now());
+        expect(token).toBeNull();
+    });
+
+    it('release filters on the lock token so a tick only releases its OWN lock', async () => {
+        const now = 1_700_000_000_000;
+        findOneAndUpdate.mockReturnValue(queryResult({}));
+        const token = new Date(now).toISOString();
+
+        await releaseExecutionLock('0xABC', token);
+
+        const [filter, update] = findOneAndUpdate.mock.calls[0];
+        expect(filter.userAddress).toBe('0xabc'); // normalized lowercase
+        // Owner check: release is scoped to the document whose held lock
+        // matches our claim timestamp. If a stale-reclaim handed the lock to
+        // another tick, this filter no longer matches → no-op, not a clobber.
+        expect(filter['executionLock.claimedAt']).toEqual(new Date(token));
+        expect(update).toEqual({ $set: { executionLock: null } });
+    });
+});
+
+describe('dequeueRecommendation (idempotency gate)', () => {
+    beforeEach(() => {
+        findOneAndUpdate.mockReset();
+    });
+
+    it('returns true and atomically unsets the matched recommendation', async () => {
+        findOneAndUpdate.mockReturnValue(queryResult({ latestRecommendation: { capturedAt: 'R1' } }));
+
+        const won = await dequeueRecommendation('0xABC', 'R1');
+
+        expect(won).toBe(true);
+        const [filter, update] = findOneAndUpdate.mock.calls[0];
+        expect(filter.userAddress).toBe('0xabc'); // normalized lowercase
+        // Claim is scoped to the EXACT recommendation by capturedAt — this is
+        // what makes a given recommendation executable at most once.
+        expect(filter['latestRecommendation.capturedAt']).toBe('R1');
+        expect(update).toEqual({ $unset: { latestRecommendation: '' } });
+    });
+
+    it('returns false when the recommendation was already claimed/cleared', async () => {
+        // No document matched the capturedAt filter — another tick won first.
+        findOneAndUpdate.mockReturnValue(queryResult(null));
+
+        const won = await dequeueRecommendation('0xabc', 'R1');
+
+        expect(won).toBe(false);
     });
 });

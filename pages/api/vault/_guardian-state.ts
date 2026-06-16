@@ -175,8 +175,10 @@ export async function updateGuardianState(
 }
 
 /**
- * Atomically claim the per-user execution lock. Returns true if the caller
- * won the lock, false if another tick already holds a fresh one.
+ * Atomically claim the per-user execution lock. Returns the lock token (the
+ * claim's ISO timestamp) if the caller won the lock, or `null` if another tick
+ * already holds a fresh one. The token MUST be passed back to
+ * `releaseExecutionLock` so a tick only ever releases the lock it owns.
  *
  * This is pure per-user mutual exclusion: a caller wins only if NO lock
  * exists or the existing lock is stale (older than `staleMs`). The
@@ -194,10 +196,11 @@ export async function claimExecutionLock(
   recommendationCapturedAt: string | undefined,
   staleMs: number = 5 * 60 * 1000,
   now: number = Date.now(),
-): Promise<boolean> {
+): Promise<string | null> {
   await dbConnect();
   const normalized = normalizeUserAddress(userAddress);
   const staleBefore = new Date(now - staleMs);
+  const claimedAt = new Date(now);
 
   // Win the lock iff no document/lock exists or the lock is stale. Upsert
   // handles the first-ever write for a user.
@@ -210,7 +213,7 @@ export async function claimExecutionLock(
       ],
     },
     {
-      $set: { executionLock: { claimedAt: new Date(now), recommendationCapturedAt } },
+      $set: { executionLock: { claimedAt, recommendationCapturedAt } },
       $setOnInsert: { userAddress: normalized },
     },
     { new: true, upsert: true },
@@ -220,14 +223,58 @@ export async function claimExecutionLock(
     throw err;
   });
 
-  return res !== null;
+  return res !== null ? claimedAt.toISOString() : null;
 }
 
-/** Release the per-user execution lock once a tick finishes. */
-export async function releaseExecutionLock(userAddress: string): Promise<void> {
+/**
+ * Release the per-user execution lock once a tick finishes — but ONLY if the
+ * lock currently held matches `lockToken` (the value returned by the
+ * `claimExecutionLock` that this tick won). This owner check closes a race:
+ * if a slow tick A runs past `staleMs`, tick B can reclaim the stale lock and
+ * start a second execution. Without the owner check, A's `finally` would then
+ * delete B's live lock, reopening the double-execution window the lock exists
+ * to prevent. With it, A's release is a no-op because the stored
+ * `claimedAt` no longer matches A's token.
+ */
+export async function releaseExecutionLock(
+  userAddress: string,
+  lockToken: string,
+): Promise<void> {
   await dbConnect();
   await GuardianState.findOneAndUpdate(
-    { userAddress: normalizeUserAddress(userAddress) },
+    {
+      userAddress: normalizeUserAddress(userAddress),
+      'executionLock.claimedAt': new Date(lockToken),
+    },
     { $set: { executionLock: null } },
   );
+}
+
+/**
+ * Atomically dequeue (claim) a specific pending recommendation for execution.
+ * Returns true if THIS caller removed it, false if it was already gone — i.e.
+ * another concurrent tick claimed it, or it was already cleared.
+ *
+ * Matching on `capturedAt` makes this the idempotency gate for auto-execution:
+ * the recommendation is removed BEFORE the swap runs, so a given recommendation
+ * can be executed at most once even if a slow `rebalance()` overran the
+ * execution lock's staleness window and a second tick reclaimed the lock — that
+ * tick finds the recommendation already gone and skips. It also means a swap
+ * that may have already landed on-chain before a post-submit failure is never
+ * blindly retried (the recommendation is already dequeued). The `$unset` is the
+ * single atomic claim point; whichever tick wins it is the sole executor.
+ */
+export async function dequeueRecommendation(
+  userAddress: string,
+  capturedAt: string,
+): Promise<boolean> {
+  await dbConnect();
+  const res = await GuardianState.findOneAndUpdate(
+    {
+      userAddress: normalizeUserAddress(userAddress),
+      'latestRecommendation.capturedAt': capturedAt,
+    },
+    { $unset: { latestRecommendation: '' } },
+  ).lean();
+  return res !== null;
 }
