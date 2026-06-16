@@ -1,9 +1,22 @@
 /**
- * Permission Model — MongoDB schema for ERC-7715 agent permissions.
+ * Permission Model — MongoDB schema for ERC-7715-style agent permissions.
  *
  * Replaces the in-memory session store with persistent, auditable permissions.
- * The user signs an EIP-712 permission granting the agent scoped spending authority.
- * The signature itself is the on-chain proof; this model is for server-side auth checks.
+ * The user signs an EIP-712 permission (verified server-side on write, see
+ * `erc7715-service.ts`), which is cryptographic CONSENT that binds the grant to
+ * the user's wallet.
+ *
+ * ⚠️ Enforcement is app-layer, not on-chain (today). On the production Celo /
+ * Mento path the bounds in this document — `dailyLimitUSD`, `spendingLimitUSD`,
+ * `allowedTokens`, `expiresAt`, `status` — are enforced only in application code
+ * (`VaultService.validateSwap` + the guardian-loop gates), because execution
+ * goes through a server-custodied smart account (Privy Safe) / `VAULT_PRIVATE_KEY`.
+ * The signature is consent, NOT an on-chain spending constraint, and `revoke`
+ * is a status flag here, not an on-chain revocation. True on-chain enforcement
+ * (ERC-7710 redemption via a DelegationManager) exists in
+ * `providers/metamask-delegation-provider.ts` but is dark and EIP-7702-only
+ * (no Celo support). See `docs/guardian-enforcement-model.md` for the current
+ * model, the residual gap, and the hybrid plan.
  */
 
 import mongoose, { Schema, Document } from 'mongoose';

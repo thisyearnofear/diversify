@@ -1,7 +1,7 @@
 # DiversiFi: The Proactive AI Guardian
 ## Autonomous Savings Protection for Volatile Economies
 
-DiversiFi is an autonomous savings guardian. It protects stablecoin savings from local inflation by routing capital between **Celo/Mento** (local stablecoins, low-cost savings) and **Arbitrum** (deep liquidity, RWA yield). Every high-impact Guardian decision is verifiable: the full reasoning is encrypted and stored on **0G**, the decision hash is recorded on-chain, and autonomous execution stays within user-signed ERC-7715 permission bounds.
+DiversiFi is an autonomous savings guardian. It protects stablecoin savings from local inflation by routing capital between **Celo/Mento** (local stablecoins, low-cost savings) and **Arbitrum** (deep liquidity, RWA yield). Every high-impact Guardian decision is verifiable: the full reasoning is encrypted and stored on **0G**, the decision hash is recorded on-chain, and autonomous execution stays within user-signed ERC-7715-style permission bounds (currently enforced in application code, not on-chain — see [`docs/guardian-enforcement-model.md`](./docs/guardian-enforcement-model.md)).
 
 **Live App:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app)  
 **Hackathon Tracks:** 🏆 Arbitrum Overall / Best Agentic Project · 🤖 Agentic Economy · 🛡️ Verifiable AI (0G) · 🪙 Autonomous Payments (Arc)

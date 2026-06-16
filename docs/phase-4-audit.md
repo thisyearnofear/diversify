@@ -196,6 +196,14 @@ The 0.1 I held back is for the duplicate dry-run button (3.3 residual) and the r
 
 **Re-checked 2026-06-11:** the duplicate dry-run button is **fixed** in commit `6e1126f`, and the rules-of-hooks cluster is **fixed** in commit `78fdddc` (moved the early return to the end of the component, killing all 14 warnings). The off-by-one "bug" in `guardian-loop.ts` turned out to be a misread (see 2.8).
 
+### 3.4 — Residual: Guardian permission enforcement is app-layer, not on-chain
+
+**Added 2026-06-16.** This is the *one* ceiling that hardening alone cannot close. The user's signed permission is cryptographic *consent*, but its bounds (`dailyLimitUSD`, `spendingLimitUSD`, `allowedTokens`, `expiresAt`, `status`) are enforced only in `VaultService.validateSwap` and the guardian-loop gates — execution signs through a server-custodied smart account (Privy Safe, the production default) or `VAULT_PRIVATE_KEY`. The chain imposes no limit on what that custodial signer can do. "Revoke" is a MongoDB status flag, not an on-chain revocation. A real on-chain path exists (`providers/metamask-delegation-provider.ts`, ERC-7710 redemption) but is dark and EIP-7702-only (no Celo support).
+
+**Mitigation in place:** the 2026-06 hardening pass made the app-layer enforcement robust (atomic state, double-execute guard, wei math, dequeue-before-execute, first-execution consent gate, validator bypass closure, daily-limit clamp). These remain valuable as defense-in-depth even after on-chain enforcement lands; they do not, by themselves, remove server trust.
+
+**Owner / status:** deferred architecture workstream. Tracked in detail at [`docs/guardian-enforcement-model.md`](./guardian-enforcement-model.md) (decision: hybrid — keep Celo on the app-enforced Privy path, pursue chain-enforced redemption on EIP-7702 chains when Guardian execution lands there).
+
 ---
 
 ## 4. Recommended Phase 5 candidates (in order of value × cost)

@@ -1038,7 +1038,7 @@ export const AgentTierStatus: React.FC<{
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                      Have your wallet enforce the daily limit on-chain. Best if you already use MetaMask.
+                      Have your wallet co-sign an on-chain spending cap via an ERC-7715 delegation. Best if you already use MetaMask.
                       {!isOnArbitrum && ' Available on Arbitrum.'}
                     </p>
                     {grantStatus === 'granted' ? (

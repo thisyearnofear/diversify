@@ -66,7 +66,7 @@ A stablecoin saver who wants to protect purchasing power but does not want to ma
 |------|--------|
 | **AI inference** | Multi-provider chain: Gemini Flash → Venice → Featherless → 0G Serving → Modal, with circuit breakers and 5-min caching |
 | **Swap execution** | 12+ strategies: Mento (Celo), LiFi, 1inch, Uniswap V3, Hyperliquid perps, direct RWA, Arbitrum-native DEX, Curve Arc, Emerging Markets |
-| **Guardian loop** | Cron-driven autonomous execution with ERC-7715 permission enforcement, confidence thresholds, and daily caps |
+| **Guardian loop** | Cron-driven autonomous execution with user-signed permission enforcement (app-layer; ERC-7710 on-chain enforcement is deferred), confidence thresholds, and daily caps |
 | **x402 payments** | HTTP 402 challenge → real Arc USDC settlement → paid evidence with on-chain tx proof |
 | **0G verifiability** | Full stack: Serving (inference) → Storage (evidence CID) → DA (state) → Chain (RecommendationLedger) |
 | **Live data** | 12+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
@@ -120,4 +120,4 @@ People in emerging markets who:
 
 ## Current Priorities
 
-See `roadmap.md` for the 14-day improvement plan targeting 9/10 across Product Design, UI/UX, Cogency, Performance, and Architecture.
+See `roadmap.md` for the 14-day improvement plan targeting 9/10 across Product Design, UI/UX, Cogency, Performance, and Architecture.an targeting 9/10 across Product Design, UI/UX, Cogency, Performance, and Architecture.

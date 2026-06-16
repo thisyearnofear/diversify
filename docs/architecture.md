@@ -1,6 +1,8 @@
 # Architecture
 
-DiversiFi is an AI-powered autonomous savings guardian. It protects stablecoin savings from local inflation by routing capital between **Celo/Mento** (local stablecoins, low-cost savings) and **Arbitrum** (deep liquidity, RWA yield). The architecture combines multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — all anchored to on-chain verifiability via 0G and bounded by user-signed ERC-7715 permissions.
+DiversiFi is an AI-powered autonomous savings guardian. It protects stablecoin savings from local inflation by routing capital between **Celo/Mento** (local stablecoins, low-cost savings) and **Arbitrum** (deep liquidity, RWA yield). The architecture combines multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — all anchored to on-chain verifiability via 0G and scoped by user-signed ERC-7715-style permissions.
+
+> **Enforcement model (important):** the user-signed permission is cryptographic *consent*, verified server-side. Its spending bounds are currently enforced in **application code**, not on-chain — execution on Celo/Mento runs through a server-custodied smart account. True on-chain enforcement (ERC-7710 redemption) is the residual gap. See [`docs/guardian-enforcement-model.md`](./guardian-enforcement-model.md).
 
 ## Recent Hardening (2026-06)
 
@@ -122,7 +124,7 @@ Strategies are tried in order. The orchestrator tracks per-strategy performance 
 
 ## Guardian Autonomous Loop
 
-The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes within user-signed ERC-7715 permission bounds:
+The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes within user-signed ERC-7715-style permission bounds (app-layer enforcement; on-chain ERC-7710 redemption is deferred — see [`guardian-enforcement-model.md`](./guardian-enforcement-model.md)):
 
 ```
 1. Firecrawl detects macro change

@@ -73,7 +73,7 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 ### Security
 - `GUARDIAN_LOOP_SECRET` protects the cron endpoint (server-to-server only)
 - `FIRECRAWL_WEBHOOK_SECRET` authenticates incoming Firecrawl webhooks
-- User's ERC-7715 permission bounds are always enforced (daily limit, allowed tokens, expiry)
+- User's permission bounds are always enforced (daily limit, allowed tokens, expiry). **Enforcement is app-layer**, not on-chain, on the production Celo/Mento path — see `docs/guardian-enforcement-model.md`.
 - `GUARDIAN_CONFIDENCE_THRESHOLD` (default 0.6) prevents low-confidence auto-execution
 - **ERC-7715 permission integrity:** `/api/vault/permission` POST verifies the EIP-712 typed-data signature against the user's wallet on the server (`ERC7715Service.verifySignedPermission`). Requests with a missing, malformed, or non-recovering signature are rejected with `400` before any permission is persisted. The `signature: 'unsigned'` fallback has been removed.
 
