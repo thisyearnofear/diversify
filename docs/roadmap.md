@@ -23,7 +23,7 @@ The Arbitrum "Overall" and "Best Agentic Project" submission shipped in Phase 1-
 | 3 | Deploy `StrategyVault` on Arbitrum Sepolia | Arbitrum-facing vault for liquidity/RWA actions | `scripts/deploy-all.sh arbitrum_sepolia --verify` → `scripts/DeployArbitrum.s.sol` |
 | 4 | Deploy `AgenticHub` on Arbitrum Sepolia | Arbitrum execution coordinator | `scripts/deploy-all.sh arbitrum_sepolia --verify` → `scripts/DeployArbitrum.s.sol` |
 | 5 | Record deployed addresses in config | Frontend/services need deterministic addresses | `config/index.ts`, `.env.example` |
-| 6 | Make `RecommendationLedger` service chain-aware | Support both 0G mirror and Arbitrum canonical ledger | `packages/shared/src/services/recommendation-ledger.service.ts` |
+| 6 | Make `RecommendationLedger` service chain-aware | Support Arbitrum mirror and 0G mainnet canonical (Wave 3) | `packages/shared/src/services/recommendation-ledger.service.ts` |
 | 7 | Add Arbitrum to wagmi/Privy frontend config | Judges' wallets must connect to the right network | `components/app/ProviderTree.tsx`, `context/PrivyProvider.tsx` |
 | 8 | Add Arbitrum executor to Guardian loop | Route liquidity/RWA actions to Arbitrum | `pages/api/agent/guardian-loop.ts`, `packages/shared/src/services/execution/` |
 

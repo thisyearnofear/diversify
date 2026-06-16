@@ -1,10 +1,12 @@
 /**
  * Recommendation Ledger Service
  *
- * Records and queries AI recommendations on-chain via the RecommendationLedger
- * contract. The canonical ledger for the Arbitrum hackathon submission lives on
- * Arbitrum Sepolia (chainId 421614); the previous 0G Galileo Testnet deployment
- * is retained as an optional audit mirror.
+ * Records and queries AI recommendations on-chain via the chain-aware
+ * RecommendationLedger contract. The default chain is configurable via
+ * `LEDGER_DEFAULT_CHAIN_ID` and `ZERO_G_MAINNET_LEDGER_CONTRACT`; Arbitrum
+ * Sepolia and 0G Galileo are both supported as registry entries, and the
+ * 0G Bridge Wave 3 work promotes 0G mainnet to canonical. Arbitrum is
+ * retained as a settlement-receipt mirror.
  *
  * Each recommendation is linked to:
  *   - 0G Storage evidence CID (AI reasoning + source data)

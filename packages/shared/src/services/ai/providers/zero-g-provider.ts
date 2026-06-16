@@ -5,9 +5,9 @@
 
 import OpenAI from "openai";
 import { BaseAIProvider } from './base-ai-provider';
-import { 
-  ChatCompletionOptions, 
-  ChatCompletionResult, 
+import {
+  ChatCompletionOptions,
+  ChatCompletionResult,
   TTSOptions,
   AIProviderConfig
 } from '../types';
@@ -16,17 +16,29 @@ import { withTimeout } from "../../../utils/promise-utils";
 export class ZeroGProvider extends BaseAIProvider {
   private client: OpenAI | null = null;
   private apiKey: string | undefined;
+  /**
+   * 0G Serving Router model. Per the 0G Router catalog, the verified chat
+   * models are `deepseek-chat-v3-0324`, `qwen-2.5-72b-instruct`, and
+   * `llama-3.3-70b-instruct`. Earlier code shipped `deepseek-v4-pro`,
+   * which is not in the catalog and silently fell back to the router's
+   * default — fixed 2026-06 as Phase 0 audit finding A1.
+   * Override per-deploy with `ZERO_G_SERVING_MODEL`.
+   */
+  private model: string;
 
   constructor(config: AIProviderConfig) {
     super(config);
     this.apiKey = config.zeroGApiKey;
+    this.model = config.zeroGModel
+      ?? process.env.ZERO_G_SERVING_MODEL
+      ?? 'deepseek-chat-v3-0324';
   }
 
   async initialize(): Promise<void> {
     if (!this.apiKey) {
       throw new Error('0G Serving API key is required');
     }
-    
+
     this.client = new OpenAI({
       baseURL: "https://router-api.0g.ai/v1",
       apiKey: this.apiKey,
@@ -48,14 +60,15 @@ export class ZeroGProvider extends BaseAIProvider {
       await this.initialize();
     }
 
+    const modelName = options.model ?? this.model;
     const completion = await withTimeout(
       this.client!.chat.completions.create({
-        model: options.model ?? "deepseek-v4-pro",
+        model: modelName,
         messages: options.messages,
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens,
         stream: false,
-        ...(options.responseFormat?.type === "json_object" 
+        ...(options.responseFormat?.type === "json_object"
           ? { response_format: { type: "json_object" } }
           : {})
       }),
@@ -63,10 +76,8 @@ export class ZeroGProvider extends BaseAIProvider {
     );
 
     const content = completion.choices[0]?.message?.content || "";
-    
-    // Clean JSON if requested
+
     if (options.responseFormat?.type === "json_object") {
-      // We'll clean and then validate by parsing
       const cleaned = this.cleanJsonResponse(content);
       try {
         JSON.parse(cleaned);
@@ -76,24 +87,23 @@ export class ZeroGProvider extends BaseAIProvider {
       return {
         data: cleaned,
         provider: 'zeroG',
-        modelUsed: options.model ?? "deepseek-v4-pro",
-        citations: undefined
+        modelUsed: modelName,
+        citations: undefined,
       };
     }
 
     return {
       data: this.cleanJsonResponse(content),
       provider: 'zeroG',
-      modelUsed: options.model ?? "deepseek-v4-pro",
-      citations: undefined
+      modelUsed: modelName,
+      citations: undefined,
     };
   }
 
-  // 0G Serving doesn't currently support TTS or transcription in this implementation
   async generateSpeech(options: TTSOptions): Promise<any> {
     throw new Error('0G Serving provider does not support TTS');
   }
-  
+
   async transcribeAudio(filePath: string): Promise<any> {
     throw new Error('0G Serving provider does not support transcription');
   }

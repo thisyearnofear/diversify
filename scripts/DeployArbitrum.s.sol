@@ -48,7 +48,9 @@ contract DeployArbitrum is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy canonical recommendation ledger on Arbitrum Sepolia
+        // 1. Deploy the Arbitrum-sepolia mirror of the recommendation ledger.
+//    0G mainnet becomes canonical in 0G Bridge Wave 3; this Arbitrum
+//    deployment is retained as a settlement-receipt mirror.
         RecommendationLedger ledger = new RecommendationLedger();
         console.log("RecommendationLedger deployed at:", address(ledger));
 

@@ -26,18 +26,23 @@ interface AnchorPayload {
 
 export class ZeroGAnchoringDecorator {
   /**
-   * Determines if a response should be anchored to 0G
-   * Based on content keywords that indicate valuable insights
+   * Cheap pre-filter: returns true if the response likely commits to a
+   * concrete action. This is the pre-upload gate — we skip 0G Storage
+   * entirely for prose-only replies.
+   *
+   * The list is intentionally tight: only action verbs that map to a
+   * real on-chain action. Words like "analyze" or "summary" used to be
+   * in here and fired on nearly every chat reply — Phase 0 audit
+   * finding A2 (2026-06) tightened this to action-only.
    */
   private shouldAnchorToZeroG(options: ChatCompletionOptions, result: string): boolean {
     const contentToCheck = (options.messages || []).map(m => m.content || '').join(' ') + ' ' + result;
     const lowerContent = contentToCheck.toLowerCase();
 
-    // Anchor if contains keywords indicating analysis, recommendations, or strategy
     const anchorKeywords = [
-      'analyze', 'analysis', 'recommend', 'recommendation',
-      'strategy', 'allocate', 'portfolio', 'invest', 'yield',
-      'risk', 'hedge', 'balance', 'summary', 'outlook'
+      'recommend', 'recommendation', 'strategy', 'strategies',
+      'allocate', 'allocation', 'rebalance', 'swap', 'exchange',
+      'deposit', 'withdraw', 'invest', 'hedge', 'protect',
     ];
 
     return anchorKeywords.some(keyword => lowerContent.includes(keyword));
@@ -73,7 +78,13 @@ export class ZeroGAnchoringDecorator {
     const contentToCheck = (options.messages || []).map(m => m.content || '').join(' ') + ' ' + result.data;
     const lowerContent = contentToCheck.toLowerCase();
 
-    const recommendationKeywords = ['recommend', 'strategy', 'allocate', 'invest'];
+    // Action verbs only — same set as shouldAnchorToZeroG above, but
+    // applied as a defence-in-depth check before the (costly) 0G Storage
+    // upload. The outer shouldAnchorToZeroG already gates the upload
+    // path; this second check would only fire if the outer were
+    // bypassed. Phase 0 audit finding A2 (2026-06) — anchored on action
+    // keywords, not prose keywords.
+    const recommendationKeywords = ['recommend', 'strategy', 'allocate', 'invest', 'rebalance', 'swap', 'deposit', 'withdraw', 'hedge', 'protect'];
     const isRecommendation = recommendationKeywords.some(keyword => lowerContent.includes(keyword));
 
     if (!isRecommendation) {

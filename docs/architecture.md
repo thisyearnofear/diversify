@@ -143,7 +143,7 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
    → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
    → Execute via /api/vault/rebalance
    → Anchor evidence bundle to 0G Storage + Cognee memory
-   → Record hash/CID on **Arbitrum RecommendationLedger** (canonical)
+   → Record hash/CID on the **chain-aware RecommendationLedger** (Arbitrum mirror today, 0G mainnet canonical in Wave 3 of the 0G Bridge buildathon)
    → Mirror optionally to 0G Galileo testnet ledger
    → Clear recommendation from guardian-state
 ```

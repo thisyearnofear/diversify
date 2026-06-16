@@ -52,7 +52,7 @@ DiversiFi is built on a deliberate chain split that matches real user needs:
 - **Arbitrum Frontend RPC**: Configured in `components/app/ProviderTree.tsx` / `context/PrivyProvider.tsx`.
 
 ### 0G Stack (Verifiable AI)
-- **RecommendationLedger Mirror** (0G Galileo Testnet, chainId `16602`): [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) — optional audit replica; the Arbitrum ledger is the canonical prize-eligible record.
+- **RecommendationLedger Mirror** (0G Galileo Testnet, chainId `16602`): [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) — optional audit replica. The 0G Bridge Wave 3 work promotes a 0G mainnet deployment to canonical.
 - **0G Storage Evidence**: Every Guardian recommendation uploads an encrypted evidence bundle (prompt + reasoning + sources) and records its CID in the Arbitrum ledger.
 - **0G Compute (Direct)**: High-impact decisions can be routed through TEE-verified providers with `processResponse()` proof verification.
 - **Verifiable AI Dashboard**: Open the **"Verifiable AI"** tab in-app to view live evidence CIDs, serving-model IDs, and chain receipts.

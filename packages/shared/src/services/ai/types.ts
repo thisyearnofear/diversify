@@ -7,6 +7,8 @@ export interface AIProviderConfig {
   geminiApiKey?: string;
   featherlessApiKey?: string;
   zeroGApiKey?: string;
+  /** Override the 0G Serving model name (default: deepseek-chat-v3-0324). */
+  zeroGModel?: string;
   modalToken?: string;
   openaiApiKey?: string;
   elevenlabsApiKey?: string;

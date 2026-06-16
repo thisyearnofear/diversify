@@ -71,7 +71,7 @@ A stablecoin saver who wants to protect purchasing power but does not want to ma
 | **0G verifiability** | Full stack: Serving (inference) → Storage (evidence CID) → DA (state) → Chain (RecommendationLedger) |
 | **Live data** | 12+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
 | **Agent memory** | Cognee for cross-session persistent context |
-| **Multi-chain** | Celo (stable savings), Arbitrum (liquidity + canonical ledger), Arc Testnet (x402 payments) |
+| **Multi-chain** | Celo (stable savings), Arbitrum (liquidity + settlement-receipt mirror), 0G (canonical trust ledger — Wave 3), Arc Testnet (x402 payments) |
 | **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |
 
 ## Product Principles
