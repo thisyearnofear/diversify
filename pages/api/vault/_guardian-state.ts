@@ -1,5 +1,5 @@
-import * as path from 'path';
-import { readJsonFile, writeJsonFile } from '../agent/_json-store';
+import dbConnect from '../../../lib/mongodb';
+import { GuardianState } from '../../../models/GuardianState';
 
 export interface GuardianRecommendationSnapshot {
   capturedAt: string;
@@ -8,6 +8,13 @@ export interface GuardianRecommendationSnapshot {
   targetToken?: string;
   oneLiner?: string;
   reasoning?: string;
+  /**
+   * Notional size of the swap in USD — the amount actually spent. This is
+   * distinct from `expectedSavings` (projected annual purchasing-power
+   * preserved). The Guardian loop sizes trades and accounts against the
+   * daily limit using THIS field, never `expectedSavings`.
+   */
+  tradeAmountUSD?: number;
   expectedSavings?: number;
   confidence?: number;
   riskLevel?: string;
@@ -73,22 +80,27 @@ export interface GuardianStateRecord {
  */
 export const MAX_ANCHOR_HISTORY = 5;
 
-type GuardianStateStore = Record<string, GuardianStateRecord>;
-
-const STORAGE_PATH =
-  process.env.GUARDIAN_STATE_PATH ||
-  path.join(process.cwd(), '.data', 'guardian-state.json');
-
 function normalizeUserAddress(userAddress: string): string {
   return userAddress.trim().toLowerCase();
 }
 
-async function loadStore(): Promise<GuardianStateStore> {
-  return readJsonFile<GuardianStateStore>(STORAGE_PATH, {});
-}
+/** Fields persisted on the GuardianState document that we project back out. */
+const STATE_FIELDS: Array<keyof GuardianStateRecord> = [
+  'latestRecommendation',
+  'latestAnchor',
+  'latestAnchors',
+  'alertCooldowns',
+];
 
-async function saveStore(store: GuardianStateStore): Promise<void> {
-  await writeJsonFile(STORAGE_PATH, store);
+function toStateRecord(doc: Record<string, any> | null): GuardianStateRecord | null {
+  if (!doc) return null;
+  const record: GuardianStateRecord = {};
+  for (const field of STATE_FIELDS) {
+    if (doc[field] !== undefined && doc[field] !== null) {
+      (record as any)[field] = doc[field];
+    }
+  }
+  return record;
 }
 
 /**
@@ -121,21 +133,101 @@ export function pushAnchorHistory(
 }
 
 export async function getGuardianState(userAddress: string): Promise<GuardianStateRecord | null> {
-  const store = await loadStore();
-  return store[normalizeUserAddress(userAddress)] || null;
+  await dbConnect();
+  const doc = await GuardianState.findOne({ userAddress: normalizeUserAddress(userAddress) }).lean();
+  return toStateRecord(doc as Record<string, any> | null);
 }
 
+/**
+ * Atomically merge `partial` into a user's Guardian state. Setting a field to
+ * `undefined` clears it (translated to a Mongo `$unset`). This is a single
+ * atomic findOneAndUpdate, so concurrent writers (cron loop + webhook) no
+ * longer clobber each other the way the old read-modify-write file store did.
+ */
 export async function updateGuardianState(
   userAddress: string,
   partial: Partial<GuardianStateRecord>,
 ): Promise<GuardianStateRecord> {
+  await dbConnect();
   const normalized = normalizeUserAddress(userAddress);
-  const store = await loadStore();
-  const nextRecord: GuardianStateRecord = {
-    ...(store[normalized] || {}),
-    ...partial,
-  };
-  store[normalized] = nextRecord;
-  await saveStore(store);
-  return nextRecord;
+
+  const $set: Record<string, unknown> = {};
+  const $unset: Record<string, ''> = {};
+  for (const [key, value] of Object.entries(partial)) {
+    if (value === undefined) {
+      $unset[key] = '';
+    } else {
+      $set[key] = value;
+    }
+  }
+
+  const update: Record<string, unknown> = { $setOnInsert: { userAddress: normalized } };
+  if (Object.keys($set).length > 0) update.$set = $set;
+  if (Object.keys($unset).length > 0) update.$unset = $unset;
+
+  const doc = await GuardianState.findOneAndUpdate(
+    { userAddress: normalized },
+    update,
+    { new: true, upsert: true },
+  ).lean();
+
+  return toStateRecord(doc as Record<string, any>) || {};
+}
+
+/**
+ * Atomically claim the per-user execution lock. Returns true if the caller
+ * won the lock, false if another tick already holds a fresh one.
+ *
+ * This is pure per-user mutual exclusion: a caller wins only if NO lock
+ * exists or the existing lock is stale (older than `staleMs`). The
+ * staleness reclaim is the ONLY way to take a held lock, so a crashed tick
+ * can't wedge a user forever while a live, in-flight tick is never preempted.
+ *
+ * `recommendationCapturedAt` is recorded on the lock for observability only —
+ * it is deliberately NOT a claim condition. An earlier version let a caller
+ * win whenever the stored recommendation differed, which allowed a newly
+ * arrived recommendation (e.g. from the firecrawl webhook) to steal a live
+ * lock mid-`rebalance()` and run a second execution concurrently.
+ */
+export async function claimExecutionLock(
+  userAddress: string,
+  recommendationCapturedAt: string | undefined,
+  staleMs: number = 5 * 60 * 1000,
+  now: number = Date.now(),
+): Promise<boolean> {
+  await dbConnect();
+  const normalized = normalizeUserAddress(userAddress);
+  const staleBefore = new Date(now - staleMs);
+
+  // Win the lock iff no document/lock exists or the lock is stale. Upsert
+  // handles the first-ever write for a user.
+  const res = await GuardianState.findOneAndUpdate(
+    {
+      userAddress: normalized,
+      $or: [
+        { executionLock: null },
+        { 'executionLock.claimedAt': { $lt: staleBefore } },
+      ],
+    },
+    {
+      $set: { executionLock: { claimedAt: new Date(now), recommendationCapturedAt } },
+      $setOnInsert: { userAddress: normalized },
+    },
+    { new: true, upsert: true },
+  ).lean().catch((err: any) => {
+    // Duplicate-key (11000) means another tick won the upsert race first.
+    if (err?.code === 11000) return null;
+    throw err;
+  });
+
+  return res !== null;
+}
+
+/** Release the per-user execution lock once a tick finishes. */
+export async function releaseExecutionLock(userAddress: string): Promise<void> {
+  await dbConnect();
+  await GuardianState.findOneAndUpdate(
+    { userAddress: normalizeUserAddress(userAddress) },
+    { $set: { executionLock: null } },
+  );
 }

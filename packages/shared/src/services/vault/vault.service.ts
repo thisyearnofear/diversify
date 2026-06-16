@@ -512,8 +512,16 @@ export class VaultService {
     if (!permission.allowedActions.includes('swap') && !permission.allowedActions.includes('rebalance')) {
       return { allowed: false, reason: 'Swap not in allowed actions' };
     }
-    if (!permission.allowedTokens.includes(rec.tokenIn) && !permission.allowedTokens.includes(rec.tokenOut)) {
-      return { allowed: false, reason: 'Token not in allowed list' };
+    // The acquired (destination) token must be explicitly allowed. Checking
+    // tokenIn OR tokenOut was a bypass: tokenIn is always the funding token
+    // (cUSD), so an OR check let the agent acquire ANY tokenOut. A wildcard
+    // '*' opts into any destination token. Token comparison is
+    // case-insensitive to match the guardian-loop gate.
+    const allowedTokens = permission.allowedTokens.map((t) => t.toLowerCase());
+    const destinationAllowed =
+      allowedTokens.includes('*') || allowedTokens.includes(rec.tokenOut.toLowerCase());
+    if (!destinationAllowed) {
+      return { allowed: false, reason: `Destination token ${rec.tokenOut} not in allowed list` };
     }
     if (permission.spentTodayUSD + rec.estimatedAmountUSD > permission.dailyLimitUSD) {
       return {

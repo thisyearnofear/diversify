@@ -43,7 +43,12 @@ async function resolveRecommendations(
   const latestRecommendation = guardianState?.latestRecommendation;
   if (!latestRecommendation) return [];
 
-  const fallbackAmount = Math.max(25, Math.min(100, Math.round((latestRecommendation.expectedSavings || 25) / 2) || 25));
+  // Size from the explicit trade notional when present. Fall back to a
+  // bounded default — never derive the spend from expectedSavings, which is
+  // projected annual purchasing-power preserved, not an amount to spend.
+  const fallbackAmount = latestRecommendation.tradeAmountUSD && latestRecommendation.tradeAmountUSD > 0
+    ? Math.max(1, Math.min(100, Math.round(latestRecommendation.tradeAmountUSD)))
+    : 10;
   const reason = latestRecommendation.oneLiner
     || latestRecommendation.reasoning
     || (dryRun

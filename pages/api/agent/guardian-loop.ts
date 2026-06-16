@@ -22,7 +22,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { Permission } from '../../../models/Permission';
 import { vaultStore } from '../vault/_store';
-import { getGuardianState, pushAnchorHistory, updateGuardianState } from '../vault/_guardian-state';
+import { claimExecutionLock, getGuardianState, pushAnchorHistory, releaseExecutionLock, updateGuardianState } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared';
@@ -42,6 +42,11 @@ const GUARDIAN_LOOP_SECRET = (() => {
 })();
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
 const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
+// Default per-trade notional (USD) when a recommendation does not carry an
+// explicit tradeAmountUSD. Kept small and always clamped to the user's
+// remaining daily limit below. NEVER derived from expectedSavings, which is
+// projected annual purchasing-power preserved, not a spend amount.
+const DEFAULT_TRADE_USD = parseFloat(process.env.GUARDIAN_DEFAULT_TRADE_USD || '10');
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -128,18 +133,36 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      // Check daily spending limit
+      // Check daily spending limit. The trade NOTIONAL is the explicit
+      // tradeAmountUSD on the recommendation, falling back to a small
+      // default. It is then clamped to whatever remains under the daily
+      // limit. expectedSavings (annual purchasing-power preserved) is NOT a
+      // spend amount and must never size the trade.
       const today = new Date().toISOString().slice(0, 10);
       const spentToday = perm.spentDate === today ? perm.spentTodayUSD : 0;
       const remainingToday = perm.dailyLimitUSD - spentToday;
-      const estimatedCost = recommendation.expectedSavings || 25;
 
-      if (estimatedCost > remainingToday) {
+      if (remainingToday <= 0) {
         results.push({
           userAddress,
           action: 'skip',
           status: 'daily_limit_reached',
-          reason: `Estimated $${estimatedCost} > remaining $${remainingToday.toFixed(2)}/day`,
+          reason: `No daily budget remaining ($${spentToday.toFixed(2)} spent of $${perm.dailyLimitUSD}/day)`,
+        });
+        continue;
+      }
+
+      const requestedTradeUSD = recommendation.tradeAmountUSD && recommendation.tradeAmountUSD > 0
+        ? recommendation.tradeAmountUSD
+        : DEFAULT_TRADE_USD;
+      const tradeAmountUSD = Math.min(requestedTradeUSD, remainingToday);
+
+      if (tradeAmountUSD < 1) {
+        results.push({
+          userAddress,
+          action: 'skip',
+          status: 'daily_limit_reached',
+          reason: `Remaining daily budget $${remainingToday.toFixed(2)} below $1 minimum trade size`,
         });
         continue;
       }
@@ -182,19 +205,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const rebalanceRecs: RebalanceRecommendation[] = [{
-        action: 'swap',
-        urgency: 'high',
-        tokenIn: 'cUSD',
-        tokenInAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
-        tokenOut: targetToken,
-        tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[targetToken] || CELO_TOKEN_ADDRESS_BY_SYMBOL.cEUR,
-        amountIn: `${Math.max(1, Math.round(estimatedCost))}000000000000000000`,
-        reason: recommendation.oneLiner || `Guardian auto-execute: ${recommendation.reasoning || 'AI-recommended rebalance'}`,
-        estimatedAmountUSD: estimatedCost,
-      }];
+      // Atomically claim the per-user execution lock so two overlapping cron
+      // ticks (e.g. a slow tick still running when the next fires) cannot
+      // double-execute the same recommendation. The recommendation is only
+      // cleared AFTER a successful swap, so without this lock the window
+      // between rebalance() and the clear is a double-spend risk.
+      const lockAcquired = await claimExecutionLock(userAddress, recommendation.capturedAt);
+      if (!lockAcquired) {
+        results.push({
+          userAddress,
+          action: 'skip',
+          status: 'locked',
+          reason: 'Another execution is already in progress for this user',
+        });
+        continue;
+      }
 
+      // Everything after the lock claim runs inside try/finally so the lock
+      // is always released — including the wei math and rec construction
+      // below, which would otherwise leak the lock until the staleness
+      // window if they threw.
       try {
+        // cUSD is 18 decimals. Convert the USD notional to wei via integer
+        // micro-USD math (6 dp) to keep cent precision without float drift at
+        // 18 decimals. floor() so we never round UP past the daily limit.
+        const amountInWei = (BigInt(Math.floor(tradeAmountUSD * 1_000_000)) * 1_000_000_000_000n).toString();
+
+        const rebalanceRecs: RebalanceRecommendation[] = [{
+          action: 'swap',
+          urgency: 'high',
+          tokenIn: 'cUSD',
+          tokenInAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
+          tokenOut: targetToken,
+          tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[targetToken] || CELO_TOKEN_ADDRESS_BY_SYMBOL.cEUR,
+          amountIn: amountInWei,
+          reason: recommendation.oneLiner || `Guardian auto-execute: ${recommendation.reasoning || 'AI-recommended rebalance'}`,
+          estimatedAmountUSD: tradeAmountUSD,
+        }];
+
         const result = await service.rebalance(vault._id, rebalanceRecs);
 
         if (result.executed > 0) {
@@ -270,7 +318,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           cogneeMemoryService.persistInteraction(
             userAddress,
             `Guardian auto-executed: ${recommendation.oneLiner}`,
-            `Swapped ~$${estimatedCost} → ${targetToken}. Confidence: ${confidence}. Source: ${recommendation.source}. TX: ${txHash}`,
+            `Swapped ~$${tradeAmountUSD} → ${targetToken}. Confidence: ${confidence}. Source: ${recommendation.source}. TX: ${txHash}`,
             {
               action: 'autonomous_rebalance',
               sources: [recommendation.source || 'guardian-loop'],
@@ -293,6 +341,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'error',
           reason: execError.message,
         });
+      } finally {
+        // Always release the lock so a failed tick doesn't wedge the user
+        // until the staleness window elapses.
+        await releaseExecutionLock(userAddress).catch(() => {});
       }
     }
 

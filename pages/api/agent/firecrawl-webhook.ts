@@ -24,9 +24,26 @@ import { generateChatCompletion, cogneeMemoryService, recommendationLedgerServic
 import { updateGuardianState } from '../vault/_guardian-state';
 import { guardianEventBus } from './_guardian-event-bus';
 import { Permission } from '../../../models/Permission';
+import { Vault } from '../../../models/Vault';
 import dbConnect from '../../../lib/mongodb';
 
-const FIRECRAWL_WEBHOOK_SECRET = process.env.FIRECRAWL_WEBHOOK_SECRET || '';
+// Webhook secret is mandatory in production: this endpoint fans a signal into
+// every active user's guardian-state, which the autonomous loop then acts on.
+// An unauthenticated caller could therefore inject a rebalance intent for all
+// users, so we refuse to boot without a secret rather than silently accepting
+// any caller (the old `|| ''` behaviour skipped the check when unset).
+const FIRECRAWL_WEBHOOK_SECRET = (() => {
+  const secret = process.env.FIRECRAWL_WEBHOOK_SECRET;
+  if (secret && secret.length > 0) return secret;
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error(
+      'FIRECRAWL_WEBHOOK_SECRET environment variable is required in production. ' +
+      'Set it in the API runtime .env and restart so the macro-signal webhook is authenticated.',
+    );
+  }
+  console.warn('[firecrawl-webhook] FIRECRAWL_WEBHOOK_SECRET not set — webhook is UNAUTHENTICATED. Do NOT use in production.');
+  return '';
+})();
 
 interface FirecrawlWebhookPayload {
   type: string; // 'monitor.page' | 'monitor.check.completed'
@@ -118,7 +135,15 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       });
     }
 
-    // Signal is actionable — update guardian-state for all users with active permissions
+    // Signal is actionable — propagate it ONLY to users it is relevant to.
+    // A macro signal is a cUSD → targetToken rebalance intent, so a user is
+    // relevant only if BOTH:
+    //   1. the targetToken is permitted by their signed permission, and
+    //   2. their vault actually holds the source funding token (cUSD) to swap.
+    // Without this gate the webhook fans an identical recommendation into
+    // every active user's guardian-state (e.g. a cEUR intent pushed onto a
+    // user who forbids cEUR or has no cUSD to spend), which the autonomous
+    // loop would then try to act on.
     await dbConnect();
     const now = Math.floor(Date.now() / 1000);
     const activePermissions = await Permission.find({
@@ -126,15 +151,41 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       $or: [{ expiresAt: { $gt: now } }, { expiresAt: 0 }],
     }).lean();
 
+    const targetToken = parsed.targetToken || 'cEUR';
+    const targetTokenLc = targetToken.toLowerCase();
+
     let usersUpdated = 0;
+    const skipped: Array<{ userAddress: string; reason: string }> = [];
+
     for (const perm of activePermissions) {
+      // (1) Permission must allow the destination token.
+      const allowedTokens = (perm.allowedTokens || []).map((t: string) => t.toLowerCase());
+      const tokenAllowed = allowedTokens.length === 0
+        ? false // no allowlist configured → nothing is permitted, skip rather than guess
+        : allowedTokens.includes('*') || allowedTokens.includes(targetTokenLc);
+      if (!tokenAllowed) {
+        skipped.push({ userAddress: perm.userAddress, reason: `${targetToken} not permitted` });
+        continue;
+      }
+
+      // (2) Vault must hold the cUSD funding token to swap from. No funds →
+      // the signal is irrelevant to this user, so don't queue it.
+      const vault = await Vault.findOne({ userAddress: perm.userAddress }).lean();
+      const cusdAllocation = (vault?.allocations || []).find(
+        (a: { token?: string; valueUSD?: number }) => a.token?.toLowerCase() === 'cusd',
+      );
+      if (!cusdAllocation || (cusdAllocation.valueUSD ?? 0) <= 0) {
+        skipped.push({ userAddress: perm.userAddress, reason: 'no cUSD balance to rebalance' });
+        continue;
+      }
+
       const capturedAt = new Date().toISOString();
       await updateGuardianState(perm.userAddress, {
         latestRecommendation: {
           capturedAt,
           source: 'advisor-analysis',
           action: 'REBALANCE',
-          targetToken: parsed.targetToken || 'cEUR',
+          targetToken,
           oneLiner: parsed.oneLiner || 'Macro signal detected from monitored source',
           reasoning: parsed.reasoning || `Signal: ${parsed.signal}. Source: ${url}`,
           confidence: parsed.confidence,
@@ -155,7 +206,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     const anchor = await recommendationLedgerService.recordRecommendation({
       user: '0x0000000000000000000000000000000000000000', // System-level signal
       action: `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`,
-      targetToken: parsed.targetToken || '',
+      targetToken,
       reasoning: `${parsed.oneLiner}. Source: ${url}`,
       evidenceCid: '', // Could store full page content in 0G Storage
       servingModel: 'firecrawl-monitor',
@@ -174,8 +225,9 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       action: 'signal_propagated',
       signal: parsed.signal,
       confidence: parsed.confidence,
-      targetToken: parsed.targetToken,
+      targetToken,
       usersUpdated,
+      usersSkipped: skipped.length,
       anchor: {
         status: anchor.status,
         txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
