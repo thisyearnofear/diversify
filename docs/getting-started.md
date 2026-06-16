@@ -17,24 +17,7 @@ Users can sign in via email, social login, or existing wallet (Privy). No wallet
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Privy app (social login + smart accounts) |
 | `PRIVY_APP_SECRET` | Privy server SDK (session signer execution) |
 
-## Optional Environment Variables
-
-| Variable | Purpose |
-|----------|---------|
-| `VAULT_PRIVATE_KEY` | Dev fallback when Privy smart account not configured |
-| `GEMINI_API_KEY` | **Primary** AI provider (Gemini Flash / Pro). Required for Google prize track. |
-| `VENICE_API_KEY` | Secondary AI fallback |
-| `GOOGLE_AI_API_KEY` | Google AI services (embeddings etc.) |
-| `SYNTHDATA_API_KEY` | SynthData analytics |
-| `FRED_API_KEY` | Federal Reserve economic data (inflation rates) |
-| `COINGECKO_API_KEY` | Exchange rates |
-| `NEXT_PUBLIC_ENABLE_ARC` | Enable Arc testnet features in the UI |
-| `ENABLE_AUTONOMOUS_MODE` | Enable the Arc/x402 research flow |
-| `ARC_RPC_URL` | Arc RPC endpoint for on-chain payment and settlement verification |
-| `DATA_HUB_RECIPIENT_ADDRESS` | Recipient for Arc research payments |
-| `VAULT_PRIVATE_KEY` | EOA private key — funds real on-chain USDC settlements on Arc |
-| `ARC_SETTLEMENT_START_BLOCK` | Optional optimization: first Arc block to scan when deriving settlement counts from USDC transfer logs |
-| `CIRCLE_API_KEY` | Optional Circle API key for wallet/account experimentation |
+That's the minimum to run the app. Every other env var (AI providers, data feeds, Arc/x402, Circle, deployment) is documented in [`integrations.md`](./integrations.md) — pick what you need and the linked doc has the table, the purpose, and the source.
 
 ## Supported Chains
 
