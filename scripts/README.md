@@ -2,15 +2,18 @@
 
 This directory contains utility scripts for development, testing, and deployment.
 
+## Deploying
+
+The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (local build + rsync to Hetzner with a healthz gate and automatic rollback). See the script's header for env overrides (`DEPLOY_SKIP_BUILD`, `DEPLOY_SYNC_ENV`, `DEPLOY_SKIP_GATE`).
+
+Contract deploys: `./scripts/deploy-all.sh <chain> [--verify]`. See the script header for supported chains (Arbitrum One, Arbitrum Sepolia, Celo, or a custom RPC URL).
+
 ## Security Notice
 
-⚠️ **Deployment scripts with server-specific details are gitignored for security.**
-
-Files ending in `.example` are templates that should be copied and customized:
+⚠️ **Scripts with server-specific details are gitignored for security.** `.example` files are templates — copy and customize, never commit the customized version.
 
 ```bash
 # Copy example files and customize with your server details
-cp deploy-hetzner.sh.example deploy-hetzner.sh
 cp start-runtime.sh.example start-runtime.sh
 cp pm2.ecosystem.config.cjs.example pm2.ecosystem.config.cjs
 cp nginx-diversifi-api.conf.example nginx-diversifi-api.conf
@@ -20,50 +23,31 @@ cp deploy-env-to-server.sh.example deploy-env-to-server.sh
 # These customized files will NOT be committed to git
 ```
 
-## Deployment Scripts (Gitignored)
+## Gitignored (server-specific)
 
-These files contain server-specific details and should NOT be committed:
+- `start-runtime.sh` — runtime bootstrap (path, port, env)
+- `pm2.ecosystem.config.cjs` — PM2 app definition
+- `nginx-diversifi-api.conf` — Nginx reverse proxy
+- `deploy-env-to-server.sh` — `.env` sync helper
+- `setup-mongodb.sh` — MongoDB setup with auth
 
-- `deploy-hetzner.sh` - Server deployment script copied from the example template
-- `start-runtime.sh` - Runtime bootstrap script copied from the example template
-- `pm2.ecosystem.config.cjs` - PM2 app definition copied from the example template
-- `deploy-env-to-server.sh` - Environment variable deployment
-- `nginx-diversifi-api.conf` - Nginx configuration
-- `setup-mongodb.sh` - MongoDB setup script
+## Tracked
 
-## Safe to Commit
+- `deploy-to-hetzner.sh` — **the active backend deploy** (local build → rsync → PM2 restart → healthz gate). No server-specific data, safe to commit.
+- `deploy-all.sh`, `Deploy*.s.sol` — contract deployment
+- `test-guardian-loop.sh`, `check-env-drift*.sh`, `check-secrets.sh`, `server-health-check.sh` — verification helpers
+- `start-runtime.sh.example`, `pm2.ecosystem.config.cjs.example`, `nginx-diversifi-api.conf.example` — templates to copy
+- `setup-firecrawl-monitors.ts` — Firecrawl watcher registration
 
-All other scripts are safe to commit as they don't contain sensitive information:
+## Hetzner runtime shape (intended)
 
-- Development utilities
-- Test scripts
-- Generic setup helpers
-- Analysis tools
-
-## Why This Approach?
-
-Keeping deployment scripts out of version control prevents:
-
-- Exposing server hostnames and IP addresses
-- Revealing internal port numbers
-- Disclosing infrastructure topology
-- Making it easier for attackers to target your infrastructure
-
-Instead, we provide `.example` templates that can be customized per environment.
-
-The `deploy-hetzner.sh.example` template is the canonical tracked version.
-It includes runtime checks and removes `.next/cache` after successful builds so
-Hetzner does not accumulate unnecessary Next build cache over time.
-
-Use `start-runtime.sh.example` and `pm2.ecosystem.config.cjs.example` as the
-canonical tracked templates for bootstrapping the Hetzner runtime without
-committing server-specific paths or secrets.
-
-The intended Hetzner shape is:
-- source/build checkout in one directory
-- standalone runtime extracted into a separate runtime directory
+- Source/build checkout in one directory
+- Standalone runtime extracted into a separate runtime directory
 - PM2 pointed at the runtime directory, not the source checkout
 
-If a build does not emit `.next/standalone/server.js`, the deploy helper should
-fall back to running PM2 from the fresh source build instead of leaving the
-runtime on an older extracted bundle.
+If a build does not emit `.next/standalone/server.js`, the deploy helper falls back to running PM2 from the fresh source build instead of leaving the runtime on an older extracted bundle.
+
+## Removed (2026-06)
+
+- `deploy-hetzner.sh` and `deploy-hetzner.sh.example` — superseded by `deploy-to-hetzner.sh` (the Hetzner server is space-constrained and cannot build locally).
+

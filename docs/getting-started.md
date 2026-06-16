@@ -109,7 +109,7 @@ The agent runtime runs as a standalone Node.js process with PM2:
 
 1. Copy deploy scripts from `.example` files (never commit real credentials)
 2. Set environment variables on the server
-3. Run `./deploy-hetzner.sh` to push and restart
+3. Run `./scripts/deploy-to-hetzner.sh` from the project root — it builds locally, rsyncs the standalone bundle to the server, restarts PM2, and gates on `/api/healthz` with automatic rollback
 
 ### Contract Deployment (Foundry)
 

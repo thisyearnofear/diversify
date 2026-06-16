@@ -219,11 +219,12 @@ Provider priority: Farcaster > MiniPay > Injected > AppKit
 
 ### Deployment Scripts Security
 The following files are git-ignored and must be configured from `.example` templates:
-- `deploy-hetzner.sh` — Server deployment script
 - `start-runtime.sh` — Agent runtime startup
 - `pm2.ecosystem.config.cjs` — PM2 process config with env vars
 - `deploy-env-to-server.sh` — Environment sync
 - `nginx.conf` — Reverse proxy config
+
+The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (tracked, not gitignored) — see [`scripts/README.md`](../../scripts/README.md) for details.
 
 ## Rate Limits & Caching Strategy
 

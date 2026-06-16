@@ -22,7 +22,7 @@ The Core Principles are not aspirational here; they are the buildathon's grading
 | **CLEAN** | Each 0G component has exactly one owner module: Storage → `packages/shared-0g/src/services/storage-service.ts`; Serving → `packages/shared/src/services/ai/providers/zero-g-provider.ts`; Chain → `recommendation-ledger.service.ts`; DA → `packages/shared-0g/src/services/persistence-service.ts`; Pay → `settlement-service.ts`; Agentic ID → new `contracts/AgenticID.sol` (only if Wave 3/4 feature work requires it). | Cross-call between `ZeroGStorageService` and `ZeroGPersistenceService` (already coupled via `registerContent` and that coupling is fine). |
 | **MODULAR** | All 0G services are testable in isolation (no Next.js, no DB). The AI provider, the storage service, the persistence service, the settlement service, and the ledger service all instantiate without a Next.js request context. | Add 0G Pay as a class with implicit `req`/`res` state. Make `recordRecommendation` need a session. |
 | **PERFORMANT** | High-impact decisions (confidence > 0.8) take the 0G Compute Direct TEE-verified path. Low-impact decisions skip TEE attestation. 0G Storage uploads are fire-and-forget (already pattern in `ZeroGAnchoringDecorator`). 0G Pay is a non-blocking settlement (already pattern in `settleOnChain`). | Block the Guardian loop on a 0G Storage upload. Block the chat response on a 0G Compute proof. |
-| **ORGANIZED** | The 0G-Chain-specific contract lives in `contracts/` next to the existing 3 contracts. The 0G-Chain-specific Foundry config goes in `foundry.toml` next to the existing `zero_g_testnet` entry. The 0G-Chain-specific deploy script lives in `scripts/` next to `DeployArbitrum.s.sol`. The 0G-Chain-specific runbook lives in `docs/internal/` next to `DEPLOYMENT_RUNBOOK.md`. | Spawn a new top-level `0g/` directory or move chain-specific code into per-chain subfolders before we have >2 chains. |
+| **ORGANIZED** | The 0G-Chain-specific contract lives in `contracts/` next to the existing 3 contracts. The 0G-Chain-specific Foundry config goes in `foundry.toml` next to the existing `zero_g_testnet` entry. The 0G-Chain-specific deploy script lives in `scripts/` next to `DeployArbitrum.s.sol`. | Spawn a new top-level `0g/` directory or move chain-specific code into per-chain subfolders before we have >2 chains. |
 
 If a proposed change cannot point to the row above that justifies it, the change is rejected. The pre-Wave-1 PR template asks the author to fill in the principle column.
 
@@ -122,7 +122,7 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 | `pages/api/agent/guardian-loop.ts` | When recording a recommendation, also write to 0G mainnet if `ZERO_G_MAINNET_LEDGER_CONTRACT` is set (in addition to the canonical chain). This becomes the Wave 3 promotion path's "dry run." | +15 | MODULAR, PERFORMANT |
 | `packages/shared/src/services/__tests__/recommendation-ledger.service.test.ts` | Add 4 tests: 0G mainnet entry exists, `getDefaultLedgerChainId` still prefers Arbitrum in Wave 2, write to 0G mainnet returns the right `explorerUrl`, mirror result is independent of canonical result. | +60 | MODULAR |
 | `packages/shared/src/services/__tests__/settlement-service.test.ts` | Add 2 tests: ZERO_G default network, ARC override. | +25 | MODULAR |
-| `docs/internal/zero-g-mainnet-runbook.md` | (new) Step-by-step deploy + verify + revoke procedure for the 0G mainnet ledger. Mirrors the structure of `docs/internal/DEPLOYMENT_RUNBOOK.md`. | +80 | ORGANIZED |
+| `docs/internal/zero-g-mainnet-runbook.md` | (new) Step-by-step deploy + verify + revoke procedure for the 0G mainnet ledger. | +80 | ORGANIZED |
 
 **Net diff:** ~330 lines, ~11 files, 1 new deploy script, 0 new core services.
 
@@ -270,7 +270,7 @@ The Wave 1 submission is otherwise a packaging exercise. The hard work (the 0G i
 - All integrations: [`docs/integrations.md`](./integrations.md)
 - Quality roadmap: [`docs/roadmap.md`](./roadmap.md)
 - Last audit: [`docs/phase-4-audit.md`](./phase-4-audit.md)
-- Internal runbook: [`docs/internal/DEPLOYMENT_RUNBOOK.md`](./internal/DEPLOYMENT_RUNBOOK.md)
+- Internal runbook: `docs/internal/zero-g-mainnet-runbook.md` (to be created when 0G mainnet deploy happens)
 - 0G contract: [`contracts/RecommendationLedger.sol`](../contracts/RecommendationLedger.sol)
 - 0G Storage service: [`packages/shared-0g/src/services/storage-service.ts`](../packages/shared-0g/src/services/storage-service.ts)
 - 0G DA service: [`packages/shared-0g/src/services/persistence-service.ts`](../packages/shared-0g/src/services/persistence-service.ts)
@@ -282,4 +282,6 @@ The Wave 1 submission is otherwise a packaging exercise. The hard work (the 0G i
 - 0G config: [`packages/shared/src/config/index.ts`](../packages/shared/src/config/index.ts) (`NETWORKS.ZERO_G_TESTNET`, `ZERO_G_DATA_HUB_CONFIG`)
 - Foundry config: [`foundry.toml`](../foundry.toml) (`zero_g_testnet` rpc endpoint)
 - Deploy script (Arbitrum template): [`scripts/DeployArbitrum.s.sol`](../scripts/DeployArbitrum.s.sol)
+- Deploy-all script: [`scripts/deploy-all.sh`](../scripts/deploy-all.sh)
+um template): [`scripts/DeployArbitrum.s.sol`](../scripts/DeployArbitrum.s.sol)
 - Deploy-all script: [`scripts/deploy-all.sh`](../scripts/deploy-all.sh)
