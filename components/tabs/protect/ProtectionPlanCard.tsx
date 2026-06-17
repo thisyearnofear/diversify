@@ -17,7 +17,6 @@ interface Props {
   userRegion: Region;
   isComplete: boolean;
   currentGoalLabel: string;
-  onClaim?: () => void;
 }
 
 export function ProtectionPlanCard({
@@ -26,7 +25,6 @@ export function ProtectionPlanCard({
   userRegion,
   isComplete,
   currentGoalLabel,
-  onClaim,
 }: Props) {
   const isBeginner = experienceMode === "beginner";
   const { totalValue, chainCount, regionData, isLoading: isMultichainLoading, isStale } = portfolio;
@@ -55,7 +53,6 @@ export function ProtectionPlanCard({
     completeEditing, setUserGoal, setRiskTolerance, setTimeHorizon,
   } = useProtectionProfile();
 
-  const { streak, canClaim, estimatedReward } = { streak: { daysActive: 0 }, canClaim: false, estimatedReward: '' };
   if (isBeginner) {
     return (
       <Card padding="p-0" className="overflow-hidden shadow-[0_20px_50px_-24px_rgba(79,70,229,0.45)] border border-indigo-200/40 dark:border-indigo-900/40">
@@ -121,8 +118,6 @@ export function ProtectionPlanCard({
           { label: "Inflation Risk", value: Math.round(Math.max(0, 100 - (portfolio?.weightedInflationRisk ?? 0) * 10)), status: `${Math.round(portfolio?.weightedInflationRisk ?? 0)}% weighted`, icon: "🛡️", description: "Measures purchasing power loss from inflation. Each token's regional inflation rate is weighted by its share of your portfolio. Source: live inflation data service + your wallet holdings." },
         ]}
         isLoading={isMultichainLoading} isStale={isStale}
-        streak={streak} canClaim={canClaim} estimatedReward={estimatedReward}
-        onClaim={onClaim}
       >
         <div className="mt-2">
           <ProfileWizard

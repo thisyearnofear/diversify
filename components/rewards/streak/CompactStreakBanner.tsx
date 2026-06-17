@@ -19,7 +19,7 @@ export function CompactStreakBanner({
           <span className="text-2xl">🔥</span>
           <div className="text-left">
             <div className="text-sm font-black text-amber-700 dark:text-amber-400">
-              {daysActive}-Day Streak
+              Day {daysActive} Bonus
             </div>
             <div className="text-xs text-amber-600 dark:text-amber-500">{nextClaimLabel}</div>
           </div>

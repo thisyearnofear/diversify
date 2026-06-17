@@ -26,7 +26,7 @@ import {
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
-import { useClaimFlow, ClaimFlowOverlay } from "../../hooks/use-claim-flow";
+import { useClaimFlowContext } from "../../hooks/claim-flow-context";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
@@ -65,7 +65,7 @@ export default function SwapTab({
   const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
   const { demoMode } = useDemoMode();
   const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
-  const flow = useClaimFlow();
+  const flow = useClaimFlowContext();
   const { config: profileConfig, isComplete: profileComplete } =
     useProtectionProfile();
   const preferredChainId = useMemo(
@@ -801,7 +801,6 @@ export default function SwapTab({
         />
       )}
 
-      <ClaimFlowOverlay flow={flow} />
     </div>
   );
 }

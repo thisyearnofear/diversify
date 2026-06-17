@@ -5,14 +5,14 @@ export function MilestoneProgress({ daysActive }: { daysActive: number }) {
 
   const title =
     daysActive < 7
-      ? '🔥 Next: 7-Day Badge'
+      ? '🔥 Next: 7-Day Saver'
       : daysActive < 30
-        ? '🏆 Next: 30-Day Badge'
+        ? '🏆 Next: 30-Day Saver'
         : daysActive < 100
-          ? '💎 Next: 100-Day Badge'
+          ? '💎 Next: 100-Day Saver'
           : daysActive < 365
-            ? '👑 Next: 365-Day Badge'
-            : '👑 Legend Status!';
+            ? '👑 Next: 365-Day Saver'
+            : '👑 Legend Status';
 
   const sub =
     daysActive < 7

@@ -29,7 +29,6 @@ import OptimizationInsight from "./protect/OptimizationInsight";
 import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
-import { useClaimFlow, ClaimFlowOverlay } from "@/hooks/use-claim-flow";
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 import { GuardianMascot } from "../shared/GuardianMascot";
@@ -72,11 +71,6 @@ export default function ProtectionTab({
 
   // Use demo data if in demo mode
   const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
-
-  // Hooks must be called unconditionally and in stable order, so the claim
-  // flow hook lives before any early return. The hook itself short-circuits
-  // safely when the wallet is disconnected.
-  const flow = useClaimFlow();
 
   // Guardian onboarding state — lives here so the Protect tab owns setup
   const { autonomousStatus, isLoading: isGuardianStatusLoading } = useAgentStatus();
@@ -462,7 +456,6 @@ export default function ProtectionTab({
         userRegion={userRegion}
         isComplete={isComplete}
         currentGoalLabel={currentGoalLabel}
-        onClaim={flow.handleClaim}
       />}
 
       {/* =================================================================
@@ -691,10 +684,6 @@ export default function ProtectionTab({
         onClose={() => setShowAssetModal(null)}
         onSwap={openProtectionFlow}
       />
-
-      {/* GoodDollar streak now integrated into ProtectionDashboard header */}
-
-      <ClaimFlowOverlay flow={flow} />
 
       {/* Guardian Setup Mobile Wizard — full activation flow inline */}
       {showMobileWizard && address && (

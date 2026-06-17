@@ -383,10 +383,6 @@ export const ProtectionDashboard = ({
   isLoading = false,
   isStale = false,
   children,
-  streak,
-  canClaim,
-  estimatedReward,
-  onClaim,
   strategy = 'global',
 }: {
   title?: string;
@@ -399,10 +395,6 @@ export const ProtectionDashboard = ({
   isLoading?: boolean;
   isStale?: boolean;
   children?: React.ReactNode;
-  streak?: { daysActive: number } | null;
-  canClaim?: boolean;
-  estimatedReward?: string;
-  onClaim?: () => void;
   strategy?: string;
 }) => {
   const isGood = score >= 80;
@@ -413,7 +405,6 @@ export const ProtectionDashboard = ({
   const statusText = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
 
   const filled = (score / 100) * RING_C;
-  const hasStreak = streak && streak.daysActive > 0;
 
   // Strategy-specific themes
   const themes = {
@@ -529,41 +520,6 @@ export const ProtectionDashboard = ({
             </div>
           </motion.div>
         </div>
-
-        {/* GoodDollar Streak - Miniaturized and integrated with more pop */}
-        {hasStreak && (
-          <motion.button
-            onClick={onClaim}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={{ y: -2, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="relative z-10 w-full mt-6 flex items-center justify-between p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-2xl border border-white/20 shadow-lg transition-all group overflow-hidden"
-          >
-            {/* Button Interior Glow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-
-            <div className="flex items-center gap-3 relative z-10">
-              <div className="size-8 bg-white/20 rounded-xl flex items-center justify-center text-lg shadow-inner">
-                💚
-              </div>
-              <div className="text-left">
-                <span className="text-xs font-bold text-white tracking-tight block">
-                  {canClaim ? "G$ Reward Ready!" : `G$ · ${streak?.daysActive}-Day Streak`}
-                </span>
-                <p className="text-xs text-white/60 font-medium">
-                  {canClaim ? (estimatedReward || "Claim now") : "Free UBI on Celo Network"}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 relative z-10">
-              {canClaim && (
-                <span className="size-2 bg-emerald-400 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" />
-              )}
-              <span className="size-6 bg-white/10 rounded-lg flex items-center justify-center text-xs font-black text-white group-hover:bg-white/30 transition-colors">→</span>
-            </div>
-          </motion.button>
-        )}
 
         {isStale && (
           <p className="text-xs text-white/40 mt-4 text-center font-bold uppercase tracking-widest">

@@ -12,7 +12,17 @@
  * surfaces are not used in the UI.
  */
 
-import { createPublicClient, createWalletClient, custom, getAddress, http, type Address, type WalletClient } from 'viem';
+import {
+  createPublicClient,
+  createWalletClient,
+  custom,
+  getAddress,
+  http,
+  parseEventLogs,
+  type Address,
+  type Log,
+  type WalletClient,
+} from 'viem';
 import { celo } from 'viem/chains';
 import {
   ClaimSDK,
@@ -59,6 +69,20 @@ export interface StreamInfo {
   receiver: string;
   isActive: boolean;
 }
+
+// Minimal ABI fragment for receipt parsing. UBIClaimed is the event the
+// UBIScheme proxy emits when claim() pays out; we read `amount` from it so
+// the success surface shows the actual claim, not the pre-claim estimate.
+const UBI_CLAIMED_EVENT_ABI = [
+  {
+    type: 'event',
+    name: 'UBIClaimed',
+    inputs: [
+      { name: 'claimer', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint256', indexed: false },
+    ],
+  },
+] as const;
 
 const CFA_FORWARDER_ABI = [
   {
@@ -264,7 +288,15 @@ export class GoodDollarService {
       const sdk = await this.initClaimSDK();
       const receipt = await sdk.claim();
       const txHash = (receipt as { transactionHash?: `0x${string}` })?.transactionHash;
-      return { success: true, txHash, amount: undefined };
+      const receiptLogs = (receipt as { logs?: Log[] })?.logs;
+      let amount: string | undefined;
+      if (receiptLogs) {
+        const parsed = parseEventLogs({ abi: UBI_CLAIMED_EVENT_ABI, logs: receiptLogs, eventName: 'UBIClaimed' });
+        if (parsed.length > 0) {
+          amount = parsed[0].args.amount?.toString();
+        }
+      }
+      return { success: true, txHash, amount };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to claim UBI';
       if (message.includes('not whitelisted') || message.includes('face verification')) {

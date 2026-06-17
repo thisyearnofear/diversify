@@ -9,7 +9,7 @@ import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";
 import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 import { DepositHub } from "../onramp/DepositHub";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
-import { useClaimFlow, ClaimFlowOverlay } from "@/hooks/use-claim-flow";
+import { useClaimFlowContext } from "@/hooks/claim-flow-context";
 import type { Region } from "@/hooks/use-user-region";
 import InfoSkeleton from "../ui/skeletons/InfoSkeleton";
 import { VerifiableAIDashboard } from "../agent/VerifiableAIDashboard";
@@ -28,7 +28,7 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
   const { address, chainId, formatAddress } = useWalletContext();
   const { experienceMode } = useExperience();
   const { streak, canClaim, isWhitelisted, estimatedReward, verifyIdentity } = useStreakRewards();
-  const flow = useClaimFlow();
+  const flow = useClaimFlowContext();
   const [showNetworkInfo, setShowNetworkInfo] = useState(false);
 
   const isBeginner = experienceMode === "beginner";
@@ -122,14 +122,8 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
           onClaim={() => void flow.handleClaim()}
           onVerify={() => verifyIdentity()}
           onLearnMore={() => window.open('https://docs.gooddollar.org', '_blank')}
-          // TODO: Replace with in-app staking flow when GoodStaking contract is integrated
-          onStake={() => window.open('https://gooddollar.org/stake', '_blank')}
         />
       </div>
-
-      <ClaimFlowOverlay flow={flow} />
-
-
 
 
 

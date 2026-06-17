@@ -1,0 +1,31 @@
+import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
+import { useClaimFlow, ClaimFlowOverlay, type ClaimFlow } from './use-claim-flow';
+
+const ClaimFlowContext = createContext<ClaimFlow | null>(null);
+
+export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
+  const flow = useClaimFlow();
+  return (
+    <ClaimFlowContext.Provider value={flow}>
+      {children}
+      <ClaimFlowOverlay flow={flow} />
+    </ClaimFlowContext.Provider>
+  );
+}
+
+export function useClaimFlowContext(): ClaimFlow {
+  const ctx = useContext(ClaimFlowContext);
+  if (!ctx) throw new Error('useClaimFlowContext must be used within ClaimFlowProvider');
+  return ctx;
+}
+
+export function useOnClaimSuccess(cb: () => void) {
+  const flow = useClaimFlowContext();
+  const cbRef = useRef(cb);
+  cbRef.current = cb;
+  useEffect(() => {
+    if (flow.claimStatus === 'success') {
+      cbRef.current();
+    }
+  }, [flow.claimStatus]);
+}

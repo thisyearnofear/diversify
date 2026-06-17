@@ -186,9 +186,9 @@ export function useHomeSections({
     if (hasHoldings && !isBeginner) {
       sections.push({
         id: "rewards",
-        title: "Rewards",
-        icon: "🎁",
-        teaser: "Daily GoodDollar claim, streak progress, and partner perks.",
+        title: "Celo Welcome Bonus",
+        icon: "💚",
+        teaser: "Claim free G$ daily on Celo — a bonus for active savers.",
         defaultOpen: false,
       });
     }

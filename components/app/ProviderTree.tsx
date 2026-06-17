@@ -12,6 +12,7 @@ import { AIConversationProvider } from "@/context/AIConversationContext";
 import { PrivyProvider } from "@/context/PrivyProvider";
 import { StreakRewardsProvider } from "@/hooks/use-streak-rewards";
 import { ProofFeedProvider } from "@/hooks/proof-feed-provider";
+import { ClaimFlowProvider } from "@/hooks/claim-flow-context";
 
 interface ProviderTreeProps {
   children: ReactNode;
@@ -27,7 +28,9 @@ export default function ProviderTree({ children }: ProviderTreeProps) {
               <WalletProvider>
                 <StreakRewardsProvider>
                   <ProofFeedProvider>
-                    {children}
+                    <ClaimFlowProvider>
+                      {children}
+                    </ClaimFlowProvider>
                   </ProofFeedProvider>
                 </StreakRewardsProvider>
               </WalletProvider>

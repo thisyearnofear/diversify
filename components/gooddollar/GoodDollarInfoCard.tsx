@@ -2,11 +2,6 @@ import React, { useState } from "react";
 import DashboardCard from "../shared/DashboardCard";
 import { Tooltip, TOOLTIPS } from "../shared/Tooltip";
 import { motion, AnimatePresence } from "framer-motion";
-import dynamic from "next/dynamic";
-
-const GStreamingWidget = dynamic(() => import("./GStreamingWidget"), {
-    ssr: false,
-});
 
 // Reusable accordion section
 function AccordionSection({
@@ -62,7 +57,6 @@ function AccordionSection({
 
 interface GoodDollarInfoCardProps {
     onLearnMore?: () => void;
-    onStake?: () => void;
     compact?: boolean;
     /** Streak data for claim status — pass to enable the full hub mode */
     streak?: { daysActive: number } | null;
@@ -74,13 +68,12 @@ interface GoodDollarInfoCardProps {
 }
 
 /**
- * GoodDollar hub — consolidated educational + action card.
- * compact=true: one-line summary (used in ProtectionTab banner).
- * compact=false: full hub with claim status, accordions, and streaming.
+ * GoodDollar hub — claim status + light education for the Info tab.
+ * compact=true: one-line summary banner.
+ * compact=false: full hub with claim status and accordions.
  */
 export default function GoodDollarInfoCard({
     onLearnMore,
-    onStake,
     compact = false,
     streak,
     canClaim,
@@ -198,10 +191,9 @@ export default function GoodDollarInfoCard({
                         >
                             <div className="space-y-2.5 pt-1">
                                 {[
-                                    { step: "1", text: "Supporters stake stablecoins in DeFi protocols" },
-                                    { step: "2", text: "Interest earned funds the GoodDollar Reserve" },
-                                    { step: "3", text: "G$ tokens are minted and distributed as UBI" },
-                                    { step: "4", text: "You claim your daily G$ on Celo (after face verification)" },
+                                    { step: "1", text: "Verify you're a real person (one-time face check)" },
+                                    { step: "2", text: "Claim free G$ tokens daily on Celo" },
+                                    { step: "3", text: "Hold, spend, or swap to local stablecoins" },
                                 ].map(({ step, text }) => (
                                     <motion.div
                                         key={step}
@@ -248,39 +240,19 @@ export default function GoodDollarInfoCard({
                             </div>
                         </AccordionSection>
 
-                        <AccordionSection
-                            id="streaming"
-                            icon="🌊"
-                            title="G$ Streaming"
-                            openId={openSection}
-                            onToggle={toggleSection}
-                        >
-                            <div className="pt-1 -mx-3 -mb-3">
-                                <GStreamingWidget />
-                            </div>
-                        </AccordionSection>
                     </div>
 
                     {/* Footer Links */}
-                    <div className="flex gap-2 pt-1">
-                        {onStake && (
-                            <button
-                                onClick={onStake}
-                                className="flex-1 text-xs font-black py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
-                                title="Stake stablecoins to support UBI and earn GOOD tokens"
-                            >
-                                🌱 Support UBI
-                            </button>
-                        )}
-                        {onLearnMore && (
+                    {onLearnMore && (
+                        <div className="flex gap-2 pt-1">
                             <button
                                 onClick={onLearnMore}
                                 className="flex-1 text-xs font-black py-2 px-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-emerald-700 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors"
                             >
                                 Docs →
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
             </DashboardCard>
         </>

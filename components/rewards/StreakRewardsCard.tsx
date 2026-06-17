@@ -16,7 +16,7 @@ import { StreakProgressVisualizer } from './streak/StreakProgressVisualizer';
 import { GraduationProgressExplainer } from './GraduationProgressExplainer';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
-import { useClaimFlow, ClaimFlowOverlay } from '../../hooks/use-claim-flow';
+import { useClaimFlowContext } from '../../hooks/claim-flow-context';
 import { useWalletContext } from '../wallet/WalletProvider';
 import { AchievementBadge, AchievementToast, ACHIEVEMENTS, type Badge } from './AchievementBadge';
 import { NETWORKS } from '../../config';
@@ -55,7 +55,7 @@ export function StreakRewardsSection({ onSaveClick }: { onSaveClick?: () => void
       >
         <div className="flex items-center gap-2">
           <span className="text-sm">💚</span>
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">G$ Streak Hidden</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Welcome Bonus Hidden</span>
         </div>
         <span className="text-xs text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">Show →</span>
       </button>
@@ -98,8 +98,8 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     eligibleForGraduation,
   } = useStreakRewards();
 
-  // Claim/verify state machine shared with ProtectionTab, SwapTab, AIChat.
-  const flow = useClaimFlow();
+  // Claim/verify state machine shared from app-level context.
+  const flow = useClaimFlowContext();
   const { claimStatus, claimError, verifyStatus, handleClaim, handleVerify } = flow;
 
   const [showGraduationModal, setShowGraduationModal] = useState(false);
@@ -162,7 +162,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
       >
         <div className="flex items-center gap-2">
           <span className="text-sm">💚</span>
-          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">G$ Streak Hidden</span>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Welcome Bonus Hidden</span>
         </div>
         <span className="text-xs text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300">Show →</span>
       </button>
@@ -173,9 +173,9 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
   if (!isConnected) {
     return (
       <InsightCard
-        icon="💰"
-        title="Daily G$ Access"
-        description="Connect your wallet to earn daily G$ rewards through platform usage"
+        icon="💚"
+        title="Celo Welcome Bonus"
+        description="Connect your wallet to earn free G$ tokens daily on Celo"
         variant="default"
       />
     );
@@ -248,7 +248,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
                 : 'Verification Required'
               : canClaim
                 ? 'Claim Your G$'
-                : `${streak?.daysActive || 0}-Day Streak`
+                : `Day ${streak?.daysActive || 1} Bonus`
           }
           description={
             !isWhitelisted
@@ -257,9 +257,9 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
                 : "Verify once on GoodDollar to start claiming your daily UBI. Takes about a minute."
               : canClaim
                 ? `Your daily G$ is ready — claim ${rewardLabel} now.`
-                : `Swap $1+ to maintain your streak and unlock tomorrow's claim.`
+                : `Swap $1+ to unlock tomorrow's bonus.`
           }
-          impact={!isWhitelisted ? (verifyStatus === 'awaiting' ? 'Checking every 30s' : 'Identity Pending') : (canClaim ? rewardLabel : `${streak?.daysActive} days active`)}
+          impact={!isWhitelisted ? (verifyStatus === 'awaiting' ? 'Checking every 30s' : 'Identity Pending') : (canClaim ? rewardLabel : `Day ${streak?.daysActive} streak`)}
           action={
             !isWhitelisted
               ? {
@@ -406,9 +406,6 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
         </div>
       )}
 
-      {/* Claim celebration overlay — shown after a successful direct claim */}
-      <ClaimFlowOverlay flow={flow} />
-
       {/* Graduation Modal */}
       {showGraduationModal && (
         <GraduationModal
@@ -493,7 +490,7 @@ export function RewardsStats({ className = '' }: { className?: string }) {
       </div>
       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2 text-center">
         <div className="text-lg font-bold text-green-700 dark:text-green-300">{stats.activeStreaks}</div>
-        <div className="text-xs text-green-600 dark:text-green-400">Active streaks</div>
+        <div className="text-xs text-green-600 dark:text-green-400">Active savers</div>
       </div>
     </div>
   );

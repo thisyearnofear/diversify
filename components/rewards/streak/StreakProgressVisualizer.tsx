@@ -5,7 +5,7 @@ export function StreakProgressVisualizer({ daysActive }: { daysActive: number })
     <div className="mt-2 py-3 px-4 bg-white/40 dark:bg-black/20 rounded-xl backdrop-blur-sm border border-black/5">
       <div className="flex justify-between items-end mb-2">
         <div className="text-xs font-black uppercase text-gray-500 tracking-wider">
-          Streak Progress
+          7-Day Bonus Cycle
         </div>
         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{daysActive} Days</div>
       </div>

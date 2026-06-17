@@ -7,7 +7,7 @@ import { useAgentChat } from "../../hooks/use-agent-chat";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
-import { useClaimFlow, ClaimFlowOverlay } from "../../hooks/use-claim-flow";
+import { useClaimFlowContext, useOnClaimSuccess } from "../../hooks/claim-flow-context";
 import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from "@diversifi/shared";
 import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
@@ -369,12 +369,10 @@ export default function AIChat() {
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
-  // Direct-claim flow: closes the drawer on success so the celebration can
-  // overlay the full screen, and awards credits via the existing XP system.
-  const flow = useClaimFlow({
-    onClaimSuccess: () => {
-      claimReward('gooddollar_claim');
-    },
+  // Direct-claim flow: shared from app-level context.
+  const flow = useClaimFlowContext();
+  useOnClaimSuccess(() => {
+    claimReward('gooddollar_claim');
   });
   // When the user initiates a claim from inside the drawer, close the drawer
   // immediately so the celebration overlay (z-50) can render above the
@@ -446,9 +444,6 @@ export default function AIChat() {
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
-      {/* Direct-claim celebration overlay — shown after the flow completes */}
-      <ClaimFlowOverlay flow={flow} />
-
       {/* Backdrop */}
       {isDrawerOpen && (
         <motion.div

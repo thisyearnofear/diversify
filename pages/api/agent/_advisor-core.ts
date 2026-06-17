@@ -445,7 +445,8 @@ function extractBrightDataContext(macroData?: Record<string, any>): string {
 
 export async function runAdvisorConversation(input: ConversationRequest) {
   const { message, history = [], chainId, address, portfolio, financialStrategy } = input;
-  const gdContext = await getGoodDollarContext(address);
+  const userMentionsG$ = /\b(g\$|ubi|gooddollar|good dollar|free money|claim.*g\$|face verif)/i.test(message);
+  const gdContext = userMentionsG$ ? await getGoodDollarContext(address) : '';
   const strategyContext = financialStrategy
     ? `\nUSER'S FINANCIAL STRATEGY: ${financialStrategy}\n${StrategyService.getAIPrompt(financialStrategy)}\nAlways reference this strategy explicitly when giving portfolio advice, asset suggestions, or rebalancing recommendations.\n`
     : '';
