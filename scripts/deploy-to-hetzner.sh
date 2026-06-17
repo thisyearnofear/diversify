@@ -160,6 +160,7 @@ rsync -az --delete --no-owner --no-group \
     --exclude='start-runtime.sh' \
     --exclude='instrument.js' \
     --exclude='required-env.js' \
+    --exclude='required-env.json' \
     .next/standalone/ \
     "$REMOTE:$RUNTIME_DIR/" 2>&1 | tail -5
 

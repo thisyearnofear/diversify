@@ -46,7 +46,7 @@ export class ZeroGProvider extends BaseAIProvider {
   }
 
   isAvailable(): boolean {
-    return !!this.apiKey && !!this.client;
+    return !!this.apiKey;
   }
 
   async generateChatCompletion(

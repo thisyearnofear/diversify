@@ -9,25 +9,15 @@
  * - NEUTRAL: No judgment on swap strategy
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { CompactStreakBanner } from './streak/CompactStreakBanner';
-import { MilestoneProgress } from './streak/MilestoneProgress';
 import { StreakProgressVisualizer } from './streak/StreakProgressVisualizer';
-import { GraduationProgressExplainer } from './GraduationProgressExplainer';
 import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useClaimFlowContext } from '../../hooks/claim-flow-context';
 import { useWalletContext } from '../wallet/WalletProvider';
-import { AchievementBadge, AchievementToast, ACHIEVEMENTS, type Badge } from './AchievementBadge';
-import { NETWORKS } from '../../config';
-import dynamic from 'next/dynamic';
 
 const DISMISSED_KEY = 'diversifi_streak_dismissed';
-
-// Lazy load graduation modal
-const GraduationModal = dynamic(() => import('./GraduationModal'), {
-  ssr: false,
-});
 
 const DISMISSED_KEY_EXPORT = 'diversifi_streak_dismissed';
 
@@ -92,23 +82,15 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
     nextClaimTime,
     refresh,
     isLoading,
-    crossChainActivity,
-    achievements,
-    newlyEarnedAchievements,
-    eligibleForGraduation,
   } = useStreakRewards();
 
   // Claim/verify state machine shared from app-level context.
   const flow = useClaimFlowContext();
   const { claimStatus, claimError, verifyStatus, handleClaim, handleVerify } = flow;
 
-  const [showGraduationModal, setShowGraduationModal] = useState(false);
-  const [showGraduationExplainer, setShowGraduationExplainer] = useState(false);
   // Start compact when an active streak exists but claiming isn't available yet —
   // prevents the card from occupying full height in the banner stack by default.
-  // The useEffect below auto-expands it as soon as canClaim becomes true.
   const [isCompact, setIsCompact] = useState(true);
-  const [pendingToast, setPendingToast] = useState<Badge | null>(null);
 
   // Persist isDismissed to localStorage so it survives page refresh
   const [isDismissed, setIsDismissedState] = useState<boolean>(() => {
@@ -126,13 +108,6 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
       }
     }
   };
-
-  // Toast for newly earned achievements (computed in hook/module).
-  useEffect(() => {
-    if (newlyEarnedAchievements.length === 0) return;
-    const badge = ACHIEVEMENTS.find(b => b.id === newlyEarnedAchievements[0]);
-    if (badge) setPendingToast(badge);
-  }, [newlyEarnedAchievements]);
 
   // Calculate time until next claim
   const formatTimeUntil = (date: Date | null) => {
@@ -198,10 +173,6 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
           }
           variant="default"
         />
-
-        {pendingToast && (
-          <AchievementToast badge={pendingToast} onClose={() => setPendingToast(null)} />
-        )}
       </>
     );
   }
@@ -331,99 +302,6 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
           </div>
         )}
       </div>
-
-      {/* Milestone Progress - Show next achievement */}
-      {isEligible && streak && streak.daysActive > 0 && !isCompact && (
-        <MilestoneProgress daysActive={streak.daysActive} />
-      )}
-
-      {/* Graduation Progress Explainer — opened from the Cross-Chain card below */}
-      {showGraduationExplainer && (
-        <div className="mt-3">
-          <GraduationProgressExplainer />
-          <button
-            onClick={() => setShowGraduationExplainer(false)}
-            className="w-full mt-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-center py-1"
-          >
-            ▲ Close
-          </button>
-        </div>
-      )}
-
-      {/* Cross-Chain Activity & Achievements — shown once testnet activity exists */}
-      {crossChainActivity && (crossChainActivity.testnet.totalSwaps > 0 || crossChainActivity.testnet.totalClaims > 0) && !isCompact && (
-        <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-900/10 dark:to-purple-900/10 rounded-lg border border-violet-200 dark:border-violet-900/30">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-black text-violet-700 dark:text-violet-400 uppercase tracking-wider">
-              Test Drive Progress
-            </span>
-            {achievements.length > 0 && (
-              <span className="text-xs font-bold text-violet-600 dark:text-violet-400">
-                {achievements.length} 🏆
-              </span>
-            )}
-          </div>
-          
-          {/* Chain badges */}
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.CELO_SEPOLIA.chainId) && (
-              <span className="px-2 py-0.5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 text-xs font-bold rounded-full">Celo Sepolia</span>
-            )}
-            {crossChainActivity.testnet.chainsUsed.includes(NETWORKS.ARC_TESTNET.chainId) && (
-              <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-full">Arc</span>
-            )}
-            {crossChainActivity.graduation.isGraduated && (
-              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs font-bold rounded-full">Mainnet 🚀</span>
-            )}
-          </div>
-
-          {/* Achievement badges */}
-          {achievements.length > 0 && (
-            <div className="mb-3">
-              <AchievementBadge achievementIds={achievements} compact />
-            </div>
-          )}
-
-          {/* Graduation CTA */}
-          {eligibleForGraduation && !crossChainActivity.graduation.isGraduated && (
-            <button
-              onClick={() => setShowGraduationModal(true)}
-              className="w-full py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white text-xs font-bold rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all"
-            >
-              🎓 Graduate to Mainnet
-            </button>
-          )}
-
-          {/* Progress explainer link */}
-          {!crossChainActivity.graduation.isGraduated && (
-            <button
-              onClick={() => setShowGraduationExplainer(!showGraduationExplainer)}
-              className="w-full text-xs text-violet-500 dark:text-violet-400 hover:text-violet-700 dark:hover:text-violet-300 text-center py-1 font-medium"
-            >
-              {showGraduationExplainer ? '▲ Hide journey guide' : '📍 View your journey to mainnet'}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Graduation Modal */}
-      {showGraduationModal && (
-        <GraduationModal
-          isOpen={showGraduationModal}
-          onClose={() => setShowGraduationModal(false)}
-          onGraduate={() => {
-            setShowGraduationModal(false);
-          }}
-        />
-      )}
-
-      {/* Achievement toast — portal-rendered so it overlays correctly */}
-      {pendingToast && (
-        <AchievementToast
-          badge={pendingToast}
-          onClose={() => setPendingToast(null)}
-        />
-      )}
     </>
   );
 }

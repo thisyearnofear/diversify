@@ -82,6 +82,7 @@ class AIServiceImpl {
   private cachingDecorator!: CachingDecorator;
   private zeroGAnchoringDecorator!: ZeroGAnchoringDecorator;
   private recommendationLedgerDecorator!: RecommendationLedgerDecorator;
+  private chatCircuitBreaker!: CircuitBreakerDecorator;
 
   constructor(private config: AIProviderConfig) {
     this.initializeProviders();
@@ -141,26 +142,29 @@ class AIServiceImpl {
     this.cachingDecorator = new CachingDecorator('volatile'); // 30min default for chat
     this.zeroGAnchoringDecorator = new ZeroGAnchoringDecorator();
     this.recommendationLedgerDecorator = new RecommendationLedgerDecorator();
+    this.chatCircuitBreaker = new CircuitBreakerDecorator('orchestrator');
   }
 
   /**
    * Generate chat completion with full fallback chain, caching, and anchoring
    */
   async chat(options: ChatCompletionOptions): Promise<ChatCompletionResult> {
-    // Apply caching decorator
-    return await this.cachingDecorator.decorateChatCompletion(
+    // Apply circuit breaker → caching → zeroG anchoring → ledger → fallback chain
+    return await this.chatCircuitBreaker.decorateChatCompletion(
       options,
-      // Apply circuit breaker decorator to each provider call in the orchestrator
       async () => {
-        // Apply ZeroG anchoring and recommendation ledger decorators
-        return await this.zeroGAnchoringDecorator.decorateChatCompletion(
+        return await this.cachingDecorator.decorateChatCompletion(
           options,
           async () => {
-            return await this.recommendationLedgerDecorator.decorateChatCompletion(
+            return await this.zeroGAnchoringDecorator.decorateChatCompletion(
               options,
               async () => {
-                // Execute with fallback chain
-                return await this.chatOrchestrator.executeChatCompletion(options);
+                return await this.recommendationLedgerDecorator.decorateChatCompletion(
+                  options,
+                  async () => {
+                    return await this.chatOrchestrator.executeChatCompletion(options);
+                  }
+                );
               }
             );
           }
@@ -173,14 +177,18 @@ class AIServiceImpl {
    * Generate speech from text with fallback chain
    */
   async speech(options: TTSOptions): Promise<TTSResult> {
-    // Apply caching decorator for speech (1hr TTL)
+    const speechCircuitBreaker = new CircuitBreakerDecorator('speech-orchestrator');
     const speechCacheDecorator = new CachingDecorator('moderate');
-    
-    return await speechCacheDecorator.decorateSpeech(
+
+    return await speechCircuitBreaker.decorateSpeech(
       options,
-      // Apply circuit breaker decorator
       async () => {
-        return await this.speechOrchestrator.executeSpeechGeneration(options);
+        return await speechCacheDecorator.decorateSpeech(
+          options,
+          async () => {
+            return await this.speechOrchestrator.executeSpeechGeneration(options);
+          }
+        );
       }
     );
   }
@@ -189,14 +197,18 @@ class AIServiceImpl {
    * Transcribe audio to text with fallback chain
    */
   async transcribe(filePath: string): Promise<TranscriptionResult> {
-    // Apply caching decorator for transcription (30min TTL)
+    const transcriptionCircuitBreaker = new CircuitBreakerDecorator('transcription-orchestrator');
     const transcriptionCacheDecorator = new CachingDecorator('volatile');
-    
-    return await transcriptionCacheDecorator.decorateTranscription(
+
+    return await transcriptionCircuitBreaker.decorateTranscription(
       filePath,
-      // Apply circuit breaker decorator
       async () => {
-        return await this.transcriptionOrchestrator.executeTranscription(filePath);
+        return await transcriptionCacheDecorator.decorateTranscription(
+          filePath,
+          async () => {
+            return await this.transcriptionOrchestrator.executeTranscription(filePath);
+          }
+        );
       }
     );
   }
@@ -289,7 +301,20 @@ export const generateChatCompletion = async (
   options: ChatCompletionOptions,
   preferredProvider?: 'venice' | 'gemini' | 'auto'
 ) => {
-  const result = await getAIServiceInstance().chatOrchestrator.executeChatCompletion(options, preferredProvider);
+  const instance = getAIServiceInstance();
+
+  // preferredProvider override: bypass decorators for caller-specified routing
+  if (preferredProvider) {
+    const result = await instance.chatOrchestrator.executeChatCompletion(options, preferredProvider);
+    return {
+      ...result,
+      content: result.content ?? result.data,
+      model: result.model ?? result.modelUsed,
+    };
+  }
+
+  // Default path: run through caching → zeroG anchoring → ledger → fallback chain
+  const result = await instance.chat(options);
   return {
     ...result,
     content: result.content ?? result.data,
