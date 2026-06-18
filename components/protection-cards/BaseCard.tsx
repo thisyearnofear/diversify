@@ -16,7 +16,6 @@ import React from 'react';
 import {
   Archetype,
   CARD_SIZE,
-  SURFACE_GRADIENT,
   TOKENS,
   alpha,
 } from './tokens';
@@ -39,6 +38,9 @@ export function BaseCard({
   pattern,
   subMark,
 }: BaseCardProps) {
+  // Per-archetype surface gradient (135°) — each culture has its own register.
+  const surface = `linear-gradient(135deg, ${archetype.surface.start} 0%, ${archetype.surface.mid} 50%, ${archetype.surface.end} 100%)`;
+
   return (
     <div
       style={{
@@ -46,26 +48,26 @@ export function BaseCard({
         flexDirection: 'column',
         width: CARD_SIZE,
         height: CARD_SIZE,
-        background: SURFACE_GRADIENT,
+        background: surface,
         borderRadius: 36,
         padding: 64,
         fontFamily: FONT,
         color: TOKENS.foreground,
-        border: `1.5px solid ${alpha(archetype.accent, 0.28)}`,
+        border: `4px solid ${alpha(archetype.accent, 0.85)}`,
         position: 'relative',
         overflow: 'hidden',
       }}
     >
-      {/* Per-archetype pattern layer */}
+      {/* Per-archetype pattern layer (cranked) */}
       {pattern}
 
-      {/* Duotone wash — two corner radials for tonal depth */}
+      {/* Tonal washes — deepen corners for contrast, lift center for hero focus */}
       <div
         style={{
           display: 'flex',
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 100% 0%, ${alpha(archetype.accent, 0.42)} 0%, transparent 55%)`,
+          background: `radial-gradient(circle at 100% 0%, ${alpha(archetype.accentSoft, 0.55)} 0%, transparent 50%)`,
           pointerEvents: 'none',
         }}
       />
@@ -74,11 +76,21 @@ export function BaseCard({
           display: 'flex',
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 0% 100%, ${alpha(archetype.accentSoft, 0.22)} 0%, transparent 50%)`,
+          background: `radial-gradient(circle at 0% 100%, ${alpha(archetype.surface.start, 0.55)} 0%, transparent 50%)`,
           pointerEvents: 'none',
         }}
       />
-      {/* Top color bar — strong identity stripe */}
+      {/* Vignette — pulls focus to center */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(ellipse at center, transparent 30%, ${alpha(archetype.surface.start, 0.40)} 100%)`,
+          pointerEvents: 'none',
+        }}
+      />
+      {/* Top color bar — bolder identity stripe */}
       <div
         style={{
           display: 'flex',
@@ -86,7 +98,7 @@ export function BaseCard({
           top: 0,
           left: 0,
           right: 0,
-          height: 8,
+          height: 14,
           background: `linear-gradient(90deg, ${archetype.accent}, ${archetype.accentSoft}, ${archetype.accent})`,
         }}
       />

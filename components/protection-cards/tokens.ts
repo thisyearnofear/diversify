@@ -21,6 +21,7 @@ export const TOKENS = {
   surfaceGradientEnd: '#0f172a',
 } as const;
 
+/** @deprecated kept only for legacy callers; archetypes now ship their own `surface` triplet. */
 export const SURFACE_GRADIENT = `linear-gradient(135deg, ${TOKENS.surfaceGradientStart} 0%, ${TOKENS.surfaceGradientMid} 50%, ${TOKENS.surfaceGradientEnd} 100%)`;
 
 export type ArchetypeId =
@@ -32,6 +33,15 @@ export type ArchetypeId =
   | 'global_diversification'
   | 'custom';
 
+export interface ArchetypeSurface {
+  /** Top-left corner of the 135° gradient. Deepest tonal value. */
+  start: string;
+  /** Midpoint — the dominant on-brand color. */
+  mid: string;
+  /** Bottom-right corner. Highlight; pulls energy out of the surface. */
+  end: string;
+}
+
 export interface Archetype {
   id: ArchetypeId;
   name: string;
@@ -40,6 +50,8 @@ export interface Archetype {
   allocation: string[];
   accent: string;
   accentSoft: string;
+  /** Per-archetype surface gradient (135°). Replaces the shared dark-slate baseline. */
+  surface: ArchetypeSurface;
 }
 
 export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
@@ -52,6 +64,8 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     allocation: ['cUSD', 'cEUR', 'KESm', 'COPm'],
     accent: '#d97706',
     accentSoft: '#fbbf24',
+    // Savannah sunrise — deep umber → amber → gold.
+    surface: { start: '#451a03', mid: '#b45309', end: '#fbbf24' },
   },
   buen_vivir: {
     id: 'buen_vivir',
@@ -62,6 +76,8 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     allocation: ['COPm', 'BRZ', 'USDC', 'Community fund'],
     accent: '#0d9488',
     accentSoft: '#5eead4',
+    // Andean highlands — deep forest → emerald → jade.
+    surface: { start: '#022c22', mid: '#047857', end: '#5eead4' },
   },
   confucian: {
     id: 'confucian',
@@ -70,7 +86,9 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     philosophy: 'Long-term stability. Low volatility. Patience as a strategy.',
     allocation: ['USDC', 'cUSD', 'RWA Treasuries', 'Bonds'],
     accent: '#b91c1c',
-    accentSoft: '#f87171',
+    accentSoft: '#fca5a5',
+    // Imperial seal — deep cinnabar → vermilion → coral.
+    surface: { start: '#450a0a', mid: '#b91c1c', end: '#fca5a5' },
   },
   gotong_royong: {
     id: 'gotong_royong',
@@ -80,6 +98,8 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     allocation: ['cUSD', 'IDRT', 'PHPT', 'Community pool'],
     accent: '#ea580c',
     accentSoft: '#fdba74',
+    // Indonesian sunset — plum → magenta → pink → coral.
+    surface: { start: '#3b0764', mid: '#be185d', end: '#fdba74' },
   },
   islamic_finance: {
     id: 'islamic_finance',
@@ -89,7 +109,9 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
       'Sharia-compliant. No interest-bearing assets. Ethical by design.',
     allocation: ['USDC (Sharia)', 'Sukuk', 'Halal RWA'],
     accent: '#059669',
-    accentSoft: '#6ee7b7',
+    accentSoft: '#a7f3d0',
+    // Alhambra mosaic — deep emerald → teal → turquoise.
+    surface: { start: '#022c22', mid: '#0d9488', end: '#5eead4' },
   },
   global_diversification: {
     id: 'global_diversification',
@@ -100,6 +122,8 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     allocation: ['USDC', 'cUSD', 'BRZ', 'IDRT', 'Multi-region'],
     accent: '#0284c7',
     accentSoft: '#7dd3fc',
+    // Earth from space — deep ocean → sky → cyan.
+    surface: { start: '#082f49', mid: '#0369a1', end: '#7dd3fc' },
   },
   custom: {
     id: 'custom',
@@ -108,7 +132,9 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     philosophy: 'Set your own allocation. Your plan, your proof.',
     allocation: ['Configurable', 'Your targets', 'Your regions'],
     accent: '#7c3aed',
-    accentSoft: '#c4b5fd',
+    accentSoft: '#e9d5ff',
+    // Electric personal — deep violet → purple → magenta highlight.
+    surface: { start: '#2e1065', mid: '#7e22ce', end: '#f0abfc' },
   },
 };
 

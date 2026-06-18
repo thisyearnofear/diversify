@@ -11,7 +11,6 @@
 import React from 'react';
 import {
   Archetype,
-  SURFACE_GRADIENT,
   TOKENS,
   alpha,
 } from './tokens';
@@ -35,6 +34,8 @@ export function StoryCard({
   pattern,
   subMark,
 }: StoryCardProps) {
+  const surface = `linear-gradient(135deg, ${archetype.surface.start} 0%, ${archetype.surface.mid} 50%, ${archetype.surface.end} 100%)`;
+
   return (
     <div
       style={{
@@ -42,7 +43,7 @@ export function StoryCard({
         flexDirection: 'column',
         width: STORY_W,
         height: STORY_H,
-        background: SURFACE_GRADIENT,
+        background: surface,
         padding: 80,
         fontFamily: FONT,
         color: TOKENS.foreground,
@@ -50,16 +51,16 @@ export function StoryCard({
         overflow: 'hidden',
       }}
     >
-      {/* Per-archetype pattern */}
+      {/* Per-archetype pattern (cranked) */}
       {pattern}
 
-      {/* Duotone washes */}
+      {/* Tonal washes — sunrise corner + deep horizon corner */}
       <div
         style={{
           display: 'flex',
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 100% 0%, ${alpha(archetype.accent, 0.45)} 0%, transparent 55%)`,
+          background: `radial-gradient(circle at 100% 0%, ${alpha(archetype.accentSoft, 0.55)} 0%, transparent 50%)`,
           pointerEvents: 'none',
         }}
       />
@@ -68,7 +69,17 @@ export function StoryCard({
           display: 'flex',
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at 0% 100%, ${alpha(archetype.accentSoft, 0.28)} 0%, transparent 55%)`,
+          background: `radial-gradient(circle at 0% 100%, ${alpha(archetype.surface.start, 0.55)} 0%, transparent 50%)`,
+          pointerEvents: 'none',
+        }}
+      />
+      {/* Vignette */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(ellipse at center, transparent 30%, ${alpha(archetype.surface.start, 0.35)} 100%)`,
           pointerEvents: 'none',
         }}
       />
@@ -81,7 +92,7 @@ export function StoryCard({
           top: 0,
           left: 0,
           right: 0,
-          height: 12,
+          height: 18,
           background: `linear-gradient(90deg, ${archetype.accent}, ${archetype.accentSoft}, ${archetype.accent})`,
         }}
       />
@@ -93,7 +104,7 @@ export function StoryCard({
           bottom: 0,
           left: 0,
           right: 0,
-          height: 12,
+          height: 18,
           background: `linear-gradient(90deg, ${archetype.accent}, ${archetype.accentSoft}, ${archetype.accent})`,
         }}
       />
