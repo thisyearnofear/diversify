@@ -22,6 +22,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanCard } from "./protect/ProtectionPlanCard";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
+import { ProtectionAmbient } from "./protect/ProtectionAmbient";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import YieldDiscoverySection from "../earn/YieldDiscoverySection";
@@ -394,7 +395,11 @@ export default function ProtectionTab({
   }
 
   if (!address && !isDemo) {
-    return <ProtectionNotConnected experienceMode={experienceMode} onEnableDemo={enableDemoMode} />;
+    return (
+      <ProtectionAmbient>
+        <ProtectionNotConnected experienceMode={experienceMode} onEnableDemo={enableDemoMode} />
+      </ProtectionAmbient>
+    );
   }
 
   // ============================================================================
@@ -416,6 +421,7 @@ export default function ProtectionTab({
   }
 
   return (
+    <ProtectionAmbient>
     <div className="space-y-4">
       {/* Strategy Alignment Bar */}
       {selectedStrategyData && (
@@ -451,7 +457,7 @@ export default function ProtectionTab({
           PROTECTION PLAN GALLERY — the design system, live in the product.
           Same JSX renders here, in the Figma library, and in share PNGs.
           ===================================================================== */}
-      <div className="rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+      <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
         <ProtectionPlanGallery mobile />
       </div>
 
@@ -737,5 +743,6 @@ export default function ProtectionTab({
         />
       )}
     </div>
+    </ProtectionAmbient>
   );
 }

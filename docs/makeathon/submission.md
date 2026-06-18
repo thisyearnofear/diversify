@@ -193,6 +193,29 @@ surfaces.** Most are pure Figma deliverables. This one runs in production.
 > component** rendering inside the Protect tab when you visit the live
 > app. Click it there → strategy gets selected → rest of the app reacts.
 
+### Philosophy felt in the backdrop — `ProtectionAmbient`
+
+Selecting a Protection Plan card doesn't just set state — the entire
+Protect tab subtly shifts to that philosophy's visual register via
+`components/tabs/protect/ProtectionAmbient.tsx`:
+
+- **Per-archetype gradient backdrop** crossfades over 450ms (iOS drawer
+  easing) when the active strategy changes
+- **Soft accent bar** at the top fades to the archetype's accent
+- **Subtle radial halo** anchored above the gallery glows in the
+  archetype's accent
+- **Respects `prefers-reduced-motion`** — accents stay, motion drops
+
+**Pure CSS / GPU-composited only** — no shaders, no Lottie, no
+JavaScript at animation time. Designed for the user's actual phone:
+older Android, 3G, low GPU. Two-layer opacity crossfade pattern
+ensures gradient transitions tween smoothly (since CSS can't tween
+gradient color stops natively). Zero marginal bundle cost.
+
+Evidence screenshots in `docs/makeathon/assets/live-app/ambient-*.png`
+— Africapitalism (amber wash), Buen Vivir (jade), Confucian (cinnabar),
+Custom (electric violet).
+
 **No dates on cards.** Cards are evergreen library entries — stamping
 `18 JUN 2026` would make the whole system feel like a snapshot rather
 than a pattern. The footer right slot now carries `ANCHORED ON 0G
