@@ -22,7 +22,6 @@ import EmptyState from "@/components/ui/EmptyState";
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanCard } from "./protect/ProtectionPlanCard";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
-import { ProtectionAmbient } from "./protect/ProtectionAmbient";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import YieldDiscoverySection from "../earn/YieldDiscoverySection";
@@ -395,11 +394,7 @@ export default function ProtectionTab({
   }
 
   if (!address && !isDemo) {
-    return (
-      <ProtectionAmbient>
-        <ProtectionNotConnected experienceMode={experienceMode} onEnableDemo={enableDemoMode} />
-      </ProtectionAmbient>
-    );
+    return <ProtectionNotConnected experienceMode={experienceMode} onEnableDemo={enableDemoMode} />;
   }
 
   // ============================================================================
@@ -421,7 +416,6 @@ export default function ProtectionTab({
   }
 
   return (
-    <ProtectionAmbient>
     <div className="space-y-4">
       {/* Strategy Alignment Bar */}
       {selectedStrategyData && (
@@ -743,6 +737,5 @@ export default function ProtectionTab({
         />
       )}
     </div>
-    </ProtectionAmbient>
   );
 }

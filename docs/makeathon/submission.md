@@ -193,22 +193,32 @@ surfaces.** Most are pure Figma deliverables. This one runs in production.
 > component** rendering inside the Protect tab when you visit the live
 > app. Click it there → strategy gets selected → rest of the app reacts.
 
-### Philosophy felt in the backdrop — `ProtectionAmbient`
+### Philosophy takes over the entire app — `ProtectionAmbient`
 
-Selecting a Protection Plan card doesn't just set state — the entire
-Protect tab subtly shifts to that philosophy's visual register via
-`components/tabs/protect/ProtectionAmbient.tsx`:
+Selecting a Protection Plan card doesn't just set state — the **entire
+viewport across every tab** adopts that philosophy's visual register
+via `components/tabs/protect/ProtectionAmbient.tsx`, mounted at the
+app-shell level inside `ProviderTree`:
 
+- **Full-viewport ambient** (`position: fixed`, cultural pattern
+  overlay + gradient surface + vignette + accent halo) — covers every
+  page, not just the Protect tab. Africapitalism = the whole app is
+  amber sunset + kente weft; Buen Vivir = the whole app is jade
+  highlands + chakana stepped grid; Confucian = cinnabar imperial
+  red + brushmark columns; Gotong Royong = sunset magenta + kawung
+  diamonds; etc.
 - **Origin-aware bloom** (Codrops `BackgroundScaleHoverEffect` pattern,
   adapted for tap): the new archetype's surface ripples *outward from
   the position of the card the user tapped*, via animated
   `clip-path: circle(R% at X% Y%)`. The outgoing surface collapses
   inward on its own origin. Spatially anchored, not a flat crossfade.
-- **Per-archetype gradient backdrop** crossfades over ~520ms (opacity)
-  + ~900ms (clip-path bloom) when the active strategy changes
-- **Soft accent bar** at the top fades to the archetype's accent
-- **Subtle radial halo** anchored above the gallery glows in the
-  archetype's accent
+- **Per-archetype gradient backdrop** at 55% opacity + cultural
+  pattern overlay at 32% — crossfades over ~560ms (opacity) and
+  blooms over ~900ms (clip-path) when the active strategy changes
+- **Soft accent bar** (120px tall) at the top of viewport fades to
+  the archetype's accent
+- **Subtle radial halo** anchored upper-third glows in the archetype's
+  soft accent
 - **Respects `prefers-reduced-motion`** — accents stay, motion drops
 
 **Pure CSS / GPU-composited only** — no shaders, no Lottie, no

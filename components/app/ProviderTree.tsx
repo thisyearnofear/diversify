@@ -13,6 +13,7 @@ import { PrivyProvider } from "@/context/PrivyProvider";
 import { StreakRewardsProvider } from "@/hooks/use-streak-rewards";
 import { ProofFeedProvider } from "@/hooks/proof-feed-provider";
 import { ClaimFlowProvider } from "@/hooks/claim-flow-context";
+import { ProtectionAmbient } from "@/components/tabs/protect/ProtectionAmbient";
 
 interface ProviderTreeProps {
   children: ReactNode;
@@ -29,7 +30,7 @@ export default function ProviderTree({ children }: ProviderTreeProps) {
                 <StreakRewardsProvider>
                   <ProofFeedProvider>
                     <ClaimFlowProvider>
-                      {children}
+                      <ProtectionAmbient>{children}</ProtectionAmbient>
                     </ClaimFlowProvider>
                   </ProofFeedProvider>
                 </StreakRewardsProvider>
