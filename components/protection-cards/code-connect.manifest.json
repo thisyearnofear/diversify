@@ -1,0 +1,106 @@
+{
+  "$schema": "https://www.figma.com/code-connect/schemas/manifest-v0.json",
+  "fileKey": "OVtBg665hYJUYsmQpj0vEl",
+  "fileName": "DiversiFi — Protection Plans",
+  "note": "Pro-tier substitute for first-party Code Connect. Records the TS → Figma component mappings so future tooling can bind code and design.",
+  "mappings": [
+    {
+      "tsComponent": "AfricapitalismCard",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "13:3",
+      "figmaName": "ProtectionPlan / Africapitalism",
+      "surface": "1080x1080"
+    },
+    {
+      "tsComponent": "BuenVivirCard",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "13:5",
+      "figmaName": "ProtectionPlan / BuenVivir",
+      "surface": "1080x1080"
+    },
+    {
+      "tsComponent": "ConfucianCard",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "13:7",
+      "figmaName": "ProtectionPlan / Confucian",
+      "surface": "1080x1080"
+    },
+    {
+      "tsComponent": "GotongRoyongCard",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "13:9",
+      "figmaName": "ProtectionPlan / GotongRoyong",
+      "surface": "1080x1080"
+    },
+    {
+      "tsComponent": "IslamicFinanceCard",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "13:11",
+      "figmaName": "ProtectionPlan / IslamicFinance",
+      "surface": "1080x1080"
+    },
+    {
+      "tsComponent": "GlobalDiversificationCard",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "13:13",
+      "figmaName": "ProtectionPlan / GlobalDiversification",
+      "surface": "1080x1080"
+    },
+    {
+      "tsComponent": "CustomCard",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "13:15",
+      "figmaName": "ProtectionPlan / Custom",
+      "surface": "1080x1080"
+    },
+    {
+      "tsComponent": "AfricapitalismStory",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "33:3",
+      "figmaName": "Story / Africapitalism",
+      "surface": "1080x1920"
+    },
+    {
+      "tsComponent": "BuenVivirStory",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "33:5",
+      "figmaName": "Story / BuenVivir",
+      "surface": "1080x1920"
+    },
+    {
+      "tsComponent": "ConfucianStory",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "33:7",
+      "figmaName": "Story / Confucian",
+      "surface": "1080x1920"
+    },
+    {
+      "tsComponent": "GotongRoyongStory",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "33:9",
+      "figmaName": "Story / GotongRoyong",
+      "surface": "1080x1920"
+    },
+    {
+      "tsComponent": "IslamicFinanceStory",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "33:11",
+      "figmaName": "Story / IslamicFinance",
+      "surface": "1080x1920"
+    },
+    {
+      "tsComponent": "GlobalDiversificationStory",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "33:13",
+      "figmaName": "Story / GlobalDiversification",
+      "surface": "1080x1920"
+    },
+    {
+      "tsComponent": "CustomStory",
+      "tsFile": "components/protection-cards/cards.tsx",
+      "figmaComponentId": "33:15",
+      "figmaName": "Story / Custom",
+      "surface": "1080x1920"
+    }
+  ]
+}
