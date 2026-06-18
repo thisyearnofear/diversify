@@ -11,6 +11,7 @@ import { LiveProofTicker } from "../../shared/LiveProofCard";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
 import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
 import { GuardianStateScrollytelling } from "./GuardianStateScrollytelling";
+import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -66,6 +67,12 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
       onEnableDemo={onEnableDemo}
       howItWorks={HOW_IT_WORKS}
     >
+      {/* Protection Plan Gallery — the design system, live in the product.
+          Same JSX renders here, in the Figma library, and in share PNGs. */}
+      <div className="rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+        <ProtectionPlanGallery mobile />
+      </div>
+
       {/* Guardian 4-state pipeline scrollytelling — preview before connect */}
       <GuardianStateScrollytelling />
 

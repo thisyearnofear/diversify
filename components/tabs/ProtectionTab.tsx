@@ -21,6 +21,7 @@ import EmptyState from "@/components/ui/EmptyState";
 
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanCard } from "./protect/ProtectionPlanCard";
+import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import YieldDiscoverySection from "../earn/YieldDiscoverySection";
@@ -445,6 +446,14 @@ export default function ProtectionTab({
           </div>
         </div>
       )}
+
+      {/* =====================================================================
+          PROTECTION PLAN GALLERY — the design system, live in the product.
+          Same JSX renders here, in the Figma library, and in share PNGs.
+          ===================================================================== */}
+      <div className="rounded-2xl bg-gradient-to-b from-slate-900 to-slate-950 py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+        <ProtectionPlanGallery mobile />
+      </div>
 
       {/* =====================================================================
           CONSOLIDATED PROTECTION DASHBOARD
