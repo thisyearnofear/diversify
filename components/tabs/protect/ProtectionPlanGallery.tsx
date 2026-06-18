@@ -21,6 +21,7 @@ import {
   CARD_SIZE,
   type ArchetypeId,
 } from '@/components/protection-cards/tokens';
+import { useAmbientOrigin } from './ProtectionAmbient';
 
 // Mobile: ~260px (scroll). Desktop: ~300px (grid).
 const RENDERED_W_MOBILE = 260;
@@ -46,6 +47,7 @@ interface Props {
 export function ProtectionPlanGallery({ mobile = true }: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const ambient = useAmbientOrigin();
 
   const renderedW = mobile ? RENDERED_W_MOBILE : RENDERED_W_DESKTOP;
   const scale = renderedW / CARD_SIZE;
@@ -83,7 +85,17 @@ export function ProtectionPlanGallery({ mobile = true }: Props) {
             <button
               key={id}
               type="button"
-              onClick={() => setFinancialStrategy(strategyId)}
+              onClick={(e) => {
+                // Report tap origin to the ambient layer so the
+                // archetype's surface blooms from this card's
+                // position rather than crossfading globally.
+                const rect = e.currentTarget.getBoundingClientRect();
+                ambient?.reportTapOrigin(
+                  rect.left + rect.width / 2,
+                  rect.top + rect.height / 2,
+                );
+                setFinancialStrategy(strategyId);
+              }}
               className={
                 'group relative shrink-0 snap-start rounded-3xl overflow-hidden transition-transform duration-200 active:scale-[0.98] ' +
                 (isActive

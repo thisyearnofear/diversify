@@ -199,8 +199,13 @@ Selecting a Protection Plan card doesn't just set state — the entire
 Protect tab subtly shifts to that philosophy's visual register via
 `components/tabs/protect/ProtectionAmbient.tsx`:
 
-- **Per-archetype gradient backdrop** crossfades over 450ms (iOS drawer
-  easing) when the active strategy changes
+- **Origin-aware bloom** (Codrops `BackgroundScaleHoverEffect` pattern,
+  adapted for tap): the new archetype's surface ripples *outward from
+  the position of the card the user tapped*, via animated
+  `clip-path: circle(R% at X% Y%)`. The outgoing surface collapses
+  inward on its own origin. Spatially anchored, not a flat crossfade.
+- **Per-archetype gradient backdrop** crossfades over ~520ms (opacity)
+  + ~900ms (clip-path bloom) when the active strategy changes
 - **Soft accent bar** at the top fades to the archetype's accent
 - **Subtle radial halo** anchored above the gallery glows in the
   archetype's accent
