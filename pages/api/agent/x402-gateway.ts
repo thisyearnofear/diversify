@@ -378,7 +378,7 @@ export default async function handler(
     if (totalCost > 0) {
         const settlementPromises = sourcePlans
             .filter(p => p.cost > 0)
-            .map(p => settleOnArc(p.cost, p.source.id));
+            .map(p => settleOnChain(p.cost, p.source.id, DEFAULT_SETTLEMENT_NETWORK));
 
         // Await with a short timeout so we can include tx hashes in the response
         // if they land quickly (Arc has sub-second finality), but never block.
