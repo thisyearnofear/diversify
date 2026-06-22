@@ -419,13 +419,7 @@ export const ProtectionDashboard = ({
     <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
       {/* Hero Section - Visual Header Banner Style */}
       <div className={`relative p-6 text-white bg-gradient-to-br ${currentTheme} overflow-hidden`}>
-        {/* Animated Background Elements */}
-        {strategy === 'halo' ? (
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5" />
-        ) : strategy === 'taco' ? (
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid-me.png')] opacity-10" />
-        ) : null}
-        
+        {/* Decorative Background Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/10 rounded-full blur-2xl -ml-10 -mb-10" />
 
@@ -612,11 +606,6 @@ export const ProtectionDashboard = ({
     </div>
   );
 };
-
-/**
- * @deprecated Use ProtectionScore instead
- */
-export const TrustBadge = ProtectionScore;
 
 // Collapsible section for progressive disclosure
 export const CollapsibleSection = ({
@@ -1084,7 +1073,7 @@ export const ConnectWalletPrompt = ({
               const tokenRate = STABLECOIN_RATES[token.symbol] || homeInflation * 0.2;
               const savings = homeInflation - tokenRate;
               return (
-                <div key={token.symbol} className="p-2 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800">
+                <div key={token.symbol} className="p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-700">
                   <div className="flex items-center gap-2 mb-1">
                     <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-black text-blue-700 dark:text-blue-300">
                       {token.symbol.slice(0, 2)}

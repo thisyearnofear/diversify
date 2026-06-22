@@ -18,12 +18,17 @@ import { GuardianStreakWidget } from "@/components/agent/GuardianStreakWidget";
 
 const tabSkeleton = (rows: number = 3) => (
   <div className="animate-pulse space-y-4 pt-4">
-    {Array.from({ length: rows }).map((_, i) => (
-      <div
-        key={i}
-        className={`h-${i === 0 ? "10" : i === 1 ? "8" : "40"} bg-gray-100 dark:bg-gray-800 rounded-${i === 2 ? "2xl" : "xl"} ${i === 1 ? "w-3/4" : ""}`}
-      />
-    ))}
+    {Array.from({ length: rows }).map((_, i) => {
+      const heightClass = i === 0 ? "h-10" : i === 1 ? "h-8" : "h-40";
+      const radiusClass = i === 2 ? "rounded-2xl" : "rounded-xl";
+      const widthClass = i === 1 ? "w-3/4" : "w-full";
+      return (
+        <div
+          key={i}
+          className={`${heightClass} ${radiusClass} ${widthClass} bg-gray-100 dark:bg-gray-800`}
+        />
+      );
+    })}
   </div>
 );
 

@@ -54,8 +54,8 @@ export default function DashboardCard({
     return (
         <Component
             onClick={onClick}
-            whileHover={isInteractive ? { scale: 1.01 } : undefined}
-            whileTap={isInteractive ? { scale: 0.99 } : undefined}
+            whileHover={isInteractive ? { scale: 1.02 } : undefined}
+            whileTap={isInteractive ? { scale: 0.97 } : undefined}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             className={`
         bg-gradient-to-br ${colorClasses[color]}

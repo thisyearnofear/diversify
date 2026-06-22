@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useExperience } from "../../context/app/ExperienceContext";
@@ -141,7 +142,12 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
         </button>
 
         {showNetworkInfo && (
-          <div className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
+          >
             {address ? (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -153,7 +159,7 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-400">WALLET</span>
-                  <code className="text-xs font-mono bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
+                  <code className="text-xs font-mono bg-gray-50 dark:bg-gray-800/50 px-2 py-1 rounded text-gray-600 dark:text-gray-300">
                     {formatAddress(address)}
                   </code>
                 </div>
@@ -168,7 +174,7 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
                 {displayTokens.map((token) => (
                   <div
                     key={token.symbol}
-                    className="px-2 py-1 rounded-md border text-xs font-bold bg-white dark:bg-gray-900 flex items-center gap-1.5"
+                    className="px-2 py-1 rounded-md border text-xs font-bold bg-white dark:bg-gray-800/50 flex items-center gap-1.5"
                     style={{ borderColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] || "#e5e7eb" }}
                   >
                     <span className="size-1.5 rounded-full" style={{ backgroundColor: REGION_COLORS[token.region as keyof typeof REGION_COLORS] }} />
@@ -177,7 +183,7 @@ export default function InfoTab({ availableTokens, userRegion, isLoading }: Info
                 ))}
               </div>
             </div>
-          </div>
+          </motion.div>
         )}
       </div>
 
@@ -213,25 +219,30 @@ function VerifiabilitySection() {
         </button>
 
         {isOpen && (
-          <div className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 rounded-xl animate-in fade-in slide-in-from-top-2 duration-300 shadow-lg">
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: "easeOut" }}
+            className="mt-2 p-4 space-y-4 bg-white dark:bg-gray-800 rounded-xl shadow-lg"
+          >
             <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
               Every AI recommendation is traceable end-to-end: from the model that produced it, to the evidence that supports it, to the on-chain record that proves it.
             </p>
 
             <div className="grid grid-cols-2 gap-2 text-[10px]">
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
                 <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">0G Storage</div>
                 <p className="text-gray-600 dark:text-gray-400">Evidence CIDs anchored to decentralized storage</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
                 <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">0G Serving</div>
                 <p className="text-gray-600 dark:text-gray-400">Decentralized AI inference via Router API</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
                 <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">0G Chain</div>
                 <p className="text-gray-600 dark:text-gray-400">RecommendationLedger contract on Galileo testnet</p>
               </div>
-              <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl">
+              <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
                 <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">Arc x402</div>
                 <p className="text-gray-600 dark:text-gray-400">Nanopayment settlement for premium data access</p>
               </div>
@@ -243,7 +254,7 @@ function VerifiabilitySection() {
             >
               Open Verifiable AI Dashboard →
             </button>
-          </div>
+          </motion.div>
         )}
       </div>
 
