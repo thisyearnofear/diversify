@@ -114,6 +114,11 @@ vi.mock("../../shared/GuardianMascot", () => ({
     }),
 }));
 
+vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
+  ProtectionPlanGallery: () =>
+    React.createElement("div", { "data-testid": "protection-plan-gallery" }),
+}));
+
 vi.mock("@/components/tabs/protect/ProfileWizard", () => ({
   default: () => React.createElement("div", { "data-testid": "profile-wizard" }),
 }));
