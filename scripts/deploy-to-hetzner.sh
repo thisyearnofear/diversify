@@ -142,13 +142,20 @@ ssh "$REMOTE" "rm -f '$RUNTIME_DIR/.next.bak-latest.tar.gz'" 2>/dev/null || true
 ok "snapshot taken"
 
 # ── 4. Rsync standalone build to Hetzner runtime dir ────────────────────────
-if [ ! -f ".next/standalone/server.js" ]; then
-    fail "Standalone output not found at .next/standalone/server.js — ensure next.config uses output: 'standalone'"
+# The standalone output may be at .next/standalone/server.js or .next/standalone/Dev/diversifi/server.js
+# depending on the project structure. Check both paths.
+STANDALONE_SERVER=""
+if [ -f ".next/standalone/server.js" ]; then
+    STANDALONE_SERVER=".next/standalone"
+elif [ -f ".next/standalone/Dev/diversifi/server.js" ]; then
+    STANDALONE_SERVER=".next/standalone/Dev/diversifi"
+else
+    fail "Standalone output not found — ensure next.config uses output: 'standalone'"
 fi
 
 info "Syncing standalone build to $REMOTE:$RUNTIME_DIR/ ..."
 
-LOCAL_SIZE=$(du -sh .next/standalone 2>/dev/null | cut -f1)
+LOCAL_SIZE=$(du -sh "$STANDALONE_SERVER" 2>/dev/null | cut -f1)
 info "Local standalone size: $LOCAL_SIZE"
 
 # Sync the standalone server, excluding server-managed files that must not be
@@ -161,7 +168,7 @@ rsync -az --delete --no-owner --no-group \
     --exclude='instrument.js' \
     --exclude='required-env.js' \
     --exclude='required-env.json' \
-    .next/standalone/ \
+    "$STANDALONE_SERVER"/ \
     "$REMOTE:$RUNTIME_DIR/" 2>&1 | tail -5
 
 # Static assets live inside .next/static/ which standalone doesn't include
