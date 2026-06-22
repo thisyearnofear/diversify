@@ -43,7 +43,8 @@ export interface ResearchReceipt {
   nonce?: string;
   remainingCredit?: string;
   reason?: string;
-  arcSettled?: boolean;
+  onChainSettled?: boolean;
+  settlementNetwork?: string;
   settlementTxHashes?: string[];
   settlementExplorers?: string[];
   error?: string;

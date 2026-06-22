@@ -117,7 +117,8 @@ export function useX402Payment() {
             nonce: payment?.nonce,
             remainingCredit: billing.remaining_credit,
             reason: billing.reason,
-            arcSettled: Boolean(billing.arcSettled),
+            onChainSettled: Boolean(billing.onChainSettled),
+            settlementNetwork: billing.settlementNetwork,
             settlementTxHashes: billing.txHashes,
             settlementExplorers: billing.explorer,
         };

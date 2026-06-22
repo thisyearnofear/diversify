@@ -25,6 +25,14 @@ export const NETWORKS = {
         explorerUrl: 'https://testnet.arcscan.app',
         devOnly: true, // Only show in development
     },
+    ARC_MAINNET: {
+        chainId: 5042001,
+        name: 'Arc',
+        rpcUrl: process.env.NEXT_PUBLIC_ARC_MAINNET_RPC || 'https://rpc.arc.network',
+        explorerUrl: 'https://arcscan.app',
+        // Mainnet beta expected 2026. Not devOnly — this is the production nanopayment rail.
+        // See docs/0g-bridge-plan.md §0 for the four-layer architecture.
+    },
     ZERO_G_TESTNET: {
         chainId: 16602,
         name: '0G Galileo Testnet',
@@ -289,6 +297,7 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'MXNB', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARBITRUM_SEPOLIA.chainId]: ['USDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
+    [NETWORKS.ARC_MAINNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH'],
     [NETWORKS.HYPERLIQUID.chainId]: ['GOLD', 'SILVER', 'OIL', 'COPPER'],
 };
@@ -531,7 +540,7 @@ export const BROKER_ADDRESSES = {
 // Helper: Get token addresses by chain
 export function getTokenAddresses(chainId: number): Record<string, string> {
     if (chainId === NETWORKS.RH_TESTNET.chainId) return RH_TESTNET_TOKENS;
-    if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
+    if (chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.ARC_MAINNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) return ARBITRUM_SEPOLIA_TOKENS;
     return chainId === NETWORKS.CELO_SEPOLIA.chainId ? CELO_SEPOLIA_TOKENS : MAINNET_TOKENS;

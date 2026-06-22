@@ -56,6 +56,15 @@ const NETWORK_CONFIGS: Record<SettlementNetwork, SettlementConfig> = {
     },
 };
 
+/**
+ * Default settlement network.
+ * Reads from SETTLEMENT_NETWORK env var so deploy-time config controls the rail
+ * without code changes. Defaults to ZERO_G (interim) while Arc mainnet is pending.
+ * Flip to 'ARC' once ARC_MAINNET is live and funded.
+ */
+export const DEFAULT_SETTLEMENT_NETWORK: SettlementNetwork =
+    (process.env.SETTLEMENT_NETWORK as SettlementNetwork) || 'ZERO_G';
+
 const SETTLEMENT_CACHE_TTL_MS = 30_000;
 const SETTLEMENT_LOG_CHUNK_SIZE = 20_000;
 const SETTLEMENT_RECENT_LIMIT = 10;
@@ -332,7 +341,7 @@ export function getAgentAddress(): string | null {
     }
 }
 
-export async function getSettlementStats(network: SettlementNetwork = 'ZERO_G', options?: {
+export async function getSettlementStats(network: SettlementNetwork = DEFAULT_SETTLEMENT_NETWORK, options?: {
     agentAddress?: string | null;
     recipientAddress?: string;
     maxRecentTransfers?: number;
@@ -451,6 +460,10 @@ export async function settleOnChain(
     }
 }
 
-// Backward compatibility exports for Arc (deprecated)
+// Arc settlement exports.
+// 0G Pay is the interim default while Arc is testnet-only (mainnet beta expected 2026).
+// Arc reclaims the nanopayment rail at mainnet — USDC-native gas and Circle Gateway
+// make it the purpose-built chain for x402 settlement. These exports are NOT deprecated;
+// they are the forward path once ARC_MAINNET is live.
 export const settleOnArc = (amount: number, sourceId: string) => settleOnChain(amount, sourceId, 'ARC');
 export const getArcSettlementStats = (options?: any) => getSettlementStats('ARC', options);

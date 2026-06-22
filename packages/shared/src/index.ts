@@ -35,6 +35,8 @@ export {
   getAgentAddress,
   getSettlementStats,
   getArcSettlementStats,
+  DEFAULT_SETTLEMENT_NETWORK,
+  type SettlementNetwork,
   type SettlementResult,
   type SettlementSkipped,
   type SettlementStats,

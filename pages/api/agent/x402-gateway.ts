@@ -9,7 +9,8 @@ import {
     circleService,
     getArcResearchSource,
     normalizeArcResearchSource,
-    settleOnArc,
+    settleOnChain,
+    DEFAULT_SETTLEMENT_NETWORK,
     generateChatCompletion,
     startBrightDataWarming,
     type ArcResearchCategory,
@@ -393,8 +394,8 @@ export default async function handler(
 
     const bundle = buildArcResearchBundle(payloads);
     const settlementMeta = settlements.length > 0
-        ? { txHashes: settlements.map(s => s.txHash), explorer: settlements.map(s => s.explorer), arcSettled: true }
-        : { arcSettled: false };
+        ? { txHashes: settlements.map(s => s.txHash), explorer: settlements.map(s => s.explorer), onChainSettled: true, settlementNetwork: DEFAULT_SETTLEMENT_NETWORK }
+        : { onChainSettled: false };
 
     if (bundleRequested) {
         return res.status(200).json({

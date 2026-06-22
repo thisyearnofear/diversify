@@ -9,6 +9,44 @@ This plan lives next to [`roadmap.md`](./roadmap.md), [`architecture.md`](./arch
 
 ---
 
+## 0. Long-term chain architecture (the end state)
+
+The 0G Bridge buildathon frames 0G as replacing Arc for payments. That is a **buildathon-timeline pragmatism**, not the long-term architecture. Arc and 0G serve fundamentally different layers. Conflating them is the architectural mistake this section prevents.
+
+DiversiFi's long-term mainnet stack has four layers, each owned by exactly one chain:
+
+| Layer | Chain | Why this chain | What it does NOT do |
+|---|---|---|---|
+| **Savings + Identity** | **Celo** | Regional Mento stablecoins (cUSD, cREAL, KESm, GHSm, etc.), SocialConnect ODIS identity, GoodDollar UBI. No other chain has local-currency stablecoin liquidity. | Agent execution (no EIP-7702), nanopayments, verifiable AI proofs |
+| **Execution + Yield** | **Arbitrum** | Deepest USDC + RWA liquidity (Uniswap V3, 1inch, Camelot, PAXG, USDY, SYRUPUSDC). EIP-7702-capable for true on-chain ERC-7710 permission enforcement. | Trust root (ledger demoted to mirror), nanopayments, regional stablecoins |
+| **Trust + Verifiability** | **0G** | Content-addressed Storage (evidence CIDs), TEE-verified Compute, DA (state snapshots), Chain (canonical trust ledger). No other chain offers storage or verifiable inference. | Nanopayment settlement (gas-token friction — 0G tokens for gas, not USDC) |
+| **Money Movement** | **Arc** | USDC-native gas (no volatile token inventory), sub-second deterministic finality, nanopayment economics ($0.000001), built-in FX engine for stablecoin pairs, native Circle Gateway/CCTP/CPN integration. | Verifiable AI proofs, regional stablecoins, deep DEX liquidity |
+
+### The Arc vs 0G Pay resolution
+
+0G Pay (settling USDC on 0G chain) is a **stopgap** that makes sense while Arc is testnet-only. The moment Arc mainnet lands, Arc should reclaim the payment rail because:
+
+1. **USDC as native gas** — on 0G, settling a $0.001 nanopayment requires holding 0G tokens for gas. On Arc, the gas *is* USDC. The settlement currency and gas currency should match for a payment rail.
+2. **Circle Gateway is the x402 standard** — nanopayments powered by Circle Gateway are live on mainnet across 80+ chains. Arc is Circle's native chain for this.
+3. **Built-in FX engine** — Arc's institutional-grade RFQ system for stablecoin-to-stablecoin conversion is directly on-mission for DiversiFi's stablecoin savings product.
+4. **0G's value is verifiability, not payments** — using 0G as a payment rail underutilizes its unique strengths (Storage, Compute, DA) and introduces gas-token friction that Arc eliminates by design.
+
+### Migration phases
+
+| Phase | Timeline | Payment rail | Trust layer | Notes |
+|---|---|---|---|---|
+| **1 — Buildathon** | Now – Aug 2026 | 0G Pay (interim default) | 0G mainnet canonical (Wave 3) | `SETTLEMENT_NETWORK=ZERO_G`. Arc stays configured but testnet-only. |
+| **2 — Arc mainnet beta** | When Arc mainnet lands (est. 2026) | Arc (flip default) | 0G mainnet canonical | `SETTLEMENT_NETWORK=ARC`. 0G Pay becomes fallback. One-line config change. |
+| **3 — Arc mainnet stable** | Post-beta | Arc canonical | 0G canonical | Arc = payments, 0G = verifiability. These never overlap again. Explore Arc FX engine for major pairs (USDC/EURC), complementing Mento regional pairs on Celo. CCTP bridge Arc → Arbitrum for yield execution. |
+
+### What this means for the codebase
+
+- **Do not delete Arc-specific infrastructure.** `ArcAgent`, `arc-research-sources.ts`, Curve/AeonDEX strategies, and `use-arc-balance` all have long-term value once Arc mainnet lands.
+- **`DEFAULT_SETTLEMENT_NETWORK` is the single switch.** The `SETTLEMENT_NETWORK` env var controls the rail without code changes. The x402 gateway and Guardian loop both read from this default.
+- **0G's canonical role is unchanged regardless of payment rail.** Storage, Compute, DA, and the trust ledger are 0G's permanent domain. The payment rail question is orthogonal to the verifiability question.
+
+---
+
 ## 1. Principle alignment (the filter for every file we touch)
 
 The Core Principles are not aspirational here; they are the buildathon's grading rubric in disguise. Wave 3 explicitly weights "Technical Quality" at 30% and judges "0G Mainnet Integration Depth" at 50% — both are won or lost on how disciplined we are about the principles. This section is the contract for every change below.
@@ -38,7 +76,7 @@ The buildathon submission requires that "at least one 0G component must be integ
 | **0G Compute (Serving)** (TEE-verified inference) | `packages/shared/src/services/ai/providers/zero-g-provider.ts` | Live (Router API) | Document | High-impact path gated on confidence | Mainnet Compute Direct | Compare A/B on quality | Pitch |
 | **0G DA** (verifiable state snapshots) | `packages/shared-0g/src/services/persistence-service.ts` | Live (Storage-as-DA today) | Document | Promote to explicit DA namespace | Mainnet DA writes | Auto-snapshot every Guardian cycle | Compress + index |
 | **0G Chain** (canonical trust ledger) | `recommendation-ledger.service.ts` + `contracts/RecommendationLedger.sol` | Live (Arbitrum canonical, Galileo mirror) | Document | Add 0G mainnet to `LEDGER_REGISTRY` | **Deploy + promote to canonical** | Multi-tenant tx volume | Audit + gas optimization |
-| **0G Pay** (agent nanopayments) | `packages/shared/src/services/settlement-service.ts` (`SettlementNetwork = 'ARC' \| 'ZERO_G'`) | Live (ZERO_G entry exists, ARC is default) | Document | Switch default to 0G for x402-arc parity | 0G Pay mainnet settlement | Volume dashboard | Revenue share pitch |
+| **0G Pay** (agent nanopayments) | `packages/shared/src/services/settlement-service.ts` (`SettlementNetwork = 'ARC' \| 'ZERO_G'`) | Live (ZERO_G is interim default; ARC is testnet-only) | Document | Switch default to 0G (interim — Arc reclaims payment rail at mainnet) | 0G Pay mainnet settlement (interim until Arc mainnet beta) | Volume dashboard | Arc mainnet reclaims payment rail; 0G Pay becomes fallback |
 | **Agentic ID (ERC-7857)** | New `contracts/AgenticID.sol` + new `services/agentic-id.service.ts` | Not present | Defer | Spec out ERC-7857 wrapper around existing Guardian identity | Deploy mintable ID per user | Transfer + INFT-style listing | Demo Day video |
 
 **Net new files across all 5 waves: 2.** `contracts/AgenticID.sol` and `services/agentic-id.service.ts`. Everything else is configuration promotion, a Foundry script, or a method on an existing class.
@@ -115,7 +153,7 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 | `foundry.toml` | Add `[rpc_endpoints] zero_g_mainnet = "${ZERO_G_MAINNET_RPC_URL}"` (or testnet equivalent if no mainnet RPC at submission time). | +2 | DRY |
 | `packages/shared/src/services/recommendation-ledger.service.ts` | Add a `ZERO_G_MAINNET_CHAIN_ID` constant and a `LEDGER_REGISTRY` entry. The `getDefaultLedgerChainId` is **not** flipped yet (Arbitrum stays canonical in Wave 2, 0G is added as an option). | +12 | DRY, CLEAN |
 | `packages/shared-0g/src/services/storage-service.ts` | Add a `ZEROG_MAINNET_STORAGE_URL` and `ZEROG_MAINNET_INDEXER_URL` env var with Galileo as fallback. | +8 | DRY |
-| `packages/shared/src/services/settlement-service.ts` | Promote `ZERO_G` to the default `network` parameter in `settleOnChain` (currently `ZERO_G` is already the default; make this explicit in the docstring). | +3 | CLEAN |
+| `packages/shared/src/services/settlement-service.ts` | Promote `ZERO_G` to the default `network` parameter in `settleOnChain` via `DEFAULT_SETTLEMENT_NETWORK` (env-driven via `SETTLEMENT_NETWORK`). This is **interim** — 0G Pay is the stopgap while Arc is testnet-only. Arc reclaims the nanopayment rail at mainnet (USDC-native gas, Circle Gateway). Document this in the docstring. | +8 | CLEAN, DRY |
 | `scripts/DeployZeroG.s.sol` | (new) Forge deploy script for `RecommendationLedger` on 0G mainnet. Mirrors the structure of `scripts/DeployArbitrum.s.sol`. | +90 | ORGANIZED, MODULAR |
 | `scripts/deploy-all.sh` | Add a `zero_g_mainnet` target that runs `DeployZeroG.s.sol` and writes the address to `.env`. | +20 | ORGANIZED |
 | `pages/api/agent/zero-g-ledger.ts` | Accept a `chainId` query param (already in the code) and verify it documents `zero_g_mainnet` in the response. | +2 | CLEAN |
