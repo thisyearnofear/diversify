@@ -73,7 +73,7 @@ Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar har
 ┌──────────────────────────▼──────────────────────────────────┐
 │  External Services                                          │
 │  • MongoDB (user state, permissions, guardian-state)        │
-│  • Arbitrum: canonical `RecommendationLedger`, vaults,      │
+│  • Arbitrum: `RecommendationLedger` mirror, vaults,          │
 │    deep-liquidity execution (Uniswap V3 / Aave / RWA)       │
 │  • Celo/Mento: local stablecoin savings + Mento swaps       │
 │  • 0G: Storage (evidence CID) + DA + Compute (TEE proofs)   │
@@ -143,7 +143,7 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
    → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
    → Execute via /api/vault/rebalance
    → Anchor evidence bundle to 0G Storage + Cognee memory
-   → Record hash/CID on the **chain-aware RecommendationLedger** (Arbitrum mirror today, 0G mainnet canonical in Wave 3 of the 0G Bridge buildathon)
+   → Record hash/CID on the **chain-aware RecommendationLedger** (0G Galileo today, 0G mainnet canonical in Wave 3; Arbitrum retained as mirror)
    → Mirror optionally to 0G Galileo testnet ledger
    → Clear recommendation from guardian-state
 ```
@@ -192,9 +192,9 @@ Every AI recommendation traces through the full 0G pipeline:
 | **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
 | **0G Compute Direct** | Optional TEE-verified inference for high-impact Guardian decisions |
 
-**Canonical Contract:** [`RecommendationLedger`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) at `0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996` on **Arbitrum Sepolia** (chainId `421614`). StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975), AgenticHub: [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92).
+**Active Ledger:** [`RecommendationLedger`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) at `0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996` on **Arbitrum Sepolia** (chainId `421614`) — interim canonical until 0G mainnet promotion in Wave 3. StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975), AgenticHub: [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92).
 
-**Mirror Contract:** `0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED` on 0G Galileo Testnet (chainId `16602`) — optional audit replica; overridable via `ZERO_G_LEDGER_CONTRACT`.
+**0G Mirror:** `0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED` on 0G Galileo Testnet (chainId `16602`) — promoted to canonical in Wave 3; overridable via `ZERO_G_LEDGER_CONTRACT`.
 
 ### Anchor observability
 

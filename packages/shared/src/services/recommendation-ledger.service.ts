@@ -135,8 +135,9 @@ const LEDGER_REGISTRY: Record<number, LedgerConfig> = {
 
 /**
  * Returns the canonical chain ID used when callers do not specify one.
- * Prefers Arbitrum Sepolia when the contract address is configured; otherwise
- * falls back to the 0G Galileo mirror for backward compatibility.
+ * Prefers Arbitrum Sepolia when the contract address is configured (interim
+ * until Wave 3); otherwise falls back to the 0G Galileo mirror. Wave 3
+ * flips this to prefer 0G mainnet when ZERO_G_MAINNET_LEDGER_CONTRACT is set.
  */
 export function getDefaultLedgerChainId(): number {
     const arbitrum = LEDGER_REGISTRY[ARBITRUM_SEPOLIA_CHAIN_ID];
@@ -242,7 +243,7 @@ function getWriteContract(chainId: number): ethers.Contract | null {
  * `failed` results.
  *
  * @param params.recommendation data
- * @param params.chainId optional target chain; defaults to Arbitrum Sepolia when configured, else 0G Galileo
+ * @param params.chainId optional target chain; defaults to the configured canonical chain (Arbitrum Sepolia interim, 0G mainnet in Wave 3)
  */
 export async function recordRecommendation(params: {
     user: string;
@@ -353,7 +354,9 @@ export async function recordRecommendation(params: {
 
 /**
  * Mirror a recommendation to the 0G Galileo ledger after it has been anchored
- * on Arbitrum. Returns the mirror result without affecting the canonical result.
+ * on the canonical chain. Returns the mirror result without affecting the
+ * canonical result. (In Wave 3, 0G mainnet becomes canonical and this becomes
+ * the primary write; Arbitrum becomes the mirror.)
  */
 export async function mirrorRecommendationToZeroG(
     params: Omit<Parameters<typeof recordRecommendation>[0], 'chainId'>

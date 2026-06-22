@@ -21,9 +21,10 @@ export class ZeroGStorageService {
     private readonly evmRpc: string;
     /**
      * In-memory content registry mapping prefix → list of CIDs.
-     * Content-addressed storage (like 0G) has no native "list by prefix" API,
-     * so we maintain this registry to enable listing content uploaded during
-     * the current session. Entries are added on upload via registerContent().
+     * Session-scoped only — entries are lost on server restart.
+     * Used by the persistence service for state CID discovery (with a
+     * ledger fallback). Evidence CIDs are discovered via listContentByAgent()
+     * which queries the on-chain RecommendationLedger.
      */
     private readonly contentRegistry: Map<string, string[]> = new Map();
 
@@ -119,10 +120,7 @@ export class ZeroGStorageService {
 
             console.log(`[0G Storage] Upload successful. Tx: ${JSON.stringify(tx)}`);
 
-            // Auto-register CID in content registry for later discovery via listContent
             const cid = rootHash || 'unknown';
-            this.registerContent(`evidence:${metadata.agent}`, cid);
-            this.registerContent(`evidence:${metadata.source}`, cid);
 
             return {
                 cid: cid,
@@ -152,11 +150,10 @@ export class ZeroGStorageService {
     /**
      * List content stored under a specific prefix.
      *
-     * Since 0G Storage is content-addressed with no native "list by prefix" API,
-     * this reads from the in-memory content registry populated on every upload.
-     *
-     * For persistent discoverability across sessions, implement a side index
-     * (e.g., maintain a KV store mapping prefix → CIDs on each upload).
+     * Session-scoped only — reads from the in-memory content registry
+     * populated on each upload. Entries are lost on server restart.
+     * Used by the persistence service for state CID discovery (with a
+     * ledger fallback in restoreState).
      */
     async listContent(prefix: string): Promise<string[]> {
         const entries = this.contentRegistry.get(prefix);
@@ -167,6 +164,39 @@ export class ZeroGStorageService {
 
         console.log(`[0G Storage] No entries in registry for prefix "${prefix}" — returning empty`);
         return [];
+    }
+
+    /**
+     * List evidence CIDs for an agent by querying the on-chain
+     * RecommendationLedger. This is the persistent discovery path —
+     * unlike listContent(), it survives server restarts because it
+     * reads from the ledger, not an in-memory map.
+     *
+     * Phase 0 audit finding A3 (2026-06): replaced the dead in-memory
+     * evidence registry with this ledger-backed query.
+     */
+    async listContentByAgent(agentAddress: string): Promise<string[]> {
+        try {
+            const { recommendationLedgerService } = await import(
+                '../../../shared/src/services/recommendation-ledger.service'
+            );
+
+            const { recommendations } = await recommendationLedgerService.getUserRecommendations(
+                agentAddress,
+                0,
+                100,
+            );
+
+            const cids = recommendations
+                .map(r => r.evidenceCid)
+                .filter(cid => cid && cid.length > 0);
+
+            console.log(`[0G Storage] Found ${cids.length} evidence CIDs for agent ${agentAddress} from on-chain ledger`);
+            return cids;
+        } catch (error: any) {
+            console.warn('[0G Storage] listContentByAgent failed (non-fatal):', error.message);
+            return [];
+        }
     }
 
     /**

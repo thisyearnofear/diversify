@@ -2,15 +2,16 @@
  * ZeroG Anchoring Decorator for AI Service
  *
  * Wraps high-value AI responses with automatic 0G Storage anchoring and
- * records a commitment on the canonical Arbitrum RecommendationLedger.
+ * records a commitment on the chain-aware RecommendationLedger (0G Galileo
+ * today, 0G mainnet canonical in Wave 3; Arbitrum retained as a mirror).
  *
  * Flow:
  *   1. Provider returns a response.
- *   2. If the response looks like a recommendation, an encrypted evidence
- *      bundle is uploaded to 0G Storage. The returned CID is captured.
+ *   2. If the response looks like a recommendation AND confidence ≥ 0.6,
+ *      an encrypted evidence bundle is uploaded to 0G Storage. The returned
+ *      CID is captured.
  *    3. The bundle hash + 0G CID + parsed action metadata are recorded on
- *      the Arbitrum RecommendationLedger (with an optional mirror to 0G
- *      Galileo for cross-chain auditability).
+ *      the RecommendationLedger (with an optional cross-chain mirror).
  */
 
 import {
@@ -27,16 +28,22 @@ interface AnchorPayload {
 export class ZeroGAnchoringDecorator {
   /**
    * Cheap pre-filter: returns true if the response likely commits to a
-   * concrete action. This is the pre-upload gate — we skip 0G Storage
-   * entirely for prose-only replies.
+   * concrete action AND confidence is high enough to warrant on-chain
+   * anchoring. This is the pre-upload gate — we skip 0G Storage
+   * entirely for prose-only replies or low-confidence responses.
    *
-   * The list is intentionally tight: only action verbs that map to a
-   * real on-chain action. Words like "analyze" or "summary" used to be
-   * in here and fired on nearly every chat reply — Phase 0 audit
-   * finding A2 (2026-06) tightened this to action-only.
+   * The keyword list is intentionally tight: only action verbs that map
+   * to a real on-chain action. Words like "analyze" or "summary" used to
+   * be in here and fired on nearly every chat reply — Phase 0 audit
+   * finding A2 (2026-06) tightened this to action-only + confidence gate.
    */
-  private shouldAnchorToZeroG(options: ChatCompletionOptions, result: string): boolean {
-    const contentToCheck = (options.messages || []).map(m => m.content || '').join(' ') + ' ' + result;
+  private shouldAnchorToZeroG(options: ChatCompletionOptions, result: ChatCompletionResult): boolean {
+    const confidence = (result as any).confidence ?? 0.8;
+    if (confidence < 0.6) {
+      return false;
+    }
+
+    const contentToCheck = (options.messages || []).map(m => m.content || '').join(' ') + ' ' + result.data;
     const lowerContent = contentToCheck.toLowerCase();
 
     const anchorKeywords = [
@@ -55,7 +62,7 @@ export class ZeroGAnchoringDecorator {
     const result = await providerCall();
 
     // Only anchor on server-side (not in browser)
-    if (typeof window === 'undefined' && this.shouldAnchorToZeroG(options, result.data)) {
+    if (typeof window === 'undefined' && this.shouldAnchorToZeroG(options, result)) {
       try {
         // Anchor to 0G Storage and record the resulting CID on Arbitrum.
         // Fire-and-forget intentionally: the user should not wait for storage.

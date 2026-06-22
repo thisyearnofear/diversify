@@ -198,3 +198,40 @@ describe('RecommendationLedgerService — chain-aware config', () => {
         expect(getLedgerContractAddress(421614)).toBe(newAddress);
     });
 });
+
+describe('buildLedgerExplorerUrl — chain-aware URL builder (Phase 0 audit A5)', () => {
+    it('builds Arbitrum One URLs for chainId 42161', async () => {
+        const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        const url = buildLedgerExplorerUrl('0xabc123', 42161);
+        expect(url).toBe('https://arbiscan.io/tx/0xabc123');
+    });
+
+    it('builds Arbitrum Sepolia URLs for chainId 421614', async () => {
+        const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        const url = buildLedgerExplorerUrl('0xabc123', 421614);
+        expect(url).toBe('https://sepolia.arbiscan.io/tx/0xabc123');
+    });
+
+    it('builds 0G Galileo URLs for chainId 16602', async () => {
+        const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        const url = buildLedgerExplorerUrl('0xabc123', 16602);
+        expect(url).toBe('https://chainscan-galileo.0g.ai/tx/0xabc123');
+    });
+
+    it('falls back to 0G Galileo explorer for unknown chain IDs', async () => {
+        const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        const url = buildLedgerExplorerUrl('0xabc123', 99999);
+        expect(url).toBe('https://chainscan-galileo.0g.ai/tx/0xabc123');
+    });
+
+    it('uses the default chain ID when none is specified', async () => {
+        const { buildLedgerExplorerUrl, getDefaultLedgerChainId } = await import('../recommendation-ledger.service');
+        const url = buildLedgerExplorerUrl('0xabc123');
+        const defaultChain = getDefaultLedgerChainId();
+        if (defaultChain === 421614) {
+            expect(url).toBe('https://sepolia.arbiscan.io/tx/0xabc123');
+        } else {
+            expect(url).toBe('https://chainscan-galileo.0g.ai/tx/0xabc123');
+        }
+    });
+});
