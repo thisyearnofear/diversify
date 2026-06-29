@@ -31,7 +31,7 @@ describe('CircuitBreakerDecorator — decorateChatCompletion', () => {
   it('passes through successful calls and records success', async () => {
     const result = await decorator.decorateChatCompletion(
       { messages: [{ role: 'user', content: 'hello' }] },
-      () => Promise.resolve({ content: 'hi', provider: 'test' }),
+      () => Promise.resolve({ data: 'hi', content: 'hi', provider: 'test' }),
     );
     expect(result.content).toBe('hi');
     const state = circuitBreakerManager.getCircuit(circuitName).getState();
@@ -73,7 +73,7 @@ describe('CircuitBreakerDecorator — decorateChatCompletion', () => {
     await expect(
       decorator.decorateChatCompletion(
         { messages: [{ role: 'user', content: 'healthcheck' }] },
-        () => Promise.resolve({ content: 'ok', provider: 'test' }),
+        () => Promise.resolve({ data: 'ok', content: 'ok', provider: 'test' }),
       ),
     ).rejects.toThrow('Circuit breaker is OPEN');
   });
@@ -104,7 +104,7 @@ describe('CircuitBreakerDecorator — decorateChatCompletion', () => {
 
     await decorator.decorateChatCompletion(
       { messages: [{ role: 'user', content: 'recovery' }] },
-      () => Promise.resolve({ content: 'back online', provider: 'test' }),
+      () => Promise.resolve({ data: 'back online', content: 'back online', provider: 'test' }),
     );
 
     // After 1 success in HALF_OPEN, successCount(1) < successThreshold(2)
@@ -134,14 +134,14 @@ describe('CircuitBreakerDecorator — decorateChatCompletion', () => {
     // First success in HALF_OPEN → stays HALF_OPEN (1 < 2)
     await decorator.decorateChatCompletion(
       { messages: [{ role: 'user', content: 'r1' }] },
-      () => Promise.resolve({ content: 'ok', provider: 'test' }),
+      () => Promise.resolve({ data: 'ok', content: 'ok', provider: 'test' }),
     );
     expect(shortCircuit.getState().state).toBe('HALF_OPEN');
 
     // Second success → successCount(2) >= successThreshold(2) → CLOSED
     await decorator.decorateChatCompletion(
       { messages: [{ role: 'user', content: 'r2' }] },
-      () => Promise.resolve({ content: 'ok', provider: 'test' }),
+      () => Promise.resolve({ data: 'ok', content: 'ok', provider: 'test' }),
     );
     expect(shortCircuit.getState().state).toBe('CLOSED');
   });
@@ -158,9 +158,9 @@ describe('CircuitBreakerDecorator — decorateSpeech', () => {
   it('passes through successful TTS calls', async () => {
     const result = await decorator.decorateSpeech(
       { text: 'hello', voice: 'default' },
-      () => Promise.resolve({ audioData: new ArrayBuffer(0), format: 'wav' }),
+      () => Promise.resolve({ data: new ArrayBuffer(0), audio: new ArrayBuffer(0), provider: 'test', audioFormat: 'wav' }),
     );
-    expect(result.audioData).toBeInstanceOf(ArrayBuffer);
+    expect(result.audio).toBeInstanceOf(ArrayBuffer);
   });
 
   it('trips and rejects after 3 failures', async () => {
@@ -178,7 +178,7 @@ describe('CircuitBreakerDecorator — decorateSpeech', () => {
 
     await expect(decorator.decorateSpeech(
       { text: 'still down', voice: 'default' },
-      () => Promise.resolve({ audioData: new ArrayBuffer(0), format: 'wav' }),
+      () => Promise.resolve({ data: new ArrayBuffer(0), audio: new ArrayBuffer(0), provider: 'test', audioFormat: 'wav' }),
     )).rejects.toThrow('Circuit breaker is OPEN');
   });
 });
@@ -194,7 +194,7 @@ describe('CircuitBreakerDecorator — decorateTranscription', () => {
   it('passes through successful transcription calls', async () => {
     const result = await decorator.decorateTranscription(
       '/tmp/audio.wav',
-      () => Promise.resolve({ text: 'hello world' }),
+      () => Promise.resolve({ data: 'hello world', text: 'hello world', provider: 'test' }),
     );
     expect(result.text).toBe('hello world');
   });
@@ -214,7 +214,7 @@ describe('CircuitBreakerDecorator — decorateTranscription', () => {
 
     await expect(decorator.decorateTranscription(
       '/tmp/audio.wav',
-      () => Promise.resolve({ text: 'should not reach' }),
+      () => Promise.resolve({ data: 'should not reach', text: 'should not reach', provider: 'test' }),
     )).rejects.toThrow('Circuit breaker is OPEN');
   });
 });

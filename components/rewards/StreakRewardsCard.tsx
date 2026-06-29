@@ -29,7 +29,7 @@ const DISMISSED_KEY = 'diversifi_streak_dismissed';
 export function StreakRewardsSection({ onSaveClick }: { onSaveClick?: () => void }) {
   const [isDismissed, setIsDismissed] = React.useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
-    return localStorage.getItem(DISMISSED_KEY_EXPORT) === '1';
+    return localStorage.getItem(DISMISSED_KEY) === '1';
   });
 
   if (isDismissed) {
@@ -37,7 +37,7 @@ export function StreakRewardsSection({ onSaveClick }: { onSaveClick?: () => void
       <button
         onClick={() => {
           setIsDismissed(false);
-          if (typeof window !== 'undefined') localStorage.removeItem(DISMISSED_KEY_EXPORT);
+          if (typeof window !== 'undefined') localStorage.removeItem(DISMISSED_KEY);
         }}
         className="w-full p-2 bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-800 transition-colors flex items-center justify-between group"
       >
@@ -55,7 +55,7 @@ export function StreakRewardsSection({ onSaveClick }: { onSaveClick?: () => void
       onSaveClick={onSaveClick}
       onDismiss={() => {
         setIsDismissed(true);
-        if (typeof window !== 'undefined') localStorage.setItem(DISMISSED_KEY_EXPORT, '1');
+        if (typeof window !== 'undefined') localStorage.setItem(DISMISSED_KEY, '1');
       }}
     />
   );
