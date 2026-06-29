@@ -13,6 +13,8 @@ export interface AIProviderConfig {
   openaiApiKey?: string;
   elevenlabsApiKey?: string;
   elevenlabsVoiceId?: string;
+  /** NVIDIA integrate API key — OpenAI-compatible, 100+ models, ~40 req/min free. */
+  nvidiaApiKey?: string;
 }
 
 /**

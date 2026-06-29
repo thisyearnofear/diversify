@@ -21,6 +21,7 @@ import { ModalProvider } from './providers/modal-provider';
 import { OpenAIProvider } from './providers/openai-provider';
 import { AimlApiProvider } from './providers/aimlapi-provider';
 import { ElevenLabsProvider } from './providers/elevenlabs-provider';
+import { NvidiaProvider } from './providers/nvidia-provider';
 import { FallbackOrchestrator } from './fallback/fallback-orchestrator';
 import { CachingDecorator } from './decorators/caching-decorator';
 import { CircuitBreakerDecorator } from './decorators/circuit-breaker-decorator';
@@ -100,7 +101,8 @@ class AIServiceImpl {
       ZeroGProvider,
       ModalProvider,
       OpenAIProvider,
-      ElevenLabsProvider
+      ElevenLabsProvider,
+      NvidiaProvider
     ];
 
     for (const ProviderClass of providerClasses) {
@@ -289,7 +291,8 @@ export function getAIServiceInstance(): AIServiceImpl {
       openaiApiKey: process.env.OPENAI_API_KEY,
       aimlApiKey: process.env.AIML_API_KEY,
       elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
-      elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID
+      elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
+      nvidiaApiKey: process.env.NVIDIA_API_KEY
     };
     aiServiceInstance = new AIServiceImpl(config);
   }
