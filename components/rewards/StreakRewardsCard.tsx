@@ -19,8 +19,6 @@ import { useWalletContext } from '../wallet/WalletProvider';
 
 const DISMISSED_KEY = 'diversifi_streak_dismissed';
 
-const DISMISSED_KEY_EXPORT = 'diversifi_streak_dismissed';
-
 /**
  * StreakRewardsSection — lightweight gateway wrapper.
  *

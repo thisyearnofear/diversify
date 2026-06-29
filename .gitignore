@@ -41,11 +41,13 @@ yarn-error.log*
 .agents
 .augment
 .claude
+.commandcode
 .crush
 .factory
 .junie
 .kilocode
 .kiro
+.openclaude
 .openhands
 .qodo
 .qoder

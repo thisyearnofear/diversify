@@ -5,8 +5,8 @@
  * swap execution. In isolation we test the auth gate, method validation,
  * and error response shape.
  *
- * Uses dynamic import per-test with resetModules so each test picks up
- * the correct GUARDIAN_LOOP_SECRET from process.env.
+ * Env-independent tests use a static import (fast). The two env-dependent
+ * tests (custom GUARDIAN_LOOP_SECRET) use dynamic import with resetModules.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -50,6 +50,8 @@ vi.mock('../vault/_guardian-state', () => ({
   pushAnchorHistory: vi.fn().mockReturnValue([]),
 }));
 
+import handler from '../guardian-loop';
+
 type ApiMock = {
   method?: string;
   headers?: Record<string, string>;
@@ -73,13 +75,10 @@ function makeRes(): ResMock {
 }
 
 describe('POST /api/agent/guardian-loop', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.resetModules();
-  });
+  beforeEach(() => { vi.clearAllMocks(); });
 
+  // ─── Env-independent tests (fast, static import) ────────────────────────
   it('rejects non-POST with 405', async () => {
-    const handler = (await import('../guardian-loop')).default;
     const req: ApiMock = { method: 'GET', headers: {} };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -87,7 +86,6 @@ describe('POST /api/agent/guardian-loop', () => {
   });
 
   it('rejects missing auth header with 401', async () => {
-    const handler = (await import('../guardian-loop')).default;
     const req: ApiMock = { method: 'POST', headers: {} };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -95,7 +93,6 @@ describe('POST /api/agent/guardian-loop', () => {
   });
 
   it('rejects wrong auth header with 401', async () => {
-    const handler = (await import('../guardian-loop')).default;
     const req: ApiMock = {
       method: 'POST',
       headers: { 'x-guardian-secret': 'wrong-secret' },
@@ -105,15 +102,17 @@ describe('POST /api/agent/guardian-loop', () => {
     expect(res.statusCode).toBe(401);
   });
 
+  // ─── Env-dependent tests (dynamic import to pick up env vars) ───────────
   it('accepts correct auth header and returns loop result', async () => {
+    vi.resetModules();
     process.env.GUARDIAN_LOOP_SECRET = 'test-secret';
-    const handler = (await import('../guardian-loop')).default;
+    const mod = await import('../guardian-loop');
     const req: ApiMock = {
       method: 'POST',
       headers: { 'x-guardian-secret': 'test-secret' },
     };
     const res = makeRes();
-    await handler(req as never, res as never);
+    await mod.default(req as never, res as never);
     expect(res.statusCode).toBe(200);
     const body = res.body as any;
     expect(body).toHaveProperty('success');
@@ -126,15 +125,16 @@ describe('POST /api/agent/guardian-loop', () => {
   });
 
   it('accepts secret via request body as fallback', async () => {
+    vi.resetModules();
     process.env.GUARDIAN_LOOP_SECRET = 'body-secret';
-    const handler = (await import('../guardian-loop')).default;
+    const mod = await import('../guardian-loop');
     const req: ApiMock = {
       method: 'POST',
       headers: {},
       body: { secret: 'body-secret' },
     };
     const res = makeRes();
-    await handler(req as never, res as never);
+    await mod.default(req as never, res as never);
     expect(res.statusCode).toBe(200);
   });
 });
