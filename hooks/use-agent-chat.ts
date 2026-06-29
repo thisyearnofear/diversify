@@ -118,7 +118,16 @@ export function useAgentChat({
 
   const sendChatMessage = useCallback(
     async (content: string) => {
-      if (!capabilities.chat) return;
+      if (!capabilities.chat) {
+        addMessage({
+          role: "assistant",
+          content: "The Advisor is currently unavailable — no AI provider is configured. Please try again later or contact support.",
+          timestamp: new Date(),
+          type: "text",
+        });
+        updateChatState({ isChatting: false, thinkingStep: "" });
+        return;
+      }
 
       let effectiveContent = content;
       const normalizedContent = content.trim().toLowerCase();

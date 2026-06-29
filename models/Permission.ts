@@ -48,6 +48,10 @@ export interface IPermission extends Document {
   spentDate: string;
   totalSpentUSD: number;
 
+  // Consent: set to true when user grants GUARDIAN-tier permission (explicit
+  // EIP-712 consent for autonomous execution) or after first manual execution.
+  firstAutoExecutionConfirmed: boolean;
+
   // Status
   status: PermissionStatus;
 
@@ -80,6 +84,8 @@ const PermissionSchema = new Schema<IPermission>(
     spentTodayUSD: { type: Number, default: 0 },
     spentDate: { type: String, default: () => new Date().toISOString().slice(0, 10) },
     totalSpentUSD: { type: Number, default: 0 },
+
+    firstAutoExecutionConfirmed: { type: Boolean, default: false },
 
     status: {
       type: String,

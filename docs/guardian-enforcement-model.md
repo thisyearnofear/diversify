@@ -19,9 +19,10 @@ permission is enforced on-chain. It is not (yet).
   bounds (`dailyLimitUSD`, `spendingLimitUSD`, `allowedTokens`, `expiresAt`,
   `status`) are enforced **only in application code**:
   - `VaultService.validateSwap` — destination-token allowlist, daily/total caps.
-  - `pages/api/agent/guardian-loop.ts` — autonomy tier, first-execution consent,
-    confidence threshold, daily-limit clamp, staleness, per-user execution lock,
-    dequeue-before-execute idempotency.
+  - `pages/api/agent/guardian-loop.ts` — autonomy tier, first-execution consent
+    (`firstAutoExecutionConfirmed`, set at GUARDIAN-tier grant time and after
+    the first manual rebalance), confidence threshold, daily-limit clamp,
+    staleness, per-user execution lock, dequeue-before-execute idempotency.
 - Execution signs through a **server-custodied** smart account
   (`SMART_ACCOUNT_PROVIDER=privy`, the default) or the `VAULT_PRIVATE_KEY`
   fallback. The chain imposes **no** limit on what that account can sign.

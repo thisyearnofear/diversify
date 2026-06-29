@@ -43,6 +43,7 @@ const basePermission = (overrides: Partial<VaultPermission> = {}): VaultPermissi
   spentTodayUSD: 0,
   spentDate: new Date().toISOString().slice(0, 10),
   totalSpentUSD: 0,
+  firstAutoExecutionConfirmed: true,
   status: 'active',
   ...overrides,
 });

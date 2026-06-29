@@ -94,6 +94,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         spentTodayUSD: 0,
         spentDate: new Date().toISOString().slice(0, 10),
         totalSpentUSD: 0,
+        // Granting GUARDIAN-tier permission is explicit EIP-712 consent for
+        // autonomous execution — mark as confirmed so the guardian-loop gate
+        // passes. COPILOT/ADVISORY tiers don't auto-execute anyway.
+        firstAutoExecutionConfirmed: (permission.autonomyLevel || 'GUARDIAN') === 'GUARDIAN',
         status: 'active' as const,
       });
 

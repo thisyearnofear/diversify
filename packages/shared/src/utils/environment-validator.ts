@@ -20,7 +20,8 @@ export class EnvironmentValidator {
     'ALPHA_VANTAGE_API_KEY',
     'FRED_API_KEY',
     'COINGECKO_API_KEY',
-    'ONEINCH_API_KEY'
+    'ONEINCH_API_KEY',
+    'UNISWAP_API_KEY'
   ];
 
   /**
@@ -66,7 +67,8 @@ export class EnvironmentValidator {
       'ALPHA_VANTAGE_API_KEY': 'Get your Alpha Vantage API key from alphavantage.co',
       'FRED_API_KEY': 'Get your FRED API key from fred.stlouisfed.org',
       'COINGECKO_API_KEY': 'Get your CoinGecko API key from coingecko.com',
-      'ONEINCH_API_KEY': 'Get your 1inch API key from portal.1inch.dev'
+      'ONEINCH_API_KEY': 'Get your 1inch API key from portal.1inch.dev (required for Arbitrum RWA swaps)',
+      'UNISWAP_API_KEY': 'Get your Uniswap API key from docs.uniswap.org (required for Uniswap V3 swaps)'
     };
 
     return suggestions[key] || `Configure ${key} in your environment variables`;

@@ -86,7 +86,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         capabilities: {
             analysis: veniceStatus.available || geminiStatus.available,
             analysisProviders: {
-                venice: veniceStatus.available,
+                venice: false,
                 gemini: geminiStatus.available,
             },
             // Note: Venice AI does not support transcription yet (feature in progress)
@@ -96,9 +96,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 openai: !!process.env.OPENAI_API_KEY,
                 elevenlabs: elevenLabsStatus.available,
             },
-            speech: veniceStatus.available || elevenLabsStatus.available,
+            // Venice TTS is not implemented (provider throws "not yet implemented").
+            // Only ElevenLabs provides speech today.
+            speech: elevenLabsStatus.available,
             speechProviders: {
-                venice: veniceStatus.available,
+                venice: false,
                 elevenLabs: elevenLabsStatus.available,
             },
             webSearch: veniceStatus.available, // Venice-only feature
@@ -110,7 +112,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Feature flags
         features: {
             webEnrichedAnalysis: veniceStatus.available,
-            multiProviderTTS: veniceStatus.available && elevenLabsStatus.available,
+            multiProviderTTS: false, // Venice TTS not implemented yet
         }
     });
 }

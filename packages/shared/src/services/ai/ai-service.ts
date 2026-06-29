@@ -283,7 +283,7 @@ export function getAIServiceInstance(): AIServiceImpl {
       veniceApiKey: process.env.VENICE_API_KEY,
       geminiApiKey: process.env.GEMINI_API_KEY,
       featherlessApiKey: process.env.FEATHERLESS_API_KEY,
-      zeroGApiKey: process.env.ZEROG_API_KEY,
+      zeroGApiKey: process.env.ZERO_G_SERVING_API_KEY,
       zeroGModel: process.env.ZERO_G_SERVING_MODEL,
       modalToken: process.env.MODAL_TOKEN,
       openaiApiKey: process.env.OPENAI_API_KEY,

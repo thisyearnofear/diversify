@@ -43,11 +43,15 @@ export function useAdvisor() {
           body: JSON.stringify({ transcription: message }),
         });
 
-        if (response.ok) {
-          const { insights } = await response.json();
-          IntelligenceService.saveVoiceInsight(insights);
+        if (!response.ok) {
+          console.warn(`[useAdvisor] Voice insights endpoint returned ${response.status} — feature may not be deployed`);
+          return;
+        }
 
-          addMessage({
+        const { insights } = await response.json();
+        IntelligenceService.saveVoiceInsight(insights);
+
+        addMessage({
             role: 'assistant',
             content: insights.summary,
             timestamp: new Date(),
@@ -58,7 +62,6 @@ export function useAdvisor() {
               actionItems: insights.actionItems
             }
           });
-        }
       } catch (err) {
         console.warn("[useAdvisor] Failed to fetch voice insights:", err);
       }

@@ -7,6 +7,7 @@ import { CELO_TOKEN_ADDRESS_BY_SYMBOL, isKnownCeloToken } from '../../../package
 import {
   getGuardianState,
 } from './_guardian-state';
+import { Permission } from '../../../models/Permission';
 
 type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' | 'failed';
 
@@ -193,6 +194,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const result = await service.rebalance(id, resolvedRecommendations as RebalanceRecommendation[]);
+
+    // After a successful manual (non-dry-run) execution, mark the permission
+    // as firstAutoExecutionConfirmed so the guardian-loop consent gate passes.
+    // This is belt-and-suspenders: GUARDIAN-tier grants already set this at
+    // permission creation time, but a manual execution also confirms intent.
+    if (result.executed > 0 && permission && !permission.firstAutoExecutionConfirmed) {
+      await Permission.updateOne(
+        { _id: permission._id },
+        { $set: { firstAutoExecutionConfirmed: true } },
+      ).catch(() => {});
+    }
+
     const executionSummary = {
       total: resolvedRecommendations.length,
       executed: result.executed,

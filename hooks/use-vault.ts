@@ -48,6 +48,7 @@ export interface VaultPermission {
   autonomyLevel: string;
   spentTodayUSD: number;
   totalSpentUSD: number;
+  firstAutoExecutionConfirmed: boolean;
   status: string;
 }
 
@@ -214,14 +215,18 @@ export function useVault(): UseVaultReturn {
 
   const revokePermission = useCallback(async (userAddress: string) => {
     try {
-      await fetch(
+      const resp = await fetch(
         `${API_BASE}/api/vault/permission?userAddress=${encodeURIComponent(userAddress)}`,
         { method: 'DELETE' }
       );
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to revoke permission');
+      }
       setPermission(null);
       setStatus(deriveStatus(vault, null));
-    } catch {
-      // Silently fail
+    } catch (e: any) {
+      setError(e.message);
     }
   }, [vault, deriveStatus]);
 
