@@ -39,7 +39,7 @@ Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar har
 │                                                             │
 │  ┌─────────────────────┐  ┌───────────────────────────┐     │
 │  │ AI Layer            │  │ Swap Layer                │     │
-│  │ • 8 providers       │  │ • SwapOrchestratorService │     │
+│  │ • 9 providers       │  │ • SwapOrchestratorService │     │
 │  │ • FallbackOrch.     │  │ • 13 strategy impls       │     │
 │  │ • CircuitBreaker    │  │ • ChainDetectionService   │     │
 │  │ • CachingDecorator  │  │ • LiFi, 1inch, UniswapV3  │     │
@@ -85,12 +85,12 @@ Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar har
 
 ## AI Provider Chain
 
-Requests flow through a 5-deep fallback with circuit breakers at each step:
+Requests flow through a 6-deep fallback with circuit breakers at each step:
 
 ```
-Gemini Flash → Venice AI → Featherless → 0G Serving → Modal (GLM)
-    │              │            │             │            │
-    └── CircuitBreaker ────────┴─────────────┴────────────┘
+Gemini Flash → Venice AI → AI/ML API → NVIDIA → Featherless → 0G Serving → Modal (GLM)
+    │              │            │          │           │             │            │
+    └── CircuitBreaker ────────┴──────────┴───────────┴─────────────┴────────────┘
                   │
           CachingDecorator (5-min TTL)
                   │
@@ -261,7 +261,7 @@ diversifi/
 | Pattern | Where | Why |
 |---------|-------|------|
 | **Strategy** | 13 swap strategies under `SwapOrchestratorService` | New DEX = new class, no existing code changes |
-| **Provider** | 8 AI providers under `BaseAIProvider` | Add/remove providers without touching orchestration |
+| **Provider** | 9 AI providers under `BaseAIProvider` | Add/remove providers without touching orchestration |
 | **Decorator** | AI service wraps providers in caching → circuit breaker → 0G anchoring → ledger | Cross-cutting concerns are independently testable |
 | **Orchestrator** | `FallbackOrchestrator` and `SwapOrchestratorService` | Ordered fallback with performance tracking |
 | **Observer** | `agentEventBus` for proactive yield/rebalance alerts | Decoupled pub/sub between detection and notification |

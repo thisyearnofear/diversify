@@ -27,7 +27,9 @@
 |----------|------|----------|
 | **Gemini (Google)** | Primary agent intelligence (Flash for speed, Pro for reasoning) | Venice AI |
 | **Venice AI** | Secondary / fallback | AI/ML API |
-| **AI/ML API** | 400+ models, OpenAI-compatible endpoint (`deepseek/deepseek-chat`) | 0G Serving |
+| **AI/ML API** | 400+ models, OpenAI-compatible endpoint (`deepseek/deepseek-chat`) | NVIDIA |
+| **NVIDIA** | OpenAI-compatible, 100+ models, ~40 req/min free tier (`deepseek/deepseek-v4-flash`) | Featherless |
+| **Featherless** | OpenAI-compatible fallback | 0G Serving |
 | **0G Serving** | Decentralized inference via 0G Router (`deepseek-v4-pro`, `GLM-5.1`, `qwen3.6-plus`) | Modal (GLM) |
 | **Modal (GLM)** | Tertiary fallback | Error response |
 
@@ -273,7 +275,7 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 |----------|------------|
 | Frontend | Next.js 15, React 19, Tailwind CSS |
 | Smart Accounts | Privy + Safe (ERC-4337) |
-| AI | Gemini (primary), Venice AI, AI/ML API (fallback), Modal GLM (tertiary) |
+| AI | Gemini (primary), Venice AI, AI/ML API, NVIDIA, Featherless, 0G Serving, Modal GLM (fallback chain) |
 | Agent Memory | Cognee (cross-session learning) |
 | Macro Monitoring | Firecrawl (event-driven page watching) |
 | Swaps | Mento Protocol (Celo), 1inch/Uniswap (Arbitrum) |
