@@ -40,6 +40,7 @@ import { useAgentConfig } from "@/hooks/use-agent-config";
 import { useVault } from "@/hooks/use-vault";
 import { useSessionKey } from "@/hooks/use-session-key";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
+import { SavingsLoopCard } from "../rewards/SavingsLoopCard";
 
 // ============================================================================
 // MAIN COMPONENT
@@ -446,6 +447,12 @@ export default function ProtectionTab({
           </div>
         </div>
       )}
+
+      {/* =====================================================================
+          G$ SAVINGS LOOP — Claim G$ → Build streak → Protect → Repeat.
+          This is the explicit loop GoodBuilders S4 reviewers asked for.
+          ===================================================================== */}
+      <SavingsLoopCard />
 
       {/* =====================================================================
           PROTECTION PLAN GALLERY — the design system, live in the product.

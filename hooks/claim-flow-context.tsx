@@ -1,14 +1,19 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef } from 'react';
 import { useClaimFlow, ClaimFlowOverlay, type ClaimFlow } from './use-claim-flow';
+import { useNavigation } from '@/context/app/NavigationContext';
 
 const ClaimFlowContext = createContext<ClaimFlow | null>(null);
 
 export function ClaimFlowProvider({ children }: { children: React.ReactNode }) {
-  const flow = useClaimFlow();
+  const { setActiveTab } = useNavigation();
+  const handleProtect = useCallback(() => {
+    setActiveTab('protect');
+  }, [setActiveTab]);
+  const flow = useClaimFlow({ onProtect: handleProtect });
   return (
     <ClaimFlowContext.Provider value={flow}>
       {children}
-      <ClaimFlowOverlay flow={flow} />
+      <ClaimFlowOverlay flow={flow} onProtect={handleProtect} />
     </ClaimFlowContext.Provider>
   );
 }

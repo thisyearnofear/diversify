@@ -123,16 +123,21 @@ async function handleGet(address: string, res: NextApiResponse) {
   }
 }
 
-// POST - Record a save activity
+// POST - Record a save activity (swap or claim)
 async function handlePost(address: string, req: NextApiRequest, res: NextApiResponse) {
   try {
-    const { amountUSD } = req.body;
+    const { amountUSD, source } = req.body;
 
-    if (!amountUSD || amountUSD < MIN_SWAP_USD) {
+    // Claims always qualify (G$ UBI is the entry point to the savings loop).
+    // Swaps must meet the minimum amount threshold.
+    const isClaim = source === 'claim';
+    if (!isClaim && (!amountUSD || amountUSD < MIN_SWAP_USD)) {
       return res.status(400).json({
         error: `Minimum swap amount is $${MIN_SWAP_USD}`
       });
     }
+
+    const effectiveAmount = isClaim ? (amountUSD || 0) : amountUSD;
 
     const today = Math.floor(Date.now() / 86400000);
 
@@ -147,7 +152,7 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
         lastActivity: Date.now(),
         daysActive: 1,
         gracePeriodsUsed: 0,
-        totalSaved: amountUSD,
+        totalSaved: effectiveAmount,
         longestStreak: 1,
         totalStreaksCompleted: 0,
         milestones: {
@@ -163,19 +168,19 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
 
       if (today === lastDay) {
         // Already saved today - just update amount
-        streak.totalSaved += amountUSD;
+        streak.totalSaved += effectiveAmount;
         streak.lastActivity = Date.now();
       } else if (today === lastDay + 1) {
         // Consecutive day - streak continues
         streak.daysActive += 1;
         streak.lastActivity = Date.now();
-        streak.totalSaved += amountUSD;
+        streak.totalSaved += effectiveAmount;
       } else if (today <= lastDay + 2 && streak.gracePeriodsUsed < GRACE_PERIODS_PER_WEEK) {
         // Used grace period
         streak.daysActive += 1;
         streak.gracePeriodsUsed += 1;
         streak.lastActivity = Date.now();
-        streak.totalSaved += amountUSD;
+        streak.totalSaved += effectiveAmount;
       } else {
         // Streak broken - record it and start over
         if (streak.daysActive >= 7) {
@@ -192,7 +197,7 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
         streak.lastActivity = Date.now();
         streak.daysActive = 1;
         streak.gracePeriodsUsed = 0;
-        streak.totalSaved = amountUSD;
+        streak.totalSaved = effectiveAmount;
       }
     }
 
@@ -293,6 +298,9 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
       streak.crossChainActivity.graduation.graduatedAt = new Date();
       streak.crossChainActivity.graduation.testnetActionsBeforeGraduation = 
         streak.crossChainActivity.testnet.totalSwaps + streak.crossChainActivity.testnet.totalClaims;
+    } else if (action === 'protection') {
+      // User selected a protection plan — counts toward the savings loop.
+      // No crossChainActivity field needed; the achievement below is the signal.
     }
 
     // Track unique chains used (for testnet)
@@ -376,6 +384,20 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
     if (streak.crossChainActivity.graduation.isGraduated && !hasAchievement('mainnet-pioneer')) {
       streak.achievements.push('mainnet-pioneer');
       newAchievements.push('mainnet-pioneer');
+    }
+
+    // First Protection Plan (user selected a protection strategy)
+    if (action === 'protection' && !hasAchievement('first-protection-plan')) {
+      streak.achievements.push('first-protection-plan');
+      newAchievements.push('first-protection-plan');
+    }
+
+    // Savings Loop Master (claimed G$ AND protected in the same streak)
+    const hasClaimed = streak.crossChainActivity.mainnet.totalClaims > 0 || streak.crossChainActivity.testnet.totalClaims > 0;
+    const hasProtected = hasAchievement('first-protection-plan');
+    if (hasClaimed && hasProtected && !hasAchievement('savings-loop-master')) {
+      streak.achievements.push('savings-loop-master');
+      newAchievements.push('savings-loop-master');
     }
 
     await streak.save();

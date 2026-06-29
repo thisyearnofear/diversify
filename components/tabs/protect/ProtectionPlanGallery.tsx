@@ -22,6 +22,9 @@ import {
   type ArchetypeId,
 } from '@/components/protection-cards/tokens';
 import { useAmbientOrigin } from './ProtectionAmbient';
+import { useStreakRewards } from '@/hooks/use-streak-rewards';
+import { useWalletContext } from '@/components/wallet/WalletProvider';
+import { NETWORKS } from '@/config';
 
 // Mobile: ~260px (scroll). Desktop: ~300px (grid).
 const RENDERED_W_MOBILE = 260;
@@ -48,6 +51,8 @@ export function ProtectionPlanGallery({ mobile = true }: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const ambient = useAmbientOrigin();
+  const { recordActivity } = useStreakRewards();
+  const { address, chainId } = useWalletContext();
 
   const renderedW = mobile ? RENDERED_W_MOBILE : RENDERED_W_DESKTOP;
   const scale = renderedW / CARD_SIZE;
@@ -95,6 +100,16 @@ export function ProtectionPlanGallery({ mobile = true }: Props) {
                   rect.top + rect.height / 2,
                 );
                 setFinancialStrategy(strategyId);
+                // Record protection plan selection to the streak system —
+                // this awards the "first-protection-plan" achievement and
+                // contributes to the "savings-loop-master" achievement.
+                if (address && chainId) {
+                  recordActivity({
+                    action: 'protection',
+                    chainId,
+                    networkType: NETWORKS.CELO_MAINNET.chainId === chainId ? 'mainnet' : 'testnet',
+                  }).catch(() => {});
+                }
               }}
               className={
                 'group relative shrink-0 snap-start rounded-3xl overflow-hidden transition-transform duration-200 active:scale-[0.98] ' +

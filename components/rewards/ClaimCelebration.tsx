@@ -14,11 +14,13 @@ interface ClaimCelebrationProps {
   txHash?: string;
   streakDays: number;
   onClose: () => void;
+  /** Called when user taps "Protect your G$" — navigates to the swap tab. */
+  onProtect?: () => void;
 }
 
-export default function ClaimCelebration({ amount, txHash, streakDays, onClose }: ClaimCelebrationProps) {
+export default function ClaimCelebration({ amount, txHash, streakDays, onClose, onProtect }: ClaimCelebrationProps) {
   useEffect(() => {
-    const timer = setTimeout(onClose, 4000);
+    const timer = setTimeout(onClose, 6000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
@@ -96,11 +98,23 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose }
           </div>
         )}
 
+        {onProtect && (
+          <button
+            onClick={() => {
+              onProtect();
+              onClose();
+            }}
+            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-black rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-600/20 mb-2"
+          >
+            🛡️ Protect your G$ from inflation →
+          </button>
+        )}
+
         <button
           onClick={onClose}
-          className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-black rounded-2xl hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg shadow-emerald-600/20"
+          className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
         >
-          Awesome!
+          Maybe later
         </button>
       </div>
     </div>

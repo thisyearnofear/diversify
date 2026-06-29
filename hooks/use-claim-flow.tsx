@@ -22,6 +22,7 @@ import dynamic from 'next/dynamic';
 import { useStreakRewards } from './use-streak-rewards';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { NETWORKS } from '@/config';
+import { STREAK_CONFIG } from '../modules/rewards/streak/types';
 
 // Lazy-load the celebration so consumers that don't reach success never
 // pay the bundle cost.
@@ -63,10 +64,13 @@ export interface UseClaimFlowOptions {
   /** Called after a successful on-chain claim. Use for side effects like
    *  awarding XP, refreshing stats, or closing the surrounding drawer. */
   onClaimSuccess?: () => void;
+  /** Called when user taps "Protect your G$" in the celebration overlay.
+   *  Typically navigates to the swap or protect tab. */
+  onProtect?: () => void;
 }
 
 export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
-  const { onClaimSuccess } = options;
+  const { onClaimSuccess, onProtect } = options;
   const { chainId } = useWalletContext();
   const {
     canClaim,
@@ -77,6 +81,7 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
     verifyIdentity,
     refresh,
     recordActivity,
+    recordSwap,
     isLoading,
   } = useStreakRewards();
 
@@ -148,6 +153,12 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
             usdValue: parseFloat(estimatedReward.replace(/[^0-9.]/g, '')) || 0,
           });
         }
+        // Activate/increment the savings streak — claiming G$ is the entry
+        // point to the Claim → Streak → Protect → Claim loop. Uses source:'claim'
+        // so the POST handler treats it as a qualifying activity regardless
+        // of the USD amount (G$ UBI may be below the $1 swap minimum).
+        const claimUsd = parseFloat(estimatedReward.replace(/[^0-9.]/g, '')) || 0;
+        recordSwap(claimUsd, 'claim').catch(() => {});
         onClaimSuccess?.();
       } else {
         setClaimError(result.error || 'Claim failed. Please try again.');
@@ -165,7 +176,7 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
         setClaimError(null);
       }, 6_000);
     }
-  }, [canClaim, claimStatus, claimG, estimatedReward, recordActivity, chainId, onClaimSuccess]);
+  }, [canClaim, claimStatus, claimG, estimatedReward, recordActivity, recordSwap, chainId, onClaimSuccess]);
 
   const handleClaimSuccessClose = useCallback(() => {
     setClaimStatus('idle');
@@ -189,11 +200,12 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
 }
 
 /**
- * <ClaimFlowOverlay flow={flow} /> — renders the success celebration when
- * the flow's claimStatus transitions to 'success'. Mount it once in the
- * consumer's JSX; it self-renders only when there's something to show.
+ * <ClaimFlowOverlay flow={flow} onProtect={...} /> — renders the success
+ * celebration when the flow's claimStatus transitions to 'success'. Mount
+ * it once in the consumer's JSX; it self-renders only when there's something
+ * to show.
  */
-export function ClaimFlowOverlay({ flow }: { flow: ClaimFlow }) {
+export function ClaimFlowOverlay({ flow, onProtect }: { flow: ClaimFlow; onProtect?: () => void }) {
   if (flow.claimStatus !== 'success' || !flow.lastClaim) return null;
   return (
     <ClaimCelebration
@@ -201,6 +213,7 @@ export function ClaimFlowOverlay({ flow }: { flow: ClaimFlow }) {
       txHash={flow.lastClaim.txHash}
       streakDays={flow.streakDays}
       onClose={flow.handleClaimSuccessClose}
+      onProtect={onProtect}
     />
   );
 }

@@ -59,13 +59,13 @@ export interface StreakState {
 }
 
 export interface StreakActions {
-  recordSwap: (amountUSD: number) => Promise<void>;
+  recordSwap: (amountUSD: number, source?: 'swap' | 'claim') => Promise<void>;
   claimG: () => Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }>;
   verifyIdentity: () => Promise<{ success: boolean; url?: string; error?: string }>;
   resetStreak: () => Promise<void>;
   refresh: () => Promise<void>;
   recordActivity: (params: {
-    action: 'swap' | 'claim' | 'graduation' | 'simulation';
+    action: 'swap' | 'claim' | 'graduation' | 'simulation' | 'protection';
     chainId: number;
     networkType: 'testnet' | 'mainnet';
     usdValue?: number;

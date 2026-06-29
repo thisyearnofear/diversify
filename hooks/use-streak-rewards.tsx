@@ -152,9 +152,10 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const recordSwap = useCallback(
-    async (amountUSD: number) => {
+    async (amountUSD: number, source?: 'swap' | 'claim') => {
       if (!address) throw new Error('Wallet not connected');
-      if (amountUSD < STREAK_CONFIG.MIN_SWAP_USD) return;
+      // Claims bypass the minimum amount check (G$ UBI may be < $1)
+      if (source !== 'claim' && amountUSD < STREAK_CONFIG.MIN_SWAP_USD) return;
 
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
@@ -162,7 +163,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
         const response = await fetch(`/api/streaks/${address}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amountUSD }),
+          body: JSON.stringify({ amountUSD, source: source || 'swap' }),
         });
 
         if (response.ok) {
@@ -272,7 +273,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
 
   const recordActivity = useCallback(
     async (params: {
-      action: 'swap' | 'claim' | 'graduation' | 'simulation';
+      action: 'swap' | 'claim' | 'graduation' | 'simulation' | 'protection';
       chainId: number;
       networkType: 'testnet' | 'mainnet';
       usdValue?: number;

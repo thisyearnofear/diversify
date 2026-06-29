@@ -1,7 +1,7 @@
 import { safeParseJson } from '../utils';
 
 export type RecordActivityParams = {
-  action: 'swap' | 'claim' | 'graduation' | 'simulation';
+  action: 'swap' | 'claim' | 'graduation' | 'simulation' | 'protection';
   chainId: number;
   networkType: 'testnet' | 'mainnet';
   usdValue?: number;
