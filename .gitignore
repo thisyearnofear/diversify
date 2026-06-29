@@ -102,3 +102,4 @@ scripts/setup-mongodb.sh
 !scripts/nginx-diversifi-api.conf.example
 .synthesis-credentials
 .blackboxcli/
+.commandcode/
