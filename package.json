@@ -24,7 +24,8 @@
     "test-x402-frequency": "node tests/test-x402-frequency.mjs",
     "generate-x402-volume": "node scripts/generate-x402-volume.mjs",
     "validate-agent": "npx tsx -e \"import { validateAgentConfig } from './packages/shared/src/utils/arc-agent-setup'; console.log(validateAgentConfig());\"",
-    "register-agent": "npx tsx scripts/register-on-agentscan.ts"
+    "register-agent": "npx tsx scripts/register-on-agentscan.ts",
+    "register-erc8004": "npx tsx scripts/register-erc8004.ts"
   },
   "dependencies": {
     "@0gfoundation/0g-storage-ts-sdk": "1.2.9",
@@ -40,6 +41,8 @@
     "@privy-io/react-auth": "3.13.1",
     "@privy-io/wagmi": "4.0.1",
     "@quicknode/x402": "0.1.3",
+    "@selfxyz/agent-sdk": "0.2.1",
+    "@selfxyz/qrcode": "1.0.24",
     "@stable-station/mento-utils": "workspace:*",
     "@tanstack/react-query": "5.90.21",
     "@vercel/og": "0.8.6",

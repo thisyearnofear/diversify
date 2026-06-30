@@ -20,6 +20,8 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - `pnpm test-x402`: Verifies the gateway challenge/response loop.
 - `pnpm test-x402-comprehensive`: Validates the full research-payment-settlement cycle.
 - `pnpm validate-agent`: Checks configuration integrity.
+- `pnpm register-erc8004`: Mints the DiversiFi Guardian agent identity NFT on the ERC-8004 Identity Registry (see `docs/agent-identity.md`).
+- `pnpm register-agent`: Registers on the Celo AgentScan registry.
 
 ## Coding Style & Naming Conventions
 - **Enhancement First**: Prioritize extending existing components and shared services before creating new ones.

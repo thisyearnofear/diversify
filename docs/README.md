@@ -12,6 +12,7 @@ Index for `docs/`. Start at the top, drill down by need.
 - **New contributor setting up locally** → [`getting-started.md`](./getting-started.md) (env vars, quick start, deploy)
 - **Looking up an API endpoint, provider, or env var** → [`integrations.md`](./integrations.md) (comprehensive reference; the canonical env var table)
 - **Understanding the Guardian's spending bounds & what stops a compromised server** → [`guardian-enforcement-model.md`](./guardian-enforcement-model.md) (TL;DR + threat model + hybrid plan)
+- **Agent identity (ERC-8004 + Self Protocol)** → [`agent-identity.md`](./agent-identity.md) (registration, signing, verification)
 - **Roadmap & active buildathon track** → [`roadmap.md`](./roadmap.md) (product quality plan + task breakdown) + [`0g-bridge-plan.md`](./0g-bridge-plan.md) (authoritative 0G file-by-file plan)
 
 ## Deploy ops
