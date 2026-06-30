@@ -79,6 +79,8 @@ Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar har
 │  • 0G: Storage (evidence CID) + DA + Compute (TEE proofs)   │
 │  • Arc: x402 nanopayment settlement                         │
 │  • Cognee: cross-session agent memory                       │
+│  • ERC-8004: agent identity registry (8004scan)             │
+│  • Self Protocol: sybil-resistant agent ID (Celo)           │
 │  • Hetzner: always-on cron runtime (no cold starts)         │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -151,6 +153,31 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
 **Security:** Server-to-server auth via `GUARDIAN_LOOP_SECRET` header. DB unavailability returns `200` with status (never `500` — graceful degradation).
 
 **Permission integrity:** The ERC-7715 permission posted to `/api/vault/permission` is verified server-side via `ERC7715Service.verifySignedPermission` (EIP-712 typed-data recovery against the expected `userAddress` and `chainId`). The previous "deferred to Privy policies" posture is gone — every persisted permission is cryptographically bound to the user's wallet signature. Permission objects without a valid 0x-hex signature and 32-byte nonce are rejected with `400`.
+
+## Agent Identity (ERC-8004 + Self Protocol)
+
+The DiversiFi Guardian has two on-chain identity registrations. Both are
+ERC-8004 compliant; Self Protocol adds a Proof-of-Human layer on top.
+
+| Registry | Address | Chain | Status |
+|---|---|---|---|
+| ERC-8004 Identity Registry (8004scan) | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | Celo mainnet | **Registered** — agentId 9654, owner `0x3542…Af48` |
+| Self Protocol Agent ID | `0x043DaCac8b0771DD5b444bCC88f2f8BBDBEdd379` | Celo Sepolia (testnet) | **Registered** — agentId 82, verified, proof-of-human (passport strength 100) |
+
+**ERC-8004 (8004scan):** Portable, censorship-resistant agent identity. The
+registration file at `public/.well-known/erc8004.json` describes the agent
+(services, x402 support, supported trust signals). `pnpm register-erc8004`
+mints the NFT; the `agentURI` points to the hosted registration file.
+
+**Self Protocol Agent ID:** Sybil-resistant identity on Celo backed by ZK
+passport verification (one human = one agent). The
+`SelfAgentRegistration` component renders a QR code; the agent owner scans
+with the Self app → soulbound NFT minted. `self-agent-service.ts` provides
+signing (`getSelfSigningAgent`) and verification (`getSelfAgentVerifier`)
+for outbound/inbound agent requests.
+
+See [`docs/agent-identity.md`](./agent-identity.md) for registration
+instructions, env vars, and the signing/verification API.
 
 ## State Management (Frontend)
 

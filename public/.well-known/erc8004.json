@@ -23,7 +23,7 @@
   "registrations": [
     {
       "agentRegistry": "eip155:42220:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
-      "agentId": "PENDING"
+      "agentId": "9654"
     }
   ],
   "supportedTrust": ["reputation", "crypto-economic"]

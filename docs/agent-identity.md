@@ -11,6 +11,19 @@ The DiversiFi Guardian agent has two on-chain identity registrations:
 Both are ERC-8004 compliant. Self Protocol adds the human-verification layer
 on top.
 
+## Current Registration Status
+
+| Registry | Agent ID | Chain | Owner | Verified |
+|---|---|---|---|---|
+| ERC-8004 Identity Registry | 9654 | Celo mainnet (42220) | `0x3542916a…Af48` | N/A (no proof-of-human on this registry) |
+| Self Protocol Agent ID | 82 | Celo Sepolia (11142220) | `0xe10e5fcb…ebde` | Yes — passport, strength 100, sybil count 1 |
+
+**ERC-8004 tx:** [`0xb698d493…`](https://celoscan.io/tx/0xb698d493282c1826546cb4a78258cf1cdff33f325770917cd215c4c90f14e5d1)
+
+**Self Protocol:** Registered via REST API (`https://agent-api.self.xyz/api/agent/register`) with testnet mock documents. The agent is verified on-chain with passport-strength proof-of-human. To move to mainnet, re-register with a real passport via the Self app.
+
+**Agent signing key:** `0xe10e5fcb87462736F4929E68D1580902f01Eebde` (Self Protocol agent address). The private key is held by the Self API session; export it via the `/api/agent/register/export` endpoint and store as `AGENT_PRIVATE_KEY` in the server environment.
+
 ---
 
 ## ERC-8004 Registration (8004scan)

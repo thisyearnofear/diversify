@@ -50,7 +50,13 @@ if (fs.existsSync(envPath)) {
     const trimmed = line.trim();
     if (trimmed && !trimmed.startsWith("#")) {
       const [key, ...valueParts] = trimmed.split("=");
-      if (key) process.env[key.trim()] = valueParts.join("=").trim();
+      if (key) {
+        const envKey = key.trim();
+        // Don't overwrite env vars already set (CLI/shell takes precedence)
+        if (!process.env[envKey]) {
+          process.env[envKey] = valueParts.join("=").trim();
+        }
+      }
     }
   });
 }
@@ -143,13 +149,18 @@ async function main() {
 
     if (receipt.status === "success") {
       // Parse the Registered event to get the agentId
+      // Registered(uint256 indexed agentId, string agentURI, address indexed owner)
+      // topic0 = 0xca52e62c367d81bb2e328eb795f7c7ba24afb478408a26c0e201d155c449bc4a
+      const REGISTERED_TOPIC =
+        "0xca52e62c367d81bb2e328eb795f7c7ba24afb478408a26c0e201d155c449bc4a";
       const registeredLog = receipt.logs.find(
-        (log) => log.address.toLowerCase() === registry.toLowerCase(),
+        (log) =>
+          log.address.toLowerCase() === registry.toLowerCase() &&
+          log.topics[0]?.toLowerCase() === REGISTERED_TOPIC,
       );
 
       let agentId: bigint | undefined;
       if (registeredLog) {
-        // Registered event: uint256 indexed agentId, string agentURI, address indexed owner
         // agentId is the first indexed topic (topic[1])
         agentId = BigInt(registeredLog.topics[1]);
       }

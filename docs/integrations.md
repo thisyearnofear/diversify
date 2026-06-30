@@ -283,4 +283,5 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | Hedging | Hyperliquid perps |
 | Data | World Bank, FRED, CoinGecko, DeFiLlama |
 | Database | MongoDB |
+| Agent Identity | ERC-8004 Identity Registry (8004scan), Self Protocol Agent ID (Celo) |
 | Hosting | Vercel (frontend), Hetzner (agent runtime) |
