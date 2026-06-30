@@ -1,21 +1,11 @@
 @AGENTS.md
 
-# Active work: Config Makeathon submission (deadline today, 2026-06-18 23:59 PDT)
+# Active work: 0G Bridge by AKINDO buildathon
 
-Read `docs/makeathon/brief.md` and `docs/makeathon/plan.md` before
-starting work. They contain the scoring rubric, scope decision, and
-work breakdown.
-
-**Scope at a glance:** 7 Protection Plan cards as a culturally-aligned
-visual identity for emerging-market savings strategies. One Figma
-file with cover + 7 components + one in-context screen mockup.
-6–8 hours of focused work.
-
-**Prior art that works:** The same workflow shipped 10 archetype
-cards for `~/Dev/sportwarren` over the past 2 days — TS satori
-components → PNG render → Figma component sync via the Figma MCP
-plugin API. The patterns are reusable; `docs/makeathon/references.md`
-links the exact files to crib from.
+The authoritative file-by-file, wave-by-wave plan lives in
+`docs/0g-bridge-plan.md`. Read it before starting work on the 0G
+track. The roadmap (`docs/roadmap.md`) covers the broader product
+quality plan.
 
 **Tool note:** Before any `use_figma` call, invoke the `figma-use`
 skill (via `Skill` tool with name `figma-use`, or read

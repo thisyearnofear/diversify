@@ -5,8 +5,7 @@
 
 Every high-impact Guardian decision is verifiable: the full reasoning is encrypted and stored on **0G**, the decision hash is recorded on-chain, and autonomous execution stays within user-signed ERC-7715-style permission bounds (currently enforced in application code, not on-chain — see [`docs/guardian-enforcement-model.md`](./docs/guardian-enforcement-model.md)).
 
-**Live App:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app)  
-**Hackathon Tracks:** 🏆 Arbitrum Overall / Best Agentic Project · 🤖 Agentic Economy · 🛡️ Verifiable AI (0G) · 🪙 Autonomous Payments (Arc)
+**Live App:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app)
 
 ---
 
@@ -41,14 +40,14 @@ DiversiFi is built on a deliberate chain split that matches real user needs:
 
 ---
 
-## 🔑 Judge Verification Proofs
+## 🔑 Deployment Proofs
 
-### Arbitrum Deployment (Prize Eligibility)
+### Arbitrum Deployment
 - **Deployment script**: `./scripts/deploy-all.sh arbitrum_sepolia --verify` uses the unified `scripts/DeployArbitrum.s.sol` script and deploys all three Arbitrum Sepolia contracts in one run.
 - **RecommendationLedger Contract** (Arbitrum Sepolia, chainId `421614`): [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996)
 - **StrategyVault Contract** (Arbitrum Sepolia, chainId `421614`): [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975)
 - **AgenticHub Contract** (Arbitrum Sepolia, chainId `421614`): [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92)
-- **Payment token**: Arbitrum Sepolia USDC `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` (baked into `DeployArbitrum.s.sol` for the hackathon testnet deployment).
+- **Payment token**: Arbitrum Sepolia USDC `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` (baked into `DeployArbitrum.s.sol`).
 - **Arbitrum Frontend RPC**: Configured in `components/app/ProviderTree.tsx` / `context/PrivyProvider.tsx`.
 
 ### 0G Stack (Verifiable AI)

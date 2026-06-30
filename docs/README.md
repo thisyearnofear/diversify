@@ -12,8 +12,7 @@ Index for `docs/`. Start at the top, drill down by need.
 - **New contributor setting up locally** → [`getting-started.md`](./getting-started.md) (env vars, quick start, deploy)
 - **Looking up an API endpoint, provider, or env var** → [`integrations.md`](./integrations.md) (comprehensive reference; the canonical env var table)
 - **Understanding the Guardian's spending bounds & what stops a compromised server** → [`guardian-enforcement-model.md`](./guardian-enforcement-model.md) (TL;DR + threat model + hybrid plan)
-- **Auditing recent hardening work** → [`phase-4-audit.md`](./phase-4-audit.md) (summary, score, residuals, final tally). Per-phase detail and cross-cutting findings live in [`internal/archive/phase-4-audit-detailed.md`](./internal/archive/phase-4-audit-detailed.md).
-- **Roadmap / buildathon planning** → [`roadmap.md`](./roadmap.md) (summary) + [`0g-bridge-plan.md`](./0g-bridge-plan.md) (authoritative file-by-file plan)
+- **Roadmap & active buildathon track** → [`roadmap.md`](./roadmap.md) (product quality plan + task breakdown) + [`0g-bridge-plan.md`](./0g-bridge-plan.md) (authoritative 0G file-by-file plan)
 
 ## Deploy ops
 
@@ -23,10 +22,10 @@ Index for `docs/`. Start at the top, drill down by need.
 
 ## Top-level
 
-- **[`../README.md`](../README.md)** — marketing / judge verification / quick demo flow
+- **[`../README.md`](../README.md)** — marketing / deployment proofs / quick demo flow
 - **[`../AGENTS.md`](../AGENTS.md)** — repo conventions, build/test commands, coding style for coding agents
 
 ## Internal / archived
 
-- `internal/` — ops notes, one-off runbooks (not for judges)
-- `internal/archive/` — historical plans and detailed audits kept for reference; not authoritative
+- `internal/` — ops notes, one-off runbooks
+- `internal/archive/` — historical plans kept for reference; not authoritative

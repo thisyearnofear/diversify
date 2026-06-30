@@ -40,10 +40,10 @@ malicious code path can move funds **beyond the user's intended bounds**,
 because nothing on-chain stops the custodial signer. "Revoke" is a MongoDB
 status flag, not an on-chain revocation.
 
-The hardened app-layer gates (see `docs/phase-4-audit.md` and the 2026-06
-Guardian hardening) make this robust *within the trusted model* — they are the
-enforcement layer today and remain valuable as defense-in-depth even after
-on-chain enforcement lands. They do not, by themselves, remove server trust.
+The hardened app-layer gates (the 2026-06 Guardian hardening) make this
+robust *within the trusted model* — they are the enforcement layer today and
+remain valuable as defense-in-depth even after on-chain enforcement lands.
+They do not, by themselves, remove server trust.
 
 ## Current flow
 
@@ -135,4 +135,3 @@ blocker, so:
   the real (dark) ERC-7710 redemption path.
 - `pages/api/vault/_executor.ts` — current Privy/Safe/`VAULT_PRIVATE_KEY` execution.
 - `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates.
-- `docs/phase-4-audit.md` — per-phase hardening verdicts.

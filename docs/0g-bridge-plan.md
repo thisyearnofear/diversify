@@ -5,7 +5,7 @@
 **Status:** Wave 1 (scoping) — drafted 2026-06-15
 **Authoritative reference for:** 0G component selection, Wave-by-Wave file deltas, principle alignment
 
-This plan lives next to [`roadmap.md`](./roadmap.md), [`architecture.md`](./architecture.md), [`integrations.md`](./integrations.md), and [`phase-4-audit.md`](./phase-4-audit.md). The 0G Bridge track supersedes the "Arbitrum Submission Roadmap (Active)" section in `roadmap.md` once Wave 1 is submitted — Arbitrum stays in scope as a settlement rail; 0G becomes the canonical trust + inference surface.
+This plan lives next to [`roadmap.md`](./roadmap.md), [`architecture.md`](./architecture.md), and [`integrations.md`](./integrations.md). The 0G Bridge track supersedes the Arbitrum submission track — Arbitrum stays in scope as a settlement rail; 0G becomes the canonical trust + inference surface.
 
 ---
 
@@ -307,7 +307,6 @@ The Wave 1 submission is otherwise a packaging exercise. The hard work (the 0G i
 - Architecture: [`docs/architecture.md`](./architecture.md)
 - All integrations: [`docs/integrations.md`](./integrations.md)
 - Quality roadmap: [`docs/roadmap.md`](./roadmap.md)
-- Last audit: [`docs/phase-4-audit.md`](./phase-4-audit.md)
 - Internal runbook: `docs/internal/zero-g-mainnet-runbook.md` (to be created when 0G mainnet deploy happens)
 - 0G contract: [`contracts/RecommendationLedger.sol`](../contracts/RecommendationLedger.sol)
 - 0G Storage service: [`packages/shared-0g/src/services/storage-service.ts`](../packages/shared-0g/src/services/storage-service.ts)

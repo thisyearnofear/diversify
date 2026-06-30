@@ -6,7 +6,7 @@
 
 ## Recent Hardening (2026-06)
 
-This document reflects the post-hardening state. The full audit, including per-phase verdicts and the residual gap list, lives in [`docs/phase-4-audit.md`](./phase-4-audit.md). The headline changes since the initial 8.4/10 review:
+This document reflects the post-hardening state. The headline changes since the initial 8.4/10 review:
 
 - **EIP-712 server-side signature verification** on `POST /api/vault/permission` — every persisted permission is now cryptographically bound to the user's wallet signature (was: trust on first use with server-side inflation defaults).
 - **0G anchor observability** — `recordRecommendation` returns a discriminated `AnchorResult` (`anchored | pending | failed`) and the status is surfaced in the chat receipt, the proof feed, and `GuardianState.latestAnchor`. The `pending` case (60s receipt timeout) is honest rather than silent.
