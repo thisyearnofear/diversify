@@ -283,4 +283,4 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | Hedging | Hyperliquid perps |
 | Data | World Bank, FRED, CoinGecko, DeFiLlama |
 | Database | MongoDB |
-| Hosting | Vercel/Netlify (frontend), Hetzner (agent runtime) |
+| Hosting | Vercel (frontend), Hetzner (agent runtime) |

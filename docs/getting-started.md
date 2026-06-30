@@ -79,7 +79,7 @@ pnpm generate-x402-volume
 
 ## Deployment
 
-### Frontend (Vercel/Netlify/Cloudflare)
+### Frontend (Vercel)
 
 ```bash
 pnpm build
