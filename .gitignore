@@ -43,8 +43,11 @@ yarn-error.log*
 .claude
 .commandcode
 .crush
+.cursor
+.devin
 .factory
 .junie
+.kilo
 .kilocode
 .kiro
 .openclaude
@@ -100,6 +103,7 @@ scripts/setup-mongodb.sh
 !scripts/pm2.ecosystem.config.cjs.example
 !scripts/deploy-env-to-server.sh.example
 !scripts/nginx-diversifi-api.conf.example
+
+# Misc credentials / local CLI state
 .synthesis-credentials
 .blackboxcli/
-.commandcode/

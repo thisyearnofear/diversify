@@ -33,3 +33,9 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **Conventional Commits**: Use `feat:`, `fix:`, `refactor:`, `docs:`, etc.
 - **Signal-to-Noise**: Commit messages should focus on the "why" of the change.
 - **Validation**: Never submit a PR without running the specialized verification commands if core agent logic is modified.
+
+## Active Work
+The 0G Bridge by AKINDO buildathon is the current submission target. The authoritative file-by-file, wave-by-wave plan lives in `docs/0g-bridge-plan.md`. The broader product quality plan is in `docs/roadmap.md`.
+
+## Tool Notes
+- **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.
