@@ -160,6 +160,6 @@ This attaches three headers:
 
 ## Support
 
-- GitHub: [diversifi/diversifi](https://github.com/diversifi/diversifi)
+- GitHub: [thisyearnofear/diversify](https://github.com/thisyearnofear/diversify)
 - Live gateway: https://api.diversifi.famile.xyz
 - Settlement metrics: https://api.diversifi.famile.xyz/api/agent/x402-metrics
