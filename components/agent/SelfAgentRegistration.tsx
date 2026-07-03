@@ -15,12 +15,8 @@ import { Wallet } from "ethers";
 import {
   SelfAppBuilder,
   SelfQRcodeWrapper,
-  type ISelfApp,
+  type SelfApp,
 } from "@selfxyz/qrcode";
-import {
-  signRegistrationChallenge,
-  buildAdvancedRegisterUserDataAscii,
-} from "@selfxyz/agent-sdk";
 
 const REGISTRY_MAINNET = "0xaC3DF9ABf80d0F5c020C06B04Cced27763355944";
 const REGISTRY_TESTNET = "0x043DaCac8b0771DD5b444bCC88f2f8BBDBEdd379";
@@ -42,7 +38,7 @@ export function SelfAgentRegistration({
   onSuccess,
   onError,
 }: SelfAgentRegistrationProps) {
-  const [selfApp, setSelfApp] = useState<ISelfApp | null>(null);
+  const [selfApp, setSelfApp] = useState<SelfApp | null>(null);
   const [agentWallet] = useState(() => Wallet.createRandom());
   const [status, setStatus] = useState<"loading" | "ready" | "success" | "error">("loading");
   const [savedKey, setSavedKey] = useState(false);
@@ -55,21 +51,25 @@ export function SelfAgentRegistration({
 
     (async () => {
       try {
-        // The agent key signs a challenge proving it controls the key
-        const sig = await signRegistrationChallenge(agentWallet.privateKey, {
-          humanIdentifier: humanAddress,
-          chainId: testnet ? 11142220 : 42220,
-          registryAddress: registry,
-          nonce: 0,
+        // The signing + payload building uses node:crypto (server-only).
+        // Call the API route to get the signed userDefinedData.
+        const res = await fetch("/api/agent/self-register-challenge", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            agentPrivateKey: agentWallet.privateKey,
+            agentAddress: agentWallet.address,
+            humanAddress,
+            testnet,
+          }),
         });
 
-        // Encode the registration payload
-        const disclosures = { minimumAge: 18, ofac: true };
-        const userDefinedData = buildAdvancedRegisterUserDataAscii({
-          agentAddress: agentWallet.address,
-          signature: sig,
-          disclosures,
-        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Challenge signing failed");
+        }
+
+        const { userDefinedData, disclosures } = await res.json();
 
         const app = new SelfAppBuilder({
           version: 2,

@@ -21,7 +21,7 @@
  *     (defaults to https://diversifiapp.vercel.app/.well-known/erc8004.json)
  */
 
-import { createWalletClient, http, parseAbi, publicActions } from "viem";
+import { createWalletClient, http, parseAbi, publicActions, type Chain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { celo, celoSepolia, arbitrum, base, polygon, bsc } from "viem/chains";
 import * as fs from "fs";
@@ -63,7 +63,7 @@ if (fs.existsSync(envPath)) {
 
 // ── Chain selection ──
 
-const CHAINS: Record<string, typeof celo> = {
+const CHAINS: Record<string, Chain> = {
   celo,
   arbitrum,
   base,
@@ -71,7 +71,7 @@ const CHAINS: Record<string, typeof celo> = {
   bsc,
 };
 
-function selectChain(): { chain: typeof celo; registry: `0x${string}`; isTestnet: boolean } {
+function selectChain(): { chain: Chain; registry: `0x${string}`; isTestnet: boolean } {
   const args = process.argv.slice(2);
   const isTestnet = args.includes("--testnet");
   const chainArg = args.find((a) => a.startsWith("--chain="))?.split("=")[1];
@@ -160,7 +160,7 @@ async function main() {
       );
 
       let agentId: bigint | undefined;
-      if (registeredLog) {
+      if (registeredLog && registeredLog.topics[1]) {
         // agentId is the first indexed topic (topic[1])
         agentId = BigInt(registeredLog.topics[1]);
       }
