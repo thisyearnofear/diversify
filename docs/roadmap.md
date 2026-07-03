@@ -83,7 +83,7 @@ true on-chain ERC-7710 permission enforcement for yield actions.
 2. ~~Wire chain-aware routing in `recommendation-ledger.service.ts`~~ **Done** — `getLedgerChainForAction()` routes yield tokens to Arbitrum mainnet automatically
 3. External agent example executing a yield action on Arbitrum mainnet — example code written (`examples/external-agent/`), needs live end-to-end test
 
-**Prep priority (before July 10):** ~~Deploy + verify RecommendationLedger on Arbitrum mainnet~~ **Deployed.** Remaining: verify contract source on Arbiscan (needs API key), run the external agent example end-to-end against the live gateway.
+**Prep priority (before July 10):** ~~Deploy + verify RecommendationLedger on Arbitrum mainnet~~ **Deployed + source verified on Arbiscan.** Remaining: run the external agent example end-to-end against the live gateway.
 
 ---
 
