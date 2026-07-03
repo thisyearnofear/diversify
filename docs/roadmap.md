@@ -51,8 +51,8 @@ actionable feedback. The gaps and the fixes:
 
 | Gap from reviewer feedback | Fix | Status |
 |---|---|---|
-| "Consumer app with infrastructure framing" | Reframe as intelligence protocol; ship external-agent SDK + integration guide | In progress |
-| "No evidence of external agents consuming the gateway" | One working external-agent example that pays x402 and consumes Mento intelligence | Planned |
+| "Consumer app with infrastructure framing" | Reframe as intelligence protocol; ship external-agent SDK + integration guide | **Docs reframed** (product.md, README.md, architecture.md). Integration guide written (`docs/integration-guide.md`) |
+| "No evidence of external agents consuming the gateway" | One working external-agent example that pays x402 and consumes Mento intelligence | **Example code written** (`examples/external-agent/consume-intelligence.js`). Needs live end-to-end test against deployed gateway |
 | "Verifiable stack sits off Celo / on testnet" | Deploy `RecommendationLedger` on Celo mainnet; move Self Agent ID to mainnet | **Ledger deployed** (0x3BCf…369C on Celo mainnet, first rec seeded). Self Protocol mainnet pending passport scan |
 | "Celo mainnet footprint is essentially a fresh ERC-8004 registration" | Add verified ledger + real Guardian tx history on Celo mainnet | **Ledger deployed + first rec seeded** (cUSD rebalance, tx 0xea1b169a…) |
 | "No milestones, grant amount, or team section" | Write `docs/grant-proposal.md` with named team, milestones, amount, sustainability | Planned |
@@ -79,12 +79,11 @@ reasoning tamper-proof. Arbitrum's EIP-7702 capability is the path to
 true on-chain ERC-7710 permission enforcement for yield actions.
 
 **What to ship during the 3 days:**
-1. Promote the Arbitrum ledger from Sepolia to mainnet (verify on Arbiscan)
-2. Wire chain-aware routing in `recommendation-ledger.service.ts`
-3. External agent example executing a yield action on Arbitrum mainnet
+1. ~~Promote the Arbitrum ledger from Sepolia to mainnet~~ **Done** — `0x3BCf…369C` on Arbitrum mainnet, first rec seeded (tx `0x2a034aad…`)
+2. ~~Wire chain-aware routing in `recommendation-ledger.service.ts`~~ **Done** — `getLedgerChainForAction()` routes yield tokens to Arbitrum mainnet automatically
+3. External agent example executing a yield action on Arbitrum mainnet — example code written (`examples/external-agent/`), needs live end-to-end test
 
-**Prep priority (before July 10):** Deploy + verify RecommendationLedger
-on Arbitrum mainnet so we walk in with a mainnet contract, not testnet.
+**Prep priority (before July 10):** ~~Deploy + verify RecommendationLedger on Arbitrum mainnet~~ **Deployed.** Remaining: verify contract source on Arbiscan (needs API key), run the external agent example end-to-end against the live gateway.
 
 ---
 

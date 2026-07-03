@@ -39,5 +39,14 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 ## Active Work
 Three grant tracks run in parallel, sharing one architecture: the **0G Bridge buildathon** (0G as evidence layer), the **Celo Prezenti grant** (Celo as savings + identity layer), and the **Arbitrum Open House London** (Arbitrum as yield + execution layer, July 10-12). The authoritative file-by-file, wave-by-wave plan lives in `docs/0g-bridge-plan.md`. The broader product quality plan is in `docs/roadmap.md`.
 
+**Current progress (2026-07-03):**
+- RecommendationLedger deployed to **Arbitrum mainnet** (`0x3BCf…369C`) and **Celo mainnet** (same address) — first recs seeded on both chains
+- Chain-aware routing implemented in `recommendation-ledger.service.ts` (`getLedgerChainForAction`)
+- External agent example + integration guide written (`examples/external-agent/`, `docs/integration-guide.md`)
+- LICENSE file added at repo root (MIT)
+- Self Protocol mainnet registration page created (`/admin/self-register`) — pending passport scan
+- All 459 tests pass (21 ledger tests including 8 new chain-aware routing tests)
+- **Remaining:** Arbiscan/Celoscan contract verification (needs API keys), Self Protocol mainnet passport scan, 0G mainnet evidence anchor deployment
+
 ## Tool Notes
 - **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.
