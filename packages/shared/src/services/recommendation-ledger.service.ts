@@ -72,6 +72,7 @@ export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string
     if (resolvedChainId === 42161) return `https://arbiscan.io/tx/${txHash}`;
     if (resolvedChainId === 421614) return `https://sepolia.arbiscan.io/tx/${txHash}`;
     if (resolvedChainId === 16602) return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
+    if (resolvedChainId === 16661) return `https://chainscan.0g.ai/tx/${txHash}`;
     return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
 }
 
@@ -122,6 +123,7 @@ const CELO_MAINNET_CHAIN_ID = 42220;
 const ARBITRUM_MAINNET_CHAIN_ID = 42161;
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 const ZERO_G_GALILEO_CHAIN_ID = 16602;
+const ZERO_G_MAINNET_CHAIN_ID = 16661;
 
 /**
  * Tokens that settle on Celo (savings / local stablecoins via Mento).
@@ -166,6 +168,11 @@ function getLedgerRegistry(): Record<number, LedgerConfig> {
             contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
             rpcUrl: process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai',
             chainId: ZERO_G_GALILEO_CHAIN_ID,
+        },
+        [ZERO_G_MAINNET_CHAIN_ID]: {
+            contractAddress: process.env.ZERO_G_MAINNET_LEDGER_CONTRACT || '',
+            rpcUrl: process.env.ZERO_G_MAINNET_RPC_URL || 'https://evmrpc.0g.ai',
+            chainId: ZERO_G_MAINNET_CHAIN_ID,
         },
     };
 }
@@ -224,6 +231,10 @@ export function getDefaultLedgerChainId(): number {
     const arbitrum = resolveLedgerConfig(ARBITRUM_SEPOLIA_CHAIN_ID);
     if (arbitrum?.contractAddress) {
         return ARBITRUM_SEPOLIA_CHAIN_ID;
+    }
+    const zeroGMainnet = resolveLedgerConfig(ZERO_G_MAINNET_CHAIN_ID);
+    if (zeroGMainnet?.contractAddress) {
+        return ZERO_G_MAINNET_CHAIN_ID;
     }
     return ZERO_G_GALILEO_CHAIN_ID;
 }
@@ -289,9 +300,12 @@ function getReadOnlyContract(chainId: number): ethers.Contract {
 }
 
 function getWriteContract(chainId: number): ethers.Contract | null {
-    const privateKey = process.env.VAULT_PRIVATE_KEY;
+    // Prefer LEDGER_PRIVATE_KEY (the ledger signer — typically the deployer
+    // wallet that is funded and authorized as an agent on all chains).
+    // Fall back to VAULT_PRIVATE_KEY for backward compatibility.
+    const privateKey = process.env.LEDGER_PRIVATE_KEY || process.env.VAULT_PRIVATE_KEY;
     if (!privateKey) {
-        console.warn('[RecommendationLedger] VAULT_PRIVATE_KEY not set — write operations disabled');
+        console.warn('[RecommendationLedger] No LEDGER_PRIVATE_KEY or VAULT_PRIVATE_KEY set — write operations disabled');
         return null;
     }
 
@@ -443,15 +457,22 @@ export async function recordRecommendation(params: {
 }
 
 /**
- * Mirror a recommendation to the 0G Galileo evidence anchor after it has been
+ * Mirror a recommendation to the 0G evidence anchor after it has been
  * settled on the chain-aware ledger (Celo or Arbitrum). 0G is the evidence
  * layer — this write creates a cross-chain verifiable reference to the
  * reasoning CID that the settlement ledger entry points to.
+ *
+ * Prefers 0G mainnet (chain 16661) when ZERO_G_MAINNET_LEDGER_CONTRACT is
+ * set, falling back to 0G Galileo testnet (16602) for backward compat.
  */
 export async function mirrorRecommendationToZeroG(
     params: Omit<Parameters<typeof recordRecommendation>[0], 'chainId'>
 ): Promise<AnchorResult> {
-    return recordRecommendation({ ...params, chainId: ZERO_G_GALILEO_CHAIN_ID });
+    const mainnetConfig = resolveLedgerConfig(ZERO_G_MAINNET_CHAIN_ID);
+    const targetChain = mainnetConfig?.contractAddress
+        ? ZERO_G_MAINNET_CHAIN_ID
+        : ZERO_G_GALILEO_CHAIN_ID;
+    return recordRecommendation({ ...params, chainId: targetChain });
 }
 
 /**

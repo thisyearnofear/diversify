@@ -311,6 +311,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             confidence: Math.round(confidence * 10000), // Contract uses basis points
           });
 
+          // Mirror to 0G evidence anchor (fire-and-forget). This creates a
+          // cross-chain verifiable reference on 0G mainnet — the evidence
+          // layer — alongside the primary settlement chain recording above.
+          recommendationLedgerService.mirrorRecommendationToZeroG({
+            user: userAddress,
+            action: 'EVIDENCE_MIRROR',
+            targetToken,
+            reasoning: `Evidence anchor for ${anchor.status} rec on chain ${anchor.chainId}: ${recommendation.oneLiner || recommendation.reasoning || ''}`,
+            evidenceCid: '',
+            servingModel: 'guardian-loop-mirror',
+            settlementTxHash: anchor.status === 'failed' ? '' : anchor.txHash,
+            confidence: Math.round(confidence * 10000),
+          }).catch((mirrorErr) => {
+            console.warn(`[guardian-loop] 0G mirror failed for ${userAddress}: ${mirrorErr.message}`);
+          });
+
           // Persist the new anchor to BOTH the pointer field and the
           // rolling history (and notify SSE subscribers). The pointer is the
           // single-source-of-truth for callers that only need the most recent
