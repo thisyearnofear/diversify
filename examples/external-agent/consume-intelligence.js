@@ -10,6 +10,19 @@
  * 3. Re-request intelligence with payment proof → receive payload
  *
  * This proves DiversiFi is infrastructure other agents depend on.
+ *
+ * Usage:
+ *   node examples/external-agent/consume-intelligence.js
+ *
+ * Env vars (optional — defaults hit the live API):
+ *   DIVERSIFI_GATEWAY_URL  Gateway URL (default: https://api.diversifi.famile.xyz)
+ *   BUYER_PRIVATE_KEY      Arc testnet wallet private key (for payment step)
+ *   ARC_RPC_URL            Arc RPC URL (default: https://testnet.arcscan.app/rpc)
+ *   USDC_ADDRESS           Arc testnet USDC contract
+ *   INTELLIGENCE_SOURCE    Source to request (default: macro_analysis)
+ *
+ * Without BUYER_PRIVATE_KEY, the script demonstrates the 402 challenge
+ * and exits — proving the gateway is live and payment-gated.
  */
 
 const { ethers } = require('ethers');
@@ -23,15 +36,6 @@ const BUYER_PRIVATE_KEY = process.env.BUYER_PRIVATE_KEY;
 const ARC_RPC_URL = process.env.ARC_RPC_URL || 'https://testnet.arcscan.app/rpc';
 const USDC_ADDRESS = process.env.USDC_ADDRESS;
 const INTELLIGENCE_SOURCE = process.env.INTELLIGENCE_SOURCE || 'macro_analysis';
-
-if (!BUYER_PRIVATE_KEY) {
-  console.error('❌ Set BUYER_PRIVATE_KEY env var (Arc testnet wallet with USDC)');
-  process.exit(1);
-}
-if (!USDC_ADDRESS) {
-  console.error('❌ Set USDC_ADDRESS env var (Arc testnet USDC contract)');
-  process.exit(1);
-}
 
 // USDC ERC-20 ABI (minimal)
 const USDC_ABI = [
@@ -50,22 +54,58 @@ async function main() {
   console.log(`  Source:   ${INTELLIGENCE_SOURCE}`);
   console.log('');
 
-  // Step 1: Request intelligence → get 402 challenge
-  console.log('Step 1: Requesting intelligence (expecting 402 payment challenge)...');
-  const challenge = await requestIntelligence(INTELLIGENCE_SOURCE);
+  // Step 1: Exhaust free tier (if any) to trigger the 402 payment challenge
+  console.log('Step 1: Requesting intelligence (exhausting free tier if available)...');
+  let challenge = null;
+  let freeRemaining = null;
+
+  for (let i = 0; i < 10; i++) {
+    const result = await requestIntelligence(INTELLIGENCE_SOURCE);
+    if (result.status === 402) {
+      challenge = result.challenge;
+      break;
+    }
+    if (result.status === 200 && result.body?._billing) {
+      freeRemaining = result.body._billing.remaining_free;
+      if (freeRemaining === undefined || freeRemaining === 0) {
+        // Free tier exhausted but still got 200 — try once more
+        const retry = await requestIntelligence(INTELLIGENCE_SOURCE);
+        if (retry.status === 402) {
+          challenge = retry.challenge;
+          break;
+        }
+      }
+      console.log(`  → Free tier: ${freeRemaining} remaining`);
+    }
+  }
 
   if (!challenge) {
-    console.error('❌ No payment challenge received. Gateway may be down.');
+    console.error('❌ Could not trigger 402 payment challenge after 10 attempts.');
+    console.error('   The source may have a large free tier. Try a different INTELLIGENCE_SOURCE.');
     process.exit(1);
   }
 
-  console.log(`  → Payment required: ${challenge.amount} USDC`);
-  console.log(`  → Recipient: ${challenge.recipient}`);
-  console.log(`  → Nonce: ${challenge.nonce}`);
-  console.log(`  → Expires: ${challenge.expires}`);
+  console.log('');
+  console.log('  ✅ Payment challenge received (HTTP 402):');
+  console.log(`     Amount:     ${challenge.amount} USDC`);
+  console.log(`     Recipient:  ${challenge.recipient}`);
+  console.log(`     Nonce:      ${challenge.nonce}`);
+  console.log(`     Chain ID:   ${challenge.chainId || 'N/A'}`);
+  console.log(`     Expires:    ${new Date(challenge.expires).toISOString()}`);
   console.log('');
 
-  // Step 2: Settle payment on Arc
+  // Step 2: Settle payment on Arc (only if we have a wallet)
+  if (!BUYER_PRIVATE_KEY || !USDC_ADDRESS) {
+    console.log('Step 2: ⏭  Skipped (no BUYER_PRIVATE_KEY/USDC_ADDRESS set)');
+    console.log('  To complete the payment flow, set these env vars:');
+    console.log('    BUYER_PRIVATE_KEY — Arc testnet wallet with USDC');
+    console.log('    USDC_ADDRESS      — Arc testnet USDC contract address');
+    console.log('');
+    console.log('✅ Gateway is live and payment-gated. The 402 challenge proves');
+    console.log('   DiversiFi is infrastructure that external agents must pay to consume.');
+    return;
+  }
+
   console.log('Step 2: Settling USDC payment on Arc...');
   const provider = new ethers.JsonRpcProvider(ARC_RPC_URL);
   const wallet = new ethers.Wallet(BUYER_PRIVATE_KEY, provider);
@@ -88,34 +128,36 @@ async function main() {
     nonce: challenge.nonce,
   });
 
-  if (!intelligence) {
+  if (intelligence.status !== 200 || !intelligence.body) {
     console.error('❌ Intelligence retrieval failed after payment.');
     process.exit(1);
   }
 
+  const payload = intelligence.body;
+
   console.log('');
   console.log('═══ Intelligence Received ══════════════════════════════════════════');
   console.log(`  Source:          ${INTELLIGENCE_SOURCE}`);
-  console.log(`  Confidence:      ${intelligence._billing?.confidence || 'N/A'}`);
-  console.log(`  Arc settled:     ${intelligence._billing?.arcSettled || false}`);
-  console.log(`  Settlement txs:  ${(intelligence._billing?.txHashes || []).join(', ')}`);
+  console.log(`  Confidence:      ${payload._billing?.confidence || 'N/A'}`);
+  console.log(`  Arc settled:     ${payload._billing?.arcSettled || false}`);
+  console.log(`  Settlement txs:  ${(payload._billing?.txHashes || []).join(', ')}`);
   console.log('');
 
-  if (intelligence.data) {
+  if (payload.data) {
     console.log('═══ Intelligence Payload ═══════════════════════════════════════════');
-    console.log(JSON.stringify(intelligence.data, null, 2));
+    console.log(JSON.stringify(payload.data, null, 2));
   }
 
-  if (intelligence._billing?.anchor) {
+  if (payload._billing?.anchor) {
     console.log('');
     console.log('═══ On-Chain Verifiability ════════════════════════════════════════');
-    console.log(`  Anchor status:   ${intelligence._billing.anchor.status}`);
-    console.log(`  Chain ID:        ${intelligence._billing.anchor.chainId}`);
-    if (intelligence._billing.anchor.explorerUrl) {
-      console.log(`  Explorer URL:    ${intelligence._billing.anchor.explorerUrl}`);
+    console.log(`  Anchor status:   ${payload._billing.anchor.status}`);
+    console.log(`  Chain ID:        ${payload._billing.anchor.chainId}`);
+    if (payload._billing.anchor.explorerUrl) {
+      console.log(`  Explorer URL:    ${payload._billing.anchor.explorerUrl}`);
     }
-    if (intelligence._billing.anchor.id) {
-      console.log(`  Ledger ID:       #${intelligence._billing.anchor.id}`);
+    if (payload._billing.anchor.id) {
+      console.log(`  Ledger ID:       #${payload._billing.anchor.id}`);
     }
   }
 
@@ -129,8 +171,7 @@ async function main() {
 
 /**
  * Request intelligence from the x402 gateway.
- * Without payment proof: returns the 402 challenge.
- * With payment proof: returns the intelligence payload.
+ * Returns { status, challenge?, body? }.
  */
 async function requestIntelligence(source, paymentProof) {
   const url = `${GATEWAY_URL}/api/agent/x402-gateway?source=${source}`;
@@ -144,26 +185,29 @@ async function requestIntelligence(source, paymentProof) {
   const res = await fetch(url, { headers });
 
   if (res.status === 402) {
-    // Payment challenge
     const body = await res.json();
     return {
-      amount: body.amount,
-      recipient: body.recipient,
-      nonce: body.nonce,
-      currency: body.currency,
-      expires: body.expires,
+      status: 402,
+      challenge: {
+        amount: body.amount,
+        recipient: body.recipient,
+        nonce: body.nonce,
+        currency: body.currency,
+        chainId: body.chainId,
+        expires: body.expires,
+      },
     };
   }
 
   if (res.status === 200) {
-    // Intelligence payload
-    return await res.json();
+    const body = await res.json();
+    return { status: 200, body };
   }
 
   console.error(`❌ Unexpected status: ${res.status}`);
   const text = await res.text();
   console.error(text);
-  return null;
+  return { status: res.status };
 }
 
 // ============================================================================
