@@ -16,13 +16,13 @@ on top.
 | Registry | Agent ID | Chain | Owner | Verified |
 |---|---|---|---|---|
 | ERC-8004 Identity Registry | 9654 | Celo mainnet (42220) | `0x3542916a…Af48` | N/A (no proof-of-human on this registry) |
-| Self Protocol Agent ID | 82 | Celo Sepolia (11142220) | `0xe10e5fcb…ebde` | Yes — passport, strength 100, sybil count 1 |
+| Self Protocol Agent ID | *(mainnet)* | Celo mainnet (42220) | `0xE8cDb7CA…f170` | Yes — real passport, mainnet verification |
 
 **ERC-8004 tx:** [`0xb698d493…`](https://celoscan.io/tx/0xb698d493282c1826546cb4a78258cf1cdff33f325770917cd215c4c90f14e5d1)
 
-**Self Protocol:** Registered via REST API (`https://agent-api.self.xyz/api/agent/register`) with testnet mock documents. The agent is verified on-chain with passport-strength proof-of-human. **Mainnet migration is a Celo grant priority** — testnet + mock docs scored zero on the Celo Prezenti rubric. To move to mainnet, re-register with a real passport via the Self app on Celo mainnet (registry `0xaC3DF9ABf80d0F5c020C06B04Cced27763355944`).
+**Self Protocol:** Registered on Celo mainnet (registry `0xaC3DF9ABf80d0F5c020C06B04Cced27763355944`) with a real passport scan via the Self app. The agent is verified on-chain with proof-of-human — sybil-resistant, one agent per human. Agent address: `0xE8cDb7CA…f170`.
 
-**Agent signing key:** `0xe10e5fcb87462736F4929E68D1580902f01Eebde` (Self Protocol agent address). The private key is held by the Self API session; export it via the `/api/agent/register/export` endpoint and store as `AGENT_PRIVATE_KEY` in the server environment.
+**Agent signing key:** `0xE8cDb7CAB1D28CbeE97dE85c27b7ab1f7661f170` (Self Protocol mainnet agent address).
 
 ---
 
@@ -59,7 +59,7 @@ npx tsx scripts/register-erc8004.ts --testnet
 npx tsx scripts/register-erc8004.ts --chain=arbitrum
 ```
 
-Requires `PRIVATE_KEY` or `VAULT_PRIVATE_KEY` in `.env.local`.
+Requires `PRIVATE_KEY` or `VAULT_PRIVATE_KEY` (see `.env.example`).
 
 After registration, the agent appears on [8004scan.io](https://8004scan.io/agents)
 and the agentId is written back into `public/.well-known/erc8004.json`.
@@ -108,7 +108,7 @@ data leaves the device).
 3. On testnet, mock documents can be generated in the app — no real passport.
 4. On success, a soulbound NFT is minted. **Save the agent private key** —
    it's the agent's signing key and cannot be recovered.
-5. Store the private key as `AGENT_PRIVATE_KEY` in the server environment.
+5. Store the private key securely — it is the agent's signing key and cannot be recovered.
 
 ### Signing requests as the agent
 
@@ -161,5 +161,5 @@ The `agentURI` for both can point to the same registration file
 | Variable | Purpose |
 |---|---|
 | `PRIVATE_KEY` or `VAULT_PRIVATE_KEY` | Used by `register-erc8004.ts` to pay gas for the mint transaction. |
-| `AGENT_PRIVATE_KEY` | The Self Protocol agent's signing key (generated during QR registration). Used by `self-agent-service.ts` to sign outbound requests. |
+| `AGENT_PRIVATE_KEY` | The Self Protocol agent's signing key. Used by `self-agent-service.ts` to sign outbound requests. Store securely — never commit to the repo. |
 | `AGENT_URI` | URL where the ERC-8004 registration file is hosted. Defaults to `https://diversifiapp.vercel.app/.well-known/erc8004.json`. |

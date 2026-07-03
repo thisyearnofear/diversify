@@ -53,7 +53,7 @@ actionable feedback. The gaps and the fixes:
 |---|---|---|
 | "Consumer app with infrastructure framing" | Reframe as intelligence protocol; ship external-agent SDK + integration guide | **Docs reframed** (product.md, README.md, architecture.md). Integration guide written (`docs/integration-guide.md`) |
 | "No evidence of external agents consuming the gateway" | One working external-agent example that pays x402 and consumes Mento intelligence | **Example code written** (`examples/external-agent/consume-intelligence.js`). Needs live end-to-end test against deployed gateway |
-| "Verifiable stack sits off Celo / on testnet" | Deploy `RecommendationLedger` on Celo mainnet; move Self Agent ID to mainnet | **Ledger deployed** (0x3BCf…369C on Celo mainnet, first rec seeded). Self Protocol mainnet pending passport scan |
+| "Verifiable stack sits off Celo / on testnet" | Deploy `RecommendationLedger` on Celo mainnet; move Self Agent ID to mainnet | **Done.** Ledger deployed (0x3BCf…369C on Celo mainnet, first rec seeded). Self Protocol mainnet verified with real passport |
 | "Celo mainnet footprint is essentially a fresh ERC-8004 registration" | Add verified ledger + real Guardian tx history on Celo mainnet | **Ledger deployed + first rec seeded** (cUSD rebalance, tx 0xea1b169a…) |
 | "No milestones, grant amount, or team section" | Write `docs/grant-proposal.md` with named team, milestones, amount, sustainability | Planned |
 
