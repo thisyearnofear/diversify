@@ -43,7 +43,8 @@ Each chain has a genuine, irreplaceable role. The ledger of record follows the m
 
 ### Celo Mainnet
 - **ERC-8004 Agent Identity**: agentId 9654, registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` — [Celoscan tx](https://celoscan.io/tx/0xb698d493282c1826546cb4a78258cf1cdff33f325770917cd215c4c90f14e5d1)
-- **RecommendationLedger**: *(mainnet deployment in progress — see `docs/roadmap.md`)*
+- **RecommendationLedger** (savings decisions of record): [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://celoscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C)
+- **First recommendation**: [`0xea1b169a…`](https://celoscan.io/tx/0xea1b169acd6cee8e3a50fcde9fd6f1d862a0a9609272e49ee0666b65187d2d5e) — Mento rebalance to cUSD, confidence 82%
 
 ### Arbitrum Mainnet
 - **RecommendationLedger** (yield decisions of record): [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://arbiscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C)

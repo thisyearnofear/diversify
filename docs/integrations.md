@@ -132,7 +132,7 @@ ledgers of record live on Celo (savings) and Arbitrum (yield).
 |-------|-------|
 | **0G Galileo evidence anchor** | chainId `16602`, [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
 | **Arbitrum Sepolia yield ledger** | chainId `421614`, [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) |
-| **Celo mainnet savings ledger** | *(deployment in progress — Wave 3)* |
+| **Celo mainnet savings ledger** | chainId `42220`, [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://celoscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C) |
 | **0G RPC** | `https://evmrpc-testnet.0g.ai` |
 | **0G Explorer** | `https://chainscan-galileo.0g.ai` |
 | **Write authority** | EOA configured via `VAULT_PRIVATE_KEY` (automatically authorised on deploy; admin can grant via `setAgentAuthorization`) |

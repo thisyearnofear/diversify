@@ -53,8 +53,8 @@ actionable feedback. The gaps and the fixes:
 |---|---|---|
 | "Consumer app with infrastructure framing" | Reframe as intelligence protocol; ship external-agent SDK + integration guide | In progress |
 | "No evidence of external agents consuming the gateway" | One working external-agent example that pays x402 and consumes Mento intelligence | Planned |
-| "Verifiable stack sits off Celo / on testnet" | Deploy `RecommendationLedger` on Celo mainnet; move Self Agent ID to mainnet | Planned (Wave 3) |
-| "Celo mainnet footprint is essentially a fresh ERC-8004 registration" | Add verified ledger + real Guardian tx history on Celo mainnet | Planned (Wave 3) |
+| "Verifiable stack sits off Celo / on testnet" | Deploy `RecommendationLedger` on Celo mainnet; move Self Agent ID to mainnet | **Ledger deployed** (0x3BCf…369C on Celo mainnet, first rec seeded). Self Protocol mainnet pending passport scan |
+| "Celo mainnet footprint is essentially a fresh ERC-8004 registration" | Add verified ledger + real Guardian tx history on Celo mainnet | **Ledger deployed + first rec seeded** (cUSD rebalance, tx 0xea1b169a…) |
 | "No milestones, grant amount, or team section" | Write `docs/grant-proposal.md` with named team, milestones, amount, sustainability | Planned |
 
 The Celo grant and the 0G buildathon share the same codebase and
