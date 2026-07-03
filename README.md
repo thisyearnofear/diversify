@@ -51,6 +51,11 @@ Each chain has a genuine, irreplaceable role. The ledger of record follows the m
 - **First recommendation**: [`0x2a034aad…`](https://arbiscan.io/tx/0x2a034aad48a7bf026358df745b43126f89f5da09b3521ba7b5d2fa7cc5eea8f0) — yield rotation USDC→USDY, confidence 85%
 - **Deployment**: `forge script scripts/DeployRecommendationLedger.s.sol --rpc-url arbitrum_one --broadcast`
 
+### 0G Mainnet
+- **RecommendationLedger** (evidence anchor): [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://chainscan.0g.ai/address/0x3BCf7dFd68ce98880618c89A351168960724369C)
+- **First recommendation**: [`0x981086b4…`](https://chainscan.0g.ai/tx/0x981086b466438af7eb2dc0a8c97f4370ed6e926abfc9095a8f610afbd86e864e) — evidence anchor, confidence 95%
+- **Deployment**: `forge script scripts/DeployRecommendationLedger.s.sol --rpc-url zero_g_mainnet --broadcast`
+
 ### Arbitrum Sepolia (testnet)
 - **RecommendationLedger**: [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996)
 - **StrategyVault**: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975)

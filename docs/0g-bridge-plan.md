@@ -219,7 +219,7 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 
 | File | Change | Lines | Principle |
 |---|---|---|---|
-| `contracts/RecommendationLedger.sol` | No logic change. Deploy to 0G mainnet as evidence anchor. ~~Deploy to Celo mainnet as savings ledger. Deploy to Arbitrum mainnet as yield ledger.~~ **Done** — Celo + Arbitrum mainnet deployed at `0x3BCf…369C`, first recs seeded on both chains. 0G mainnet evidence anchor pending. | 0 | (deploy only) |
+| `contracts/RecommendationLedger.sol` | ~~No logic change. Deploy to 0G mainnet as evidence anchor.~~ **Done** — deployed to 0G mainnet (`0x3BCf…369C`), Celo mainnet, and Arbitrum mainnet. First recs seeded on all three. | 0 | (deploy only) |
 | `packages/shared/src/services/recommendation-ledger.service.ts` | ~~Add `CELO_MAINNET_CHAIN_ID` and `ZERO_G_MAINNET_CHAIN_ID` to `LEDGER_REGISTRY`. Implement chain-aware routing: savings actions → Celo ledger, yield actions → Arbitrum ledger, evidence anchor → 0G ledger.~~ **Done.** `getLedgerChainForAction(action, targetToken)` routes Celo savings tokens → Celo mainnet, yield/RWA tokens → Arbitrum mainnet. Lazy env reading so tests can override at runtime. 0G mainnet chain ID pending. | -8, +20 | CONSOLIDATION, DRY |
 | `packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts` | `anchorAndRecord` now records to the chain-aware ledger (Celo or Arbitrum based on action type) and anchors evidence to 0G mainnet Storage. The 0G mainnet evidence anchor write is fire-and-forget. | +15 | PERFORMANT, CLEAN |
 | `packages/shared/src/services/ai/providers/zero-g-provider.ts` | Add a `useDirectCompute: boolean` option that, when true, calls the 0G Compute Direct API for TEE-verified inference. The `withTimeout` window tightens to 15s for the direct path (TEE proofs add latency). | +35 | MODULAR, PERFORMANT |
@@ -242,11 +242,11 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 **Verification gate:**
 
 - `pnpm test` passes (~410 tests).
-- ~~`RecommendationLedger` address on 0G mainnet (evidence anchor), Celo mainnet (savings ledger), and Arbitrum mainnet (yield ledger) are in `.env` and in the README.~~ **Celo + Arbitrum done.** 0G mainnet evidence anchor pending.
-- 0G Explorer link to a real evidence anchor tx is in the README. *(pending 0G mainnet deploy)*
+- ~~`RecommendationLedger` address on 0G mainnet (evidence anchor), Celo mainnet (savings ledger), and Arbitrum mainnet (yield ledger) are in `.env` and in the README.~~ **All three deployed** at `0x3BCf…369C`.
+- ~~0G Explorer link to a real evidence anchor tx is in the README.~~ **Done** — tx `0x981086b4…` on chainscan.0g.ai
 - ~~Celoscan link to a real savings ledger tx is in the README.~~ **Done** — tx `0xea1b169a…`
 - ~~Arbiscan link to a real yield ledger tx is in the README.~~ **Done** — tx `0x2a034aad…`
-- Guardian loop records a recommendation on all three chains end-to-end. *(Celo + Arbitrum done manually; 0G mainnet + automated loop pending)*
+- Guardian loop records a recommendation on all three chains end-to-end. *(All three seeded manually; automated loop pending)*
 - Agentic ID is minted for at least 1 test user; the on-chain ID points to a 0G Storage CID.
 - Demo video updated to show the chain-aware flow.
 - X post with mainnet proof.
