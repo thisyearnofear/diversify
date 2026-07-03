@@ -46,7 +46,9 @@ Three grant tracks run in parallel, sharing one architecture: the **0G Bridge bu
 - LICENSE file added at repo root (MIT)
 - Self Protocol mainnet registration complete (real passport, Celo mainnet, agent `0xE8cDb7CA…f170`)
 - All 459 tests pass (21 ledger tests including 8 new chain-aware routing tests)
-- **Remaining:** 0G explorer source verification (custom API), automated Guardian loop on all 3 chains
+- Guardian heartbeat cron runs every 30 min on Hetzner — records advisory recommendations on Celo/Arbitrum primary + 0G mainnet evidence mirror
+- Guardian loop cron runs every 5 min — auto-executes within user permission bounds, mirrors to 0G
+- **Remaining:** 0G explorer source verification (custom API), demo video, X post with mainnet proof
 
 ## Tool Notes
 - **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.

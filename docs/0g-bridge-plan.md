@@ -241,12 +241,12 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 
 **Verification gate:**
 
-- `pnpm test` passes (~410 tests).
+- `pnpm test` passes (459 tests).
 - ~~`RecommendationLedger` address on 0G mainnet (evidence anchor), Celo mainnet (savings ledger), and Arbitrum mainnet (yield ledger) are in `.env` and in the README.~~ **All three deployed** at `0x3BCf…369C`.
 - ~~0G Explorer link to a real evidence anchor tx is in the README.~~ **Done** — tx `0x981086b4…` on chainscan.0g.ai
 - ~~Celoscan link to a real savings ledger tx is in the README.~~ **Done** — tx `0xea1b169a…`
 - ~~Arbiscan link to a real yield ledger tx is in the README.~~ **Done** — tx `0x2a034aad…`
-- Guardian loop records a recommendation on all three chains end-to-end. *(All three seeded manually; automated loop pending)*
+- ~~Guardian loop records a recommendation on all three chains end-to-end.~~ **Done.** Guardian heartbeat cron runs every 30 min, recording on Celo/Arbitrum primary + 0G evidence mirror. Guardian loop runs every 5 min for auto-execution within user permission bounds.
 - Agentic ID is minted for at least 1 test user; the on-chain ID points to a 0G Storage CID.
 - Demo video updated to show the chain-aware flow.
 - X post with mainnet proof.

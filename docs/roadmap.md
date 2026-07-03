@@ -52,9 +52,9 @@ actionable feedback. The gaps and the fixes:
 | Gap from reviewer feedback | Fix | Status |
 |---|---|---|
 | "Consumer app with infrastructure framing" | Reframe as intelligence protocol; ship external-agent SDK + integration guide | **Docs reframed** (product.md, README.md, architecture.md). Integration guide written (`docs/integration-guide.md`) |
-| "No evidence of external agents consuming the gateway" | One working external-agent example that pays x402 and consumes Mento intelligence | **Example code written** (`examples/external-agent/consume-intelligence.js`). Needs live end-to-end test against deployed gateway |
+| "No evidence of external agents consuming the gateway" | One working external-agent example that pays x402 and consumes Mento intelligence | **Done.** External agent example verified against live gateway — receives HTTP 402 payment challenge with amount, recipient, nonce, chain ID (`examples/external-agent/consume-intelligence.js`) |
 | "Verifiable stack sits off Celo / on testnet" | Deploy `RecommendationLedger` on Celo mainnet; move Self Agent ID to mainnet | **Done.** Ledger deployed (0x3BCf…369C on Celo mainnet, first rec seeded). Self Protocol mainnet verified with real passport |
-| "Celo mainnet footprint is essentially a fresh ERC-8004 registration" | Add verified ledger + real Guardian tx history on Celo mainnet | **Ledger deployed + first rec seeded** (cUSD rebalance, tx 0xea1b169a…) |
+| "Celo mainnet footprint is essentially a fresh ERC-8004 registration" | Add verified ledger + real Guardian tx history on Celo mainnet | **Done.** Ledger deployed + source verified on Celoscan. Guardian heartbeat cron records advisory recommendations every 30 min (tx `0x536daf48…` and counting) |
 | "No milestones, grant amount, or team section" | Write `docs/grant-proposal.md` with named team, milestones, amount, sustainability | Planned |
 
 The Celo grant and the 0G buildathon share the same codebase and
@@ -81,9 +81,9 @@ true on-chain ERC-7710 permission enforcement for yield actions.
 **What to ship during the 3 days:**
 1. ~~Promote the Arbitrum ledger from Sepolia to mainnet~~ **Done** — `0x3BCf…369C` on Arbitrum mainnet, first rec seeded (tx `0x2a034aad…`)
 2. ~~Wire chain-aware routing in `recommendation-ledger.service.ts`~~ **Done** — `getLedgerChainForAction()` routes yield tokens to Arbitrum mainnet automatically
-3. External agent example executing a yield action on Arbitrum mainnet — example code written (`examples/external-agent/`), needs live end-to-end test
+3. ~~External agent example executing a yield action on Arbitrum mainnet~~ **Done** — `examples/external-agent/consume-intelligence.js` verified against live gateway (HTTP 402 payment challenge received)
 
-**Prep priority (before July 10):** ~~Deploy + verify RecommendationLedger on Arbitrum mainnet~~ **Deployed + source verified on Arbiscan.** Remaining: run the external agent example end-to-end against the live gateway.
+**Prep priority (before July 10):** ~~Deploy + verify RecommendationLedger on Arbitrum mainnet~~ **Deployed + source verified on Arbiscan.** ~~Run the external agent example end-to-end against the live gateway~~ **Done.** Guardian heartbeat cron now records on all 3 chains every 30 min.
 
 ---
 

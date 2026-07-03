@@ -140,4 +140,5 @@ is the blocker, so:
 - `packages/shared/src/services/vault/providers/metamask-delegation-provider.ts` —
   the real (dark) ERC-7710 redemption path.
 - `pages/api/vault/_executor.ts` — current Privy/Safe/`VAULT_PRIVATE_KEY` execution.
-- `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates.
+- `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates. Cron every 5 min.
+- `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on all 3 chains (Celo/Arbitrum primary + 0G evidence mirror). Cron every 30 min.

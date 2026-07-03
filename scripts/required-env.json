@@ -10,6 +10,8 @@
   "_oneOfComment": "Each group is an array. The validator passes if AT LEAST ONE group has all of its keys present and non-empty. Use this for cases like 'PRIVATE_KEY OR (CIRCLE_API_KEY + CIRCLE_ENTITY_SECRET)' where multiple configurations are valid.",
   "oneOf": [
     ["PRIVATE_KEY"],
+    ["LEDGER_PRIVATE_KEY"],
+    ["VAULT_PRIVATE_KEY"],
     ["CIRCLE_API_KEY", "CIRCLE_ENTITY_SECRET"]
   ],
 
