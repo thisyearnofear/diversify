@@ -1,58 +1,64 @@
-# DiversiFi: The Proactive AI Guardian
-## Autonomous Savings Protection for Volatile Economies
+# DiversiFi: Agent Intelligence Protocol for Stablecoin Markets
 
-> *A savings protection app for people in volatile economies. A proactive AI Guardian monitors markets, detects inflation shifts, and protects stablecoin savings by routing capital between Celo/Mento (local stablecoins) and Arbitrum (liquidity / RWA yield) — with on-chain proof of every decision. Full pitch: [`docs/product.md`](./docs/product.md).*
+## Multi-chain intelligence + verifiable settlement for autonomous agents
 
-Every high-impact Guardian decision is verifiable: the full reasoning is encrypted and stored on **0G**, the decision hash is recorded on-chain, and autonomous execution stays within user-signed ERC-7715-style permission bounds (currently enforced in application code, not on-chain — see [`docs/guardian-enforcement-model.md`](./docs/guardian-enforcement-model.md)).
+> *DiversiFi is a multi-chain agent intelligence protocol that makes stablecoin and yield markets agent-readable. Autonomous agents consume real-time depeg, inflation, and yield intelligence via x402 nanopayments, settle every decision on a verified ledger on the chain where the money moves, and anchor reasoning to 0G — with the DiversiFi Guardian as the reference consumer and an open SDK for any agent to subscribe. Full pitch: [`docs/product.md`](./docs/product.md).*
+
+The **DiversiFi Guardian** is the first agent built on the protocol — a proactive AI that monitors markets, detects inflation shifts, and protects stablecoin savings by routing capital between Celo/Mento (local stablecoins) and Arbitrum (deep liquidity, RWA yield), with on-chain proof of every decision.
 
 **Live App:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app)
 
 ---
 
-## 🏗️ Dual-Chain + Verifiable Architecture
+## Chain Architecture
 
-DiversiFi is built on a deliberate chain split that matches real user needs:
+Each chain has a genuine, irreplaceable role. The ledger of record follows the money — decisions settle on the chain where the action executes, not on a single canonical chain.
 
-| Layer | Chain | Role |
-|---|---|---|
-| **Savings / Local Stables** | **Celo** | Hold, save, and rebalance across local stablecoins (cUSD, cEUR, regional Mento assets) with near-zero fees. |
-| **Liquidity / RWA Yield** | **Arbitrum** | Deploy into deep-liquidity DEXs and RWA yield opportunities (e.g., Uniswap V3, Aave, Centrifuge, Maple). |
-| **Verifiable Evidence** | **0G Storage + 0G DA** | Encrypt and store the full reasoning bundle for every Guardian decision; anchor attestations for cross-chain consistency. |
-| **On-Chain Ledger** | **Arbitrum** | `RecommendationLedger` records `user → action → evidence CID → serving model → confidence` on an Arbitrum chain (required for prize eligibility). |
-| **Autonomous Inference** | **0G Compute + 0G Serving** | High-impact Guardian decisions can be routed through 0G Compute Direct with TEE-verified inference proofs. |
+| Layer | Chain | Role | Why this chain |
+|---|---|---|---|
+| **Savings + Identity** | **Celo** | Hold, save, rebalance across local stablecoins (cUSD, cEUR, cREAL, KESm, COPm, PHPm). `RecommendationLedger` records savings decisions here. ERC-8004 agent identity. | Regional Mento stablecoins exist nowhere else. Near-zero fees. SocialConnect ODIS identity. GoodDollar UBI. |
+| **Yield + Execution** | **Arbitrum** | Deep-liquidity DEXs and RWA yield (Uniswap V3, 1inch, Camelot, PAXG, USDY, SYRUPUSDC). `RecommendationLedger` records yield decisions here. EIP-7702 path to on-chain ERC-7710 permission enforcement. | Deepest USDC + RWA liquidity. EIP-7702-capable for true on-chain permission enforcement. |
+| **Evidence + Verifiability** | **0G** | Content-addressed Storage (evidence CIDs), TEE-verified Compute, DA (state snapshots). The tamper-proof evidence layer that both ledgers reference. | No other chain offers storage or verifiable inference. 0G is not the ledger of record — it is the proof layer. |
+| **Money Movement** | **Arc** | USDC-native gas nanopayment settlement for x402 intelligence consumption. Sub-cent, sub-second. | USDC as native gas. Circle Gateway integration. Built-in FX engine. |
 
 **AI Reasoning Engine (Gemini → Venice → 0G Serving → Modal)**: Multi-provider failover chain. Each response is tagged with the provider that produced it.
 
-**Arc Network x402 (Autonomous Economics)**: Premium research flows are gated by HTTP 402 challenges settled on Arc (with a path to Arbitrum-native x402 where available).
+**Arc Network x402 (Autonomous Economics)**: Premium intelligence flows are gated by HTTP 402 challenges settled on Arc. External agents pay USDC to consume Mento depeg + inflation + yield intelligence.
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
-*   **ArcAgent Service**: `ArcAgent` class extending `AgentService` with ARC testnet-first wallet and session-based execution. Re-exported from `@diversifi/shared`.
-*   **ESLint v9 Configuration**: Migrated from `.eslintrc.json` to `eslint.config.cjs` (flat config) with Next.js core-web-vitals rules.
-
+*   **Intelligence Gateway**: x402-gated Mento depeg + inflation + yield intelligence, open to any agent via SDK. The Guardian is the reference consumer; external agents are consumers #2+.
+*   **Chain-Aware Ledger**: `RecommendationLedger` records decisions on the chain where the money moves — Celo for savings, Arbitrum for yield. Each entry references a 0G Storage evidence CID.
 *   **Guardian Pulse**: AI-synthesized market insights, powered by real-time data and anchored for truth via 0G.
 *   **Proactive Pilot**: Autonomous rebalancing intent discovery, allowing users to approve complex financial strategies with one tap.
 *   **0G Audit Trail**: An in-app dashboard to verify the raw evidence and decision logs of your agent.
-*   **Dual-Chain Routing**: Guardian automatically chooses Celo for stable-savings actions and Arbitrum for liquidity/RWA actions.
+*   **Dual-Chain Routing**: Guardian automatically chooses Celo for stable-savings actions and Arbitrum for liquidity/RWA actions. Each chain has a verified ledger of record.
 *   **Frictionless Onboarding**: Secure, social-login-first (Privy) UX that abstracts away the complexity of managing agent wallets.
 
 ---
 
-## 🔑 Deployment Proofs
+## Deployment Proofs
 
-### Arbitrum Deployment
-- **Deployment script**: `./scripts/deploy-all.sh arbitrum_sepolia --verify` uses the unified `scripts/DeployArbitrum.s.sol` script and deploys all three Arbitrum Sepolia contracts in one run.
-- **RecommendationLedger Contract** (Arbitrum Sepolia, chainId `421614`): [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996)
-- **StrategyVault Contract** (Arbitrum Sepolia, chainId `421614`): [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975)
-- **AgenticHub Contract** (Arbitrum Sepolia, chainId `421614`): [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92)
-- **Payment token**: Arbitrum Sepolia USDC `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` (baked into `DeployArbitrum.s.sol`).
-- **Arbitrum Frontend RPC**: Configured in `components/app/ProviderTree.tsx` / `context/PrivyProvider.tsx`.
+### Celo Mainnet
+- **ERC-8004 Agent Identity**: agentId 9654, registry `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` — [Celoscan tx](https://celoscan.io/tx/0xb698d493282c1826546cb4a78258cf1cdff33f325770917cd215c4c90f14e5d1)
+- **RecommendationLedger**: *(mainnet deployment in progress — see `docs/roadmap.md`)*
 
-### 0G Stack (Verifiable AI)
-- **RecommendationLedger Mirror** (0G Galileo Testnet, chainId `16602`): [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) — optional audit replica. The 0G Bridge Wave 3 work promotes a 0G mainnet deployment to canonical.
-- **0G Storage Evidence**: Every Guardian recommendation uploads an encrypted evidence bundle (prompt + reasoning + sources) and records its CID in the Arbitrum ledger.
+### Arbitrum Mainnet
+- **RecommendationLedger** (yield decisions of record): [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://arbiscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C)
+- **First recommendation**: [`0x2a034aad…`](https://arbiscan.io/tx/0x2a034aad48a7bf026358df745b43126f89f5da09b3521ba7b5d2fa7cc5eea8f0) — yield rotation USDC→USDY, confidence 85%
+- **Deployment**: `forge script scripts/DeployRecommendationLedger.s.sol --rpc-url arbitrum_one --broadcast`
+
+### Arbitrum Sepolia (testnet)
+- **RecommendationLedger**: [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996)
+- **StrategyVault**: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975)
+- **AgenticHub**: [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92)
+- **Deployment script**: `./scripts/deploy-all.sh arbitrum_sepolia --verify`
+
+### 0G Stack (Verifiable Evidence)
+- **0G Galileo Testnet Mirror** (chainId `16602`): [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED)
+- **0G Storage Evidence**: Every Guardian recommendation uploads an encrypted evidence bundle (prompt + reasoning + sources) and records its CID in the chain-aware ledger.
 - **0G Compute (Direct)**: High-impact decisions can be routed through TEE-verified providers with `processResponse()` proof verification.
 - **Verifiable AI Dashboard**: Open the **"Verifiable AI"** tab in-app to view live evidence CIDs, serving-model IDs, and chain receipts.
 
@@ -63,7 +69,7 @@ DiversiFi is built on a deliberate chain split that matches real user needs:
 
 ---
 
-## 🛠️ Development
+## Development
 
 ```bash
 pnpm install

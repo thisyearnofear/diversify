@@ -103,17 +103,23 @@ guardian-loop ──redeems via session signer──▶ DelegationManager ──
    on-chain (or rely on expiry); surface the on-chain permission/redemption in
    the proof feed.
 
-## Decision: hybrid (4c)
+## Decision: hybrid (4c) — chain-aware enforcement
 
-Celo/Mento *is* the product, and EIP-7702/DelegationManager on Celo is the
-blocker, so:
+The chain-aware thesis means enforcement follows the chain's capabilities.
+Celo/Mento *is* the savings layer, and EIP-7702/DelegationManager on Celo
+is the blocker, so:
 
-- **Celo Guardian stays app-enforced** for now. Document it honestly (this doc +
-  the `Permission.ts` header + the architecture intro). Keep the hardened gates.
-- **Pursue chain-enforced redemption on EIP-7702 chains** the toolkit already
-  supports (Arbitrum, etc.) when Guardian execution lands there.
-- **Do not claim on-chain ERC-7715 enforcement** in code comments, docs, or UI
-  until it actually ships on the relevant surface.
+- **Celo Guardian stays app-enforced** for savings actions. Document it
+  honestly (this doc + the `Permission.ts` header + the architecture
+  intro). Keep the hardened gates.
+- **Pursue chain-enforced redemption on Arbitrum** for yield actions,
+  where EIP-7702 + DelegationManager is already supported. This is the
+  Arbitrum Open House AI & Agentic Track differentiator — true on-chain
+  permission enforcement for autonomous yield execution.
+- **Do not claim on-chain ERC-7715 enforcement** in code comments, docs,
+  or UI until it actually ships on the relevant surface. Be explicit
+  about which surface is "soft/app-enforced" (Celo savings) vs
+  "hard/chain-enforced" (Arbitrum yield, when it ships).
 
 ## Impact summary
 

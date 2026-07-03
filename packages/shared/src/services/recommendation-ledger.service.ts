@@ -2,11 +2,15 @@
  * Recommendation Ledger Service
  *
  * Records and queries AI recommendations on-chain via the chain-aware
- * RecommendationLedger contract. The default chain is configurable via
- * `LEDGER_DEFAULT_CHAIN_ID` and `ZERO_G_MAINNET_LEDGER_CONTRACT`; Arbitrum
- * Sepolia and 0G Galileo are both supported as registry entries, and the
- * 0G Bridge Wave 3 work promotes 0G mainnet to canonical. Arbitrum is
- * retained as a settlement-receipt mirror.
+ * RecommendationLedger contract. The ledger of record follows the money:
+ * savings actions (Mento stablecoins) settle on Celo mainnet, yield actions
+ * (RWA, USDC liquidity) settle on Arbitrum mainnet. 0G is the evidence layer
+ * — Storage holds the reasoning CIDs, and the 0G Galileo deployment serves
+ * as an evidence anchor/mirror for cross-chain verification.
+ *
+ * Chain-aware routing is implemented via `getLedgerChainForAction()`, which
+ * maps the action's target token to the correct settlement chain. Callers
+ * can override with an explicit `chainId` parameter.
  *
  * Each recommendation is linked to:
  *   - 0G Storage evidence CID (AI reasoning + source data)
@@ -63,6 +67,8 @@ export type AnchorResult =
 
 export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string {
     const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+    if (resolvedChainId === 42220) return `https://celoscan.io/tx/${txHash}`;
+    if (resolvedChainId === 11142220) return `https://celoscan.io/tx/${txHash}`; // Celo Sepolia
     if (resolvedChainId === 42161) return `https://arbiscan.io/tx/${txHash}`;
     if (resolvedChainId === 421614) return `https://sepolia.arbiscan.io/tx/${txHash}`;
     if (resolvedChainId === 16602) return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
@@ -112,36 +118,111 @@ export function computeReasoningHash(reasoning: string): string {
 // CHAIN-AWARE CONFIG REGISTRY
 // ============================================================================
 
+const CELO_MAINNET_CHAIN_ID = 42220;
+const ARBITRUM_MAINNET_CHAIN_ID = 42161;
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 const ZERO_G_GALILEO_CHAIN_ID = 16602;
 
 /**
- * Registry of supported ledger deployments. The Arbitrum deployment is the
- * canonical source of truth for the hackathon submission; 0G Galileo is kept
- * as an optional mirror for cross-chain auditability.
+ * Tokens that settle on Celo (savings / local stablecoins via Mento).
+ * Used by `getLedgerChainForAction` to route recommendations.
+ * All entries are uppercase — the routing function uppercases the input token.
  */
-const LEDGER_REGISTRY: Record<number, LedgerConfig> = {
-    [ARBITRUM_SEPOLIA_CHAIN_ID]: {
-        contractAddress: process.env.ARBITRUM_LEDGER_CONTRACT || '',
-        rpcUrl: process.env.ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
-        chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
-    },
-    [ZERO_G_GALILEO_CHAIN_ID]: {
-        contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
-        rpcUrl: process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai',
-        chainId: ZERO_G_GALILEO_CHAIN_ID,
-    },
-};
+const CELO_SAVINGS_TOKENS = new Set([
+    'CUSD', 'CEUR', 'CREAL', 'KESM', 'COPM', 'PHPM', 'GHSM', 'CKES', 'CCOP',
+    'CELO', 'G$', 'GOOD',
+]);
 
 /**
- * Returns the canonical chain ID used when callers do not specify one.
- * Prefers Arbitrum Sepolia when the contract address is configured (interim
- * until Wave 3); otherwise falls back to the 0G Galileo mirror. Wave 3
- * flips this to prefer 0G mainnet when ZERO_G_MAINNET_LEDGER_CONTRACT is set.
+ * Registry of supported ledger deployments.
+ *
+ * Chain-aware: the ledger of record follows the money.
+ * - Celo mainnet: savings decisions of record (Mento stablecoins)
+ * - Arbitrum mainnet: yield decisions of record (RWA, USDC liquidity)
+ * - Arbitrum Sepolia: testnet (retained for backward compatibility)
+ * - 0G Galileo: evidence anchor/mirror for cross-chain verification
+ *
+ * Env vars are read lazily on each access so tests can override them
+ * after module load.
+ */
+function getLedgerRegistry(): Record<number, LedgerConfig> {
+    return {
+        [CELO_MAINNET_CHAIN_ID]: {
+            contractAddress: process.env.CELO_MAINNET_LEDGER_CONTRACT || '',
+            rpcUrl: process.env.CELO_RPC_URL || 'https://forno.celo.org',
+            chainId: CELO_MAINNET_CHAIN_ID,
+        },
+        [ARBITRUM_MAINNET_CHAIN_ID]: {
+            contractAddress: process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT || '',
+            rpcUrl: process.env.ARBITRUM_ONE_RPC_URL || 'https://arb1.arbitrum.io/rpc',
+            chainId: ARBITRUM_MAINNET_CHAIN_ID,
+        },
+        [ARBITRUM_SEPOLIA_CHAIN_ID]: {
+            contractAddress: process.env.ARBITRUM_LEDGER_CONTRACT || '',
+            rpcUrl: process.env.ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
+            chainId: ARBITRUM_SEPOLIA_CHAIN_ID,
+        },
+        [ZERO_G_GALILEO_CHAIN_ID]: {
+            contractAddress: process.env.ZERO_G_LEDGER_CONTRACT || '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
+            rpcUrl: process.env.ZERO_G_RPC_URL || 'https://evmrpc-testnet.0g.ai',
+            chainId: ZERO_G_GALILEO_CHAIN_ID,
+        },
+    };
+}
+
+/**
+ * Mutable override registry for runtime-set contract addresses.
+ * Populated by `setLedgerContractAddress` and merged with env-derived config.
+ */
+const _runtimeOverrides: Record<number, Partial<LedgerConfig>> = {};
+
+function resolveLedgerConfig(chainId: number): LedgerConfig | null {
+    const registry = getLedgerRegistry();
+    const base = registry[chainId];
+    if (!base) return null;
+    const override = _runtimeOverrides[chainId];
+    return override ? { ...base, ...override } : base;
+}
+
+/**
+ * Determine the correct ledger chain for a given action based on the
+ * target token. The ledger of record follows the money:
+ * - Celo savings tokens (cUSD, cREAL, KESm, etc.) → Celo mainnet
+ * - Yield/RWA tokens (USDY, PAXG, USDC, etc.) → Arbitrum mainnet
+ * - HOLD or unspecified → default chain (Arbitrum mainnet if configured,
+ *   else Arbitrum Sepolia for backward compat)
+ *
+ * Callers can override with an explicit `chainId` parameter.
+ */
+export function getLedgerChainForAction(action: string, targetToken: string): number {
+    const token = (targetToken || '').toUpperCase().trim();
+
+    // Celo savings tokens → Celo mainnet
+    if (CELO_SAVINGS_TOKENS.has(token)) {
+        const celoConfig = resolveLedgerConfig(CELO_MAINNET_CHAIN_ID);
+        if (celoConfig?.contractAddress) return CELO_MAINNET_CHAIN_ID;
+    }
+
+    // Everything else (yield, RWA, USDC, BRIDGE) → Arbitrum mainnet
+    const arbMainnet = resolveLedgerConfig(ARBITRUM_MAINNET_CHAIN_ID);
+    if (arbMainnet?.contractAddress) return ARBITRUM_MAINNET_CHAIN_ID;
+
+    // Fall back to Arbitrum Sepolia for backward compatibility
+    return getDefaultLedgerChainId();
+}
+
+/**
+ * Returns the default chain ID used when callers do not specify one
+ * and the action type is not determinable. Prefers Arbitrum mainnet
+ * when configured, then Arbitrum Sepolia, then 0G Galileo.
  */
 export function getDefaultLedgerChainId(): number {
-    const arbitrum = LEDGER_REGISTRY[ARBITRUM_SEPOLIA_CHAIN_ID];
-    if (arbitrum.contractAddress) {
+    const arbMainnet = resolveLedgerConfig(ARBITRUM_MAINNET_CHAIN_ID);
+    if (arbMainnet?.contractAddress) {
+        return ARBITRUM_MAINNET_CHAIN_ID;
+    }
+    const arbitrum = resolveLedgerConfig(ARBITRUM_SEPOLIA_CHAIN_ID);
+    if (arbitrum?.contractAddress) {
         return ARBITRUM_SEPOLIA_CHAIN_ID;
     }
     return ZERO_G_GALILEO_CHAIN_ID;
@@ -149,15 +230,16 @@ export function getDefaultLedgerChainId(): number {
 
 export function getLedgerConfig(chainId?: number): LedgerConfig | null {
     const id = chainId ?? getDefaultLedgerChainId();
-    return LEDGER_REGISTRY[id] || null;
+    return resolveLedgerConfig(id);
 }
 
 export function setLedgerContractAddress(address: string, chainId?: number): void {
     const id = chainId ?? getDefaultLedgerChainId();
-    if (!LEDGER_REGISTRY[id]) {
+    const registry = getLedgerRegistry();
+    if (!registry[id]) {
         throw new Error(`[RecommendationLedger] Unsupported chainId: ${id}`);
     }
-    LEDGER_REGISTRY[id].contractAddress = address;
+    _runtimeOverrides[id] = { ..._runtimeOverrides[id], contractAddress: address };
     // Reset cached contracts for this chain to force re-initialization
     delete _readOnlyContracts[id];
     delete _writeContracts[id];
@@ -168,7 +250,7 @@ export function getLedgerContractAddress(chainId?: number): string {
 }
 
 export function listSupportedLedgerChains(): number[] {
-    return Object.keys(LEDGER_REGISTRY).map(Number);
+    return Object.keys(getLedgerRegistry()).map(Number);
 }
 
 // ============================================================================
@@ -242,8 +324,14 @@ function getWriteContract(chainId: number): ethers.Contract | null {
  * must inspect `result.status` and surface it to the user — never ignore
  * `failed` results.
  *
+ * Chain-aware routing: if `chainId` is not specified, the service determines
+ * the correct chain based on `targetToken` — Celo mainnet for savings tokens
+ * (cUSD, cREAL, KESm, etc.), Arbitrum mainnet for yield tokens (USDY, PAXG,
+ * USDC, etc.). 0G Galileo is used as an evidence anchor via
+ * `mirrorRecommendationToZeroG`.
+ *
  * @param params.recommendation data
- * @param params.chainId optional target chain; defaults to the configured canonical chain (Arbitrum Sepolia interim, 0G mainnet in Wave 3)
+ * @param params.chainId optional target chain; if omitted, chain-aware routing is used
  */
 export async function recordRecommendation(params: {
     user: string;
@@ -264,7 +352,9 @@ export async function recordRecommendation(params: {
         : params.reasoning
             ? computeReasoningHash(params.reasoning)
             : ethers.ZeroHash;
-    const chainId = params.chainId ?? getDefaultLedgerChainId();
+    // Chain-aware routing: determine the correct chain based on the action's
+    // target token if the caller didn't specify one explicitly.
+    const chainId = params.chainId ?? getLedgerChainForAction(params.action, params.targetToken);
     const config = getLedgerConfig(chainId);
     if (!config) {
         return { status: 'failed', error: `Unsupported ledger chainId: ${chainId}`, chainId };
@@ -353,10 +443,10 @@ export async function recordRecommendation(params: {
 }
 
 /**
- * Mirror a recommendation to the 0G Galileo ledger after it has been anchored
- * on the canonical chain. Returns the mirror result without affecting the
- * canonical result. (In Wave 3, 0G mainnet becomes canonical and this becomes
- * the primary write; Arbitrum becomes the mirror.)
+ * Mirror a recommendation to the 0G Galileo evidence anchor after it has been
+ * settled on the chain-aware ledger (Celo or Arbitrum). 0G is the evidence
+ * layer — this write creates a cross-chain verifiable reference to the
+ * reasoning CID that the settlement ledger entry points to.
  */
 export async function mirrorRecommendationToZeroG(
     params: Omit<Parameters<typeof recordRecommendation>[0], 'chainId'>
@@ -501,6 +591,7 @@ export const recommendationLedgerService = {
     setLedgerContractAddress,
     getLedgerContractAddress,
     getDefaultLedgerChainId,
+    getLedgerChainForAction,
     listSupportedLedgerChains,
     buildLedgerExplorerUrl,
     computeReasoningHash,

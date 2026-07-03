@@ -1,9 +1,11 @@
 # Roadmap
 
-Two tracks run in parallel: the **0G Bridge buildathon** (active
-submission target) and the **product quality plan** (bring DiversiFi
-from 7.0 → 9.0 across Product Design, UI/UX, Cogency, Performance,
-and System Architecture).
+Three tracks run in parallel, each serving a different grant program but
+sharing one architecture: the **0G Bridge buildathon** (0G as evidence
+layer), the **Celo Prezenti grant** (Celo as savings + identity layer),
+and the **Arbitrum Open House** (Arbitrum as yield + execution layer).
+The **product quality plan** brings DiversiFi from 7.0 → 9.0 across
+Product Design, UI/UX, Cogency, Performance, and System Architecture.
 
 ---
 
@@ -11,8 +13,11 @@ and System Architecture).
 
 The 0G Bridge by AKINDO buildathon (10 weeks, 5 waves, up to $50K in
 0G credits, Demo Day at Token2049 Singapore Oct 7-8 2026) is the
-current submission target. Arbitrum remains in scope as a settlement
-rail, not the canonical trust surface.
+current submission target. 0G is the evidence/anchoring layer — Storage
+(reasoning CIDs), Compute (TEE proofs), DA (state snapshots). The
+chain-aware `RecommendationLedger` settles on the chain where the money
+moves (Celo for savings, Arbitrum for yield); 0G mainnet hosts an
+evidence anchor deployment for cross-chain verification.
 
 The authoritative file-by-file, wave-by-wave implementation plan
 lives in [`docs/0g-bridge-plan.md`](./0g-bridge-plan.md). The headline
@@ -27,12 +32,59 @@ audit, and the Wave 1-5 file deltas are in the linked doc.
 the file deltas in `0g-bridge-plan.md` §4 (Wave 1) plus the §3 audit
 fixes are the entire Wave 1 scope.
 
-**Why this supersedes the Arbitrum track:** Wave 3 of the 0G Bridge
-buildathon carries 30% of the credit allocation ($15K) and explicitly
-requires a 0G mainnet contract deployment. Promoting
-`RecommendationLedger` to 0G mainnet canonical (and demoting Arbitrum
-to a settlement-receipt mirror) is the highest-leverage move. Arbitrum
-stays live for execution; the trust root moves.
+**Why 0G is the evidence layer, not the ledger of record:** The
+chain-aware thesis means the ledger follows the money. A Mento
+rebalance on Celo gets recorded on Celo. A PAXG yield deposit on
+Arbitrum gets recorded on Arbitrum. Both ledger entries reference a
+0G Storage evidence CID. This serves three grant tracks simultaneously:
+Celo reviewers check Celoscan, Arbitrum reviewers check Arbiscan, 0G
+reviewers check 0G Explorer. 0G's unique value (Storage, Compute, DA)
+is preserved without forcing it to be a settlement layer it isn't
+designed for.
+
+---
+
+## Track 1b — Celo Prezenti Grant (Next round, 2026)
+
+The Celo Prezenti Frontier Round rejected the initial application with
+actionable feedback. The gaps and the fixes:
+
+| Gap from reviewer feedback | Fix | Status |
+|---|---|---|
+| "Consumer app with infrastructure framing" | Reframe as intelligence protocol; ship external-agent SDK + integration guide | In progress |
+| "No evidence of external agents consuming the gateway" | One working external-agent example that pays x402 and consumes Mento intelligence | Planned |
+| "Verifiable stack sits off Celo / on testnet" | Deploy `RecommendationLedger` on Celo mainnet; move Self Agent ID to mainnet | Planned (Wave 3) |
+| "Celo mainnet footprint is essentially a fresh ERC-8004 registration" | Add verified ledger + real Guardian tx history on Celo mainnet | Planned (Wave 3) |
+| "No milestones, grant amount, or team section" | Write `docs/grant-proposal.md` with named team, milestones, amount, sustainability | Planned |
+
+The Celo grant and the 0G buildathon share the same codebase and
+architecture. Celo mainnet gets the savings ledger of record; 0G
+mainnet gets the evidence anchor. No code fork needed.
+
+---
+
+## Track 1c — Arbitrum Open House London (July 10-12, 2026)
+
+Accepted to the Arbitrum Open House — a 3-day in-person builder event
+with $300K in prizes, including a separately-evaluated **AI & Agentic
+Track**. The Guardian's autonomous yield execution on Arbitrum is the
+exact thesis this track funds.
+
+**Arbitrum-specific value prop:** DiversiFi's Guardian is an autonomous
+AI agent that executes verifiable yield strategies on Arbitrum — routing
+stablecoin savings into RWA-backed yield (PAXG, USDY, SYRUPUSDC) with
+on-chain proof of every decision. The `RecommendationLedger` on
+Arbitrum makes every agent action auditable, and 0G anchoring makes the
+reasoning tamper-proof. Arbitrum's EIP-7702 capability is the path to
+true on-chain ERC-7710 permission enforcement for yield actions.
+
+**What to ship during the 3 days:**
+1. Promote the Arbitrum ledger from Sepolia to mainnet (verify on Arbiscan)
+2. Wire chain-aware routing in `recommendation-ledger.service.ts`
+3. External agent example executing a yield action on Arbitrum mainnet
+
+**Prep priority (before July 10):** Deploy + verify RecommendationLedger
+on Arbitrum mainnet so we walk in with a mainnet contract, not testnet.
 
 ---
 
@@ -243,7 +295,7 @@ area is visible and decisions are intentional rather than reactive.
 
 | Task | Why deferred |
 |---|---|
-| **Agent identity on-chain registration** (ERC-8004 mint + Self Protocol passport scan) | **Done.** ERC-8004 agentId 9654 on Celo mainnet, Self Protocol agentId 82 on Celo Sepolia (testnet, proof-of-human verified). See `docs/agent-identity.md`. Self Protocol mainnet registration (real passport) can be done later for production. |
+| **Agent identity on-chain registration** (ERC-8004 mint + Self Protocol passport scan) | **ERC-8004 done** (agentId 9654 on Celo mainnet). **Self Protocol on testnet** (agentId 82 on Celo Sepolia, proof-of-human verified with mock documents). Mainnet Self Protocol registration with real passport is a Wave 3 / Celo grant priority — testnet + mock docs scored zero on the Celo rubric. See `docs/agent-identity.md`. |
 | **Package split** (`@diversifi/shared` → `shared-ai`, `shared-swap`, `shared-guardian`, `shared-data`, `shared-core`) | 33K-line monolith will surface circular dependency nightmares. Revisit when the package hits 50K+ lines or a second team starts contributing. |
 | **API versioning** (`/api/v1/` prefix) | Zero external consumers. All API routes are internal Next.js routes consumed by the same app. Add versioning when the first SDK or mobile app is built. |
 | **Turbopack migration** (remove `--webpack` flag) | Mixing bundler changes with component refactors makes debugging untraceable. Do this as a standalone task after this plan is complete and the codebase is stable. |

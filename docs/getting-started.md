@@ -21,11 +21,12 @@ That's the minimum to run the app. Every other env var (AI providers, data feeds
 
 ## Supported Chains
 
-| Chain | Purpose | Testnet Faucet |
+| Chain | Role | Testnet Faucet |
 |-------|---------|----------------|
-| **Celo** | Stablecoin swaps (cUSD, cEUR, cREAL, KESm, COPm, PHPm) | [Celo Faucet](https://celo.org/developers/faucet) |
-| **Arbitrum** | Yield/RWA (USDC, USDY) | [Arbitrum Faucet](https://faucet.arbitrum.io/) |
-| **Arc Testnet** | Agent orchestration hub (USDC gas) | Circle Arc Faucet |
+| **Celo** | Savings + identity + savings ledger of record (cUSD, cEUR, cREAL, KESm, COPm, PHPm) | [Celo Faucet](https://celo.org/developers/faucet) |
+| **Arbitrum** | Yield + execution + yield ledger of record (USDC, USDY, PAXG) | [Arbitrum Faucet](https://faucet.arbitrum.io/) |
+| **0G** | Evidence layer (Storage CIDs, Compute TEE proofs, DA snapshots) | [0G Galileo Faucet](https://chainscan-galileo.0g.ai) |
+| **Arc Testnet** | x402 nanopayment settlement (USDC gas) | Circle Arc Faucet |
 | **Robinhood Chain** | Emerging market tokens | Robinhood Faucet |
 
 ## Arc / x402 Research Mode

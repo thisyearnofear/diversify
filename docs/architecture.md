@@ -1,6 +1,6 @@
 # Architecture
 
-*For the product pitch, see [`product.md`](./product.md). This doc covers the system architecture that makes it work: multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — all anchored to on-chain verifiability via 0G and scoped by user-signed ERC-7715-style permissions.*
+*For the product pitch, see [`product.md`](./product.md). This doc covers the system architecture that makes it work: multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — with chain-aware on-chain settlement (Celo for savings, Arbitrum for yield) and 0G as the tamper-proof evidence layer, all scoped by user-signed ERC-7715-style permissions.*
 
 > **Enforcement model (important):** the user-signed permission is cryptographic *consent*, verified server-side. Its spending bounds are currently enforced in **application code**, not on-chain — execution on Celo/Mento runs through a server-custodied smart account. True on-chain enforcement (ERC-7710 redemption) is the residual gap. See [`docs/guardian-enforcement-model.md`](./guardian-enforcement-model.md).
 
@@ -73,13 +73,16 @@ Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar har
 ┌──────────────────────────▼──────────────────────────────────┐
 │  External Services                                          │
 │  • MongoDB (user state, permissions, guardian-state)        │
-│  • Arbitrum: `RecommendationLedger` mirror, vaults,          │
-│    deep-liquidity execution (Uniswap V3 / Aave / RWA)       │
 │  • Celo/Mento: local stablecoin savings + Mento swaps       │
+│    + RecommendationLedger (savings decisions of record)     │
+│    + ERC-8004 agent identity                                │
+│  • Arbitrum: yield execution (Uniswap V3 / Aave / RWA)      │
+│    + RecommendationLedger (yield decisions of record)       │
+│    + StrategyVault, AgenticHub                              │
 │  • 0G: Storage (evidence CID) + DA + Compute (TEE proofs)   │
+│    — the tamper-proof evidence layer both ledgers reference │
 │  • Arc: x402 nanopayment settlement                         │
 │  • Cognee: cross-session agent memory                       │
-│  • ERC-8004: agent identity registry (8004scan)             │
 │  • Self Protocol: sybil-resistant agent ID (Celo)           │
 │  • Hetzner: always-on cron runtime (no cold starts)         │
 └─────────────────────────────────────────────────────────────┘
@@ -145,8 +148,10 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
    → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
    → Execute via /api/vault/rebalance
    → Anchor evidence bundle to 0G Storage + Cognee memory
-   → Record hash/CID on the **chain-aware RecommendationLedger** (0G Galileo today, 0G mainnet canonical in Wave 3; Arbitrum retained as mirror)
-   → Mirror optionally to 0G Galileo testnet ledger
+   → Record hash/CID on the **chain-aware RecommendationLedger** —
+     the decision settles on the chain where the action executed
+     (Celo for savings, Arbitrum for yield). 0G Storage holds the
+     evidence blob; the ledger entry references the 0G CID.
    → Clear recommendation from guardian-state
 ```
 
@@ -210,18 +215,32 @@ The `useProactiveAgent` monitoring loop is mounted once at the app root via `com
 
 ## 0G Verifiability Stack
 
+0G is the **evidence layer**, not the ledger of record. The chain-aware
+`RecommendationLedger` settles decisions on the chain where the money
+moves (Celo for savings, Arbitrum for yield); 0G holds the tamper-proof
+reasoning evidence that those ledger entries reference. This separation
+serves both the Celo grant (verifiable settlement on Celo) and the 0G
+buildathon (deep Storage/Compute/DA integration) without forcing a
+single canonical chain.
+
 Every AI recommendation traces through the full 0G pipeline:
 
 | 0G Component | Purpose |
 |---|---|
 | **0G Serving** | Decentralized inference via 0G Router (part of AI fallback chain) |
-| **0G Storage** | Evidence bundles (prompt, reasoning, data sources) hashed → CID |
+| **0G Storage** | Evidence bundles (prompt, reasoning, data sources) hashed → CID. The CID is referenced by the chain-aware ledger entry. |
 | **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
 | **0G Compute Direct** | Optional TEE-verified inference for high-impact Guardian decisions |
 
-**Active Ledger:** [`RecommendationLedger`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) at `0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996` on **Arbitrum Sepolia** (chainId `421614`) — interim canonical until 0G mainnet promotion in Wave 3. StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975), AgenticHub: [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92).
+**Chain-aware ledger (the ledger of record follows the money):**
 
-**0G Mirror:** `0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED` on 0G Galileo Testnet (chainId `16602`) — promoted to canonical in Wave 3; overridable via `ZERO_G_LEDGER_CONTRACT`.
+| Chain | Ledger role | Contract | Status |
+|---|---|---|---|
+| **Arbitrum Sepolia** | Yield decisions of record | [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) | Live (mainnet promotion in progress) |
+| **Celo mainnet** | Savings decisions of record | *(deployment in progress)* | ERC-8004 identity live; ledger deployment next |
+| **0G Galileo Testnet** | Evidence mirror | [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) | Live (0G mainnet promotion in Wave 3) |
+
+StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975), AgenticHub: [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92) (both Arbitrum Sepolia).
 
 ### Anchor observability
 

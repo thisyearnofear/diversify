@@ -61,7 +61,8 @@ The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio 
 ```
 Firecrawl detects macro change → webhook → AI extracts signal → guardian-state updated
 → cron ticks → guardian-loop checks permissions → confidence > threshold? → auto-execute
-→ 0G RecommendationLedger records on-chain → Cognee persists memory
+→ chain-aware RecommendationLedger records on the chain where the action settled
+  (Celo for savings, Arbitrum for yield) → 0G Storage anchors evidence CID → Cognee persists memory
 ```
 
 | Component | File | Purpose |
@@ -118,16 +119,22 @@ Client → GET /api/agent/x402-gateway?source=macro_analysis
 
 Real tx verifiable at `https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8`
 
-## 0G Chain — RecommendationLedger
+## 0G Chain — Evidence Anchor + RecommendationLedger
 
-Every advisor recommendation is recorded on the 0G Galileo Testnet via the `RecommendationLedger` contract. This is the immutable, queryable ledger of agent output and links the full 0G Serving → 0G Storage → 0G Chain trace.
+Every advisor recommendation is recorded on a chain-aware
+`RecommendationLedger` — the ledger of record follows the money. 0G is
+the **evidence layer**: Storage holds the reasoning CIDs, Compute
+provides TEE-verified inference, DA holds state snapshots. The 0G
+Galileo Testnet hosts an evidence anchor deployment; the chain-aware
+ledgers of record live on Celo (savings) and Arbitrum (yield).
 
 | Field | Value |
 |-------|-------|
-| **Network** | 0G Galileo Testnet (chainId `16602`) |
-| **Contract** | [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
-| **RPC** | `https://evmrpc-testnet.0g.ai` |
-| **Explorer** | `https://chainscan-galileo.0g.ai` |
+| **0G Galileo evidence anchor** | chainId `16602`, [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
+| **Arbitrum Sepolia yield ledger** | chainId `421614`, [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) |
+| **Celo mainnet savings ledger** | *(deployment in progress — Wave 3)* |
+| **0G RPC** | `https://evmrpc-testnet.0g.ai` |
+| **0G Explorer** | `https://chainscan-galileo.0g.ai` |
 | **Write authority** | EOA configured via `VAULT_PRIVATE_KEY` (automatically authorised on deploy; admin can grant via `setAgentAuthorization`) |
 | **Public API** | `GET /api/agent/zero-g-ledger` |
 
@@ -168,7 +175,7 @@ curl -s https://api.diversifi.famile.xyz/api/agent/zero-g-ledger | python3 -m js
 | `pending`  | Tx broadcast but receipt not confirmed within 60 s (network congestion) | Same surfaces; the `txHash` is included so a later re-query by hash can resolve. |
 | `failed`   | Broadcast failed, write contract unavailable, or tx reverted | Same surfaces; the `error` text is included. |
 
-The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a 0G Galileo network stall should never block the user-visible chat reply, so the function returns `pending` rather than failing the call. The recommendation may still land on-chain; callers can re-query by `txHash` later.
+The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a network stall should never block the user-visible chat reply, so the function returns `pending` rather than failing the call. The recommendation may still land on-chain; callers can re-query by `txHash` later.
 
 ## DEX & Routing
 
@@ -283,5 +290,5 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | Hedging | Hyperliquid perps |
 | Data | World Bank, FRED, CoinGecko, DeFiLlama |
 | Database | MongoDB |
-| Agent Identity | ERC-8004 Identity Registry (8004scan), Self Protocol Agent ID (Celo) |
+| Agent Identity | ERC-8004 Identity Registry (8004scan, Celo mainnet), Self Protocol Agent ID (Celo Sepolia → mainnet pending) |
 | Hosting | Vercel (frontend), Hetzner (agent runtime) |

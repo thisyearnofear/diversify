@@ -5,7 +5,7 @@
 **Status:** Wave 1 (scoping) — drafted 2026-06-15
 **Authoritative reference for:** 0G component selection, Wave-by-Wave file deltas, principle alignment
 
-This plan lives next to [`roadmap.md`](./roadmap.md), [`architecture.md`](./architecture.md), and [`integrations.md`](./integrations.md). The 0G Bridge track supersedes the Arbitrum submission track — Arbitrum stays in scope as a settlement rail; 0G becomes the canonical trust + inference surface.
+This plan lives next to [`roadmap.md`](./roadmap.md), [`architecture.md`](./architecture.md), and [`integrations.md`](./integrations.md). The 0G Bridge track runs alongside the Celo grant and Arbitrum Open House tracks — each chain has a genuine, irreplaceable role. 0G is the evidence/anchoring layer; Celo and Arbitrum are the settlement layers where the ledgers of record live.
 
 ---
 
@@ -13,14 +13,36 @@ This plan lives next to [`roadmap.md`](./roadmap.md), [`architecture.md`](./arch
 
 The 0G Bridge buildathon frames 0G as replacing Arc for payments. That is a **buildathon-timeline pragmatism**, not the long-term architecture. Arc and 0G serve fundamentally different layers. Conflating them is the architectural mistake this section prevents.
 
-DiversiFi's long-term mainnet stack has four layers, each owned by exactly one chain:
+DiversiFi's long-term mainnet stack has four layers, each owned by exactly one chain. The ledger of record follows the money — decisions settle on the chain where the action executes, not on a single canonical chain. 0G is the evidence layer that all ledgers reference.
 
 | Layer | Chain | Why this chain | What it does NOT do |
 |---|---|---|---|
 | **Savings + Identity** | **Celo** | Regional Mento stablecoins (cUSD, cREAL, KESm, GHSm, etc.), SocialConnect ODIS identity, GoodDollar UBI. No other chain has local-currency stablecoin liquidity. | Agent execution (no EIP-7702), nanopayments, verifiable AI proofs |
 | **Execution + Yield** | **Arbitrum** | Deepest USDC + RWA liquidity (Uniswap V3, 1inch, Camelot, PAXG, USDY, SYRUPUSDC). EIP-7702-capable for true on-chain ERC-7710 permission enforcement. | Trust root (ledger demoted to mirror), nanopayments, regional stablecoins |
-| **Trust + Verifiability** | **0G** | Content-addressed Storage (evidence CIDs), TEE-verified Compute, DA (state snapshots), Chain (canonical trust ledger). No other chain offers storage or verifiable inference. | Nanopayment settlement (gas-token friction — 0G tokens for gas, not USDC) |
+| **Trust + Verifiability** | **0G** | Content-addressed Storage (evidence CIDs), TEE-verified Compute, DA (state snapshots). No other chain offers storage or verifiable inference. | Nanopayment settlement (gas-token friction — 0G tokens for gas, not USDC), ledger of record (0G is the evidence layer, not the settlement layer) |
 | **Money Movement** | **Arc** | USDC-native gas (no volatile token inventory), sub-second deterministic finality, nanopayment economics ($0.000001), built-in FX engine for stablecoin pairs, native Circle Gateway/CCTP/CPN integration. | Verifiable AI proofs, regional stablecoins, deep DEX liquidity |
+
+### The chain-aware ledger resolution
+
+The ledger of record follows the money. A Mento rebalance on Celo gets
+recorded on Celo. A PAXG yield deposit on Arbitrum gets recorded on
+Arbitrum. Both ledger entries reference a 0G Storage evidence CID. This
+serves three grant tracks simultaneously:
+
+- **Celo grant reviewers** check Celoscan → see verified savings ledger + tx history ✓
+- **Arbitrum Open House reviewers** check Arbiscan → see verified yield ledger + tx history ✓
+- **0G buildathon reviewers** check 0G Explorer → see deep Storage/Compute/DA integration ✓
+
+0G is not the ledger of record — it is the tamper-proof evidence layer.
+The chain-aware `RecommendationLedger` (already implemented in
+`recommendation-ledger.service.ts` with its `LEDGER_REGISTRY`) settles
+on the chain where the action executed; 0G Storage holds the reasoning
+blob; the ledger entry's `evidenceCid` field references it.
+
+This is a cleaner separation than "ledger on 0G": it co-locates
+verifiability with value (the user sees their money AND their agent's
+decisions on one explorer) while preserving 0G's unique role as the
+evidence/anchoring layer.
 
 ### The Arc vs 0G Pay resolution
 
@@ -75,7 +97,7 @@ The buildathon submission requires that "at least one 0G component must be integ
 | **0G Storage** (encrypted evidence CIDs) | `packages/shared-0g/src/services/storage-service.ts` + `ZeroGAnchoringDecorator` | Live (Galileo testnet) | Document | Testnet demo with real CIDs | Mainnet upload path | Traction counter | Polish |
 | **0G Compute (Serving)** (TEE-verified inference) | `packages/shared/src/services/ai/providers/zero-g-provider.ts` | Live (Router API) | Document | High-impact path gated on confidence | Mainnet Compute Direct | Compare A/B on quality | Pitch |
 | **0G DA** (verifiable state snapshots) | `packages/shared-0g/src/services/persistence-service.ts` | Live (Storage-as-DA today) | Document | Promote to explicit DA namespace | Mainnet DA writes | Auto-snapshot every Guardian cycle | Compress + index |
-| **0G Chain** (canonical trust ledger) | `recommendation-ledger.service.ts` + `contracts/RecommendationLedger.sol` | Live (Arbitrum canonical, Galileo mirror) | Document | Add 0G mainnet to `LEDGER_REGISTRY` | **Deploy + promote to canonical** | Multi-tenant tx volume | Audit + gas optimization |
+| **0G Chain** (evidence anchoring) | `recommendation-ledger.service.ts` + `contracts/RecommendationLedger.sol` | Live (Arbitrum Sepolia yield ledger, 0G Galileo evidence mirror) | Document | Add 0G mainnet to `LEDGER_REGISTRY` as evidence anchor | **Deploy 0G mainnet evidence anchor + promote Storage/Compute/DA to mainnet** | Multi-tenant tx volume | Audit + gas optimization |
 | **0G Pay** (agent nanopayments) | `packages/shared/src/services/settlement-service.ts` (`SettlementNetwork = 'ARC' \| 'ZERO_G'`) | Live (ZERO_G is interim default; ARC is testnet-only) | Document | Switch default to 0G (interim — Arc reclaims payment rail at mainnet) | 0G Pay mainnet settlement (interim until Arc mainnet beta) | Volume dashboard | Arc mainnet reclaims payment rail; 0G Pay becomes fallback |
 | **Agentic ID (ERC-7857)** | New `contracts/AgenticID.sol` + new `services/agentic-id.service.ts` | Not present | Defer | Spec out ERC-7857 wrapper around existing Guardian identity | Deploy mintable ID per user | Transfer + INFT-style listing | Demo Day video |
 
@@ -98,7 +120,7 @@ Before any new work, the following must be true. All three are 1-line checks:
 | A1 | `deepseek-v4-pro` is not a real 0G Serving model. The Router model catalog lists `deepseek-chat-v3-0324`, `qwen-2.5-72b-instruct`, `llama-3.3-70b-instruct`. We are currently sending an unknown model name to the Router, which returns whatever the router default is. | `packages/shared/src/services/ai/providers/zero-g-provider.ts` line 79-83 | Replace default with `deepseek-chat-v3-0324`. Add a `ZERO_G_SERVING_MODEL` env var so the failover orchestrator can override per deployment. | DRY, CLEAN |
 | A2 | `shouldAnchorToZeroG` keyword heuristic includes `'analyze'` and `'summary'`, which fires for nearly every chat reply. The intent was "high-impact only"; the implementation is "anything that sounds like prose." | `packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts` lines 32-46 | Tighten to action keywords only (`recommend`, `strategy`, `allocate`, `rebalance`, `swap`, `deposit`, `withdraw`, `hedge`). Add a confidence-threshold gate (anchor only when `confidence > 0.6`). | PERFORMANT, PREVENT BLOAT |
 | A3 | The `registerContent` in-memory map is the only way to list 0G Storage CIDs across sessions; after a server restart it is empty. The `restoreState` already has a fallback to the on-chain `RecommendationLedger` for CID discovery — but `listContent` for arbitrary prefixes does not. | `packages/shared-0g/src/services/storage-service.ts` `listContent` method | The chain-aware `RecommendationLedger` is already the persistent index. Add a `listContentByAgent` method that queries `getUserRecommendations` from the on-chain ledger and returns the `evidenceCid` array. Delete the dead-path "in-memory registry" code path. | DRY, CONSOLIDATION |
-| A4 | `RecommendationLedger` is described as canonical on Arbitrum, with 0G Galileo as a mirror. The buildathon wants 0G mainnet canonical. We will **delete** the "Arbitrum canonical" language from doc comments in Wave 1 and **promote** 0G to canonical in Wave 3. | `docs/architecture.md`, `docs/integrations.md`, `contracts/RecommendationLedger.sol` comments, `recommendation-ledger.service.ts` doc comments | Update doc comments in Wave 1 (no logic change). Promote `getDefaultLedgerChainId` in Wave 3 to prefer 0G mainnet. | CLEAN, CONSOLIDATION |
+| A4 | `RecommendationLedger` is described as canonical on Arbitrum, with 0G Galileo as a mirror. The chain-aware thesis says the ledger follows the money (Celo for savings, Arbitrum for yield) and 0G is the evidence layer. We will **update doc comments** in Wave 1 to reflect chain-aware routing and **implement** `getLedgerChainForAction` in Wave 3. | `docs/architecture.md`, `docs/integrations.md`, `contracts/RecommendationLedger.sol` comments, `recommendation-ledger.service.ts` doc comments | Update doc comments in Wave 1 (no logic change). Implement chain-aware routing in Wave 3. | CLEAN, CONSOLIDATION |
 | A5 | No tests cover the 0G branch of the AI provider or the 0G branch of the settlement service. | `packages/shared/src/services/__tests__/` | Add 3 unit tests in Wave 2: provider model override, ZERO_G default vs ARC override, 0G explorer URL builder. | MODULAR, PERFORMANT |
 
 Phase 0 is the gate. We do not start Wave 1 work until the 5 audit findings are either fixed or explicitly deferred to a later wave (with the deferral written into this doc).
@@ -151,14 +173,14 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 | File | Change | Lines | Principle |
 |---|---|---|---|
 | `foundry.toml` | Add `[rpc_endpoints] zero_g_mainnet = "${ZERO_G_MAINNET_RPC_URL}"` (or testnet equivalent if no mainnet RPC at submission time). | +2 | DRY |
-| `packages/shared/src/services/recommendation-ledger.service.ts` | Add a `ZERO_G_MAINNET_CHAIN_ID` constant and a `LEDGER_REGISTRY` entry. The `getDefaultLedgerChainId` is **not** flipped yet (Arbitrum stays canonical in Wave 2, 0G is added as an option). | +12 | DRY, CLEAN |
+| `packages/shared/src/services/recommendation-ledger.service.ts` | Add a `ZERO_G_MAINNET_CHAIN_ID` constant and a `LEDGER_REGISTRY` entry. The chain-aware routing (`getLedgerChainForAction`) is not implemented yet — Arbitrum Sepolia stays the default ledger, 0G is added as an option. Chain-aware routing lands in Wave 3. | +12 | DRY, CLEAN |
 | `packages/shared-0g/src/services/storage-service.ts` | Add a `ZEROG_MAINNET_STORAGE_URL` and `ZEROG_MAINNET_INDEXER_URL` env var with Galileo as fallback. | +8 | DRY |
 | `packages/shared/src/services/settlement-service.ts` | Promote `ZERO_G` to the default `network` parameter in `settleOnChain` via `DEFAULT_SETTLEMENT_NETWORK` (env-driven via `SETTLEMENT_NETWORK`). This is **interim** — 0G Pay is the stopgap while Arc is testnet-only. Arc reclaims the nanopayment rail at mainnet (USDC-native gas, Circle Gateway). Document this in the docstring. | +8 | CLEAN, DRY |
 | `scripts/DeployZeroG.s.sol` | (new) Forge deploy script for `RecommendationLedger` on 0G mainnet. Mirrors the structure of `scripts/DeployArbitrum.s.sol`. | +90 | ORGANIZED, MODULAR |
 | `scripts/deploy-all.sh` | Add a `zero_g_mainnet` target that runs `DeployZeroG.s.sol` and writes the address to `.env`. | +20 | ORGANIZED |
 | `pages/api/agent/zero-g-ledger.ts` | Accept a `chainId` query param (already in the code) and verify it documents `zero_g_mainnet` in the response. | +2 | CLEAN |
 | `pages/api/agent/guardian-loop.ts` | When recording a recommendation, also write to 0G mainnet if `ZERO_G_MAINNET_LEDGER_CONTRACT` is set (in addition to the canonical chain). This becomes the Wave 3 promotion path's "dry run." | +15 | MODULAR, PERFORMANT |
-| `packages/shared/src/services/__tests__/recommendation-ledger.service.test.ts` | Add 4 tests: 0G mainnet entry exists, `getDefaultLedgerChainId` still prefers Arbitrum in Wave 2, write to 0G mainnet returns the right `explorerUrl`, mirror result is independent of canonical result. | +60 | MODULAR |
+| `packages/shared/src/services/__tests__/recommendation-ledger.service.test.ts` | Add 4 tests: 0G mainnet entry exists, default ledger still Arbitrum Sepolia in Wave 2, write to 0G mainnet returns the right `explorerUrl`, evidence anchor result is independent of the settlement ledger result. | +60 | MODULAR |
 | `packages/shared/src/services/__tests__/settlement-service.test.ts` | Add 2 tests: ZERO_G default network, ARC override. | +25 | MODULAR |
 | `docs/internal/zero-g-mainnet-runbook.md` | (new) Step-by-step deploy + verify + revoke procedure for the 0G mainnet ledger. | +80 | ORGANIZED |
 
@@ -168,7 +190,7 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 
 - `pnpm test` passes (~390 tests, +9 from Phase 0 + Wave 2).
 - `pnpm test-x402` passes end-to-end with the 0G settlement rail as the default.
-- Guardian loop records 1+ recommendation on 0G mainnet in a fresh deploy; 0G Explorer URL is generated and surfaces in the proof feed.
+- Guardian loop records 1+ recommendation on 0G mainnet evidence anchor in a fresh deploy; 0G Explorer URL is generated and surfaces in the proof feed.
 - 3-minute demo video is recorded and uploaded (YouTube unlisted is fine).
 - Public X post with demo GIF + `#0GBridge #BuildOn0G`.
 
@@ -178,38 +200,55 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 
 ### Wave 3 — Mainnet deployment (July 11-24, $15K, the highest-allocated wave)
 
-**Goal:** `RecommendationLedger` is canonical on **0G mainnet**. The Arbitrum deployment becomes a settlement-receipt mirror, not the trust root. Agentic ID (ERC-7857) contract is deployed and one user is minted.
+**Goal:** 0G Storage, Compute, and DA are promoted to **0G mainnet** as
+the evidence/anchoring layer. The chain-aware `RecommendationLedger`
+settles on the chain where the money moves — Celo mainnet for savings
+decisions, Arbitrum mainnet for yield decisions. 0G mainnet hosts an
+evidence anchor deployment (a `RecommendationLedger` instance that
+records evidence CIDs for cross-chain verification). Agentic ID
+(ERC-7857) contract is deployed on 0G mainnet and one user is minted.
+
+**The key architectural decision:** 0G is the evidence layer, not the
+ledger of record. The ledgers of record live on Celo and Arbitrum
+(where the money moves). 0G mainnet gets an evidence anchor deployment
+that records CIDs for cross-chain verification — this satisfies the
+buildathon's "0G mainnet integration depth" requirement while keeping
+the settlement story coherent for the Celo and Arbitrum grant tracks.
 
 **File deltas:**
 
 | File | Change | Lines | Principle |
 |---|---|---|---|
-| `contracts/RecommendationLedger.sol` | No logic change. Deploy to 0G mainnet using the Wave 2 script. | 0 | (deploy only) |
-| `packages/shared/src/services/recommendation-ledger.service.ts` | **Flip** `getDefaultLedgerChainId` to return 0G mainnet chainId (16661) when `ZERO_G_MAINNET_LEDGER_CONTRACT` is set. The Arbitrum entry stays in the registry as a mirror, not the default. | -6, +10 | CONSOLIDATION, DRY |
-| `packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts` | `anchorAndRecord` now records to the canonical (0G mainnet) ledger first; the Arbitrum mirror is a fire-and-forget second write. | +12 | PERFORMANT, CLEAN |
+| `contracts/RecommendationLedger.sol` | No logic change. Deploy to 0G mainnet as evidence anchor. Deploy to Celo mainnet as savings ledger. Deploy to Arbitrum mainnet as yield ledger. | 0 | (deploy only) |
+| `packages/shared/src/services/recommendation-ledger.service.ts` | Add `CELO_MAINNET_CHAIN_ID` and `ZERO_G_MAINNET_CHAIN_ID` to `LEDGER_REGISTRY`. Implement chain-aware routing: savings actions → Celo ledger, yield actions → Arbitrum ledger, evidence anchor → 0G ledger. The `getDefaultLedgerChainId` is replaced by `getLedgerChainForAction(actionType)` that returns the correct chain based on the action. | -8, +20 | CONSOLIDATION, DRY |
+| `packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts` | `anchorAndRecord` now records to the chain-aware ledger (Celo or Arbitrum based on action type) and anchors evidence to 0G mainnet Storage. The 0G mainnet evidence anchor write is fire-and-forget. | +15 | PERFORMANT, CLEAN |
 | `packages/shared/src/services/ai/providers/zero-g-provider.ts` | Add a `useDirectCompute: boolean` option that, when true, calls the 0G Compute Direct API for TEE-verified inference. The `withTimeout` window tightens to 15s for the direct path (TEE proofs add latency). | +35 | MODULAR, PERFORMANT |
 | `packages/shared/src/services/ai/fallback/fallback-orchestrator.ts` | Route high-confidence decisions (`confidence > 0.8`) through the 0G Compute Direct provider; low-confidence decisions stay on the Router API path. | +20 | PERFORMANT |
 | `packages/shared-0g/src/services/persistence-service.ts` | Add a `snapshotGuardianState` method that writes the full Guardian state to 0G mainnet DA once per Guardian loop cycle (not on every decision). Reads are unchanged. | +25 | PERFORMANT, MODULAR |
 | `pages/api/agent/guardian-loop.ts` | After the recommendation record, fire a `snapshotGuardianState` to 0G DA. Awaited, not fire-and-forget — DA is a state checkpoint, not a receipt. | +8 | PERFORMANT |
 | `contracts/AgenticID.sol` | (new) Minimal ERC-7857 wrapper: `mint(user, agentURI)` with `agentURI` pointing to the encrypted evidence bundle in 0G Storage. Ownable, single contract, no on-chain AI. The actual Guardian is an off-chain service; the on-chain ID is a transferable pointer. | +120 | MODULAR, CLEAN |
 | `scripts/DeployAgenticID.s.sol` | (new) Deploy script for `AgenticID.sol` to 0G mainnet. | +60 | ORGANIZED |
+| `scripts/DeployCelo.s.sol` | (new) Deploy script for `RecommendationLedger` on Celo mainnet. Mirrors `DeployArbitrum.s.sol`. | +90 | ORGANIZED |
+| `scripts/deploy-all.sh` | Add `celo_mainnet` and `zero_g_mainnet` targets. | +30 | ORGANIZED |
 | `packages/shared/src/services/agentic-id.service.ts` | (new) Server-side service that mints/burns/transfers Agentic IDs. Mirrors the `recommendationLedgerService` shape (chain-aware registry, on-chain + 0G Storage). 1 file, ~200 lines, 4 methods. | +200 | MODULAR, DRY |
 | `packages/shared/src/index.ts` | Re-export `agenticIdService`. | +1 | CLEAN |
 | `pages/api/agent/agentic-id.ts` | (new) GET/POST endpoint for the Agentic ID. | +50 | ORGANIZED |
 | `packages/shared/src/services/__tests__/agentic-id.service.test.ts` | (new) 6 tests: mint, transfer, ownership, agentURI resolution, pause, 0G Storage pointer. | +80 | MODULAR |
-| `packages/shared/src/services/__tests__/recommendation-ledger.service.test.ts` | Update tests to expect 0G mainnet as the default chain. | +5 | DRY |
-| `docs/architecture.md` | Update the architecture diagram to put 0G Chain as the canonical trust surface, Arbitrum as a settlement rail. | +10 | CLEAN |
+| `packages/shared/src/services/__tests__/recommendation-ledger.service.test.ts` | Update tests to expect chain-aware routing: savings → Celo, yield → Arbitrum, evidence → 0G. | +15 | DRY |
+| `docs/architecture.md` | Update the architecture diagram to show chain-aware ledger (Celo + Arbitrum as ledgers of record, 0G as evidence layer). | +10 | CLEAN |
 
 **Net diff:** ~620 lines, ~12 files, 1 new contract, 1 new service module, 1 new endpoint.
 
 **Verification gate:**
 
 - `pnpm test` passes (~410 tests).
-- `RecommendationLedger` address on 0G mainnet is in `.env` and in the README.
-- 0G Explorer link to a real tx is in the README.
-- Guardian loop records a recommendation on 0G mainnet end-to-end.
+- `RecommendationLedger` address on 0G mainnet (evidence anchor), Celo mainnet (savings ledger), and Arbitrum mainnet (yield ledger) are in `.env` and in the README.
+- 0G Explorer link to a real evidence anchor tx is in the README.
+- Celoscan link to a real savings ledger tx is in the README.
+- Arbiscan link to a real yield ledger tx is in the README.
+- Guardian loop records a recommendation on all three chains end-to-end.
 - Agentic ID is minted for at least 1 test user; the on-chain ID points to a 0G Storage CID.
-- Demo video updated to show the mainnet flow.
+- Demo video updated to show the chain-aware flow.
 - X post with mainnet proof.
 
 **Submission artifact (Wave 3):** mainnet contract address + 0G Explorer link + updated demo video.
@@ -224,12 +263,12 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 
 | File | Change | Lines | Principle |
 |---|---|---|---|
-| `components/tabs/AgentTab.tsx` (or the dashboard component) | Add a "0G Mainnet Activity" widget: live tx count, gas spent, evidence CIDs created this week, # of users with a minted Agentic ID. Reads from `/api/agent/zero-g-ledger?chainId=<0G mainnet>`. | +60 | PERFORMANT, CLEAN |
+| `components/tabs/AgentTab.tsx` (or the dashboard component) | Add a "Chain-Aware Ledger Activity" widget: live tx count per chain (Celo savings, Arbitrum yield, 0G evidence anchor), gas spent, evidence CIDs created this week, # of users with a minted Agentic ID. Reads from `/api/agent/zero-g-ledger?chainId=<0G mainnet>` and the Celo/Arbitrum ledger endpoints. | +60 | PERFORMANT, CLEAN |
 | `pages/api/agent/zero-g-stats.ts` | (new) Aggregated stats endpoint: `totalRecommendations`, `totalUsers`, `totalAgenticIds`, `last7DaysActivity`. Uses the existing `recommendationLedgerService` and `agenticIdService`. | +80 | DRY, MODULAR |
 | `pages/api/agent/zero-g-ledger.ts` | Add a `?stats=true` flag that returns the aggregated shape from `zero-g-stats` (or merge the endpoints via query param to keep the surface small — DRY). | +15 | DRY |
 | `packages/shared/src/services/agentic-id.service.ts` | Add a `transfer(to)` method that updates 0G Storage pointers on transfer. The Agentic ID is the user's Guardian, so a transfer is a real event. | +30 | MODULAR, CLEAN |
 | `hooks/use-proactive-agent.ts` | On session start, check whether the user has an Agentic ID; if not, show a 1-tap "Mint your Guardian ID" call-to-action. | +25 | CLEAN, MODULAR |
-| `pages/api/agent/_advisor-core.ts` | When recommending an action, surface "This recommendation will be recorded on 0G mainnet as Guardian #N" — a small UX hint that drives home the verifiable-AI story. | +10 | CLEAN |
+| `pages/api/agent/_advisor-core.ts` | When recommending an action, surface "This recommendation will be recorded on [Celo/Arbitrum] as Guardian #N, with evidence anchored to 0G" — a small UX hint that drives home the chain-aware verifiability story. | +10 | CLEAN |
 | `lib/marketing/0g-bridge-week-N.md` | (new) Weekly traction recap. Not a code file; lives next to `docs/` as `docs/internal/0g-bridge-week-N.md`. | +60 each | ORGANIZED |
 
 **Net diff:** ~280 lines, ~6 files, 0 new contracts, 1 new endpoint.
@@ -237,8 +276,8 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 **Verification gate:**
 
 - `pnpm test` passes (~430 tests).
-- 50+ wallets have connected and at least 1 Guardian decision each is on 0G mainnet.
-- The Verifiable AI dashboard shows live 0G Explorer links.
+- 50+ wallets have connected and at least 1 Guardian decision each is recorded on the chain-aware ledger (Celo for savings, Arbitrum for yield, 0G evidence anchor).
+- The Verifiable AI dashboard shows live 0G Explorer links + Celoscan + Arbiscan links.
 - `pages/api/agent/zero-g-stats` returns non-zero counts.
 
 **Submission artifact (Wave 4):** traction metrics + screenshots of the dashboard.
@@ -257,7 +296,7 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 | `contracts/AgenticID.sol` | Same audit pass. | +20 or +5 | PERFORMANT |
 | `docs/internal/0g-bridge-demo-day-pitch.md` | (new) Demo Day pitch script. | +200 | ORGANIZED |
 | `docs/roadmap.md` | Mark the 0G Bridge track as "submitted to Demo Day." Add a "post-buildathon" section referencing 0G's Investment Committee path. | +30 | ORGANIZED |
-| `README.md` | Add a "Demo Day" section linking to the pitch video, the mainnet contracts, and the 0G Explorer proof. | +15 | CLEAN |
+| `README.md` | Add a "Demo Day" section linking to the pitch video, the chain-aware mainnet contracts (Celo, Arbitrum, 0G), and the explorer proof links. | +15 | CLEAN |
 | `scripts/check-0g-bridge-submission.sh` | (new) Verification script that runs before each Wave submission: checks contracts are deployed, env vars are set, tests pass, demo video is linked, X post is public. Mirrors `scripts/check-env-drift.sh`. | +80 | ORGANIZED, PERFORMANT |
 
 **Net diff:** ~360 lines, ~5 files, 0 new core services, 1 new verification script.
@@ -280,7 +319,7 @@ For each wave: principle alignment, file changes, verification gate, and the bui
 | 0G mainnet RPC is unreliable at submission time | Medium | High (blocks Wave 3) | Use `x402-proxy.mjs` (existing) to pay-per-request, or fall back to a public RPC + 3 retries with exponential backoff. | PERFORMANT |
 | ERC-7857 spec evolves between Wave 3 and Wave 5 | Medium | Medium | Keep `AgenticID.sol` minimal; wrap, don't extend OpenZeppelin. Easy to redeploy. | MODULAR |
 | 0G Compute Direct TEE proofs add >15s latency | Low | Medium | Direct path is gated on `confidence > 0.8`; low-confidence decisions use the Router path. | PERFORMANT |
-| Arbitrum ledger is required by some hackathon partners | Low | Low | `recommendationLedgerService` already supports both chains as mirrors. | DRY |
+| Arbitrum ledger is required by the Arbitrum Open House reviewers | Medium | Medium | `recommendationLedgerService` is chain-aware — Arbitrum mainnet hosts the yield ledger of record. The chain-aware routing serves both tracks. | DRY |
 | 0G Pay USDC contract differs on mainnet | Medium | Low | `ZERO_G_DATA_HUB_CONFIG.USDC_TESTNET` is already env-overridable. Add `USDC_MAINNET` and switch the default in Wave 3. | DRY |
 | Wave 1 submission is late (deadline June 26) | High if not done this week | High (lose $5K) | This document IS the Wave 1 submission. Submission deadline: June 26, 2026 23:59 UTC. | (action item, see below) |
 

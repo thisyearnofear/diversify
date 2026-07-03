@@ -108,6 +108,7 @@ export {
   setLedgerContractAddress,
   getLedgerContractAddress,
   getDefaultLedgerChainId,
+  getLedgerChainForAction,
   listSupportedLedgerChains,
   mirrorRecommendationToZeroG,
   recordRecommendation,

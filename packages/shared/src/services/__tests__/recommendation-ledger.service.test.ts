@@ -235,3 +235,103 @@ describe('buildLedgerExplorerUrl — chain-aware URL builder (Phase 0 audit A5)'
         }
     });
 });
+
+describe('getLedgerChainForAction — chain-aware routing', () => {
+    const savedCeloMainnet = process.env.CELO_MAINNET_LEDGER_CONTRACT;
+    const savedArbMainnet = process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT;
+    const savedArbSepolia = process.env.ARBITRUM_LEDGER_CONTRACT;
+
+    beforeEach(() => {
+        vi.resetModules();
+        delete process.env.CELO_MAINNET_LEDGER_CONTRACT;
+        delete process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT;
+        delete process.env.ARBITRUM_LEDGER_CONTRACT;
+    });
+
+    afterEach(() => {
+        if (savedCeloMainnet) process.env.CELO_MAINNET_LEDGER_CONTRACT = savedCeloMainnet;
+        if (savedArbMainnet) process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = savedArbMainnet;
+        if (savedArbSepolia) process.env.ARBITRUM_LEDGER_CONTRACT = savedArbSepolia;
+    });
+
+    it('routes Celo savings tokens (cUSD) to Celo mainnet when configured', async () => {
+        process.env.CELO_MAINNET_LEDGER_CONTRACT = '0x' + 'ce'.repeat(20);
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        expect(getLedgerChainForAction('SWAP', 'cUSD')).toBe(42220);
+        expect(getLedgerChainForAction('SWAP', 'cREAL')).toBe(42220);
+        expect(getLedgerChainForAction('SWAP', 'KESm')).toBe(42220);
+        expect(getLedgerChainForAction('REBALANCE', 'cEUR')).toBe(42220);
+    });
+
+    it('routes yield/RWA tokens (USDY, PAXG) to Arbitrum mainnet when configured', async () => {
+        process.env.CELO_MAINNET_LEDGER_CONTRACT = '0x' + 'ce'.repeat(20);
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        expect(getLedgerChainForAction('SWAP', 'USDY')).toBe(42161);
+        expect(getLedgerChainForAction('SWAP', 'PAXG')).toBe(42161);
+        expect(getLedgerChainForAction('SWAP', 'USDC')).toBe(42161);
+        expect(getLedgerChainForAction('HOLD', '')).toBe(42161);
+    });
+
+    it('falls back to default chain when no mainnet contracts are configured', async () => {
+        process.env.ARBITRUM_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        const { getLedgerChainForAction, getDefaultLedgerChainId } = await import('../recommendation-ledger.service');
+        // cUSD would go to Celo, but Celo mainnet not configured → falls back
+        expect(getLedgerChainForAction('SWAP', 'cUSD')).toBe(getDefaultLedgerChainId());
+        // Yield token with no mainnet → falls back to Arbitrum Sepolia
+        expect(getLedgerChainForAction('SWAP', 'USDY')).toBe(421614);
+    });
+
+    it('is case-insensitive for token symbols', async () => {
+        process.env.CELO_MAINNET_LEDGER_CONTRACT = '0x' + 'ce'.repeat(20);
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        expect(getLedgerChainForAction('SWAP', 'cusd')).toBe(42220);
+        expect(getLedgerChainForAction('SWAP', 'CUSD')).toBe(42220);
+        expect(getLedgerChainForAction('SWAP', ' usdy ')).toBe(42161);
+    });
+});
+
+describe('buildLedgerExplorerUrl — Celo mainnet support', () => {
+    it('builds Celoscan URLs for chainId 42220', async () => {
+        const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        const url = buildLedgerExplorerUrl('0xabc123', 42220);
+        expect(url).toBe('https://celoscan.io/tx/0xabc123');
+    });
+
+    it('builds Celoscan URLs for Celo Sepolia chainId 11142220', async () => {
+        const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        const url = buildLedgerExplorerUrl('0xabc123', 11142220);
+        expect(url).toBe('https://celoscan.io/tx/0xabc123');
+    });
+});
+
+describe('getDefaultLedgerChainId — mainnet preference', () => {
+    const savedArbMainnet = process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT;
+    const savedArbSepolia = process.env.ARBITRUM_LEDGER_CONTRACT;
+
+    beforeEach(() => {
+        vi.resetModules();
+        delete process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT;
+        delete process.env.ARBITRUM_LEDGER_CONTRACT;
+    });
+
+    afterEach(() => {
+        if (savedArbMainnet) process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = savedArbMainnet;
+        if (savedArbSepolia) process.env.ARBITRUM_LEDGER_CONTRACT = savedArbSepolia;
+    });
+
+    it('prefers Arbitrum mainnet when configured', async () => {
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        process.env.ARBITRUM_LEDGER_CONTRACT = '0x' + 'cd'.repeat(20);
+        const { getDefaultLedgerChainId } = await import('../recommendation-ledger.service');
+        expect(getDefaultLedgerChainId()).toBe(42161);
+    });
+
+    it('falls back to Arbitrum Sepolia when mainnet not configured', async () => {
+        process.env.ARBITRUM_LEDGER_CONTRACT = '0x' + 'cd'.repeat(20);
+        const { getDefaultLedgerChainId } = await import('../recommendation-ledger.service');
+        expect(getDefaultLedgerChainId()).toBe(421614);
+    });
+});
