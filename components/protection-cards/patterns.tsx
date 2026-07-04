@@ -393,6 +393,76 @@ export function CustomScatterPattern({ cardWidth, cardHeight, accent, accentSoft
   return <PatternFrame>{dots}</PatternFrame>;
 }
 
+/* ────────────────────────────────────────────────────────────────────
+ * Pan-Caribbean — layered swell lines + archipelago arc.
+ * Horizontal wave bands (ocean swell grammar) with a sweeping arc of
+ * island dots echoing the Antilles chain. Turquoise on deep-sea surface.
+ * ──────────────────────────────────────────────────────────────────── */
+export function CaribbeanSwellPattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
+  const parts: React.ReactNode[] = [];
+  // Swell bands — pairs of thin lines with alternating tilt, like
+  // rendered ocean current charts.
+  const bandGap = 72;
+  const rows = Math.ceil(cardHeight / bandGap) + 2;
+  for (let i = 0; i < rows; i++) {
+    const tilt = i % 2 === 0 ? -2.5 : 2.5;
+    parts.push(
+      <div
+        key={`swell-${i}`}
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: i * bandGap,
+          left: -60,
+          width: cardWidth + 120,
+          height: 3,
+          background: alpha(i % 3 === 0 ? accentSoft : '#000000', i % 3 === 0 ? 0.4 : 0.22),
+          transform: `rotate(${tilt}deg)`,
+        }}
+      />,
+      <div
+        key={`swell-echo-${i}`}
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: i * bandGap + 10,
+          left: -60,
+          width: cardWidth + 120,
+          height: 1.5,
+          background: alpha('#000000', 0.14),
+          transform: `rotate(${tilt}deg)`,
+        }}
+      />,
+    );
+  }
+  // Archipelago arc — island dots sweeping from lower-left to upper-right,
+  // sized irregularly like a real island chain.
+  const islands = 9;
+  for (let i = 0; i < islands; i++) {
+    const t = i / (islands - 1);
+    const x = 60 + t * (cardWidth - 140);
+    const y = cardHeight * 0.72 - Math.sin(t * Math.PI * 0.9) * cardHeight * 0.38;
+    const r = 7 + ((i * 13) % 4) * 4;
+    parts.push(
+      <div
+        key={`isle-${i}`}
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: y - r,
+          left: x - r,
+          width: r * 2,
+          height: r * 2,
+          borderRadius: r,
+          background: alpha(i % 3 === 0 ? accentSoft : accent, i % 3 === 0 ? 0.8 : 0.5),
+          border: `1.5px solid ${alpha(accentSoft, 0.5)}`,
+        }}
+      />,
+    );
+  }
+  return <PatternFrame>{parts}</PatternFrame>;
+}
+
 /* ─────────────────────────────────────────────────────────────────── */
 function PatternFrame({ children }: { children: React.ReactNode }) {
   return (

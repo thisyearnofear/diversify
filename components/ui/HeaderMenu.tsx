@@ -49,6 +49,7 @@ export default function HeaderMenu({
         const icons: Record<string, string> = {
             africapitalism: "🌍",
             buen_vivir: "🌎",
+            pan_caribbean: "🏝️",
             confucian: "🏮",
             gotong_royong: "🤝",
             islamic: "☪️",
@@ -63,6 +64,7 @@ export default function HeaderMenu({
         const names: Record<string, string> = {
             africapitalism: "Africapitalism",
             buen_vivir: "Buen Vivir",
+            pan_caribbean: "Pan-Caribbean",
             confucian: "Family Wealth",
             gotong_royong: "Mutual Aid",
             islamic: "Islamic Finance",

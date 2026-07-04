@@ -35,6 +35,7 @@ const RENDERED_W_DESKTOP = 300;
 const STRATEGY_ID: Record<ArchetypeId, FinancialStrategy> = {
   africapitalism: 'africapitalism',
   buen_vivir: 'buen_vivir',
+  pan_caribbean: 'pan_caribbean',
   confucian: 'confucian',
   gotong_royong: 'gotong_royong',
   islamic_finance: 'islamic',

@@ -6,6 +6,7 @@ export type FinancialStrategy =
   | 'custom'
   | 'africapitalism'
   | 'buen_vivir'
+  | 'pan_caribbean'
   | 'confucian'
   | 'gotong_royong'
   | 'islamic'

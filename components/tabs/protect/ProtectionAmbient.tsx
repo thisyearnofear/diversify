@@ -42,6 +42,7 @@ import {
 import {
   AfricaWeavePattern,
   BuenVivirTerracePattern,
+  CaribbeanSwellPattern,
   ConfucianColumnPattern,
   CustomScatterPattern,
   GlobalMeridianPattern,
@@ -55,6 +56,7 @@ import {
 const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
   africapitalism: 'africapitalism',
   buen_vivir: 'buen_vivir',
+  pan_caribbean: 'pan_caribbean',
   confucian: 'confucian',
   gotong_royong: 'gotong_royong',
   islamic: 'islamic_finance',
@@ -68,6 +70,7 @@ const PATTERN_FOR: Record<
 > = {
   africapitalism: AfricaWeavePattern,
   buen_vivir: BuenVivirTerracePattern,
+  pan_caribbean: CaribbeanSwellPattern,
   confucian: ConfucianColumnPattern,
   gotong_royong: GotongDiamondPattern,
   islamic_finance: IslamicTessellationPattern,

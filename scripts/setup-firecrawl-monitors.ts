@@ -12,6 +12,9 @@
  *   2. Federal Reserve press releases
  *   3. DeFiLlama top stablecoin yields
  *   4. CoinGecko stablecoin depeg tracker
+ *   5. STATIN Jamaica CPI releases (Pan-Caribbean plan)
+ *   6. Central Bank of Trinidad & Tobago media releases (Pan-Caribbean plan)
+ *   7. NHC Atlantic tropical cyclone outlook (Pan-Caribbean disaster mode)
  */
 
 const FIRECRAWL_API_KEY = process.env.FIRECRAWL_API_KEY;
@@ -67,6 +70,34 @@ const MONITORS: MonitorConfig[] = [
     targets: [{
       type: 'scrape',
       urls: ['https://www.coingecko.com/en/categories/stablecoins'],
+    }],
+  },
+  // ── Pan-Caribbean intelligence diet (docs/caribbean-strategy.md §5) ──
+  {
+    name: 'STATIN Jamaica CPI Releases',
+    schedule: { text: 'every 12 hours', timezone: 'America/Jamaica' },
+    goal: 'Alert when the Statistical Institute of Jamaica publishes a new Consumer Price Index or inflation press release. Extract the headline inflation rate and especially the food & non-alcoholic beverages division change — food inflation above 6% is a rebalance trigger for the Pan-Caribbean protection plan (shift toward PAXG/USDY). Ignore non-CPI publications like census or labour force releases.',
+    targets: [{
+      type: 'scrape',
+      urls: ['https://statinja.gov.jm/PressReleases.aspx'],
+    }],
+  },
+  {
+    name: 'Central Bank of Trinidad & Tobago Releases',
+    schedule: { text: 'every 12 hours', timezone: 'America/Port_of_Spain' },
+    goal: 'Alert when the Central Bank of Trinidad and Tobago publishes a new inflation report, monetary policy announcement, repo rate decision, or Economic DataPack update. Extract headline and food inflation figures — food inflation above 3% or a repo rate change is a signal for the Pan-Caribbean protection plan. Ignore routine speeches and administrative notices.',
+    targets: [{
+      type: 'scrape',
+      urls: ['https://www.central-bank.org.tt/category/news/'],
+    }],
+  },
+  {
+    name: 'NHC Atlantic Tropical Cyclone Outlook',
+    schedule: { text: 'every 6 hours', timezone: 'UTC' },
+    goal: 'Alert when the National Hurricane Center shows an active tropical storm or hurricane with a forecast track threatening Caribbean territories (Jamaica, Trinidad & Tobago, Barbados, Guyana, Eastern Caribbean islands, Bahamas). This triggers the Pan-Caribbean plan disaster mode: shift toward maximum-liquidity USDC so users retain phone-accessible value if physical banking is disrupted. Ignore systems confined to the Gulf of Mexico, US mainland, or open Atlantic with no Caribbean landfall risk.',
+    targets: [{
+      type: 'scrape',
+      urls: ['https://www.nhc.noaa.gov/gtwo.php?basin=atlc'],
     }],
   },
 ];

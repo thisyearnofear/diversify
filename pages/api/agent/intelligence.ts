@@ -11,7 +11,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const startedAt = Date.now();
   try {
-    const pulse = await marketPulseService.getMarketPulse();
+    // Optional horizon query param: "1h" for short-term spikes, "24h" for
+    // longer-term risk management. Defaults to "24h" (same as the service).
+    const horizon = (req.query.horizon === '1h' ? '1h' : '24h') as '1h' | '24h';
+    const pulse = await marketPulseService.getMarketPulse(horizon);
     // allSettled so a single upstream failure doesn't drop the other result.
     // Both services use circuit breakers internally, so rejections are rare,
     // but the pattern is more defensive than Promise.all.

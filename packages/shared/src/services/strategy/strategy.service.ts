@@ -94,6 +94,32 @@ export class StrategyService {
                     },
                 };
 
+            case 'pan_caribbean':
+                // No onchain Caribbean stablecoin exists (JAM-DEX, SandDollar,
+                // DCash, Carib$ are all private/permissioned ledgers). Most
+                // Caribbean currencies are USD-pegged (BBD 2:1, XCD 2.7:1), so
+                // the honest hedge is USD-pegged stables + gold against
+                // imported inflation. See docs/caribbean-strategy.md.
+                return {
+                    preferredRegions: ['Global', 'USA', 'Commodities'],
+                    targetAllocations: [
+                        { region: 'Global', min: 30, ideal: 45, max: 70 }, // USDC/USDm — USD-pegged core
+                        { region: 'USA', min: 15, ideal: 25, max: 45 }, // USDY/SYRUPUSDC — RWA yield
+                        { region: 'Commodities', min: 10, ideal: 15, max: 30 }, // PAXG — imported-inflation hedge
+                    ],
+                    prioritizeAssets: ['USDC', 'USDm', 'USDY', 'PAXG'],
+                    scoringWeights: {
+                        regionalConcentration: 0.4,
+                        globalDiversification: 0.4,
+                        assetCompliance: 0.2,
+                    },
+                    successThresholds: {
+                        excellent: 80,
+                        good: 60,
+                        needsWork: 40,
+                    },
+                };
+
             case 'confucian':
                 return {
                     preferredRegions: ['Asia'],
@@ -324,6 +350,15 @@ export class StrategyService {
 - Suggest swapping into: ${priorityAssetsStr}
 - Support regional sovereignty
 - Target: 40-50% LatAm exposure for balanced harmony`;
+
+            case 'pan_caribbean':
+                return `The user follows the Pan-Caribbean (CSME) philosophy. Prioritize recommendations that:
+- Protect purchasing power against IMPORTED inflation — Caribbean economies import ~43% of goods from the US; food inflation runs 5-8% in Jamaica and Guyana while headline stays moderate
+- Hold USD-pegged stablecoins as the core hedge: ${priorityAssetsStr} (most Caribbean currencies are USD-pegged — BBD 2:1, XCD 2.7:1 — so USD-pegged stables preserve local purchasing power)
+- Increase PAXG (gold) weight when food commodity prices or US tariff pass-through accelerate
+- Shift toward maximum-liquidity USDC when hurricane alerts threaten physical banking infrastructure (disaster mode — onchain value survives what branches and ATMs do not)
+- Optimize diaspora remittance corridors (US/UK/Canada → Caribbean) via low-cost Celo rails
+- Target regions: ${preferredRegionsStr} with a 40-50% USD-pegged core`;
 
             case 'confucian':
                 return `The user follows Confucian/Family Wealth philosophy. Prioritize recommendations that:

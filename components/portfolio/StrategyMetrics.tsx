@@ -124,6 +124,8 @@ function getMetricsForStrategy(
             return getAfricapitalismMetrics(data);
         case 'buen_vivir':
             return getBuenVivirMetrics(data);
+        case 'pan_caribbean':
+            return getPanCaribbeanMetrics(data);
         case 'confucian':
             return getConfucianMetrics(data);
         case 'gotong_royong':
@@ -206,6 +208,57 @@ function getBuenVivirMetrics(
             icon: '🆓',
             description: 'Reducing dollar dependence',
             status: latamExposure > 60 ? 'good' : 'neutral',
+        },
+    ];
+}
+
+function getPanCaribbeanMetrics(
+    data: StrategyMetricsProps['portfolioData']
+): StrategyMetric[] {
+    // No onchain Caribbean stablecoin exists — the Pan-Caribbean plan is a
+    // USD-pegged core (imported-inflation hedge) + gold (food-shock hedge).
+    const usdPegged = ['USDC', 'cUSD', 'USDm', 'USDT', 'USDY', 'SYRUPUSDC'];
+    const goldHedge = ['PAXG', 'GOLD'];
+    const totalValue = data.tokens.reduce((sum, t) => {
+        const value = typeof t.balance === 'number' ? t.balance : (t.value || 0);
+        return sum + value;
+    }, 0);
+    const sumFor = (symbols: string[]) => data.tokens.reduce((sum, t) => {
+        if (!symbols.includes(t.symbol)) return sum;
+        const value = typeof t.balance === 'number' ? t.balance : (t.value || 0);
+        return sum + value;
+    }, 0);
+    const usdCore = totalValue > 0 ? (sumFor(usdPegged) / totalValue) * 100 : 0;
+    const goldWeight = totalValue > 0 ? (sumFor(goldHedge) / totalValue) * 100 : 0;
+
+    return [
+        {
+            label: 'USD-Pegged Core',
+            value: `${usdCore.toFixed(0)}%`,
+            icon: '🛡️',
+            description: 'Hedge vs imported inflation',
+            status: usdCore >= 40 ? 'good' : usdCore >= 25 ? 'neutral' : 'warning',
+        },
+        {
+            label: 'Food-Shock Hedge',
+            value: `${goldWeight.toFixed(0)}%`,
+            icon: '🥇',
+            description: 'Gold vs food commodity spikes',
+            status: goldWeight >= 10 ? 'good' : goldWeight > 0 ? 'neutral' : 'warning',
+        },
+        {
+            label: 'Storm Ready',
+            value: usdCore >= 40 ? '✓' : '○',
+            icon: '🌀',
+            description: 'Liquid onchain value survives disasters',
+            status: usdCore >= 40 ? 'good' : 'neutral',
+        },
+        {
+            label: 'Diaspora Rails',
+            value: data.chains.length >= 2 ? 'Open' : 'Building',
+            icon: '🏝️',
+            description: 'Low-cost US/UK/CA → Caribbean corridor',
+            status: data.chains.length >= 2 ? 'good' : 'neutral',
         },
     ];
 }
@@ -413,6 +466,7 @@ function getStrategyIcon(strategy: FinancialStrategy): string {
     const icons: Record<NonNullable<FinancialStrategy>, string> = {
         africapitalism: '🌍',
         buen_vivir: '🌎',
+        pan_caribbean: '🏝️',
         confucian: '🏮',
         gotong_royong: '🤝',
         islamic: '☪️',
@@ -432,6 +486,7 @@ function getStrategyName(strategy: FinancialStrategy): string {
     const names: Record<NonNullable<FinancialStrategy>, string> = {
         africapitalism: 'Africapitalism',
         buen_vivir: 'Buen Vivir',
+        pan_caribbean: 'Pan-Caribbean',
         confucian: 'Family Wealth',
         gotong_royong: 'Mutual Aid',
         islamic: 'Islamic Finance',

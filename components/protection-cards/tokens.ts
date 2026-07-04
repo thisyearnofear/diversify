@@ -27,6 +27,7 @@ export const SURFACE_GRADIENT = `linear-gradient(135deg, ${TOKENS.surfaceGradien
 export type ArchetypeId =
   | 'africapitalism'
   | 'buen_vivir'
+  | 'pan_caribbean'
   | 'confucian'
   | 'gotong_royong'
   | 'islamic_finance'
@@ -78,6 +79,18 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     accentSoft: '#5eead4',
     // Andean highlands — deep forest → emerald → jade.
     surface: { start: '#022c22', mid: '#047857', end: '#5eead4' },
+  },
+  pan_caribbean: {
+    id: 'pan_caribbean',
+    name: 'Pan-Caribbean',
+    kicker: 'Protection Plan · Pan-Caribbean',
+    philosophy:
+      'Weather every storm. USD-pegged savings against imported inflation, gold against food shocks.',
+    allocation: ['USDC', 'cUSD', 'USDY', 'PAXG'],
+    accent: '#06b6d4',
+    accentSoft: '#a5f3fc',
+    // Caribbean shallows — deep sea → tropical turquoise → coral sand.
+    surface: { start: '#083344', mid: '#0891b2', end: '#fed7aa' },
   },
   confucian: {
     id: 'confucian',
@@ -141,6 +154,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
 export const ARCHETYPE_ORDER: ArchetypeId[] = [
   'africapitalism',
   'buen_vivir',
+  'pan_caribbean',
   'confucian',
   'gotong_royong',
   'islamic_finance',

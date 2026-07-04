@@ -49,6 +49,17 @@ const STRATEGIES: Strategy[] = [
         regions: ['Latin America'],
     },
     {
+        id: 'pan_caribbean',
+        name: 'Pan-Caribbean',
+        nativeName: 'One Caribbean',
+        icon: '🏝️',
+        tagline: 'Weather every storm',
+        description: 'Protect purchasing power against imported inflation, FX scarcity, and hurricane disruption. USD-pegged savings core with a gold hedge, tuned to CARICOM economies.',
+        values: ['Regional resilience', 'Diaspora corridors', 'Disaster-proof savings'],
+        example: 'USDC/cUSD core, USDY yield, PAXG food-shock hedge',
+        regions: ['Caribbean'],
+    },
+    {
         id: 'confucian',
         name: 'Family Wealth',
         nativeName: 'Confucian Economics',

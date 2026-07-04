@@ -42,11 +42,6 @@ const GUARDIAN_LOOP_SECRET = (() => {
 })();
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
 const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
-// Default per-trade notional (USD) when a recommendation does not carry an
-// explicit tradeAmountUSD. Kept small and always clamped to the user's
-// remaining daily limit below. NEVER derived from expectedSavings, which is
-// projected annual purchasing-power preserved, not a spend amount.
-const DEFAULT_TRADE_USD = parseFloat(process.env.GUARDIAN_DEFAULT_TRADE_USD || '10');
 
 /**
  * Persist an anchor to BOTH the pointer field and the rolling history, then
@@ -152,11 +147,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      // Check daily spending limit. The trade NOTIONAL is the explicit
-      // tradeAmountUSD on the recommendation, falling back to a small
-      // default. It is then clamped to whatever remains under the daily
-      // limit. expectedSavings (annual purchasing-power preserved) is NOT a
-      // spend amount and must never size the trade.
+      // Check daily spending limit. The trade NOTIONAL must be the explicit
+      // tradeAmountUSD on the recommendation — there is no default. Advisory
+      // recommendations (e.g. 0G heartbeat) that don't carry a notional are
+      // skipped, not silently executed with a guessed amount.
+      // expectedSavings (annual purchasing-power preserved) is NOT a spend
+      // amount and must never size the trade.
       const today = new Date().toISOString().slice(0, 10);
       const spentToday = perm.spentDate === today ? perm.spentTodayUSD : 0;
       const remainingToday = perm.dailyLimitUSD - spentToday;
@@ -171,10 +167,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const requestedTradeUSD = recommendation.tradeAmountUSD && recommendation.tradeAmountUSD > 0
-        ? recommendation.tradeAmountUSD
-        : DEFAULT_TRADE_USD;
-      const tradeAmountUSD = Math.min(requestedTradeUSD, remainingToday);
+      // Require an explicit tradeAmountUSD — no silent default.
+      // Recommendations without a notional (e.g. advisory/heartbeat recs)
+      // are skipped with a clear reason so the proof feed shows why.
+      if (!recommendation.tradeAmountUSD || recommendation.tradeAmountUSD <= 0) {
+        console.warn(
+          `[Guardian Loop] Skipping recommendation for ${userAddress}: no explicit tradeAmountUSD ` +
+          `(source: ${recommendation.source || 'unknown'}, action: ${recommendation.action || 'unknown'}). ` +
+          `Advisory recommendations are not auto-executed.`
+        );
+        results.push({
+          userAddress,
+          action: 'skip',
+          status: 'missing_notional',
+          reason: `Recommendation has no explicit trade amount (source: ${recommendation.source || 'unknown'}). Advisory recommendations are not auto-executed.`,
+        });
+        continue;
+      }
+
+      const tradeAmountUSD = Math.min(recommendation.tradeAmountUSD, remainingToday);
 
       if (tradeAmountUSD < 1) {
         results.push({

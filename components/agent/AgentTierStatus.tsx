@@ -29,6 +29,11 @@ import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianWDKStatus from "./GuardianWDKStatus";
 import { GuardianMobileWizard } from "./GuardianMobileWizard";
+import { ActivityFeed } from "./ActivityFeed";
+import { GuardianPermissionModal } from "./GuardianPermissionModal";
+import { GuardianGrantModal } from "./GuardianGrantModal";
+import { GuardianJournalTab, type GuardianProofEvent } from "./GuardianJournalTab";
+import { GuardianProofTab } from "./GuardianProofTab";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
 import { useMultichainBalances } from "../../hooks/use-multichain-balances";
 
@@ -75,18 +80,6 @@ export const AgentTierStatus: React.FC<{
   onAdvisorClick,
   onNavigateToFund,
 }) => {
-  type GuardianProofEvent = {
-    id: string;
-    source: "vault" | "wdk";
-    title: string;
-    subtitle: string;
-    timestamp: number;
-    status: string;
-    explorerUrl?: string;
-    txHash?: string;
-    error?: string;
-  };
-
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { activities, addActivity } = useAgentActivities();
   const { config } = useAgentConfig();
@@ -1087,541 +1080,73 @@ export const AgentTierStatus: React.FC<{
           )}
 
           {guardianTab === "journal" && (
-          <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Activity</h4>
-                <span className="text-xs text-gray-400 italic">Newest first</span>
-              </div>
-
-              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {guardianProofEvents.length === 0 ? (
-                  <div className="text-center py-10 bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 px-6 space-y-3">
-                    <span className="text-3xl block">{hasValidPermission && isLowOnFunds ? "💸" : "🛡️"}</span>
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                      {!hasValidPermission
-                        ? "Nothing to show yet"
-                        : isLowOnFunds
-                          ? "Auto-Saver is waiting for funds before its first move."
-                          : "Auto-Saver is watching. No moves yet."}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
-                      {!hasValidPermission
-                        ? "Set up Auto-Saver to start tracking automatic moves and on-chain receipts."
-                        : isLowOnFunds
-                          ? "Top up with at least $5 in stables. Auto-Saver will use the next chance it sees."
-                          : "Once it makes its first move, every action will appear here with a verifiable receipt."}
-                    </p>
-                    {hasValidPermission && (
-                      isLowOnFunds && onNavigateToFund ? (
-                        <button
-                          type="button"
-                          onClick={onNavigateToFund}
-                          className="mt-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2 transition-colors"
-                        >
-                          Add funds
-                        </button>
-                      ) : !isLowOnFunds ? (
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            setIsRunningLoop(true);
-                            try {
-                              const result = await triggerExecutionLoop(true);
-                              setLoopResult(result);
-                            } finally {
-                              setIsRunningLoop(false);
-                            }
-                          }}
-                          disabled={isRunningLoop}
-                          className="mt-2 text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          {isRunningLoop ? "Previewing…" : "Preview next move"}
-                        </button>
-                      ) : null
-                    )}
-                  </div>
-                ) : (
-                  guardianProofEvents.map((event, index) => {
-                      const anchor = event.txHash
-                        ? anchorByTxHash.get(event.txHash.toLowerCase())
-                        : undefined;
-                      return (
-                      <div key={event.id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
-                        <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
-                          {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
-                        </div>
-                        <div className={`bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border ${index === 0 ? 'border-green-100 dark:border-green-900/50 ring-1 ring-green-50 dark:ring-green-900/20' : 'border-gray-100 dark:border-gray-700'} hover:shadow-md transition-shadow relative overflow-hidden`}>
-                          <div className="absolute top-3 right-3 opacity-20 text-xl grayscale pointer-events-none">
-                            {event.source === "wdk" ? "🌌" : "🛡️"}
-                          </div>
-
-                          <div className="flex justify-between items-start mb-1 pr-8">
-                            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-                              {event.title}
-                            </span>
-                            <span className="text-xs text-gray-400 whitespace-nowrap">
-                              {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          {anchor && anchor.status === 'anchored' && (
-                            <a
-                              href={anchor.explorerUrl ?? event.explorerUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              data-testid="anchor-chip"
-                              className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
-                              title={anchor.id && anchor.id > 0 ? `0G RecommendationLedger #${anchor.id}` : 'Anchored on 0G (awaiting event index)'}
-                            >
-                              <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                              {anchor.id && anchor.id > 0 ? `0G #${anchor.id}` : '0G anchored'}
-                            </a>
-                          )}
-                          {anchor && anchor.status === 'pending' && (
-                            <span
-                              data-testid="anchor-chip-pending"
-                              className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
-                            >
-                              <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
-                              0G pending
-                            </span>
-                          )}
-                          {anchor && anchor.status === 'failed' && (
-                            <span
-                              className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
-                              title={anchor.error ?? '0G anchor failed'}
-                            >
-                              <span className="w-1 h-1 rounded-full bg-red-500" />
-                              0G failed
-                            </span>
-                          )}
-                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                            {event.subtitle}
-                          </p>
-                          {event.error && (
-                            <p className="mt-2 text-xs text-red-500">
-                              {event.error}
-                            </p>
-                          )}
-                          {(event.explorerUrl || event.status) && (
-                            <div className="mt-3 flex items-center justify-between gap-2">
-                              {event.explorerUrl ? (
-                              <a
-                                href={event.explorerUrl}
-                                target="_blank"
-                                className="text-xs font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded-md border border-blue-100 dark:border-blue-800 transition-colors whitespace-nowrap"
-                              >
-                                View Evidence
-                              </a>
-                              ) : (
-                                <span className="text-xs font-bold text-gray-400">
-                                  No explorer receipt
-                                </span>
-                              )}
-                              <span className={`text-[11px] uppercase font-bold px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
-                                event.status === "confirmed"
-                                  ? "text-green-500 bg-green-50 dark:bg-green-900/20"
-                                  : event.status === "failed"
-                                    ? "text-red-500 bg-red-50 dark:bg-red-900/20"
-                                    : "text-amber-500 bg-amber-50 dark:bg-amber-900/20"
-                              }`}>
-                                <span className={`w-1 h-1 rounded-full ${
-                                  event.status === "confirmed"
-                                    ? "bg-green-500 animate-pulse"
-                                    : event.status === "failed"
-                                      ? "bg-red-500"
-                                      : "bg-amber-500"
-                                }`} />
-                                {event.status}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                    })
-                )}
-              </div>
-          </div>
+            <GuardianJournalTab
+              events={guardianProofEvents}
+              anchorByTxHash={anchorByTxHash}
+              hasValidPermission={hasValidPermission}
+              isLowOnFunds={isLowOnFunds}
+              isRunningLoop={isRunningLoop}
+              onNavigateToFund={onNavigateToFund}
+              onPreview={async () => {
+                setIsRunningLoop(true);
+                try {
+                  const result = await triggerExecutionLoop(true);
+                  setLoopResult(result);
+                } finally {
+                  setIsRunningLoop(false);
+                }
+              }}
+            />
           )}
 
           {guardianTab === "proof" && (
-          <div className="space-y-4">
-              {sessionInfo?.latestRecommendation ? (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 rounded-2xl border border-blue-100 dark:border-purple-900 p-4">
-                  <div className="text-[11px] font-bold uppercase tracking-widest text-gray-500 mb-2">
-                    Proof chain
-                  </div>
-                  <div className="space-y-2 text-sm">
-                    <div>
-                      <span className="font-bold text-blue-700 dark:text-blue-300">1. Advisor:</span>{" "}
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {sessionInfo.latestRecommendation.oneLiner || "Produced a rebalance recommendation"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-amber-700 dark:text-amber-300">2. Permission:</span>{" "}
-                      <span className="text-gray-700 dark:text-gray-300">
-                        ${dailyLimit}/day, {permissionExpiry || "active session"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-bold text-purple-700 dark:text-purple-300">3. Auto-Saver:</span>{" "}
-                      <span className="text-gray-700 dark:text-gray-300">
-                        {sessionInfo.recentExecutions.length > 0
-                          ? `${sessionInfo.recentExecutions.length} move${sessionInfo.recentExecutions.length === 1 ? '' : 's'} on record`
-                          : "Waiting for the right moment"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                // Empty-state primer — explains the proof chain BEFORE any
-                // data exists, so the user understands what will appear here
-                // and why it matters. Each row is rendered as a dimmed
-                // skeleton so the structure is visible at a glance.
-                <div className="bg-gray-50 dark:bg-gray-800/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-800 p-5 space-y-4">
-                  <div className="text-center space-y-1.5">
-                    <span className="text-3xl block">🔗</span>
-                    <p className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                      {hasValidPermission
-                        ? "Nothing to prove yet"
-                        : "How Auto-Saver proves its work"}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto leading-relaxed">
-                      Every move Auto-Saver makes is backed by a chain of three steps. Once your first
-                      recommendation lands, this view will fill in.
-                    </p>
-                  </div>
-                  <ol className="space-y-2 text-xs">
-                    <li className="flex items-start gap-2 p-2 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800">
-                      <span className="font-black text-blue-500">1.</span>
-                      <div className="flex-1">
-                        <div className="font-bold text-blue-700 dark:text-blue-300">Advisor</div>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          What signal triggered a suggestion (e.g., inflation rising, depeg risk).
-                        </div>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-2 p-2 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800">
-                      <span className="font-black text-amber-500">2.</span>
-                      <div className="flex-1">
-                        <div className="font-bold text-amber-700 dark:text-amber-300">Permission</div>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          The limit you signed (e.g., ${dailyLimit}/day, 7-day window).
-                        </div>
-                      </div>
-                    </li>
-                    <li className="flex items-start gap-2 p-2 rounded-xl bg-white/60 dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800">
-                      <span className="font-black text-purple-500">3.</span>
-                      <div className="flex-1">
-                        <div className="font-bold text-purple-700 dark:text-purple-300">Auto-Saver</div>
-                        <div className="text-gray-500 dark:text-gray-400">
-                          The actual on-chain transaction, with a receipt anyone can verify.
-                        </div>
-                      </div>
-                    </li>
-                  </ol>
-                </div>
-              )}
-          </div>
+            <GuardianProofTab
+              hasLatestRecommendation={!!sessionInfo?.latestRecommendation}
+              latestRecommendationOneLiner={sessionInfo?.latestRecommendation?.oneLiner}
+              dailyLimit={dailyLimit}
+              permissionExpiry={permissionExpiry}
+              recentExecutionsCount={sessionInfo?.recentExecutions?.length ?? 0}
+              hasValidPermission={hasValidPermission}
+            />
           )}
         </motion.div>
       )}
 
       {/* Auto-Saver setup modal — user picks their daily limit BEFORE any signature. */}
       {showPermissionModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setShowPermissionModal(false)}
-        >
-          <div
-            className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-center space-y-2">
-              <span className="text-4xl">🛡️</span>
-              <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
-                Set up Auto-Saver
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Pick how much Auto-Saver can move each day. You can change or pause it any time.
-              </p>
-            </div>
-
-            {/* Onchain awareness: which chain + what Auto-Saver can see in
-                the user's wallet. Sourced from useMultichainBalances so
-                the figure matches the portfolio shown elsewhere. */}
-            {address && (
-              <div
-                className={`rounded-2xl p-3 border text-xs space-y-1 ${
-                  !isChainSupported
-                    ? "bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800"
-                    : isLowOnFunds
-                      ? "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800"
-                      : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-gray-700 dark:text-gray-300">
-                    {currentChainName
-                      ? `Network · ${currentChainName}`
-                      : "Network · Not connected"}
-                  </span>
-                  {portfolio.isLoading ? (
-                    <span className="text-gray-400">Checking balance…</span>
-                  ) : isChainSupported ? (
-                    <span className="font-black text-gray-900 dark:text-gray-100">
-                      ${stableBalanceOnChain.total.toFixed(2)} in stables
-                    </span>
-                  ) : null}
-                </div>
-                {!isChainSupported ? (
-                  <div className="space-y-2">
-                    <p className="text-red-700 dark:text-red-300">
-                      Switch to Celo or Arbitrum to set up Auto-Saver.
-                    </p>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => switchToChain(42220)}
-                        className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg py-1.5 transition-colors"
-                      >
-                        Switch to Celo
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => switchToChain(ARBITRUM_CHAIN_ID)}
-                        className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg py-1.5 transition-colors"
-                      >
-                        Switch to Arbitrum
-                      </button>
-                    </div>
-                  </div>
-                ) : isLowOnFunds ? (
-                  <div className="space-y-2">
-                    <p className="text-amber-700 dark:text-amber-300">
-                      {hasNonStableButNoStable
-                        ? `You have $${nonStableBalanceOnChain.toFixed(0)} on ${currentChainName} but not in stables. Auto-Saver needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to act.`
-                        : `Auto-Saver needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to act. You can still approve now and top up later — it'll just wait.`}
-                    </p>
-                    {isMiniPay ? (
-                      <p className="text-[11px] text-amber-700 dark:text-amber-300 italic">
-                        Tap "Add Cash" in your MiniPay wallet — fastest way to top up.
-                      </p>
-                    ) : onNavigateToFund ? (
-                      <div className="flex gap-2">
-                        {hasNonStableButNoStable && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setShowPermissionModal(false);
-                              onNavigateToFund();
-                            }}
-                            className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg py-1.5 transition-colors"
-                          >
-                            Convert to stables
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowPermissionModal(false);
-                            onNavigateToFund();
-                          }}
-                          className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg py-1.5 transition-colors"
-                        >
-                          Add funds
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Auto-Saver only acts on funds it can see in your wallet on this chain.
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                  Daily limit
-                </span>
-                <span className="text-sm font-black text-purple-600 dark:text-purple-400">
-                  ${pendingDailyLimit} / day
-                </span>
-              </div>
-              <div className="grid grid-cols-5 gap-2">
-                {DAILY_LIMIT_PRESETS.map((amount) => {
-                  const selected = amount === pendingDailyLimit;
-                  // Dim (but don't disable) chips above the user's stable
-                  // balance so they understand the limit but can still pick
-                  // it if they plan to top up.
-                  const aboveBalance =
-                    isChainSupported &&
-                    !portfolio.isLoading &&
-                    stableBalanceOnChain.total > 0 &&
-                    amount > stableBalanceOnChain.total;
-                  return (
-                    <button
-                      key={amount}
-                      type="button"
-                      onClick={() => setPendingDailyLimit(amount)}
-                      title={aboveBalance ? "More than what's in your wallet right now" : undefined}
-                      className={`py-2 text-xs font-bold rounded-xl border transition-colors ${
-                        selected
-                          ? "bg-purple-600 border-purple-600 text-white"
-                          : aboveBalance
-                            ? "bg-white/40 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-purple-300"
-                            : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-400"
-                      }`}
-                    >
-                      ${amount}
-                    </button>
-                  );
-                })}
-              </div>
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center">
-                Start small. You can raise the limit later.
-              </p>
-            </div>
-
-            <div className="space-y-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 border border-purple-100 dark:border-purple-800">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
-                What you're approving
-              </p>
-              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-500 mt-0.5">•</span>
-                  <span>Auto-Saver may swap up to <strong>${pendingDailyLimit}</strong> of your stables each day.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-500 mt-0.5">•</span>
-                  <span>Valid for <strong>7 days</strong>, then expires automatically.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-500 mt-0.5">•</span>
-                  <span>Only into approved stablecoins or gold (USDC, EURC, PAXG).</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-500 mt-0.5">•</span>
-                  <span>If your wallet is empty when it runs, it just waits — no errors, no fees.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-purple-500 mt-0.5">•</span>
-                  <span>You can pause it from this screen any time.</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowPermissionModal(false)}
-                className="flex-1 text-sm font-bold text-gray-500 py-4"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRequestPermission}
-                disabled={!isChainSupported}
-                className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-all active:scale-95"
-              >
-                {isChainSupported ? "Approve in wallet" : "Switch network first"}
-              </button>
-            </div>
-          </div>
-        </div>
+        <GuardianPermissionModal
+          pendingDailyLimit={pendingDailyLimit}
+          setPendingDailyLimit={setPendingDailyLimit}
+          DAILY_LIMIT_PRESETS={DAILY_LIMIT_PRESETS}
+          isChainSupported={isChainSupported}
+          isLowOnFunds={isLowOnFunds}
+          hasNonStableButNoStable={hasNonStableButNoStable}
+          nonStableBalanceOnChain={nonStableBalanceOnChain}
+          currentChainName={currentChainName}
+          stableBalanceTotal={stableBalanceOnChain.total}
+          portfolioLoading={portfolio.isLoading}
+          isMiniPay={isMiniPay}
+          onNavigateToFund={onNavigateToFund}
+          switchToChain={switchToChain}
+          onCancel={() => setShowPermissionModal(false)}
+          onApprove={handleRequestPermission}
+        />
       )}
 
       {/* On-chain (ERC-7715) grant confirmation modal — user must see the
           summary BEFORE MetaMask pops. Closes the anxiety gap between
           "I clicked a button" and "MetaMask wants me to sign something". */}
       {showGrantConfirmModal && (
-        <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"
-          onClick={() => setShowGrantConfirmModal(false)}
-        >
-          <div
-            className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-center space-y-2">
-              <span className="text-4xl">🦊</span>
-              <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
-                Stronger protection via MetaMask
-              </h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Your wallet will enforce the daily limit on-chain. Keys never leave your device.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-                  Daily limit
-                </span>
-                <span className="text-sm font-black text-orange-600 dark:text-orange-400">
-                  ${pendingDailyLimit} / day
-                </span>
-              </div>
-              <div className="grid grid-cols-5 gap-2">
-                {DAILY_LIMIT_PRESETS.map((amount) => {
-                  const selected = amount === pendingDailyLimit;
-                  return (
-                    <button
-                      key={amount}
-                      type="button"
-                      onClick={() => setPendingDailyLimit(amount)}
-                      className={`py-2 text-xs font-bold rounded-xl border transition-colors ${
-                        selected
-                          ? "bg-orange-500 border-orange-500 text-white"
-                          : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-orange-400"
-                      }`}
-                    >
-                      ${amount}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-2 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4 border border-orange-100 dark:border-orange-800">
-              <p className="text-[11px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-300">
-                What MetaMask will ask you to sign
-              </p>
-              <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-orange-500 mt-0.5">•</span>
-                  <span>Allow Auto-Saver to spend up to <strong>${pendingDailyLimit}</strong> of your USDC per day on Arbitrum.</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-orange-500 mt-0.5">•</span>
-                  <span>You can revoke this permission in your wallet at any time.</span>
-                </li>
-              </ul>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowGrantConfirmModal(false)}
-                className="flex-1 text-sm font-bold text-gray-500 py-4"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowGrantConfirmModal(false);
-                  handleGrantAdvanced();
-                }}
-                className="flex-1 text-sm font-black bg-orange-600 hover:bg-orange-700 text-white rounded-2xl py-4 shadow-lg shadow-orange-200 dark:shadow-orange-900/30 transition-all active:scale-95"
-              >
-                Continue to MetaMask
-              </button>
-            </div>
-          </div>
-        </div>
+        <GuardianGrantModal
+          pendingDailyLimit={pendingDailyLimit}
+          setPendingDailyLimit={setPendingDailyLimit}
+          DAILY_LIMIT_PRESETS={DAILY_LIMIT_PRESETS}
+          onCancel={() => setShowGrantConfirmModal(false)}
+          onContinue={() => {
+            setShowGrantConfirmModal(false);
+            handleGrantAdvanced();
+          }}
+        />
       )}
 
       {/* Strategy Switcher Wizard */}
@@ -1644,94 +1169,3 @@ export const AgentTierStatus: React.FC<{
   );
 };
 
-// Activity Feed Component (inline, not separate file)
-const ActivityFeed: React.FC<{
-  activities: AgentActivity[];
-  onNavigateToSwap?: () => void;
-  hasWallet?: boolean;
-}> = ({ activities, onNavigateToSwap, hasWallet }) => {
-  if (activities.length === 0) {
-    return (
-      <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <div className="text-center py-2">
-          <p className="text-xs text-gray-400 mb-2">No recent activity</p>
-          {hasWallet ? (
-            <button
-              onClick={onNavigateToSwap}
-              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
-            >
-              Make your first swap →
-            </button>
-          ) : (
-            <p className="text-xs text-gray-500">Connect wallet to start</p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
-      {activities.map((activity) => (
-        <motion.div
-          key={activity.id}
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-start gap-2"
-        >
-          <div
-            className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
-              activity.status === "success"
-                ? "bg-green-500"
-                : activity.status === "pending"
-                  ? "bg-amber-500"
-                  : "bg-red-500"
-            }`}
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-gray-700 dark:text-gray-300 leading-tight">
-              {activity.description}
-            </p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-gray-400">
-                {new Date(activity.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-              {activity.details?.txHash && (
-                <a
-                  href={`${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${activity.details.txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-blue-500 hover:underline"
-                  onClick={(e) => e.stopPropagation()}
-                  >
-                    View tx →
-                  </a>
-              )}
-            </div>
-            {activity.details?.researchEvidence?.bundle && (
-              <div className="flex flex-wrap gap-1.5 mt-1.5">
-                <span className="px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/30 text-[11px] font-bold text-blue-700 dark:text-blue-300">
-                  {Math.round(activity.details.researchEvidence.bundle.confidence * 100)}% confidence
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-                  {Math.round(activity.details.researchEvidence.bundle.freshnessScore * 100)}% freshness
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-violet-50 dark:bg-violet-900/30 text-[11px] font-bold text-violet-700 dark:text-violet-300">
-                  {activity.details.researchEvidence.bundle.sourceCount} sources
-                </span>
-              </div>
-            )}
-            {activity.details?.researchEvidence?.summary && (
-              <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
-                {activity.details.researchEvidence.summary}
-              </p>
-            )}
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
-};

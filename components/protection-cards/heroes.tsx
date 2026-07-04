@@ -771,3 +771,111 @@ export function CustomHero({ accent, accentSoft, size = DEFAULT }: HeroProps) {
     </div>
   );
 }
+
+/* ────────────────────────────────────────────────────────────────────
+ * Pan-Caribbean — swell rings + archipelago arc + trade-wind sun.
+ * Concentric wave rings (ocean swell radiating from a sun disc) with
+ * an arc of island dots sweeping across, echoing the Antilles chain.
+ * Turquoise + coral-sand register.
+ * ──────────────────────────────────────────────────────────────────── */
+export function PanCaribbeanHero({ accent, accentSoft, size = DEFAULT }: HeroProps) {
+  const center = size / 2;
+  return (
+    <div
+      style={{
+        display: 'flex',
+        position: 'relative',
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      {/* Concentric swell rings — radiating outward like ripples */}
+      {[0, 1, 2, 3].map((ring) => {
+        const r = 90 + ring * 78;
+        return (
+          <div
+            key={`ring-${ring}`}
+            style={{
+              display: 'flex',
+              position: 'absolute',
+              top: center - r,
+              left: center - r,
+              width: r * 2,
+              height: r * 2,
+              borderRadius: r,
+              border: `${4 - ring * 0.7}px solid ${alpha(ring % 2 === 0 ? accentSoft : accent, 0.85 - ring * 0.17)}`,
+              background: ring === 0 ? `radial-gradient(circle, ${alpha(accentSoft, 0.14)}, transparent 70%)` : 'transparent',
+            }}
+          />
+        );
+      })}
+      {/* Horizon band — the sea line */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: center + 96,
+          left: 30,
+          width: size - 60,
+          height: 8,
+          borderRadius: 4,
+          background: `linear-gradient(90deg, ${alpha(accent, 0)} 0%, ${alpha(accent, 0.75)} 30%, ${alpha(accentSoft, 0.9)} 50%, ${alpha(accent, 0.75)} 70%, ${alpha(accent, 0)} 100%)`,
+        }}
+      />
+      {/* Archipelago arc — island chain sweeping over the rings */}
+      {[0, 1, 2, 3, 4, 5, 6].map((i) => {
+        const t = i / 6;
+        const x = 80 + t * (size - 160);
+        const y = center + 60 - Math.sin(t * Math.PI) * 210;
+        const r = i % 2 === 0 ? 17 : 11;
+        return (
+          <div
+            key={`isle-${i}`}
+            style={{
+              display: 'flex',
+              position: 'absolute',
+              top: y - r,
+              left: x - r,
+              width: r * 2,
+              height: r * 2,
+              borderRadius: r,
+              background: i % 3 === 0
+                ? `radial-gradient(circle at 35% 35%, ${accentSoft}, ${accent})`
+                : alpha(accent, 0.85),
+              border: `2px solid ${alpha(accentSoft, 0.75)}`,
+            }}
+          />
+        );
+      })}
+      {/* Central sun disc — warm coral-sand counterpoint */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: center - 56,
+          left: center - 56,
+          width: 112,
+          height: 112,
+          borderRadius: 56,
+          background: `radial-gradient(circle at 35% 35%, #fef3c7 0%, #fdba74 55%, ${alpha('#fb923c', 0.85)} 100%)`,
+          border: `3px solid ${alpha('#fed7aa', 0.8)}`,
+        }}
+      />
+      {/* Inner highlight */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: center - 20,
+          left: center - 20,
+          width: 40,
+          height: 40,
+          borderRadius: 20,
+          background: alpha('#fffbeb', 0.6),
+        }}
+      />
+    </div>
+  );
+}

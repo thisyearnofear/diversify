@@ -38,6 +38,7 @@ async function loadFromGoogleFonts(family: string, weight: number): Promise<Arra
 const ARCHETYPE_FILENAMES: Record<ArchetypeId, string> = {
   africapitalism: 'africapitalism',
   buen_vivir: 'buen-vivir',
+  pan_caribbean: 'pan-caribbean',
   confucian: 'confucian',
   gotong_royong: 'gotong-royong',
   islamic_finance: 'islamic-finance',

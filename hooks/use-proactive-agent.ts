@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { agentEventBus } from './agent-event-bus';
-import { marketPulseService } from '@diversifi/shared';
 import { useStreakRewards } from './use-streak-rewards';
 import { useAgentConfig } from './use-agent-config';
 import { useAdvisor } from './use-advisor';
@@ -183,8 +182,14 @@ export function useProactiveAgent() {
   useEffect(() => {
     const monitoringInterval = setInterval(async () => {
       try {
-        // 1. Market Volatility Check (real data from marketPulseService)
-        const pulse = await marketPulseService.getMarketPulse('1h');
+        // 1. Market Volatility Check — routed through /api/agent/intelligence
+        // (prevents direct external API calls from the browser, which would
+        //  expose CORS keys and fire once per open tab independently).
+        const intelligenceRes = await fetch(`${API_BASE}/api/agent/intelligence?horizon=1h`);
+        if (!intelligenceRes.ok) return;
+        const intelligenceData = await intelligenceRes.json();
+        const pulse = intelligenceData.pulse;
+        if (!pulse) return;
 
         if (pulse.impliedVolatility && pulse.impliedVolatility > volatilityThreshold && !volatilityAlerted.current) {
           volatilityAlerted.current = true;

@@ -54,12 +54,17 @@ vi.mock("@/hooks/use-streak-rewards", () => ({
   }),
 }));
 
-vi.mock("@/hooks/useFinancialStrategies", () => ({
-  useFinancialStrategies: () => ({
-    selectedStrategy: null,
-    getStrategyById: vi.fn(() => null),
-  }),
-}));
+vi.mock("@/hooks/useFinancialStrategies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useFinancialStrategies")>();
+  return {
+    ...actual,
+    useFinancialStrategies: () => ({
+      strategies: actual.STRATEGIES,
+      selectedStrategy: null,
+      getStrategyById: vi.fn(() => null),
+    }),
+  };
+});
 
 vi.mock("@diversifi/shared", () => ({
   StrategyService: {
