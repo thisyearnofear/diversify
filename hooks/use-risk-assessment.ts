@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { MarketPulseService, type MarketPulse } from "@diversifi/shared";
-import { useMultichainBalances } from "./use-multichain-balances";
+import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useStablecoinPortfolio } from "./use-stablecoin-portfolio";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 
@@ -57,7 +57,7 @@ export function useRiskAssessment(horizon: "1h" | "24h" = "24h") {
   const [error, setError] = useState<Error | null>(null);
 
   const { address } = useWalletContext();
-  const { totalValue: portfolioValue, isLoading: balancesLoading } = useMultichainBalances(address ?? undefined);
+  const { totalValue: portfolioValue, isLoading: balancesLoading } = useSharedMultichainBalances(address ?? undefined);
   const { balances: stablecoinBalances, isLoading: stablecoinsLoading } = useStablecoinPortfolio(address ?? undefined);
 
   const totalStablecoins = stablecoinBalances.reduce((sum, b) => sum + b.value, 0);

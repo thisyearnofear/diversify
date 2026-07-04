@@ -475,9 +475,11 @@ export default function ProtectionTab({
       />}
 
       {/* =================================================================
-          GUARDIAN ONBOARDING — Setup lives on Protect tab
+          GUARDIAN ONBOARDING — Setup lives on Protect tab.
+          Hidden when the mobile wizard is open so only one setup surface
+          is visible at a time (single entry point with mobile/desktop fork).
           ================================================================= */}
-      {address && !isGuardianStatusLoading && !guardianDismissed && (!autonomousStatus || !autonomousStatus.enabled) && (
+      {address && !isGuardianStatusLoading && !guardianDismissed && !showMobileWizard && (!autonomousStatus || !autonomousStatus.enabled) && (
         <GuardianOnboardingWizard
           onActivate={() => setShowMobileWizard(true)}
           onSkip={() => setGuardianDismissed(true)}
@@ -708,6 +710,7 @@ export default function ProtectionTab({
           vaultAddress={vault.vault?.circleWalletAddress}
           onComplete={() => {
             setShowMobileWizard(false);
+            setGuardianDismissed(true);
             if (address) vault.refresh(address);
           }}
           onCancel={() => setShowMobileWizard(false)}

@@ -35,7 +35,7 @@ import { GuardianGrantModal } from "./GuardianGrantModal";
 import { GuardianJournalTab, type GuardianProofEvent } from "./GuardianJournalTab";
 import { GuardianProofTab } from "./GuardianProofTab";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
-import { useMultichainBalances } from "../../hooks/use-multichain-balances";
+import { useSharedMultichainBalances } from "../../context/app/PortfolioContext";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -166,7 +166,7 @@ export const AgentTierStatus: React.FC<{
   // Onchain awareness — what Auto-Saver can actually see in the user's
   // wallet on the chain they're currently connected to. Drives the
   // balance line, chip dimming, and the "Waiting for funds" runtime chip.
-  const portfolio = useMultichainBalances(address ?? undefined);
+  const portfolio = useSharedMultichainBalances(address ?? undefined);
   const currentChainName = chainId ? CHAIN_DISPLAY_NAMES[chainId] : null;
   const isChainSupported = chainId ? SUPPORTED_AUTO_SAVER_CHAINS.includes(chainId) : false;
   const isOnArbitrum = chainId === ARBITRUM_CHAIN_ID;

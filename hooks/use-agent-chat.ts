@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useAgentConfig } from "./use-agent-config";
-import { useMultichainBalances } from "./use-multichain-balances";
+import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
+import { useAgentChatContext } from "../context/app/AgentChatContext";
 import { IntentDiscoveryService, AgentActionService, recordRecommendation, type AppIntent, type ResponseFormat } from "@diversifi/shared";
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
@@ -28,21 +29,6 @@ const defaultChatState: ChatStoreState = {
 // macro_analysis(0.004) + portfolio_optimization(0.005) + risk_assessment(0.006)
 const RESEARCH_BUNDLE_PRICE = 0.015;
 
-let cachedChatState: ChatStoreState = defaultChatState;
-const listeners = new Set<(state: ChatStoreState) => void>();
-
-const notify = () => {
-  listeners.forEach((listener) => listener(cachedChatState));
-};
-
-const updateChatState = (
-  updater: Partial<ChatStoreState> | ((prev: ChatStoreState) => Partial<ChatStoreState>),
-) => {
-  const partial = typeof updater === "function" ? updater(cachedChatState) : updater;
-  cachedChatState = { ...cachedChatState, ...partial };
-  notify();
-};
-
 export function useAgentChat({
   apiBase,
   capabilities,
@@ -52,21 +38,24 @@ export function useAgentChat({
   const globalConversation = useAIConversationOptional();
   const { chainId, address } = useWalletContext();
   const { config } = useAgentConfig();
-  const portfolio = useMultichainBalances(address, config.goal);
+  const portfolio = useSharedMultichainBalances(address, config.goal);
   const { fetchPaidSource } = useX402Payment();
   const { addActivity } = useAgentActivities();
   const { deductCredits, status: creditsStatus } = useCredits();
 
-  const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
-  const [chatState, setChatState] = useState<ChatStoreState>(cachedChatState);
+  // Shared chat state via React Context (replaces module-level pub-sub).
+  // Falls back to local state if no provider is present (tests).
+  const ctx = useAgentChatContext();
+  const [localChatState, setLocalChatState] = useState<ChatStoreState>(defaultChatState);
+  const chatState = ctx?.chatState ?? localChatState;
+  const updateChatState = ctx?.updateChatState ?? ((updater: Partial<ChatStoreState> | ((prev: ChatStoreState) => Partial<ChatStoreState>)) => {
+    setLocalChatState((prev) => {
+      const partial = typeof updater === "function" ? updater(prev) : updater;
+      return { ...prev, ...partial };
+    });
+  });
 
-  useEffect(() => {
-    const listener = (next: ChatStoreState) => setChatState(next);
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
-  }, []);
+  const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
 
   const isUsingGlobal = useGlobalConversation && globalConversation !== undefined;
   const messages = isUsingGlobal ? globalConversation!.messages : localMessages;

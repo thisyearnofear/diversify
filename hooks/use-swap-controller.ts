@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSwap } from "./use-swap";
 import { useExpectedAmountOut } from "./use-expected-amount-out";
-import { useMultichainBalances } from "./use-multichain-balances";
+import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useInflationData } from "./use-inflation-data";
 import { useStreakRewards } from "./use-streak-rewards";
 import { NETWORKS } from "../config";
@@ -91,7 +91,7 @@ export function useSwapController({
 
   // 2. Specialized Hooks
   const { tokenMap: tokenBalances, refresh: refreshBalances } =
-    useMultichainBalances(address || "");
+    useSharedMultichainBalances(address || "");
   const {
     swap: performSwap,
     error: swapError,

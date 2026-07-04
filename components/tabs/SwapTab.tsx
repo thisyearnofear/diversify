@@ -24,7 +24,7 @@ import {
   filterTradeableTokens,
 } from "../../hooks/use-tradeable-tokens";
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
-import { useMultichainBalances } from "../../hooks/use-multichain-balances";
+import { useSharedMultichainBalances } from "../../context/app/PortfolioContext";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import { useClaimFlowContext } from "../../hooks/claim-flow-context";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
@@ -137,7 +137,7 @@ export default function SwapTab({
     goalScores,
     isLoading: isMultichainLoading,
     refresh: refreshMultichain,
-  } = useMultichainBalances(address);
+  } = useSharedMultichainBalances(address);
 
   // Helper to refresh balances with retries
   const refreshWithRetries = useCallback(

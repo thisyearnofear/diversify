@@ -1,9 +1,14 @@
 /**
- * Per-archetype background patterns (v2 — cranked).
+ * Per-archetype background patterns (v3 — SVG).
  *
  * Each pattern is *abstract geometry inspired by* a cultural tradition —
  * woven stripes, stepped grids, tessellations, brushmark columns,
  * mosaic stars — never literal religious or copyrighted symbols.
+ *
+ * v3: converted from div-based to inline SVG for better compositing
+ * performance on low-end mobile (the target demographic). SVG elements
+ * are GPU-composited as a single layer, vs divs which each create
+ * separate stacking contexts.
  *
  * Opacities are intentionally higher (~25-45%) than typical "background
  * texture" because the surface gradient is now per-archetype and bold;
@@ -12,7 +17,6 @@
  */
 
 import React from 'react';
-import { alpha } from './tokens';
 
 export interface PatternProps {
   cardWidth: number;
@@ -22,51 +26,65 @@ export interface PatternProps {
 }
 
 /* ────────────────────────────────────────────────────────────────────
+ * SVG frame — shared wrapper. All patterns draw inside this SVG.
+ * ──────────────────────────────────────────────────────────────────── */
+function PatternFrame({ children, width, height }: { children: React.ReactNode; width: number; height: number }) {
+  return (
+    <svg
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      style={{
+        position: 'absolute',
+        inset: 0,
+        pointerEvents: 'none',
+      }}
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/* ────────────────────────────────────────────────────────────────────
  * Africapitalism — diagonal woven warp + weft.
  * Inspired by West African kente cloth weft/warp grammar. Bright
  * gold + deep brown stripes on the savannah-sunrise surface.
  * ──────────────────────────────────────────────────────────────────── */
 export function AfricaWeavePattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const stripes: React.ReactNode[] = [];
-  const stripeW = 8;
   const gap = 32;
   const total = Math.ceil((cardWidth + cardHeight) / gap);
+  const stripes: React.ReactNode[] = [];
   for (let i = 0; i < total; i++) {
+    const x = -200 + i * gap;
     stripes.push(
-      <div
+      <rect
         key={`d-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: -200,
-          left: -200 + i * gap,
-          width: stripeW,
-          height: cardHeight + 500,
-          background: alpha(i % 4 === 0 ? accentSoft : '#000000', i % 2 === 0 ? 0.32 : 0.18),
-          transform: 'rotate(35deg)',
-          transformOrigin: 'top left',
-        }}
+        x={x}
+        y={-200}
+        width={8}
+        height={cardHeight + 500}
+        fill={i % 4 === 0 ? accentSoft : '#000000'}
+        opacity={i % 2 === 0 ? 0.32 : 0.18}
+        transform={`rotate(35 ${x} 0)`}
       />,
     );
   }
   // Strong horizontal weft bands
   for (let i = 0; i < 10; i++) {
     stripes.push(
-      <div
+      <rect
         key={`h-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          top: 40 + i * 108,
-          height: 4,
-          background: alpha('#000000', 0.28),
-        }}
+        x={0}
+        y={40 + i * 108}
+        width={cardWidth}
+        height={4}
+        fill="#000000"
+        opacity={0.28}
       />,
     );
   }
-  return <PatternFrame>{stripes}</PatternFrame>;
+  return <PatternFrame width={cardWidth} height={cardHeight}>{stripes}</PatternFrame>;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -75,32 +93,46 @@ export function AfricaWeavePattern({ cardWidth, cardHeight, accent, accentSoft }
  * deep-emerald-on-jade register. Reads as cultivated highland.
  * ──────────────────────────────────────────────────────────────────── */
 export function BuenVivirTerracePattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const blocks: React.ReactNode[] = [];
   const step = 40;
   const cols = Math.ceil(cardWidth / step);
   const rows = Math.ceil(cardHeight / step);
+  const blocks: React.ReactNode[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const isStep = (r + c) % 3 === 0;
       const isHL = (r + c) % 7 === 0;
-      blocks.push(
-        <div
-          key={`${r}-${c}`}
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: r * step,
-            left: c * step,
-            width: step - 4,
-            height: step - 4,
-            background: isHL ? alpha(accentSoft, 0.35) : isStep ? alpha('#000000', 0.25) : 'transparent',
-            border: isStep ? `1.5px solid ${alpha('#000000', 0.35)}` : 'none',
-          }}
-        />,
-      );
+      if (isHL) {
+        blocks.push(
+          <rect
+            key={`${r}-${c}-hl`}
+            x={c * step}
+            y={r * step}
+            width={step - 4}
+            height={step - 4}
+            fill={accentSoft}
+            opacity={0.35}
+          />,
+        );
+      }
+      if (isStep) {
+        blocks.push(
+          <rect
+            key={`${r}-${c}-step`}
+            x={c * step}
+            y={r * step}
+            width={step - 4}
+            height={step - 4}
+            fill="#000000"
+            opacity={0.25}
+            stroke="#000000"
+            strokeWidth={1.5}
+            strokeOpacity={0.35}
+          />,
+        );
+      }
     }
   }
-  return <PatternFrame>{blocks}</PatternFrame>;
+  return <PatternFrame width={cardWidth} height={cardHeight}>{blocks}</PatternFrame>;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -109,45 +141,39 @@ export function BuenVivirTerracePattern({ cardWidth, cardHeight, accent, accentS
  * seal lines. Dark ink on cinnabar surface.
  * ──────────────────────────────────────────────────────────────────── */
 export function ConfucianColumnPattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const cols: React.ReactNode[] = [];
-  const colW = 6;
   const gap = 48;
   const total = Math.ceil(cardWidth / gap);
+  const cols: React.ReactNode[] = [];
   for (let i = 0; i < total; i++) {
     const tall = i % 2 === 0;
+    const x = 20 + i * gap;
     cols.push(
-      <div
+      <rect
         key={`col-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: tall ? 40 : 120,
-          left: 20 + i * gap,
-          width: colW,
-          height: tall ? cardHeight - 80 : cardHeight - 240,
-          background: alpha(i % 5 === 0 ? accentSoft : '#000000', i % 3 === 0 ? 0.40 : 0.22),
-        }}
+        x={x}
+        y={tall ? 40 : 120}
+        width={6}
+        height={tall ? cardHeight - 80 : cardHeight - 240}
+        fill={i % 5 === 0 ? accentSoft : '#000000'}
+        opacity={i % 3 === 0 ? 0.40 : 0.22}
       />,
     );
   }
   // Seal-frame horizontal lines
   for (let i = 0; i < 5; i++) {
     cols.push(
-      <div
+      <rect
         key={`seal-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          left: 60,
-          right: 60,
-          top: 140 + i * 200,
-          height: 3,
-          background: alpha('#000000', 0.45),
-        }}
+        x={60}
+        y={140 + i * 200}
+        width={cardWidth - 120}
+        height={3}
+        fill="#000000"
+        opacity={0.45}
       />,
     );
   }
-  return <PatternFrame>{cols}</PatternFrame>;
+  return <PatternFrame width={cardWidth} height={cardHeight}>{cols}</PatternFrame>;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -156,49 +182,43 @@ export function ConfucianColumnPattern({ cardWidth, cardHeight, accent, accentSo
  * sunset gradient. Reads as cultivated batik cloth, not background.
  * ──────────────────────────────────────────────────────────────────── */
 export function GotongDiamondPattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const blocks: React.ReactNode[] = [];
   const cell = 90;
   const cols = Math.ceil(cardWidth / cell) + 1;
   const rows = Math.ceil(cardHeight / cell) + 1;
+  const blocks: React.ReactNode[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const offsetX = r % 2 === 0 ? 0 : cell / 2;
       const cx = c * cell + offsetX;
       const cy = r * cell;
       blocks.push(
-        <div
+        <rect
           key={`d-${r}-${c}`}
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: cy,
-            left: cx,
-            width: 36,
-            height: 36,
-            transform: 'rotate(45deg)',
-            border: `2.5px solid ${alpha(accentSoft, 0.55)}`,
-            background: alpha('#000000', 0.18),
-          }}
+          x={cx - 18}
+          y={cy - 18}
+          width={36}
+          height={36}
+          transform={`rotate(45 ${cx} ${cy})`}
+          fill="#000000"
+          opacity={0.18}
+          stroke={accentSoft}
+          strokeWidth={2.5}
+          strokeOpacity={0.55}
         />,
       );
       blocks.push(
-        <div
+        <circle
           key={`p-${r}-${c}`}
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: cy + 14,
-            left: cx + 14,
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            background: alpha(accentSoft, 0.85),
-          }}
+          cx={cx + 14}
+          cy={cy + 14}
+          r={4}
+          fill={accentSoft}
+          opacity={0.85}
         />,
       );
     }
   }
-  return <PatternFrame>{blocks}</PatternFrame>;
+  return <PatternFrame width={cardWidth} height={cardHeight}>{blocks}</PatternFrame>;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -207,64 +227,57 @@ export function GotongDiamondPattern({ cardWidth, cardHeight, accent, accentSoft
  * over the emerald surface. Reads as a mosaic wall, not wallpaper.
  * ──────────────────────────────────────────────────────────────────── */
 export function IslamicTessellationPattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const blocks: React.ReactNode[] = [];
   const cell = 100;
   const cols = Math.ceil(cardWidth / cell) + 1;
   const rows = Math.ceil(cardHeight / cell) + 1;
+  const blocks: React.ReactNode[] = [];
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const cx = c * cell;
       const cy = r * cell;
       blocks.push(
-        <div
+        <rect
           key={`s-${r}-${c}`}
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: cy,
-            left: cx,
-            width: 48,
-            height: 48,
-            border: `2px solid ${alpha(accentSoft, 0.55)}`,
-            background: alpha('#000000', 0.10),
-          }}
+          x={cx}
+          y={cy}
+          width={48}
+          height={48}
+          fill="#000000"
+          opacity={0.10}
+          stroke={accentSoft}
+          strokeWidth={2}
+          strokeOpacity={0.55}
         />,
       );
       blocks.push(
-        <div
+        <rect
           key={`r-${r}-${c}`}
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: cy,
-            left: cx,
-            width: 48,
-            height: 48,
-            border: `2px solid ${alpha(accentSoft, 0.55)}`,
-            background: alpha('#000000', 0.10),
-            transform: 'rotate(45deg)',
-          }}
+          x={cx}
+          y={cy}
+          width={48}
+          height={48}
+          transform={`rotate(45 ${cx + 24} ${cy + 24})`}
+          fill="#000000"
+          opacity={0.10}
+          stroke={accentSoft}
+          strokeWidth={2}
+          strokeOpacity={0.55}
         />,
       );
       // Center dot for each tessellation
       blocks.push(
-        <div
+        <circle
           key={`c-${r}-${c}`}
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            top: cy + 21,
-            left: cx + 21,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            background: alpha(accentSoft, 0.85),
-          }}
+          cx={cx + 24}
+          cy={cy + 24}
+          r={3}
+          fill={accentSoft}
+          opacity={0.85}
         />,
       );
     }
   }
-  return <PatternFrame>{blocks}</PatternFrame>;
+  return <PatternFrame width={cardWidth} height={cardHeight}>{blocks}</PatternFrame>;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -277,34 +290,28 @@ export function GlobalMeridianPattern({ cardWidth, cardHeight, accent, accentSof
   const cols = 14;
   for (let i = 0; i < cols; i++) {
     lines.push(
-      <div
+      <rect
         key={`v-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: 0,
-          left: (cardWidth / cols) * i,
-          width: 1.5,
-          height: cardHeight,
-          background: alpha(accentSoft, i === cols / 2 ? 0.65 : 0.30),
-        }}
+        x={(cardWidth / cols) * i}
+        y={0}
+        width={1.5}
+        height={cardHeight}
+        fill={accentSoft}
+        opacity={i === cols / 2 ? 0.65 : 0.30}
       />,
     );
   }
   const rows = 9;
   for (let i = 0; i < rows; i++) {
     lines.push(
-      <div
+      <rect
         key={`h-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          left: 0,
-          top: (cardHeight / rows) * i + cardHeight / rows / 2,
-          width: cardWidth,
-          height: 1.5,
-          background: alpha(accentSoft, i === Math.floor(rows / 2) ? 0.65 : 0.28),
-        }}
+        x={0}
+        y={(cardHeight / rows) * i + cardHeight / rows / 2}
+        width={cardWidth}
+        height={1.5}
+        fill={accentSoft}
+        opacity={i === Math.floor(rows / 2) ? 0.65 : 0.28}
       />,
     );
   }
@@ -321,23 +328,20 @@ export function GlobalMeridianPattern({ cardWidth, cardHeight, accent, accentSof
   ];
   pins.forEach((p, i) => {
     lines.push(
-      <div
+      <circle
         key={`p-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: p.y * cardHeight - 6,
-          left: p.x * cardWidth - 6,
-          width: 12,
-          height: 12,
-          borderRadius: 6,
-          background: alpha(accentSoft, 0.95),
-          border: `2px solid ${alpha('#ffffff', 0.7)}`,
-        }}
+        cx={p.x * cardWidth}
+        cy={p.y * cardHeight}
+        r={6}
+        fill={accentSoft}
+        opacity={0.95}
+        stroke="#ffffff"
+        strokeWidth={2}
+        strokeOpacity={0.7}
       />,
     );
   });
-  return <PatternFrame>{lines}</PatternFrame>;
+  return <PatternFrame width={cardWidth} height={cardHeight}>{lines}</PatternFrame>;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -357,18 +361,13 @@ export function CustomScatterPattern({ cardWidth, cardHeight, accent, accentSoft
     const r = 1.5 + seed(i * 3) * 4;
     const isBright = i % 4 === 0;
     dots.push(
-      <div
+      <circle
         key={`s-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: y - r,
-          left: x - r,
-          width: r * 2,
-          height: r * 2,
-          borderRadius: r,
-          background: alpha(isBright ? accentSoft : '#ffffff', isBright ? 0.85 : 0.42),
-        }}
+        cx={x}
+        cy={y}
+        r={r}
+        fill={isBright ? accentSoft : '#ffffff'}
+        opacity={isBright ? 0.85 : 0.42}
       />,
     );
   }
@@ -376,21 +375,18 @@ export function CustomScatterPattern({ cardWidth, cardHeight, accent, accentSoft
   for (let i = 0; i < 5; i++) {
     const y = seed(i * 100 + 7) * cardHeight;
     dots.push(
-      <div
+      <rect
         key={`streak-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: y,
-          left: 0,
-          right: 0,
-          height: 1,
-          background: alpha(accentSoft, 0.35),
-        }}
+        x={0}
+        y={y}
+        width={cardWidth}
+        height={1}
+        fill={accentSoft}
+        opacity={0.35}
       />,
     );
   }
-  return <PatternFrame>{dots}</PatternFrame>;
+  return <PatternFrame width={cardWidth} height={cardHeight}>{dots}</PatternFrame>;
 }
 
 /* ────────────────────────────────────────────────────────────────────
@@ -406,32 +402,29 @@ export function CaribbeanSwellPattern({ cardWidth, cardHeight, accent, accentSof
   const rows = Math.ceil(cardHeight / bandGap) + 2;
   for (let i = 0; i < rows; i++) {
     const tilt = i % 2 === 0 ? -2.5 : 2.5;
+    const y = i * bandGap;
     parts.push(
-      <div
+      <rect
         key={`swell-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: i * bandGap,
-          left: -60,
-          width: cardWidth + 120,
-          height: 3,
-          background: alpha(i % 3 === 0 ? accentSoft : '#000000', i % 3 === 0 ? 0.4 : 0.22),
-          transform: `rotate(${tilt}deg)`,
-        }}
+        x={-60}
+        y={y}
+        width={cardWidth + 120}
+        height={3}
+        fill={i % 3 === 0 ? accentSoft : '#000000'}
+        opacity={i % 3 === 0 ? 0.4 : 0.22}
+        transform={`rotate(${tilt} ${cardWidth / 2} ${y})`}
       />,
-      <div
+    );
+    parts.push(
+      <rect
         key={`swell-echo-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: i * bandGap + 10,
-          left: -60,
-          width: cardWidth + 120,
-          height: 1.5,
-          background: alpha('#000000', 0.14),
-          transform: `rotate(${tilt}deg)`,
-        }}
+        x={-60}
+        y={y + 10}
+        width={cardWidth + 120}
+        height={1.5}
+        fill="#000000"
+        opacity={0.14}
+        transform={`rotate(${tilt} ${cardWidth / 2} ${y + 10})`}
       />,
     );
   }
@@ -444,38 +437,18 @@ export function CaribbeanSwellPattern({ cardWidth, cardHeight, accent, accentSof
     const y = cardHeight * 0.72 - Math.sin(t * Math.PI * 0.9) * cardHeight * 0.38;
     const r = 7 + ((i * 13) % 4) * 4;
     parts.push(
-      <div
+      <circle
         key={`isle-${i}`}
-        style={{
-          display: 'flex',
-          position: 'absolute',
-          top: y - r,
-          left: x - r,
-          width: r * 2,
-          height: r * 2,
-          borderRadius: r,
-          background: alpha(i % 3 === 0 ? accentSoft : accent, i % 3 === 0 ? 0.8 : 0.5),
-          border: `1.5px solid ${alpha(accentSoft, 0.5)}`,
-        }}
+        cx={x}
+        cy={y}
+        r={r}
+        fill={i % 3 === 0 ? accentSoft : accent}
+        opacity={i % 3 === 0 ? 0.8 : 0.5}
+        stroke={accentSoft}
+        strokeWidth={1.5}
+        strokeOpacity={0.5}
       />,
     );
   }
-  return <PatternFrame>{parts}</PatternFrame>;
-}
-
-/* ─────────────────────────────────────────────────────────────────── */
-function PatternFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        position: 'absolute',
-        inset: 0,
-        overflow: 'hidden',
-        pointerEvents: 'none',
-      }}
-    >
-      {children}
-    </div>
-  );
+  return <PatternFrame width={cardWidth} height={cardHeight}>{parts}</PatternFrame>;
 }
