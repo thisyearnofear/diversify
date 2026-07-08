@@ -21,6 +21,8 @@ import {
     type BrightDataCommodity,
     x402Analytics
 } from '@diversifi/shared';
+import { validateApiKey, recordRecommendation, type EnterpriseKey } from '@diversifi/shared';
+import { indexRecommendation } from '../../../lib/audit-index';
 
 /**
  * Arc Data Hub - Production Gateway (v2)
@@ -54,6 +56,10 @@ interface UserState {
     windowStart: number;
     nonces: Map<string, number>; // Nonce -> Expiry
     usageHistory: Record<string, { count: number; lastReset: number }>;
+    /** Set when this client authenticated with an enterprise API key. */
+    enterprise?: boolean;
+    /** Per-key request limit override (enterprise keys). */
+    rateLimitMax?: number;
 }
 
 // --- State Management ---
@@ -74,9 +80,10 @@ class UserManager {
     }
 
     static checkRateLimit(user: UserState): { allowed: boolean; retryAfter?: number } {
+        const limit = user.rateLimitMax ?? RATE_LIMIT_MAX_REQUESTS;
         const now = Date.now();
         if (now < user.windowStart + RATE_LIMIT_WINDOW) {
-            if (user.requestCount >= RATE_LIMIT_MAX_REQUESTS) {
+            if (user.requestCount >= limit) {
                 return { allowed: false, retryAfter: Math.ceil((user.windowStart + RATE_LIMIT_WINDOW - now) / 1000) };
             }
             user.requestCount++;
@@ -257,12 +264,24 @@ export default async function handler(
     const clientIP = (req.headers['x-forwarded-for'] as string) || req.connection.remoteAddress || 'unknown';
     const clientKey = Array.isArray(clientIP) ? clientIP[0] : clientIP;
 
+    // --- Enterprise API-key auth (additive parallel path to x402 on-chain payment) ---
+    const apiKeyHeader = getHeader(req, 'x-api-key');
+    const enterpriseKey: EnterpriseKey | null = apiKeyHeader ? validateApiKey(apiKeyHeader) : null;
+    if (apiKeyHeader && !enterpriseKey) {
+        return res.status(401).json({ error: 'Invalid enterprise API key' });
+    }
+    const effectiveClientKey = enterpriseKey ? `ent:${enterpriseKey.tenantId}` : clientKey;
+
     if (requestedSources.length === 0) {
         x402Analytics.recordFailure('unknown', 'Missing source parameter');
         return res.status(400).json({ error: 'Missing source parameter' });
     }
 
-    const user = UserManager.getUser(clientKey);
+    const user = UserManager.getUser(effectiveClientKey);
+    if (enterpriseKey) {
+        user.enterprise = true;
+        user.rateLimitMax = enterpriseKey.rateLimit;
+    }
 
     let sourcePlans: SourcePlan[];
     try {
@@ -337,7 +356,7 @@ export default async function handler(
         }
     }
 
-    if (totalCostMicros > 0 && !UserManager.deductCredit(user, totalCostMicros)) {
+    if (totalCostMicros > 0 && !user.enterprise && !UserManager.deductCredit(user, totalCostMicros)) {
         return sendPaymentRequired(res, user, sourcePlans, totalCost, bundleRequested);
     }
 
@@ -374,8 +393,9 @@ export default async function handler(
     // --- Real Arc on-chain settlement (fire-and-forget, non-blocking) ---
     // Fires a real USDC micro-tx on Arc for every paid request.
     // Settlement runs in background — gateway response is not delayed.
+    // Enterprise API-key clients skip x402 settlement (billed via their tenant quota).
     const settlements: SettlementResult[] = [];
-    if (totalCost > 0) {
+    if (totalCost > 0 && !user.enterprise) {
         const settlementPromises = sourcePlans
             .filter(p => p.cost > 0)
             .map(p => settleOnChain(p.cost, p.source.id, DEFAULT_SETTLEMENT_NETWORK));
@@ -389,6 +409,29 @@ export default async function handler(
 
         if (Array.isArray(settled)) {
             settled.forEach(r => { if (r.settled) settlements.push(r as SettlementResult); });
+        }
+    }
+
+    // --- Enterprise tenant audit attribution (fire-and-forget) ---
+    // Every premium request from an enterprise key produces an off-chain audit
+    // record attributed to the tenant, so the audit-export endpoint can scope
+    // the tenant's verifiable consumption. Best-effort: never blocks the response.
+    if (user.enterprise && enterpriseKey) {
+        for (const plan of sourcePlans) {
+            if (plan.cost > 0) {
+                recordRecommendation({
+                    user: enterpriseKey.tenantId,
+                    action: 'ACCESS',
+                    targetToken: plan.source.id,
+                    evidenceCid: '',
+                    servingModel: 'enterprise-gateway',
+                    confidence: 10000,
+                    tenantId: enterpriseKey.tenantId,
+                    onAnchor: indexRecommendation,
+                }).catch((err: any) =>
+                    console.warn('[Data Hub] Enterprise audit record skipped:', err?.message ?? err),
+                );
+            }
         }
     }
 

@@ -123,7 +123,12 @@ export {
   type LedgerConfig,
   type AnchorStatus,
   type AnchorResult,
+  type RecommendationAnchorMeta,
 } from './services/recommendation-ledger.service';
+export {
+  validateApiKey,
+  type EnterpriseKey,
+} from './services/enterprise-auth.service';
 export {
   deriveGuardianTierState,
   isPermissionValidNow,

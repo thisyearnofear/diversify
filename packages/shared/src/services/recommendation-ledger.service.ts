@@ -65,6 +65,61 @@ export type AnchorResult =
     | { status: 'pending'; txHash: string; chainId: number; explorerUrl: string }
     | { status: 'failed'; error: string; chainId: number };
 
+/**
+ * Metadata passed to an optional `onAnchor` callback after a recommendation is
+ * successfully recorded. Consumers use this to index the decision off-chain
+ * (e.g. enterprise tenant attribution) without changing the on-chain contract,
+ * whose `user` field is a wallet address and cannot carry a tenant id.
+ */
+export interface RecommendationAnchorMeta {
+    id: number;
+    chainId: number;
+    user: string;
+    tenantId?: string;
+    action: string;
+    targetToken: string;
+    evidenceCid: string;
+    txHash: string;
+    status: AnchorStatus;
+    timestamp: number;
+}
+
+/**
+ * Best-effort dispatch of an `onAnchor` callback after a successful (or
+ * pending) anchor. Failures in the callback must never break the primary
+ * recommendation flow, so they are swallowed and logged.
+ */
+async function emitAnchor(
+    params: {
+        user: string;
+        action: string;
+        targetToken: string;
+        evidenceCid: string;
+        tenantId?: string;
+        onAnchor?: (meta: RecommendationAnchorMeta) => void | Promise<void>;
+    },
+    result: AnchorResult,
+): Promise<AnchorResult> {
+    if (result.status !== 'failed' && params.onAnchor) {
+        const meta: RecommendationAnchorMeta = {
+            id: result.status === 'anchored' ? result.id : -1,
+            chainId: result.chainId,
+            user: params.user,
+            tenantId: params.tenantId,
+            action: params.action,
+            targetToken: params.targetToken,
+            evidenceCid: params.evidenceCid,
+            txHash: result.txHash,
+            status: result.status,
+            timestamp: Date.now(),
+        };
+        Promise.resolve(params.onAnchor(meta)).catch((err: any) =>
+            console.warn('[RecommendationLedger] onAnchor callback failed:', err?.message ?? err),
+        );
+    }
+    return result;
+}
+
 export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string {
     const resolvedChainId = chainId ?? getDefaultLedgerChainId();
     if (resolvedChainId === 42220) return `https://celoscan.io/tx/${txHash}`;
@@ -360,6 +415,10 @@ export async function recordRecommendation(params: {
     settlementTxHash?: string;
     confidence: number;
     chainId?: number;
+    /** Enterprise tenant attribution. Stamped off-chain via `onAnchor`; the on-chain `user` field is a wallet address and cannot carry it. */
+    tenantId?: string;
+    /** Best-effort callback fired after a successful/pending anchor (e.g. to index the decision for enterprise audit). */
+    onAnchor?: (meta: RecommendationAnchorMeta) => void | Promise<void>;
 }): Promise<AnchorResult> {
     const reasoningHash = params.reasoningHash
         ? params.reasoningHash
@@ -412,7 +471,7 @@ export async function recordRecommendation(params: {
         receipt = await tx.wait(1, 60_000);
     } catch (error: any) {
         console.warn(`[RecommendationLedger] ⏳ Broadcast but receipt not confirmed for ${params.user} on chain ${chainId}: ${tx.hash} — ${error.message}`);
-        return { status: 'pending', txHash: tx.hash, chainId, explorerUrl };
+        return emitAnchor(params, { status: 'pending', txHash: tx.hash, chainId, explorerUrl });
     }
 
     if (receipt && receipt.status === 0) {
@@ -449,11 +508,11 @@ export async function recordRecommendation(params: {
     if (id < 1) {
         // Tx was mined but the event was not parseable. Still treat the
         // anchor as resolved — the receipt is on-chain proof.
-        return { status: 'anchored', id: -1, txHash: tx.hash, chainId, explorerUrl };
+        return emitAnchor(params, { status: 'anchored', id: -1, txHash: tx.hash, chainId, explorerUrl });
     }
 
     console.log(`[RecommendationLedger] ✅ Recorded #${id} for ${params.user} on chain ${chainId}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
-    return { status: 'anchored', id, txHash: tx.hash, chainId, explorerUrl };
+    return emitAnchor(params, { status: 'anchored', id, txHash: tx.hash, chainId, explorerUrl });
 }
 
 /**

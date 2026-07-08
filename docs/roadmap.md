@@ -87,6 +87,34 @@ true on-chain ERC-7710 permission enforcement for yield actions.
 
 ---
 
+## Track 1d — Enterprise Tier (B2B licensing, 2026)
+
+The verifiable-intelligence gateway is licensable as a B2B product, not just
+a retail feature. Two additive capabilities were added (the public x402 flow
+is unchanged):
+
+- **API-key auth** (`pages/api/agent/x402-gateway.ts` +
+  `packages/shared/src/services/enterprise-auth.service.ts`): licensed
+  consumers authenticate with an `x-api-key` header instead of per-request
+  x402 USDC settlement. Keys are configured via `ENTERPRISE_API_KEYS` (JSON
+  array of `{ key, tenantId, tier, rateLimit, quotaUsd, audit }`). Enterprise
+  requests skip the 402 challenge and Arc on-chain settlement but are still
+  attributed to the tenant for audit.
+- **Audit export** (`pages/api/agent/enterprise/audit.ts` +
+  `lib/audit-index.ts`): `GET /api/agent/enterprise/audit` returns a tenant's
+  verifiable recommendation history (chain-aware `RecommendationLedger`
+  entries + 0G evidence bundles) as JSON or CSV. A wallet-scoped variant reads
+  the ledger directly for any address. Off-chain tenant attribution lives in
+  `models/TenantRecommendation.ts` (Mongo) — the on-chain ledger records
+  `user` as a wallet, never a tenant.
+
+**Status:** implemented; `pnpm build` + `pnpm test` green. **Remaining
+hardening (pre-mainnet):** Redis/Mongo-backed rate-limit/credit store
+(currently in-memory), mainnet ledger/env flip, and 0G-anchoring the
+gateway's premium responses.
+
+---
+
 ## Track 2 — Product Quality Plan
 
 Bring DiversiFi from 7.0 → 9.0 across Product Design, UI/UX,
