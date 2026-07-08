@@ -109,11 +109,12 @@ is unchanged):
   `user` as a wallet, never a tenant.
 
 **Status:** implemented; `pnpm build` + `pnpm test` green. **Remaining
-hardening (pre-mainnet):** Redis/Mongo-backed rate-limit/credit store
-(currently in-memory), and the mainnet ledger/env flip. ~~0G-anchoring the
-gateway's premium responses~~ **Done** — paid gateway intelligence is now
-anchored to 0G with CIDs surfaced in `_billing.evidenceCids` and the
-enterprise audit record.
+hardening (pre-mainnet):** ~~Redis/Mongo-backed rate-limit/credit store~~
+**Done** — pluggable `ClientStateStore` (in-memory default, MongoDB via
+`CLIENT_STATE_STORE=mongo`, fire-and-forget persistence), and the mainnet
+ledger/env flip. ~~0G-anchoring the gateway's premium responses~~ **Done** —
+paid gateway intelligence is now anchored to 0G with CIDs surfaced in
+`_billing.evidenceCids` and the enterprise audit record.
 
 ---
 

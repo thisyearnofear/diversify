@@ -23,6 +23,7 @@ import {
 } from '@diversifi/shared';
 import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey } from '@diversifi/shared';
 import { indexRecommendation } from '../../../lib/audit-index';
+import { getClientStore, type ClientState } from '../../../lib/client-store';
 
 /**
  * Arc Data Hub - Production Gateway (v2)
@@ -32,7 +33,7 @@ import { indexRecommendation } from '../../../lib/audit-index';
  * Core Principles:
  * - ENHANCEMENT FIRST: Upgraded from "1-tx-per-request" to "Credit Balance" model.
  * - AGGRESSIVE CONSOLIDATION: Unified state management in UserManager.
- * - PREVENT BLOAT: In-memory store for prototype (replace with Redis for prod).
+ * - PLUGGABLE STORE: in-memory by default; set CLIENT_STATE_STORE=mongo for durable MongoDB-backed client state (see lib/client-store.ts).
  */
 
 // --- Constants ---
@@ -51,10 +52,11 @@ const CREDIT_EPSILON_MICRO_USDC = 1;
 
 // --- Types ---
 interface UserState {
+    clientKey?: string;
     creditBalanceMicros: number; // Available credit in micro-USDC
     requestCount: number;
     windowStart: number;
-    nonces: Map<string, number>; // Nonce -> Expiry
+    nonces: Record<string, number>; // Nonce -> Expiry
     usageHistory: Record<string, { count: number; lastReset: number }>;
     /** Set when this client authenticated with an enterprise API key. */
     enterprise?: boolean;
@@ -65,18 +67,33 @@ interface UserState {
 // --- State Management ---
 class UserManager {
     private static users = new Map<string, UserState>();
+    private static store = getClientStore();
 
-    static getUser(clientKey: string): UserState {
-        if (!this.users.has(clientKey)) {
-            this.users.set(clientKey, {
-                creditBalanceMicros: 0,
-                requestCount: 0,
-                windowStart: Date.now(),
-                nonces: new Map(),
-                usageHistory: {}
-            });
-        }
-        return this.users.get(clientKey)!;
+    static async getUser(clientKey: string): Promise<UserState> {
+        const cached = this.users.get(clientKey);
+        if (cached) return cached;
+        const stored = await this.store.get(clientKey);
+        const user: UserState = stored
+            ? { ...stored, clientKey }
+            : {
+                  clientKey,
+                  creditBalanceMicros: 0,
+                  requestCount: 0,
+                  windowStart: Date.now(),
+                  nonces: {},
+                  usageHistory: {},
+              };
+        this.users.set(clientKey, user);
+        return user;
+    }
+
+    static persist(user: UserState): void {
+        if (!user.clientKey) return;
+        this.store
+            .set(user.clientKey, user as ClientState)
+            .catch((err: any) =>
+                console.warn('[Data Hub] Client state persist failed:', err?.message ?? err),
+            );
     }
 
     static checkRateLimit(user: UserState): { allowed: boolean; retryAfter?: number } {
@@ -84,6 +101,7 @@ class UserManager {
         const now = Date.now();
         if (now < user.windowStart + RATE_LIMIT_WINDOW) {
             if (user.requestCount >= limit) {
+                this.persist(user);
                 return { allowed: false, retryAfter: Math.ceil((user.windowStart + RATE_LIMIT_WINDOW - now) / 1000) };
             }
             user.requestCount++;
@@ -91,6 +109,7 @@ class UserManager {
             user.requestCount = 1;
             user.windowStart = now;
         }
+        this.persist(user);
         return { allowed: true };
     }
 
@@ -102,6 +121,7 @@ class UserManager {
             user.usageHistory[sourceKey] = { count: 0, lastReset: today };
         }
         user.usageHistory[sourceKey].count++;
+        this.persist(user);
         return user.usageHistory[sourceKey].count;
     }
 
@@ -113,14 +133,36 @@ class UserManager {
 
     static addCredit(user: UserState, amountMicros: number) {
         user.creditBalanceMicros += amountMicros;
+        this.persist(user);
     }
 
     static deductCredit(user: UserState, amountMicros: number): boolean {
         if (user.creditBalanceMicros + CREDIT_EPSILON_MICRO_USDC >= amountMicros) {
             user.creditBalanceMicros = Math.max(0, user.creditBalanceMicros - amountMicros);
+            this.persist(user);
             return true;
         }
         return false;
+    }
+
+    static consumeNonce(user: UserState, nonce: string): { valid: boolean; reason?: string } {
+        const expiresAt = user.nonces[nonce];
+        if (!expiresAt) {
+            return { valid: false, reason: 'Payment nonce not found' };
+        }
+        if (Date.now() > expiresAt) {
+            delete user.nonces[nonce];
+            this.persist(user);
+            return { valid: false, reason: 'Payment nonce expired' };
+        }
+        delete user.nonces[nonce];
+        this.persist(user);
+        return { valid: true };
+    }
+
+    static issueNonce(user: UserState, nonce: string, expiresAt: number): void {
+        user.nonces[nonce] = expiresAt;
+        this.persist(user);
     }
 }
 
@@ -176,20 +218,7 @@ function getHeader(req: NextApiRequest, key: string): string | undefined {
     return Array.isArray(value) ? value[0] : value;
 }
 
-function consumeNonce(user: UserState, nonce: string): { valid: boolean; reason?: string } {
-    const expiresAt = user.nonces.get(nonce);
-    if (!expiresAt) {
-        return { valid: false, reason: 'Unknown payment nonce' };
-    }
 
-    if (Date.now() > expiresAt) {
-        user.nonces.delete(nonce);
-        return { valid: false, reason: 'Payment nonce expired' };
-    }
-
-    user.nonces.delete(nonce);
-    return { valid: true };
-}
 
 function parseRequestedSources(sourceParam: NextApiRequest['query']['source'], sourcesParam: NextApiRequest['query']['sources']): string[] {
     const values = [sourceParam, sourcesParam].flatMap((value) => {
@@ -278,7 +307,7 @@ export default async function handler(
         return res.status(400).json({ error: 'Missing source parameter' });
     }
 
-    const user = UserManager.getUser(effectiveClientKey);
+    const user = await UserManager.getUser(effectiveClientKey);
     if (enterpriseKey) {
         user.enterprise = true;
         user.rateLimitMax = enterpriseKey.rateLimit;
@@ -317,7 +346,7 @@ export default async function handler(
                 return res.status(400).json({ error: 'Missing nonce in payment mandate' });
             }
 
-            const nonceCheck = consumeNonce(user, mandate.nonce);
+            const nonceCheck = UserManager.consumeNonce(user, mandate.nonce);
             if (!nonceCheck.valid) {
                 return res.status(401).json({ error: nonceCheck.reason });
             }
@@ -340,7 +369,7 @@ export default async function handler(
     if (paymentProof) {
         try {
             if (paymentNonce) {
-                const nonceCheck = consumeNonce(user, paymentNonce);
+                const nonceCheck = UserManager.consumeNonce(user, paymentNonce);
                 if (!nonceCheck.valid) {
                     return res.status(401).json({ error: nonceCheck.reason });
                 }
@@ -523,7 +552,7 @@ function sendResearchQuote(
 ) {
     const nonce = `quote_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const expiresAt = Date.now() + CHALLENGE_TTL_MS;
-    user.nonces.set(nonce, expiresAt);
+    UserManager.issueNonce(user, nonce, expiresAt);
     const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
 
     return res.status(200).json({
@@ -554,7 +583,7 @@ function sendPaymentRequired(
 ) {
     const nonce = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const expiresAt = Date.now() + CHALLENGE_TTL_MS;
-    user.nonces.set(nonce, expiresAt);
+    UserManager.issueNonce(user, nonce, expiresAt);
     const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
 
     return res.status(402).json({
