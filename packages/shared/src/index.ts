@@ -130,6 +130,10 @@ export {
   type EnterpriseKey,
 } from './services/enterprise-auth.service';
 export {
+  anchorIntelligence,
+  type IntelligenceEvidence,
+} from './services/intelligence-anchor.service';
+export {
   deriveGuardianTierState,
   isPermissionValidNow,
   GUARDIAN_TIER_STATE_LABELS,

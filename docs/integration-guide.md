@@ -134,6 +134,14 @@ Every response includes verifiable proof:
 3. **Settlement tx** — the `_billing.txHashes` array contains the Arc
    USDC transfer tx hashes. Verify on Arcscan.
 
+**Gateway intelligence CIDs.** Every paid Data Hub response also includes
+`evidenceCids` in its `_billing` block — one 0G Storage CID per paid
+source. Each CID references the exact intelligence payload (analysis, data
+sources, model, prompt) returned for that request, so a consumer can
+fetch it from 0G and verify the precise output they paid for. This closes
+the verifiability gap for the gateway's direct (non-recommendation)
+intelligence responses.
+
 ## Code Example
 
 See [`examples/external-agent/consume-intelligence.js`](../examples/external-agent/consume-intelligence.js)

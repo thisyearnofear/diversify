@@ -21,7 +21,7 @@ import {
     type BrightDataCommodity,
     x402Analytics
 } from '@diversifi/shared';
-import { validateApiKey, recordRecommendation, type EnterpriseKey } from '@diversifi/shared';
+import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey } from '@diversifi/shared';
 import { indexRecommendation } from '../../../lib/audit-index';
 
 /**
@@ -144,6 +144,7 @@ type SourcePayload = {
     freshnessMinutes: number;
     reputation: number;
     data: Record<string, unknown>;
+    evidenceCid?: string;
 };
 
 type PaymentMandatePayload = {
@@ -390,6 +391,23 @@ export default async function handler(
         }
     }
 
+    // --- Anchor premium intelligence to 0G (verifiability) ---
+    // Every paid gateway response is uploaded to 0G Storage; the CID is
+    // surfaced in _billing and the enterprise audit record. Best-effort:
+    // failures return null and never block the response.
+    const evidenceCidsBySource = new Map<string, string>();
+    await Promise.all(
+        payloads
+            .filter((_, i) => (sourcePlans[i]?.cost ?? 0) > 0)
+            .map(async (p) => {
+                const cid = await anchorIntelligence({ sourceId: p.sourceId, data: p.data }).catch(() => null);
+                if (cid) {
+                    p.evidenceCid = cid;
+                    evidenceCidsBySource.set(p.sourceId, cid);
+                }
+            }),
+    );
+
     // --- Real Arc on-chain settlement (fire-and-forget, non-blocking) ---
     // Fires a real USDC micro-tx on Arc for every paid request.
     // Settlement runs in background — gateway response is not delayed.
@@ -423,7 +441,7 @@ export default async function handler(
                     user: enterpriseKey.tenantId,
                     action: 'ACCESS',
                     targetToken: plan.source.id,
-                    evidenceCid: '',
+                    evidenceCid: evidenceCidsBySource.get(plan.source.id) ?? '',
                     servingModel: 'enterprise-gateway',
                     confidence: 10000,
                     tenantId: enterpriseKey.tenantId,
@@ -452,6 +470,7 @@ export default async function handler(
                 reason: totalCost > 0
                     ? 'Multiple paid sources unlocked through a single research bundle'
                     : 'All requested bundle sources were within free tier',
+                evidenceCids: Array.from(evidenceCidsBySource.values()),
                 ...settlementMeta,
             },
         });
@@ -473,6 +492,7 @@ export default async function handler(
             reason: singlePlan.isFreeEligible
                 ? `Free tier (${singlePlan.freeLimit - (singlePlan.currentUsage + 1)} remaining today)`
                 : 'Premium insight unlocked — daily free limit reached',
+            evidenceCids: Array.from(evidenceCidsBySource.values()),
             ...settlementMeta,
         },
     });
