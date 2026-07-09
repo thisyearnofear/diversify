@@ -674,7 +674,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     >
                       {selectedArchetype ? 'Explore demo first' : 'Explore Demo First'}
                     </button>
-                    {!isBenchmarkCurrency && riskData && (
+                    {riskData && (
                       <button
                         onClick={() => { setSelectedArchetype(null); setStep('risk'); }}
                         className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"

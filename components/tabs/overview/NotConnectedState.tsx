@@ -5,9 +5,7 @@ import { useStrategy } from "@/context/app/StrategyContext";
 import {
   BENCHMARKS,
   type Benchmark,
-  type Horizon,
 } from "@/constants/currency-risk";
-import { StrategyService } from "@diversifi/shared";
 import { ARCHETYPES, type ArchetypeId } from "@/components/protection-cards/tokens";
 import RegionalIconography from "../../regional/RegionalIconography";
 import WalletButton from "../../wallet/WalletButton";
@@ -48,12 +46,6 @@ export function NotConnectedState({
 
   const [savingsAmount, setSavingsAmount] = useState(10000);
   const [shieldPercentage, setShieldPercentage] = useState(20);
-
-  // Get strategy-specific allocation if the user selected a philosophy
-  const strategyConfig = useMemo(() => {
-    if (!financialStrategy) return null;
-    return StrategyService.getConfig(financialStrategy);
-  }, [financialStrategy]);
 
   // Calculate counterfactual using gold benchmark (universal hedge)
   const totalPreserved = useMemo(() => {

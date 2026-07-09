@@ -18,6 +18,18 @@ import { Card } from "../../shared/TabComponents";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { StrategyService } from "@diversifi/shared";
+import { ARCHETYPES, type ArchetypeId } from "@/components/protection-cards/tokens";
+
+const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
+  africapitalism: 'africapitalism',
+  buen_vivir: 'buen_vivir',
+  pan_caribbean: 'pan_caribbean',
+  confucian: 'confucian',
+  gotong_royong: 'gotong_royong',
+  islamic: 'islamic_finance',
+  global: 'global_diversification',
+  custom: 'custom',
+};
 
 interface ProtectionScorecardProps {
   portfolio: MultichainPortfolio;
@@ -181,8 +193,8 @@ export function ProtectionScorecard({
                   {framing.scoreLabel}
                 </p>
                 {financialStrategy && (
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 capitalize">
-                    {financialStrategy.replace(/_/g, ' ')}
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    {ARCHETYPES[STRATEGY_TO_ARCHETYPE[financialStrategy] ?? 'custom']?.name ?? financialStrategy}
                   </p>
                 )}
               </div>
