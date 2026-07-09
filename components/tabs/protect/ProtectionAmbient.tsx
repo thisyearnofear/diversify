@@ -230,10 +230,12 @@ export function ProtectionAmbient({ children }: Props) {
             etc. at ~30% so the texture is *felt*, not just visible. */}
         {Pattern && slot.archetype && (
           <div
+            className="motion-reduce:!animation-none"
             style={{
               position: 'absolute',
               inset: 0,
               opacity: 0.32,
+              animation: 'ambient-breathe 24s ease-in-out infinite',
             }}
           >
             <Pattern
@@ -242,6 +244,16 @@ export function ProtectionAmbient({ children }: Props) {
               accent={slot.archetype.accent}
               accentSoft={slot.archetype.accentSoft}
             />
+            <style>{`
+              @keyframes ambient-breathe {
+                0%, 100% { transform: scale(1) translate(0, 0); }
+                33% { transform: scale(1.02) translate(4px, -2px); }
+                66% { transform: scale(0.99) translate(-3px, 3px); }
+              }
+              @media (prefers-reduced-motion: reduce) {
+                .ambient-breathe, [style*="ambient-breathe"] { animation: none !important; }
+              }
+            `}</style>
           </div>
         )}
         {/* Soft vignette toward the deepest surface tone — frames the
