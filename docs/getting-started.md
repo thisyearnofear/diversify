@@ -26,17 +26,18 @@ That's the minimum to run the app. Every other env var (AI providers, data feeds
 | **Celo** | Savings + identity + savings ledger of record (`0x3BCf…369C` on mainnet) | [Celo Faucet](https://celo.org/developers/faucet) |
 | **Arbitrum** | Yield + execution + yield ledger of record (`0x3BCf…369C` on mainnet) | [Arbitrum Faucet](https://faucet.arbitrum.io/) |
 | **0G** | Evidence layer (Storage CIDs, Compute TEE proofs, DA snapshots, evidence anchor ledger `0x3BCf…369C` on mainnet) | [0G Galileo Faucet](https://chainscan-galileo.0g.ai) |
-| **Arc Testnet** | x402 nanopayment settlement (USDC gas) | Circle Arc Faucet |
+| **Arc / 0G (env-gated)** | x402 nanopayment settlement rail for paid intelligence (`SETTLEMENT_NETWORK` = `ZERO_G` or `ARC`; `SETTLEMENT_ENV` = `testnet` or `mainnet`) | Circle Arc Faucet (testnet); fund `VAULT_PRIVATE_KEY` on the chosen rail (mainnet) |
 | **Robinhood Chain** | Emerging market tokens | Robinhood Faucet |
 
-## Arc / x402 Research Mode
+## x402 / Settlement Research Mode
 
-Enable the autonomous research-payment loop where the Guardian negotiates paid premium data via x402 nanopayments settled on Arc:
+Enable the autonomous research-payment loop where the Guardian negotiates paid premium data via x402 nanopayments on the configured settlement rail:
 
-1. Set `NEXT_PUBLIC_ENABLE_ARC=true`
+1. Set `NEXT_PUBLIC_ENABLE_ARC=true` (keeps the legacy env name; gate is rail-agnostic)
 2. Set `ENABLE_AUTONOMOUS_MODE=true`
-3. Configure `ARC_RPC_URL` and `DATA_HUB_RECIPIENT_ADDRESS`
-4. Fund the agent EOA with Arc testnet USDC (see below)
+3. Configure `SETTLEMENT_NETWORK` (`ZERO_G` or `ARC`) and `SETTLEMENT_ENV` (`testnet` or `mainnet`)
+4. Configure the rail's RPC + USDC address (`ARC_RPC_URL`, `ZERO_G_RPC_URL`, or their mainnet variants, plus the matching `*_USDC` env var)
+5. Fund the agent EOA with USDC on the active rail (see below)
 
 ### Verification
 
@@ -48,11 +49,13 @@ pnpm test-x402-frequency          # Payment frequency validation
 
 ### Funding the Agent Wallet
 
-The agent wallet must hold testnet USDC on Arc to settle paid requests.
+The agent wallet (`VAULT_PRIVATE_KEY`) must hold USDC on the active settlement rail to settle paid requests.
 
-1. Get the address: `GET /api/agent/x402-metrics` → `arcSettlement.agentAddress`
-2. Fund it via [Circle Arc Faucet](https://faucet.circle.com) → select **Arc Testnet** → paste address
-3. Verify: `arcSettlement.agentUSDCBalance` reflects the balance
+1. Get the address: `GET /api/agent/x402-metrics` → `settlement.agentAddress` (legacy alias: `arcSettlement.agentAddress`)
+2. Fund it:
+   - **Testnet (ZERO_G or ARC):** use the Circle Arc Faucet → select **Arc Testnet**, or the 0G Galileo faucet for the ZERO_G rail.
+   - **Mainnet:** send real USDC to the agent address on the configured rail.
+3. Verify: `settlement.agentUSDCBalance` reflects the balance
 
 ### Generating Test Volume
 
@@ -109,7 +112,7 @@ After deployment, update `config/contracts.ts` with new addresses and verify on 
 ### Expected Costs
 
 | Network | Deploy Cost | Typical Tx |
-|---------|------------|------------|
+| Arc / 0G (env-gated) | Free (faucet) testnet; real USDC cost on mainnet | Free (faucet) testnet; gas on mainnet |
 | Celo Sepolia | ~0.01 CELO | ~0.001 CELO |
 | Arbitrum Sepolia | ~0.001 ETH | ~0.0001 ETH |
 | Arc Testnet | Free (faucet) | Free |

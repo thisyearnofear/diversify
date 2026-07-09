@@ -80,28 +80,45 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 - `GUARDIAN_CONFIDENCE_THRESHOLD` (default 0.6) prevents low-confidence auto-execution
 - **ERC-7715 permission integrity:** `/api/vault/permission` POST verifies the EIP-712 typed-data signature against the user's wallet on the server (`ERC7715Service.verifySignedPermission`). Requests with a missing, malformed, or non-recovering signature are rejected with `400` before any permission is persisted. The `signature: 'unsigned'` fallback has been removed.
 
-## Arc Research Payments
+## x402 Research Payments (Env-Gated Settlement Rail)
 
-DiversiFi’s hackathon path should reuse the current Arc/x402 gateway as the single billing surface.
+DiversiFi’s x402 gateway is the single billing surface for premium intelligence.
+The underlying settlement rail is configurable: `ZERO_G` (interim default) or
+`ARC`, in `testnet` or `mainnet` mode. This lets the same gateway serve hackathon
+judges on testnet and production consumers on mainnet without code changes.
 
 | Component | Responsibility |
 |-----------|-----------------|
 | `pages/api/agent/_advisor-core.ts` | Decide what evidence is needed before recommending an action |
-| `pages/api/agent/x402-gateway.ts` | Verify payment, enforce credit drawdown, and return paid evidence |
+| `pages/api/agent/x402-gateway.ts` | Issue payment challenge, verify payment, enforce credit drawdown, and return paid evidence |
+|| `packages/shared/src/services/settlement-service.ts` | Configurable USDC micro-payment rail (`SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`) |
 | Shared source registry | Canonical source IDs, alias mapping, pricing, reputation, and freshness rules |
 
 ### Payment Boundary
 
-- The live judge-facing path is: `402` challenge → buyer sends a real Arc USDC transfer → gateway verifies the tx hash and nonce.
+- The live judge-facing path is: `402` challenge → buyer sends a real USDC transfer on the active settlement rail → gateway verifies the tx hash and nonce.
 - Per-action source prices are at or below `$0.01` in the registry — enforced at build time.
 - Nonce expiry and replay checks protect against double-spend on payment proofs.
-- Every paid request triggers a real `USDC.transfer` on Arc via `arc-settlement.ts`.
+- Every paid request triggers a real `USDC.transfer` on the active rail via `settlement-service.ts`.
 - Opaque `circle-gateway-*` proof ids are intentionally not accepted in the judge-facing flow unless server-side verification is explicitly configured.
+
+### Configuring the Rail
+
+Set in `.env.local` or on the server (see `.env.example` → "MAINNET FLIP"):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SETTLEMENT_NETWORK` | `ZERO_G` | Rail: `ZERO_G` or `ARC` |
+| `SETTLEMENT_ENV` | `testnet` | Environment: `testnet` or `mainnet` |
+| `ZERO_G_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ZERO_G SETTLEMENT_ENV=mainnet` |
+| `ARC_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet` |
+
+To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's mainnet USDC address, and set `SETTLEMENT_ENV=mainnet`.
 
 ### Evidence Bundles
 
 - A single recommendation may request multiple sources.
-- Each bundle returns source payload, timestamp, cost, confidence, and Arc tx hashes.
+- Each bundle returns source payload, timestamp, cost, confidence, and settlement tx hashes.
 - The advisor prefers fresh, high-agreement data and reduces action size when evidence conflicts.
 - Premium sources (`macro_analysis`, `portfolio_optimization`, `risk_assessment`) use Gemini to
   synthesise live World Bank / DeFiLlama / CoinGecko / FRED / Yearn data into structured JSON.
@@ -110,14 +127,19 @@ DiversiFi’s hackathon path should reuse the current Arc/x402 gateway as the si
 
 ```text
 Client → GET /api/agent/x402-gateway?source=macro_analysis
-       ← 402 { nonce, amount: "0.004", currency: "USDC", recipient, expires }
+       ← 402 { nonce, amount: "0.004", currency: "USDC", recipient, chainId,
+             settlement_network: "ZERO_G", settlement_env: "testnet", expires }
 Client → GET /api/agent/x402-gateway?source=macro_analysis
-         x-payment-proof: 0x<real_arc_usdc_transfer_tx_hash>
+         x-payment-proof: 0x<real_usdc_transfer_tx_hash>
          x-payment-nonce: <challenge_nonce>
-       ← 200 { data, _billing: { arcSettled: true, txHashes: ["0x..."], explorer: ["https://testnet.arcscan.app/tx/0x..."] } }
+       ← 200 { data, _billing: { onChainSettled: true, settlementNetwork: "ZERO_G",
+             settlementEnv: "testnet", txHashes: ["0x..."],
+             explorer: ["https://chainscan-galileo.0g.ai/tx/0x..."] } }
 ```
 
-Real tx verifiable at `https://testnet.arcscan.app/address/0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8`
+Live settlement metrics and the active explorer are exposed at
+`GET /api/agent/x402-metrics` under the `settlement` object (and the legacy
+`arcSettlement` alias for backwards compatibility).
 
 ## 0G Chain — Evidence Anchor + RecommendationLedger
 
@@ -125,18 +147,20 @@ Every advisor recommendation is recorded on a chain-aware
 `RecommendationLedger` — the ledger of record follows the money. 0G is
 the **evidence layer**: Storage holds the reasoning CIDs, Compute
 provides TEE-verified inference, DA holds state snapshots. The 0G
-Galileo Testnet hosts an evidence anchor deployment; the chain-aware
-ledgers of record live on Celo (savings) and Arbitrum (yield).
+mainnet hosts the evidence anchor deployment; the chain-aware ledgers of
+record live on Celo (savings) and Arbitrum (yield). Galileo Testnet remains
+available as a fallback mirror for development.
 
 | Field | Value |
 |-------|-------|
-| **0G Galileo evidence anchor** | chainId `16602`, [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
+|| **0G Mainnet evidence anchor** | chainId `16661`, [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://chainscan.0g.ai/address/0x3BCf7dFd68ce98880618c89A351168960724369C) (overridable via `ZERO_G_MAINNET_LEDGER_CONTRACT`) |
 | **Arbitrum Sepolia yield ledger** | chainId `421614`, [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) |
+|| **0G Galileo evidence mirror** | chainId `16602`, [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
 | **Celo mainnet savings ledger** | chainId `42220`, [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://celoscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C) |
-| **0G RPC** | `https://evmrpc-testnet.0g.ai` |
-| **0G Explorer** | `https://chainscan-galileo.0g.ai` |
-| **Write authority** | EOA configured via `VAULT_PRIVATE_KEY` (automatically authorised on deploy; admin can grant via `setAgentAuthorization`) |
-| **Public API** | `GET /api/agent/zero-g-ledger` |
+|| **0G Mainnet RPC** | `https://evmrpc.0g.ai` |
+|| **0G Mainnet Explorer** | `https://chainscan.0g.ai` |
+|| **0G Galileo RPC / Explorer** | `https://evmrpc-testnet.0g.ai` / `https://chainscan-galileo.0g.ai` |
+|| **Write authority** | EOA configured via `LEDGER_PRIVATE_KEY` or `VAULT_PRIVATE_KEY` (automatically authorised on deploy; admin can grant via `setAgentAuthorization`) |
 
 ### Recorded fields (per recommendation)
 
@@ -148,7 +172,7 @@ ledgers of record live on Celo (savings) and Arbitrum (yield).
 | `reasoning` | string | Full AI-generated reasoning text |
 | `evidenceCid` | string | 0G Storage CID for the evidence bundle |
 | `servingModel` | string | 0G Serving model ID (e.g. `deepseek-v4-pro`) |
-| `settlementTxHash` | string | Arc x402 settlement tx hash (if a payment was made) |
+| `settlementTxHash` | string | x402 settlement tx hash on the active rail (if a payment was made) |
 | `timestamp` | uint256 | Block timestamp |
 | `confidence` | uint256 | AI confidence in basis points (0–10000) |
 

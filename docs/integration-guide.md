@@ -23,15 +23,17 @@ consume. The gateway provides:
 External Agent
     │
     ├── GET /api/agent/x402-gateway?source=macro_analysis
-    │       ← 402 { nonce, amount, currency: "USDC", recipient, expires }
+    │       ← 402 { nonce, amount, currency: "USDC", recipient, chainId,
+    │             settlement_network, settlement_env, expires }
     │
-    ├── USDC.transfer(recipient, amount) on Arc
-    │       → real on-chain tx
+    ├── USDC.transfer(recipient, amount) on the active settlement rail
+    │       → real on-chain tx (Arc or 0G, testnet or mainnet)
     │
     ├── GET /api/agent/x402-gateway?source=macro_analysis
     │       + x-payment-proof: 0x{tx_hash}
     │       + x-payment-nonce: {challenge_nonce}
-    │       ← 200 { data, _billing: { arcSettled, txHashes, anchor } }
+    │       ← 200 { data, _billing: { onChainSettled, txHashes, explorer,
+    │             settlementNetwork, settlementEnv, anchor } }
     │
     └── Intelligence consumed + on-chain proof recorded
 ```
@@ -49,9 +51,16 @@ External Agent
 No API key required. The x402 protocol handles authentication via
 on-chain USDC payment. Each request:
 
-1. Receives a unique nonce + payment challenge
-2. Requires a real USDC transfer on Arc to the specified recipient
+1. Receives a unique nonce + payment challenge (including `chainId`,
+   `settlement_network`, and `settlement_env`)
+2. Requires a real USDC transfer on the configured settlement rail
+   (`ZERO_G` or `ARC`, testnet or mainnet) to the specified recipient
 3. Is verified by the gateway before intelligence is released
+
+The settlement rail and environment are controlled by `SETTLEMENT_NETWORK`
+and `SETTLEMENT_ENV` (see `.env.example` → "MAINNET FLIP"). By default the
+gateway runs on `ZERO_G` testnet; set `SETTLEMENT_ENV=mainnet` and provide
+the rail's mainnet USDC address to flip to mainnet without a code change.
 
 An optional **enterprise tier** authenticates with an `x-api-key` header
 instead of per-request x402 settlement — see
@@ -72,13 +81,22 @@ Response (HTTP 402):
   "amount": "0.004",
   "currency": "USDC",
   "recipient": "0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8",
+  "chainId": 16602,
+  "settlement_network": "ZERO_G",
+  "settlement_env": "testnet",
   "expires": "2026-07-03T12:00:00Z"
 }
 ```
 
-### Step 2: Settle payment on Arc
+The `chainId`, `settlement_network`, and `settlement_env` tell the buyer
+exactly which rail and environment to pay on. These values follow the
+deployment's `SETTLEMENT_NETWORK` and `SETTLEMENT_ENV` configuration.
 
-Send a real USDC transfer on Arc to the recipient address:
+### Step 2: Settle payment on the active rail
+
+Send a real USDC transfer on the rail specified by the challenge to the
+recipient address. Use the returned `chainId` to select the correct network
+in your wallet or provider:
 
 ```javascript
 const usdc = new ethers.Contract(USDC_ADDRESS, USDC_ABI, wallet);
@@ -104,9 +122,12 @@ Response (HTTP 200):
     "confidence": 0.85
   },
   "_billing": {
-    "arcSettled": true,
+    "onChainSettled": true,
+    "settlementNetwork": "ZERO_G",
+    "settlementEnv": "testnet",
     "txHashes": ["0x..."],
-    "explorer": ["https://testnet.arcscan.app/tx/0x..."],
+    "explorer": ["https://chainscan-galileo.0g.ai/tx/0x..."],
+    "evidenceCids": ["bafy..."],
     "anchor": {
       "status": "anchored",
       "id": 42,
@@ -131,8 +152,10 @@ Every response includes verifiable proof:
    - Arbitrum mainnet (42161) for yield/RWA decisions
    - 0G Galileo (16602) for evidence anchor/mirror
 
-3. **Settlement tx** — the `_billing.txHashes` array contains the Arc
-   USDC transfer tx hashes. Verify on Arcscan.
+3. **Settlement tx** — the `_billing.txHashes` array contains the
+   USDC transfer tx hashes on the active settlement rail. Verify on the
+   rail's explorer (returned in `_billing.explorer` and indicated by
+   `_billing.settlementNetwork` / `_billing.settlementEnv`).
 
 **Gateway intelligence CIDs.** Every paid Data Hub response also includes
 `evidenceCids` in its `_billing` block — one 0G Storage CID per paid
@@ -207,7 +230,7 @@ curl https://api.diversifi.famile.xyz/api/agent/x402-gateway?source=macro_analys
 
 Enterprise requests:
 
-- Skip the HTTP 402 payment challenge and the Arc on-chain USDC settlement.
+- Skip the HTTP 402 payment challenge and the on-chain USDC settlement.
 - Are still attributed to the tenant (`tenantId`) for audit purposes.
 - Return the same verifiable intelligence payload (0G Storage CID +
   chain-aware `RecommendationLedger` anchor) as a paid x402 request.
