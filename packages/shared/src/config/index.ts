@@ -380,10 +380,24 @@ export const CIRCLE_CONFIG = {
     USDC_TOKEN_ID_ARC: '0x3600000000000000000000000000000000000000', // Actual token ID for Arc testnet USDC
 };
 
+export const ARBITRUM_TOKENS = {
+    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    PAXG: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
+    USDY: '0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d',
+    SYRUPUSDC: '0x41CA7586cC1311807B4605fBB748a3B8862b42b5',
+    // Bitso MXNB (Mexican Peso) — Arbitrum One proxy contract, 6 decimals
+    MXNB: '0xF197FFC28c23E0309B5559e7a166f2c6164C80aA',
+} as const;
+
+export const ARBITRUM_SEPOLIA_TOKENS = {
+    // Arbitrum Sepolia USDC (Circle testnet faucet)
+    USDC: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+} as const;
+
 // Hyperliquid Configuration
 export const HYPERLIQUID_CONFIG = {
     BRIDGE_ADDRESS_ARBITRUM: '0x2Df1c51E09a42AD0809B739f5Ad8854a9554Dbc7', // Standard HL bridge on Arb
-    USDC_TOKEN_ID: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', // Mainnet USDC on Arbitrum
+    USDC_TOKEN_ID: ARBITRUM_TOKENS.USDC, // Mainnet USDC on Arbitrum (single source of truth)
     API_URL: 'https://api.hyperliquid.xyz',
     TESTNET_API_URL: 'https://api.hyperliquid-testnet.xyz'
 };
@@ -513,20 +527,6 @@ export const CELO_SEPOLIA_TOKENS = {
     NGNm: '0xE2702Bd97ee33c88c8f6f92DA3B733608aa76F71',
     'G$': '0x61FA0fB802fd8345C06da558240E0651886fec69', // GoodDollar staging G$ (Celo). GoodDollar does not publish a Celo Sepolia deployment; using staging so the token list is functional for testing. Override to mainnet (0x62B8...9c7A) for production.
     USDT: '0xd077A400968890Eacc75cdc901F0356c943e4fDb',
-} as const;
-
-export const ARBITRUM_TOKENS = {
-    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
-    PAXG: '0xfeb4dfc8c4cf7ed305bb08065d08ec6ee6728429',
-    USDY: '0x35e050d3c0ec2d29d269a8ecea763a183bdf9a9d',
-    SYRUPUSDC: '0x41CA7586cC1311807B4605fBB748a3B8862b42b5',
-    // Bitso MXNB (Mexican Peso) — Arbitrum One proxy contract, 6 decimals
-    MXNB: '0xF197FFC28c23E0309B5559e7a166f2c6164C80aA',
-} as const;
-
-export const ARBITRUM_SEPOLIA_TOKENS = {
-    // Arbitrum Sepolia USDC (Circle testnet faucet)
-    USDC: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
 } as const;
 
 export const ARC_TOKENS = {

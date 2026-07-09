@@ -26,7 +26,7 @@ That's the minimum to run the app. Every other env var (AI providers, data feeds
 | **Celo** | Savings + identity + savings ledger of record (`0x3BCf…369C` on mainnet) | [Celo Faucet](https://celo.org/developers/faucet) |
 | **Arbitrum** | Yield + execution + yield ledger of record (`0x3BCf…369C` on mainnet) | [Arbitrum Faucet](https://faucet.arbitrum.io/) |
 | **0G** | Evidence layer (Storage CIDs, Compute TEE proofs, DA snapshots, evidence anchor ledger `0x3BCf…369C` on mainnet) | [0G Galileo Faucet](https://chainscan-galileo.0g.ai) |
-| **Arc / 0G (env-gated)** | x402 nanopayment settlement rail for paid intelligence (`SETTLEMENT_NETWORK` = `ZERO_G` or `ARC`; `SETTLEMENT_ENV` = `testnet` or `mainnet`) | Circle Arc Faucet (testnet); fund `VAULT_PRIVATE_KEY` on the chosen rail (mainnet) |
+| **Arbitrum / Arc / 0G (env-gated)** | x402 nanopayment settlement rail for paid intelligence (`SETTLEMENT_NETWORK` = `ARBITRUM`, `ZERO_G`, or `ARC`; `SETTLEMENT_ENV` = `testnet` or `mainnet`) | **Arbitrum:** fund `VAULT_PRIVATE_KEY` with Sepolia USDC (testnet) or Circle USDC (mainnet). Arc/0G: Circle Arc Faucet (testnet) or rail-specific mainnet funding. |
 | **Robinhood Chain** | Emerging market tokens | Robinhood Faucet |
 
 ## x402 / Settlement Research Mode
@@ -35,14 +35,15 @@ Enable the autonomous research-payment loop where the Guardian negotiates paid p
 
 1. Set `NEXT_PUBLIC_ENABLE_ARC=true` (keeps the legacy env name; gate is rail-agnostic)
 2. Set `ENABLE_AUTONOMOUS_MODE=true`
-3. Configure `SETTLEMENT_NETWORK` (`ZERO_G` or `ARC`) and `SETTLEMENT_ENV` (`testnet` or `mainnet`)
-4. Configure the rail's RPC + USDC address (`ARC_RPC_URL`, `ZERO_G_RPC_URL`, or their mainnet variants, plus the matching `*_USDC` env var)
+3. Configure `SETTLEMENT_NETWORK` (`ARBITRUM`, `ZERO_G`, or `ARC`) and `SETTLEMENT_ENV` (`testnet` or `mainnet`)
+4. Configure the rail's RPC + USDC address (e.g. `ARBITRUM_ONE_RPC_URL` + `ARBITRUM_MAINNET_USDC`, or their ZERO_G/ARC equivalents)
 5. Fund the agent EOA with USDC on the active rail (see below)
 
-> **Mainnet blocker (2026-07-09):** Arc mainnet is not live yet, and 0G mainnet
-> does not have a verified USDC contract address published in the official docs.
-> Keep `SETTLEMENT_ENV=testnet` for now. The mainnet flip is a single config change
-> once a verified mainnet USDC contract is available.
+> **Buildathon recommendation:** Use `SETTLEMENT_NETWORK=ARBITRUM` and
+> `SETTLEMENT_ENV=mainnet` for the Arbitrum Open House. Arbitrum has a verified,
+> live Circle USDC contract on chainId 42161, so real mainnet payments are ready
+> as soon as the agent wallet is funded. Arc mainnet is not live yet and 0G mainnet
+> lacks a verified USDC contract, so those rails should stay on testnet for now.
 
 ### Verification
 
@@ -58,8 +59,9 @@ The agent wallet (`VAULT_PRIVATE_KEY`) must hold USDC on the active settlement r
 
 1. Get the address: `GET /api/agent/x402-metrics` → `settlement.agentAddress` (legacy alias: `arcSettlement.agentAddress`)
 2. Fund it:
-   - **Testnet (ZERO_G or ARC):** use the Circle Arc Faucet → select **Arc Testnet**, or the 0G Galileo faucet for the ZERO_G rail.
-   - **Mainnet:** send real USDC to the agent address on the configured rail.
+   - **Arbitrum mainnet:** send Circle USDC on Arbitrum to the agent address. Gas is paid in ETH.
+   - **Arbitrum Sepolia:** get USDC from the [Circle testnet faucet](https://faucet.circle.com).
+   - **ZERO_G / ARC testnet:** use the Circle Arc Faucet → select **Arc Testnet**, or the 0G Galileo faucet for the ZERO_G rail.
 3. Verify: `settlement.agentUSDCBalance` reflects the balance
 
 ### Generating Test Volume
@@ -115,12 +117,11 @@ forge create src/contracts/Vault.sol:Vault \
 After deployment, update `config/contracts.ts` with new addresses and verify on explorers.
 
 ### Expected Costs
-
 | Network | Deploy Cost | Typical Tx |
-| Arc / 0G (env-gated) | Free (faucet) testnet; real USDC cost on mainnet | Free (faucet) testnet; gas on mainnet |
+|---|---|---|
+| Arbitrum / Arc / 0G (env-gated) | Free (faucet) testnet; real USDC + gas on mainnet | Free (faucet) testnet; gas on mainnet (Arbitrum ETH, Arc/0G native gas) |
 | Celo Sepolia | ~0.01 CELO | ~0.001 CELO |
 | Arbitrum Sepolia | ~0.001 ETH | ~0.0001 ETH |
-| Arc Testnet | Free (faucet) | Free |
 
 ## Troubleshooting
 

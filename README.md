@@ -19,11 +19,11 @@ Each chain has a genuine, irreplaceable role. The ledger of record follows the m
 | **Savings + Identity** | **Celo** | Hold, save, rebalance across local stablecoins (cUSD, cEUR, cREAL, KESm, COPm, PHPm). `RecommendationLedger` records savings decisions here. ERC-8004 agent identity. | Regional Mento stablecoins exist nowhere else. Near-zero fees. SocialConnect ODIS identity. GoodDollar UBI. |
 | **Yield + Execution** | **Arbitrum** | Deep-liquidity DEXs and RWA yield (Uniswap V3, 1inch, Camelot, PAXG, USDY, SYRUPUSDC). `RecommendationLedger` records yield decisions here. EIP-7702 path to on-chain ERC-7710 permission enforcement. | Deepest USDC + RWA liquidity. EIP-7702-capable for true on-chain permission enforcement. |
 | **Evidence + Verifiability** | **0G** | Content-addressed Storage (evidence CIDs), TEE-verified Compute, DA (state snapshots). The tamper-proof evidence layer that both ledgers reference. | No other chain offers storage or verifiable inference. 0G is not the ledger of record — it is the proof layer. |
-| **Money Movement** | **Arc / 0G (env-gated)** | x402 nanopayment settlement rail for paid intelligence. `SETTLEMENT_NETWORK=ZERO_G\|ARC`, `SETTLEMENT_ENV=testnet\|mainnet`. | USDC-native gas on Arc; 0G mainnet for production evidence anchoring. Configurable without code changes. |
+| **Money Movement** | **Arbitrum / Arc / 0G (env-gated)** | x402 nanopayment settlement rail for paid intelligence. `SETTLEMENT_NETWORK=ARBITRUM\|ZERO_G\|ARC`, `SETTLEMENT_ENV=testnet\|mainnet`. | Arbitrum has live Circle USDC on mainnet today; Arc and 0G mainnet settlement remain pending verified USDC contracts. |
 
 **AI Reasoning Engine (Gemini → Venice → 0G Serving → Modal)**: Multi-provider failover chain. Each response is tagged with the provider that produced it.
 
-**x402 Settlement Rail (Autonomous Economics)**: Premium intelligence flows are gated by HTTP 402 challenges settled on the configured rail (`ZERO_G` default, `ARC` optional; `testnet` or `mainnet`). External agents pay USDC to consume Mento depeg + inflation + yield intelligence.
+**x402 Settlement Rail (Autonomous Economics)**: Premium intelligence flows are gated by HTTP 402 challenges settled on the configured rail (`ARBITRUM` recommended for mainnet, `ZERO_G` default, `ARC` optional; `testnet` or `mainnet`). External agents pay USDC to consume Mento depeg + inflation + yield intelligence.
 
 ---
 
@@ -69,8 +69,10 @@ Each chain has a genuine, irreplaceable role. The ledger of record follows the m
 - **Verifiable AI Dashboard**: Open the **"Verifiable AI"** tab in-app to view live evidence CIDs, serving-model IDs, and chain receipts.
 
 ### x402 / Settlement Stack (Autonomous Payments)
-|- **Default rail**: `ZERO_G` testnet; flips to `ZERO_G` or `ARC` mainnet via `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV` (config-only)
+|- **Default rail**: `ZERO_G` testnet; buildathon mainnet rail is `ARBITRUM` via `SETTLEMENT_NETWORK=ARBITRUM` + `SETTLEMENT_ENV=mainnet` (config-only)
 |- **Legacy testnet agent wallet (Arc Testnet)**: `0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8`
+|- **Arbitrum mainnet agent wallet**: fund `VAULT_PRIVATE_KEY` with Circle USDC on Arbitrum (address shown in x402-metrics)
+|- **Arbitrum settlement contract**: Circle USDC at `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` (chainId 42161)
 |- **Settlement Metrics**: [https://api.diversifi.famile.xyz/api/agent/x402-metrics](https://api.diversifi.famile.xyz/api/agent/x402-metrics)
 |- **Active explorer**: returned by the metrics endpoint under `settlement.explorerBase` (legacy alias `arcSettlement`)
 

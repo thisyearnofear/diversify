@@ -12,7 +12,7 @@
  */
 
 import { ethers } from 'ethers';
-import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS } from '../config';
+import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS, ARBITRUM_TOKENS, ARBITRUM_SEPOLIA_TOKENS } from '../config';
 
 // Minimal ERC-20 ABI — transfer only
 const ERC20_TRANSFER_ABI = [
@@ -26,7 +26,7 @@ const TRANSFER_EVENT_ABI = [
 const transferInterface = new ethers.utils.Interface(TRANSFER_EVENT_ABI);
 const transferTopic = transferInterface.getEventTopic('Transfer');
 
-export type SettlementNetwork = 'ARC' | 'ZERO_G';
+export type SettlementNetwork = 'ARC' | 'ZERO_G' | 'ARBITRUM';
 export type SettlementEnv = 'testnet' | 'mainnet';
 
 export interface SettlementConfig {
@@ -96,8 +96,27 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 name: '0G',
             },
         },
+        ARBITRUM: {
+            testnet: {
+                rpcUrl: process.env.ARBITRUM_SEPOLIA_RPC_URL || NETWORKS.ARBITRUM_SEPOLIA.rpcUrl,
+                usdcAddress: process.env.ARBITRUM_TESTNET_USDC || ARBITRUM_SEPOLIA_TOKENS.USDC,
+                recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.ARBITRUM_SEPOLIA.explorerUrl,
+                chainId: NETWORKS.ARBITRUM_SEPOLIA.chainId,
+                name: 'Arbitrum Sepolia',
+            },
+            mainnet: {
+                rpcUrl: process.env.ARBITRUM_ONE_RPC_URL || NETWORKS.ARBITRUM_ONE.rpcUrl,
+                // Circle-native USDC on Arbitrum One — verified, live, and the preferred buildathon rail.
+                usdcAddress: process.env.ARBITRUM_MAINNET_USDC || ARBITRUM_TOKENS.USDC,
+                recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.ARBITRUM_ONE.explorerUrl,
+                chainId: NETWORKS.ARBITRUM_ONE.chainId,
+                name: 'Arbitrum',
+            },
+        },
     };
-    return { ARC: variants.ARC[env], ZERO_G: variants.ZERO_G[env] };
+    return { ARC: variants.ARC[env], ZERO_G: variants.ZERO_G[env], ARBITRUM: variants.ARBITRUM[env] };
 }
 
 const NETWORK_CONFIGS: Record<SettlementNetwork, SettlementConfig> = buildNetworkConfigs(SETTLEMENT_ENV);
@@ -527,10 +546,6 @@ export async function settleOnChain(
     }
 }
 
-// Arc settlement exports.
-// 0G Pay is the interim default while Arc is testnet-only (mainnet beta expected 2026).
-// Arc reclaims the nanopayment rail at mainnet — USDC-native gas and Circle Gateway
-// make it the purpose-built chain for x402 settlement. These exports are NOT deprecated;
-// they are the forward path once ARC_MAINNET is live.
-export const settleOnArc = (amount: number, sourceId: string) => settleOnChain(amount, sourceId, 'ARC');
-export const getArcSettlementStats = (options?: any) => getSettlementStats('ARC', options);
+// No per-rail convenience wrappers. Use settleOnChain(network, ...) and
+// getSettlementStats(network, ...) with DEFAULT_SETTLEMENT_NETWORK or the
+// desired SettlementNetwork to keep a single settlement API.

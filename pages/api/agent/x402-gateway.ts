@@ -447,7 +447,7 @@ export default async function handler(
             .map(p => settleOnChain(p.cost, p.source.id, DEFAULT_SETTLEMENT_NETWORK));
 
         // Await with a short timeout so we can include tx hashes in the response
-        // if they land quickly (Arc has sub-second finality), but never block.
+        // if they land quickly, but never block the API response.
         const settled = await Promise.race([
             Promise.all(settlementPromises),
             new Promise<null>(r => setTimeout(() => r(null), 1500)),

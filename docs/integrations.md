@@ -108,14 +108,16 @@ Set in `.env.local` or on the server (see `.env.example` → "MAINNET FLIP"):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `SETTLEMENT_NETWORK` | `ZERO_G` | Rail: `ZERO_G` or `ARC` |
+| `SETTLEMENT_NETWORK` | `ZERO_G` | Rail: `ZERO_G`, `ARC`, or `ARBITRUM` |
 | `SETTLEMENT_ENV` | `testnet` | Environment: `testnet` or `mainnet` |
 | `ZERO_G_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ZERO_G SETTLEMENT_ENV=mainnet` |
 | `ARC_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet` |
+| `ARBITRUM_MAINNET_USDC` | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` | Circle-native USDC on Arbitrum One (override optional) |
+| `ARBITRUM_TESTNET_USDC` | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` | Arbitrum Sepolia USDC (override optional) |
 
 To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet USDC address, and set `SETTLEMENT_ENV=mainnet`.
 
-> **Mainnet blocker (2026-07-09):** Arc mainnet is not live yet, and 0G mainnet does not have a Circle-issued or officially documented USDC contract address on chainId 16661. The code is ready, but the default `SETTLEMENT_ENV=testnet` should remain until a verified mainnet USDC contract is available for the chosen rail.
+> **Buildathon recommendation:** For the Arbitrum Open House, use `SETTLEMENT_NETWORK=ARBITRUM` and `SETTLEMENT_ENV=mainnet`. Arbitrum already has a verified, live, Circle-issued USDC contract on chainId 42161, making it the only rail ready for real mainnet payments today. 0G mainnet and Arc mainnet lack a verified USDC contract for settlement.
 
 ### Evidence Bundles
 
@@ -130,16 +132,18 @@ To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet US
 ```text
 Client → GET /api/agent/x402-gateway?source=macro_analysis
        ← 402 { nonce, amount: "0.004", currency: "USDC", recipient, chainId,
-             settlement_network: "ZERO_G", settlement_env: "testnet", expires }
+             settlement_network: "ARBITRUM", settlement_env: "mainnet", expires }
 Client → GET /api/agent/x402-gateway?source=macro_analysis
          x-payment-proof: 0x<real_usdc_transfer_tx_hash>
          x-payment-nonce: <challenge_nonce>
-       ← 200 { data, _billing: { onChainSettled: true, settlementNetwork: "ZERO_G",
-             settlementEnv: "testnet", txHashes: ["0x..."],
-             explorer: ["https://chainscan-galileo.0g.ai/tx/0x..."] } }
+       ← 200 { data, _billing: { onChainSettled: true, settlementNetwork: "ARBITRUM",
+             settlementEnv: "mainnet", txHashes: ["0x..."],
+             explorer: ["https://arbiscan.io/tx/0x..."] } }
 ```
 
-Live settlement metrics and the active explorer are exposed at
+The example above shows the Arbitrum buildathon default; swap
+`settlement_network`/`settlement_env` for `ZERO_G`/`ARC` as needed. Live
+settlement metrics and the active explorer are exposed at
 `GET /api/agent/x402-metrics` under the `settlement` object (and the legacy
 `arcSettlement` alias for backwards compatibility).
 

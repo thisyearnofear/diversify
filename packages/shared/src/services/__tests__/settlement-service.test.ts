@@ -34,6 +34,13 @@ describe('SettlementService — DEFAULT_SETTLEMENT_NETWORK (Phase 0 audit A5)', 
         const { DEFAULT_SETTLEMENT_NETWORK } = await import('../settlement-service');
         expect(DEFAULT_SETTLEMENT_NETWORK).toBe('ZERO_G');
     });
+
+    it('uses ARBITRUM when SETTLEMENT_NETWORK=ARBITRUM', async () => {
+        process.env.SETTLEMENT_NETWORK = 'ARBITRUM';
+        vi.resetModules();
+        const { DEFAULT_SETTLEMENT_NETWORK } = await import('../settlement-service');
+        expect(DEFAULT_SETTLEMENT_NETWORK).toBe('ARBITRUM');
+    });
 });
 
 describe('SettlementService — SETTLEMENT_ENV (mainnet flip)', () => {
@@ -66,5 +73,54 @@ describe('SettlementService — SETTLEMENT_ENV (mainnet flip)', () => {
         vi.resetModules();
         const { SETTLEMENT_ENV } = await import('../settlement-service');
         expect(SETTLEMENT_ENV).toBe('testnet');
+    });
+});
+
+describe('SettlementService — ARBITRUM rail config', () => {
+    const originalNetwork = process.env.SETTLEMENT_NETWORK;
+    const originalEnv = process.env.SETTLEMENT_ENV;
+    const originalMainnetUsdc = process.env.ARBITRUM_MAINNET_USDC;
+
+    afterEach(() => {
+        if (originalNetwork === undefined) delete process.env.SETTLEMENT_NETWORK;
+        else process.env.SETTLEMENT_NETWORK = originalNetwork;
+        if (originalEnv === undefined) delete process.env.SETTLEMENT_ENV;
+        else process.env.SETTLEMENT_ENV = originalEnv;
+        if (originalMainnetUsdc === undefined) delete process.env.ARBITRUM_MAINNET_USDC;
+        else process.env.ARBITRUM_MAINNET_USDC = originalMainnetUsdc;
+    });
+
+    it('returns Arbitrum mainnet config by default', async () => {
+        process.env.SETTLEMENT_NETWORK = 'ARBITRUM';
+        process.env.SETTLEMENT_ENV = 'mainnet';
+        vi.resetModules();
+        const { getSettlementConfig } = await import('../settlement-service');
+        const config = getSettlementConfig();
+        expect(config.chainId).toBe(42161);
+        expect(config.name).toBe('Arbitrum');
+        expect(config.usdcAddress).toBe('0xaf88d065e77c8cC2239327C5EDb3A432268e5831');
+        expect(config.explorerBase).toBe('https://arbiscan.io');
+    });
+
+    it('returns Arbitrum Sepolia config in testnet mode', async () => {
+        process.env.SETTLEMENT_NETWORK = 'ARBITRUM';
+        process.env.SETTLEMENT_ENV = 'testnet';
+        vi.resetModules();
+        const { getSettlementConfig } = await import('../settlement-service');
+        const config = getSettlementConfig();
+        expect(config.chainId).toBe(421614);
+        expect(config.name).toBe('Arbitrum Sepolia');
+        expect(config.usdcAddress).toBe('0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d');
+        expect(config.explorerBase).toBe('https://sepolia.arbiscan.io');
+    });
+
+    it('allows ARBITRUM_MAINNET_USDC override', async () => {
+        process.env.SETTLEMENT_NETWORK = 'ARBITRUM';
+        process.env.SETTLEMENT_ENV = 'mainnet';
+        process.env.ARBITRUM_MAINNET_USDC = '0x1234567890123456789012345678901234567890';
+        vi.resetModules();
+        const { getSettlementConfig } = await import('../settlement-service');
+        const config = getSettlementConfig();
+        expect(config.usdcAddress).toBe('0x1234567890123456789012345678901234567890');
     });
 });
