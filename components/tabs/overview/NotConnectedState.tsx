@@ -41,14 +41,10 @@ export function NotConnectedState({
     return StrategyService.getConfig(financialStrategy);
   }, [financialStrategy]);
 
-  // Calculate counterfactual across all benchmarks
+  // Calculate counterfactual using gold benchmark (universal hedge)
   const totalPreserved = useMemo(() => {
     if (!riskData) return 0;
-    return (
-      calculateCounterfactual(savingsAmount, shieldPercentage, 'USD', '5yr') +
-      calculateCounterfactual(savingsAmount, shieldPercentage, 'EUR', '5yr') +
-      calculateCounterfactual(savingsAmount, shieldPercentage, 'XAU', '5yr')
-    );
+    return calculateCounterfactual(savingsAmount, shieldPercentage, 'XAU', '5yr');
   }, [riskData, savingsAmount, shieldPercentage, calculateCounterfactual]);
 
   const HOW_IT_WORKS: HowItWorksStep[] = [
@@ -104,6 +100,8 @@ export function NotConnectedState({
                 {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => {
                   const dep = getDepreciation(bench, '5yr');
                   const b = BENCHMARKS[bench];
+                  // Skip 0% benchmarks (self-comparison, e.g., USD vs USD)
+                  if (dep === 0) return null;
                   return (
                     <div key={bench} className="flex items-center justify-between">
                       <span className="text-sm text-gray-700 dark:text-gray-300">
@@ -152,10 +150,10 @@ export function NotConnectedState({
                     You would have preserved
                   </p>
                   <p className="text-2xl font-black text-red-600 dark:text-red-400">
-                    ${(totalPreserved / 3).toFixed(0)}
+                    ${totalPreserved.toFixed(0)}
                   </p>
                   <p className="text-[10px] text-red-400 dark:text-red-500 mt-1">
-                    over 5 years — that&apos;s ~${((totalPreserved / 3) / (365 * 5)).toFixed(1)}/day gone. Every day you wait.
+                    over 5 years — that&apos;s ~${(totalPreserved / (365 * 5)).toFixed(1)}/day gone. Every day you wait.
                   </p>
                 </div>
               </div>

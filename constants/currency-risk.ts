@@ -361,6 +361,60 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       { year: 2023, event: 'Coffee export decline', impact: "UGX pressured as Uganda's largest export earner fell on global price dip" },
     ],
   },
+  // ── Benchmark currencies ──────────────────────────────────────────
+  // "Stable" currencies are not risk-free. Gold has outperformed all of
+  // them, inflation erodes purchasing power, and political/concentration
+  // risk exists everywhere. These entries ensure US/EU/UK visitors also
+  // get a risk "aha" moment — the risk is just a different shape.
+  {
+    code: 'GBP',
+    countryName: 'United Kingdom',
+    iso2: 'GB',
+    iso3: 'GBR',
+    flag: '🇬🇧',
+    depreciation: {
+      vsUSD: { '1yr': -2, '3yr': -8, '5yr': -12 },
+      vsEUR: { '1yr': 0, '3yr': -6, '5yr': -10 },
+      vsXAU: { '1yr': -17, '3yr': -30, '5yr': -41 },
+    },
+    riskEvents: [
+      { year: 2022, event: 'Mini-budget crisis', impact: 'GBP crashed to parity with USD after unfunded tax cuts; Bank of England intervened' },
+      { year: 2024, event: 'Election + fiscal uncertainty', impact: "Pound volatility as new government's spending plans drew scrutiny" },
+    ],
+  },
+  {
+    code: 'EUR',
+    countryName: 'Eurozone',
+    iso2: 'DE',
+    iso3: 'DEU',
+    flag: '🇪🇺',
+    depreciation: {
+      vsUSD: { '1yr': -3, '3yr': -10, '5yr': -8 },
+      vsEUR: { '1yr': 0, '3yr': 0, '5yr': 0 },
+      vsXAU: { '1yr': -18, '3yr': -32, '5yr': -38 },
+    },
+    riskEvents: [
+      { year: 2022, event: 'Energy crisis', impact: 'EUR dropped to parity with USD as energy import costs surged after Russia-Ukraine war' },
+      { year: 2023, event: 'Inflation peak 9.2%', impact: 'Eurozone inflation hit record highs, eroding purchasing power across the bloc' },
+    ],
+  },
+  {
+    code: 'USD',
+    countryName: 'United States',
+    iso2: 'US',
+    iso3: 'USA',
+    flag: '🇺🇸',
+    depreciation: {
+      vsUSD: { '1yr': 0, '3yr': 0, '5yr': 0 },
+      vsEUR: { '1yr': 3, '3yr': 10, '5yr': 8 },
+      vsXAU: { '1yr': -15, '3yr': -28, '5yr': -37 },
+    },
+    riskEvents: [
+      { year: 2022, event: 'Inflation crisis', impact: 'USD inflation hit 8% — the highest in 40 years. Purchasing power eroded significantly' },
+      { year: 2023, event: 'Debt ceiling standoff', impact: 'US nearly defaulted on sovereign debt; credit rating downgraded by Fitch' },
+      { year: 2024, event: 'Election volatility', impact: 'Political polarization drove uncertainty about dollar stability and fiscal policy' },
+    ],
+  },
 ];
 
 /** Lookup by ISO2 country code (most common — from IP geolocation). */
@@ -381,8 +435,11 @@ export const CURRENCY_BY_CODE: Record<string, CurrencyRiskEntry> = Object.fromEn
 /**
  * Get currency risk data for a country.
  * Accepts ISO2 (from IP geolocation), ISO3 (from existing constants),
- * or currency code. Returns null if the country's currency is not in
- * the dataset (e.g., USD, EUR — those are benchmarks, not at-risk).
+ * or currency code. Returns null only if the country is not in the
+ * dataset at all (e.g., a small country we don't have data for).
+ *
+ * Benchmark currencies (USD, EUR, GBP) ARE included — they have risk
+ * in the form of gold depreciation, inflation, and political events.
  */
 export function getCurrencyRisk(countryCode: string): CurrencyRiskEntry | null {
   return (
@@ -419,6 +476,11 @@ export const HORIZON_KEYS = Object.keys(HORIZONS) as Horizon[];
  * "If you had put X% into [benchmark] Y years ago, you would have
  * preserved $Z of your $principal."
  *
+ * The shielded portion (shieldPercentage) is what was protected.
+ * If that portion had stayed in the depreciating currency, it would
+ * have lost `depreciation`% of its value. By putting it in a stable
+ * benchmark instead, the user preserved that amount.
+ *
  * This is a neutral calculation — it shows what *could* have been
  * preserved, without prescribing that the user should have done so.
  * The philosophy system determines the actual recommended allocation.
@@ -430,12 +492,11 @@ export function calculatePreservedValue(
   horizon: Horizon,
 ): number {
   const shieldAmount = principal * (shieldPercentage / 100);
-  const unhedgedAmount = principal - shieldAmount;
   const depreciationRate = Math.abs(depreciation) / 100;
 
-  // The unhedged portion loses value; the shielded portion is preserved.
-  const lostFromUnhedged = unhedgedAmount * depreciationRate;
-  return lostFromUnhedged;
+  // The shielded portion would have lost this much if it had stayed
+  // in the depreciating currency. By shielding it, the user preserved it.
+  return shieldAmount * depreciationRate;
 }
 
 /**

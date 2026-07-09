@@ -68,14 +68,12 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
     // Determine the onboarding phase
     const phase: Phase = useMemo(() => {
       if (riskLoading && !countryCode) return 'detect';
-      if (riskData || isBenchmarkCurrency) {
+      if (riskData) {
         if (selectedArchetype) return 'philosophy';
-        // If benchmark currency (USD/EUR), skip risk and go to philosophy
-        if (isBenchmarkCurrency) return 'philosophy';
         return 'risk';
       }
       return 'detect';
-    }, [riskLoading, countryCode, riskData, isBenchmarkCurrency, selectedArchetype]);
+    }, [riskLoading, countryCode, riskData, selectedArchetype]);
 
     const handleSwitchToTestnet = async () => {
         if (isSwitching) return;
@@ -312,16 +310,20 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                   {/* Multi-benchmark depreciation card */}
                   <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 rounded-2xl p-5 mb-4">
                     <p className="text-xs text-red-600 dark:text-red-400 font-bold mb-3">
-                      {riskData.countryName}&apos;s {riskData.code} has lost value against:
+                      {isBenchmarkCurrency
+                        ? `${riskData.countryName}'s ${riskData.code} may be strong, but it still loses value against hard assets:`
+                        : `${riskData.countryName}'s ${riskData.code} has lost value against:`}
                     </p>
 
-                    {/* Benchmark rows */}
+                    {/* Benchmark rows — skip 0% entries (e.g., USD vs USD) */}
                     <div className="space-y-3">
                       {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => {
                         const dep5yr = getDepreciation(bench, '5yr');
                         const dep3yr = getDepreciation(bench, '3yr');
                         const dep1yr = getDepreciation(bench, '1yr');
                         const b = BENCHMARKS[bench];
+                        // Skip benchmarks with 0% depreciation (self-comparison)
+                        if (dep5yr === 0 && dep3yr === 0 && dep1yr === 0) return null;
                         return (
                           <div key={bench} className="bg-white/60 dark:bg-gray-900/40 rounded-xl p-3 border border-red-100 dark:border-red-900/40">
                             <div className="flex items-center justify-between mb-1">
@@ -342,21 +344,25 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                       })}
                     </div>
 
-                    {/* Counterfactual */}
-                    <div className="mt-4 pt-3 border-t border-red-200 dark:border-red-800">
-                      <p className="text-xs text-red-500 dark:text-red-300">
-                        If <strong>20%</strong> of $10,000 had been in a diversified protection basket 5 years ago,
-                        you would have preserved{' '}
-                        <strong className="text-base">
-                          ${(
-                            calculateCounterfactual(10000, 20, 'USD', '5yr') +
-                            calculateCounterfactual(10000, 20, 'EUR', '5yr') +
-                            calculateCounterfactual(10000, 20, 'XAU', '5yr')
-                          ).toFixed(0)}
-                        </strong>{' '}
-                        in real value.
-                      </p>
-                    </div>
+                    {/* Counterfactual — uses the gold benchmark (universal hedge) */}
+                    {(() => {
+                      const xauPreserved = calculateCounterfactual(10000, 20, 'XAU', '5yr');
+                      return (
+                        <div className="mt-4 pt-3 border-t border-red-200 dark:border-red-800">
+                          <p className="text-xs text-red-500 dark:text-red-300">
+                            If <strong>20%</strong> of $10,000 had been in gold-backed assets 5 years ago,
+                            you would have preserved{' '}
+                            <strong className="text-base">
+                              ${xauPreserved.toFixed(0)}
+                            </strong>{' '}
+                            in real value.
+                          </p>
+                          <p className="text-[10px] text-red-400 dark:text-red-500 mt-1">
+                            That&apos;s ~${(xauPreserved / (365 * 5)).toFixed(1)}/day — gone. Every day you wait.
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Risk events */}

@@ -71,13 +71,13 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
     return getCurrencyRisk(effectiveCountryCode);
   }, [effectiveCountryCode]);
 
-  // Determine if the user's currency is a benchmark (USD/EUR) — no risk to show
+  // Determine if the user's currency is a benchmark (USD/EUR) —
+  // benchmark currencies still have risk (gold depreciation, inflation,
+  // political events), but the risk card uses a different framing.
   const isBenchmarkCurrency = useMemo(() => {
     if (!effectiveCountryCode) return false;
-    const entry = getCurrencyRisk(effectiveCountryCode);
-    // US, EU countries that use USD/EUR are benchmarks
-    const benchmarkCountries = ['US', 'CA', 'GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'IE', 'PT', 'GR', 'FI'];
-    return !entry && benchmarkCountries.includes(effectiveCountryCode.toUpperCase());
+    return ['US', 'CA', 'GB', 'DE', 'FR', 'IT', 'ES', 'NL', 'BE', 'AT', 'IE', 'PT', 'GR', 'FI']
+      .includes(effectiveCountryCode.toUpperCase());
   }, [effectiveCountryCode]);
 
   // Load override from localStorage on mount
