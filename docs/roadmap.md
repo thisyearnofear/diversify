@@ -334,6 +334,53 @@ area is visible and decisions are intentional rather than reactive.
 
 ---
 
+## Track 3 — Product Reframe: Risk-Aware, Values-Driven Treasury (2026-07-09)
+
+The product was reframed from "AI intelligence marketplace" to "risk-aware,
+values-driven treasury management." The insight: nobody wakes up wanting
+premium macro research; they wake up wanting to know their savings won't
+evaporate because of an election, a rate decision, or a currency crisis.
+The Kenyan business example crystallized this: a business saving in KES vs
+USD around an election would have maintained significantly more purchasing
+power, but the headaches of doing it meant they just kept everything in KES.
+
+**Core principle:** The risk data is neutral. The response is philosophy-driven.
+DiversiFi shows users their currency risk, then lets them choose a
+culturally-aligned protection philosophy — never prescribing "move to USD."
+
+### What shipped
+
+| Change | Files | Principle |
+|---|---|---|
+| Curated multi-benchmark depreciation dataset (20 currencies vs USD/EUR/gold, 1yr/3yr/5yr, risk events) | `constants/currency-risk.ts` (new) | DRY, MODULAR |
+| Consolidated non-prescriptive currency risk hook | `hooks/use-currency-risk.ts` (new) | DRY, CLEAN |
+| Surface ISO2 country code from IP geolocation | `hooks/use-user-region.ts` (enhanced) | ENHANCEMENT FIRST |
+| 3-phase onboarding: detect country → show risk → choose philosophy | `components/onboarding/screens/WelcomeScreen.tsx` (enhanced) | ENHANCEMENT FIRST |
+| Philosophy-aware counterfactual calculator with archetype gallery | `components/tabs/overview/NotConnectedState.tsx` (enhanced) | ENHANCEMENT FIRST |
+| Philosophy-aware protection scorecard (adapts to chosen archetype) | `components/tabs/overview/ProtectionScorecard.tsx` (new) | ENHANCEMENT FIRST |
+| Add scorecard section to home page decision logic | `hooks/use-home-sections.ts` (enhanced) | ENHANCEMENT FIRST |
+| Reorder tabs to lead with Shield, relabel Protect → Shield | `constants/tabs.ts`, `TabNavigation.tsx`, `TabContentRouter.tsx`, `NavigationContext.tsx` | CONSOLIDATION |
+| Neutral "understand, choose, act" copy across key screens | `pages/index.tsx`, `use-cold-start.ts`, `ConnectedOverview.tsx` | CLEAN |
+
+### Why the cultural archetype system is the differentiator
+
+The app has 8 cultural protection philosophies (Africapitalism, Buen Vivir,
+Pan-Caribbean, Confucian, Gotong Royong, Islamic Finance, Global
+Diversification, Custom) with deep strategy configs, AI prompts, visual
+ambient effects, and scoring weights. The reframe connects the currency risk
+data to this existing archetype system: the user's specific currency risk
+becomes the *reason* to engage with the archetype system, and the archetype
+system becomes the *values-driven response* to that risk. This makes DiversiFi
+impossible to replicate with a generic stablecoin app.
+
+### What was deliberately NOT done
+- No new live FX API (curated dataset for the "aha"; existing Frankfurter for live monitoring)
+- No prescriptive USD framing anywhere
+- No filtering of archetypes (show all, let user self-select)
+- No new tabs (reordered existing 5)
+
+---
+
 ## Deferred (Correct but Wrong Timing)
 
 | Task | Why deferred |

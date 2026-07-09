@@ -87,7 +87,7 @@ function TabPane({ id, children }: TabPaneProps) {
   );
 }
 
-const TAB_DISPLAY_ORDER = ["overview", "protect", "exchange", "agent", "info"] as const;
+const TAB_DISPLAY_ORDER = ["protect", "overview", "exchange", "agent", "info"] as const;
 
 // ── Component ──
 

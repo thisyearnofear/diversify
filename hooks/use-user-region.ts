@@ -106,8 +106,23 @@ const LANGUAGE_TO_REGION: Record<string, Region> = {
   'ar': 'Africa',
 };
 
-export function useUserRegion() {
+export interface UseUserRegionReturn {
+  region: Region;
+  /** ISO2 country code from IP geolocation (e.g., 'KE', 'NG', 'AR'). Null if undetected. */
+  countryCode: string | null;
+  /** Country name from IP geolocation (e.g., 'Kenya'). Null if undetected. */
+  countryName: string | null;
+  isLoading: boolean;
+  detectionMethod: 'default' | 'locale' | 'ip' | 'manual';
+  setRegion: (region: Region) => void;
+  /** Manually override the detected country code (e.g., from onboarding selection). */
+  setCountryCode: (code: string) => void;
+}
+
+export function useUserRegion(): UseUserRegionReturn {
   const [region, setRegion] = useState<Region>('Africa'); // Default to Africa
+  const [countryCode, setCountryCode] = useState<string | null>(null);
+  const [countryName, setCountryName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [detectionMethod, setDetectionMethod] = useState<'default' | 'locale' | 'ip' | 'manual'>('default');
 
@@ -116,9 +131,11 @@ export function useUserRegion() {
       try {
         // First try to get from localStorage (if user previously set it)
         const savedRegion = localStorage.getItem('user-region');
+        const savedCountry = localStorage.getItem('user-country-code');
         if (savedRegion && REGIONS.includes(savedRegion as Region)) {
           setRegion(savedRegion as Region);
           setDetectionMethod('manual');
+          if (savedCountry) setCountryCode(savedCountry);
           setIsLoading(false);
           return;
         }
@@ -150,8 +167,12 @@ export function useUserRegion() {
           const response = await fetch('https://ipapi.co/json/');
           const data = await response.json();
 
-          if (data.country_code && COUNTRY_TO_REGION[data.country_code]) {
-            setRegion(COUNTRY_TO_REGION[data.country_code]);
+          if (data.country_code) {
+            setCountryCode(data.country_code);
+            setCountryName(data.country_name ?? null);
+            if (COUNTRY_TO_REGION[data.country_code]) {
+              setRegion(COUNTRY_TO_REGION[data.country_code]);
+            }
             setDetectionMethod('ip');
             setIsLoading(false);
             return;
@@ -215,10 +236,23 @@ export function useUserRegion() {
     }
   };
 
+  // Function to manually override the country code
+  const setCountryCodeManual = (code: string) => {
+    setCountryCode(code);
+    try {
+      localStorage.setItem('user-country-code', code);
+    } catch (e) {
+      console.warn('Failed to save country code to localStorage:', e);
+    }
+  };
+
   return {
     region,
+    countryCode,
+    countryName,
     isLoading,
     detectionMethod,
-    setRegion: setUserRegion
+    setRegion: setUserRegion,
+    setCountryCode: setCountryCodeManual,
   };
 }

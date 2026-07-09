@@ -1,5 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import type { Region } from "@/hooks/use-user-region";
+import { useCurrencyRisk } from "@/hooks/use-currency-risk";
+import { useStrategy } from "@/context/app/StrategyContext";
+import {
+  BENCHMARKS,
+  type Benchmark,
+  type Horizon,
+} from "@/constants/currency-risk";
+import { StrategyService } from "@diversifi/shared";
 import RegionalIconography from "../../regional/RegionalIconography";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
@@ -17,30 +25,49 @@ export function NotConnectedState({
   regionalInflation,
   onEnableDemo,
 }: NotConnectedStateProps) {
-  const [savingsAmount, setSavingsAmount] = useState(1000);
-  const monthlyLoss = ((savingsAmount * (regionalInflation / 100)) / 12).toFixed(2);
-  const yearlyLoss = (savingsAmount * (regionalInflation / 100)).toFixed(0);
+  const {
+    riskData,
+    getDepreciation,
+    calculateCounterfactual,
+  } = useCurrencyRisk();
+  const { financialStrategy } = useStrategy();
+
+  const [savingsAmount, setSavingsAmount] = useState(10000);
+  const [shieldPercentage, setShieldPercentage] = useState(20);
+
+  // Get strategy-specific allocation if the user selected a philosophy
+  const strategyConfig = useMemo(() => {
+    if (!financialStrategy) return null;
+    return StrategyService.getConfig(financialStrategy);
+  }, [financialStrategy]);
+
+  // Calculate counterfactual across all benchmarks
+  const totalPreserved = useMemo(() => {
+    if (!riskData) return 0;
+    return (
+      calculateCounterfactual(savingsAmount, shieldPercentage, 'USD', '5yr') +
+      calculateCounterfactual(savingsAmount, shieldPercentage, 'EUR', '5yr') +
+      calculateCounterfactual(savingsAmount, shieldPercentage, 'XAU', '5yr')
+    );
+  }, [riskData, savingsAmount, shieldPercentage, calculateCounterfactual]);
 
   const HOW_IT_WORKS: HowItWorksStep[] = [
     {
-      icon: "👛",
-      title: "Connect in Seconds",
-      text: "Link your wallet and see your starting point right away.",
+      icon: "📊",
+      title: "See Your Currency Risk",
+      text: "Understand how much your local currency has depreciated against global benchmarks.",
     },
     {
-      icon: "📊",
-      title: "See Your Inflation Risk",
-      text: "Understand how much local inflation is reducing your purchasing power.",
+      icon: "🌍",
+      title: "Choose Your Approach",
+      text: "Pick a protection philosophy that matches your values — from Africapitalism to Islamic Finance.",
     },
     {
       icon: "🛡️",
-      title: "Move Into Protection",
-      text: "Follow a simple plan to spread savings across stronger stable currencies.",
+      title: "Act on Your Terms",
+      text: "No lock-ups. No subscriptions. Protect what matters, your way.",
     },
   ];
-
-  // InlineOnboarding removed — consolidated into GuidedTour (Phase 3).
-  // The tour now handles region/goal selection as an interactive step.
 
   // ── Calculator hero card ──
   const heroCard = (
@@ -54,68 +81,161 @@ export function NotConnectedState({
             <div className="flex items-center gap-2 mb-2">
               <span className="text-2xl">🛡️</span>
               <h3 className="text-lg font-black text-emerald-900 dark:text-emerald-100">
-                Protect Your Savings
+                Understand Your Risk
               </h3>
             </div>
             <p className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-              A calmer way to protect savings in {userRegion} (
-              {regionalInflation.toFixed(1)}% inflation)
+              {riskData
+                ? `${riskData.flag} ${riskData.countryName} — ${riskData.code}`
+                : `${userRegion} (${regionalInflation.toFixed(1)}% inflation)`}
             </p>
           </div>
           <RegionalIconography region={userRegion} size="md" />
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-emerald-100 dark:border-emerald-900">
-          <div className="text-center mb-3">
-            <label htmlFor="savings-input" className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold block">
-              If you protect
-            </label>
-            <div className="flex items-center justify-center gap-1 mb-2">
-              <span className="text-lg text-emerald-600 dark:text-emerald-400 font-bold">$</span>
-              <input
-                id="savings-input"
-                type="number"
-                min="0"
-                max="10000000"
-                value={savingsAmount}
-                onChange={(e) => setSavingsAmount(Math.max(0, Number(e.target.value) || 0))}
-                className="w-28 text-center text-2xl font-black text-emerald-900 dark:text-emerald-100 bg-transparent border-b-2 border-emerald-300 dark:border-emerald-700 focus:border-emerald-500 outline-none transition-colors"
-              />
+        {riskData ? (
+          <>
+            {/* Multi-benchmark depreciation */}
+            <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-emerald-100 dark:border-emerald-900">
+              <p className="text-xs text-gray-500 dark:text-gray-400 font-bold mb-3">
+                {riskData.code} has lost value against:
+              </p>
+              <div className="space-y-2 mb-4">
+                {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => {
+                  const dep = getDepreciation(bench, '5yr');
+                  const b = BENCHMARKS[bench];
+                  return (
+                    <div key={bench} className="flex items-center justify-between">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        {b.flag} {b.label}
+                      </span>
+                      <span className={`text-sm font-black ${Math.abs(dep) >= 25 ? 'text-red-500' : 'text-orange-500'}`}>
+                        {dep.toFixed(0)}% (5yr)
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Counterfactual calculator */}
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+                <div className="text-center mb-3">
+                  <label className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold block">
+                    Your savings
+                  </label>
+                  <div className="flex items-center justify-center gap-1 mb-2">
+                    <span className="text-lg text-emerald-600 dark:text-emerald-400 font-bold">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10000000"
+                      value={savingsAmount}
+                      onChange={(e) => setSavingsAmount(Math.max(0, Number(e.target.value) || 0))}
+                      className="w-28 text-center text-xl font-black text-emerald-900 dark:text-emerald-100 bg-transparent border-b-2 border-emerald-300 dark:border-emerald-700 focus:border-emerald-500 outline-none transition-colors"
+                    />
+                  </div>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <label className="text-xs text-gray-500 dark:text-gray-400">If {shieldPercentage}% had been protected</label>
+                    <input
+                      type="range"
+                      min="5"
+                      max="50"
+                      step="5"
+                      value={shieldPercentage}
+                      onChange={(e) => setShieldPercentage(Number(e.target.value))}
+                      className="w-20 accent-emerald-500"
+                    />
+                  </div>
+                </div>
+                <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/40">
+                  <p className="text-xs text-red-600 dark:text-red-400 font-bold mb-1">
+                    You would have preserved
+                  </p>
+                  <p className="text-2xl font-black text-red-600 dark:text-red-400">
+                    ${(totalPreserved / 3).toFixed(0)}
+                  </p>
+                  <p className="text-[10px] text-red-400 dark:text-red-500 mt-1">
+                    over 5 years — that&apos;s ~${((totalPreserved / 3) / (365 * 5)).toFixed(1)}/day gone. Every day you wait.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="text-3xl font-black text-emerald-900 dark:text-emerald-100">
-              Save ${yearlyLoss}/year
+
+            {/* Philosophy-aware framing */}
+            {strategyConfig && financialStrategy ? (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 border border-blue-100 dark:border-blue-900/40">
+                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-1">
+                  Your chosen philosophy: {financialStrategy.replace(/_/g, ' ')}
+                </p>
+                <p className="text-[11px] text-blue-500 dark:text-blue-300">
+                  Target allocation: {strategyConfig.targetAllocations.map(a => `${a.region} ${a.ideal}%`).join(', ')}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 mb-4 border border-emerald-100 dark:border-emerald-900/40">
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">
+                  Different communities respond differently
+                </p>
+                <p className="text-[11px] text-emerald-500 dark:text-emerald-300">
+                  Choose a protection philosophy that matches your values — from Africapitalism to Islamic Finance.
+                </p>
+              </div>
+            )}
+          </>
+        ) : (
+          /* Fallback: inflation-only calculator (for benchmark currencies) */
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 border-2 border-emerald-100 dark:border-emerald-900">
+            <div className="text-center mb-3">
+              <label className="text-xs text-emerald-600 dark:text-emerald-400 mb-1 font-bold block">
+                If you protect
+              </label>
+              <div className="flex items-center justify-center gap-1 mb-2">
+                <span className="text-lg text-emerald-600 dark:text-emerald-400 font-bold">$</span>
+                <input
+                  id="savings-input"
+                  type="number"
+                  min="0"
+                  max="10000000"
+                  value={savingsAmount}
+                  onChange={(e) => setSavingsAmount(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-28 text-center text-2xl font-black text-emerald-900 dark:text-emerald-100 bg-transparent border-b-2 border-emerald-300 dark:border-emerald-700 focus:border-emerald-500 outline-none transition-colors"
+                />
+              </div>
+              <div className="text-3xl font-black text-emerald-900 dark:text-emerald-100">
+                Save ${(savingsAmount * regionalInflation / 100).toFixed(0)}/year
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
+                <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">
+                  Per month
+                </div>
+                <div className="text-xl font-black text-emerald-900 dark:text-emerald-100">
+                  ${((savingsAmount * regionalInflation / 100) / 12).toFixed(2)}
+                </div>
+                <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                  lost to inflation
+                </div>
+              </div>
+              <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-lg border border-teal-100 dark:border-teal-800">
+                <div className="text-xs text-teal-600 dark:text-teal-400 font-bold mb-1">
+                  Per year
+                </div>
+                <div className="text-xl font-black text-teal-900 dark:text-teal-100">
+                  ${(savingsAmount * regionalInflation / 100).toFixed(0)}
+                </div>
+                <div className="text-xs text-teal-600 dark:text-teal-400">
+                  protected value
+                </div>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-100 dark:border-emerald-800">
-              <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">
-                Per month
-              </div>
-              <div className="text-xl font-black text-emerald-900 dark:text-emerald-100">
-                ${monthlyLoss}
-              </div>
-              <div className="text-xs text-emerald-600 dark:text-emerald-400">
-                lost to inflation
-              </div>
-            </div>
-            <div className="bg-teal-50 dark:bg-teal-900/20 p-3 rounded-lg border border-teal-100 dark:border-teal-800">
-              <div className="text-xs text-teal-600 dark:text-teal-400 font-bold mb-1">
-                Per year
-              </div>
-              <div className="text-xl font-black text-teal-900 dark:text-teal-100">
-                ${yearlyLoss}
-              </div>
-              <div className="text-xs text-teal-600 dark:text-teal-400">
-                protected value
-              </div>
-            </div>
-          </div>
-        </div>
+        )}
 
         <div className="space-y-2">
           <WalletButton variant="primary" className="w-full" />
           <p className="text-center text-xs text-emerald-700 dark:text-emerald-300">
-            Connect a wallet to personalize your protection, or try demo mode first.
+            Connect a wallet to choose your protection philosophy, or try demo mode first.
           </p>
         </div>
       </div>

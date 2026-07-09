@@ -87,6 +87,7 @@ export interface HomeSections {
   showMarketIntel: boolean;
   showSmartTips: boolean;
   showInsightAccordion: boolean;
+  showProtectionScorecard: boolean;
 
   /** The "next best move" tip for the hero. */
   primaryTip: string | null;
@@ -220,6 +221,9 @@ export function useHomeSections({
     const showSmartTips = hasHoldings && !isBeginner;
     // Insights accordion is just the deep sections wrapped together.
     const showInsightAccordion = sections.length > 0;
+    // Protection Scorecard: show when the user has holdings (needs portfolio data
+    // to be meaningful). Renders the philosophy-aware protection summary.
+    const showProtectionScorecard = hasHoldings;
 
     // ── 5. Primary tip (next best move) ──────────────────────────────────
     // Mirrors the legacy buildTips() but is just a single line for the hero.
@@ -272,6 +276,7 @@ export function useHomeSections({
       showMarketIntel,
       showSmartTips,
       showInsightAccordion,
+      showProtectionScorecard,
 
       primaryTip,
       primarySectionId: "protection-mix",

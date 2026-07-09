@@ -55,11 +55,11 @@ export default function DiversiFiPage() {
   return (
     <div className="min-h-screen bg-transparent p-2 sm:p-4 transition-colors relative">
       <Head>
-        <title>DiversiFi - Protect Your Savings</title>
-        <meta name="description" content="Diversify your stablecoin savings across regions to protect against currency debasement" />
+        <title>DiversiFi - Shield Your Savings</title>
+        <meta name="description" content="Understand your currency risk and choose a values-driven protection philosophy — from Africapitalism to Islamic Finance" />
 
-        <meta property="og:title" content="DiversiFi - Protect Your Savings" />
-        <meta property="og:description" content="Diversify your stablecoin savings across regions to protect against currency debasement" />
+        <meta property="og:title" content="DiversiFi - Shield Your Savings" />
+        <meta property="og:description" content="Understand your currency risk and choose a values-driven protection philosophy" />
         <meta property="og:image" content={ogImageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />

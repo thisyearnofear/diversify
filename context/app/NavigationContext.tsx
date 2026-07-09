@@ -15,7 +15,7 @@ const NavigationContext = createContext<NavigationContextValue | undefined>(unde
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<NavigationState>({
-    activeTab: 'overview' satisfies TabId,
+    activeTab: 'protect' satisfies TabId,
     visitedTabs: [],
     chainId: null,
     swapPrefill: null,
@@ -26,7 +26,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     const savedTab = localStorage.getItem('activeTab');
     setState((prev) => ({
       ...prev,
-      activeTab: savedTab && isTabId(savedTab) ? savedTab : ('overview' satisfies TabId),
+      activeTab: savedTab && isTabId(savedTab) ? savedTab : ('protect' satisfies TabId),
     }));
   }, []);
 
@@ -67,7 +67,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
     setState((prev) => ({
       ...prev,
-      activeTab: isTabId(candidate) ? candidate : 'overview',
+      activeTab: isTabId(candidate) ? candidate : 'protect',
     }));
   }, []);
 

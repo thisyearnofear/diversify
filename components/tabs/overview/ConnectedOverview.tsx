@@ -25,6 +25,10 @@ import { HomeSection } from "../../shared/HomeSection";
 import { HomeNav } from "../../shared/HomeNav";
 import { MoreOptions } from "../../shared/MoreOptions";
 import { useHomeSections } from "@/hooks/use-home-sections";
+import { useCurrencyRisk } from "@/hooks/use-currency-risk";
+import { useStrategy } from "@/context/app/StrategyContext";
+import { StrategyService } from "@diversifi/shared";
+import { ProtectionScorecard } from "./ProtectionScorecard";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -289,7 +293,7 @@ export function ConnectedOverview({
             {home.isBeginner && hasHoldings && (
               <p className="text-sm text-gray-500 mt-4 max-w-xs mx-auto leading-relaxed">
                 Your savings are currently{" "}
-                <strong>{diversificationScore}% protected</strong> from local inflation.
+                <strong>{diversificationScore}% protected</strong> from currency risk.
               </p>
             )}
 
@@ -302,7 +306,7 @@ export function ConnectedOverview({
                 }
                 className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
               >
-                {hasHoldings ? "Review My Protection" : "Set Up My Plan"}
+                {hasHoldings ? "Review Your Shield" : "Set Up Your Plan"}
               </button>
               {hasHoldings && (
                 <button
@@ -331,6 +335,18 @@ export function ConnectedOverview({
           <div className="absolute bottom-[-25%] left-[-10%] w-48 h-48 bg-indigo-500/8 rounded-full blur-3xl" />
         </Card>
       </section>
+
+      {/* ── 2.5. PROTECTION SCORECARD (philosophy-aware) ──────────────
+          Shows how the user's chosen philosophy is performing relative
+          to their currency risk. Only renders when the user has holdings
+          and a currency risk entry exists. */}
+      {home.showProtectionScorecard && hasHoldings && (
+        <ProtectionScorecard
+          portfolio={portfolio}
+          activePortfolio={activePortfolio}
+          setActiveTab={setActiveTab}
+        />
+      )}
 
       {/* ── 3. PROTECTION MIX (always-open in holdings; default-open is
           the first thing a user sees below the hero) ─────────────── */}

@@ -39,13 +39,26 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 ## Active Work
 Three grant tracks run in parallel, sharing one architecture: the **0G Bridge buildathon** (0G as evidence layer), the **Celo Prezenti grant** (Celo as savings + identity layer), and the **Arbitrum Open House London** (Arbitrum as yield + execution layer, July 10-12). The authoritative file-by-file, wave-by-wave plan lives in `docs/0g-bridge-plan.md`. The broader product quality plan is in `docs/roadmap.md`.
 
+**Product reframe (2026-07-09):**
+The product has been reframed from "AI intelligence marketplace" to "risk-aware, values-driven treasury management." The core insight: nobody wakes up wanting premium macro research; they wake up wanting to know their savings won't evaporate. The app now:
+- Detects the visitor's country/currency dynamically (IP geolocation) and shows their specific currency's depreciation against USD, EUR, and gold over 1/3/5 years
+- Presents the risk as neutral data — never prescribes "move to USD"
+- Connects the risk to the existing cultural archetype system (Africapitalism, Buen Vivir, Islamic Finance, etc.) via a new philosophy selection phase in onboarding
+- Shows a philosophy-aware Protection Scorecard on the overview tab
+- Leads with "Shield" as the primary tab (reordered from 5th position)
+
+Key new files:
+- `constants/currency-risk.ts`: Curated multi-benchmark depreciation dataset for 20 high-risk currencies
+- `hooks/use-currency-risk.ts`: Consolidated non-prescriptive currency risk hook
+- `components/tabs/overview/ProtectionScorecard.tsx`: Philosophy-aware protection summary card
+
 **Current progress (2026-07-03):**
 - RecommendationLedger deployed to **Arbitrum mainnet**, **Celo mainnet**, and **0G mainnet** (all at `0x3BCf…369C`) — first recs seeded on all three chains
 - Chain-aware routing implemented in `recommendation-ledger.service.ts` (`getLedgerChainForAction`)
 - External agent example + integration guide written (`examples/external-agent/`, `docs/integration-guide.md`)
 - LICENSE file added at repo root (MIT)
 - Self Protocol mainnet registration complete (real passport, Celo mainnet, agent `0xE8cDb7CA…f170`)
-- All 459 tests pass (21 ledger tests including 8 new chain-aware routing tests)
+- All 525 tests pass
 - Guardian heartbeat cron runs every 2 hours on Hetzner — records advisory recommendations on Celo/Arbitrum primary + 0G mainnet evidence mirror
 - Guardian loop cron runs every 5 min — auto-executes within user permission bounds, mirrors to 0G
 - **Remaining:** 0G explorer source verification (custom API), demo video, X post with mainnet proof
