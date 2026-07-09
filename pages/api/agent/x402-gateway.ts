@@ -23,9 +23,16 @@ import {
     type BrightDataCommodity,
     x402Analytics
 } from '@diversifi/shared';
-import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey } from '@diversifi/shared';
+import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey, constantTimeEqual } from '@diversifi/shared';
 import { indexRecommendation } from '../../../lib/audit-index';
 import { getClientStore, type ClientState } from '../../../lib/client-store';
+import connectDB from '../../../lib/mongodb';
+import { ProcessedPaymentProof } from '../../../models/ProcessedPaymentProof';
+import { mongoSettlementCapStore } from '../../../lib/settlement-cap-store';
+import { setSettlementCapStore } from '@diversifi/shared';
+
+// Inject the MongoDB-backed daily settlement cap store at module load.
+setSettlementCapStore(mongoSettlementCapStore);
 
 /**
  * Arc Data Hub - Production Gateway (v2)
@@ -45,9 +52,48 @@ const RATE_LIMIT_MAX_REQUESTS = 20; // Increased limit for batched users
 const BATCH_TOPUP_AMOUNT = '1.00'; // Optional larger top-up users can choose
 const CHALLENGE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_PAYMENT_AMOUNT_USDC = 0.001;
-const processedPaymentProofs = new Set<string>();
 const USDC_DECIMALS = 6;
 const CREDIT_EPSILON_MICRO_USDC = 1;
+const FREE_TIER_DAILY_CAP = parseInt(process.env.FREE_TIER_DAILY_CAP || '100', 10);
+
+// Durable replay protection for payment proofs (tx hashes and Circle Gateway IDs).
+// The old in-memory Set has been replaced by a MongoDB collection with a unique
+// index on (txHash, network, env).
+async function isProofProcessed(txHash: string): Promise<boolean> {
+    try {
+        await connectDB();
+        const existing = await ProcessedPaymentProof.findOne({
+            txHash,
+            network: DEFAULT_SETTLEMENT_NETWORK,
+            env: SETTLEMENT_ENV,
+        }).lean();
+        return !!existing;
+    } catch (err) {
+        console.error('[Data Hub] Failed to check processed payment proof:', err);
+        // Fail closed: if we cannot verify uniqueness, refuse the proof.
+        return true;
+    }
+}
+
+async function markProofProcessed(txHash: string, amountUSDC: number): Promise<void> {
+    try {
+        await connectDB();
+        await ProcessedPaymentProof.create({
+            txHash,
+            network: DEFAULT_SETTLEMENT_NETWORK,
+            env: SETTLEMENT_ENV,
+            amountUSDC,
+        });
+    } catch (err: any) {
+        // Duplicate key means another concurrent request won the race — re-throw
+        // so the caller treats this proof as already processed.
+        if (err?.code === 11000) {
+            throw new Error('Transaction already processed');
+        }
+        console.error('[Data Hub] Failed to record processed payment proof:', err);
+        throw new Error('Payment proof record failed');
+    }
+}
 
 // --- Types ---
 interface UserState {
@@ -57,6 +103,8 @@ interface UserState {
     windowStart: number;
     nonces: Record<string, number>; // Nonce -> Expiry
     usageHistory: Record<string, { count: number; lastReset: number }>;
+    /** Global free-tier request counter (per-client-key, per-day). */
+    freeUsageToday?: { count: number; lastReset: number };
     /** Set when this client authenticated with an enterprise API key. */
     enterprise?: boolean;
     /** Per-key request limit override (enterprise keys). */
@@ -128,6 +176,33 @@ class UserManager {
         const today = new Date().setHours(0, 0, 0, 0);
         const sourceKey = `${source}_${today}`;
         return user.usageHistory[sourceKey]?.count || 0;
+    }
+
+    /**
+     * Global free-tier budget across all sources for a single client key (IP or
+     * enterprise tenant) per UTC day. Used to prevent abuse of the freemium path.
+     * Returns true while the daily free budget remains.
+     */
+    static checkFreeTierBudget(user: UserState): { allowed: boolean; remaining: number } {
+        if (FREE_TIER_DAILY_CAP <= 0) {
+            return { allowed: true, remaining: Infinity };
+        }
+        const today = new Date().setHours(0, 0, 0, 0);
+        if (!user.freeUsageToday || user.freeUsageToday.lastReset < today) {
+            user.freeUsageToday = { count: 0, lastReset: today };
+        }
+        const remaining = Math.max(0, FREE_TIER_DAILY_CAP - user.freeUsageToday.count);
+        return { allowed: remaining > 0, remaining };
+    }
+
+    static consumeFreeTierBudget(user: UserState): void {
+        if (FREE_TIER_DAILY_CAP <= 0) return;
+        const today = new Date().setHours(0, 0, 0, 0);
+        if (!user.freeUsageToday || user.freeUsageToday.lastReset < today) {
+            user.freeUsageToday = { count: 0, lastReset: today };
+        }
+        user.freeUsageToday.count++;
+        this.persist(user);
     }
 
     static addCredit(user: UserState, amountMicros: number) {
@@ -242,7 +317,10 @@ function resolveSourcePlan(user: UserState, requestedSource: string): SourcePlan
     }
 
     const currentUsage = UserManager.getUsage(user, source.id);
-    const isFreeEligible = source.freeLimit > 0 && currentUsage < source.freeLimit;
+    const sourceFreeEligible = source.freeLimit > 0 && currentUsage < source.freeLimit;
+    // Global per-client-key free-tier budget takes precedence over source-level limits.
+    const globalFreeBudget = UserManager.checkFreeTierBudget(user);
+    const isFreeEligible = sourceFreeEligible && globalFreeBudget.allowed;
     const cost = isFreeEligible ? 0 : parseFloat(source.price);
 
     return {
@@ -393,6 +471,7 @@ export default async function handler(
     for (const plan of sourcePlans) {
         if (plan.isFreeEligible) {
             console.log(`[Data Hub] Free access: ${plan.source.id} (${plan.currentUsage + 1}/${plan.freeLimit})`);
+            UserManager.consumeFreeTierBudget(user);
         } else {
             console.log(`[Data Hub] Paid access: ${plan.source.id} - Deducted $${plan.cost}`);
         }
@@ -624,7 +703,7 @@ function sendPaymentRequired(
 
 // --- Verification Logic ---
 async function verifyOnChainPayment(txHash: string): Promise<number> {
-    if (processedPaymentProofs.has(txHash)) {
+    if (await isProofProcessed(txHash)) {
         throw new Error('Transaction already processed');
     }
 
@@ -662,8 +741,9 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
         throw new Error('Invalid payment recipient');
     }
 
-    // In production, move this set into Redis/DB for multi-instance replay protection.
-    processedPaymentProofs.add(txHash);
+    // Persist replay-protected record atomically. A duplicate-key exception
+    // means another concurrent request verified the same hash first.
+    await markProofProcessed(txHash, amountUSDC);
 
     return amountUSDC;
 }
@@ -671,7 +751,7 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
 // Payment proofs must be real on-chain tx hashes or verified signed mandates.
 async function verifyCircleGatewayPayment(paymentProof: string): Promise<number> {
     try {
-        if (processedPaymentProofs.has(paymentProof)) {
+        if (await isProofProcessed(paymentProof)) {
             throw new Error('Payment proof already processed');
         }
 
@@ -686,8 +766,9 @@ async function verifyCircleGatewayPayment(paymentProof: string): Promise<number>
             }
 
             const parsedAmount = parseGatewayProofAmount(paymentProof);
-            processedPaymentProofs.add(paymentProof);
-            return parsedAmount ?? 0.01;
+            const amountUSDC = parsedAmount ?? 0.01;
+            await markProofProcessed(paymentProof, amountUSDC);
+            return amountUSDC;
         }
 
         throw new Error('Unsupported payment proof format');

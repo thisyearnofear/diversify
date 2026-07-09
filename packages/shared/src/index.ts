@@ -1,4 +1,4 @@
-import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, getSettlementConfig, SETTLEMENT_ENV, DEFAULT_SETTLEMENT_NETWORK, type SettlementNetwork, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer, type SettlementConfig, type SettlementEnv } from './services/settlement-service';
+import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, getSettlementConfig, SETTLEMENT_ENV, DEFAULT_SETTLEMENT_NETWORK, setSettlementCapStore, type SettlementNetwork, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer, type SettlementConfig, type SettlementEnv, type SettlementCapStore } from './services/settlement-service';
 import { circleService, CircleService } from './services/circle-service';
 import { AgentService } from './services/agent-service';
 import { ArcAgent } from './services/arc-agent';
@@ -36,6 +36,7 @@ export {
   getSettlementConfig,
   SETTLEMENT_ENV,
   DEFAULT_SETTLEMENT_NETWORK,
+  setSettlementCapStore,
   type SettlementNetwork,
   type SettlementResult,
   type SettlementSkipped,
@@ -43,6 +44,7 @@ export {
   type SettlementTransfer,
   type SettlementConfig,
   type SettlementEnv,
+  type SettlementCapStore,
   circleService,
   CircleService,
   AgentService,
@@ -206,6 +208,7 @@ export {
 export { marketMomentumService, type MarketMomentum } from './utils/market-momentum-service';
 export * from './utils/arc-research-sources';
 export * from './utils/x402-analytics';
+export { constantTimeEqual, hashPaymentProof } from './utils/security';
 
 // Export Modules (Wallet, etc.)
 export * from './modules/wallet/core/chains';

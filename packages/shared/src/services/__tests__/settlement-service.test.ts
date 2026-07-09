@@ -158,22 +158,22 @@ describe('SettlementService — daily settlement cap', () => {
         vi.resetModules();
         const { checkDailyCap, recordDailySpend } = await import('../settlement-service');
 
-        expect(checkDailyCap(0.5, 'ARBITRUM').allowed).toBe(true);
-        recordDailySpend(0.5, 'ARBITRUM');
-        expect(checkDailyCap(0.4, 'ARBITRUM').allowed).toBe(true);
-        expect(checkDailyCap(0.6, 'ARBITRUM').allowed).toBe(false);
+        expect((await checkDailyCap(0.5, 'ARBITRUM')).allowed).toBe(true);
+        await recordDailySpend(0.5, 'ARBITRUM');
+        expect((await checkDailyCap(0.4, 'ARBITRUM')).allowed).toBe(true);
+        expect((await checkDailyCap(0.6, 'ARBITRUM')).allowed).toBe(false);
 
         // A different network has its own bucket
-        expect(checkDailyCap(0.9, 'ZERO_G').allowed).toBe(true);
-        recordDailySpend(0.9, 'ZERO_G');
-        expect(checkDailyCap(0.2, 'ZERO_G').allowed).toBe(false);
+        expect((await checkDailyCap(0.9, 'ZERO_G')).allowed).toBe(true);
+        await recordDailySpend(0.9, 'ZERO_G');
+        expect((await checkDailyCap(0.2, 'ZERO_G')).allowed).toBe(false);
     });
 
     it('disables the cap when SETTLEMENT_DAILY_CAP_USDC=0', async () => {
         process.env.SETTLEMENT_DAILY_CAP_USDC = '0';
         vi.resetModules();
         const { checkDailyCap, recordDailySpend } = await import('../settlement-service');
-        recordDailySpend(999, 'ARBITRUM');
-        expect(checkDailyCap(1, 'ARBITRUM').allowed).toBe(true);
+        await recordDailySpend(999, 'ARBITRUM');
+        expect((await checkDailyCap(1, 'ARBITRUM')).allowed).toBe(true);
     });
 });

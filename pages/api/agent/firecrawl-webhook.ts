@@ -20,7 +20,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateChatCompletion, cogneeMemoryService, recommendationLedgerService } from '@diversifi/shared';
+import { generateChatCompletion, cogneeMemoryService, recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
 import { updateGuardianState } from '../vault/_guardian-state';
 import { guardianEventBus } from './_guardian-event-bus';
 import { Permission } from '../../../models/Permission';
@@ -66,7 +66,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Verify webhook authenticity (if secret is configured)
   if (FIRECRAWL_WEBHOOK_SECRET) {
     const providedSecret = req.headers['x-firecrawl-secret'] || req.query.secret;
-    if (providedSecret !== FIRECRAWL_WEBHOOK_SECRET) {
+    const normalizedSecret = Array.isArray(providedSecret) ? providedSecret[0] : providedSecret;
+    if (typeof normalizedSecret !== 'string' || !constantTimeEqual(normalizedSecret, FIRECRAWL_WEBHOOK_SECRET)) {
       return res.status(401).json({ error: 'Invalid webhook secret' });
     }
   }

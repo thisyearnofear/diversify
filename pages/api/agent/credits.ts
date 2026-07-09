@@ -90,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       try {
         const url = new URL(proof);
         const validDomains = ['medium.com', 'substack.com', 'mirror.xyz', 'youtube.com', 'youtu.be', 'twitter.com', 'x.com', 'linkedin.com'];
-        const isValid = validDomains.some(d => url.hostname.endsWith(d));
+        const isValid = validDomains.some(d => url.hostname === d || url.hostname.endsWith('.' + d));
         if (!isValid) {
           return res.status(400).json({ error: 'Proof URL must be from a recognised platform (Medium, YouTube, Twitter/X, LinkedIn, Mirror, Substack)' });
         }

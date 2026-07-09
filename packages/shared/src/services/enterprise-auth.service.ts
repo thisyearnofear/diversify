@@ -12,6 +12,8 @@
  * off-chain audit index can scope a tenant's verifiable decisions.
  */
 
+import { constantTimeEqual } from '../utils/security';
+
 export interface EnterpriseKey {
     /** The secret presented in the `x-api-key` header. */
     key: string;
@@ -43,12 +45,12 @@ function loadKeys(): EnterpriseKey[] {
  * Validate an API key presented in the `x-api-key` header.
  * Returns the resolved tenant config, or null if missing/invalid.
  *
- * Note: this is a constant-equality compare (prototype-grade). For production,
- * store only key hashes and use a timing-safe compare.
+ * Uses a timing-safe comparison. For production, store only key hashes and
+ * compare against hashed inputs.
  */
 export function validateApiKey(rawKey?: string): EnterpriseKey | null {
     if (!rawKey) return null;
     const keys = loadKeys();
-    const match = keys.find((k) => k.key && k.key === rawKey);
+    const match = keys.find((k) => k.key && constantTimeEqual(k.key, rawKey));
     return match ?? null;
 }

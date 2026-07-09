@@ -21,7 +21,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { recommendationLedgerService } from '@diversifi/shared';
+import { recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -137,7 +137,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
   const authHeader = req.headers['x-guardian-secret'] || req.body?.secret;
-  if (authHeader !== GUARDIAN_LOOP_SECRET) {
+  if (typeof authHeader !== 'string' || !constantTimeEqual(authHeader, GUARDIAN_LOOP_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

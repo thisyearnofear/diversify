@@ -22,6 +22,8 @@ export interface ClientState {
     windowStart: number;
     nonces: Record<string, number>;
     usageHistory: Record<string, { count: number; lastReset: number }>;
+    /** Global free-tier request counter (per-client-key, per-day). */
+    freeUsageToday?: { count: number; lastReset: number };
     enterprise?: boolean;
     rateLimitMax?: number;
     clientKey?: string;

@@ -25,6 +25,7 @@ vi.mock('@diversifi/shared', () => ({
     }),
   },
   CELO_TOKEN_ADDRESS_BY_SYMBOL: {},
+  constantTimeEqual: (a: string, b: string) => a === b,
 }));
 
 vi.mock('../../../../lib/mongodb', () => ({

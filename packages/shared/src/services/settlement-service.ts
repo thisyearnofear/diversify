@@ -65,34 +65,73 @@ export const SETTLEMENT_DAILY_CAP_USDC = parseFloat(
     process.env.SETTLEMENT_DAILY_CAP_USDC || '50.0',
 );
 
-const _dailySettlementTotals: Record<string, { date: string; spent: number }> = {};
+/** Pluggable store for the daily settlement cap. Implementations should be
+ * atomic: if the cap would be exceeded, the spend must NOT be recorded. */
+export interface SettlementCapStore {
+    recordSpendAtomic(
+        date: string,
+        network: string,
+        amountUSDC: number,
+        capUSDC: number,
+    ): Promise<{ allowed: boolean; newTotal: number }>;
+    getSpendTotal(date: string, network: string): Promise<number>;
+}
+
+// Default in-memory store. Production deployments should inject a MongoDB-backed
+// store via setSettlementCapStore() so the cap survives restarts and scales
+// across instances.
+const _memoryTotals: Record<string, { date: string; spent: number }> = {};
+
+const defaultCapStore: SettlementCapStore = {
+    async recordSpendAtomic(date, network, amountUSDC, capUSDC) {
+        const key = `${date}:${network}`;
+        const bucket = _memoryTotals[key];
+        if (!bucket || bucket.date !== date) {
+            _memoryTotals[key] = { date, spent: 0 };
+        }
+        if (_memoryTotals[key].spent + amountUSDC > capUSDC + 1e-9) {
+            return { allowed: false, newTotal: _memoryTotals[key].spent };
+        }
+        _memoryTotals[key].spent += amountUSDC;
+        return { allowed: true, newTotal: _memoryTotals[key].spent };
+    },
+    async getSpendTotal(date, network) {
+        const key = `${date}:${network}`;
+        const bucket = _memoryTotals[key];
+        return bucket && bucket.date === date ? bucket.spent : 0;
+    },
+};
+
+let _settlementCapStore: SettlementCapStore | null = null;
+
+export function setSettlementCapStore(store: SettlementCapStore): void {
+    _settlementCapStore = store;
+}
+
+function getCapStore(): SettlementCapStore {
+    return _settlementCapStore ?? defaultCapStore;
+}
 
 function getCurrentDateKey(): string {
     return new Date().toISOString().slice(0, 10);
 }
 
-export function checkDailyCap(amountUSDC: number, network: SettlementNetwork): { allowed: boolean; remaining: number } {
+export async function checkDailyCap(amountUSDC: number, network: SettlementNetwork): Promise<{ allowed: boolean; remaining: number }> {
     if (SETTLEMENT_DAILY_CAP_USDC <= 0) {
         return { allowed: true, remaining: Infinity };
     }
     const today = getCurrentDateKey();
-    const bucket = _dailySettlementTotals[network];
-    if (!bucket || bucket.date !== today) {
-        _dailySettlementTotals[network] = { date: today, spent: 0 };
-    }
-    const current = _dailySettlementTotals[network].spent;
+    const current = await getCapStore().getSpendTotal(today, network);
     const remaining = Math.max(0, SETTLEMENT_DAILY_CAP_USDC - current);
     return { allowed: current + amountUSDC <= SETTLEMENT_DAILY_CAP_USDC + 1e-9, remaining };
 }
 
-export function recordDailySpend(amountUSDC: number, network: SettlementNetwork): void {
-    if (SETTLEMENT_DAILY_CAP_USDC <= 0) return;
-    const today = getCurrentDateKey();
-    const bucket = _dailySettlementTotals[network];
-    if (!bucket || bucket.date !== today) {
-        _dailySettlementTotals[network] = { date: today, spent: 0 };
+export async function recordDailySpend(amountUSDC: number, network: SettlementNetwork): Promise<{ allowed: boolean; newTotal: number }> {
+    if (SETTLEMENT_DAILY_CAP_USDC <= 0) {
+        return { allowed: true, newTotal: 0 };
     }
-    _dailySettlementTotals[network].spent += amountUSDC;
+    const today = getCurrentDateKey();
+    return getCapStore().recordSpendAtomic(today, network, amountUSDC, SETTLEMENT_DAILY_CAP_USDC);
 }
 
 /**
@@ -550,8 +589,8 @@ export async function settleOnChain(
     // Minimum settlement: 0.001 USDC (1000 micro-USDC)
     const micro = Math.max(0.001, Math.min(amountUSDC, 0.01));
 
-    // Global daily safety cap on the agent wallet
-    const capCheck = checkDailyCap(micro, network);
+    // Global daily safety cap on the agent wallet (MongoDB-backed atomic check)
+    const capCheck = await checkDailyCap(micro, network);
     if (!capCheck.allowed) {
         return {
             settled: false,
@@ -586,8 +625,8 @@ export async function settleOnChain(
 
         console.log(`[SettlementService] ✅ ${sourceId} → ${micro} USDC on ${network} → ${tx.hash}`);
 
-        // Record against the daily safety cap (optimistically, at broadcast time)
-        recordDailySpend(micro, network);
+        // Record against the daily safety cap atomically (optimistically, at broadcast time)
+        await recordDailySpend(micro, network);
 
         // Mine in background
         tx.wait(1).then(receipt => {

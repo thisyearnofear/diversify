@@ -25,7 +25,7 @@ import { vaultStore } from '../vault/_store';
 import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, updateGuardianState, type GuardianAnchorRecord } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
-import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared';
+import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual } from '@diversifi/shared';
 import { guardianEventBus } from './_guardian-event-bus';
 
 const GUARDIAN_LOOP_SECRET = (() => {
@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Verify cron secret (server-to-server auth)
   const authHeader = req.headers['x-guardian-secret'] || req.body?.secret;
-  if (authHeader !== GUARDIAN_LOOP_SECRET) {
+  if (typeof authHeader !== 'string' || !constantTimeEqual(authHeader, GUARDIAN_LOOP_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
