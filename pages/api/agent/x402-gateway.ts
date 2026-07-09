@@ -11,6 +11,8 @@ import {
     normalizeArcResearchSource,
     settleOnChain,
     DEFAULT_SETTLEMENT_NETWORK,
+    getSettlementConfig,
+    SETTLEMENT_ENV,
     generateChatCompletion,
     startBrightDataWarming,
     type ArcResearchCategory,
@@ -38,9 +40,6 @@ import { getClientStore, type ClientState } from '../../../lib/client-store';
 
 // --- Constants ---
 const DATA_HUB_WALLET = process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS;
-const ARC_RPC = process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network';
-const USDC_TESTNET = ARC_DATA_HUB_CONFIG.USDC_TESTNET;
-const USDC_MAINNET = '0xCa23545A2F2199b1307A0B2E15a0c1086da37798';
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 20; // Increased limit for batched users
 const BATCH_TOPUP_AMOUNT = '1.00'; // Optional larger top-up users can choose
@@ -437,8 +436,8 @@ export default async function handler(
             }),
     );
 
-    // --- Real Arc on-chain settlement (fire-and-forget, non-blocking) ---
-    // Fires a real USDC micro-tx on Arc for every paid request.
+    // --- Real on-chain settlement (fire-and-forget, non-blocking) ---
+    // Fires a real USDC micro-tx on the configured settlement rail for every paid request.
     // Settlement runs in background — gateway response is not delayed.
     // Enterprise API-key clients skip x402 settlement (billed via their tenant quota).
     const settlements: SettlementResult[] = [];
@@ -484,7 +483,13 @@ export default async function handler(
 
     const bundle = buildArcResearchBundle(payloads);
     const settlementMeta = settlements.length > 0
-        ? { txHashes: settlements.map(s => s.txHash), explorer: settlements.map(s => s.explorer), onChainSettled: true, settlementNetwork: DEFAULT_SETTLEMENT_NETWORK }
+        ? {
+            txHashes: settlements.map(s => s.txHash),
+            explorer: settlements.map(s => s.explorer),
+            onChainSettled: true,
+            settlementNetwork: DEFAULT_SETTLEMENT_NETWORK,
+            settlementEnv: SETTLEMENT_ENV,
+        }
         : { onChainSettled: false };
 
     if (bundleRequested) {
@@ -554,12 +559,14 @@ function sendResearchQuote(
     const expiresAt = Date.now() + CHALLENGE_TTL_MS;
     UserManager.issueNonce(user, nonce, expiresAt);
     const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
+    const settlementConfig = getSettlementConfig();
+    const paidSourceCount = sourcePlans.filter(plan => plan.cost > 0).length;
 
     return res.status(200).json({
         status: totalCost > 0 ? 'quoted' : 'free',
         amount: totalCost > 0 ? paymentAmount.toFixed(3) : '0.000',
         currency: 'USDC',
-        chainId: 5042002,
+        chainId: settlementConfig.chainId,
         recipient: DATA_HUB_WALLET,
         nonce,
         expires: expiresAt,
@@ -567,9 +574,11 @@ function sendResearchQuote(
         required_cost: totalCost,
         requested_sources: sourcePlans.map((plan) => plan.source.id),
         bundle_requested: bundleRequested,
+        settlement_network: DEFAULT_SETTLEMENT_NETWORK,
+        settlement_env: SETTLEMENT_ENV,
         reason: totalCost > 0
-            ? `Premium Arc research will use ${totalCost.toFixed(3)} USDC for ${sourcePlans.filter(plan => plan.cost > 0).length} paid source${sourcePlans.filter(plan => plan.cost > 0).length === 1 ? '' : 's'}.`
-            : 'This research is covered by the free tier. No Arc USDC will be spent.',
+            ? `Premium research will use ${totalCost.toFixed(3)} USDC on ${settlementConfig.name} for ${paidSourceCount} paid source${paidSourceCount === 1 ? '' : 's'}.`
+            : `This research is covered by the free tier. No USDC will be spent on ${settlementConfig.name}.`,
         sources: buildQuoteLineItems(sourcePlans),
     });
 }
@@ -585,16 +594,17 @@ function sendPaymentRequired(
     const expiresAt = Date.now() + CHALLENGE_TTL_MS;
     UserManager.issueNonce(user, nonce, expiresAt);
     const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
+    const settlementConfig = getSettlementConfig();
 
     return res.status(402).json({
         error: bundleRequested ? 'Research Bundle Required' : 'Premium Source Required',
         reason: bundleRequested
-            ? `Accessing ${sourcePlans.length} sources requires ${totalCost.toFixed(3)} USDC in research credits.`
-            : `Accessing "${sourcePlans[0].source.label}" requires premium micro-credits ($${totalCost.toFixed(3)} USDC)`,
+            ? `Accessing ${sourcePlans.length} sources requires ${totalCost.toFixed(3)} USDC in research credits on ${settlementConfig.name}.`
+            : `Accessing "${sourcePlans[0].source.label}" requires premium micro-credits ($${totalCost.toFixed(3)} USDC) on ${settlementConfig.name}`,
         recipient: DATA_HUB_WALLET,
         amount: paymentAmount.toFixed(3),
         currency: 'USDC',
-        chainId: 5042002,
+        chainId: settlementConfig.chainId,
         nonce,
         expires: expiresAt,
         suggested_topup_amount: BATCH_TOPUP_AMOUNT,
@@ -602,10 +612,12 @@ function sendPaymentRequired(
         required_cost: totalCost,
         requested_sources: sourcePlans.map((plan) => plan.source.id),
         bundle_requested: bundleRequested,
+        settlement_network: DEFAULT_SETTLEMENT_NETWORK,
+        settlement_env: SETTLEMENT_ENV,
         circle_gateway: {
             enabled: Boolean(process.env.CIRCLE_API_KEY),
             description: 'Opaque Circle Gateway proof IDs are not accepted in the judge-facing path unless server-side verification is explicitly configured.',
-            benefits: ['Use signed mandates when supported', 'Fall back to real Arc tx hashes', 'Keep payment proofs externally verifiable']
+            benefits: ['Use signed mandates when supported', 'Fall back to real on-chain tx hashes', 'Keep payment proofs externally verifiable']
         }
     });
 }
@@ -616,13 +628,18 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
         throw new Error('Transaction already processed');
     }
 
-    const provider = new ethers.providers.JsonRpcProvider(ARC_RPC);
+    const settlementConfig = getSettlementConfig();
+    const usdcAddress = settlementConfig.usdcAddress;
+    if (!usdcAddress) {
+        throw new Error(`Settlement USDC not configured for ${DEFAULT_SETTLEMENT_NETWORK} (${SETTLEMENT_ENV})`);
+    }
+
+    const provider = new ethers.providers.JsonRpcProvider(settlementConfig.rpcUrl);
     const tx = await provider.getTransaction(txHash);
 
     if (!tx) throw new Error('Transaction not found');
 
     const receipt = await tx.wait(1);
-    const usdcAddress = tx.to?.toLowerCase() === USDC_TESTNET.toLowerCase() ? USDC_TESTNET : USDC_MAINNET;
 
     if (tx.to?.toLowerCase() !== usdcAddress.toLowerCase()) {
         throw new Error('Payment must be to USDC contract');
@@ -651,7 +668,7 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
     return amountUSDC;
 }
 
-// Payment proofs must be real Arc tx hashes or verified signed mandates.
+// Payment proofs must be real on-chain tx hashes or verified signed mandates.
 async function verifyCircleGatewayPayment(paymentProof: string): Promise<number> {
     try {
         if (processedPaymentProofs.has(paymentProof)) {

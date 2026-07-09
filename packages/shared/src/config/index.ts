@@ -40,6 +40,14 @@ export const NETWORKS = {
         explorerUrl: 'https://chainscan-galileo.0g.ai',
         devOnly: true,
     },
+    ZERO_G_MAINNET: {
+        chainId: 16661,
+        name: '0G',
+        rpcUrl: process.env.NEXT_PUBLIC_ZERO_G_MAINNET_RPC || process.env.ZERO_G_MAINNET_RPC_URL || 'https://evmrpc.0g.ai',
+        explorerUrl: 'https://chainscan.0g.ai',
+        // Production evidence-anchor chain. RecommendationLedger lives here (0x3BCf…369C).
+        // Not devOnly — this is the mainnet 0G rail. See docs/0g-bridge-plan.md §0.
+    },
     ARBITRUM_ONE: {
         chainId: 42161,
         name: 'Arbitrum',

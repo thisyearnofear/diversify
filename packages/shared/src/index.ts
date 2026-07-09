@@ -1,4 +1,4 @@
-import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, settleOnArc, getArcSettlementStats, DEFAULT_SETTLEMENT_NETWORK, type SettlementNetwork, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer } from './services/settlement-service';
+import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats, getSettlementConfig, SETTLEMENT_ENV, settleOnArc, getArcSettlementStats, DEFAULT_SETTLEMENT_NETWORK, type SettlementNetwork, type SettlementResult, type SettlementSkipped, type SettlementStats, type SettlementTransfer, type SettlementConfig, type SettlementEnv } from './services/settlement-service';
 import { circleService, CircleService } from './services/circle-service';
 import { AgentService } from './services/agent-service';
 import { ArcAgent } from './services/arc-agent';
@@ -34,6 +34,8 @@ export {
   getAgentUSDCBalance,
   getAgentAddress,
   getSettlementStats,
+  getSettlementConfig,
+  SETTLEMENT_ENV,
   getArcSettlementStats,
   DEFAULT_SETTLEMENT_NETWORK,
   type SettlementNetwork,
@@ -41,6 +43,8 @@ export {
   type SettlementSkipped,
   type SettlementStats,
   type SettlementTransfer,
+  type SettlementConfig,
+  type SettlementEnv,
   circleService,
   CircleService,
   AgentService,

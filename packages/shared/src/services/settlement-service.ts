@@ -27,6 +27,7 @@ const transferInterface = new ethers.utils.Interface(TRANSFER_EVENT_ABI);
 const transferTopic = transferInterface.getEventTopic('Transfer');
 
 export type SettlementNetwork = 'ARC' | 'ZERO_G';
+export type SettlementEnv = 'testnet' | 'mainnet';
 
 export interface SettlementConfig {
     rpcUrl: string;
@@ -37,30 +38,89 @@ export interface SettlementConfig {
     name: string;
 }
 
-const NETWORK_CONFIGS: Record<SettlementNetwork, SettlementConfig> = {
-    ARC: {
-        rpcUrl: process.env.ARC_RPC_URL || NETWORKS.ARC_TESTNET.rpcUrl,
-        usdcAddress: ARC_TOKENS.USDC,
-        recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
-        explorerBase: NETWORKS.ARC_TESTNET.explorerUrl,
-        chainId: NETWORKS.ARC_TESTNET.chainId,
-        name: 'Arc Testnet',
-    },
-    ZERO_G: {
-        rpcUrl: process.env.ZERO_G_RPC_URL || NETWORKS.ZERO_G_TESTNET.rpcUrl,
-        usdcAddress: ZERO_G_DATA_HUB_CONFIG.USDC_TESTNET,
-        recipientAddress: ZERO_G_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
-        explorerBase: NETWORKS.ZERO_G_TESTNET.explorerUrl,
-        chainId: NETWORKS.ZERO_G_TESTNET.chainId,
-        name: '0G Galileo Testnet',
-    },
-};
+/**
+ * Settlement environment — testnet (default) or mainnet.
+ *
+ * Read from SETTLEMENT_ENV so the mainnet flip is a pure config change: the
+ * default is 'testnet' (behavior-preserving for every existing deployment),
+ * and setting SETTLEMENT_ENV=mainnet points x402 nanopayments at the mainnet
+ * rails below. Each mainnet rail also needs its USDC + RPC env vars set (see
+ * .env.example → "MAINNET FLIP"); if a mainnet USDC address is not yet
+ * configured, settlement skips gracefully (non-blocking) rather than erroring.
+ */
+export const SETTLEMENT_ENV: SettlementEnv =
+    process.env.SETTLEMENT_ENV === 'mainnet' ? 'mainnet' : 'testnet';
 
 /**
- * Default settlement network.
+ * Per-rail config for both environments. NETWORK_CONFIGS (the single source of
+ * truth) is resolved from this by SETTLEMENT_ENV. All chain-specific values
+ * (chainId, RPC, explorer) come from the shared NETWORKS registry — DRY.
+ */
+function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, SettlementConfig> {
+    const variants: Record<SettlementNetwork, Record<SettlementEnv, SettlementConfig>> = {
+        ARC: {
+            testnet: {
+                rpcUrl: process.env.ARC_RPC_URL || NETWORKS.ARC_TESTNET.rpcUrl,
+                usdcAddress: process.env.ARC_TESTNET_USDC || ARC_TOKENS.USDC,
+                recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.ARC_TESTNET.explorerUrl,
+                chainId: NETWORKS.ARC_TESTNET.chainId,
+                name: 'Arc Testnet',
+            },
+            mainnet: {
+                rpcUrl: process.env.ARC_MAINNET_RPC_URL || NETWORKS.ARC_MAINNET.rpcUrl,
+                // Arc USDC is a system predeploy (stable across Arc networks); override if it differs on mainnet.
+                usdcAddress: process.env.ARC_MAINNET_USDC || ARC_TOKENS.USDC,
+                recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.ARC_MAINNET.explorerUrl,
+                chainId: NETWORKS.ARC_MAINNET.chainId,
+                name: 'Arc',
+            },
+        },
+        ZERO_G: {
+            testnet: {
+                rpcUrl: process.env.ZERO_G_RPC_URL || NETWORKS.ZERO_G_TESTNET.rpcUrl,
+                usdcAddress: ZERO_G_DATA_HUB_CONFIG.USDC_TESTNET,
+                recipientAddress: process.env.ZERO_G_PAY_RECIPIENT || ZERO_G_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.ZERO_G_TESTNET.explorerUrl,
+                chainId: NETWORKS.ZERO_G_TESTNET.chainId,
+                name: '0G Galileo Testnet',
+            },
+            mainnet: {
+                rpcUrl: process.env.ZERO_G_MAINNET_RPC_URL || NETWORKS.ZERO_G_MAINNET.rpcUrl,
+                // No committed default: 0G mainnet USDC must be set before mainnet settlement runs.
+                usdcAddress: process.env.ZERO_G_MAINNET_USDC || '',
+                recipientAddress: process.env.ZERO_G_PAY_RECIPIENT || ZERO_G_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.ZERO_G_MAINNET.explorerUrl,
+                chainId: NETWORKS.ZERO_G_MAINNET.chainId,
+                name: '0G',
+            },
+        },
+    };
+    return { ARC: variants.ARC[env], ZERO_G: variants.ZERO_G[env] };
+}
+
+const NETWORK_CONFIGS: Record<SettlementNetwork, SettlementConfig> = buildNetworkConfigs(SETTLEMENT_ENV);
+
+/**
+ * Returns the active settlement config for a rail, defaulting to
+ * DEFAULT_SETTLEMENT_NETWORK. Callers (x402 gateway, metrics, etc.) use this so
+ * payment challenges, verification, and explorer links automatically follow the
+ * SETTLEMENT_NETWORK + SETTLEMENT_ENV switches without hardcoded chain IDs.
+ */
+export function getSettlementConfig(network: SettlementNetwork = DEFAULT_SETTLEMENT_NETWORK): SettlementConfig {
+    return NETWORK_CONFIGS[network];
+}
+
+/**
+ * Default settlement network (which rail: ARC or ZERO_G).
  * Reads from SETTLEMENT_NETWORK env var so deploy-time config controls the rail
  * without code changes. Defaults to ZERO_G (interim) while Arc mainnet is pending.
  * Flip to 'ARC' once ARC_MAINNET is live and funded.
+ *
+ * Testnet vs mainnet for the chosen rail is controlled separately by
+ * SETTLEMENT_ENV (see above) — so `SETTLEMENT_NETWORK=ZERO_G SETTLEMENT_ENV=mainnet`
+ * settles on 0G mainnet.
  */
 export const DEFAULT_SETTLEMENT_NETWORK: SettlementNetwork =
     (process.env.SETTLEMENT_NETWORK as SettlementNetwork) || 'ZERO_G';
@@ -110,10 +170,17 @@ function getContracts(network: SettlementNetwork): { provider: ethers.providers.
         return null;
     }
 
+    const { usdcAddress } = NETWORK_CONFIGS[network];
+    if (!usdcAddress) {
+        // Mainnet flip staged but USDC not yet configured — skip gracefully.
+        console.warn(`[SettlementService] No USDC address for ${network} (${SETTLEMENT_ENV}) — on-chain settlement disabled. Set the mainnet USDC env var to enable.`);
+        return null;
+    }
+
     if (!_usdcContracts[network]) {
         const provider = getProvider(network);
         const signer = new ethers.Wallet(key, provider);
-        const usdc = new ethers.Contract(NETWORK_CONFIGS[network].usdcAddress, ERC20_TRANSFER_ABI, signer);
+        const usdc = new ethers.Contract(usdcAddress, ERC20_TRANSFER_ABI, signer);
         _signers[network] = signer;
         _usdcContracts[network] = usdc;
     }

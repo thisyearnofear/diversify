@@ -4,7 +4,10 @@ import {
   x402Analytics,
   getAgentAddress,
   getAgentUSDCBalance,
-  getArcSettlementStats,
+  getSettlementStats,
+  DEFAULT_SETTLEMENT_NETWORK,
+  getSettlementConfig,
+  SETTLEMENT_ENV,
   getLedgerStats,
 } from '@diversifi/shared';
 
@@ -33,10 +36,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const maxPerActionPrice = sourcePricing.reduce((max, item) => Math.max(max, item.priceUSDC), 0);
 
   // Agent wallet info — lets judges verify the on-chain settlement address
+  const settlementConfig = getSettlementConfig();
   const agentAddress = getAgentAddress();
-  const agentBalance = agentAddress ? await getAgentUSDCBalance('ARC') : null;
+  const agentBalance = agentAddress ? await getAgentUSDCBalance(DEFAULT_SETTLEMENT_NETWORK) : null;
   const chainSettlement = agentAddress
-    ? await getArcSettlementStats({ agentAddress, maxRecentTransfers: 10 }).catch(() => null)
+    ? await getSettlementStats(DEFAULT_SETTLEMENT_NETWORK, { agentAddress, maxRecentTransfers: 10 }).catch(() => null)
     : null;
   const settlementAnalytics = chainSettlement as (typeof chainSettlement & {
     amountBreakdown?: Record<string, number>;
@@ -69,14 +73,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     : chainSettlement
       ? [
           `Chain-verified settlements observed: ${chainSettlement.transferCount}`,
-          `Total Arc USDC settled: $${chainSettlement.totalSettledUSDC}`,
-          derivedTopSources[0] ? `Most observed paid route: ${derivedTopSources[0][0]} (${derivedTopSources[0][1]} requests)` : 'Observability derived from Arc transfer history',
+          `Total ${settlementConfig.name} USDC settled: $${chainSettlement.totalSettledUSDC}`,
+          derivedTopSources[0] ? `Most observed paid route: ${derivedTopSources[0][0]} (${derivedTopSources[0][1]} requests)` : `Observability derived from ${settlementConfig.name} transfer history`,
         ].filter(Boolean)
       : [];
   const derivedRecommendations = report.recommendations.length > 0
     ? report.recommendations
     : shouldUseChainDerivedAnalytics
-      ? ['Durable app-level analytics are now inferred from Arc settlement history while persistent telemetry is finalized']
+      ? [`Durable app-level analytics are now inferred from ${settlementConfig.name} settlement history while persistent telemetry is finalized`]
       : [];
 
   // Fetch 0G Recommendation Ledger stats (non-blocking — graceful fallback)
@@ -86,6 +90,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch {
     // Ledger not deployed or unreachable
   }
+
+  const settlementPayload = {
+    network: DEFAULT_SETTLEMENT_NETWORK,
+    env: SETTLEMENT_ENV,
+    name: settlementConfig.name,
+    agentAddress,
+    agentUSDCBalance: agentBalance,
+    recipientAddress: chainSettlement?.recipientAddress ?? settlementConfig.recipientAddress,
+    tokenAddress: chainSettlement?.tokenAddress ?? settlementConfig.usdcAddress,
+    totalSettledUSDC: chainSettlement?.totalSettledUSDC ?? null,
+    settledTransferCount: chainSettlement?.transferCount ?? null,
+    recentTransfers: chainSettlement?.recentTransfers ?? [],
+    explorerBase: settlementConfig.explorerBase,
+    agentExplorer: agentAddress ? `${settlementConfig.explorerBase}/address/${agentAddress}` : null,
+    note: agentBalance === null
+      ? `Fund agent wallet to enable real on-chain settlement on ${settlementConfig.name}`
+      : chainSettlement
+        ? `Transaction counts are derived from ${settlementConfig.name} USDC Transfer logs for the agent wallet`
+        : `Agent wallet live — ${settlementConfig.name} settlement is enabled, but chain-derived proof is temporarily unavailable`,
+  };
 
   return res.status(200).json({
     generatedAt: new Date().toISOString(),
@@ -109,22 +133,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       allSourcesAtOrBelowOneCent: maxPerActionPrice <= 0.01,
       sourcePricing,
     },
-    arcSettlement: {
-      agentAddress,
-      agentUSDCBalance: agentBalance,
-      recipientAddress: chainSettlement?.recipientAddress ?? null,
-      tokenAddress: chainSettlement?.tokenAddress ?? null,
-      totalSettledUSDC: chainSettlement?.totalSettledUSDC ?? null,
-      settledTransferCount: chainSettlement?.transferCount ?? null,
-      recentTransfers: chainSettlement?.recentTransfers ?? [],
-      explorerBase: 'https://testnet.arcscan.app',
-      agentExplorer: agentAddress ? `https://testnet.arcscan.app/address/${agentAddress}` : null,
-      note: agentBalance === null
-        ? 'Fund agent wallet to enable real on-chain settlement per research request'
-        : chainSettlement
-          ? 'Transaction counts are derived from Arc USDC Transfer logs for the agent wallet'
-          : 'Agent wallet live — Arc settlement is enabled, but chain-derived proof is temporarily unavailable',
-    },
+    settlement: settlementPayload,
+    // Deprecated alias for backwards compatibility — consumers should migrate to `settlement`.
+    arcSettlement: settlementPayload,
     appAnalytics: {
       totalRecordedPayments: shouldUseChainDerivedAnalytics
         ? chainSettlement?.transferCount ?? 0
