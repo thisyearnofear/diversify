@@ -39,6 +39,11 @@ Enable the autonomous research-payment loop where the Guardian negotiates paid p
 4. Configure the rail's RPC + USDC address (`ARC_RPC_URL`, `ZERO_G_RPC_URL`, or their mainnet variants, plus the matching `*_USDC` env var)
 5. Fund the agent EOA with USDC on the active rail (see below)
 
+> **Mainnet blocker (2026-07-09):** Arc mainnet is not live yet, and 0G mainnet
+> does not have a verified USDC contract address published in the official docs.
+> Keep `SETTLEMENT_ENV=testnet` for now. The mainnet flip is a single config change
+> once a verified mainnet USDC contract is available.
+
 ### Verification
 
 ```bash

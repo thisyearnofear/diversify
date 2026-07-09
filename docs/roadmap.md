@@ -114,12 +114,17 @@ hardening (pre-mainnet):** ~~Redis/Mongo-backed rate-limit/credit store~~
 `CLIENT_STATE_STORE=mongo`, fire-and-forget persistence). ~~0G-anchoring the
 gateway's premium responses~~ **Done** — paid gateway intelligence is now
 anchored to 0G with CIDs surfaced in `_billing.evidenceCids` and the enterprise
-audit record. ~~mainnet ledger/env flip~~ **Done** — x402 settlement is now
-env-gated via `SETTLEMENT_NETWORK` (rail) + `SETTLEMENT_ENV` (testnet/mainnet);
-the 402 challenge, payment verification, and metrics explorer all follow the
-active rail dynamically. Flipping to mainnet is a config-only change: fund the
-agent, set the mainnet USDC address for the chosen rail, and set
-`SETTLEMENT_ENV=mainnet`.
+audit record. ~~mainnet ledger/env flip~~ **Staged / blocked** — the x402
+settlement code is fully env-gated via `SETTLEMENT_NETWORK` (rail) +
+`SETTLEMENT_ENV` (testnet/mainnet), and the 402 challenge, payment verification,
+and metrics explorer all follow the active rail dynamically. The moment a
+verified mainnet USDC contract is available, the flip is a config-only change.
+**Blocker:** Arc mainnet is not live yet, and 0G mainnet does not have a
+Circle-issued or officially documented USDC contract address on chainId 16661.
+Until one of those is resolved, x402 settlement remains on the default testnet
+rail. The chain-aware `RecommendationLedger` (Celo/Arbitrum/0G mainnet at
+`0x3BCf…369C`) and 0G evidence anchoring are already live and provide the
+mainnet proof surface for demos.
 
 ---
 

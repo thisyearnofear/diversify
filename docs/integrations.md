@@ -113,7 +113,9 @@ Set in `.env.local` or on the server (see `.env.example` → "MAINNET FLIP"):
 | `ZERO_G_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ZERO_G SETTLEMENT_ENV=mainnet` |
 | `ARC_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet` |
 
-To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's mainnet USDC address, and set `SETTLEMENT_ENV=mainnet`.
+To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet USDC address, and set `SETTLEMENT_ENV=mainnet`.
+
+> **Mainnet blocker (2026-07-09):** Arc mainnet is not live yet, and 0G mainnet does not have a Circle-issued or officially documented USDC contract address on chainId 16661. The code is ready, but the default `SETTLEMENT_ENV=testnet` should remain until a verified mainnet USDC contract is available for the chosen rail.
 
 ### Evidence Bundles
 
