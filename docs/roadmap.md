@@ -379,6 +379,18 @@ impossible to replicate with a generic stablecoin app.
 - No filtering of archetypes (show all, let user self-select)
 - No new tabs (reordered existing 5)
 
+### Post-launch fix: counterfactual math + benchmark currency risk (2026-07-09)
+
+Two fixes shipped after initial deploy:
+
+1. **Counterfactual math bug**: `calculatePreservedValue` was returning `unhedgedAmount * depreciationRate` (what the 80% still lost), but the UI said "you would have preserved $X." Fixed to `shieldAmount * depreciationRate` (what the shielded 20% avoided losing). The counterfactual now uses gold (XAU) as the universal hedge benchmark instead of summing across all three.
+
+2. **Benchmark currency risk**: The initial implementation treated USD/EUR/GBP as "safe" benchmarks with no risk, skipping the risk phase entirely for US/EU visitors. This was a Western-centric normative judgment that contradicts the app's ethos. Added benchmark currency entries (USD, EUR, GBP) to the dataset with their vsXAU depreciation (gold gained against all of them), inflation, and political risk events (US debt ceiling, UK mini-budget crisis, EU energy crisis). Every visitor now gets the "aha" risk moment, including US/EU judges and diaspora communities. Risk is contextual: for a Kenyan business it's KES depreciation; for a US investor it's gold outperformance and political instability; for an African diaspora member in New York it's both.
+
+### Why "risk is universal" is the right framing
+
+The assumption that "USD = safe, everything else = risky" is itself a normative judgment. A US investor worried about political instability, a Muslim in London seeking Sharia-compliant holdings, or a Kenyan-American whose family's savings are in KES — all of them have risk, and all of them can find a philosophy that matches their values. Gold (XAU) works as the universal benchmark because it has outperformed every currency, including USD. The philosophy system then provides the values-driven response: HALO for hard-asset hedgers, Africapitalism for diaspora wealth retention, Islamic Finance for Sharia compliance, TACO for political neutrality.
+
 ---
 
 ## Deferred (Correct but Wrong Timing)

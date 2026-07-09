@@ -52,7 +52,10 @@ Key new files:
 - `hooks/use-currency-risk.ts`: Consolidated non-prescriptive currency risk hook
 - `components/tabs/overview/ProtectionScorecard.tsx`: Philosophy-aware protection summary card
 
-**Current progress (2026-07-03):**
+**Design principle: risk is universal, not currency-specific.**
+"Stable" currencies (USD, EUR, GBP) are not risk-free. Gold has outperformed all of them, inflation erodes purchasing power universally, and political/concentration risk exists in every jurisdiction. The dataset includes benchmark currency entries with their vsXAU depreciation and political risk events so that US/EU visitors get the same "aha" risk moment as visitors from volatile-currency economies. A US investor worried about political instability, an African diaspora member in New York whose family's savings are in KES, or a Muslim in London seeking Sharia-compliant holdings — all of them have risk, and all of them can find a philosophy that matches their values. Risk is contextual; the response is values-driven.
+
+**Current progress (2026-07-09):**
 - RecommendationLedger deployed to **Arbitrum mainnet**, **Celo mainnet**, and **0G mainnet** (all at `0x3BCf…369C`) — first recs seeded on all three chains
 - Chain-aware routing implemented in `recommendation-ledger.service.ts` (`getLedgerChainForAction`)
 - External agent example + integration guide written (`examples/external-agent/`, `docs/integration-guide.md`)
