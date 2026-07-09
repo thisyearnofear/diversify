@@ -85,6 +85,13 @@ vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({ navigateToSwap: mockNavigateToSwap }),
 }));
 
+vi.mock("@/context/app/StrategyContext", () => ({
+  useStrategy: () => ({
+    financialStrategy: null,
+    setFinancialStrategy: vi.fn(),
+  }),
+}));
+
 vi.mock("@/context/app/DemoModeContext", () => ({
   useDemoMode: () => ({ demoMode: { isActive: false } }),
 }));

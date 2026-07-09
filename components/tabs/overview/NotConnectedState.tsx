@@ -8,11 +8,23 @@ import {
   type Horizon,
 } from "@/constants/currency-risk";
 import { StrategyService } from "@diversifi/shared";
+import { ARCHETYPES, type ArchetypeId } from "@/components/protection-cards/tokens";
 import RegionalIconography from "../../regional/RegionalIconography";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
 import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
+
+const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
+  africapitalism: 'africapitalism',
+  buen_vivir: 'buen_vivir',
+  pan_caribbean: 'pan_caribbean',
+  confucian: 'confucian',
+  gotong_royong: 'gotong_royong',
+  islamic: 'islamic_finance',
+  global: 'global_diversification',
+  custom: 'custom',
+};
 
 interface NotConnectedStateProps {
   userRegion: Region;
@@ -31,6 +43,8 @@ export function NotConnectedState({
     calculateCounterfactual,
   } = useCurrencyRisk();
   const { financialStrategy } = useStrategy();
+  const archetypeId = financialStrategy ? STRATEGY_TO_ARCHETYPE[financialStrategy] ?? null : null;
+  const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 
   const [savingsAmount, setSavingsAmount] = useState(10000);
   const [shieldPercentage, setShieldPercentage] = useState(20);
@@ -160,14 +174,42 @@ export function NotConnectedState({
             </div>
 
             {/* Philosophy-aware framing */}
-            {strategyConfig && financialStrategy ? (
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 border border-blue-100 dark:border-blue-900/40">
-                <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-1">
-                  Your chosen philosophy: {financialStrategy.replace(/_/g, ' ')}
+            {archetype ? (
+              <div
+                className="rounded-xl p-3 mb-4 border"
+                style={{
+                  borderColor: `${archetype.accent}40`,
+                  background: `${archetype.surface.start}15`,
+                }}
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black"
+                    style={{ background: archetype.accent }}
+                  >
+                    {archetype.name[0]}
+                  </div>
+                  <p className="text-xs font-bold" style={{ color: archetype.accent }}>
+                    Your philosophy: {archetype.name}
+                  </p>
+                </div>
+                <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                  {archetype.philosophy}
                 </p>
-                <p className="text-[11px] text-blue-500 dark:text-blue-300">
-                  Target allocation: {strategyConfig.targetAllocations.map(a => `${a.region} ${a.ideal}%`).join(', ')}
-                </p>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {archetype.allocation.map((asset, i) => (
+                    <span
+                      key={i}
+                      className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                      style={{
+                        background: `${archetype.accentSoft}20`,
+                        color: archetype.accent,
+                      }}
+                    >
+                      {asset}
+                    </span>
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 mb-4 border border-emerald-100 dark:border-emerald-900/40">

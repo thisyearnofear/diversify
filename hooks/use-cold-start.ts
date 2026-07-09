@@ -88,8 +88,8 @@ export function useColdStart(chainId: number | null): ColdStartContext {
 
         // Unknown chain or no chainId
         return {
-            headline: 'Ready to understand your currency risk?',
-            body: 'Connect to Celo or Arbitrum to get started. We\'ll show you how your local currency is performing and help you choose a protection philosophy.',
+            headline: 'Ready to activate your protection plan?',
+            body: 'Connect to Celo or Arbitrum to put your chosen philosophy into action. Your savings will be shielded across chains.',
             emoji: '🛡️',
             currentChainName: null,
             isOnSupportedChain: false,
