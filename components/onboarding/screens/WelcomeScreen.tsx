@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { NETWORKS } from '../../../config';
@@ -64,7 +64,7 @@ const staggerChild: Variants = {
 };
 
 interface WelcomeScreenProps extends OnboardingScreenProps {
-    onContinue: () => void;
+    onContinue?: () => void;
     chainId?: number;
     onComplete?: (region: string | null) => void;
 }
@@ -173,7 +173,7 @@ function ArchetypeCard({
   );
 }
 
-export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletConnected, chainId, onComplete }: WelcomeScreenProps) {
+export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chainId, onComplete }: WelcomeScreenProps) {
     const { switchNetwork, isConnected } = useWalletContext();
     const {
       riskData,
@@ -195,14 +195,20 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
 
-    const phase: Phase = useMemo(() => {
-      if (riskLoading && !countryCode) return 'detect';
-      if (riskData) {
-        if (selectedArchetype) return 'philosophy';
-        return 'risk';
+    // Local step state — the user controls phase transitions via button taps.
+    // Auto-advances from 'detect' to 'risk' once riskData loads.
+    const [step, setStep] = useState<Phase>('detect');
+
+    // Auto-advance from detect → risk when risk data becomes available
+    useEffect(() => {
+      if (riskData && step === 'detect') {
+        setStep('risk');
       }
-      return 'detect';
-    }, [riskLoading, countryCode, riskData, selectedArchetype]);
+    }, [riskData, step]);
+
+    // Phase is now driven by the user's step, not derived from data state.
+    // This ensures forward/back buttons actually change the screen.
+    const phase: Phase = step;
 
     const handleSwitchToTestnet = async () => {
         if (isSwitching) return;
@@ -366,7 +372,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                   {riskData && (
                     <motion.button
                       variants={staggerChild}
-                      onClick={onContinue}
+                      onClick={() => setStep('risk')}
                       className="w-full px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-black rounded-2xl shadow-lg active:scale-95 transition-all"
                       whileHover={{ y: -1 }}
                     >
@@ -542,7 +548,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
 
                   <motion.button
                     variants={staggerChild}
-                    onClick={onContinue}
+                    onClick={() => setStep('philosophy')}
                     className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl active:scale-95 transition-all shadow-lg"
                     whileHover={{ y: -1 }}
                   >
@@ -551,7 +557,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
 
                   <motion.button
                     variants={staggerChild}
-                    onClick={() => { setCountryOverride(null); onContinue(); }}
+                    onClick={() => { setCountryOverride(null); setStep('detect'); }}
                     className="w-full py-2 mt-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                   >
                     ← Pick a different country
@@ -618,7 +624,7 @@ export function WelcomeScreen({ onContinue, onSkip, onConnectWallet, isWalletCon
                     </button>
                     {!isBenchmarkCurrency && riskData && (
                       <button
-                        onClick={() => { setSelectedArchetype(null); onContinue(); }}
+                        onClick={() => { setSelectedArchetype(null); setStep('risk'); }}
                         className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
                       >
                         ← Back to risk data
