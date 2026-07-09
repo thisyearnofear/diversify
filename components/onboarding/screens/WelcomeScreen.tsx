@@ -82,15 +82,28 @@ const STRATEGY_ID: Record<ArchetypeId, FinancialStrategy> = {
 
 type Phase = 'detect' | 'risk' | 'philosophy';
 
+const PHILOSOPHY_CTA: Record<ArchetypeId, string> = {
+  africapitalism: 'Begin building African wealth',
+  buen_vivir: 'Start living in balance',
+  pan_caribbean: 'Weather every storm',
+  confucian: 'Begin with patience',
+  gotong_royong: 'Start rising together',
+  islamic_finance: 'Begin your Sharia-compliant journey',
+  global_diversification: 'Start diversifying globally',
+  custom: 'Build your own plan',
+};
+
 // ── Archetype card with 3D tilt ────────────────────────────────────────
 function ArchetypeCard({
   id,
   isActive,
+  isDimmed,
   onSelect,
   index,
 }: {
   id: ArchetypeId;
   isActive: boolean;
+  isDimmed: boolean;
   onSelect: (id: ArchetypeId) => void;
   index: number;
 }) {
@@ -103,9 +116,11 @@ function ArchetypeCard({
         onClick={() => onSelect(id)}
         onMouseMove={tilt.onMouseMove}
         onMouseLeave={tilt.onMouseLeave}
-        className={`w-full p-3 rounded-2xl border-2 text-left flex items-start gap-3 overflow-hidden ${
+        className={`w-full p-3 rounded-2xl border-2 text-left flex items-start gap-3 overflow-hidden transition-all duration-300 ${
           isActive
-            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-400'
+            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-400 scale-[1.02]'
+            : isDimmed
+            ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-40'
             : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-600 bg-white dark:bg-gray-800'
         }`}
         style={{
@@ -257,23 +272,34 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                 <div className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-purple-400 dark:bg-purple-600 rounded-full blur-[120px] mix-blend-multiply" />
             </div>
 
-            {/* Brand and Mascot */}
+            {/* Brand and Mascot — full mascot only on detect phase; compact brand mark on content phases */}
             <motion.div
                 className="mb-4 relative mt-6 md:mt-4"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', duration: 1 }}
             >
-                <div className="flex items-center justify-center gap-1.5 mb-3">
-                    <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
-                        <span className="text-white text-xs font-black">D</span>
+                {phase === 'detect' ? (
+                  <>
+                    <div className="flex items-center justify-center gap-1.5 mb-3">
+                        <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
+                            <span className="text-white text-xs font-black">D</span>
+                        </div>
+                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
                     </div>
-                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
-                </div>
-                <GuardianMascot
-                  size={100}
-                  mood={phase === 'philosophy' ? 'happy' : phase === 'risk' ? 'alert' : 'neutral'}
-                />
+                    <GuardianMascot
+                      size={100}
+                      mood={selectedArchetype ? 'happy' : 'neutral'}
+                    />
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center gap-1.5 mb-2">
+                      <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
+                          <span className="text-white text-sm font-black">D</span>
+                      </div>
+                      <span className="text-sm font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
+                  </div>
+                )}
             </motion.div>
 
             <AnimatePresence mode="wait">
@@ -582,45 +608,71 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     Different communities have different relationships with money. Pick what resonates with you.
                   </motion.p>
 
-                  {/* Archetype grid with staggered reveal + 3D tilt */}
+                  {/* Archetype grid — no nested scroll, flows naturally in modal */}
                   <motion.div
                     variants={{
                       animate: { transition: { staggerChildren: 0.05 } },
                     }}
-                    className="space-y-2 mb-5 max-h-[40vh] overflow-y-auto pr-1"
+                    className="space-y-2 mb-5"
                   >
                     {ARCHETYPE_ORDER.map((id, i) => (
                       <ArchetypeCard
                         key={id}
                         id={id}
                         isActive={selectedArchetype === id}
+                        isDimmed={selectedArchetype !== null && selectedArchetype !== id}
                         onSelect={handleArchetypeSelect}
                         index={i}
                       />
                     ))}
                   </motion.div>
 
-                  {/* Actions */}
+                  {/* Actions — archetype-aware when a philosophy is selected */}
                   <motion.div variants={staggerChild} className="space-y-2">
-                    {onConnectWallet && !isWalletConnected && (
+                    {selectedArchetype ? (
                       <motion.button
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
                         onClick={async () => {
-                          try { await onConnectWallet(); } catch { /* fall through */ }
+                          if (onConnectWallet && !isWalletConnected) {
+                            try { await onConnectWallet(); } catch { /* fall through */ }
+                          }
                           handleFinish(countryCode);
                         }}
-                        className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl active:scale-95 transition-all shadow-lg"
+                        className="w-full px-6 py-4 text-white font-black rounded-2xl active:scale-95 transition-all shadow-lg"
+                        style={{
+                          background: `linear-gradient(135deg, ${ARCHETYPES[selectedArchetype].accent}, ${ARCHETYPES[selectedArchetype].accentSoft})`,
+                        }}
                         whileHover={{ y: -1 }}
                       >
-                        {selectedArchetype
-                          ? `Start with ${ARCHETYPES[selectedArchetype].name} →`
-                          : 'Connect Wallet to Get Started'}
+                        <ShimmerText>{PHILOSOPHY_CTA[selectedArchetype]} →</ShimmerText>
                       </motion.button>
+                    ) : (
+                      <>
+                        {onConnectWallet && !isWalletConnected && (
+                          <motion.button
+                            onClick={async () => {
+                              try { await onConnectWallet(); } catch { /* fall through */ }
+                              handleFinish(countryCode);
+                            }}
+                            className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl active:scale-95 transition-all shadow-lg"
+                            whileHover={{ y: -1 }}
+                          >
+                            Connect Wallet to Get Started
+                          </motion.button>
+                        )}
+                      </>
                     )}
                     <button
                       onClick={() => handleFinish(countryCode)}
-                      className="w-full px-6 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold rounded-2xl active:scale-95 transition-all"
+                      className={`w-full px-6 py-3 font-bold rounded-2xl active:scale-95 transition-all ${
+                        selectedArchetype
+                          ? 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm'
+                          : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white'
+                      }`}
                     >
-                      Explore Demo First
+                      {selectedArchetype ? 'Explore demo first' : 'Explore Demo First'}
                     </button>
                     {!isBenchmarkCurrency && riskData && (
                       <button

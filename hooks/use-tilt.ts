@@ -29,6 +29,12 @@ const prefersReducedMotion = typeof window !== 'undefined'
   ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
   : false;
 
+const isTouchDevice = typeof window !== 'undefined'
+  ? window.matchMedia('(pointer: coarse)').matches
+  : false;
+
+const shouldDisableTilt = prefersReducedMotion || isTouchDevice;
+
 export function useTilt(maxTilt: number = 4): UseTiltReturn {
   const ref = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<TiltStyle>({
@@ -37,7 +43,7 @@ export function useTilt(maxTilt: number = 4): UseTiltReturn {
   });
 
   const onMouseMove = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    if (prefersReducedMotion || !ref.current) return;
+    if (shouldDisableTilt || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -53,7 +59,7 @@ export function useTilt(maxTilt: number = 4): UseTiltReturn {
   }, [maxTilt]);
 
   const onMouseLeave = useCallback(() => {
-    if (prefersReducedMotion) return;
+    if (shouldDisableTilt) return;
     setStyle({
       transform: 'perspective(800px) rotateX(0deg) rotateY(0deg) scale(1)',
       transition: 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
