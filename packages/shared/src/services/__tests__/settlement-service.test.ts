@@ -124,3 +124,56 @@ describe('SettlementService — ARBITRUM rail config', () => {
         expect(config.usdcAddress).toBe('0x1234567890123456789012345678901234567890');
     });
 });
+
+describe('SettlementService — daily settlement cap', () => {
+    const originalCap = process.env.SETTLEMENT_DAILY_CAP_USDC;
+    const originalEnv = process.env.SETTLEMENT_ENV;
+    const originalNetwork = process.env.SETTLEMENT_NETWORK;
+
+    afterEach(() => {
+        if (originalCap === undefined) delete process.env.SETTLEMENT_DAILY_CAP_USDC;
+        else process.env.SETTLEMENT_DAILY_CAP_USDC = originalCap;
+        if (originalEnv === undefined) delete process.env.SETTLEMENT_ENV;
+        else process.env.SETTLEMENT_ENV = originalEnv;
+        if (originalNetwork === undefined) delete process.env.SETTLEMENT_NETWORK;
+        else process.env.SETTLEMENT_NETWORK = originalNetwork;
+    });
+
+    it('defaults to 50 USDC when SETTLEMENT_DAILY_CAP_USDC is not set', async () => {
+        delete process.env.SETTLEMENT_DAILY_CAP_USDC;
+        vi.resetModules();
+        const { SETTLEMENT_DAILY_CAP_USDC } = await import('../settlement-service');
+        expect(SETTLEMENT_DAILY_CAP_USDC).toBe(50.0);
+    });
+
+    it('allows custom cap via SETTLEMENT_DAILY_CAP_USDC', async () => {
+        process.env.SETTLEMENT_DAILY_CAP_USDC = '10.5';
+        vi.resetModules();
+        const { SETTLEMENT_DAILY_CAP_USDC } = await import('../settlement-service');
+        expect(SETTLEMENT_DAILY_CAP_USDC).toBe(10.5);
+    });
+
+    it('tracks spend per network and resets on a new day', async () => {
+        process.env.SETTLEMENT_DAILY_CAP_USDC = '1.0';
+        vi.resetModules();
+        const { checkDailyCap, recordDailySpend } = await import('../settlement-service');
+
+        expect(checkDailyCap(0.5, 'ARBITRUM').allowed).toBe(true);
+        recordDailySpend(0.5, 'ARBITRUM');
+        expect(checkDailyCap(0.4, 'ARBITRUM').allowed).toBe(true);
+        expect(checkDailyCap(0.6, 'ARBITRUM').allowed).toBe(false);
+
+        // A different network has its own bucket
+        expect(checkDailyCap(0.9, 'ZERO_G').allowed).toBe(true);
+        recordDailySpend(0.9, 'ZERO_G');
+        expect(checkDailyCap(0.2, 'ZERO_G').allowed).toBe(false);
+    });
+
+    it('disables the cap when SETTLEMENT_DAILY_CAP_USDC=0', async () => {
+        process.env.SETTLEMENT_DAILY_CAP_USDC = '0';
+        vi.resetModules();
+        const { checkDailyCap, recordDailySpend } = await import('../settlement-service');
+        recordDailySpend(999, 'ARBITRUM');
+        expect(checkDailyCap(1, 'ARBITRUM').allowed).toBe(true);
+    });
+});

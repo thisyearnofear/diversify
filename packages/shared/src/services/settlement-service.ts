@@ -52,6 +52,50 @@ export const SETTLEMENT_ENV: SettlementEnv =
     process.env.SETTLEMENT_ENV === 'mainnet' ? 'mainnet' : 'testnet';
 
 /**
+ * Global daily settlement cap in USDC. This is a safety valve on the agent
+ * wallet: no more than this amount of USDC can be spent by the settlement
+ * service across all rails in a UTC day. Defaults to 50 USDC; set
+ * SETTLEMENT_DAILY_CAP_USDC=0 to disable the cap.
+ *
+ * Note: the counter is currently in-memory. For multi-instance or
+ * restart-resilient production deployments, persist it to MongoDB/Redis.
+ * For the single-server buildathon demo this is acceptable.
+ */
+export const SETTLEMENT_DAILY_CAP_USDC = parseFloat(
+    process.env.SETTLEMENT_DAILY_CAP_USDC || '50.0',
+);
+
+const _dailySettlementTotals: Record<string, { date: string; spent: number }> = {};
+
+function getCurrentDateKey(): string {
+    return new Date().toISOString().slice(0, 10);
+}
+
+export function checkDailyCap(amountUSDC: number, network: SettlementNetwork): { allowed: boolean; remaining: number } {
+    if (SETTLEMENT_DAILY_CAP_USDC <= 0) {
+        return { allowed: true, remaining: Infinity };
+    }
+    const today = getCurrentDateKey();
+    const bucket = _dailySettlementTotals[network];
+    if (!bucket || bucket.date !== today) {
+        _dailySettlementTotals[network] = { date: today, spent: 0 };
+    }
+    const current = _dailySettlementTotals[network].spent;
+    const remaining = Math.max(0, SETTLEMENT_DAILY_CAP_USDC - current);
+    return { allowed: current + amountUSDC <= SETTLEMENT_DAILY_CAP_USDC + 1e-9, remaining };
+}
+
+export function recordDailySpend(amountUSDC: number, network: SettlementNetwork): void {
+    if (SETTLEMENT_DAILY_CAP_USDC <= 0) return;
+    const today = getCurrentDateKey();
+    const bucket = _dailySettlementTotals[network];
+    if (!bucket || bucket.date !== today) {
+        _dailySettlementTotals[network] = { date: today, spent: 0 };
+    }
+    _dailySettlementTotals[network].spent += amountUSDC;
+}
+
+/**
  * Per-rail config for both environments. NETWORK_CONFIGS (the single source of
  * truth) is resolved from this by SETTLEMENT_ENV. All chain-specific values
  * (chainId, RPC, explorer) come from the shared NETWORKS registry — DRY.
@@ -505,6 +549,16 @@ export async function settleOnChain(
 
     // Minimum settlement: 0.001 USDC (1000 micro-USDC)
     const micro = Math.max(0.001, Math.min(amountUSDC, 0.01));
+
+    // Global daily safety cap on the agent wallet
+    const capCheck = checkDailyCap(micro, network);
+    if (!capCheck.allowed) {
+        return {
+            settled: false,
+            reason: `Daily settlement cap reached on ${network} (cap ${SETTLEMENT_DAILY_CAP_USDC} USDC, remaining ${capCheck.remaining.toFixed(6)} USDC)`,
+        };
+    }
+
     const raw   = ethers.utils.parseUnits(micro.toFixed(6), 6);
 
     try {
@@ -531,6 +585,9 @@ export async function settleOnChain(
         };
 
         console.log(`[SettlementService] ✅ ${sourceId} → ${micro} USDC on ${network} → ${tx.hash}`);
+
+        // Record against the daily safety cap (optimistically, at broadcast time)
+        recordDailySpend(micro, network);
 
         // Mine in background
         tx.wait(1).then(receipt => {
