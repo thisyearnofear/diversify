@@ -66,5 +66,13 @@ Key new files:
 - Guardian loop cron runs every 5 min — auto-executes within user permission bounds, mirrors to 0G
 - **Remaining:** 0G explorer source verification (custom API), demo video, X post with mainnet proof
 
+**Onboarding UI/UX pass (2026-07-10):**
+The stablecoin "coin motif" is now the onboarding design language. Reusable pieces live in shared components — prefer them over one-off decorations:
+- `components/shared/FloatingCoins.tsx`: `Coin` SVG primitive (any accent color, glyph or kawaii face) + `FloatingCoins` ambient drift field (SSR-safe deterministic layout, reduced-motion aware). Used by the StrategyModal backdrop and WelcomeScreen.
+- `components/shared/TokenIcon.tsx` + `constants/token-logos.ts`: real token logos (Trust Wallet assets, incl. Mento regionals cUSD/cEUR/KESm/COPm) with automatic `Coin` fallback for unknown symbols — never renders a broken image. Used by all allocation chips.
+- Onboarding progress is the 3-step `CoinSteps` indicator in `WelcomeScreen.tsx`; completed steps navigate back.
+- **Scroll rule:** the StrategyModal dialog is the single scroll container. Do not add `overflow-y-auto` or `justify-center` to WelcomeScreen's root — center via the `my-auto` wrapper (justify-center on an overflowing flex container makes the top unreachable).
+- `.custom-scrollbar`, `.coin-float`, `.aurora-drift` utilities are defined in `styles/globals.css`.
+
 ## Tool Notes
 - **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.

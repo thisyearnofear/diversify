@@ -21,6 +21,8 @@ import {
 } from '../../../constants/currency-risk';
 
 import { GuardianMascot } from '../../shared/GuardianMascot';
+import { Coin, FloatingCoins } from '../../shared/FloatingCoins';
+import { TokenIcon } from '../../shared/TokenIcon';
 
 // ── Animation variants ─────────────────────────────────────────────────
 // Blur-swap phase transition (transitions.dev "text states swap" pattern)
@@ -29,7 +31,7 @@ import { GuardianMascot } from '../../shared/GuardianMascot';
 const phaseVariants: Variants = {
   initial: {
     opacity: 0,
-    filter: 'blur(12px)',
+    filter: 'blur(6px)',
     scale: 0.98,
   },
   animate: {
@@ -44,7 +46,7 @@ const phaseVariants: Variants = {
   },
   exit: {
     opacity: 0,
-    filter: 'blur(12px)',
+    filter: 'blur(6px)',
     scale: 1.02,
     transition: {
       duration: 0.2,
@@ -54,7 +56,7 @@ const phaseVariants: Variants = {
 };
 
 const staggerChild: Variants = {
-  initial: { opacity: 0, y: 10, filter: 'blur(4px)' },
+  initial: { opacity: 0, y: 10, filter: 'blur(2px)' },
   animate: {
     opacity: 1,
     y: 0,
@@ -93,6 +95,105 @@ const PHILOSOPHY_CTA: Record<ArchetypeId, string> = {
   custom: 'Build your own plan',
 };
 
+// Ambient wash per phase — the room's light shifts as the story moves from
+// "where are you" (blue) → "here's the danger" (warm) → "here's your plan"
+// (emerald). A gold floor glow echoes the coin motif throughout.
+const PHASE_WASH: Record<Phase, string> = {
+  detect:
+    'radial-gradient(90% 55% at 50% 0%, rgba(59,130,246,0.14) 0%, transparent 70%), radial-gradient(70% 40% at 50% 100%, rgba(251,191,36,0.10) 0%, transparent 70%)',
+  risk:
+    'radial-gradient(90% 55% at 50% 0%, rgba(244,63,94,0.13) 0%, transparent 70%), radial-gradient(70% 40% at 50% 100%, rgba(251,146,60,0.10) 0%, transparent 70%)',
+  philosophy:
+    'radial-gradient(90% 55% at 50% 0%, rgba(16,185,129,0.13) 0%, transparent 70%), radial-gradient(70% 40% at 50% 100%, rgba(251,191,36,0.10) 0%, transparent 70%)',
+};
+
+// ── Coin-minting progress steps ────────────────────────────────────────
+// Each phase mints a coin: numbered gold coin → emerald ✓ when complete.
+// Completed coins are tappable, making back-navigation discoverable.
+
+const STEPS: { id: Phase; label: string }[] = [
+  { id: 'detect', label: 'You' },
+  { id: 'risk', label: 'Risk' },
+  { id: 'philosophy', label: 'Plan' },
+];
+
+function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p: Phase) => void }) {
+  const idx = STEPS.findIndex((s) => s.id === phase);
+  return (
+    <div
+      className="flex items-start justify-center mb-5 select-none"
+      role="group"
+      aria-label={`Onboarding step ${idx + 1} of ${STEPS.length}`}
+    >
+      {STEPS.map((s, i) => {
+        const isDone = i < idx;
+        const isActive = i === idx;
+        return (
+          <React.Fragment key={s.id}>
+            {i > 0 && (
+              <div className="w-10 h-[2px] rounded-full mt-[15px] mx-1 overflow-hidden bg-gray-200 dark:bg-gray-700">
+                <motion.div
+                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
+                  initial={false}
+                  animate={{ width: i <= idx ? '100%' : '0%' }}
+                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => isDone && onNavigate(s.id)}
+              disabled={!isDone}
+              aria-current={isActive ? 'step' : undefined}
+              aria-label={isDone ? `Go back to step ${i + 1}: ${s.label}` : `Step ${i + 1}: ${s.label}`}
+              className={`flex flex-col items-center gap-1 rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 ${
+                isDone ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : 'cursor-default'
+              }`}
+            >
+              <span className="relative w-8 h-8 flex items-center justify-center">
+                {isActive && (
+                  <motion.span
+                    className="absolute -inset-1 rounded-full border-2 border-amber-400/60"
+                    animate={{ scale: [1, 1.25, 1], opacity: [0.7, 0, 0.7] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                )}
+                {isDone ? (
+                  <motion.span
+                    initial={{ scale: 0, rotate: -90 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+                    className="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-black flex items-center justify-center shadow-sm"
+                  >
+                    ✓
+                  </motion.span>
+                ) : (
+                  <Coin
+                    size={isActive ? 30 : 26}
+                    symbol={String(i + 1)}
+                    className={isActive ? '' : 'opacity-40 grayscale'}
+                  />
+                )}
+              </span>
+              <span
+                className={`text-[9px] font-black uppercase tracking-widest ${
+                  isActive
+                    ? 'text-amber-500'
+                    : isDone
+                    ? 'text-emerald-500'
+                    : 'text-gray-300 dark:text-gray-600'
+                }`}
+              >
+                {s.label}
+              </span>
+            </button>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Archetype card with 3D tilt ────────────────────────────────────────
 function ArchetypeCard({
   id,
@@ -111,12 +212,12 @@ function ArchetypeCard({
   const tilt = useTilt(3);
 
   return (
-    <motion.div variants={staggerChild}>
+    <motion.div variants={staggerChild} whileTap={{ scale: 0.98 }}>
       <button
         onClick={() => onSelect(id)}
         onMouseMove={tilt.onMouseMove}
         onMouseLeave={tilt.onMouseLeave}
-        className={`w-full p-3 rounded-2xl border-2 text-left flex items-start gap-3 overflow-hidden transition-all duration-300 ${
+        className={`w-full p-3 rounded-2xl border-2 text-left flex items-start gap-3 overflow-hidden transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 ${
           isActive
             ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-400 scale-[1.02]'
             : isDimmed
@@ -131,16 +232,15 @@ function ArchetypeCard({
           } : {}),
         }}
       >
-        {/* Accent dot — uses the archetype's accent color */}
-        <div
-          className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-black transition-transform"
-          style={{
-            background: a.accent,
-            transform: isActive ? 'scale(1.15)' : 'scale(1)',
-          }}
+        {/* Archetype coin — flips like a freshly minted coin when selected */}
+        <motion.div
+          className="w-9 h-9 flex-shrink-0"
+          animate={isActive ? { rotateY: 360, scale: 1.12 } : { rotateY: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+          style={{ transformPerspective: 400 }}
         >
-          {a.name[0]}
-        </div>
+          <Coin size={36} symbol={a.name[0]} color={a.accent} />
+        </motion.div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-black text-gray-900 dark:text-white">{a.name}</span>
@@ -162,12 +262,13 @@ function ArchetypeCard({
             {a.allocation.slice(0, 4).map((asset, i) => (
               <span
                 key={i}
-                className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium"
+                className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium"
                 style={isActive ? {
                   background: `${a.accent}15`,
                   color: a.accent,
                 } : undefined}
               >
+                <TokenIcon symbol={asset} size={11} />
                 {asset}
               </span>
             ))}
@@ -265,12 +366,31 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       : 0;
 
     return (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-10 text-center relative overflow-y-auto custom-scrollbar">
-            {/* Mesh Gradient Background */}
-            <div className="absolute inset-0 -z-10 opacity-30">
-                <div className="absolute top-0 -left-1/4 w-full h-full bg-blue-400 dark:bg-blue-600 rounded-full blur-[120px] mix-blend-multiply" />
-                <div className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-purple-400 dark:bg-purple-600 rounded-full blur-[120px] mix-blend-multiply" />
+        // Scrolling lives on the parent dialog (single scroll container).
+        // justify-center is gone — with it, overflowing content extended above
+        // the scrollable area and could never be reached. The my-auto wrapper
+        // below centers short content and top-aligns tall content instead.
+        <div className="flex-1 flex flex-col items-center p-6 md:p-10 text-center relative">
+            {/* Ambient backdrop — phase-tinted wash + drifting coin motifs */}
+            <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
+                <AnimatePresence>
+                    <motion.div
+                        key={`wash-${phase}`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.7, ease: 'easeOut' }}
+                        className="absolute inset-0"
+                        style={{ background: PHASE_WASH[phase] }}
+                    />
+                </AnimatePresence>
+                <FloatingCoins
+                    variant="panel"
+                    accent={selectedArchetype ? ARCHETYPES[selectedArchetype].accent : null}
+                />
             </div>
+
+            <div className="my-auto w-full flex flex-col items-center">
 
             {/* Brand and Mascot — full mascot only on detect phase; compact brand mark on content phases */}
             <motion.div
@@ -293,14 +413,22 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     />
                   </>
                 ) : (
-                  <div className="flex items-center justify-center gap-1.5 mb-2">
-                      <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
-                          <span className="text-white text-sm font-black">D</span>
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                      <GuardianMascot
+                        size={40}
+                        mood={phase === 'risk' ? 'alert' : selectedArchetype ? 'happy' : 'thinking'}
+                      />
+                      <div className="flex items-center gap-1.5">
+                          <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
+                              <span className="text-white text-sm font-black">D</span>
+                          </div>
+                          <span className="text-sm font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
                       </div>
-                      <span className="text-sm font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
                   </div>
                 )}
             </motion.div>
+
+            <CoinSteps phase={phase} onNavigate={(p) => setStep(p)} />
 
             <AnimatePresence mode="wait">
               {/* ── Phase 1: Detect & confirm ───────────────────────────── */}
@@ -399,8 +527,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     <motion.button
                       variants={staggerChild}
                       onClick={() => setStep('risk')}
-                      className="w-full px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-black rounded-2xl shadow-lg active:scale-95 transition-all"
-                      whileHover={{ y: -1 }}
+                      className="w-full px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
+                      whileHover={{ y: -2 }}
+                      whileTap={{ scale: 0.97 }}
                     >
                       <ShimmerText>Understand Your Risk →</ShimmerText>
                     </motion.button>
@@ -575,8 +704,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   <motion.button
                     variants={staggerChild}
                     onClick={() => setStep('philosophy')}
-                    className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl active:scale-95 transition-all shadow-lg"
-                    whileHover={{ y: -1 }}
+                    className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
+                    whileHover={{ y: -2 }}
+                    whileTap={{ scale: 0.97 }}
                   >
                     <ShimmerText>Choose Your Approach →</ShimmerText>
                   </motion.button>
@@ -640,11 +770,13 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           }
                           handleFinish(countryCode);
                         }}
-                        className="w-full px-6 py-4 text-white font-black rounded-2xl active:scale-95 transition-all shadow-lg"
+                        className="w-full px-6 py-4 text-white font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2"
                         style={{
                           background: `linear-gradient(135deg, ${ARCHETYPES[selectedArchetype].accent}, ${ARCHETYPES[selectedArchetype].accentSoft})`,
+                          boxShadow: `0 12px 32px -12px ${ARCHETYPES[selectedArchetype].accent}80`,
                         }}
-                        whileHover={{ y: -1 }}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.97 }}
                       >
                         <ShimmerText>{PHILOSOPHY_CTA[selectedArchetype]} →</ShimmerText>
                       </motion.button>
@@ -656,8 +788,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                               try { await onConnectWallet(); } catch { /* fall through */ }
                               handleFinish(countryCode);
                             }}
-                            className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl active:scale-95 transition-all shadow-lg"
-                            whileHover={{ y: -1 }}
+                            className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.97 }}
                           >
                             Connect Wallet to Get Started
                           </motion.button>
@@ -666,7 +799,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     )}
                     <button
                       onClick={() => handleFinish(countryCode)}
-                      className={`w-full px-6 py-3 font-bold rounded-2xl active:scale-95 transition-all ${
+                      className={`w-full px-6 py-3 font-bold rounded-2xl active:scale-[0.97] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 ${
                         selectedArchetype
                           ? 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm'
                           : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white'
@@ -676,8 +809,8 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     </button>
                     {riskData && (
                       <button
-                        onClick={() => { setSelectedArchetype(null); setStep('risk'); }}
-                        className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        onClick={() => setStep('risk')}
+                        className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 rounded-lg"
                       >
                         ← Back to risk data
                       </button>
@@ -686,6 +819,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                 </motion.div>
               )}
             </AnimatePresence>
+            </div>
         </div>
     );
 }

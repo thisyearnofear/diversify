@@ -8,6 +8,7 @@ import {
 } from "@/constants/currency-risk";
 import { ARCHETYPES, type ArchetypeId } from "@/components/protection-cards/tokens";
 import RegionalIconography from "../../regional/RegionalIconography";
+import { TokenIcon } from "../../shared/TokenIcon";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
@@ -192,12 +193,13 @@ export function NotConnectedState({
                   {archetype.allocation.map((asset, i) => (
                     <span
                       key={i}
-                      className="text-[9px] px-1.5 py-0.5 rounded font-medium"
+                      className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
                       style={{
                         background: `${archetype.accentSoft}20`,
                         color: archetype.accent,
                       }}
                     >
+                      <TokenIcon symbol={asset} size={11} />
                       {asset}
                     </span>
                   ))}

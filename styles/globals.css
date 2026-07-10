@@ -240,5 +240,64 @@ body {
   animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Slim scrollbar for panels that opt in via .custom-scrollbar
+   (was referenced app-wide but never defined) */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.45);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.7);
+}
+/* Match specificity of the :root.dark global scrollbar rules above */
+:root.dark .custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+:root.dark .custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+:root.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.6);
+  border-radius: 9999px;
+}
+
+/* ── Coin motif ambience (FloatingCoins, onboarding backdrops) ─────── */
+@keyframes coin-drift {
+  0%, 100% { transform: translateY(0) rotate(-7deg); }
+  50% { transform: translateY(-16px) rotate(7deg); }
+}
+.coin-float {
+  animation: coin-drift var(--coin-duration, 9s) ease-in-out var(--coin-delay, 0s) infinite;
+  will-change: transform;
+}
+
+@keyframes aurora-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(4%, -4%, 0) scale(1.1); }
+}
+.aurora-drift {
+  animation: aurora-drift 18s ease-in-out infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coin-float,
+  .aurora-drift {
+    animation: none;
+  }
+}
+
 /* REMOVED: Wallet button was intentionally hidden during onboarding causing UX friction */
 /* Users should be able to connect wallet anytime, not just after completing onboarding */

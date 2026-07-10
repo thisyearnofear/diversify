@@ -14,6 +14,7 @@ import { GuardianStateScrollytelling } from "./GuardianStateScrollytelling";
 import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { ARCHETYPES, type ArchetypeId } from "@/components/protection-cards/tokens";
+import { TokenIcon } from "../../shared/TokenIcon";
 
 const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
   africapitalism: 'africapitalism',
@@ -85,12 +86,13 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
           {archetype.allocation.map((asset, i) => (
             <span
               key={i}
-              className="text-[10px] px-2 py-1 rounded-full font-bold"
+              className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-bold"
               style={{
                 background: `${archetype.accentSoft}20`,
                 color: archetype.accentSoft,
               }}
             >
+              <TokenIcon symbol={asset} size={12} />
               {asset}
             </span>
           ))}
