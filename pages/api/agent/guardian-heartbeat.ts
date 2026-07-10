@@ -147,22 +147,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const snapshot = await fetchMarketSnapshot();
     const rec = pickRecommendation(snapshot);
 
-    // 2. Record on the primary chain (Celo for savings tokens, Arbitrum for yield)
-    const primaryResult = await recommendationLedgerService.recordRecommendation({
-      user: GUARDIAN_AGENT_ADDRESS,
-      action: rec.action,
-      targetToken: rec.targetToken,
-      reasoning: rec.reasoning,
-      evidenceCid: '',
-      servingModel: 'guardian-heartbeat',
-      confidence: Math.round(rec.confidence * 10000),
-    });
-
-    // 2b. APAC rail advisory: when the HashKey ledger is configured, also
-    // record the savings-stance advisory for the APAC plan cohort
-    // (Confucian / Gotong Royong). Routed via the same chain-aware logic —
-    // the routingContext sends this HOLD to the HashKey ledger, keeping the
-    // APAC savings home continuously attested (docs/apac-rail.md).
+    // 2. Record on the primary chain (Celo for savings tokens, Arbitrum for
+    // yield) and — when the HashKey ledger is configured — the APAC-cohort
+    // savings advisory (Confucian / Gotong Royong) in parallel. The two
+    // records target different chains, so the signer's nonces are
+    // independent and neither wait blocks the other. The APAC advisory is
+    // routed via the same chain-aware logic as user recommendations — the
+    // routingContext sends this HOLD stance to the HashKey ledger, keeping
+    // the APAC savings home continuously attested (docs/apac-rail.md).
     const apacPromise = process.env.HASHKEY_LEDGER_CONTRACT
       ? recommendationLedgerService.recordRecommendation({
           user: GUARDIAN_AGENT_ADDRESS,
@@ -178,6 +170,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           return null;
         })
       : Promise.resolve(null);
+
+    const primaryResult = await recommendationLedgerService.recordRecommendation({
+      user: GUARDIAN_AGENT_ADDRESS,
+      action: rec.action,
+      targetToken: rec.targetToken,
+      reasoning: rec.reasoning,
+      evidenceCid: '',
+      servingModel: 'guardian-heartbeat',
+      confidence: Math.round(rec.confidence * 10000),
+    });
 
     // 3. Mirror to 0G mainnet as evidence anchor (fire-and-forget)
     const mirrorPromise = recommendationLedgerService.mirrorRecommendationToZeroG({

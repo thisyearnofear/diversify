@@ -38,14 +38,17 @@ export const APAC_PHILOSOPHIES: ReadonlySet<FinancialStrategy> = new Set<Financi
  * Whether a user profile targets the APAC rail: an APAC-facing philosophy
  * chosen from the Asia region. Both signals are required — a Confucian-plan
  * user in Nairobi still routes through Celo/Arbitrum.
+ *
+ * Inputs are normalized (case, whitespace): callers range from client
+ * region detection ('Asia') to server-side profile records, and a silent
+ * casing drift must not silently reroute a user's ledger of record.
  */
 export function isApacRailProfile(
   philosophy: string | null | undefined,
   region: string | null | undefined,
 ): boolean {
-  return !!(
-    philosophy &&
-    APAC_PHILOSOPHIES.has(philosophy as FinancialStrategy) &&
-    region === 'Asia'
-  );
+  if (!philosophy || !region) return false;
+  const normalizedPhilosophy = philosophy.trim().toLowerCase() as FinancialStrategy;
+  const normalizedRegion = region.trim().toLowerCase();
+  return APAC_PHILOSOPHIES.has(normalizedPhilosophy) && normalizedRegion === 'asia';
 }

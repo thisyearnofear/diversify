@@ -16,7 +16,7 @@ import { useStrategy } from "@/context/app/StrategyContext";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { PhilosophyHeroCard } from "@/components/protection-cards/PhilosophyHeroCard";
 import { ApacRailHonestyBanner } from "../../shared/ApacRailHonestyBanner";
-import { needsApacRailHonesty } from "@/constants/apac-rail";
+import { needsApacRailMessaging } from "@/constants/apac-rail";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useUserRegion } from "@/hooks/use-user-region";
 
@@ -49,7 +49,7 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
   const { region: detectedRegion } = useUserRegion();
   const archetypeId = strategyToArchetype(financialStrategy);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
-  const showApacHonesty = needsApacRailHonesty(
+  const showApacBanner = needsApacRailMessaging(
     financialStrategy ?? profileConfig.philosophy,
     profileConfig.userRegion ?? detectedRegion,
   );
@@ -98,7 +98,7 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
         </div>
       )}
 
-      {showApacHonesty && (
+      {showApacBanner && (
         <div className="mb-4">
           <ApacRailHonestyBanner />
         </div>

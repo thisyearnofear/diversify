@@ -25,7 +25,7 @@ import { useProtectionProfile } from "./use-protection-profile";
 import { useColdStart } from "./use-cold-start";
 import { useStreakRewards } from "./use-streak-rewards";
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared";
-import { needsApacRailHonesty } from "@/constants/apac-rail";
+import { needsApacRailMessaging } from "@/constants/apac-rail";
 
 export type HomeMode = "beginner" | "standard" | "advanced";
 
@@ -165,7 +165,7 @@ export function useHomeSections({
     }
     const effectiveRegion = profileConfig.userRegion ?? userRegion;
     if (
-      needsApacRailHonesty(profileConfig.philosophy, effectiveRegion) &&
+      needsApacRailMessaging(profileConfig.philosophy, effectiveRegion) &&
       bannerPriority < APAC_RAIL_PRIORITY
     ) {
       banner = "apac-rail-pending";

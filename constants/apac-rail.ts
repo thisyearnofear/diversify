@@ -26,7 +26,7 @@ export function isApacRailLive(): boolean {
  * plan chosen from the Asia region. Which message (live vs honest
  * coming-soon) depends on `isApacRailLive()`.
  */
-export function needsApacRailHonesty(
+export function needsApacRailMessaging(
   philosophy: string | null | undefined,
   region: string | null | undefined,
 ): boolean {
