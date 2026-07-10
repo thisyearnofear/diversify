@@ -22,7 +22,7 @@
       ]
     },
     "incremental": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowJs": true
   },
   "include": [
