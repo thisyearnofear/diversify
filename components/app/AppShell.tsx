@@ -5,10 +5,11 @@
  *   - TabContentRouter  (tab routing, swipe, dynamic imports)
  *   - FloatingControls  (advisor FAB, tour triggers, guided tour)
  *
- * index.tsx handles only page-level concerns (onboarding gate, SEO, confetti).
+ * index.tsx handles only page-level concerns (onboarding gate, SEO).
  */
 import { useAppShell } from "@/hooks/use-app-shell";
 import { NETWORKS } from "@/config";
+import { shouldShowTestnetBanner } from "@/constants/testnet";
 import TabNavigation from "@/components/ui/TabNavigation";
 import { WalletTutorial } from "@/components/wallet/WalletTutorial";
 import AppHeader from "@/components/app/AppHeader";
@@ -28,12 +29,7 @@ export default function AppShell() {
     handleTranscription,
   } = useAppShell();
 
-  const isTestnet = !!(
-    walletChainId &&
-    (walletChainId === NETWORKS.CELO_SEPOLIA.chainId ||
-      walletChainId === NETWORKS.ARC_TESTNET.chainId ||
-      walletChainId === NETWORKS.RH_TESTNET.chainId)
-  );
+  const showTestnetBanner = shouldShowTestnetBanner(walletChainId);
 
   return (
     <div className="max-w-md mx-auto">
@@ -43,8 +39,8 @@ export default function AppShell() {
         experienceMode={experienceMode}
       />
 
-      {/* Testnet Warning Banner */}
-      {isTestnet && (
+      {/* Testnet banner — only for dev flag or explicit user opt-in */}
+      {showTestnetBanner && (
         <div className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-4 py-2 mb-2 rounded-xl text-xs font-bold flex items-center justify-between shadow-md">
           <div className="flex items-center gap-2">
             <span>🧪</span>

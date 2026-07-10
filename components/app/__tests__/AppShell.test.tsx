@@ -152,6 +152,35 @@ const baseShellState = {
   handleTranscription: vi.fn(),
 };
 
+describe("AppShell testnet banner", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("NEXT_PUBLIC_SHOW_TESTNET", "");
+    mockUseAppShell.mockReturnValue({
+      ...baseShellState,
+      walletChainId: 5042002,
+    });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    cleanup();
+  });
+
+  it("hides testnet banner without explicit opt-in in production", () => {
+    render(<AppShell />);
+    expect(screen.queryByText(/Testnet/i)).not.toBeInTheDocument();
+  });
+
+  it("shows testnet banner when user opted into testnet UI", () => {
+    localStorage.setItem("diversifi-testnet-opt-in", "true");
+    render(<AppShell />);
+    expect(screen.getByText(/Testnet/i)).toBeInTheDocument();
+  });
+});
+
 describe("AppShell AI Chat FAB", () => {
   beforeEach(() => {
     vi.clearAllMocks();

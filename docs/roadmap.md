@@ -419,9 +419,10 @@ Critical UI/UX audit against the emerging/APAC saver persona. Five waves; **0–
 | **1 — Guardian surfaces** | Delete `GuardianOnboardingWizard`; `GuardianStatusChip`; compact scrollytelling (2 states) | **Done** |
 | **2 — DRY + plain copy** | `strategyToArchetype()` single source; beginner tips without chain jargon; compact `LiveProofCard` | **Done** |
 | **3 — Calm + honest** | Hide header chrome in Simple mode; 3-step tour; APAC honesty banner; fold `philosophy` into protection profile | **Done** |
-| **4+** | Testnet banner gating, further AgentTier demotion, claim confetti removal | Planned |
+| **4 — Calm polish** | Testnet banner gated; ClaimCelebration coin motif; ProtectionTab confetti removed; AgentTab beginner compact view | **Done** |
+| **5+** | Voice demotion in Simple mode, further LiveProof mainnet copy | Planned |
 
-**540 tests passing** after Wave 3. Key files: `constants/tabs.ts`, `constants/onboarding.ts`, `constants/apac-rail.ts`, `hooks/use-protection-profile.ts`, `hooks/use-home-sections.ts`, `components/app/AppHeader.tsx`, `components/tour/GuidedTour.tsx`.
+**544 tests passing** after Wave 4. Key files: `constants/tabs.ts`, `constants/onboarding.ts`, `constants/apac-rail.ts`, `constants/testnet.ts`, `hooks/use-protection-profile.ts`, `hooks/use-home-sections.ts`, `components/app/AppHeader.tsx`, `components/tour/GuidedTour.tsx`.
 
 ---
 

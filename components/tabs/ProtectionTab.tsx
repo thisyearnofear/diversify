@@ -1,5 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from "react";
-import confetti from "canvas-confetti";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
@@ -137,56 +136,6 @@ export default function ProtectionTab({
   const topOpportunity = rebalancingOpportunities?.[0];
 
   // ============================================================================
-  // CONFETTI CELEBRATIONS
-  // ============================================================================
-
-  const lastScoreMilestoneRef = useRef(0);
-  const hasFiredProfileConfettiRef = useRef(false);
-
-  const fireScoreConfetti = useCallback((score: number) => {
-    if (isBeginner) return;
-    const milestone = Math.floor(score / 25) * 25;
-    if (milestone > 0 && milestone > lastScoreMilestoneRef.current) {
-      lastScoreMilestoneRef.current = milestone;
-      confetti({
-        particleCount: 60,
-        spread: 50,
-        origin: { y: 0.4, x: 0.5 },
-        colors: ["#6366f1", "#a855f7", "#ec4899"],
-      });
-    }
-  }, [isBeginner]);
-
-  const fireProfileConfetti = useCallback(() => {
-    if (isBeginner) return;
-    if (!hasFiredProfileConfettiRef.current) {
-      hasFiredProfileConfettiRef.current = true;
-      const end = Date.now() + 800;
-      const colors = ["#6366f1", "#a855f7", "#ec4899"];
-      const frame = () => {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0, y: 0.7 },
-          colors,
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1, y: 0.7 },
-          colors,
-        });
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      };
-      frame();
-    }
-  }, [isBeginner]);
-
-  // ============================================================================
   // HANDLERS
   // ============================================================================
 
@@ -310,18 +259,6 @@ export default function ProtectionTab({
           2,
       )
     : 0;
-
-  useEffect(() => {
-    if (address && protectionScore > 0 && displayTotalValue > 0) {
-      fireScoreConfetti(protectionScore);
-    }
-  }, [protectionScore, fireScoreConfetti, address, displayTotalValue]);
-
-  useEffect(() => {
-    if (isComplete && address) {
-      fireProfileConfetti();
-    }
-  }, [isComplete, address, fireProfileConfetti]);
 
   // Keep hook order stable across disconnected/connected renders.
   const strategyAlignmentScore = useMemo(() => {

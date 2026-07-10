@@ -3,10 +3,6 @@ import { render, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
-vi.mock("canvas-confetti", () => ({
-  default: vi.fn(),
-}));
-
 const mockAdvisor = vi.fn();
 vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: mockAdvisor }),
@@ -226,7 +222,6 @@ vi.mock("../../wallet/WalletProvider", () => ({
   useWalletContext: vi.fn(),
 }));
 
-import confetti from "canvas-confetti";
 import ProtectionTab from "../ProtectionTab";
 
 const EMPTY_PORTFOLIO = {
@@ -294,55 +289,10 @@ describe("ProtectionTab Confetti", () => {
     cleanup();
   });
 
-  it("renders without connected wallet (no confetti)", () => {
+  it("renders without connected wallet", () => {
     render(
       <ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />,
     );
-    expect(confetti).not.toHaveBeenCalled();
-  });
-
-  it("fires confetti when protection score crosses a 25-point milestone", () => {
-    vi.mocked(useWalletContext).mockReturnValue({
-      address: "0x123",
-      chainId: 42220,
-    } as any);
-
-    render(
-      <ProtectionTab
-        userRegion="USA"
-        portfolio={{
-          ...MOCK_PORTFOLIO,
-          diversificationScore: 82,
-          weightedInflationRisk: 0,
-        }}
-      />,
-    );
-
-    expect(confetti).toHaveBeenCalledWith(
-      expect.objectContaining({
-        particleCount: 60,
-        spread: 50,
-      }),
-    );
-  });
-
-  it("does not fire confetti for scores below milestone threshold", () => {
-    vi.mocked(useWalletContext).mockReturnValue({
-      address: "0x123",
-      chainId: 42220,
-    } as any);
-
-    render(
-      <ProtectionTab
-        userRegion="USA"
-        portfolio={{
-          ...MOCK_PORTFOLIO,
-          diversificationScore: 10,
-          weightedInflationRisk: 15,
-        }}
-      />,
-    );
-
-    expect(confetti).not.toHaveBeenCalled();
+    expect(document.body).toBeTruthy();
   });
 });

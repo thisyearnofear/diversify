@@ -1,13 +1,13 @@
 /**
  * ClaimCelebration — post-claim success overlay.
  *
- * Renders the celebratory state (confetti, amount, streak stats, Celoscan
- * link) after a direct claim. Auto-closes after 4s. No business logic —
- * the parent card handles the claim and passes results in.
+ * Calm coin-mint celebration (no confetti). Auto-closes after 6s.
+ * The parent card handles the claim and passes results in.
  */
 
 import React, { useEffect } from 'react';
 import { NETWORKS } from "../../config";
+import { Coin } from '../shared/FloatingCoins';
 
 interface ClaimCelebrationProps {
   amount: string;
@@ -33,34 +33,17 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
         className="w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-8 animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 duration-500 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Confetti */}
-        <div className="absolute inset-0 pointer-events-none">
-          {[...Array(12)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute text-2xl animate-bounce"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `-20px`,
-                animationDelay: `${Math.random() * 3}s`,
-                animationDuration: `${2 + Math.random() * 2}s`,
-                opacity: 0.2,
-              }}
-            >
-              💚
-            </div>
-          ))}
-        </div>
-
         <div className="text-center mb-6 relative z-10">
-          <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full flex items-center justify-center mx-auto mb-3 animate-in zoom-in duration-500">
-            <span className="text-4xl animate-pulse">✨</span>
+          <div className="flex justify-center mb-3">
+            <div className="animate-in zoom-in duration-500 coin-float">
+              <Coin size={80} symbol="G$" color="#10b981" />
+            </div>
           </div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">
-            Claim Successful!
+            Claim Successful
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            Your G$ is being delivered
+            Your G$ is on its way to your wallet
           </p>
         </div>
 

@@ -8,7 +8,7 @@
  */
 
 import React, { useCallback, useState } from "react";
-import { AgentTierStatus } from "../agent/AgentTierStatus";
+import { AgentTierStatus, GuardianStatusChip } from "../agent/AgentTierStatus";
 import AutomationSettings from "../agent/AutomationSettings";
 import ActionableRecommendation from "../agent/ActionableRecommendation";
 import { useAgentStatus } from "../../hooks/use-agent-status";
@@ -378,7 +378,32 @@ export default function AgentTab({
     );
   }
 
-  // ─── Main fallthrough: standard dashboard ─────────────────────────────
+  // ─── Beginner: compact Advisor surface (full cockpit is Standard+) ──
+  if (experienceMode === "beginner") {
+    return (
+      <div className="space-y-4 pb-6">
+        <GuardianStatusChip
+          onSetup={handleAskAgent}
+          onDeposit={onNavigateToFund}
+          onViewActivity={handleAskAgent}
+        />
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+            Ask your Advisor about your savings. Switch to Standard mode from Home for
+            full protection controls.
+          </p>
+          <button
+            onClick={handleAskAgent}
+            className="w-full py-3 rounded-2xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
+          >
+            💬 Ask Advisor
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main fallthrough: standard / advanced dashboard ─────────────────
   return (
     <div className="space-y-4 pb-6">
       {renderDashboard()}

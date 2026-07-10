@@ -19,6 +19,7 @@ import {
   type Benchmark,
   CURRENCY_RISK_DATA,
 } from '../../../constants/currency-risk';
+import { showTestnetUi, optIntoTestnetUi } from '../../../constants/testnet';
 
 import { GuardianMascot } from '../../shared/GuardianMascot';
 import { Coin, FloatingCoins } from '../../shared/FloatingCoins';
@@ -331,6 +332,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
         setIsSwitching(true);
         try {
             await switchNetwork(NETWORKS.ARC_TESTNET.chainId);
+            optIntoTestnetUi();
             setSwitchDone(true);
         } catch { /* fall through */ } finally {
             setIsSwitching(false);
@@ -563,8 +565,8 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     </motion.button>
                   )}
 
-                  {/* Developer / testnet options — deliberately faint; normal
-                      visitors never need this, so it must not read as required. */}
+                  {/* Developer / testnet options — env-gated; production users never see this */}
+                  {showTestnetUi() && (
                   <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800/60">
                     <button
                       onClick={() => setShowTestDetails(!showTestDetails)}
@@ -608,6 +610,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       )}
                     </AnimatePresence>
                   </div>
+                  )}
                 </motion.div>
               )}
 
