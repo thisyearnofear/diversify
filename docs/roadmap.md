@@ -411,7 +411,7 @@ The assumption that "USD = safe, everything else = risky" is itself a normative 
 
 ### UX consolidation waves (2026-07-10)
 
-Critical UI/UX audit against the emerging/APAC saver persona. Five waves; **0–3 shipped**, 4+ deferred.
+Critical UI/UX audit against the emerging/APAC saver persona. Six waves; **0–6 shipped**.
 
 | Wave | Focus | Status |
 |------|-------|--------|
@@ -421,8 +421,9 @@ Critical UI/UX audit against the emerging/APAC saver persona. Five waves; **0–
 | **3 — Calm + honest** | Hide header chrome in Simple mode; 3-step tour; APAC honesty banner; fold `philosophy` into protection profile | **Done** |
 | **4 — Calm polish** | Testnet banner gated; ClaimCelebration coin motif; ProtectionTab confetti removed; AgentTab beginner compact view | **Done** |
 | **5 — Provider + proof polish** | `ProtectionProfileProvider` replaces `StrategyProvider`; LiveProof mainnet-aware copy; voice hidden in Simple mode | **Done** |
+| **6 — DRY + pacing** | `PhilosophyHeroCard` shared hero; WelcomeScreen manual detect→risk advance | **Done** |
 
-**547 tests passing** after Wave 5. Key files: `hooks/use-protection-profile.tsx`, `constants/proof-feed.ts`, `constants/testnet.ts`, `components/shared/LiveProofCard.tsx`.
+**549 tests passing** after Wave 6. Key files: `components/protection-cards/PhilosophyHeroCard.tsx`, `components/onboarding/screens/WelcomeScreen.tsx`, `hooks/use-protection-profile.tsx`.
 
 ---
 

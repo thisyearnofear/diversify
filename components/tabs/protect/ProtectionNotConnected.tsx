@@ -14,7 +14,7 @@ import { GuardianStateScrollytelling } from "./GuardianStateScrollytelling";
 import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
-import { TokenIcon } from "../../shared/TokenIcon";
+import { PhilosophyHeroCard } from "@/components/protection-cards/PhilosophyHeroCard";
 import { ApacRailHonestyBanner } from "../../shared/ApacRailHonestyBanner";
 import { needsApacRailHonesty } from "@/constants/apac-rail";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
@@ -55,54 +55,12 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
   );
 
   const heroCard = archetype ? (
-    <Card
-      className="text-white p-6 border-2"
-      style={{ borderColor: `${archetype.accent}40` }}
-    >
-      <div
-        className="rounded-2xl p-6 -m-6"
-        style={{
-          background: `linear-gradient(135deg, ${archetype.surface.start} 0%, ${archetype.surface.mid} 60%, ${archetype.surface.end} 100%)`,
-        }}
-      >
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-black uppercase tracking-tight" style={{ color: archetype.accentSoft }}>
-              {archetype.name}
-            </h3>
-            <p className="text-white/80 text-xs font-bold opacity-80 mt-1">
-              {archetype.philosophy}
-            </p>
-          </div>
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-black flex-shrink-0"
-            style={{ background: archetype.accent }}
-          >
-            {archetype.name[0]}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-1.5 mb-4">
-          {archetype.allocation.map((asset, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-bold"
-              style={{
-                background: `${archetype.accentSoft}20`,
-                color: archetype.accentSoft,
-              }}
-            >
-              <TokenIcon symbol={asset} size={12} />
-              {asset}
-            </span>
-          ))}
-        </div>
-        <ConnectWalletPrompt
-          message={WALLET_CONNECT_COPY.activatePlan(archetype.name)}
-          WalletButtonComponent={<WalletButton variant="inline" />}
-          experienceMode={experienceMode}
-        />
-      </div>
-    </Card>
+    <PhilosophyHeroCard
+      archetype={archetype}
+      variant="hero"
+      experienceMode={experienceMode}
+      walletMessage={WALLET_CONNECT_COPY.activatePlan(archetype.name)}
+    />
   ) : (
     <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6">
       <div className="flex items-start justify-between mb-4">

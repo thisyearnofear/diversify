@@ -7,8 +7,8 @@ import {
   type Benchmark,
 } from "@/constants/currency-risk";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { PhilosophyHeroCard } from "@/components/protection-cards/PhilosophyHeroCard";
 import RegionalIconography from "../../regional/RegionalIconography";
-import { TokenIcon } from "../../shared/TokenIcon";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
@@ -157,43 +157,7 @@ export function NotConnectedState({
 
             {/* Philosophy-aware framing */}
             {archetype ? (
-              <div
-                className="rounded-xl p-3 mb-4 border"
-                style={{
-                  borderColor: `${archetype.accent}40`,
-                  background: `${archetype.surface.start}15`,
-                }}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-black"
-                    style={{ background: archetype.accent }}
-                  >
-                    {archetype.name[0]}
-                  </div>
-                  <p className="text-xs font-bold" style={{ color: archetype.accent }}>
-                    Your philosophy: {archetype.name}
-                  </p>
-                </div>
-                <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                  {archetype.philosophy}
-                </p>
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {archetype.allocation.map((asset, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded font-medium"
-                      style={{
-                        background: `${archetype.accentSoft}20`,
-                        color: archetype.accent,
-                      }}
-                    >
-                      <TokenIcon symbol={asset} size={11} />
-                      {asset}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              <PhilosophyHeroCard archetype={archetype} variant="inline" className="mb-4" />
             ) : (
               <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 mb-4 border border-emerald-100 dark:border-emerald-900/40">
                 <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">

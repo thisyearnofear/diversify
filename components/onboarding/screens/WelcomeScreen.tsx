@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { NETWORKS } from '../../../config';
@@ -312,19 +312,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
 
-    // Local step state — the user controls phase transitions via button taps.
-    // Auto-advances from 'detect' to 'risk' once riskData loads.
+    // Local step state — user taps to advance (no auto-advance on detect).
     const [step, setStep] = useState<Phase>('detect');
 
-    // Auto-advance from detect → risk when risk data becomes available
-    useEffect(() => {
-      if (riskData && step === 'detect') {
-        setStep('risk');
-      }
-    }, [riskData, step]);
-
-    // Phase is now driven by the user's step, not derived from data state.
-    // This ensures forward/back buttons actually change the screen.
     const phase: Phase = step;
 
     const handleSwitchToTestnet = async () => {
