@@ -49,12 +49,18 @@ function timeAgo(iso: string, nowMs: number = Date.now()): string {
     return `${days} d ago`;
 }
 
-export function LiveProofCard() {
+export interface LiveProofCardProps {
+    variant?: 'full' | 'compact';
+}
+
+export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
     const { data, isLoading, isStale, error } = useProofFeed();
     const prefersReducedMotion = useReducedMotion();
 
     const stats = data?.stats;
     const contractExplorer = data?.contractExplorer;
+    const latest = data?.recent?.[0];
+    const isCompact = variant === 'compact';
 
     // ── Skeleton ──
     if (isLoading && !data) {
@@ -97,6 +103,46 @@ export function LiveProofCard() {
     }
 
     // ── Loaded (or stale) ──
+    if (isCompact) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+                className="rounded-2xl border border-emerald-100 dark:border-emerald-900/40 bg-gradient-to-br from-emerald-50/60 to-teal-50/60 dark:from-emerald-950/20 dark:to-teal-950/20 p-4"
+                data-testid="live-proof-card"
+                data-variant="compact"
+            >
+                <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                        <span aria-hidden="true">🛡️</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <h3 className="text-sm font-black text-emerald-900 dark:text-emerald-100">
+                            Protection is happening
+                        </h3>
+                        {stats && (
+                            <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                                {stats.totalRecommendations.toLocaleString()} savings moves recorded
+                                {latest ? ` · latest ${timeAgo(new Date(latest.timestamp * 1000).toISOString())}` : ''}
+                            </p>
+                        )}
+                        {contractExplorer && (
+                            <a
+                                href={contractExplorer}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-block text-xs font-bold text-emerald-700 dark:text-emerald-300 underline hover:no-underline"
+                            >
+                                See proof →
+                            </a>
+                        )}
+                    </div>
+                </div>
+            </motion.div>
+        );
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 4 }}

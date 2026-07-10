@@ -6,24 +6,13 @@ import {
   BENCHMARKS,
   type Benchmark,
 } from "@/constants/currency-risk";
-import { ARCHETYPES, type ArchetypeId } from "@/components/protection-cards/tokens";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import RegionalIconography from "../../regional/RegionalIconography";
 import { TokenIcon } from "../../shared/TokenIcon";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
 import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
-
-const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
-  africapitalism: 'africapitalism',
-  buen_vivir: 'buen_vivir',
-  pan_caribbean: 'pan_caribbean',
-  confucian: 'confucian',
-  gotong_royong: 'gotong_royong',
-  islamic: 'islamic_finance',
-  global: 'global_diversification',
-  custom: 'custom',
-};
 
 interface NotConnectedStateProps {
   userRegion: Region;
@@ -42,7 +31,7 @@ export function NotConnectedState({
     calculateCounterfactual,
   } = useCurrencyRisk();
   const { financialStrategy } = useStrategy();
-  const archetypeId = financialStrategy ? STRATEGY_TO_ARCHETYPE[financialStrategy] ?? null : null;
+  const archetypeId = strategyToArchetype(financialStrategy);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 
   const [savingsAmount, setSavingsAmount] = useState(10000);

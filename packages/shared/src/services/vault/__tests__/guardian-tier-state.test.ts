@@ -4,6 +4,7 @@ import {
     isPermissionValidNow,
     GUARDIAN_TIER_STATE_LABELS,
     collapseGuardianTierForUser,
+    getBeginnerPrimaryTip,
     type GuardianTierState,
 } from '../guardian-tier-state';
 
@@ -59,6 +60,20 @@ describe('collapseGuardianTierForUser', () => {
 
     it('maps monitoring to "active"', () => {
         expect(collapseGuardianTierForUser('monitoring')).toBe('active');
+    });
+});
+
+describe('getBeginnerPrimaryTip', () => {
+    it('returns plain-language inflation tip without chain names', () => {
+        expect(
+            getBeginnerPrimaryTip('inflation_protection', { hedge: 45, diversify: 50, rwa: 0 }),
+        ).toContain('Protection score 45%');
+    });
+
+    it('returns null for exploring goal', () => {
+        expect(
+            getBeginnerPrimaryTip('exploring', { hedge: 50, diversify: 50, rwa: 0 }),
+        ).toBeNull();
     });
 });
 

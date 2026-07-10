@@ -10,7 +10,7 @@ import { useStrategy } from '@/context/app/StrategyContext';
 import { dismissFirstRunTour } from '@/constants/onboarding';
 import {
   ARCHETYPES,
-  type ArchetypeId,
+  strategyToArchetype,
 } from '@/components/protection-cards/tokens';
 import { FloatingCoins } from '@/components/shared/FloatingCoins';
 import { WelcomeScreen } from './screens/WelcomeScreen';
@@ -23,17 +23,6 @@ const NOISE_TEXTURE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2
 // aurora glow + floating coin field layered on top.
 const DEFAULT_BACKDROP =
   'linear-gradient(160deg, #0a1128 0%, #16213e 45%, #0f2b3d 100%)';
-
-const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
-  africapitalism: 'africapitalism',
-  buen_vivir: 'buen_vivir',
-  pan_caribbean: 'pan_caribbean',
-  confucian: 'confucian',
-  gotong_royong: 'gotong_royong',
-  islamic: 'islamic_finance',
-  global: 'global_diversification',
-  custom: 'custom',
-};
 
 interface StrategyModalProps {
     isOpen: boolean;
@@ -57,7 +46,7 @@ export default function StrategyModal({
     const dialogRef = useRef<HTMLDivElement>(null);
 
     // Map strategy to archetype for the celebration background
-    const archetypeId = financialStrategy ? STRATEGY_TO_ARCHETYPE[financialStrategy] ?? null : null;
+    const archetypeId = strategyToArchetype(financialStrategy);
     const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 
     // Focus trap: keep focus inside modal while open, Escape to close

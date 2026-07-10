@@ -9,8 +9,8 @@
 // @vitest-environment jsdom
 
 import React, { type ReactNode } from 'react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 import {
@@ -81,6 +81,7 @@ function CtxWrap({
 
 describe('LiveProofCard', () => {
     beforeEach(() => vi.clearAllMocks());
+    afterEach(() => cleanup());
 
     it('renders a skeleton while loading with no data', () => {
         const { container } = render(
@@ -126,10 +127,25 @@ describe('LiveProofCard', () => {
         );
         expect(screen.getByText('Cached · chain 16602')).toBeInTheDocument();
     });
+
+    it('renders compact variant without exposing contract address in the headline', () => {
+        const { container } = render(
+            <CtxWrap value={{ isLoading: false, data: SAMPLE_DATA }}>
+                <LiveProofCard variant="compact" />
+            </CtxWrap>,
+        );
+        const card = container.querySelector('[data-testid="live-proof-card"][data-variant="compact"]');
+        expect(card).not.toBeNull();
+        expect(screen.getByText('Protection is happening')).toBeInTheDocument();
+        expect(screen.getByText(/247 savings moves recorded/)).toBeInTheDocument();
+        expect(screen.getByText('See proof →')).toBeInTheDocument();
+        expect(screen.queryByText('View on-chain →')).not.toBeInTheDocument();
+    });
 });
 
 describe('LiveProofTicker', () => {
     beforeEach(() => vi.clearAllMocks());
+    afterEach(() => cleanup());
 
     it('renders a skeleton while loading with no data', () => {
         const { container } = render(

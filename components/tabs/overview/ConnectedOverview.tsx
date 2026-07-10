@@ -28,7 +28,7 @@ import { useHomeSections } from "@/hooks/use-home-sections";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useAdvisor } from "@/hooks/use-advisor";
-import { StrategyService } from "@diversifi/shared";
+import { StrategyService, getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared";
 import { ProtectionScorecard } from "./ProtectionScorecard";
 
 interface ConnectedOverviewProps {
@@ -135,6 +135,15 @@ export function ConnectedOverview({
     const missing = activePortfolio.missingRegions;
     const goal = profileConfig.userGoal;
     let tips: string[] = [];
+
+    if (home.isBeginner && profileComplete && goal && goal !== "exploring") {
+      const plain = getBeginnerPrimaryTip(
+        goal as ProtectionUserGoal,
+        gs,
+        missing ?? [],
+      );
+      return plain ? [plain] : [];
+    }
 
     if (profileComplete && goal && goal !== "exploring") {
       if (goal === "inflation_protection") {
@@ -271,7 +280,7 @@ export function ConnectedOverview({
                 analyticsLabel="whats_this_score"
                 content={
                   home.isBeginner
-                    ? "We track USDm, cUSD, EURm, USDC, USDT, PAXG across Celo and Arbitrum. Volatile tokens (CELO, ETH) appear in your mix but don't count toward this score."
+                    ? "Your protection score reflects how well your stablecoin savings are spread across regions — higher is better."
                     : "Score reflects diversification across tracked stablecoin regions. Volatile tokens (CELO, ETH, WBTC) are shown in your asset mix but don't count. Open 'View Asset Details' below to see the split."
                 }
                 side="bottom"

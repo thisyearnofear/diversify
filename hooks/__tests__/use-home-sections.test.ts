@@ -37,6 +37,20 @@ vi.mock("../use-streak-rewards", () => ({
   useStreakRewards: vi.fn(),
 }));
 
+vi.mock("@diversifi/shared", () => ({
+  getBeginnerPrimaryTip: vi.fn(
+    (
+      goal: string,
+      scores: { hedge: number; diversify: number; rwa: number },
+    ) => {
+      if (goal === "inflation_protection" && scores.hedge < 60) {
+        return `Protection score ${Math.round(scores.hedge)}% — consider moving to more stable holdings.`;
+      }
+      return null;
+    },
+  ),
+}));
+
 vi.mock("../use-market-regime", () => ({
   useMarketRegime: vi.fn(() => null),
 }));

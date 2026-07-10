@@ -6,25 +6,15 @@ import React from "react";
 import { Card, ConnectWalletPrompt } from "../../shared/TabComponents";
 import WalletButton from "../../wallet/WalletButton";
 import type { UserExperienceMode } from "@/context/app/types";
+import { WALLET_CONNECT_COPY } from "@diversifi/shared";
 import { LiveProofTicker } from "../../shared/LiveProofCard";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
 import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
 import { GuardianStateScrollytelling } from "./GuardianStateScrollytelling";
 import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 import { useStrategy } from "@/context/app/StrategyContext";
-import { ARCHETYPES, type ArchetypeId } from "@/components/protection-cards/tokens";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { TokenIcon } from "../../shared/TokenIcon";
-
-const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
-  africapitalism: 'africapitalism',
-  buen_vivir: 'buen_vivir',
-  pan_caribbean: 'pan_caribbean',
-  confucian: 'confucian',
-  gotong_royong: 'gotong_royong',
-  islamic: 'islamic_finance',
-  global: 'global_diversification',
-  custom: 'custom',
-};
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -51,7 +41,7 @@ const HOW_IT_WORKS: HowItWorksStep[] = [
 
 export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) {
   const { financialStrategy } = useStrategy();
-  const archetypeId = financialStrategy ? STRATEGY_TO_ARCHETYPE[financialStrategy] ?? null : null;
+  const archetypeId = strategyToArchetype(financialStrategy);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 
   const heroCard = archetype ? (
@@ -97,7 +87,7 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
           ))}
         </div>
         <ConnectWalletPrompt
-          message={`Connect your wallet to activate your ${archetype.name} protection plan.`}
+          message={WALLET_CONNECT_COPY.activatePlan(archetype.name)}
           WalletButtonComponent={<WalletButton variant="inline" />}
           experienceMode={experienceMode}
         />
@@ -117,7 +107,7 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
         <span className="text-3xl">🤖</span>
       </div>
       <ConnectWalletPrompt
-        message="Connect your wallet to see how your savings hold up against inflation."
+        message={WALLET_CONNECT_COPY.generic}
         WalletButtonComponent={<WalletButton variant="inline" />}
         experienceMode={experienceMode}
       />
@@ -129,6 +119,7 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
       heroCard={heroCard}
       showProofCard={true}
       proofCardSide="above"
+      proofCardVariant={experienceMode === 'beginner' ? 'compact' : 'full'}
       showDemoCta={true}
       onEnableDemo={onEnableDemo}
       howItWorks={HOW_IT_WORKS}

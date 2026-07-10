@@ -90,6 +90,11 @@ vi.mock("@diversifi/shared", () => ({
     funded: { headline: "Turn on", description: "Enable", cta: "Turn on", hint: "" },
     monitoring: { headline: "On", description: "Active", cta: "View", hint: "" },
   },
+  WALLET_CONNECT_COPY: {
+    activatePlan: (name: string) => `Connect to activate ${name}`,
+    generic: "Connect your wallet",
+    startProtecting: "Connect to start",
+  },
 }));
 
 vi.mock("@/hooks/use-agent-status", () => ({

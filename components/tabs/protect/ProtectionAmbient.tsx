@@ -36,6 +36,7 @@ import React, {
 import { useStrategy } from '@/context/app/StrategyContext';
 import {
   ARCHETYPES,
+  strategyToArchetype,
   type Archetype,
   type ArchetypeId,
 } from '@/components/protection-cards/tokens';
@@ -50,19 +51,6 @@ import {
   IslamicTessellationPattern,
   type PatternProps,
 } from '@/components/protection-cards/patterns';
-
-// Live-app FinancialStrategy → design-token ArchetypeId. Two IDs
-// differ (`islamic` ↔ `islamic_finance`, `global` ↔ `global_diversification`).
-const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
-  africapitalism: 'africapitalism',
-  buen_vivir: 'buen_vivir',
-  pan_caribbean: 'pan_caribbean',
-  confucian: 'confucian',
-  gotong_royong: 'gotong_royong',
-  islamic: 'islamic_finance',
-  global: 'global_diversification',
-  custom: 'custom',
-};
 
 const PATTERN_FOR: Record<
   ArchetypeId,
@@ -124,7 +112,7 @@ interface Props {
 export function ProtectionAmbient({ children }: Props) {
   const { financialStrategy } = useStrategy();
   const archetypeId = financialStrategy
-    ? STRATEGY_TO_ARCHETYPE[financialStrategy] ?? null
+    ? strategyToArchetype(financialStrategy)
     : null;
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 

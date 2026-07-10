@@ -162,6 +162,25 @@ export const ARCHETYPE_ORDER: ArchetypeId[] = [
   'custom',
 ];
 
+/** Map app financial strategy ids to protection-plan archetype ids. */
+const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
+  africapitalism: 'africapitalism',
+  buen_vivir: 'buen_vivir',
+  pan_caribbean: 'pan_caribbean',
+  confucian: 'confucian',
+  gotong_royong: 'gotong_royong',
+  islamic: 'islamic_finance',
+  global: 'global_diversification',
+  custom: 'custom',
+};
+
+export function strategyToArchetype(
+  strategy: string | null | undefined,
+): ArchetypeId | null {
+  if (!strategy) return null;
+  return STRATEGY_TO_ARCHETYPE[strategy] ?? null;
+}
+
 export function alpha(hex: string, opacity: number): string {
   // Normalize 3-char hex (#abc) to 6-char (#aabbcc) so satori parses cleanly.
   let h = hex.replace('#', '');

@@ -144,8 +144,12 @@ export {
   GUARDIAN_USER_COPY,
   collapseGuardianTierForUser,
   GUARDIAN_USER_FACING_LABELS,
+  WALLET_CONNECT_COPY,
+  getBeginnerPrimaryTip,
   type GuardianTierState,
   type GuardianUserFacingState,
+  type ProtectionUserGoal,
+  type GoalScoresSlice,
   type DeriveGuardianTierStateInput,
 } from './services/vault/guardian-tier-state';
 export { IntentDiscoveryService, type AppIntent, type AppTab, type ResponseFormat } from './services/ai/intent-discovery.service';
@@ -188,7 +192,6 @@ export {
   calculateProjections,
   generateRebalancingOpportunities,
   generateTargetAllocations,
-  detectGuidedTour,
   createEmptyAnalysis
 } from './utils/portfolio-analysis';
 export type { PortfolioAnalysis, TokenAllocation, RegionalExposure, RebalancingOpportunity } from './utils/portfolio-analysis';

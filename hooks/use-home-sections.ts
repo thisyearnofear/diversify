@@ -24,6 +24,7 @@ import { useExperience } from "../context/app/ExperienceContext";
 import { useProtectionProfile } from "./use-protection-profile";
 import { useColdStart } from "./use-cold-start";
 import { useStreakRewards } from "./use-streak-rewards";
+import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared";
 
 export type HomeMode = "beginner" | "standard" | "advanced";
 
@@ -234,7 +235,14 @@ export function useHomeSections({
     let primaryTip: string | null = null;
     if (hasHoldings && portfolio) {
       const gs = portfolio.goalScores;
-      if (profileComplete && profileConfig.userGoal === "inflation_protection") {
+
+      if (isBeginner && profileComplete && profileConfig.userGoal) {
+        primaryTip = getBeginnerPrimaryTip(
+          profileConfig.userGoal as ProtectionUserGoal,
+          gs,
+          portfolio.missingRegions ?? [],
+        );
+      } else if (profileComplete && profileConfig.userGoal === "inflation_protection") {
         if (gs.hedge < 60) {
           primaryTip = `Hedge score ${Math.round(gs.hedge)}% — swap high-inflation tokens to USDm or EURm.`;
         } else if (gs.hedge >= 80) {

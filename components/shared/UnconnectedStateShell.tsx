@@ -36,6 +36,8 @@ export interface UnconnectedStateShellProps {
   /** Where to place the proof card relative to the hero card. "below" (default) renders
    *  hero → proof → how-it-works. "above" renders proof → hero → how-it-works. */
   proofCardSide?: 'above' | 'below';
+  /** Compact proof card hides contract addresses — better for beginner mode. */
+  proofCardVariant?: 'full' | 'compact';
   /** Whether to show the demo mode CTA (default: true) */
   showDemoCta?: boolean;
   /** Callback for enabling demo mode — required when showDemoCta is true */
@@ -57,6 +59,7 @@ export function UnconnectedStateShell({
   className = '',
   showProofCard = true,
   proofCardSide = 'below',
+  proofCardVariant = 'full',
   showDemoCta = true,
   onEnableDemo,
   howItWorks,
@@ -65,7 +68,7 @@ export function UnconnectedStateShell({
   demoCtaCardClassName = '',
   children,
 }: UnconnectedStateShellProps) {
-  const proofCard = showProofCard ? <LiveProofCard /> : null;
+  const proofCard = showProofCard ? <LiveProofCard variant={proofCardVariant} /> : null;
 
   return (
     <div className={`space-y-4 ${className}`}>
