@@ -25,6 +25,9 @@ export interface PatternProps {
   accentSoft: string;
 }
 
+/** Safety cap — prevents mobile GPU from choking on huge viewports. */
+const MAX_ELEMENTS = 80;
+
 /* ────────────────────────────────────────────────────────────────────
  * SVG frame — shared wrapper. All patterns draw inside this SVG.
  * ──────────────────────────────────────────────────────────────────── */
@@ -52,10 +55,10 @@ function PatternFrame({ children, width, height }: { children: React.ReactNode; 
  * gold + deep brown stripes on the savannah-sunrise surface.
  * ──────────────────────────────────────────────────────────────────── */
 export function AfricaWeavePattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const gap = 32;
+  const gap = cardHeight > 800 ? 48 : 32;
   const total = Math.ceil((cardWidth + cardHeight) / gap);
   const stripes: React.ReactNode[] = [];
-  for (let i = 0; i < total; i++) {
+  for (let i = 0; i < total && stripes.length < MAX_ELEMENTS; i++) {
     const x = -200 + i * gap;
     stripes.push(
       <rect
@@ -93,12 +96,13 @@ export function AfricaWeavePattern({ cardWidth, cardHeight, accent, accentSoft }
  * deep-emerald-on-jade register. Reads as cultivated highland.
  * ──────────────────────────────────────────────────────────────────── */
 export function BuenVivirTerracePattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const step = 40;
+  // Scale step up for large surfaces to cap element count
+  const step = cardHeight > 800 ? 60 : 40;
   const cols = Math.ceil(cardWidth / step);
   const rows = Math.ceil(cardHeight / step);
   const blocks: React.ReactNode[] = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+  for (let r = 0; r < rows && blocks.length < MAX_ELEMENTS; r++) {
+    for (let c = 0; c < cols && blocks.length < MAX_ELEMENTS; c++) {
       const isStep = (r + c) % 3 === 0;
       const isHL = (r + c) % 7 === 0;
       if (isHL) {
@@ -182,12 +186,12 @@ export function ConfucianColumnPattern({ cardWidth, cardHeight, accent, accentSo
  * sunset gradient. Reads as cultivated batik cloth, not background.
  * ──────────────────────────────────────────────────────────────────── */
 export function GotongDiamondPattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const cell = 90;
+  const cell = cardHeight > 800 ? 130 : 90;
   const cols = Math.ceil(cardWidth / cell) + 1;
   const rows = Math.ceil(cardHeight / cell) + 1;
   const blocks: React.ReactNode[] = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+  for (let r = 0; r < rows && blocks.length < MAX_ELEMENTS; r++) {
+    for (let c = 0; c < cols && blocks.length < MAX_ELEMENTS; c++) {
       const offsetX = r % 2 === 0 ? 0 : cell / 2;
       const cx = c * cell + offsetX;
       const cy = r * cell;
@@ -227,12 +231,12 @@ export function GotongDiamondPattern({ cardWidth, cardHeight, accent, accentSoft
  * over the emerald surface. Reads as a mosaic wall, not wallpaper.
  * ──────────────────────────────────────────────────────────────────── */
 export function IslamicTessellationPattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
-  const cell = 100;
+  const cell = cardHeight > 800 ? 140 : 100;
   const cols = Math.ceil(cardWidth / cell) + 1;
   const rows = Math.ceil(cardHeight / cell) + 1;
   const blocks: React.ReactNode[] = [];
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
+  for (let r = 0; r < rows && blocks.length < MAX_ELEMENTS; r++) {
+    for (let c = 0; c < cols && blocks.length < MAX_ELEMENTS; c++) {
       const cx = c * cell;
       const cy = r * cell;
       blocks.push(
@@ -355,7 +359,8 @@ export function CustomScatterPattern({ cardWidth, cardHeight, accent, accentSoft
     const x = Math.sin(i * 12.9898) * 43758.5453;
     return x - Math.floor(x);
   };
-  for (let i = 0; i < 140; i++) {
+  const dotCount = Math.min(60, 140);
+  for (let i = 0; i < dotCount; i++) {
     const x = seed(i * 2) * cardWidth;
     const y = seed(i * 2 + 1) * cardHeight;
     const r = 1.5 + seed(i * 3) * 4;

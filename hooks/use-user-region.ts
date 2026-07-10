@@ -162,9 +162,14 @@ export function useUserRegion(): UseUserRegionReturn {
           }
         }
 
-        // If locale detection failed, try IP-based detection
+        // If locale detection failed, try IP-based detection (5s timeout)
         try {
-          const response = await fetch('https://ipapi.co/json/');
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const response = await fetch('https://ipapi.co/json/', {
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
           const data = await response.json();
 
           if (data.country_code) {
