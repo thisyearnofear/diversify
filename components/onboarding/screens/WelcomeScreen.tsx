@@ -401,12 +401,18 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
             >
                 {phase === 'detect' ? (
                   <>
-                    <div className="flex items-center justify-center gap-1.5 mb-3">
+                    <div className="flex items-center justify-center gap-1.5 mb-2">
                         <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
                             <span className="text-white text-xs font-black">D</span>
                         </div>
                         <span className="text-xs font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
                     </div>
+                    {/* Identity line — establishes what this is before asking
+                        anything of the visitor. Echoes the "no lock-ups"
+                        promise repeated later so the voice stays consistent. */}
+                    <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 mb-3 max-w-[240px] mx-auto leading-snug">
+                      Values-driven currency protection. No lock-ups, ever.
+                    </p>
                     <GuardianMascot
                       size={100}
                       mood={selectedArchetype ? 'happy' : 'neutral'}
@@ -471,9 +477,12 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         </button>
                       </div>
                     ) : (
-                      <div className="bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-2xl p-5 mb-4">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                          We couldn&apos;t detect your country automatically.
+                      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-5 mb-4">
+                        <p className="text-sm font-black text-gray-900 dark:text-white mb-1">
+                          See how your currency is holding up
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                          Pick your country and we&apos;ll show its real depreciation against USD, EUR, and gold.
                         </p>
                         <button
                           onClick={() => setShowCountryPicker(true)}

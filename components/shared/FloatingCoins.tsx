@@ -2,9 +2,11 @@
  * Coin + FloatingCoins — the stablecoin motif system.
  *
  * `Coin` is a self-contained SVG coin: radial-gradient face, embossed
- * inner ring, glossy highlight, and either a currency glyph or a cute
- * kawaii face. Pass any accent color and the light/dark facets are
- * derived automatically, so archetype-tinted coins stay on-palette.
+ * inner ring, glossy highlight, and a stamped currency glyph. Pass any
+ * accent color and the light/dark facets are derived automatically, so
+ * archetype-tinted coins stay on-palette. Deliberately no mascot-like
+ * face — this is a finance app, not a rewards app, so the motif reads
+ * as a minted medallion, not a character.
  *
  * `FloatingCoins` scatters a deterministic field of drifting coins for
  * ambient backdrops. Deterministic layout keeps SSR hydration safe;
@@ -34,8 +36,6 @@ export interface CoinProps {
   symbol?: string;
   /** Base color of the coin; facets are derived. Defaults to warm gold. */
   color?: string;
-  /** Render a smiling face instead of a glyph. */
-  face?: boolean;
   className?: string;
   style?: React.CSSProperties;
 }
@@ -44,7 +44,6 @@ export function Coin({
   size = 48,
   symbol = '$',
   color = GOLD,
-  face = false,
   className = '',
   style,
 }: CoinProps) {
@@ -84,33 +83,17 @@ export function Coin({
         opacity="0.35"
         transform="rotate(-24 23 17)"
       />
-      {face ? (
-        <g>
-          <circle cx="25" cy="30" r="2.4" fill={ink} />
-          <circle cx="39" cy="30" r="2.4" fill={ink} />
-          <path
-            d="M24.5 37 Q32 43.5 39.5 37"
-            fill="none"
-            stroke={ink}
-            strokeWidth="2.6"
-            strokeLinecap="round"
-          />
-          <circle cx="19.5" cy="35" r="2.6" fill="#fb7185" opacity="0.4" />
-          <circle cx="44.5" cy="35" r="2.6" fill="#fb7185" opacity="0.4" />
-        </g>
-      ) : (
-        <text
-          x="32"
-          y="33.5"
-          textAnchor="middle"
-          dominantBaseline="central"
-          fontSize={symbol.length > 1 ? 18 : 26}
-          fontWeight={800}
-          fill={ink}
-        >
-          {symbol}
-        </text>
-      )}
+      <text
+        x="32"
+        y="33.5"
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={symbol.length > 1 ? 18 : 26}
+        fontWeight={800}
+        fill={ink}
+      >
+        {symbol}
+      </text>
     </svg>
   );
 }
@@ -119,8 +102,7 @@ interface FloatSpec {
   left: string;
   top: string;
   size: number;
-  symbol?: string;
-  face?: boolean;
+  symbol: string;
   duration: number;
   delay: number;
   opacity: number;
@@ -134,13 +116,13 @@ interface FloatSpec {
 const BACKDROP_COINS: FloatSpec[] = [
   { left: '5%', top: '12%', size: 44, symbol: '$', duration: 11, delay: 0, opacity: 0.5 },
   { left: '86%', top: '8%', size: 30, symbol: '€', duration: 9, delay: 1.2, opacity: 0.42, blur: 1, tinted: true },
-  { left: '10%', top: '70%', size: 58, face: true, duration: 13, delay: 0.6, opacity: 0.55 },
+  { left: '10%', top: '70%', size: 58, symbol: '$', duration: 13, delay: 0.6, opacity: 0.55 },
   { left: '80%', top: '74%', size: 38, symbol: '₱', duration: 10, delay: 2, opacity: 0.45, tinted: true },
   { left: '46%', top: '88%', size: 26, symbol: '¢', duration: 8, delay: 0.3, opacity: 0.35, blur: 2 },
   { left: '92%', top: '44%', size: 48, symbol: '$', duration: 12, delay: 1.8, opacity: 0.4, blur: 1 },
   { left: '2%', top: '42%', size: 22, symbol: '€', duration: 7.5, delay: 2.6, opacity: 0.3, blur: 2, tinted: true },
   { left: '64%', top: '3%', size: 20, symbol: '¥', duration: 8.5, delay: 3.2, opacity: 0.32, blur: 2 },
-  { left: '28%', top: '5%', size: 34, face: true, duration: 10.5, delay: 1.5, opacity: 0.45, tinted: true },
+  { left: '28%', top: '5%', size: 34, symbol: '£', duration: 10.5, delay: 1.5, opacity: 0.45, tinted: true },
   { left: '35%', top: '76%', size: 18, symbol: '$', duration: 7, delay: 4, opacity: 0.28, blur: 3 },
 ];
 
@@ -149,7 +131,7 @@ const BACKDROP_COINS: FloatSpec[] = [
 const PANEL_COINS: FloatSpec[] = [
   { left: '2%', top: '16%', size: 32, symbol: '$', duration: 10, delay: 0.4, opacity: 0.35 },
   { left: '88%', top: '10%', size: 24, symbol: '€', duration: 8.5, delay: 1.6, opacity: 0.3, blur: 1, tinted: true },
-  { left: '90%', top: '52%', size: 38, face: true, duration: 12, delay: 0.8, opacity: 0.4 },
+  { left: '90%', top: '52%', size: 38, symbol: '₹', duration: 12, delay: 0.8, opacity: 0.4 },
   { left: '3%', top: '66%', size: 22, symbol: '₱', duration: 9, delay: 2.4, opacity: 0.28, blur: 1, tinted: true },
   { left: '84%', top: '88%', size: 28, symbol: '¢', duration: 10.5, delay: 1.1, opacity: 0.32 },
   { left: '8%', top: '92%', size: 18, symbol: '€', duration: 7.5, delay: 3, opacity: 0.25, blur: 2 },
@@ -185,7 +167,6 @@ export function FloatingCoins({ variant = 'panel', accent = null, className = ''
           <Coin
             size={c.size}
             symbol={c.symbol}
-            face={c.face}
             color={accent && c.tinted ? accent : GOLD}
           />
         </div>
