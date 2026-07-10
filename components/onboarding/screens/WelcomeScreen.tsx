@@ -24,6 +24,8 @@ import { showTestnetUi, optIntoTestnetUi } from '../../../constants/testnet';
 import { GuardianMascot } from '../../shared/GuardianMascot';
 import { Coin, FloatingCoins } from '../../shared/FloatingCoins';
 import { TokenIcon } from '../../shared/TokenIcon';
+import { PlanPreviewCard } from '../../protection-cards/PlanPreviewCard';
+import { PhilosophyPromptCard } from '../../protection-cards/PhilosophyPromptCard';
 
 // ── Animation variants ─────────────────────────────────────────────────
 // Blur-swap phase transition (transitions.dev "text states swap" pattern)
@@ -302,6 +304,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       calculateCounterfactual,
       riskEvents,
       isBenchmarkCurrency,
+      getPlanPreview,
     } = useCurrencyRisk();
     const { setFinancialStrategy } = useStrategy();
 
@@ -356,6 +359,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const xauPreserved = riskData
       ? calculateCounterfactual(10000, 20, 'XAU', '5yr')
       : 0;
+
+    const planPreview = selectedArchetype
+      ? getPlanPreview(selectedArchetype, 10000, 20)
+      : null;
 
     return (
         // Scrolling lives on the parent dialog (single scroll container).
@@ -701,16 +708,8 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   )}
 
                   {/* Neutral framing */}
-                  <motion.div variants={staggerChild} className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-2 border-emerald-200 dark:border-emerald-800 rounded-2xl p-4 mb-5">
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">
-                      Different communities respond differently
-                    </p>
-                    <p className="text-sm font-black text-emerald-900 dark:text-emerald-100">
-                      Choose a protection philosophy that matches your values.
-                    </p>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                      No lock-ups. No subscriptions. Your values, your plan.
-                    </p>
+                  <motion.div variants={staggerChild}>
+                    <PhilosophyPromptCard variant="panel" className="mb-5" />
                   </motion.div>
 
                   <motion.button
@@ -768,6 +767,12 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       />
                     ))}
                   </motion.div>
+
+                  {planPreview && (
+                    <motion.div variants={staggerChild} className="mb-5">
+                      <PlanPreviewCard preview={planPreview} />
+                    </motion.div>
+                  )}
 
                   {/* Actions — archetype-aware when a philosophy is selected */}
                   <motion.div variants={staggerChild} className="space-y-2">

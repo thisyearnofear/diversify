@@ -8,6 +8,7 @@ import {
 } from "@/constants/currency-risk";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { PhilosophyHeroCard } from "@/components/protection-cards/PhilosophyHeroCard";
+import { PhilosophyPromptCard } from "@/components/protection-cards/PhilosophyPromptCard";
 import RegionalIconography from "../../regional/RegionalIconography";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
@@ -159,14 +160,7 @@ export function NotConnectedState({
             {archetype ? (
               <PhilosophyHeroCard archetype={archetype} variant="inline" className="mb-4" />
             ) : (
-              <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 mb-4 border border-emerald-100 dark:border-emerald-900/40">
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">
-                  Different communities respond differently
-                </p>
-                <p className="text-[11px] text-emerald-500 dark:text-emerald-300">
-                  Choose a protection philosophy that matches your values — from Africapitalism to Islamic Finance.
-                </p>
-              </div>
+              <PhilosophyPromptCard variant="inline" className="mb-4" />
             )}
           </>
         ) : (

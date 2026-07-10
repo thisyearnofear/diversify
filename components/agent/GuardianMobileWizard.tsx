@@ -18,6 +18,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMobile } from "@/hooks/use-mobile";
 import { LiveProofCard } from "../shared/LiveProofCard";
 import { STRATEGIES as CANONICAL_STRATEGIES } from "@/hooks/useFinancialStrategies";
+import { STRATEGY_ALLOCATIONS } from "@/components/protection-cards/plan-preview";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -40,58 +41,7 @@ interface Strategy {
 // declare explicit token splits (they show just the description instead).
 
 // Per-strategy example allocations for the wizard's preview bar.
-// Only the wizard needs this level of granularity; the authoritative strategy
-// config (regions, scoring, AI prompt) lives in StrategyService.
-const STRATEGY_ALLOCATIONS: Record<string, { token: string; region: string; percent: number }[]> = {
-  africapitalism: [
-    { token: "KESm", region: "Kenya", percent: 60 },
-    { token: "cUSD", region: "US", percent: 25 },
-    { token: "cEUR", region: "EU", percent: 15 },
-  ],
-  buen_vivir: [
-    { token: "cREAL", region: "Brazil", percent: 45 },
-    { token: "COPm", region: "Colombia", percent: 35 },
-    { token: "cUSD", region: "US", percent: 20 },
-  ],
-  pan_caribbean: [
-    { token: "cUSD", region: "US", percent: 50 },
-    { token: "PAXG", region: "Global", percent: 30 },
-    { token: "cEUR", region: "EU", percent: 20 },
-  ],
-  confucian: [
-    { token: "cUSD", region: "US", percent: 50 },
-    { token: "cEUR", region: "EU", percent: 30 },
-    { token: "KESm", region: "Kenya", percent: 20 },
-  ],
-  gotong_royong: [
-    { token: "PHPm", region: "Philippines", percent: 50 },
-    { token: "cUSD", region: "US", percent: 30 },
-    { token: "cEUR", region: "EU", percent: 20 },
-  ],
-  islamic: [
-    { token: "PAXG", region: "Global", percent: 50 },
-    { token: "cUSD", region: "US", percent: 30 },
-    { token: "cEUR", region: "EU", percent: 20 },
-  ],
-  global: [
-    { token: "cUSD", region: "US", percent: 25 },
-    { token: "cEUR", region: "EU", percent: 20 },
-    { token: "KESm", region: "Kenya", percent: 20 },
-    { token: "cREAL", region: "Brazil", percent: 15 },
-    { token: "COPm", region: "Colombia", percent: 10 },
-    { token: "PHPm", region: "Philippines", percent: 10 },
-  ],
-  halo: [
-    { token: "PAXG", region: "Global", percent: 50 },
-    { token: "USDY", region: "US", percent: 30 },
-    { token: "cUSD", region: "US", percent: 20 },
-  ],
-  taco: [
-    { token: "USDC", region: "Global", percent: 60 },
-    { token: "cEUR", region: "EU", percent: 20 },
-    { token: "cUSD", region: "US", percent: 20 },
-  ],
-};
+// Authoritative splits live in components/protection-cards/plan-preview.ts.
 
 // Wizard-local shape: canonical strategies + allocation preview.
 // Built once at module level so the component body stays clean.

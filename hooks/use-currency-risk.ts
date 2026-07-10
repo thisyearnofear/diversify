@@ -24,6 +24,11 @@ import {
   HORIZON_KEYS,
   calculatePreservedValue,
 } from '../constants/currency-risk';
+import {
+  getPlanPreview as buildPlanPreview,
+  type PlanPreview,
+} from '../components/protection-cards/plan-preview';
+import type { ArchetypeId } from '../components/protection-cards/tokens';
 
 export interface UseCurrencyRiskReturn {
   /** The matched currency risk entry, or null if the user's currency is not in the dataset. */
@@ -55,6 +60,12 @@ export interface UseCurrencyRiskReturn {
   riskEvents: CurrencyRiskEntry['riskEvents'];
   /** Whether the user's currency is a benchmark currency (USD, EUR) — in that case, no risk to show. */
   isBenchmarkCurrency: boolean;
+  /** Read-only plan simulator combining allocation splits + counterfactual preserved value. */
+  getPlanPreview: (
+    archetypeId: ArchetypeId,
+    savingsAmount: number,
+    shieldPercent?: number,
+  ) => PlanPreview;
 }
 
 export function useCurrencyRisk(): UseCurrencyRiskReturn {
@@ -125,6 +136,22 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
 
   const riskEvents = riskData?.riskEvents ?? [];
 
+  const getPlanPreview = (
+    archetypeId: ArchetypeId,
+    savingsAmount: number,
+    shieldPercent = 20,
+  ): PlanPreview => {
+    const preservedValue = riskData
+      ? calculateCounterfactual(savingsAmount, shieldPercent, 'XAU', '5yr')
+      : null;
+    return buildPlanPreview({
+      archetypeId,
+      savingsAmount,
+      shieldPercent,
+      preservedValue,
+    });
+  };
+
   return {
     riskData,
     isLoading: regionLoading,
@@ -138,5 +165,6 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
     calculateCounterfactual,
     riskEvents,
     isBenchmarkCurrency,
+    getPlanPreview,
   };
 }
