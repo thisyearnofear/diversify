@@ -200,7 +200,7 @@ instructions, env vars, and the signing/verification API.
 | `NavigationProvider` | Active tab, tab history |
 | `ThemeProvider` | Dark/light mode |
 | `ExperienceProvider` | Simple/Standard/Advanced mode |
-| `StrategyProvider` | Protection plan selection |
+| `ProtectionProfileProvider` | Profile goals, region, philosophy (`useStrategy` reads `config.philosophy`) |
 | `BacktestProvider` | Shared backtest simulation state |
 | `TourProvider` | Guided tour state |
 | `DemoModeProvider` | Demo mode toggle + mock data |

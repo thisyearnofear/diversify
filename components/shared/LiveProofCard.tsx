@@ -1,10 +1,9 @@
 /**
  * LiveProofCard — Visible "this product is real" surface.
  *
- * Shows the live 0G RecommendationLedger stats so the unconnected user
- * sees verifiable on-chain activity before they connect a wallet. Renders
- * the contract address, the total number of recommendations recorded,
- * and a link to the 0G Galileo Testnet explorer.
+ * Shows verifiable on-chain activity before the user connects a wallet.
+ * Chain label and explorer URL come from the proof feed API — not hardcoded
+ * to a single testnet name.
  *
  * Pure presentational component. The data hook is `useProofFeed` from
  * `@/hooks/use-proof-feed`; the data is read from a page-level
@@ -27,6 +26,10 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useProofFeed, type LedgerRecommendation } from '@/hooks/use-proof-feed';
+import {
+  getLedgerProofTitle,
+  getLedgerFreshnessLabel,
+} from '@/constants/proof-feed';
 
 const SHORT_ADDRESS_RE = /^(0x[0-9a-fA-F]{4})[0-9a-fA-F]+(0x[0-9a-fA-F]{4})$/;
 
@@ -84,19 +87,23 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
 
     // ── Degraded (no data, no cache, fetch failed) ──
     if (!data && error) {
+        const fallbackExplorer = 'https://celoscan.io';
         return (
             <div className="rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50/40 dark:bg-amber-950/10 p-4">
                 <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-300">
                     <span>⚠️</span>
                     <span>Live receipts unavailable</span>
                 </div>
+                <p className="mt-2 text-xs text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
+                    Protection records are still written on-chain. Try again in a moment.
+                </p>
                 <a
-                    href="https://chainscan-galileo.0g.ai"
+                    href={fallbackExplorer}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-2 inline-block text-xs font-bold text-amber-700 dark:text-amber-300 underline"
                 >
-                    View 0G Galileo Testnet explorer →
+                    Browse verified ledgers →
                 </a>
             </div>
         );
@@ -143,6 +150,10 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
         );
     }
 
+    const chainId = stats?.chainId;
+    const proofTitle = getLedgerProofTitle(chainId);
+    const freshnessLabel = getLedgerFreshnessLabel(chainId, isStale);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 4 }}
@@ -158,10 +169,10 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                     </div>
                     <div>
                         <h3 className="text-sm font-black text-emerald-900 dark:text-emerald-100">
-                            0G Galileo Testnet
+                            {proofTitle}
                         </h3>
                         <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                            {isStale ? 'Cached' : 'Live'} · chain {stats?.chainId ?? 16602}
+                            {freshnessLabel}
                         </p>
                     </div>
                 </div>
@@ -177,21 +188,26 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                 )}
             </div>
 
-            <div className="flex items-center justify-between gap-2 text-xs">
-                <div className="font-mono text-emerald-700 dark:text-emerald-300">
-                    {shortAddress(contractExplorer ?? stats?.contractAddress)}
+            <details className="text-xs">
+                <summary className="cursor-pointer font-bold text-emerald-700 dark:text-emerald-300 hover:underline">
+                    Contract address
+                </summary>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                    <div className="font-mono text-emerald-700 dark:text-emerald-300">
+                        {shortAddress(contractExplorer ?? stats?.contractAddress)}
+                    </div>
+                    {contractExplorer && (
+                        <a
+                            href={contractExplorer}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-emerald-700 dark:text-emerald-300 font-bold underline hover:no-underline whitespace-nowrap"
+                        >
+                            View on-chain →
+                        </a>
+                    )}
                 </div>
-                {contractExplorer && (
-                    <a
-                        href={contractExplorer}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-emerald-700 dark:text-emerald-300 font-bold underline hover:no-underline whitespace-nowrap"
-                    >
-                        View on-chain →
-                    </a>
-                )}
-            </div>
+            </details>
 
             {isStale && data?.capturedAt && (
                 <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold" role="status">

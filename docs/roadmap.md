@@ -420,9 +420,9 @@ Critical UI/UX audit against the emerging/APAC saver persona. Five waves; **0–
 | **2 — DRY + plain copy** | `strategyToArchetype()` single source; beginner tips without chain jargon; compact `LiveProofCard` | **Done** |
 | **3 — Calm + honest** | Hide header chrome in Simple mode; 3-step tour; APAC honesty banner; fold `philosophy` into protection profile | **Done** |
 | **4 — Calm polish** | Testnet banner gated; ClaimCelebration coin motif; ProtectionTab confetti removed; AgentTab beginner compact view | **Done** |
-| **5+** | Voice demotion in Simple mode, further LiveProof mainnet copy | Planned |
+| **5 — Provider + proof polish** | `ProtectionProfileProvider` replaces `StrategyProvider`; LiveProof mainnet-aware copy; voice hidden in Simple mode | **Done** |
 
-**544 tests passing** after Wave 4. Key files: `constants/tabs.ts`, `constants/onboarding.ts`, `constants/apac-rail.ts`, `constants/testnet.ts`, `hooks/use-protection-profile.ts`, `hooks/use-home-sections.ts`, `components/app/AppHeader.tsx`, `components/tour/GuidedTour.tsx`.
+**547 tests passing** after Wave 5. Key files: `hooks/use-protection-profile.tsx`, `constants/proof-feed.ts`, `constants/testnet.ts`, `components/shared/LiveProofCard.tsx`.
 
 ---
 

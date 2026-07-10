@@ -127,7 +127,7 @@ export default function AppHeader({
         </>
         )}
 
-        {/* Voice assistant */}
+        {!isBeginner && (
         <VoiceButton
           size="sm"
           variant="default"
@@ -135,6 +135,7 @@ export default function AppHeader({
           onSuggestionsChange={(open) => setActiveHint(open ? "voice" : null)}
           onTranscription={handleTranscription}
         />
+        )}
 
         {!isBeginner && <ChainPill />}
 

@@ -100,9 +100,7 @@ describe('LiveProofCard', () => {
         );
         expect(screen.getByTestId('live-proof-card')).toBeInTheDocument();
         expect(screen.getByText('247')).toBeInTheDocument();
-        expect(screen.getByText(/0G Galileo Testnet/)).toBeInTheDocument();
-        // Short address: 0xFA…4ED
-        expect(screen.getByText(/0xFA.*4ED/)).toBeInTheDocument();
+        expect(screen.getByText(/Verified ledger · 0G testnet/)).toBeInTheDocument();
         const link = screen.getByText('View on-chain →');
         expect(link.closest('a')).toHaveAttribute(
             'href',
@@ -117,6 +115,7 @@ describe('LiveProofCard', () => {
             </CtxWrap>,
         );
         expect(screen.getByText(/Live receipts unavailable/)).toBeInTheDocument();
+        expect(screen.getByText(/Browse verified ledgers/)).toBeInTheDocument();
     });
 
     it('renders the loaded state with a "Cached" badge when isStale is true', () => {
@@ -125,7 +124,7 @@ describe('LiveProofCard', () => {
                 <LiveProofCard />
             </CtxWrap>,
         );
-        expect(screen.getByText('Cached · chain 16602')).toBeInTheDocument();
+        expect(screen.getByText('Cached · 0G testnet')).toBeInTheDocument();
     });
 
     it('renders compact variant without exposing contract address in the headline', () => {

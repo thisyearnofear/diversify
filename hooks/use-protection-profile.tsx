@@ -5,7 +5,7 @@
  * Separates the UI flow state (editing/viewing) from the persisted config.
  */
 
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, createContext, useContext, type ReactNode } from 'react';
 import type { FinancialStrategy } from '@diversifi/shared';
 
 // ============================================================================
@@ -215,10 +215,31 @@ function saveConfig(config: ProtectionConfig): void {
 }
 
 // ============================================================================
-// MAIN HOOK
+// MAIN HOOK + PROVIDER
 // ============================================================================
 
-export function useProtectionProfile() {
+type ProtectionProfileContextValue = ReturnType<typeof useProtectionProfileState>;
+
+const ProtectionProfileContext = createContext<ProtectionProfileContextValue | null>(null);
+
+export function ProtectionProfileProvider({ children }: { children: ReactNode }) {
+  const value = useProtectionProfileState();
+  return (
+    <ProtectionProfileContext.Provider value={value}>
+      {children}
+    </ProtectionProfileContext.Provider>
+  );
+}
+
+export function useProtectionProfile(): ProtectionProfileContextValue {
+  const ctx = useContext(ProtectionProfileContext);
+  if (!ctx) {
+    throw new Error('useProtectionProfile must be used within ProtectionProfileProvider');
+  }
+  return ctx;
+}
+
+function useProtectionProfileState() {
   // Config is the source of truth for persisted data
   const [config, setConfig] = useState<ProtectionConfig>(DEFAULT_CONFIG);
   
@@ -226,15 +247,24 @@ export function useProtectionProfile() {
   const [mode, setMode] = useState<ProfileMode>('editing');
   const [currentStep, setCurrentStep] = useState(0);
   
-  // Load from storage on mount
+  // Load from storage on mount + sync cross-tab updates
   useEffect(() => {
     const loaded = loadConfig();
     setConfig(loaded);
-    
-    // If config is complete, start in viewing mode
+
     const isComplete = loaded.userGoal && loaded.riskTolerance && loaded.timeHorizon;
     setMode(isComplete ? 'complete' : 'editing');
-    setCurrentStep(isComplete ? 0 : 0);
+    setCurrentStep(0);
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY || e.key === LEGACY_STRATEGY_KEY) {
+        setConfig(loadConfig());
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   // Save to storage when config changes
@@ -408,7 +438,11 @@ export function useProtectionProfile() {
     setUserGoal: useCallback((goal: UserGoal) => updateConfig('userGoal', goal), [updateConfig]),
     setRiskTolerance: useCallback((risk: RiskTolerance) => updateConfig('riskTolerance', risk), [updateConfig]),
     setTimeHorizon: useCallback((time: TimeHorizon) => updateConfig('timeHorizon', time), [updateConfig]),
-    
+    setPhilosophy: useCallback(
+      (philosophy: FinancialStrategy | null) => updateConfig('philosophy', philosophy),
+      [updateConfig],
+    ),
+
     // Alias for updateConfig (backwards compatibility)
     updateProfile: updateConfig,
   };

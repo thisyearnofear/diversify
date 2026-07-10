@@ -61,7 +61,7 @@ Key new files:
 - External agent example + integration guide written (`examples/external-agent/`, `docs/integration-guide.md`)
 - LICENSE file added at repo root (MIT)
 - Self Protocol mainnet registration complete (real passport, Celo mainnet, agent `0xE8cDb7CA…f170`)
-- All 544 tests pass
+- All 547 tests pass
 - Guardian heartbeat cron runs every 2 hours on Hetzner — records advisory recommendations on Celo/Arbitrum primary + 0G mainnet evidence mirror
 - Guardian loop cron runs every 5 min — auto-executes within user permission bounds, mirrors to 0G
 - **Remaining:** 0G explorer source verification (custom API), demo video, X post with mainnet proof
@@ -80,6 +80,7 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - **Wave 2:** `strategyToArchetype()` DRY; `getBeginnerPrimaryTip()` plain copy; compact `LiveProofCard`; `detectGuidedTour` deleted
 - **Wave 3:** Simple mode hides header mode toggle + `ChainPill`; 3-step `GuidedTour`; APAC honesty banner; `philosophy` in `ProtectionConfig` (replaces `financialStrategy` key)
 - **Wave 4:** Testnet banner gated (`constants/testnet.ts`); `ClaimCelebration` uses `Coin` motif; ProtectionTab confetti removed; AgentTab beginner shows `GuardianStatusChip` only
+- **Wave 5:** `ProtectionProfileProvider` unifies profile + philosophy; `useStrategy()` delegates to profile; LiveProof chain-aware copy; voice hidden in Simple mode
 - **544 tests passing**; see `docs/roadmap.md` § UX consolidation waves for full table
 
 ## Tool Notes

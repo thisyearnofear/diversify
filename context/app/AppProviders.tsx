@@ -2,8 +2,8 @@ import React from 'react';
 import { NavigationProvider } from './NavigationContext';
 import { ThemeProvider } from './ThemeContext';
 import { ExperienceProvider } from './ExperienceContext';
-import { StrategyProvider } from './StrategyContext';
 import { TourProvider } from './TourContext';
+import { ProtectionProfileProvider } from '@/hooks/use-protection-profile';
 import { DemoModeProvider } from './DemoModeContext';
 import { PortfolioProvider } from './PortfolioContext';
 import { AgentChatProvider } from './AgentChatContext';
@@ -23,7 +23,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <NavigationProvider>
       <ThemeProvider>
         <ExperienceProvider>
-          <StrategyProvider>
+          <ProtectionProfileProvider>
             <TourProvider>
               <DemoModeProvider>
                 <PortfolioProvider>
@@ -31,7 +31,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                 </PortfolioProvider>
               </DemoModeProvider>
             </TourProvider>
-          </StrategyProvider>
+          </ProtectionProfileProvider>
         </ExperienceProvider>
       </ThemeProvider>
     </NavigationProvider>

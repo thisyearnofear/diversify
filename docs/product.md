@@ -74,7 +74,7 @@ attached proof, not a verbose AI explanation.
 
 6. **Calm UX.** Designed as a savings protection app, not a trading terminal. The Guardian proposes one clear action at a time. **Simple mode** (default for new users) shows three tabs — Shield, Home, Learn — and hides the experience toggle, chain pill, Exchange tab, and Advisor FAB until the user opts into Standard mode.
 
-7. **Guided first run.** Philosophy onboarding (`StrategyModal` → detect country → show risk → choose plan) is the primary first-run flow. A lightweight **3-step** `GuidedTour` (risk moment → Shield tab → connect wallet) only runs when philosophy onboarding was skipped. Region, goal, and philosophy persist in `useProtectionProfile` (`diversifi-protection-profile-v2`); `StrategyContext` is a thin React wrapper over the profile's `philosophy` field (legacy `financialStrategy` localStorage key auto-migrates).
+7. **Guided first run.** Philosophy onboarding (`StrategyModal` → detect country → show risk → choose plan) is the primary first-run flow. A lightweight **3-step** `GuidedTour` (risk moment → Shield tab → connect wallet) only runs when philosophy onboarding was skipped. Region, goal, and philosophy persist in `ProtectionProfileProvider` / `use-protection-profile` (`diversifi-protection-profile-v2`); `useStrategy()` reads `config.philosophy` from the same provider.
 
 8. **Tab discoverability.** First-visit users get an action-oriented hint above the tab bar. Tab visits are tracked via `useTabDiscovery` — the hint auto-dismisses after **2** tabs visited or the first swipe.
 
