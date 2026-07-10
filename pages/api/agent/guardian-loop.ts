@@ -25,7 +25,7 @@ import { vaultStore } from '../vault/_store';
 import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, updateGuardianState, type GuardianAnchorRecord } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
-import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual } from '@diversifi/shared';
+import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 import { guardianEventBus } from './_guardian-event-bus';
 
 const GUARDIAN_LOOP_SECRET = (() => {
@@ -320,6 +320,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             servingModel: 'guardian-loop',
             settlementTxHash: txHash,
             confidence: Math.round(confidence * 10000), // Contract uses basis points
+            routingContext: deriveLedgerRoutingContextFromVault(vault.strategy),
           });
 
           // Mirror to 0G evidence anchor (fire-and-forget). This creates a

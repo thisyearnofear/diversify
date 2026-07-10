@@ -30,14 +30,13 @@ export const STRATEGY_ALLOCATIONS: Record<string, AllocationSlice[]> = {
     { token: 'cEUR', region: 'EU', percent: 20 },
   ],
   confucian: [
-    { token: 'cUSD', region: 'US', percent: 50 },
-    { token: 'cEUR', region: 'EU', percent: 30 },
-    { token: 'KESm', region: 'Kenya', percent: 20 },
+    { token: 'USDC', region: 'APAC savings (HashKey)', percent: 70 },
+    { token: 'USDY', region: 'Yield (Arbitrum)', percent: 30 },
   ],
   gotong_royong: [
-    { token: 'PHPm', region: 'Philippines', percent: 50 },
-    { token: 'cUSD', region: 'US', percent: 30 },
-    { token: 'cEUR', region: 'EU', percent: 20 },
+    { token: 'USDC', region: 'APAC savings (HashKey)', percent: 50 },
+    { token: 'PHPm', region: 'Philippines', percent: 30 },
+    { token: 'USDY', region: 'Yield (Arbitrum)', percent: 20 },
   ],
   islamic: [
     { token: 'PAXG', region: 'Global', percent: 50 },

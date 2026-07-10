@@ -348,8 +348,8 @@ zone: regulated-market savings and structured settlement for **Confucian** and
 | Intelligence API tolls | Arc / x402 (unchanged) |
 | Reasoning evidence | 0G (unchanged) |
 
-Full rationale, routing diagram, build/skip criteria, and minimal v1 scope:
-[`apac-rail.md`](./apac-rail.md).
+Full rationale, routing diagram, build/skip criteria, go-live runbook, and hackathon submission:
+[`apac-rail.md`](./apac-rail.md) · [`hackathon-hashkey-buidl.md`](./hackathon-hashkey-buidl.md).
 
 ---
 

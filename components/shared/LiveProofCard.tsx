@@ -29,6 +29,9 @@ import { useProofFeed, type LedgerRecommendation } from '@/hooks/use-proof-feed'
 import {
   getLedgerProofTitle,
   getLedgerFreshnessLabel,
+  getMultiChainProofTitle,
+  getMultiChainFreshnessLabel,
+  getLedgerProofLabel,
 } from '@/constants/proof-feed';
 
 const SHORT_ADDRESS_RE = /^(0x[0-9a-fA-F]{4})[0-9a-fA-F]+(0x[0-9a-fA-F]{4})$/;
@@ -150,9 +153,13 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
         );
     }
 
-    const chainId = stats?.chainId;
-    const proofTitle = getLedgerProofTitle(chainId);
-    const freshnessLabel = getLedgerFreshnessLabel(chainId, isStale);
+    const chainIds = stats?.chainIds ?? (stats?.chainId != null ? [stats.chainId] : []);
+    const proofTitle =
+        chainIds.length > 1 ? getMultiChainProofTitle(chainIds) : getLedgerProofTitle(stats?.chainId);
+    const freshnessLabel =
+        chainIds.length > 1
+            ? getMultiChainFreshnessLabel(chainIds, isStale)
+            : getLedgerFreshnessLabel(stats?.chainId, isStale);
 
     return (
         <motion.div
@@ -256,10 +263,15 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
             <ul className="space-y-1.5" aria-live="polite" aria-atomic="true">
                 {recent.map((rec) => (
                     <li
-                        key={rec.id}
+                        key={`${rec.chainId ?? 0}-${rec.id}`}
                         className="flex items-center gap-2 text-[11px] text-emerald-900 dark:text-emerald-100"
                     >
                         <span className="size-1.5 rounded-full bg-emerald-500" />
+                        {rec.chainId != null && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80 shrink-0">
+                                {getLedgerProofLabel(rec.chainId)}
+                            </span>
+                        )}
                         <span className="font-mono text-emerald-600 dark:text-emerald-400">
                             #{rec.id}
                         </span>

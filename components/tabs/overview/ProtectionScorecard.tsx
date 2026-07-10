@@ -19,6 +19,7 @@ import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { StrategyService } from "@diversifi/shared";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { isApacRailLive } from "@/constants/apac-rail";
 
 interface ProtectionScorecardProps {
   portfolio: MultichainPortfolio;
@@ -35,6 +36,14 @@ interface PhilosophyFraming {
   icon: string;
   /** Accent color for progress bar */
   accent: string;
+  /** Optional chain-of-record note for region-specific rails */
+  ledgerNote?: string;
+}
+
+function getApacLedgerNote(): string {
+  return isApacRailLive()
+    ? 'Savings ledger: HashKey Chain · yield: Arbitrum'
+    : 'Savings home: HashKey Chain (deploying) · yield: Arbitrum';
 }
 
 function getPhilosophyFraming(strategy: string | null): PhilosophyFraming {
@@ -66,6 +75,7 @@ function getPhilosophyFraming(strategy: string | null): PhilosophyFraming {
         scoreLabel: 'Multi-Generational Stability',
         icon: '📜',
         accent: '#b91c1c',
+        ledgerNote: getApacLedgerNote(),
       };
     case 'gotong_royong':
       return {
@@ -73,6 +83,7 @@ function getPhilosophyFraming(strategy: string | null): PhilosophyFraming {
         scoreLabel: 'Community Resilience',
         icon: '🤝',
         accent: '#ea580c',
+        ledgerNote: getApacLedgerNote(),
       };
     case 'islamic':
       return {
@@ -233,6 +244,11 @@ export function ProtectionScorecard({
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">
                   {framing.whatProtectionMeans}
                 </p>
+                {framing.ledgerNote && (
+                  <p className="text-[10px] text-sky-700 dark:text-sky-300 font-medium mt-1">
+                    {framing.ledgerNote}
+                  </p>
+                )}
               </div>
               <p className="text-lg font-black text-gray-900 dark:text-white">
                 {(stablecoinRatio * 100).toFixed(0)}%

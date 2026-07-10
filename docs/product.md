@@ -68,7 +68,7 @@ attached proof, not a verbose AI explanation.
 
 3. **Autonomous Guardian.** A server-side cron loop monitors markets 24/7 via Firecrawl, synthesizes signals with multi-provider AI (Gemini → Venice → 0G Serving → Modal), and auto-executes rebalancing within user-signed permission bounds — no manual intervention needed.
 
-4. **Chain-aware optimization.** Celo/Mento provide local stablecoin access with near-zero fees; Arbitrum provides deep liquidity and RWA yield; a planned **APAC rail** will provide regulated-market savings and settlement for East/SE Asia (Confucian / Gotong Royong plans). The Guardian routes each action to the chain that best serves the user's goal. Each chain has a genuine, irreplaceable role — neither is a vanity deployment. See [`apac-rail.md`](./apac-rail.md).
+4. **Chain-aware optimization.** Celo/Mento provide local stablecoin access with near-zero fees; Arbitrum provides deep liquidity and RWA yield; the **APAC rail** (HashKey Chain) provides regulated-market savings settlement for East/SE Asia (Confucian / Gotong Royong plans). The Guardian routes each action to the chain that best serves the user's goal. Each chain has a genuine, irreplaceable role — neither is a vanity deployment. See [`apac-rail.md`](./apac-rail.md).
 
 5. **Regional inflation awareness.** Protection plans are culturally aligned (Africapitalism, Buen Vivir, etc.) and target specific emerging-market inflation profiles, not generic "crypto yields."
 
@@ -78,7 +78,7 @@ attached proof, not a verbose AI explanation.
 
 8. **Tab discoverability.** First-visit users get an action-oriented hint above the tab bar. Tab visits are tracked via `useTabDiscovery` — the hint auto-dismisses after **2** tabs visited or the first swipe.
 
-9. **Verifiable trust surface.** The LiveProofCard shows recent 0G-anchored Guardian actions (recommendations, rebalances) on the Protect and Overview tabs before the user connects a wallet — proof-first, not splash-first.
+9. **Verifiable trust surface.** LiveProofCard shows recent Guardian receipts merged across mainnet ledgers (Celo, Arbitrum, HashKey when configured) on Protect and Overview before wallet connect — proof-first, not splash-first.
 
 ## Terminology Guide
 
@@ -103,7 +103,7 @@ attached proof, not a verbose AI explanation.
 | **0G verifiability** | Evidence layer: Storage (reasoning CIDs), Compute (TEE-verified inference), DA (state snapshots). 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
 | **Live data** | 12+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
 | **Agent memory** | Cognee for cross-session persistent context |
-| **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), 0G (evidence/anchoring), Arc (x402 nanopayment rail), APAC rail *(planned — Asia savings + settlement)* |
+| **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — deploy pending HSK), 0G (evidence/anchoring), Arc (x402 nanopayment rail) |
 | **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |
 
 ## Product Principles
@@ -152,17 +152,17 @@ People in emerging and APAC markets who:
 - Need guidance without DeFi complexity
 - Value cultural alignment with their financial philosophy (Africapitalism, Buen Vivir, Confucian, Gotong Royong, etc.)
 
-**Regional execution:** EM savers route through Celo (local Mento stables). Global yield legs route through Arbitrum. APAC savers on Confucian or Gotong Royong plans will route through the **APAC rail** when shipped — until then, an honesty banner explains that protection runs on Celo/Arbitrum today. See [`apac-rail.md`](./apac-rail.md).
+**Regional execution:** EM savers route through Celo (local Mento stables). Global yield legs route through Arbitrum. APAC savers on Confucian or Gotong Royong plans route savings decisions to **HashKey Chain** (when deployed); until mainnet go-live, an honest banner explains that protection still runs on global chains today. See [`apac-rail.md`](./apac-rail.md).
 
-## APAC Rail (planned)
+## APAC Rail (HashKey Chain — shipped, deploy pending)
 
-DiversiFi already detects Asia-region users and offers East/SE Asian protection philosophies, but lacks a dedicated **execution + trust home** for those plans. The APAC rail closes that gap:
+DiversiFi detects Asia-region users and offers East/SE Asian protection philosophies. The **APAC rail** on **HashKey Chain mainnet (chain 177)** is the execution + trust home for those plans:
 
-- **Job:** Regulated-market savings and settlement for Japan, HK, Singapore, Philippines, and adjacent markets
+- **Job:** Regulated-market savings ledger for Japan, HK, Singapore, Philippines, and adjacent markets
 - **Not:** A yield chain (Arbitrum), EM stablecoin chain (Celo), intelligence toll (Arc), or evidence layer (0G)
 - **Enables:** Region → philosophy → chain alignment; SE Asia on-ramp → protect → optional Arbitrum yield → off-ramp lifecycle
 
-Full rationale, routing rules, and build criteria: [`apac-rail.md`](./apac-rail.md).
+Full rationale, routing rules, go-live runbook, and hackathon submission: [`apac-rail.md`](./apac-rail.md) · [`hackathon-hashkey-buidl.md`](./hackathon-hashkey-buidl.md).
 
 ## Current Priorities
 

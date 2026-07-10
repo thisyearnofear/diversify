@@ -1,6 +1,6 @@
 # Architecture
 
-*For the product pitch, see [`product.md`](./product.md). This doc covers the system architecture that makes it work: multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — with chain-aware on-chain settlement (Celo for EM savings, Arbitrum for yield, APAC rail planned for regulated-market Asia savings) and 0G as the tamper-proof evidence layer, all scoped by user-signed ERC-7715-style permissions. For the APAC rail rationale, see [`apac-rail.md`](./apac-rail.md).*
+*For the product pitch, see [`product.md`](./product.md). This doc covers the system architecture that makes it work: multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — with chain-aware on-chain settlement (Celo for EM savings, Arbitrum for yield, HashKey for APAC savings, 0G as the tamper-proof evidence layer), all scoped by user-signed ERC-7715-style permissions. For the APAC rail rationale, see [`apac-rail.md`](./apac-rail.md).*
 
 > **Enforcement model (important):** the user-signed permission is cryptographic *consent*, verified server-side. Its spending bounds are currently enforced in **application code**, not on-chain — execution on Celo/Mento runs through a server-custodied smart account. True on-chain enforcement (ERC-7710 redemption) is the residual gap. See [`docs/guardian-enforcement-model.md`](./guardian-enforcement-model.md).
 
@@ -20,7 +20,8 @@ This document reflects the post-hardening state. The headline changes since the 
 - **TabNavHint + useTabDiscovery** — animated swipe/explore hint above the tab bar on first visit, tracked via `TabDiscoveryProvider` context so TabNavigation and TabContentRouter share dismissal state. Auto-dismisses after 3 tab visits or first swipe.
 - **GuidedTour consolidation** — 3-step tour (risk → Shield → connect) for users who skip philosophy onboarding. Region/goal/philosophy live in `useProtectionProfile`; `StrategyContext` delegates to profile storage. `TourTrigger` skips when philosophy is set and migrates old localStorage keys.
 - **Beginner IA** — Simple mode: 3 tabs (Shield, Home, Learn), plain-language tips, compact proof card, `GuardianStatusChip` instead of wizard. Header hides mode toggle and chain pill.
-- **APAC honesty UX** — `needsApacRailHonesty()` surfaces a contextual banner on Home and Shield when Confucian/Gotong Royong + Asia region until the APAC rail ships.
+- **APAC rail UX** — `needsApacRailMessaging()` surfaces an `apac-rail` contextual banner on Home and Shield for Confucian/Gotong Royong + Asia region; copy swaps honest "coming soon" vs live HashKey explorer link via `isApacRailLive()`.
+- **Multi-chain proof feed** — `GET /api/agent/zero-g-ledger` merges recent receipts from Arbitrum, Celo, and HashKey (when configured) for LiveProofCard.
 - **Testnet UX gating** — `shouldShowTestnetBanner()` hides the testnet strip unless `NEXT_PUBLIC_SHOW_TESTNET`, dev mode, or explicit opt-in via onboarding developer menu.
 - **UnconnectedStateShell prop expansion** — `proofCardSide` (`'above' | 'below'`), `className`, `howItWorksCardClassName`, `demoCtaCardClassName` for flexible slot layout.
 - **LiveProofCard as trust surface** — 0G-anchored proof feed rendered on Protect (above hero) and Overview tabs before wallet connection.
@@ -85,8 +86,8 @@ Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar har
 │  • 0G: Storage (evidence CID) + DA + Compute (TEE proofs)   │
 │    — the tamper-proof evidence layer both ledgers reference │
 │  • Arc: x402 nanopayment settlement                         │
-│  • APAC rail (planned): regulated-market Asia savings +   │
-│    structured settlement — see docs/apac-rail.md          │
+│  • HashKey Chain: APAC savings ledger (Confucian / Gotong Royong) │
+│    + RecommendationLedger on chain 177 — see docs/apac-rail.md   │
 │  • Cognee: cross-session agent memory                       │
 │  • Self Protocol: sybil-resistant agent ID (Celo)           │
 │  • Hetzner: always-on cron runtime (no cold starts)         │
@@ -150,13 +151,13 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
    → Route action to execution chain:
       - Stable-savings / Mento actions → Celo executor
       - Deep-liquidity / RWA yield actions → Arbitrum executor
-      - APAC conservative savings (Confucian / Gotong Royong, Asia region) → APAC rail executor *(planned)*
+      - APAC conservative savings (Confucian / Gotong Royong, Asia region) → HashKey ledger via `routingContext`
    → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
    → Execute via /api/vault/rebalance
    → Anchor evidence bundle to 0G Storage + Cognee memory
    → Record hash/CID on the **chain-aware RecommendationLedger** —
      the decision settles on the chain where the action executed
-     (Celo for EM savings, Arbitrum for yield, APAC rail for
+     (Celo for EM savings, Arbitrum for yield, HashKey for
      regulated-market Asia savings). 0G Storage holds the evidence
      blob; the ledger entry references the 0G CID.
    → Clear recommendation from guardian-state

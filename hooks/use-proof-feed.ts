@@ -36,6 +36,8 @@ export interface LedgerStats {
     contractAddress: string;
     chainId: number;
     isDeployed: boolean;
+    /** Present when the global proof feed merged multiple mainnet ledgers. */
+    chainIds?: number[];
 }
 
 export interface LedgerRecommendation {
@@ -51,6 +53,8 @@ export interface LedgerRecommendation {
     /** Confidence in 0..1 (decimal). The contract stores basis points; the
      *  API converts to a fractional value before returning. */
     confidence: number;
+    /** Ledger chain when the feed is multi-chain merged. */
+    chainId?: number;
 }
 
 export interface ProofFeedData {
@@ -58,10 +62,12 @@ export interface ProofFeedData {
     recent: LedgerRecommendation[];
     /** ISO 8601 string of when this data was fetched. */
     capturedAt: string;
-    /** Base URL for the 0G Galileo Testnet explorer. */
+    /** Base URL for the active chain explorer. */
     explorerBase: string;
     /** URL for the contract address on the explorer, or null if not deployed. */
     contractExplorer: string | null;
+    /** Per-chain contract explorer URLs when the feed is multi-chain. */
+    contractExplorers?: Record<number, string>;
 }
 
 export interface UseProofFeedResult {
@@ -113,6 +119,7 @@ async function fetchFromApi(signal: AbortSignal): Promise<ProofFeedData> {
         capturedAt: new Date().toISOString(),
         explorerBase: json.explorerBase ?? 'https://chainscan-galileo.0g.ai',
         contractExplorer: json.contractExplorer ?? null,
+        contractExplorers: json.contractExplorers ?? undefined,
     };
 }
 

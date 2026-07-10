@@ -52,3 +52,17 @@ export function isApacRailProfile(
   const normalizedRegion = region.trim().toLowerCase();
   return APAC_PHILOSOPHIES.has(normalizedPhilosophy) && normalizedRegion === 'asia';
 }
+
+/**
+ * Server-side routing context when only vault.strategy is available.
+ * APAC philosophies assume Asia region until userRegion is persisted on
+ * the vault (see docs/apac-rail.md).
+ */
+export function deriveLedgerRoutingContextFromVault(
+  strategy: string | null | undefined,
+): { philosophy: string; region: string } | undefined {
+  if (!strategy) return undefined;
+  const philosophy = strategy.trim().toLowerCase() as FinancialStrategy;
+  if (!APAC_PHILOSOPHIES.has(philosophy)) return undefined;
+  return { philosophy, region: 'Asia' };
+}

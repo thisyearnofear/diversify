@@ -16,6 +16,11 @@ export const HASHKEY_EXPLORER_ADDRESS_URL = HASHKEY_LEDGER_ADDRESS
   ? `https://explorer.hsk.xyz/address/${HASHKEY_LEDGER_ADDRESS}`
   : '';
 
+/** Shortened contract address for inline explorer links. */
+export const HASHKEY_LEDGER_SHORT_ADDRESS = HASHKEY_LEDGER_ADDRESS
+  ? `${HASHKEY_LEDGER_ADDRESS.slice(0, 6)}…${HASHKEY_LEDGER_ADDRESS.slice(-4)}`
+  : '';
+
 /** Whether the APAC rail (HashKey ledger) is deployed and configured. */
 export function isApacRailLive(): boolean {
   return !!HASHKEY_LEDGER_ADDRESS;

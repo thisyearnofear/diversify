@@ -67,6 +67,7 @@ async function fetchFromApi(signal: AbortSignal): Promise<ProofFeedData> {
         capturedAt: new Date().toISOString(),
         explorerBase: json.explorerBase ?? 'https://chainscan-galileo.0g.ai',
         contractExplorer: json.contractExplorer ?? null,
+        contractExplorers: json.contractExplorers ?? undefined,
     };
 }
 

@@ -33,7 +33,7 @@ export type ContextualBannerKind =
   | "cold-start"      // Connected, no holdings → fund or learn
   | "demo"            // Demo mode is on
   | "goal-drift"      // Profile complete but goal is misaligned
-  | "apac-rail-pending" // APAC philosophy + Asia region; rail not shipped
+  | "apac-rail" // APAC philosophy + Asia region — live or coming-soon copy
   | "daily-claim"     // GoodDollar reward ready
   | null;             // No banner — let the hero speak
 
@@ -168,7 +168,7 @@ export function useHomeSections({
       needsApacRailMessaging(profileConfig.philosophy, effectiveRegion) &&
       bannerPriority < APAC_RAIL_PRIORITY
     ) {
-      banner = "apac-rail-pending";
+      banner = "apac-rail";
       bannerPriority = APAC_RAIL_PRIORITY;
     }
 

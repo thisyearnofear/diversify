@@ -1,17 +1,13 @@
 /**
- * 0G Recommendation Ledger API
+ * Recommendation Ledger API
  *
- * Returns on-chain recommendation data from the deployed RecommendationLedger
- * contract on 0G Galileo Testnet.
- *
- * GET /api/agent/zero-g-ledger?user=<address>&limit=10&offset=0
- *   - Returns global stats + recent recommendations (filtered by user if address given)
+ * GET /api/agent/zero-g-ledger?user=<address>&limit=10&offset=0&chainId=<id>
+ *   - With user or explicit chainId: single-chain query (backward compatible)
+ *   - Without both: fans out across configured mainnet rails (Arbitrum, Celo,
+ *     HashKey) and merges recent activity for the global proof feed
  *
  * POST /api/agent/zero-g-ledger
  *   - Allows any user to record their own attestation to the ledger
- *   - Body: { user, action, targetToken, reasoning, evidenceCid, servingModel, confidence }
- *   - The `user` address must match the one specified in the body
- *   - Returns { id, txHash } on success
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
@@ -20,42 +16,170 @@ import {
   getLedgerContractAddress,
   getDefaultLedgerChainId,
   buildLedgerExplorerUrl,
+  type LedgerRecommendation,
 } from '@diversifi/shared';
+import {
+  PROOF_FEED_CHAIN_IDS,
+  mergeProofFeedRecommendations,
+} from '@/constants/proof-feed';
 
 interface LedgerStats {
   totalRecommendations: number;
   contractAddress: string;
   chainId: number;
   isDeployed: boolean;
+  /** Present when the global proof feed merged multiple mainnet ledgers. */
+  chainIds?: number[];
 }
 
-interface LedgerRecommendation {
-  id: number;
-  user: string;
-  action: string;
-  targetToken: string;
-  reasoningHash: string;
-  evidenceCid: string;
-  servingModel: string;
-  settlementTxHash: string;
-  timestamp: number;
-  confidence: number;
-}
+type FeedRecommendation = LedgerRecommendation & { chainId?: number };
 
 interface LedgerResponse {
   stats: LedgerStats;
-  recent: LedgerRecommendation[];
+  recent: FeedRecommendation[];
   explorerBase: string;
   contractExplorer: string | null;
+  /** Per-chain contract explorer URLs when the feed is multi-chain. */
+  contractExplorers?: Record<number, string>;
+}
+
+function buildContractExplorerUrl(address: string, chainId: number): string {
+  const base = buildLedgerExplorerUrl('', chainId).replace(/\/tx\/$/, '');
+  return `${base}/address/${address}`;
+}
+
+function configuredProofFeedChains(): number[] {
+  return PROOF_FEED_CHAIN_IDS.filter((id) => !!getLedgerContractAddress(id));
+}
+
+async function fetchRecentGlobal(
+  chainId: number,
+  limit: number,
+): Promise<LedgerRecommendation[]> {
+  const contractAddress = getLedgerContractAddress(chainId);
+  if (!contractAddress) return [];
+
+  const stats = await recommendationLedgerService.getLedgerStats(chainId);
+  if (stats.totalRecommendations <= 0) return [];
+
+  const total = stats.totalRecommendations;
+  const batchSize = Math.min(10, limit);
+  const startId = Math.max(1, total - batchSize + 1);
+  const batch: LedgerRecommendation[] = [];
+
+  for (let id = total; id >= startId && batch.length < batchSize; id--) {
+    const rec = await recommendationLedgerService.getRecommendation(id, chainId);
+    if (rec) batch.push(rec);
+  }
+
+  return batch;
+}
+
+async function fetchSingleChainFeed(
+  chainId: number,
+  limit: number,
+  user?: string,
+  offset = 0,
+): Promise<LedgerResponse> {
+  const contractAddress = getLedgerContractAddress(chainId);
+  const stats = await recommendationLedgerService.getLedgerStats(chainId);
+  let recent: FeedRecommendation[] = [];
+
+  if (user) {
+    const result = await recommendationLedgerService.getUserRecommendations(
+      user,
+      offset,
+      limit,
+      chainId,
+    );
+    recent = result.recommendations.map((rec) => ({ ...rec, chainId }));
+  } else if (contractAddress && stats.totalRecommendations > 0) {
+    recent = (await fetchRecentGlobal(chainId, limit)).map((rec) => ({
+      ...rec,
+      chainId,
+    }));
+  }
+
+  return {
+    stats,
+    recent,
+    explorerBase: buildLedgerExplorerUrl('', chainId).replace(/\/tx\/$/, ''),
+    contractExplorer: contractAddress
+      ? buildContractExplorerUrl(contractAddress, chainId)
+      : null,
+  };
+}
+
+async function fetchMultiChainProofFeed(limit: number): Promise<LedgerResponse> {
+  const chainIds = configuredProofFeedChains();
+
+  if (chainIds.length === 0) {
+    const fallbackId = getDefaultLedgerChainId();
+    return fetchSingleChainFeed(fallbackId, limit);
+  }
+
+  if (chainIds.length === 1) {
+    return fetchSingleChainFeed(chainIds[0], limit);
+  }
+
+  const perChain = await Promise.all(
+    chainIds.map(async (chainId) => {
+      try {
+        const [stats, recent] = await Promise.all([
+          recommendationLedgerService.getLedgerStats(chainId),
+          fetchRecentGlobal(chainId, limit),
+        ]);
+        return { chainId, stats, recent };
+      } catch (err: any) {
+        console.warn(`[0G Ledger API] Chain ${chainId} feed failed:`, err?.message ?? err);
+        return null;
+      }
+    }),
+  );
+
+  const active = perChain.filter((r): r is NonNullable<typeof r> => r != null);
+  const mergedRecent = mergeProofFeedRecommendations(
+    active.map(({ chainId, recent }) => ({ chainId, recent })),
+    limit,
+  );
+
+  const totalRecommendations = active.reduce(
+    (sum, { stats }) => sum + stats.totalRecommendations,
+    0,
+  );
+  const primaryChainId = mergedRecent[0]?.chainId ?? chainIds[0];
+  const contractExplorers = Object.fromEntries(
+    chainIds
+      .map((id) => {
+        const addr = getLedgerContractAddress(id);
+        return addr ? ([id, buildContractExplorerUrl(addr, id)] as const) : null;
+      })
+      .filter((entry): entry is [number, string] => entry != null),
+  ) as Record<number, string>;
+
+  const primaryAddress = getLedgerContractAddress(primaryChainId);
+
+  return {
+    stats: {
+      totalRecommendations,
+      contractAddress: primaryAddress || '',
+      chainId: primaryChainId,
+      chainIds,
+      isDeployed: active.some(({ stats }) => stats.isDeployed),
+    },
+    recent: mergedRecent,
+    explorerBase: buildLedgerExplorerUrl('', primaryChainId).replace(/\/tx\/$/, ''),
+    contractExplorer: primaryAddress
+      ? buildContractExplorerUrl(primaryAddress, primaryChainId)
+      : null,
+    contractExplorers,
+  };
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  // ========================================================================
-  // POST — Submit a user attestation to the ledger
-  // ========================================================================
   if (req.method === 'POST') {
     try {
       const { user, action, targetToken, reasoning, evidenceCid, servingModel, confidence } = req.body;
@@ -76,7 +200,6 @@ export default async function handler(
         evidenceCid: evidenceCid || '',
         servingModel: servingModel || 'user-attested',
         settlementTxHash: '',
-        // Convert human-friendly 0-1 range to basis points (0-10000) for the contract
         confidence: typeof confidence === 'number' ? Math.round(confidence * 10000) : 9000,
       });
 
@@ -104,9 +227,6 @@ export default async function handler(
     }
   }
 
-  // ========================================================================
-  // GET — Query the ledger
-  // ========================================================================
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -114,49 +234,27 @@ export default async function handler(
   const { user, limit: limitParam, offset: offsetParam, chainId: chainIdParam } = req.query;
   const limit = Math.min(50, parseInt(String(limitParam || '10'), 10));
   const offset = parseInt(String(offsetParam || '0'), 10);
-  const chainId = chainIdParam ? parseInt(String(chainIdParam), 10) : getDefaultLedgerChainId();
-  const contractAddress = getLedgerContractAddress(chainId);
-  const isConfigured = !!contractAddress;
+  const explicitChainId = chainIdParam ? parseInt(String(chainIdParam), 10) : undefined;
+  const userAddress =
+    user && typeof user === 'string' && user.startsWith('0x') ? user : undefined;
 
   try {
-    // Fetch global ledger stats for the active chain
-    const stats = await recommendationLedgerService.getLedgerStats(chainId);
+    const payload =
+      userAddress || explicitChainId != null
+        ? await fetchSingleChainFeed(
+            explicitChainId ?? getDefaultLedgerChainId(),
+            limit,
+            userAddress,
+            offset,
+          )
+        : await fetchMultiChainProofFeed(limit);
 
-    // If a user address is provided, fetch their recommendations
-    let recent: LedgerRecommendation[] = [];
-
-    if (user && typeof user === 'string' && user.startsWith('0x')) {
-      const result = await recommendationLedgerService.getUserRecommendations(
-        user,
-        offset,
-        limit,
-        chainId,
-      );
-      recent = result.recommendations;
-    } else if (isConfigured && stats.totalRecommendations > 0) {
-      // No user specified — fetch the most recent recommendations by
-      // iterating IDs backwards from total (max 10 to avoid serverless timeout)
-      const total = stats.totalRecommendations;
-      const batchSize = Math.min(10, limit);
-      const startId = Math.max(1, total - batchSize + 1);
-      const batch: LedgerRecommendation[] = [];
-
-      for (let id = total; id >= startId && batch.length < batchSize; id--) {
-        const rec = await recommendationLedgerService.getRecommendation(id, chainId);
-        if (rec) batch.push(rec);
-      }
-
-      recent = batch;
-    }
-
-    return res.status(200).json({
-      stats,
-      recent,
-      explorerBase: buildLedgerExplorerUrl('', chainId).replace(/\/tx\/$/, ''),
-      contractExplorer: contractAddress || null,
-    } satisfies LedgerResponse);
+    return res.status(200).json(payload satisfies LedgerResponse);
   } catch (error: any) {
     console.error('[0G Ledger API] Failed:', error.message);
+
+    const chainId = explicitChainId ?? getDefaultLedgerChainId();
+    const contractAddress = getLedgerContractAddress(chainId);
 
     return res.status(200).json({
       stats: {

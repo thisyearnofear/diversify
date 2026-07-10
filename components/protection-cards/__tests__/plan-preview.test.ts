@@ -35,4 +35,10 @@ describe('getArchetypeAllocations', () => {
     expect(allocations[0]?.token).toBe('PAXG');
     expect(allocations.reduce((s, a) => s + a.percent, 0)).toBe(100);
   });
+
+  it('maps confucian archetype to APAC savings + Arbitrum yield split', () => {
+    const allocations = getArchetypeAllocations('confucian');
+    expect(allocations[0]).toMatchObject({ token: 'USDC', region: 'APAC savings (HashKey)', percent: 70 });
+    expect(allocations[1]).toMatchObject({ token: 'USDY', region: 'Yield (Arbitrum)', percent: 30 });
+  });
 });

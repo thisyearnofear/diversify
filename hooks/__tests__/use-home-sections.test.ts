@@ -167,7 +167,7 @@ describe("useHomeSections", () => {
       expect(result.current.banner).toBe("goal-drift");
     });
 
-    it("shows apac-rail-pending for Confucian + Asia when no higher-priority banner applies", () => {
+    it("shows apac-rail for Confucian + Asia when no higher-priority banner applies", () => {
       mockUseProtectionProfile.mockReturnValue({
         config: {
           userGoal: "exploring",
@@ -177,7 +177,7 @@ describe("useHomeSections", () => {
         isComplete: true,
       });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.banner).toBe("apac-rail-pending");
+      expect(result.current.banner).toBe("apac-rail");
     });
 
     it("cold-start outranks demo (a fresh connected user with no holdings and demo off)", () => {

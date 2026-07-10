@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { APAC_PHILOSOPHIES, isApacRailProfile } from '../strategy';
+import { APAC_PHILOSOPHIES, deriveLedgerRoutingContextFromVault, isApacRailProfile } from '../strategy';
 
 /**
  * isApacRailProfile decides a user's ledger of record (HashKey vs
@@ -33,5 +33,23 @@ describe('isApacRailProfile', () => {
     expect(APAC_PHILOSOPHIES.has('confucian')).toBe(true);
     expect(APAC_PHILOSOPHIES.has('gotong_royong')).toBe(true);
     expect(APAC_PHILOSOPHIES.has('islamic' as never)).toBe(false);
+  });
+});
+
+describe('deriveLedgerRoutingContextFromVault', () => {
+  it('assumes Asia region for APAC vault strategies until region is persisted', () => {
+    expect(deriveLedgerRoutingContextFromVault('confucian')).toEqual({
+      philosophy: 'confucian',
+      region: 'Asia',
+    });
+    expect(deriveLedgerRoutingContextFromVault('gotong_royong')).toEqual({
+      philosophy: 'gotong_royong',
+      region: 'Asia',
+    });
+  });
+
+  it('returns undefined for non-APAC strategies', () => {
+    expect(deriveLedgerRoutingContextFromVault('islamic')).toBeUndefined();
+    expect(deriveLedgerRoutingContextFromVault(null)).toBeUndefined();
   });
 });

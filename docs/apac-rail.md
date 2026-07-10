@@ -4,7 +4,7 @@
 
 ## Summary
 
-The **APAC rail** is DiversiFi's planned **regulated-market savings and settlement home** for East and Southeast Asia. It is where **Confucian** and **Gotong Royong** protection plans execute when the user's goal is prudence, compliance-adjacent trust, and local market access — not maximum RWA depth.
+The **APAC rail** is DiversiFi's **regulated-market savings and settlement home** for East and Southeast Asia (live on **HashKey Chain mainnet**, chain 177, pending deployer HSK gas). It is where **Confucian** and **Gotong Royong** protection plans execute when the user's goal is prudence, compliance-adjacent trust, and local market access — not maximum RWA depth.
 
 It is **not** a replacement for Arbitrum (yield), Celo (EM local stables), Arc (x402 intelligence tolls), or 0G (evidence). It fills a **geographic + trust gap** the current four-chain stack does not cover.
 
@@ -22,12 +22,13 @@ DiversiFi's chain stack is built around **where money is deepest or most local**
 | **Arbitrum** | Deep liquidity + RWA yield execution |
 | **Arc** | Micropayments to buy intelligence (x402) |
 | **0G** | Evidence + verifiable compute |
+| **HashKey (APAC rail)** | APAC savings ledger (Confucian / Gotong Royong + Asia region) |
 
 The product already **detects** APAC users (`JP`, `HK`, `SG`, `PH`, etc. → `Asia` region) and ships **East/SE Asian protection philosophies** (**Confucian**, **Gotong Royong**). The roadmap names SE Asia onramps (**StraitsX**, **Coins.ph**).
 
-What is missing is an **execution + trust home** for those users. Today a Confucian-plan saver in Tokyo still routes through "Celo for some stables / Arbitrum for yield" — chains chosen for emerging markets and global DeFi, not for **APAC-regulated finance**.
+What was missing was an **execution + trust home** for those users. A Confucian-plan saver in Tokyo previously routed through "Celo for some stables / Arbitrum for yield" — chains chosen for emerging markets and global DeFi, not for **APAC-regulated finance**.
 
-The APAC rail closes that gap.
+The APAC rail closes that gap (code shipped 2026-07-10; mainnet deploy pending HSK gas).
 
 ---
 
@@ -148,15 +149,18 @@ Skip when:
 
 ## Implementation status
 
-**Code shipped (2026-07-10) — deployment pending HSK gas.** The chain selected is **HashKey Chain mainnet (chain 177)**, targeted at the HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, AI track). Everything below is merged; the only remaining step is funding the deployer wallet with HSK and running the deploy.
+**Deployed on HashKey mainnet (2026-07-10).** Chain **177**, contract `0x3BCf7dFd68ce98880618c89A351168960724369C`. First APAC seed: [explorer tx](https://explorer.hsk.xyz/tx/0xc220dc0f991242ecef75086e625c24c889f93a9103daa996667f1d542011f1f8). Hetzner API runtime synced; Vercel frontend needs `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` for live banner.
 
 | Piece | Status |
 |-------|--------|
 | Chain config | ✅ `HASHKEY_LEDGER_CONTRACT` / `HASHKEY_RPC_URL` in the ledger registry (`recommendation-ledger.service.ts`), `hashkey` RPC endpoint in `foundry.toml`, explorer `https://explorer.hsk.xyz` |
-| `RecommendationLedger` | ⏳ Deploy with `./scripts/deploy-all.sh hashkey` (ledger-only short-circuit; needs HSK on chain 177), then seed via `npx tsx scripts/seed-mainnet-recommendation.ts hashkey` |
+| `RecommendationLedger` | ✅ `0x3BCf7dFd68ce98880618c89A351168960724369C` on chain 177 — seeded rec #1 (Confucian HOLD → USDC) |
 | Guardian routing | ✅ `getLedgerChainForAction(action, token, routingContext)` — APAC-profile (`isApacRailProfile` in `types/strategy.ts`, single source of truth) savings/hold actions → HashKey 177; yield rotations → Arbitrum unchanged; Celo local stables → Celo unchanged |
-| Heartbeat | ✅ `guardian-heartbeat.ts` records an APAC-cohort savings advisory on HashKey each beat when `HASHKEY_LEDGER_CONTRACT` is set — continuous on-chain attestation |
-| UX | ✅ `constants/apac-rail.ts` swaps honest "coming soon" copy for live-rail copy (with explorer link) when `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` is set; proof feed labels chain 177 "HashKey" |
+| Guardian loop | ✅ `guardian-loop.ts` passes `deriveLedgerRoutingContextFromVault(vault.strategy)` on ledger writes (Asia region assumed for APAC philosophies until vault persists region) |
+| Heartbeat | ✅ `guardian-heartbeat.ts` records an APAC-cohort savings advisory on HashKey in parallel with the primary beat when `HASHKEY_LEDGER_CONTRACT` is set |
+| Proof feed | ✅ `GET /api/agent/zero-g-ledger` fans out across Arbitrum + Celo + HashKey when no user/chainId filter; `LiveProofCard` shows multi-chain headlines and per-receipt chain labels |
+| UX | ✅ `constants/apac-rail.ts` + `apac-rail` contextual banner on Home/Shield — honest "coming soon" until `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` is set, then live copy + HashKey explorer link |
+| Plan preview | ✅ Confucian / Gotong Royong allocations show APAC savings home (HashKey) + Arbitrum yield split in onboarding and Guardian wizard |
 | Settlement (HSP) | Deferred — structured receipts above the x402 threshold remain the post-v1 step (HSP SDK: github.com/project-hsp/hsp) |
 
 Yield execution stays on Arbitrum. Intelligence stays on Arc. Evidence stays on 0G.
@@ -167,7 +171,11 @@ Yield execution stays on Arbitrum. Intelligence stays on Arc. Evidence stays on 
 2. `./scripts/deploy-all.sh hashkey`
 3. Set `HASHKEY_LEDGER_CONTRACT` + `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` in `.env.local`
 4. `npx tsx scripts/seed-mainnet-recommendation.ts hashkey` — first APAC savings record via real routing
-5. `DEPLOY_SYNC_ENV=true ./scripts/deploy-to-hetzner.sh` — banner flips to live, heartbeat starts attesting
+5. `DEPLOY_SYNC_ENV=true ./scripts/deploy-to-hetzner.sh` — banner flips to live, heartbeat starts attesting, proof feed picks up HashKey receipts
+
+### Hackathon submission
+
+BUIDL copy, demo script, and checklist: [`hackathon-hashkey-buidl.md`](./hackathon-hashkey-buidl.md)
 
 ---
 
