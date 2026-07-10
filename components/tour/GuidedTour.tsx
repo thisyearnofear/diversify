@@ -1,39 +1,21 @@
 /**
- * GuidedTour — Consolidated first-run tour with region/goal personalization.
+ * GuidedTour — First-run tour (3 steps).
  *
- * Consolidates the previous 4-step product walkthrough + InlineOnboarding's
- * 3-step region/goal wizard into a single 5-step first-run tour.
- *
- * Per the Core Principles:
- *   - ENHANCEMENT FIRST: extends the existing GuidedTour surface rather than
- *     creating a new component.
- *   - CONSOLIDATION: replaces InlineOnboarding's standalone wizard and its
- *     duplicate localStorage key.
- *   - DRY: the region/goal picker UI is rendered here, not duplicated in
- *     InlineOnboarding (which is now deleted).
- *   - MODULAR: typed steps with explicit callbacks.
+ * Philosophy onboarding (StrategyModal) covers region + goal; this tour
+ * focuses on risk → shield → connect wallet.
  */
 
-import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect } from "react";
+import { motion } from "framer-motion";
 import { useTour } from "@/context/app/TourContext";
 import { useNavigation } from "@/context/app/NavigationContext";
-import { useProtectionProfile } from "@/hooks/use-protection-profile";
-import { REGIONS, type Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
-
-// ─── Tour Steps ────────────────────────────────────────────────────────────
 
 interface TourStep {
     id: string;
     title: string;
     description: string;
     tab: TabId;
-    interactive?: boolean; // step contains inline UI (region/goal picker)
-    action?: {
-        label: string;
-        onClick: () => void;
-    };
 }
 
 const TOUR_STEPS: TourStep[] = [
@@ -44,23 +26,10 @@ const TOUR_STEPS: TourStep[] = [
         tab: "overview",
     },
     {
-        id: "swap",
-        title: "Take Action in 2 Minutes",
-        description: "Convert just $10-20 to a more stable currency. You'll see the difference immediately.",
-        tab: "exchange",
-    },
-    {
         id: "protect",
-        title: "Get Your Personal Strategy",
-        description: "Tell us your goals and we'll show you the best way to protect your specific situation.",
+        title: "Shield Your Savings",
+        description: "The Shield tab shows your protection plan and what Guardian can do for you.",
         tab: "protect",
-    },
-    {
-        id: "personalize",
-        title: "Personalize Your Plan",
-        description: "Set your region and goal — we'll tailor inflation data and recommendations just for you.",
-        tab: "overview",
-        interactive: true,
     },
     {
         id: "complete",
@@ -70,28 +39,9 @@ const TOUR_STEPS: TourStep[] = [
     },
 ];
 
-const GOAL_OPTIONS = [
-    { id: "inflation_protection", label: "Protect Savings", icon: "🛡️", desc: "Hedge against currency devaluation" },
-    { id: "geographic_diversification", label: "Global Diversity", icon: "🌍", desc: "Spread wealth across economies" },
-    { id: "rwa_access", label: "Real-World Assets", icon: "🥇", desc: "Access tokenized gold & yields" },
-    { id: "exploring", label: "Just Exploring", icon: "🔍", desc: "See what DiversiFi can do" },
-];
-
-// ─── Component ─────────────────────────────────────────────────────────────
-
 export default function GuidedTour() {
     const { guidedTour, nextTourStep, dismissTour } = useTour();
     const { setActiveTab } = useNavigation();
-    const { config, setMultipleConfig } = useProtectionProfile();
-
-    const [selectedRegion, setSelectedRegion] = useState<string | null>(config.userRegion || null);
-    const [selectedGoal, setSelectedGoal] = useState<string | null>(config.userGoal || null);
-
-    // Synchronise selections from persisted config on mount
-    useEffect(() => {
-        if (config.userRegion) setSelectedRegion(config.userRegion);
-        if (config.userGoal) setSelectedGoal(config.userGoal);
-    }, [config.userRegion, config.userGoal]);
 
     useEffect(() => {
         if (!guidedTour) return;
@@ -107,22 +57,9 @@ export default function GuidedTour() {
     const currentStep = TOUR_STEPS[guidedTour.currentStep];
     const isLastStep = guidedTour.currentStep === TOUR_STEPS.length - 1;
     const isFirstStep = guidedTour.currentStep === 0;
-    const isPersonalizeStep = currentStep.interactive;
-
-    const canProceedFromPersonalize = selectedRegion && selectedGoal;
 
     const handleNext = () => {
-        if (isPersonalizeStep) {
-            // Save region + goal to protection profile before proceeding
-            if (canProceedFromPersonalize) {
-                setMultipleConfig({
-                    userRegion: selectedRegion as any,
-                    userGoal: selectedGoal as any,
-                });
-            }
-            const nextStep = TOUR_STEPS[guidedTour.currentStep + 1];
-            nextTourStep(nextStep.tab, nextStep.id);
-        } else if (isLastStep) {
+        if (isLastStep) {
             dismissTour(guidedTour.tourId);
         } else {
             const nextStep = TOUR_STEPS[guidedTour.currentStep + 1];
@@ -143,8 +80,7 @@ export default function GuidedTour() {
     const getStepIcon = () => {
         if (isFirstStep) return "⚠️";
         if (isLastStep) return "🎉";
-        if (isPersonalizeStep) return "🎯";
-        return "💪";
+        return "🛡️";
     };
 
     return (
@@ -173,61 +109,6 @@ export default function GuidedTour() {
                 </button>
             </div>
 
-            {/* ── Interactive region/goal picker for the "personalize" step ── */}
-            {isPersonalizeStep && (
-                <div className="mb-3 space-y-3 bg-white/10 rounded-xl p-3">
-                    {/* Region picker */}
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
-                            Your region
-                        </p>
-                        <div className="flex gap-1.5">
-                            {REGIONS.map((region) => (
-                                <button
-                                    key={region}
-                                    onClick={() => setSelectedRegion(region)}
-                                    className={`flex-1 py-1.5 rounded-lg text-center transition-all ${
-                                        selectedRegion === region
-                                            ? "bg-white text-gray-900 font-black"
-                                            : "bg-white/10 text-white/80 hover:bg-white/20 font-bold"
-                                    }`}
-                                >
-                                    <span className="text-sm block">
-                                        {region === "Africa" ? "🌍" : region === "LatAm" ? "🌋" : region === "Asia" ? "⛩️" : region === "Europe" ? "🏰" : "🗽"}
-                                    </span>
-                                    <span className="text-[10px]">{region}</span>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    {/* Goal picker */}
-                    <div>
-                        <p className="text-[10px] font-black uppercase tracking-wider text-white/70 mb-2">
-                            Your goal
-                        </p>
-                        <div className="grid grid-cols-2 gap-1.5">
-                            {GOAL_OPTIONS.map((goal) => (
-                                <button
-                                    key={goal.id}
-                                    onClick={() => setSelectedGoal(goal.id)}
-                                    className={`flex items-center gap-1.5 py-1.5 px-2 rounded-lg text-left transition-all ${
-                                        selectedGoal === goal.id
-                                            ? "bg-white text-gray-900 font-black"
-                                            : "bg-white/10 text-white/80 hover:bg-white/20 font-semibold"
-                                    }`}
-                                >
-                                    <span>{goal.icon}</span>
-                                    <div className="text-[10px] leading-tight">
-                                        <div>{goal.label}</div>
-                                        <div className="opacity-70 font-medium">{goal.desc}</div>
-                                    </div>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
             <div className="flex items-center justify-between">
                 <div className="flex gap-1">
                     {TOUR_STEPS.map((_, i) => (
@@ -250,20 +131,9 @@ export default function GuidedTour() {
                     )}
                     <button
                         onClick={handleNext}
-                        disabled={isPersonalizeStep && !canProceedFromPersonalize}
-                        className={`text-xs font-bold px-4 py-2 rounded-lg transition-all shadow-lg ${
-                            isPersonalizeStep && !canProceedFromPersonalize
-                                ? "bg-white/30 text-white/50 cursor-not-allowed"
-                                : "bg-white text-gray-900 hover:bg-white/90"
-                        }`}
+                        className="text-xs font-bold px-4 py-2 rounded-lg transition-all shadow-lg bg-white text-gray-900 hover:bg-white/90"
                     >
-                        {isPersonalizeStep
-                            ? "Continue →"
-                            : isLastStep
-                                ? "Let's Go!"
-                                : isFirstStep
-                                    ? "Show Me"
-                                    : "Next →"}
+                        {isLastStep ? "Let's Go!" : isFirstStep ? "Show Me" : "Next →"}
                     </button>
                 </div>
             </div>

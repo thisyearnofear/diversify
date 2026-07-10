@@ -167,6 +167,19 @@ describe("useHomeSections", () => {
       expect(result.current.banner).toBe("goal-drift");
     });
 
+    it("shows apac-rail-pending for Confucian + Asia when no higher-priority banner applies", () => {
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          philosophy: "confucian",
+          userRegion: "Asia",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.banner).toBe("apac-rail-pending");
+    });
+
     it("cold-start outranks demo (a fresh connected user with no holdings and demo off)", () => {
       // Demo mode is the only banner triggered when isDemo is on; the cold-start
       // logic should not stack with demo. Verify the resolution is exactly one.

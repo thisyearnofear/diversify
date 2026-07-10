@@ -31,6 +31,8 @@ export default function AppHeader({
     if (typeof window !== "undefined") localStorage.setItem("seenModeTip", "1");
   };
 
+  const isBeginner = experienceMode === "beginner";
+
   return (
     <div className="flex items-center justify-between mb-2 py-1">
       {/* Left: Logo */}
@@ -63,6 +65,8 @@ export default function AppHeader({
 
       {/* Right: Controls */}
       <div className="flex items-center gap-1 sm:gap-2">
+        {!isBeginner && (
+        <>
         {/* Mode toggle — one tooltip, calm affordance */}
         <div
           className="relative"
@@ -120,6 +124,8 @@ export default function AppHeader({
             </div>
           )}
         </div>
+        </>
+        )}
 
         {/* Voice assistant */}
         <VoiceButton
@@ -130,7 +136,7 @@ export default function AppHeader({
           onTranscription={handleTranscription}
         />
 
-        <ChainPill />
+        {!isBeginner && <ChainPill />}
 
         {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
       </div>

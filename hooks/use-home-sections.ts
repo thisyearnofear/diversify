@@ -25,6 +25,7 @@ import { useProtectionProfile } from "./use-protection-profile";
 import { useColdStart } from "./use-cold-start";
 import { useStreakRewards } from "./use-streak-rewards";
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared";
+import { needsApacRailHonesty } from "@/constants/apac-rail";
 
 export type HomeMode = "beginner" | "standard" | "advanced";
 
@@ -32,6 +33,7 @@ export type ContextualBannerKind =
   | "cold-start"      // Connected, no holdings → fund or learn
   | "demo"            // Demo mode is on
   | "goal-drift"      // Profile complete but goal is misaligned
+  | "apac-rail-pending" // APAC philosophy + Asia region; rail not shipped
   | "daily-claim"     // GoodDollar reward ready
   | null;             // No banner — let the hero speak
 
@@ -101,6 +103,7 @@ export interface HomeSections {
 const COLD_START_PRIORITY = 100;
 const DEMO_PRIORITY = 80;
 const GOAL_DRIFT_PRIORITY = 60;
+const APAC_RAIL_PRIORITY = 55;
 const DAILY_CLAIM_PRIORITY = 40;
 
 export function useHomeSections({
@@ -159,6 +162,14 @@ export function useHomeSections({
         banner = "goal-drift";
         bannerPriority = GOAL_DRIFT_PRIORITY;
       }
+    }
+    const effectiveRegion = profileConfig.userRegion ?? userRegion;
+    if (
+      needsApacRailHonesty(profileConfig.philosophy, effectiveRegion) &&
+      bannerPriority < APAC_RAIL_PRIORITY
+    ) {
+      banner = "apac-rail-pending";
+      bannerPriority = APAC_RAIL_PRIORITY;
     }
 
     // ── 2. Determine which deep sections to show ─────────────────────────
@@ -295,11 +306,14 @@ export function useHomeSections({
   }, [
     experienceMode,
     profileConfig.userGoal,
+    profileConfig.philosophy,
+    profileConfig.userRegion,
     profileComplete,
     canClaim,
     hasHoldings,
     isDemo,
     portfolio,
     coldStart?.headline,
+    userRegion,
   ]);
 }

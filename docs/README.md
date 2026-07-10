@@ -13,6 +13,7 @@ Index for `docs/`. Start at the top, drill down by need.
 - **External agent integrating with the intelligence gateway** → [`integration-guide.md`](./integration-guide.md) (x402 flow, API reference, code example)
 - **Looking up an API endpoint, provider, or env var** → [`integrations.md`](./integrations.md) (comprehensive reference; the canonical env var table)
 - **Understanding the Guardian's spending bounds & what stops a compromised server** → [`guardian-enforcement-model.md`](./guardian-enforcement-model.md) (TL;DR + threat model + hybrid plan)
+- **APAC rail (planned Asia savings + settlement home)** → [`apac-rail.md`](./apac-rail.md) (why a fifth chain, routing rules, build criteria)
 - **Agent identity (ERC-8004 + Self Protocol)** → [`agent-identity.md`](./agent-identity.md) (registration, signing, verification)
 - **Roadmap & active grant tracks** → [`roadmap.md`](./roadmap.md) (product quality plan + 3 grant tracks: 0G Bridge, Celo Prezenti, Arbitrum Open House) + [`0g-bridge-plan.md`](./0g-bridge-plan.md) (authoritative 0G file-by-file plan)
 

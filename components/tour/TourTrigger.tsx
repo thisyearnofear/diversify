@@ -5,6 +5,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { useStrategy } from "@/context/app/StrategyContext";
 import {
   FIRST_RUN_TOUR_ID,
+  FIRST_RUN_TOUR_STEP_COUNT,
 } from "@/constants/onboarding";
 
 /**
@@ -43,7 +44,7 @@ export default function TourTrigger() {
         if (isTourDismissed(FIRST_RUN_TOUR_ID)) return;
 
         const timer = setTimeout(() => {
-            startTour(FIRST_RUN_TOUR_ID, 5, "overview", "welcome");
+            startTour(FIRST_RUN_TOUR_ID, FIRST_RUN_TOUR_STEP_COUNT, "overview", "welcome");
         }, 800);
 
         return () => clearTimeout(timer);

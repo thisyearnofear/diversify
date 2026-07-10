@@ -68,15 +68,15 @@ attached proof, not a verbose AI explanation.
 
 3. **Autonomous Guardian.** A server-side cron loop monitors markets 24/7 via Firecrawl, synthesizes signals with multi-provider AI (Gemini → Venice → 0G Serving → Modal), and auto-executes rebalancing within user-signed permission bounds — no manual intervention needed.
 
-4. **Dual-chain optimization.** Celo/Mento provide local stablecoin access with near-zero fees; Arbitrum provides deep liquidity and RWA yield. The Guardian routes each action to the chain that best serves the user's goal. Each chain has a genuine, irreplaceable role — neither is a vanity deployment.
+4. **Chain-aware optimization.** Celo/Mento provide local stablecoin access with near-zero fees; Arbitrum provides deep liquidity and RWA yield; a planned **APAC rail** will provide regulated-market savings and settlement for East/SE Asia (Confucian / Gotong Royong plans). The Guardian routes each action to the chain that best serves the user's goal. Each chain has a genuine, irreplaceable role — neither is a vanity deployment. See [`apac-rail.md`](./apac-rail.md).
 
 5. **Regional inflation awareness.** Protection plans are culturally aligned (Africapitalism, Buen Vivir, etc.) and target specific emerging-market inflation profiles, not generic "crypto yields."
 
-6. **Calm UX.** Designed as a savings protection app, not a trading terminal. The Guardian proposes one clear action at a time. Advanced controls are hidden behind an experience mode toggle.
+6. **Calm UX.** Designed as a savings protection app, not a trading terminal. The Guardian proposes one clear action at a time. **Simple mode** (default for new users) shows three tabs — Shield, Home, Learn — and hides the experience toggle, chain pill, Exchange tab, and Advisor FAB until the user opts into Standard mode.
 
-7. **Guided first run.** A 5-step GuidedTour replaces three separate onboarding surfaces. New users pick their region and protection goal inline during the tour, persisted via `useProtectionProfile`. No modal wizard, no duplicate inline onboarding.
+7. **Guided first run.** Philosophy onboarding (`StrategyModal` → detect country → show risk → choose plan) is the primary first-run flow. A lightweight **3-step** `GuidedTour` (risk moment → Shield tab → connect wallet) only runs when philosophy onboarding was skipped. Region, goal, and philosophy persist in `useProtectionProfile` (`diversifi-protection-profile-v2`); `StrategyContext` is a thin React wrapper over the profile's `philosophy` field (legacy `financialStrategy` localStorage key auto-migrates).
 
-8. **Tab discoverability.** First-visit users get an animated swipe hint above the tab bar. Tab visits and swipe gestures are tracked via a shared `useTabDiscovery` context — the hint auto-dismisses after 3 tabs or the first swipe.
+8. **Tab discoverability.** First-visit users get an action-oriented hint above the tab bar. Tab visits are tracked via `useTabDiscovery` — the hint auto-dismisses after **2** tabs visited or the first swipe.
 
 9. **Verifiable trust surface.** The LiveProofCard shows recent 0G-anchored Guardian actions (recommendations, rebalances) on the Protect and Overview tabs before the user connects a wallet — proof-first, not splash-first.
 
@@ -103,7 +103,7 @@ attached proof, not a verbose AI explanation.
 | **0G verifiability** | Evidence layer: Storage (reasoning CIDs), Compute (TEE-verified inference), DA (state snapshots). 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
 | **Live data** | 12+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
 | **Agent memory** | Cognee for cross-session persistent context |
-| **Multi-chain** | Celo (savings + savings ledger), Arbitrum (yield + yield ledger), 0G (evidence/anchoring), Arc (x402 nanopayment rail) |
+| **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), 0G (evidence/anchoring), Arc (x402 nanopayment rail), APAC rail *(planned — Asia savings + settlement)* |
 | **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |
 
 ## Product Principles
@@ -127,12 +127,14 @@ attached proof, not a verbose AI explanation.
 | Tab | Purpose |
 |-----|---------|
 | **Overview** | Portfolio summary, inflation impact, quick actions |
-| **Protect** | Choose plan, view allocation, deposit — with 4-state Guardian pipeline scrollytelling before connect |
+| **Protect** | Choose plan, view allocation, deposit — with compact Guardian status before connect |
 | **Exchange** | Swap stablecoins across regions and chains |
 | **Pilot** | AI Guardian recommendations, verifiable proof, backtesting, Guardian tier state |
 | **Learn** | Inflation education, strategy guides, glossary |
 
-New users see this order (Protect second). Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 3 tabs visited or first swipe gesture.
+**Simple mode** (beginner): Shield → Home → Learn only. Exchange and Advisor remain reachable via **More options** on Home. **Standard/Advanced** modes restore the full tab bar.
+
+New users see Shield-first order. Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 2 tabs visited or first swipe gesture.
 
 ## Fees
 
@@ -144,11 +146,23 @@ New users see this order (Protect second). Swipe/tap discovery hint animates in 
 
 ## Target Users
 
-People in emerging markets who:
-- Experience high local inflation (>10% annually)
+People in emerging and APAC markets who:
+- Experience high local inflation (>10% annually) or currency/regulatory uncertainty
 - Want to protect savings, not speculate
 - Need guidance without DeFi complexity
-- Value cultural alignment with their financial philosophy
+- Value cultural alignment with their financial philosophy (Africapitalism, Buen Vivir, Confucian, Gotong Royong, etc.)
+
+**Regional execution:** EM savers route through Celo (local Mento stables). Global yield legs route through Arbitrum. APAC savers on Confucian or Gotong Royong plans will route through the **APAC rail** when shipped — until then, an honesty banner explains that protection runs on Celo/Arbitrum today. See [`apac-rail.md`](./apac-rail.md).
+
+## APAC Rail (planned)
+
+DiversiFi already detects Asia-region users and offers East/SE Asian protection philosophies, but lacks a dedicated **execution + trust home** for those plans. The APAC rail closes that gap:
+
+- **Job:** Regulated-market savings and settlement for Japan, HK, Singapore, Philippines, and adjacent markets
+- **Not:** A yield chain (Arbitrum), EM stablecoin chain (Celo), intelligence toll (Arc), or evidence layer (0G)
+- **Enables:** Region → philosophy → chain alignment; SE Asia on-ramp → protect → optional Arbitrum yield → off-ramp lifecycle
+
+Full rationale, routing rules, and build criteria: [`apac-rail.md`](./apac-rail.md).
 
 ## Current Priorities
 

@@ -20,6 +20,7 @@ Each chain has a genuine, irreplaceable role. The ledger of record follows the m
 | **Yield + Execution** | **Arbitrum** | Deep-liquidity DEXs and RWA yield (Uniswap V3, 1inch, Camelot, PAXG, USDY, SYRUPUSDC). `RecommendationLedger` records yield decisions here. EIP-7702 path to on-chain ERC-7710 permission enforcement. | Deepest USDC + RWA liquidity. EIP-7702-capable for true on-chain permission enforcement. |
 | **Evidence + Verifiability** | **0G** | Content-addressed Storage (evidence CIDs), TEE-verified Compute, DA (state snapshots). The tamper-proof evidence layer that both ledgers reference. | No other chain offers storage or verifiable inference. 0G is not the ledger of record — it is the proof layer. |
 | **Money Movement** | **Arbitrum / Arc / 0G (env-gated)** | x402 nanopayment settlement rail for paid intelligence. `SETTLEMENT_NETWORK=ARBITRUM\|ZERO_G\|ARC`, `SETTLEMENT_ENV=testnet\|mainnet`. | Arbitrum has live Circle USDC on mainnet today; Arc and 0G mainnet settlement remain pending verified USDC contracts. |
+| **APAC savings + settlement** *(planned)* | **APAC rail** | Regulated-market savings home for East/SE Asia — Confucian / Gotong Royong execution, structured settlement receipts, on-ramp partner landing zone. | Fills the geographic + trust gap Celo (EM stables) and Arbitrum (global yield) do not cover. See [`docs/apac-rail.md`](docs/apac-rail.md). |
 
 **AI Reasoning Engine (Gemini → Venice → 0G Serving → Modal)**: Multi-provider failover chain. Each response is tagged with the provider that produced it.
 
@@ -34,7 +35,7 @@ Each chain has a genuine, irreplaceable role. The ledger of record follows the m
 *   **Guardian Pulse**: AI-synthesized market insights, powered by real-time data and anchored for truth via 0G.
 *   **Proactive Pilot**: Autonomous rebalancing intent discovery, allowing users to approve complex financial strategies with one tap.
 *   **0G Audit Trail**: An in-app dashboard to verify the raw evidence and decision logs of your agent.
-*   **Dual-Chain Routing**: Guardian automatically chooses Celo for stable-savings actions and Arbitrum for liquidity/RWA actions. Each chain has a verified ledger of record.
+*   **Chain-Aware Routing**: Guardian chooses Celo for EM stable-savings, Arbitrum for liquidity/RWA yield, and (planned) APAC rail for regulated-market Asia savings. Each chain has a verified ledger of record where the money moves.
 *   **Frictionless Onboarding**: Secure, social-login-first (Privy) UX that abstracts away the complexity of managing agent wallets.
 
 ---

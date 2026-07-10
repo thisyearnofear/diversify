@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+import { render, screen, within, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import AppHeader from '../AppHeader';
 
@@ -35,6 +35,10 @@ const baseProps = {
   isFarcaster: false,
   handleTranscription: vi.fn(),
 };
+
+afterEach(() => {
+  cleanup();
+});
 
 describe('AppHeader mobile layout', () => {
   it('hides the "DiversiFi" wordmark below the sm breakpoint', () => {
@@ -87,5 +91,14 @@ describe('AppHeader mobile layout', () => {
 
     const dot = container.querySelector('div.w-1\\.5.h-1\\.5.rounded-full');
     expect(dot).toBeNull();
+  });
+
+  it('hides mode toggle and chain pill in beginner mode', () => {
+    render(<AppHeader {...baseProps} experienceMode="beginner" address="0xabc" />);
+
+    expect(screen.queryByTestId('chain-pill')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Switch to Standard mode/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('voice-button')).toBeInTheDocument();
+    expect(screen.getByTestId('wallet-button')).toBeInTheDocument();
   });
 });

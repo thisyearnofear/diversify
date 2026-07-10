@@ -15,6 +15,10 @@ import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { TokenIcon } from "../../shared/TokenIcon";
+import { ApacRailHonestyBanner } from "../../shared/ApacRailHonestyBanner";
+import { needsApacRailHonesty } from "@/constants/apac-rail";
+import { useProtectionProfile } from "@/hooks/use-protection-profile";
+import { useUserRegion } from "@/hooks/use-user-region";
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -41,8 +45,14 @@ const HOW_IT_WORKS: HowItWorksStep[] = [
 
 export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) {
   const { financialStrategy } = useStrategy();
+  const { config: profileConfig } = useProtectionProfile();
+  const { region: detectedRegion } = useUserRegion();
   const archetypeId = strategyToArchetype(financialStrategy);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
+  const showApacHonesty = needsApacRailHonesty(
+    financialStrategy ?? profileConfig.philosophy,
+    profileConfig.userRegion ?? detectedRegion,
+  );
 
   const heroCard = archetype ? (
     <Card
@@ -127,6 +137,12 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
       {!archetype && (
         <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
           <ProtectionPlanGallery mobile />
+        </div>
+      )}
+
+      {showApacHonesty && (
+        <div className="mb-4">
+          <ApacRailHonestyBanner />
         </div>
       )}
 

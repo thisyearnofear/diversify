@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { FinancialStrategy, NullableFinancialStrategy } from './types';
+import { loadPhilosophy, savePhilosophy } from '@/hooks/use-protection-profile';
 
 type StrategyContextValue = {
   financialStrategy: NullableFinancialStrategy;
@@ -8,21 +9,30 @@ type StrategyContextValue = {
 
 const StrategyContext = createContext<StrategyContextValue | undefined>(undefined);
 
+const PROFILE_STORAGE_KEY = 'diversifi-protection-profile-v2';
+
+/**
+ * Thin React context over `philosophy` in the protection profile.
+ * Persists via `savePhilosophy()` — no separate `financialStrategy` key.
+ */
 export function StrategyProvider({ children }: { children: React.ReactNode }) {
-  const [financialStrategy, setFinancialStrategyState] = useState<NullableFinancialStrategy>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('financialStrategy') as FinancialStrategy | null;
-      return saved || null;
-    }
-    return null;
-  });
+  const [financialStrategy, setFinancialStrategyState] = useState<NullableFinancialStrategy>(() =>
+    typeof window !== 'undefined' ? loadPhilosophy() : null,
+  );
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === PROFILE_STORAGE_KEY || e.key === 'financialStrategy') {
+        setFinancialStrategyState(loadPhilosophy());
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   const setFinancialStrategy = useCallback((strategy: NullableFinancialStrategy) => {
     setFinancialStrategyState(strategy);
-    if (typeof window !== 'undefined') {
-      if (strategy) localStorage.setItem('financialStrategy', strategy);
-      else localStorage.removeItem('financialStrategy');
-    }
+    savePhilosophy(strategy as FinancialStrategy | null);
   }, []);
 
   const value = useMemo<StrategyContextValue>(

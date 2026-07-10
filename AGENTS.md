@@ -61,7 +61,7 @@ Key new files:
 - External agent example + integration guide written (`examples/external-agent/`, `docs/integration-guide.md`)
 - LICENSE file added at repo root (MIT)
 - Self Protocol mainnet registration complete (real passport, Celo mainnet, agent `0xE8cDb7CA…f170`)
-- All 525 tests pass
+- All 540 tests pass
 - Guardian heartbeat cron runs every 2 hours on Hetzner — records advisory recommendations on Celo/Arbitrum primary + 0G mainnet evidence mirror
 - Guardian loop cron runs every 5 min — auto-executes within user permission bounds, mirrors to 0G
 - **Remaining:** 0G explorer source verification (custom API), demo video, X post with mainnet proof
@@ -73,6 +73,13 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - Onboarding progress is the 3-step `CoinSteps` indicator in `WelcomeScreen.tsx`; completed steps navigate back.
 - **Scroll rule:** the StrategyModal dialog is the single scroll container. Do not add `overflow-y-auto` or `justify-center` to WelcomeScreen's root — center via the `my-auto` wrapper (justify-center on an overflowing flex container makes the top unreachable).
 - `.custom-scrollbar`, `.coin-float`, `.aurora-drift` utilities are defined in `styles/globals.css`.
+
+**UX consolidation waves (2026-07-10, Waves 0–3):**
+- **Wave 0:** Tour skip when philosophy set; beginner tabs via `TAB_VISIBILITY`; confetti removed; action-oriented tab hint (2-tab dismiss)
+- **Wave 1:** `GuardianOnboardingWizard` deleted; `GuardianStatusChip` + compact scrollytelling; beginner hides plan gallery/SavingsLoop
+- **Wave 2:** `strategyToArchetype()` DRY; `getBeginnerPrimaryTip()` plain copy; compact `LiveProofCard`; `detectGuidedTour` deleted
+- **Wave 3:** Simple mode hides header mode toggle + `ChainPill`; 3-step `GuidedTour`; APAC honesty banner; `philosophy` in `ProtectionConfig` (replaces `financialStrategy` key)
+- **540 tests passing**; see `docs/roadmap.md` § UX consolidation waves for full table
 
 ## Tool Notes
 - **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.

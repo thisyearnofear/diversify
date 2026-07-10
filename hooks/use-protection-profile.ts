@@ -26,6 +26,8 @@ export interface ProtectionConfig {
   userRegion: string | null;
   riskTolerance: RiskTolerance | null;
   timeHorizon: TimeHorizon | null;
+  /** Protection philosophy — single source of truth (replaces `financialStrategy` localStorage key). */
+  philosophy: FinancialStrategy | null;
 }
 
 export type ProfileMode = 'editing' | 'viewing' | 'complete';
@@ -55,7 +57,10 @@ const DEFAULT_CONFIG: ProtectionConfig = {
   userRegion: null,
   riskTolerance: null,
   timeHorizon: null,
+  philosophy: null,
 };
+
+const LEGACY_STRATEGY_KEY = 'financialStrategy';
 
 const PHILOSOPHY_DEFAULT_GOAL: Partial<Record<FinancialStrategy, UserGoal>> = {
   africapitalism: 'geographic_diversification',
@@ -86,6 +91,7 @@ export function deriveProfileFromPhilosophy(
   }
 
   return {
+    philosophy: strategy,
     userGoal: PHILOSOPHY_DEFAULT_GOAL[strategy] ?? 'inflation_protection',
     userRegion: region ?? null,
     riskTolerance: 'Balanced',
@@ -149,22 +155,55 @@ export const TIME_HORIZONS: Array<{
 // STORAGE HELPERS
 // ============================================================================
 
+function migrateLegacyPhilosophy(config: ProtectionConfig): ProtectionConfig {
+  if (config.philosophy) return config;
+  try {
+    const legacy = localStorage.getItem(LEGACY_STRATEGY_KEY) as FinancialStrategy | null;
+    if (legacy) {
+      const migrated = { ...config, philosophy: legacy };
+      saveConfig(migrated);
+      localStorage.removeItem(LEGACY_STRATEGY_KEY);
+      return migrated;
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return config;
+}
+
 function loadConfig(): ProtectionConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return {
+      return migrateLegacyPhilosophy({
         userGoal: parsed.userGoal || null,
         userRegion: parsed.userRegion || null,
         riskTolerance: parsed.riskTolerance || null,
         timeHorizon: parsed.timeHorizon || null,
-      };
+        philosophy: parsed.philosophy || null,
+      });
     }
   } catch {
     // Ignore storage errors
   }
-  return { ...DEFAULT_CONFIG };
+  return migrateLegacyPhilosophy({ ...DEFAULT_CONFIG });
+}
+
+/** Read persisted philosophy without React (StrategyContext, API helpers). */
+export function loadPhilosophy(): FinancialStrategy | null {
+  return loadConfig().philosophy;
+}
+
+/** Persist philosophy into the protection profile (removes legacy key). */
+export function savePhilosophy(strategy: FinancialStrategy | null): void {
+  const config = loadConfig();
+  saveConfig({ ...config, philosophy: strategy });
+  try {
+    localStorage.removeItem(LEGACY_STRATEGY_KEY);
+  } catch {
+    // Ignore storage errors
+  }
 }
 
 function saveConfig(config: ProtectionConfig): void {

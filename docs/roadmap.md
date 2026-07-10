@@ -332,6 +332,24 @@ The following providers map to DiversiFi's chains (Celo, Arbitrum) and target ma
 No commitment to integrate any specific provider. Listed here so the integration surface
 area is visible and decisions are intentional rather than reactive.
 
+### APAC rail — Asia execution home
+
+The onramp table above names SE Asia providers (**StraitsX**, **Coins.ph**) but does not
+define where those stablecoins **settle and get protected** after on-ramp. The **APAC rail**
+(planned) is that landing zone: regulated-market savings and structured settlement for
+**Confucian** and **Gotong Royong** plans, while Arbitrum remains the yield optimizer.
+
+| Concern | Owner |
+|---------|--------|
+| Fiat on-ramp (PH, SG) | StraitsX, Coins.ph → stablecoin on APAC rail |
+| Savings / hold actions | APAC rail + `RecommendationLedger` |
+| Yield rotation (USDY, etc.) | Arbitrum (unchanged) |
+| Intelligence API tolls | Arc / x402 (unchanged) |
+| Reasoning evidence | 0G (unchanged) |
+
+Full rationale, routing diagram, build/skip criteria, and minimal v1 scope:
+[`apac-rail.md`](./apac-rail.md).
+
 ---
 
 ## Track 3 — Product Reframe: Risk-Aware, Values-Driven Treasury (2026-07-09)
@@ -390,6 +408,20 @@ Two fixes shipped after initial deploy:
 ### Why "risk is universal" is the right framing
 
 The assumption that "USD = safe, everything else = risky" is itself a normative judgment. A US investor worried about political instability, a Muslim in London seeking Sharia-compliant holdings, or a Kenyan-American whose family's savings are in KES — all of them have risk, and all of them can find a philosophy that matches their values. Gold (XAU) works as the universal benchmark because it has outperformed every currency, including USD. The philosophy system then provides the values-driven response: HALO for hard-asset hedgers, Africapitalism for diaspora wealth retention, Islamic Finance for Sharia compliance, TACO for political neutrality.
+
+### UX consolidation waves (2026-07-10)
+
+Critical UI/UX audit against the emerging/APAC saver persona. Five waves; **0–3 shipped**, 4+ deferred.
+
+| Wave | Focus | Status |
+|------|-------|--------|
+| **0 — Stop bleeding** | Skip tour when philosophy set; beginner tab IA (Shield/Home/Learn); plain wallet CTAs; remove confetti | **Done** |
+| **1 — Guardian surfaces** | Delete `GuardianOnboardingWizard`; `GuardianStatusChip`; compact scrollytelling (2 states) | **Done** |
+| **2 — DRY + plain copy** | `strategyToArchetype()` single source; beginner tips without chain jargon; compact `LiveProofCard` | **Done** |
+| **3 — Calm + honest** | Hide header chrome in Simple mode; 3-step tour; APAC honesty banner; fold `philosophy` into protection profile | **Done** |
+| **4+** | Testnet banner gating, further AgentTier demotion, claim confetti removal | Planned |
+
+**540 tests passing** after Wave 3. Key files: `constants/tabs.ts`, `constants/onboarding.ts`, `constants/apac-rail.ts`, `hooks/use-protection-profile.ts`, `hooks/use-home-sections.ts`, `components/app/AppHeader.tsx`, `components/tour/GuidedTour.tsx`.
 
 ---
 

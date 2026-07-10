@@ -19,11 +19,12 @@ import type { Region } from "@/hooks/use-user-region";
 import { Card, PrimaryButton, SecondaryButton } from "./TabComponents";
 import { useColdStart } from "@/hooks/use-cold-start";
 import type { TabId } from "@/constants/tabs";
+import { APAC_RAIL_HONESTY_COPY } from "@/constants/apac-rail";
 import { NetworkOptimizedOnramp } from "../onramp";
 import WalletButton from "../wallet/WalletButton";
 
 export interface ContextualBannerProps {
-  kind: "cold-start" | "demo" | "goal-drift" | "daily-claim" | null;
+  kind: "cold-start" | "demo" | "goal-drift" | "daily-claim" | "apac-rail-pending" | null;
   isDemo: boolean;
   /** Total value of the portfolio, for the demo banner copy */
   demoValue?: number;
@@ -104,6 +105,7 @@ export function ContextualBanner({
           onAction={() => setActiveTab("protect")}
         />
       )}
+      {kind === "apac-rail-pending" && <ApacRailPendingVariant />}
     </motion.div>
   );
 }
@@ -311,5 +313,23 @@ function DailyClaimVariant({
         Claim Now
       </div>
     </button>
+  );
+}
+
+function ApacRailPendingVariant() {
+  return (
+    <Card padding="p-0" className="overflow-hidden border-2 border-sky-200 dark:border-sky-900">
+      <div className="bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-900/20 dark:to-indigo-900/20 p-4 flex items-start gap-3">
+        <div className="text-2xl shrink-0">⛩️</div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-wide text-sky-600 dark:text-sky-400">
+            {APAC_RAIL_HONESTY_COPY.title}
+          </div>
+          <p className="text-sm font-medium text-sky-900 dark:text-sky-100 mt-0.5 leading-relaxed">
+            {APAC_RAIL_HONESTY_COPY.body}
+          </p>
+        </div>
+      </div>
+    </Card>
   );
 }
