@@ -83,7 +83,8 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - **Wave 5:** `ProtectionProfileProvider` unifies profile + philosophy; `useStrategy()` delegates to profile; LiveProof chain-aware copy; voice hidden in Simple mode
 - **Wave 6:** `PhilosophyHeroCard` DRY for Home + Shield unconnected heroes; onboarding detect phase waits for user tap
 - **Wave 7:** `getPlanPreview()` + phase-3 `PlanPreviewCard`; `PhilosophyPromptCard` DRY; `STRATEGY_ALLOCATIONS` shared with Guardian wizard
-- **554 tests passing**; see `docs/roadmap.md` § UX consolidation waves for full table
+- **Wave 8:** Honest price feeds — shared `fetchWithTimeout` (`packages/shared/src/utils/promise-utils.ts`); EM price service per-provider timeouts + serves expired cache before fabricating a static price (fallbacks report `change24h: null`, never a fake `+0.0%`); `use-emerging-markets-prices` derives staleness from data timestamps and exposes `hasEstimates` → `DataFreshnessIndicator` "Includes estimates"; EM prices API route on `unifiedCache` (new `realtime` category, coalesces concurrent fan-outs); dead `use-data-freshness` + unused `useEmergingMarketPrice` deleted
+- **558 tests passing**; see `docs/roadmap.md` § UX consolidation waves for full table
 
 ## Tool Notes
 - **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.

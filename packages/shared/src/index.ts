@@ -196,6 +196,7 @@ export {
 } from './utils/portfolio-analysis';
 export type { PortfolioAnalysis, TokenAllocation, RegionalExposure, RebalancingOpportunity } from './utils/portfolio-analysis';
 export * from './utils/unified-cache-service';
+export { withTimeout, fetchWithTimeout } from './utils/promise-utils';
 export { inflationService, exchangeRateService, ImprovedInflationService, ExchangeRateService, macroService } from './utils/improved-data-services';
 export * from './utils/macro-economic-service';
 export * from './utils/environment';

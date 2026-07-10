@@ -411,7 +411,7 @@ The assumption that "USD = safe, everything else = risky" is itself a normative 
 
 ### UX consolidation waves (2026-07-10)
 
-Critical UI/UX audit against the emerging/APAC saver persona. Seven waves; **0–7 shipped**.
+Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–8 shipped**.
 
 | Wave | Focus | Status |
 |------|-------|--------|
@@ -423,8 +423,9 @@ Critical UI/UX audit against the emerging/APAC saver persona. Seven waves; **0�
 | **5 — Provider + proof polish** | `ProtectionProfileProvider` replaces `StrategyProvider`; LiveProof mainnet-aware copy; voice hidden in Simple mode | **Done** |
 | **6 — DRY + pacing** | `PhilosophyHeroCard` shared hero; WelcomeScreen manual detect→risk advance | **Done** |
 | **7 — Plan preview** | `getPlanPreview()` + `PlanPreviewCard` on onboarding phase 3; `PhilosophyPromptCard` DRY; shared `STRATEGY_ALLOCATIONS` | **Done** |
+| **8 — Honest price feeds** | Shared `fetchWithTimeout`; EM price failover hardened (per-provider timeouts, expired-cache-before-fabrication, no fake `+0.0%`); staleness from data timestamps + "Includes estimates" marker; EM prices API on `unifiedCache` (`realtime`); dead freshness/price hooks deleted | **Done** |
 
-**554 tests passing** after Wave 7. Key files: `components/protection-cards/plan-preview.ts`, `components/protection-cards/PlanPreviewCard.tsx`, `hooks/use-currency-risk.ts`.
+**558 tests passing** after Wave 8. Key files: `components/protection-cards/plan-preview.ts`, `components/protection-cards/PlanPreviewCard.tsx`, `hooks/use-currency-risk.ts`, `packages/shared/src/utils/promise-utils.ts`, `hooks/use-emerging-markets-prices.ts`.
 
 ---
 

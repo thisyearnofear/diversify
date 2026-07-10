@@ -1,9 +1,15 @@
 /**
  * Hook: Emerging Markets Prices
  * Fetches and manages real emerging market stock prices
+ *
+ * Staleness is derived from the data's own timestamps (the newest per-symbol
+ * lastUpdated reported by the price service), not from when the fetch
+ * happened — a successful fetch of old or fabricated data must not read
+ * as "live".
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { fetchWithTimeout } from "@diversifi/shared";
 
 interface PriceData {
     symbol: string;
@@ -24,7 +30,11 @@ interface UseEmergingMarketsPricesReturn {
     getPrice: (symbol: string) => PriceData | undefined;
     lastUpdated: number | null;
     isStale: boolean;
+    hasEstimates: boolean;
 }
+
+const FETCH_TIMEOUT_MS = 10000;
+const STALE_AFTER_MS = 5 * 60 * 1000;
 
 export function useEmergingMarketsPrices(
     autoRefresh = true,
@@ -40,7 +50,11 @@ export function useEmergingMarketsPrices(
             setIsLoading(true);
             setError(null);
 
-            const response = await fetch("/api/emerging-markets/prices");
+            const response = await fetchWithTimeout(
+                "/api/emerging-markets/prices",
+                {},
+                FETCH_TIMEOUT_MS
+            );
 
             if (!response.ok) {
                 throw new Error(`Failed to fetch prices: ${response.status}`);
@@ -50,7 +64,13 @@ export function useEmergingMarketsPrices(
 
             if (data.prices) {
                 setPrices(data.prices);
-                setLastUpdated(Date.now());
+                const newest = Math.max(
+                    0,
+                    ...Object.values(data.prices as Record<string, PriceData>).map(
+                        p => p.lastUpdated ?? 0
+                    )
+                );
+                setLastUpdated(newest > 0 ? newest : null);
             }
         } catch (err) {
             const message = err instanceof Error ? err.message : "Failed to fetch prices";
@@ -80,8 +100,11 @@ export function useEmergingMarketsPrices(
         [prices]
     );
 
-    // Calculate if data is stale (older than 5 minutes)
-    const isStale = lastUpdated ? Date.now() - lastUpdated > 5 * 60 * 1000 : false;
+    // Staleness of the underlying data, not of the last fetch
+    const isStale = lastUpdated ? Date.now() - lastUpdated > STALE_AFTER_MS : false;
+
+    // True when any displayed price is a fabricated config fallback
+    const hasEstimates = Object.values(prices).some(p => p.source === "static-fallback");
 
     return {
         prices,
@@ -91,56 +114,6 @@ export function useEmergingMarketsPrices(
         getPrice,
         lastUpdated,
         isStale,
-    };
-}
-
-/**
- * Hook for tracking a single stock price
- */
-export function useEmergingMarketPrice(
-    symbol: string | null
-): {
-    price: PriceData | null;
-    isLoading: boolean;
-    error: string | null;
-    refresh: () => Promise<void>;
-} {
-    const [price, setPrice] = useState<PriceData | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const fetchPrice = useCallback(async () => {
-        if (!symbol) return;
-
-        try {
-            setIsLoading(true);
-            setError(null);
-
-            const response = await fetch(`/api/emerging-markets/prices?symbol=${symbol}`);
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch price: ${response.status}`);
-            }
-
-            const data = await response.json();
-            setPrice(data);
-        } catch (err) {
-            const message = err instanceof Error ? err.message : "Failed to fetch price";
-            setError(message);
-            console.error(`[useEmergingMarketPrice] Error for ${symbol}:`, err);
-        } finally {
-            setIsLoading(false);
-        }
-    }, [symbol]);
-
-    useEffect(() => {
-        fetchPrice();
-    }, [fetchPrice]);
-
-    return {
-        price,
-        isLoading,
-        error,
-        refresh: fetchPrice,
+        hasEstimates,
     };
 }

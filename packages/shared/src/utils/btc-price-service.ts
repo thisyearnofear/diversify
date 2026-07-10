@@ -8,6 +8,8 @@
  * unreachable so downstream consumers can still render without throwing.
  */
 
+import { fetchWithTimeout } from "./promise-utils";
+
 const FALLBACK_PRICE_USD = 67000;
 const TIMEOUT_MS = 5000;
 
@@ -69,14 +71,4 @@ async function fetchCoinPaprika(): Promise<BtcPriceResult | null> {
         : 0,
     source: "coinpaprika",
   };
-}
-
-async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
 }

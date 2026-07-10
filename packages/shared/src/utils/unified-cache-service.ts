@@ -12,7 +12,7 @@ export interface CacheEntry<T> {
   lastAccessed: number;
 }
 
-export type CacheCategory = 'volatile' | 'moderate' | 'stable' | 'static';
+export type CacheCategory = 'realtime' | 'volatile' | 'moderate' | 'stable' | 'static';
 
 export class UnifiedCacheService {
   private cache = new Map<string, CacheEntry<any>>();
@@ -22,6 +22,7 @@ export class UnifiedCacheService {
 
   // Smart TTL configuration based on data volatility
   private readonly TTL_CONFIG: Record<CacheCategory, number> = {
+    realtime: 1000 * 60,         // 1 minute - frequently-polled API responses (live market prices)
     volatile: 1000 * 60 * 30,    // 30 minutes - token prices (stablecoins don't move much)
     moderate: 1000 * 60 * 60,    // 1 hour - inflation data, economic indicators
     stable: 1000 * 60 * 60 * 6,  // 6 hours - country data, static reference data
@@ -173,6 +174,7 @@ export class UnifiedCacheService {
     categories: Record<CacheCategory, number>;
   } {
     const categories: Record<CacheCategory, number> = {
+      realtime: 0,
       volatile: 0,
       moderate: 0,
       stable: 0,
@@ -181,7 +183,9 @@ export class UnifiedCacheService {
 
     this.cache.forEach(entry => {
       // Approximate category based on TTL
-      if (entry.ttl <= this.TTL_CONFIG.volatile) {
+      if (entry.ttl <= this.TTL_CONFIG.realtime) {
+        categories.realtime++;
+      } else if (entry.ttl <= this.TTL_CONFIG.volatile) {
         categories.volatile++;
       } else if (entry.ttl <= this.TTL_CONFIG.moderate) {
         categories.moderate++;

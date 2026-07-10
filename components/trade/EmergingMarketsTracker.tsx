@@ -224,7 +224,7 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
   showFictionalCTA = true,
 }) => {
   const [activeRegion, setActiveRegion] = useState<"all" | "africa" | "latam" | "asia">("all");
-  const { prices, isLoading, error, refresh, lastUpdated, isStale } = useEmergingMarketsPrices();
+  const { prices, isLoading, error, refresh, lastUpdated, isStale, hasEstimates } = useEmergingMarketsPrices();
   const { watchlist, toggleWatchlist, isInWatchlist } = useWatchlist();
   const [showAll, setShowAll] = useState(false);
 
@@ -296,6 +296,7 @@ export const EmergingMarketsTracker: React.FC<EmergingMarketsTrackerProps> = ({
             <DataFreshnessIndicator
               lastUpdated={lastUpdated}
               isStale={isStale}
+              hasEstimates={hasEstimates}
               isLoading={isLoading}
               error={error}
               onRefresh={refresh}

@@ -8,6 +8,8 @@ import React from "react";
 interface DataFreshnessIndicatorProps {
   lastUpdated: number | null;
   isStale?: boolean;
+  /** Some of the displayed values are fallback estimates, not live quotes */
+  hasEstimates?: boolean;
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
@@ -17,6 +19,7 @@ interface DataFreshnessIndicatorProps {
 export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   lastUpdated,
   isStale = false,
+  hasEstimates = false,
   isLoading = false,
   error = null,
   onRefresh,
@@ -72,13 +75,13 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
     );
   }
 
-  // Stale data warning
-  if (isStale) {
+  // Stale or partially estimated data — both get the honest amber marker
+  if (isStale || hasEstimates) {
     return (
       <div className={`flex items-center gap-2 text-xs ${className}`}>
         <span className="w-2 h-2 rounded-full bg-amber-500" />
         <span className="text-amber-600 dark:text-amber-400">
-          Stale data • {getRelativeTime(lastUpdated)}
+          {isStale ? "Stale data" : "Includes estimates"} • {getRelativeTime(lastUpdated)}
         </span>
         {onRefresh && (
           <button

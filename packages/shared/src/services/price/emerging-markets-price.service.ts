@@ -5,6 +5,7 @@
  */
 
 import { EMERGING_MARKET_STOCKS, type EmergingMarketStock } from "../../config/emerging-markets";
+import { fetchWithTimeout } from "../../utils/promise-utils";
 
 interface PriceCache {
     symbol: string;
@@ -29,6 +30,9 @@ interface PriceFetchResult {
 // Cache configuration
 const CACHE_TTL = 1000 * 60 * 15; // 15 minutes for price data
 const CACHE_TTL_VOLATILE = 1000 * 60 * 5; // 5 minutes during market hours
+
+// Per-provider attempt timeout — a hung upstream must fail over, not stall the chain
+const PROVIDER_TIMEOUT_MS = 8000;
 
 // API Rate limit tracking
 class RateLimitTracker {
@@ -164,20 +168,29 @@ export class EmergingMarketsPriceService {
         }
 
         if (!result) {
+            // Prefer a real-but-expired cached price over a fabricated one.
+            // Keeping its original lastUpdated lets clients mark it stale honestly.
+            const expired = this.cache.get(symbol);
+            if (expired && expired.source !== "static-fallback") {
+                console.warn(`[PriceService] All sources failed for ${symbol}, serving expired cache from ${new Date(expired.lastUpdated).toISOString()}`);
+                return expired;
+            }
+
             console.error(`[PriceService] All sources failed for ${symbol}, using config fallback`);
-            
-            // Final fallback: use static config if available
+
+            // Last resort: static config price. change24h stays null — a
+            // fabricated price must not render a real-looking "+0.0%".
             const currency = this.inferCurrency(stock.market);
             const fallbackPrice = stock.fallbackPrice || 100;
             const usdEquivalent = await this.convertToUsd(fallbackPrice, currency);
-            
+
             const cacheEntry: PriceCache = {
                 symbol,
                 price: fallbackPrice,
                 currency,
                 usdEquivalent,
-                change24h: 0,
-                changePercent24h: 0,
+                change24h: null,
+                changePercent24h: null,
                 lastUpdated: Date.now(),
                 source: "static-fallback",
             };
@@ -209,13 +222,14 @@ export class EmergingMarketsPriceService {
         const yahooTicker = this.toYahooTicker(stock.realTicker, stock.market);
 
         try {
-            const response = await fetch(
+            const response = await fetchWithTimeout(
                 `https://query1.finance.yahoo.com/v8/finance/chart/${yahooTicker}?interval=1d&range=2d`,
                 {
                     headers: {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
                     }
-                }
+                },
+                PROVIDER_TIMEOUT_MS
             );
 
             if (!response.ok) {
@@ -266,8 +280,10 @@ export class EmergingMarketsPriceService {
         if (!this.alphaVantageKey) return null;
 
         try {
-            const response = await fetch(
-                `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${stock.realTicker}&apikey=${this.alphaVantageKey}`
+            const response = await fetchWithTimeout(
+                `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${stock.realTicker}&apikey=${this.alphaVantageKey}`,
+                {},
+                PROVIDER_TIMEOUT_MS
             );
 
             if (!response.ok) {
@@ -314,8 +330,10 @@ export class EmergingMarketsPriceService {
             // Finnhub uses different ticker format
             const finnhubTicker = this.toFinnhubTicker(stock.realTicker);
 
-            const response = await fetch(
-                `https://finnhub.io/api/v1/quote?symbol=${finnhubTicker}&token=${apiKey}`
+            const response = await fetchWithTimeout(
+                `https://finnhub.io/api/v1/quote?symbol=${finnhubTicker}&token=${apiKey}`,
+                {},
+                PROVIDER_TIMEOUT_MS
             );
 
             if (!response.ok) {

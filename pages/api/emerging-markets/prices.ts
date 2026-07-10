@@ -6,7 +6,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getEmergingMarketsPriceService, emergingMarketsPriceService } from "@diversifi/shared";
+import { getEmergingMarketsPriceService, emergingMarketsPriceService, unifiedCache } from "@diversifi/shared";
 
 // Get the service instance with fallback to handle module resolution edge cases
 const getPriceService = () => {
@@ -21,10 +21,6 @@ const getPriceService = () => {
     throw new Error("EmergingMarketsPriceService not available");
 };
 
-// Simple in-memory cache for API responses
-const apiCache = new Map<string, { data: unknown; timestamp: number }>();
-const API_CACHE_TTL = 60000; // 1 minute API response cache
-
 export default async function handler(
     req: NextApiRequest,
     res: NextApiResponse
@@ -36,50 +32,54 @@ export default async function handler(
     const { symbol } = req.query;
 
     try {
-        // Check API cache first
-        const cacheKey = symbol ? `price-${symbol}` : "all-prices";
-        const cached = apiCache.get(cacheKey);
+        const cacheKey = symbol && typeof symbol === "string"
+            ? `em-prices:${symbol}`
+            : "em-prices:all";
 
-        if (cached && Date.now() - cached.timestamp < API_CACHE_TTL) {
-            return res.status(200).json(cached.data);
+        // Response-level cache: coalesces concurrent requests so a cold
+        // cache never triggers parallel getAllPrices fan-outs, and serves
+        // recently-expired data if the upstream fetch fails.
+        const { data } = await unifiedCache.getOrFetch<object | null>(
+            cacheKey,
+            async () => {
+                if (symbol && typeof symbol === "string") {
+                    const price = await getPriceService().getPrice(symbol);
+                    return {
+                        data: price
+                            ? {
+                                symbol,
+                                price: price.price,
+                                currency: price.currency,
+                                usdEquivalent: price.usdEquivalent,
+                                change24h: price.change24h,
+                                changePercent24h: price.changePercent24h,
+                                lastUpdated: price.lastUpdated,
+                                source: price.source,
+                            }
+                            : null,
+                        source: "emerging-markets-price-service",
+                    };
+                }
+
+                const prices = await getPriceService().getAllPrices();
+                return {
+                    data: {
+                        count: Object.keys(prices).length,
+                        prices,
+                        timestamp: Date.now(),
+                    },
+                    source: "emerging-markets-price-service",
+                };
+            },
+            "realtime"
+        );
+
+        if (!data) {
+            return res.status(404).json({
+                error: "Price not available",
+                symbol
+            });
         }
-
-        let data;
-
-        if (symbol && typeof symbol === "string") {
-            // Get specific stock price
-            const price = await getPriceService().getPrice(symbol);
-
-            if (!price) {
-                return res.status(404).json({
-                    error: "Price not available",
-                    symbol
-                });
-            }
-
-            data = {
-                symbol,
-                price: price.price,
-                currency: price.currency,
-                usdEquivalent: price.usdEquivalent,
-                change24h: price.change24h,
-                changePercent24h: price.changePercent24h,
-                lastUpdated: price.lastUpdated,
-                source: price.source,
-            };
-        } else {
-            // Get all prices
-            const prices = await getPriceService().getAllPrices();
-
-            data = {
-                count: Object.keys(prices).length,
-                prices,
-                timestamp: Date.now(),
-            };
-        }
-
-        // Cache the response
-        apiCache.set(cacheKey, { data, timestamp: Date.now() });
 
         // Set cache headers
         res.setHeader("Cache-Control", "public, max-age=60, stale-while-revalidate=300");
