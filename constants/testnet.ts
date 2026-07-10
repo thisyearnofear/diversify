@@ -10,7 +10,7 @@ export function showTestnetUi(): boolean {
 
 export const TESTNET_OPT_IN_KEY = 'diversifi-testnet-opt-in';
 
-const TESTNET_CHAIN_IDS = new Set([
+const TESTNET_CHAIN_IDS: ReadonlySet<number> = new Set([
   NETWORKS.CELO_SEPOLIA.chainId,
   NETWORKS.ARC_TESTNET.chainId,
   NETWORKS.RH_TESTNET.chainId,

@@ -18,7 +18,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMobile } from "@/hooks/use-mobile";
 import { LiveProofCard } from "../shared/LiveProofCard";
 import { STRATEGIES as CANONICAL_STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { STRATEGY_ALLOCATIONS } from "@/components/protection-cards/plan-preview";
+import { STRATEGY_ALLOCATIONS, type AllocationSlice } from "@/components/protection-cards/plan-preview";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ interface Strategy {
   tagline: string;
   description: string;
   regions: string[];
-  allocation: { token: string; region: string; percent: number }[];
+  allocation: AllocationSlice[];
 }
 
 // ── Single source of truth: all wizard strategies come from useFinancialStrategies.

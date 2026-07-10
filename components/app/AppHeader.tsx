@@ -9,6 +9,29 @@ import WalletButton from "@/components/wallet/WalletButton";
 import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
 import { ChainPill } from "./ChainPill";
 
+const MODE_ICON: Record<UserExperienceMode, string> = {
+  beginner: "🌱",
+  intermediate: "🚀",
+  advanced: "⚡",
+};
+
+const MODE_LABEL: Record<UserExperienceMode, string> = {
+  beginner: "Simple",
+  intermediate: "Standard",
+  advanced: "Advanced",
+};
+
+function nextExperienceMode(mode: UserExperienceMode): UserExperienceMode {
+  if (mode === "beginner") return "intermediate";
+  if (mode === "intermediate") return "advanced";
+  return "beginner";
+}
+
+const MODE_TIP_BODY: Record<"intermediate" | "advanced", string> = {
+  intermediate: "Unlocks power analytics, voice shortcuts, batch ops",
+  advanced: "Hides advanced panels for a focused view",
+};
+
 interface AppHeaderProps {
   experienceMode: UserExperienceMode;
   setExperienceMode: (mode: UserExperienceMode) => void;
@@ -75,30 +98,18 @@ export default function AppHeader({
         >
           <button
             onClick={() => {
-              const next =
-                experienceMode === "beginner"
-                  ? "intermediate"
-                  : experienceMode === "intermediate"
-                    ? "advanced"
-                    : "beginner";
-              setExperienceMode(next);
+              setExperienceMode(nextExperienceMode(experienceMode));
               setActiveHint(null);
               dismissModeTip();
             }}
             className="flex flex-col items-center gap-0.5"
-            aria-label={
-              experienceMode === "beginner"
-                ? "Switch to Standard mode"
-                : experienceMode === "intermediate"
-                  ? "Switch to Advanced mode"
-                  : "Switch to Simple mode"
-            }
+            aria-label={`Switch to ${MODE_LABEL[nextExperienceMode(experienceMode)]} mode`}
           >
             <span className="w-10 h-8 text-sm rounded-xl flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md">
-              {experienceMode === "beginner" ? "🌱" : experienceMode === "intermediate" ? "🚀" : "⚡"}
+              {MODE_ICON[experienceMode]}
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400 leading-none">
-              {experienceMode === "beginner" ? "Simple" : experienceMode === "intermediate" ? "Standard" : "Advanced"}
+              {MODE_LABEL[experienceMode]}
             </span>
           </button>
           {(activeHint === "mode" || showModeTip) && (
@@ -111,14 +122,10 @@ export default function AppHeader({
                 ✕
               </button>
               <div className="text-xs font-bold text-white mb-0.5 pr-5">
-                Tap → {experienceMode === "beginner" ? "Standard 🚀" : experienceMode === "intermediate" ? "Advanced ⚡" : "Simple 🌱"}
+                Tap → {MODE_LABEL[nextExperienceMode(experienceMode)]} {MODE_ICON[nextExperienceMode(experienceMode)]}
               </div>
               <div className="text-xs text-gray-300 leading-relaxed">
-                {experienceMode === "beginner"
-                  ? "Unlocks token search, inflation comparison, AI chat"
-                  : experienceMode === "intermediate"
-                    ? "Unlocks power analytics, voice shortcuts, batch ops"
-                    : "Hides advanced panels for a focused view"}
+                {MODE_TIP_BODY[experienceMode]}
               </div>
               <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
             </div>

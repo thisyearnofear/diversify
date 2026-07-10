@@ -9,7 +9,7 @@ import { ARCHETYPES, type ArchetypeId } from './tokens';
 export interface AllocationSlice {
   token: string;
   percent: number;
-  region?: string;
+  region: string;
 }
 
 /** Financial-strategy ids (StrategyContext / GuardianMobileWizard). */
