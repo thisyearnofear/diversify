@@ -24,6 +24,18 @@ import type { Vault, VaultPermission } from './vault.service';
 
 export type GuardianTierState = 'idle' | 'authorized' | 'funded' | 'monitoring';
 
+/** Collapsed user-facing state — setup vs actively protecting. */
+export type GuardianUserFacingState = 'setup' | 'active';
+
+export function collapseGuardianTierForUser(state: GuardianTierState): GuardianUserFacingState {
+    return state === 'monitoring' ? 'active' : 'setup';
+}
+
+export const GUARDIAN_USER_FACING_LABELS: Record<GuardianUserFacingState, string> = {
+    setup: 'Not protecting yet',
+    active: 'Protection on',
+};
+
 export const GUARDIAN_TIER_STATE_LABELS: Record<GuardianTierState, string> = {
     idle: 'Not set up',
     authorized: 'Approved',

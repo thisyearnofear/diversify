@@ -33,10 +33,11 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 import { GuardianMascot } from "../shared/GuardianMascot";
-import GuardianOnboardingWizard from "../agent/GuardianOnboardingWizard";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
+import { GuardianStatusChip, useGuardianTierSnapshot } from "../agent/AgentTierStatus";
+import { GuardianStateScrollytelling } from "./protect/GuardianStateScrollytelling";
+import { useStrategy } from "@/context/app/StrategyContext";
 import { useAgentStatus } from "@/hooks/use-agent-status";
-import { useAgentConfig } from "@/hooks/use-agent-config";
 import { useVault } from "@/hooks/use-vault";
 import { useSessionKey } from "@/hooks/use-session-key";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
@@ -75,10 +76,10 @@ export default function ProtectionTab({
   const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
 
   // Guardian onboarding state — lives here so the Protect tab owns setup
-  const { autonomousStatus, isLoading: isGuardianStatusLoading } = useAgentStatus();
-  const { config: agentConfig } = useAgentConfig();
-  const [guardianDismissed, setGuardianDismissed] = useState(false);
+  const { isLoading: isGuardianStatusLoading } = useAgentStatus();
   const [showMobileWizard, setShowMobileWizard] = useState(false);
+  const { guardianState } = useGuardianTierSnapshot();
+  const { financialStrategy } = useStrategy();
   const vault = useVault();
   const { requestPermission } = useSessionKey();
 
@@ -143,6 +144,7 @@ export default function ProtectionTab({
   const hasFiredProfileConfettiRef = useRef(false);
 
   const fireScoreConfetti = useCallback((score: number) => {
+    if (isBeginner) return;
     const milestone = Math.floor(score / 25) * 25;
     if (milestone > 0 && milestone > lastScoreMilestoneRef.current) {
       lastScoreMilestoneRef.current = milestone;
@@ -153,9 +155,10 @@ export default function ProtectionTab({
         colors: ["#6366f1", "#a855f7", "#ec4899"],
       });
     }
-  }, []);
+  }, [isBeginner]);
 
   const fireProfileConfetti = useCallback(() => {
+    if (isBeginner) return;
     if (!hasFiredProfileConfettiRef.current) {
       hasFiredProfileConfettiRef.current = true;
       const end = Date.now() + 800;
@@ -181,7 +184,7 @@ export default function ProtectionTab({
       };
       frame();
     }
-  }, []);
+  }, [isBeginner]);
 
   // ============================================================================
   // HANDLERS
@@ -416,6 +419,8 @@ export default function ProtectionTab({
     );
   }
 
+  const hasChosenPlan = !!(financialStrategy || selectedStrategy);
+
   return (
     <div className="space-y-4">
       {/* Strategy Alignment Bar */}
@@ -452,19 +457,15 @@ export default function ProtectionTab({
           G$ SAVINGS LOOP — Claim G$ → Build streak → Protect → Repeat.
           This is the explicit loop GoodBuilders S4 reviewers asked for.
           ===================================================================== */}
-      <SavingsLoopCard />
+      {/* G$ savings loop — after first deposit, standard+ only */}
+      {!isBeginner && displayTotalValue > 0 && <SavingsLoopCard />}
 
-      {/* =====================================================================
-          PROTECTION PLAN GALLERY — the design system, live in the product.
-          Same JSX renders here, in the Figma library, and in share PNGs.
-          ===================================================================== */}
-      <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
-        <ProtectionPlanGallery mobile />
-      </div>
+      {!hasChosenPlan && (
+        <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+          <ProtectionPlanGallery mobile />
+        </div>
+      )}
 
-      {/* =====================================================================
-          CONSOLIDATED PROTECTION DASHBOARD
-          ===================================================================== */}
       {<ProtectionPlanCard
         experienceMode={experienceMode}
         address={address}
@@ -474,17 +475,20 @@ export default function ProtectionTab({
         currentGoalLabel={currentGoalLabel}
       />}
 
-      {/* =================================================================
-          GUARDIAN ONBOARDING — Setup lives on Protect tab.
-          Hidden when the mobile wizard is open so only one setup surface
-          is visible at a time (single entry point with mobile/desktop fork).
-          ================================================================= */}
-      {address && !isGuardianStatusLoading && !guardianDismissed && !showMobileWizard && (!autonomousStatus || !autonomousStatus.enabled) && (
-        <GuardianOnboardingWizard
-          onActivate={() => setShowMobileWizard(true)}
-          onSkip={() => setGuardianDismissed(true)}
-          spendingLimit={agentConfig.spendingLimit}
-        />
+      {address && !isGuardianStatusLoading && !showMobileWizard && (
+        <>
+          <GuardianStatusChip
+            onSetup={() => setShowMobileWizard(true)}
+            onDeposit={() => setActiveTab?.("exchange")}
+            onViewActivity={() => setActiveTab?.("agent")}
+          />
+          {isBeginner && guardianState !== 'monitoring' && (
+            <GuardianStateScrollytelling
+              variant="compact"
+              currentState={guardianState}
+            />
+          )}
+        </>
       )}
 
       {/* =================================================================
@@ -710,7 +714,6 @@ export default function ProtectionTab({
           vaultAddress={vault.vault?.circleWalletAddress}
           onComplete={() => {
             setShowMobileWizard(false);
-            setGuardianDismissed(true);
             if (address) vault.refresh(address);
           }}
           onCancel={() => setShowMobileWizard(false)}

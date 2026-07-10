@@ -3,6 +3,7 @@ import {
     deriveGuardianTierState,
     isPermissionValidNow,
     GUARDIAN_TIER_STATE_LABELS,
+    collapseGuardianTierForUser,
     type GuardianTierState,
 } from '../guardian-tier-state';
 
@@ -45,6 +46,19 @@ describe('isPermissionValidNow', () => {
 
     it('treats expiresAt === 0 as never-expiring', () => {
         expect(isPermissionValidNow({ ...ACTIVE_PERMISSION, expiresAt: 0 }, NOW)).toBe(true);
+    });
+});
+
+describe('collapseGuardianTierForUser', () => {
+    it('collapses setup states to "setup"', () => {
+        const setupStates: GuardianTierState[] = ['idle', 'authorized', 'funded'];
+        for (const state of setupStates) {
+            expect(collapseGuardianTierForUser(state)).toBe('setup');
+        }
+    });
+
+    it('maps monitoring to "active"', () => {
+        expect(collapseGuardianTierForUser('monitoring')).toBe('active');
     });
 });
 

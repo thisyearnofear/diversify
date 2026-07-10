@@ -37,7 +37,11 @@ export default function AppShell() {
 
   return (
     <div className="max-w-md mx-auto">
-      <FloatingControls openAdvisor={openAdvisor} unreadCount={unreadCount} />
+      <FloatingControls
+        openAdvisor={openAdvisor}
+        unreadCount={unreadCount}
+        experienceMode={experienceMode}
+      />
 
       {/* Testnet Warning Banner */}
       {isTestnet && (

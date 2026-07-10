@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Head from "next/head";
 import { useWalletContext } from "../components/wallet/WalletProvider";
-import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 import AppShell from "../components/app/AppShell";
-import confetti from "canvas-confetti";
+import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 
 const ogImageUrl = "https://diversifiapp.vercel.app/embed-image.png";
 
@@ -22,7 +21,7 @@ const farcasterMeta = {
 };
 
 export default function DiversiFiPage() {
-  const { isOpen: isStrategyModalOpen, closeModal: closeStrategyModal } = useStrategyModal();
+  const { closeModal: closeStrategyModal } = useStrategyModal();
 
   const {
     address, connect: connectWallet,
@@ -34,20 +33,7 @@ export default function DiversiFiPage() {
     return localStorage.getItem("onboardingCompleted") === "true";
   });
 
-  // Fire confetti the first time wallet connects
-  const [hasCelebratedConnect, setHasCelebratedConnect] = useState(false);
-  useEffect(() => {
-    if (address && !hasCelebratedConnect) {
-      setHasCelebratedConnect(true);
-      if (onboardingComplete) {
-        // Only celebrate if onboarding is already done (avoids double-confetti)
-        confetti({ particleCount: 80, spread: 60, origin: { y: 0.5 } });
-      }
-    }
-  }, [address, hasCelebratedConnect, onboardingComplete]);
-
   const handleOnboardingComplete = () => {
-    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     setOnboardingComplete(true);
     closeStrategyModal();
   };

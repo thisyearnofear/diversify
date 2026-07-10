@@ -16,7 +16,7 @@ import { StreakRewardsCard, RewardsStats } from "../../rewards/StreakRewardsCard
 import SimplePieChart from "../../portfolio/SimplePieChart";
 import { AssetInventory } from "../../portfolio/AssetInventory";
 import { Card, Section, DataError, HeroValue } from "../../shared/TabComponents";
-import { AgentTierStatus } from "../../agent/AgentTierStatus";
+import { AgentTierStatus, GuardianStatusChip } from "../../agent/AgentTierStatus";
 import { Tooltip } from "../../shared/Tooltip";
 import { GuardianPulse } from "../../agent/GuardianPulse";
 import { useWalletContext } from "../../wallet/WalletProvider";
@@ -27,6 +27,7 @@ import { MoreOptions } from "../../shared/MoreOptions";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
+import { useAdvisor } from "@/hooks/use-advisor";
 import { StrategyService } from "@diversifi/shared";
 import { ProtectionScorecard } from "./ProtectionScorecard";
 
@@ -86,6 +87,7 @@ export function ConnectedOverview({
   const { trackAssetDetailsToggle, trackRegimeTip } = useAnalytics();
   const hasTrackedRegimeTip = useRef(false);
   const { isMiniPay } = useWalletContext();
+  const { openAdvisor } = useAdvisor();
   const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
   // ── Single source of truth for what the home page should show ──────────
@@ -348,6 +350,14 @@ export function ConnectedOverview({
         />
       )}
 
+      {home.showGuardianChip && (
+        <GuardianStatusChip
+          onSetup={() => setActiveTab("protect")}
+          onDeposit={() => setActiveTab("exchange")}
+          onViewActivity={openAdvisor}
+        />
+      )}
+
       {/* ── 3. PROTECTION MIX (always-open in holdings; default-open is
           the first thing a user sees below the hero) ─────────────── */}
       {home.showProtectionMix && (
@@ -385,10 +395,10 @@ export function ConnectedOverview({
               <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
                 <div className="flex flex-col gap-2">
                   <button
-                    onClick={() => setActiveTab("exchange")}
+                    onClick={() => setActiveTab(home.isBeginner ? "protect" : "exchange")}
                     className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
                   >
-                    Improve My Protection
+                    {home.isBeginner ? "Start Protecting" : "Improve My Protection"}
                   </button>
                   <button
                     onClick={() => {
@@ -544,14 +554,17 @@ export function ConnectedOverview({
       {/* ── 6. SETTINGS & REGION (collapsed by default) ───────────────
           Region selector + Two Chains marketing + MiniPay footnote now
           live in one disclosure row instead of three stacked cards. */}
-      {(home.showRegionSelector || home.showTwoChainsBanner) && (
+      {(home.isBeginner || home.showRegionSelector || home.showTwoChainsBanner) && (
         <MoreOptions
           id="home-more-options"
           userRegion={userRegion}
           setUserRegion={setUserRegion}
           regions={REGIONS}
-          showTwoChainsBanner={home.showTwoChainsBanner}
+          showTwoChainsBanner={home.showTwoChainsBanner && !home.isBeginner}
           isMiniPay={isMiniPay}
+          showPowerActions={home.isBeginner}
+          onNavigateToExchange={() => setActiveTab("exchange")}
+          onOpenAdvisor={openAdvisor}
         />
       )}
     </div>

@@ -5,8 +5,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useProtectionProfile } from '@/hooks/use-protection-profile';
+import { useProtectionProfile, deriveProfileFromPhilosophy } from '@/hooks/use-protection-profile';
 import { useStrategy } from '@/context/app/StrategyContext';
+import { dismissFirstRunTour } from '@/constants/onboarding';
 import {
   ARCHETYPES,
   type ArchetypeId,
@@ -95,18 +96,20 @@ export default function StrategyModal({
     }, [isOpen, onClose]);
 
     const finish = useCallback((region?: string | null) => {
-        if (region) {
-            setMultipleConfig({ userRegion: region as any });
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('user-region', region);
-            }
+        const profileUpdates = deriveProfileFromPhilosophy(financialStrategy, region ?? null);
+        if (Object.keys(profileUpdates).length > 0) {
+            setMultipleConfig(profileUpdates);
         }
+        if (region && typeof window !== 'undefined') {
+            localStorage.setItem('user-region', region);
+        }
+        dismissFirstRunTour();
         if (typeof document !== 'undefined') {
             document.documentElement.removeAttribute('data-pending-onboarding');
         }
         onClose();
         onComplete?.();
-    }, [onClose, onComplete, setMultipleConfig]);
+    }, [onClose, onComplete, setMultipleConfig, financialStrategy]);
 
     return (
         <AnimatePresence>

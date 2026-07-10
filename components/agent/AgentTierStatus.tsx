@@ -61,6 +61,129 @@ const CHAIN_DISPLAY_NAMES: Record<number, string> = {
   42161: "Arbitrum",
 };
 
+export interface GuardianStatusChipProps {
+  onSetup?: () => void;
+  onDeposit?: () => void;
+  onViewActivity?: () => void;
+  className?: string;
+}
+
+/** Shared Guardian tier derivation for compact status surfaces. */
+export function useGuardianTierSnapshot() {
+  const { address } = useWalletContext();
+  const vault = useVault();
+  const { signedPermission, sessionInfo, deriveGuardianState } = useSessionKey();
+
+  const guardianState = useMemo(() => {
+    const totalDepositedUSD = vault.vault?.totalDepositedUSD ?? 0;
+    return deriveGuardianState({
+      vault: vault.vault ? { totalDepositedUSD } : null,
+      permission: signedPermission
+        ? {
+            status: 'active',
+            expiresAt: signedPermission.permission.expiresAt,
+            spentTodayUSD: sessionInfo?.spentTodayUSD ?? 0,
+            dailyLimitUSD: signedPermission.permission.dailyLimitUSD,
+          }
+        : (sessionInfo && {
+            status: sessionInfo.active ? 'active' : 'revoked',
+            expiresAt: sessionInfo.dailyLimitUSD > 0 ? Math.floor(Date.now() / 1000) + 86400 : 0,
+            spentTodayUSD: sessionInfo.spentTodayUSD,
+            dailyLimitUSD: sessionInfo.dailyLimitUSD,
+          }),
+    });
+  }, [deriveGuardianState, vault.vault, signedPermission, sessionInfo]);
+
+  const copy = GUARDIAN_USER_COPY[guardianState];
+  const isActive = guardianState === 'monitoring';
+  const lastActivity = sessionInfo?.recentExecutions?.[0];
+
+  return { address, guardianState, copy, isActive, lastActivity };
+}
+
+/** Compact Auto-Saver status — one headline, one CTA. */
+export function GuardianStatusChip({
+  onSetup,
+  onDeposit,
+  onViewActivity,
+  className = '',
+}: GuardianStatusChipProps) {
+  const { address, guardianState, copy, isActive, lastActivity } = useGuardianTierSnapshot();
+
+  if (!address) return null;
+
+  const handleCta = () => {
+    if (guardianState === 'monitoring') {
+      onViewActivity?.();
+      return;
+    }
+    if (guardianState === 'authorized') {
+      onDeposit?.();
+      return;
+    }
+    onSetup?.();
+  };
+
+  const timeAgo = (isoOrMs: number) => {
+    const t = typeof isoOrMs === 'number' ? isoOrMs : new Date(isoOrMs).getTime();
+    const seconds = Math.max(0, Math.floor((Date.now() - t) / 1000));
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    return `${hours}h ago`;
+  };
+
+  return (
+    <div
+      className={`rounded-2xl border p-4 ${
+        isActive
+          ? 'border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20'
+          : 'border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20'
+      } ${className}`}
+      role="status"
+      aria-label={`Auto-Saver: ${copy.headline}`}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
+            isActive ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-indigo-100 dark:bg-indigo-900/40'
+          }`}
+          aria-hidden="true"
+        >
+          {isActive ? '🛡️' : '🔒'}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-black text-gray-900 dark:text-white">
+            {copy.headline}
+          </h3>
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">
+            {copy.description}
+          </p>
+          {isActive && lastActivity && (
+            <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1.5">
+              Last action {timeAgo(lastActivity.timestamp)}
+            </p>
+          )}
+        </div>
+      </div>
+      {(onSetup || onDeposit || onViewActivity) && (
+        <button
+          type="button"
+          onClick={handleCta}
+          className={`mt-3 w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
+            isActive
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
+          }`}
+        >
+          {copy.cta}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export const AgentTierStatus: React.FC<{
   isMiniPay?: boolean;
   isFarcaster?: boolean;

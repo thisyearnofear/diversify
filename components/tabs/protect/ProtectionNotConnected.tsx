@@ -5,7 +5,6 @@
 import React from "react";
 import { Card, ConnectWalletPrompt } from "../../shared/TabComponents";
 import WalletButton from "../../wallet/WalletButton";
-import { USER_GOALS } from "@/hooks/use-protection-profile";
 import type { UserExperienceMode } from "@/context/app/types";
 import { LiveProofTicker } from "../../shared/LiveProofCard";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
@@ -98,7 +97,7 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
           ))}
         </div>
         <ConnectWalletPrompt
-          message={`Connect your wallet to activate your ${archetype.name} protection plan on Arbitrum and Celo.`}
+          message={`Connect your wallet to activate your ${archetype.name} protection plan.`}
           WalletButtonComponent={<WalletButton variant="inline" />}
           experienceMode={experienceMode}
         />
@@ -118,7 +117,7 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
         <span className="text-3xl">🤖</span>
       </div>
       <ConnectWalletPrompt
-        message="Connect your wallet to analyze your portfolio across Arbitrum and Celo against real-time global inflation data."
+        message="Connect your wallet to see how your savings hold up against inflation."
         WalletButtonComponent={<WalletButton variant="inline" />}
         experienceMode={experienceMode}
       />
@@ -134,37 +133,15 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
       onEnableDemo={onEnableDemo}
       howItWorks={HOW_IT_WORKS}
     >
-      {/* Protection Plan Gallery — the design system, live in the product.
-          Same JSX renders here, in the Figma library, and in share PNGs. */}
-      <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
-        <ProtectionPlanGallery mobile />
-      </div>
+      {!archetype && (
+        <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+          <ProtectionPlanGallery mobile />
+        </div>
+      )}
 
-      {/* Guardian 4-state pipeline scrollytelling — preview before connect */}
       <GuardianStateScrollytelling />
 
-      {/* Live activity ticker — "what's been verified recently" */}
       <LiveProofTicker limit={3} />
-
-      {/* Preview of goals */}
-      <Card className="bg-gray-50 border-dashed border-2 p-4">
-        <h4 className="text-xs font-black uppercase text-gray-400 mb-4 tracking-widest text-center">
-          Available Protection Goals
-        </h4>
-        <div className="grid grid-cols-2 gap-2 opacity-50">
-          {USER_GOALS.map((goal) => (
-            <div
-              key={goal.value}
-              className="p-3 bg-white rounded-xl text-center shadow-md"
-            >
-              <div className="text-xl mb-1">{goal.icon}</div>
-              <div className="text-xs font-black uppercase text-gray-900">
-                {goal.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
     </UnconnectedStateShell>
   );
 }

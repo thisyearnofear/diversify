@@ -43,8 +43,8 @@ export function TabNavHint() {
                         >
                             ←
                         </motion.span>
-                        <span aria-hidden="true">Swipe or tap to explore</span>
-                        <span className="sr-only">You can swipe left or right or tap tabs to switch between sections.</span>
+                        <span aria-hidden="true">Tap Shield to start protecting</span>
+                        <span className="sr-only">Tap the Shield tab to start protecting your savings.</span>
                         <motion.span
                             aria-hidden="true"
                             animate={prefersReducedMotion ? { x: 0 } : { x: [2, -2, 2] }}

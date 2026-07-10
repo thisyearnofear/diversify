@@ -1,6 +1,7 @@
 import React, { useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
+import { getVisibleTabIds } from "@/constants/tabs";
 import type { UserExperienceMode } from "@/context/app/types";
 import { TabNavHint } from "./TabNavHint";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
@@ -67,19 +68,10 @@ const TABS: TabItem[] = [
   },
 ];
 
-// Tabs shown in beginner mode — includes Advisor so new users see the
-// autonomous Guardian (the single most differentiated product feature).
-const BEGINNER_TAB_IDS: TabId[] = ["protect", "overview", "exchange", "agent"];
-
-// Tabs only available in advanced mode
-const ADVANCED_ONLY_TAB_IDS: TabId[] = [];
-
 export default function TabNavigation({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
-  const isBeginner = experienceMode === 'beginner';
-  const isAdvanced = experienceMode === 'advanced';
-  const visibleTabs = isBeginner
-    ? TABS.filter(t => BEGINNER_TAB_IDS.includes(t.id))
-    : TABS.filter(t => isAdvanced || !ADVANCED_ONLY_TAB_IDS.includes(t.id));
+  const mode = experienceMode ?? 'intermediate';
+  const visibleTabIds = getVisibleTabIds(mode);
+  const visibleTabs = TABS.filter((t) => visibleTabIds.includes(t.id));
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const { recordTabVisit, recordTabBar } = useTabDiscovery();

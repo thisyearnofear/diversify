@@ -29,6 +29,10 @@ export interface MoreOptionsProps {
   isMiniPay?: boolean;
   /** Optional id for in-page navigation targeting. */
   id?: string;
+  /** Beginner-mode shortcuts to Exchange and Advisor (hidden behind this disclosure). */
+  showPowerActions?: boolean;
+  onNavigateToExchange?: () => void;
+  onOpenAdvisor?: () => void;
 }
 
 export function MoreOptions({
@@ -38,11 +42,17 @@ export function MoreOptions({
   showTwoChainsBanner = true,
   isMiniPay = false,
   id = "home-more-options",
+  showPowerActions = false,
+  onNavigateToExchange,
+  onOpenAdvisor,
 }: MoreOptionsProps) {
   const [isOpen, setIsOpen] = React.useState(false);
 
+  const hasPowerActions =
+    showPowerActions && (onNavigateToExchange || onOpenAdvisor);
+
   const hasAnyContent =
-    showTwoChainsBanner || isMiniPay || regions.length > 0;
+    showTwoChainsBanner || isMiniPay || regions.length > 0 || hasPowerActions;
 
   if (!hasAnyContent) return null;
 
@@ -61,7 +71,9 @@ export function MoreOptions({
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-base shrink-0">⚙️</span>
           <span className="text-sm font-bold text-gray-900 dark:text-white">
-            Settings & region
+            {showPowerActions && !showTwoChainsBanner && regions.length === 0
+              ? "More options"
+              : "Settings & region"}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
             · {userRegion}
@@ -94,6 +106,31 @@ export function MoreOptions({
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 space-y-4 border-t border-gray-100 dark:border-gray-800">
+              {hasPowerActions && (
+                <div className="pt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {onNavigateToExchange && (
+                    <button
+                      type="button"
+                      onClick={onNavigateToExchange}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900 text-left text-sm font-bold text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                    >
+                      <span aria-hidden="true">💱</span>
+                      Swap currencies
+                    </button>
+                  )}
+                  {onOpenAdvisor && (
+                    <button
+                      type="button"
+                      onClick={onOpenAdvisor}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 text-left text-sm font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
+                    >
+                      <span aria-hidden="true">💬</span>
+                      Talk to Advisor
+                    </button>
+                  )}
+                </div>
+              )}
+
               {showTwoChainsBanner && (
                 <div className="pt-3 flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
                   <div className="flex -space-x-1.5 shrink-0">

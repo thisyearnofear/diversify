@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import type { FinancialStrategy } from '@diversifi/shared';
 
 // ============================================================================
 // TYPES
@@ -55,6 +56,42 @@ const DEFAULT_CONFIG: ProtectionConfig = {
   riskTolerance: null,
   timeHorizon: null,
 };
+
+const PHILOSOPHY_DEFAULT_GOAL: Partial<Record<FinancialStrategy, UserGoal>> = {
+  africapitalism: 'geographic_diversification',
+  buen_vivir: 'geographic_diversification',
+  pan_caribbean: 'inflation_protection',
+  confucian: 'inflation_protection',
+  gotong_royong: 'geographic_diversification',
+  islamic: 'inflation_protection',
+  global: 'geographic_diversification',
+  custom: 'exploring',
+  inflation_protection: 'inflation_protection',
+  geographic_diversification: 'geographic_diversification',
+  rwa_access: 'rwa_access',
+  exploring: 'exploring',
+};
+
+/**
+ * Map a protection philosophy (financial strategy) to profile defaults.
+ * Called when StrategyModal onboarding completes so GuidedTour step 4
+ * does not re-ask region/goal.
+ */
+export function deriveProfileFromPhilosophy(
+  strategy: FinancialStrategy | null,
+  region?: string | null,
+): Partial<ProtectionConfig> {
+  if (!strategy) {
+    return region ? { userRegion: region } : {};
+  }
+
+  return {
+    userGoal: PHILOSOPHY_DEFAULT_GOAL[strategy] ?? 'inflation_protection',
+    userRegion: region ?? null,
+    riskTolerance: 'Balanced',
+    timeHorizon: '1 year',
+  };
+}
 
 export const USER_GOALS: Array<{
   value: UserGoal;

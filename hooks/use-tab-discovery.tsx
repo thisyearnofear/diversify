@@ -118,7 +118,7 @@ function useTabDiscoveryInternal(): UseTabDiscoveryResult {
         saveState(state);
     }, [state]);
 
-    const showHint = !state.dismissed && state.visitedTabs.length < 3 && !state.hasUsedSwipe && !state.hasUsedTabBar;
+    const showHint = !state.dismissed && state.visitedTabs.length < 2 && !state.hasUsedSwipe && !state.hasUsedTabBar;
 
     const recordTabVisit = useCallback((tab: TabId) => {
         setState((prev) => {

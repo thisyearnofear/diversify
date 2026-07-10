@@ -88,6 +88,7 @@ export interface HomeSections {
   showSmartTips: boolean;
   showInsightAccordion: boolean;
   showProtectionScorecard: boolean;
+  showGuardianChip: boolean;
 
   /** The "next best move" tip for the hero. */
   primaryTip: string | null;
@@ -224,6 +225,7 @@ export function useHomeSections({
     // Protection Scorecard: show when the user has holdings (needs portfolio data
     // to be meaningful). Renders the philosophy-aware protection summary.
     const showProtectionScorecard = hasHoldings;
+    const showGuardianChip = hasHoldings && isBeginner;
 
     // ── 5. Primary tip (next best move) ──────────────────────────────────
     // Mirrors the legacy buildTips() but is just a single line for the hero.
@@ -277,6 +279,7 @@ export function useHomeSections({
       showSmartTips,
       showInsightAccordion,
       showProtectionScorecard,
+      showGuardianChip,
 
       primaryTip,
       primarySectionId: "protection-mix",

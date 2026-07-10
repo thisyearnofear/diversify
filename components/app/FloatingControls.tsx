@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 
 import TourTrigger from "@/components/tour/TourTrigger";
+import type { UserExperienceMode } from "@/context/app/types";
 
 const GuidedTour = dynamic(() => import("@/components/tour/GuidedTour"), {
   ssr: false,
@@ -17,9 +18,10 @@ const GuidedTour = dynamic(() => import("@/components/tour/GuidedTour"), {
 export interface FloatingControlsProps {
   openAdvisor: () => void;
   unreadCount: number;
+  experienceMode?: UserExperienceMode;
 }
 
-export default function FloatingControls({ openAdvisor, unreadCount }: FloatingControlsProps) {
+export default function FloatingControls({ openAdvisor, unreadCount, experienceMode }: FloatingControlsProps) {
   // Track unread count changes for bounce animation
   const [prevUnread, setPrevUnread] = useState(unreadCount);
   const [bounceKey, setBounceKey] = useState(0);
@@ -30,6 +32,8 @@ export default function FloatingControls({ openAdvisor, unreadCount }: FloatingC
     setPrevUnread(unreadCount);
   }, [unreadCount, prevUnread]);
 
+  const showAdvisorFab = experienceMode !== 'beginner';
+
   return (
     <>
       <TourTrigger />
@@ -38,7 +42,8 @@ export default function FloatingControls({ openAdvisor, unreadCount }: FloatingC
         <GuidedTour />
       </AnimatePresence>
 
-      {/* Ask the Advisor floating action button */}
+      {/* Ask the Advisor FAB — hidden in beginner mode (Advisor via More options) */}
+      {showAdvisorFab && (
       <motion.button
         key={bounceKey}
         onClick={openAdvisor}
@@ -65,6 +70,7 @@ export default function FloatingControls({ openAdvisor, unreadCount }: FloatingC
           </motion.span>
         )}
       </motion.button>
+      )}
     </>
   );
 }

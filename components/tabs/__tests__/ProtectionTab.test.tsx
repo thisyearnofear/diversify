@@ -78,6 +78,29 @@ vi.mock("@diversifi/shared", () => ({
     funded: "Funded",
     monitoring: "Active",
   },
+  GUARDIAN_USER_FACING_LABELS: {
+    setup: "Not protecting yet",
+    active: "Protection on",
+  },
+  collapseGuardianTierForUser: (state: string) =>
+    state === "monitoring" ? "active" : "setup",
+  GUARDIAN_USER_COPY: {
+    idle: { headline: "Set up", description: "Start", cta: "Set up", hint: "" },
+    authorized: { headline: "Add funds", description: "Deposit", cta: "Deposit", hint: "" },
+    funded: { headline: "Turn on", description: "Enable", cta: "Turn on", hint: "" },
+    monitoring: { headline: "On", description: "Active", cta: "View", hint: "" },
+  },
+}));
+
+vi.mock("@/hooks/use-agent-status", () => ({
+  useAgentStatus: () => ({ isLoading: false }),
+}));
+
+vi.mock("@/components/agent/AgentTierStatus", () => ({
+  GuardianStatusChip: () =>
+    React.createElement("div", { "data-testid": "guardian-status-chip" }),
+  useGuardianTierSnapshot: () => ({ guardianState: "idle" }),
+  AgentTierStatus: () => null,
 }));
 
 const mockNavigateToSwap = vi.fn();

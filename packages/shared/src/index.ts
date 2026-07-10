@@ -142,7 +142,10 @@ export {
   isPermissionValidNow,
   GUARDIAN_TIER_STATE_LABELS,
   GUARDIAN_USER_COPY,
+  collapseGuardianTierForUser,
+  GUARDIAN_USER_FACING_LABELS,
   type GuardianTierState,
+  type GuardianUserFacingState,
   type DeriveGuardianTierStateInput,
 } from './services/vault/guardian-tier-state';
 export { IntentDiscoveryService, type AppIntent, type AppTab, type ResponseFormat } from './services/ai/intent-discovery.service';
