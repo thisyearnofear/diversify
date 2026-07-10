@@ -10,11 +10,13 @@ describe('proof-feed copy', () => {
     expect(getLedgerProofLabel(42220)).toBe('Celo');
     expect(getLedgerProofLabel(42161)).toBe('Arbitrum');
     expect(getLedgerProofLabel(16661)).toBe('0G');
+    expect(getLedgerProofLabel(177)).toBe('HashKey');
   });
 
   it('builds neutral mainnet titles', () => {
     expect(getLedgerProofTitle(42220)).toBe('Verified on Celo');
     expect(getLedgerProofTitle(42161)).toBe('Verified on Arbitrum');
+    expect(getLedgerProofTitle(177)).toBe('Verified on HashKey');
   });
 
   it('labels testnet chains without implying mainnet', () => {

@@ -77,6 +77,27 @@ if [[ "$RPC_NAME" == http* ]]; then
   echo ""
 fi
 
+# ── HashKey mainnet: APAC rail is ledger-only (docs/apac-rail.md v1) ────────
+if [[ "$RPC_NAME" == "hashkey" ]]; then
+  echo "═══ Deploying RecommendationLedger to HashKey mainnet (APAC rail) ═══════"
+  echo "  Gas token is HSK — the deployer wallet must hold HSK on chain 177."
+  $FORGE script scripts/DeployRecommendationLedger.s.sol \
+    --rpc-url "$RPC_NAME" \
+    --broadcast \
+    $VERIFY
+
+  echo ""
+  echo "✅ RecommendationLedger deployed to HashKey mainnet."
+  echo ""
+  echo "Next steps:"
+  echo "  1. Set HASHKEY_LEDGER_CONTRACT and NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT"
+  echo "     in .env.local to the address above (both, same address)"
+  echo "  2. Seed the first APAC recommendation:"
+  echo "     npx tsx scripts/seed-mainnet-recommendation.ts hashkey"
+  echo "  3. Redeploy the app (deploy-to-hetzner.sh with DEPLOY_SYNC_ENV=true)"
+  exit 0
+fi
+
 # ── Arbitrum Sepolia: unified deployment ───────────────────────────────────
 if [[ "$RPC_NAME" == "arbitrum_sepolia" ]]; then
   echo "═══ Deploying unified Arbitrum Sepolia contracts ════════════════════════"

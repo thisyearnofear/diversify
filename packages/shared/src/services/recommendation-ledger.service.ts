@@ -19,6 +19,7 @@
  */
 
 import { ethers } from 'ethers6';
+import { isApacRailProfile } from '../types/strategy';
 
 // ============================================================================
 // TYPES
@@ -128,6 +129,7 @@ export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string
     if (resolvedChainId === 421614) return `https://sepolia.arbiscan.io/tx/${txHash}`;
     if (resolvedChainId === 16602) return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
     if (resolvedChainId === 16661) return `https://chainscan.0g.ai/tx/${txHash}`;
+    if (resolvedChainId === 177) return `https://explorer.hsk.xyz/tx/${txHash}`;
     return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
 }
 
@@ -179,6 +181,7 @@ const ARBITRUM_MAINNET_CHAIN_ID = 42161;
 const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 const ZERO_G_GALILEO_CHAIN_ID = 16602;
 const ZERO_G_MAINNET_CHAIN_ID = 16661;
+const HASHKEY_MAINNET_CHAIN_ID = 177;
 
 /**
  * Tokens that settle on Celo (savings / local stablecoins via Mento).
@@ -196,6 +199,7 @@ const CELO_SAVINGS_TOKENS = new Set([
  * Chain-aware: the ledger of record follows the money.
  * - Celo mainnet: savings decisions of record (Mento stablecoins)
  * - Arbitrum mainnet: yield decisions of record (RWA, USDC liquidity)
+ * - HashKey mainnet: APAC savings decisions of record (Confucian / Gotong Royong plans)
  * - Arbitrum Sepolia: testnet (retained for backward compatibility)
  * - 0G Galileo: evidence anchor/mirror for cross-chain verification
  *
@@ -229,6 +233,11 @@ function getLedgerRegistry(): Record<number, LedgerConfig> {
             rpcUrl: process.env.ZERO_G_MAINNET_RPC_URL || 'https://evmrpc.0g.ai',
             chainId: ZERO_G_MAINNET_CHAIN_ID,
         },
+        [HASHKEY_MAINNET_CHAIN_ID]: {
+            contractAddress: process.env.HASHKEY_LEDGER_CONTRACT || '',
+            rpcUrl: process.env.HASHKEY_RPC_URL || 'https://mainnet.hsk.xyz',
+            chainId: HASHKEY_MAINNET_CHAIN_ID,
+        },
     };
 }
 
@@ -247,22 +256,57 @@ function resolveLedgerConfig(chainId: number): LedgerConfig | null {
 }
 
 /**
+ * Optional user-profile context for chain-aware routing. When provided,
+ * APAC-profile savings actions (see `isApacRailProfile`) route to the
+ * HashKey ledger — the APAC rail is the savings home for Confucian /
+ * Gotong Royong plans (docs/apac-rail.md).
+ */
+export interface LedgerRoutingContext {
+    philosophy?: string | null;
+    region?: string | null;
+}
+
+/**
+ * Savings-stance actions that belong on the APAC rail for APAC profiles.
+ * Yield rotations (SWAP to USDY etc.) stay on Arbitrum — the APAC rail
+ * holds the trust-sensitive core, it is not another yield chain.
+ */
+const APAC_SAVINGS_ACTIONS = new Set(['HOLD', 'SAVE', 'PROTECT', 'ADVISORY_HEARTBEAT']);
+
+/**
  * Determine the correct ledger chain for a given action based on the
  * target token. The ledger of record follows the money:
  * - Celo savings tokens (cUSD, cREAL, KESm, etc.) → Celo mainnet
+ * - APAC-profile savings/hold actions → HashKey mainnet (when configured)
  * - Yield/RWA tokens (USDY, PAXG, USDC, etc.) → Arbitrum mainnet
  * - HOLD or unspecified → default chain (Arbitrum mainnet if configured,
  *   else Arbitrum Sepolia for backward compat)
  *
  * Callers can override with an explicit `chainId` parameter.
  */
-export function getLedgerChainForAction(action: string, targetToken: string): number {
+export function getLedgerChainForAction(
+    action: string,
+    targetToken: string,
+    context?: LedgerRoutingContext,
+): number {
     const token = (targetToken || '').toUpperCase().trim();
 
-    // Celo savings tokens → Celo mainnet
+    // Celo savings tokens → Celo mainnet (local-stable home, all regions)
     if (CELO_SAVINGS_TOKENS.has(token)) {
         const celoConfig = resolveLedgerConfig(CELO_MAINNET_CHAIN_ID);
         if (celoConfig?.contractAddress) return CELO_MAINNET_CHAIN_ID;
+    }
+
+    // APAC savings home: hold/save decisions for Confucian / Gotong Royong
+    // plans in the Asia region settle on the HashKey ledger. Yield rotations
+    // fall through to Arbitrum unchanged.
+    if (
+        context &&
+        isApacRailProfile(context.philosophy, context.region) &&
+        APAC_SAVINGS_ACTIONS.has((action || '').toUpperCase().trim())
+    ) {
+        const hashkeyConfig = resolveLedgerConfig(HASHKEY_MAINNET_CHAIN_ID);
+        if (hashkeyConfig?.contractAddress) return HASHKEY_MAINNET_CHAIN_ID;
     }
 
     // Everything else (yield, RWA, USDC, BRIDGE) → Arbitrum mainnet
@@ -415,6 +459,8 @@ export async function recordRecommendation(params: {
     settlementTxHash?: string;
     confidence: number;
     chainId?: number;
+    /** User-profile context for chain-aware routing (APAC rail). Ignored when `chainId` is explicit. */
+    routingContext?: LedgerRoutingContext;
     /** Enterprise tenant attribution. Stamped off-chain via `onAnchor`; the on-chain `user` field is a wallet address and cannot carry it. */
     tenantId?: string;
     /** Best-effort callback fired after a successful/pending anchor (e.g. to index the decision for enterprise audit). */
@@ -426,8 +472,8 @@ export async function recordRecommendation(params: {
             ? computeReasoningHash(params.reasoning)
             : ethers.ZeroHash;
     // Chain-aware routing: determine the correct chain based on the action's
-    // target token if the caller didn't specify one explicitly.
-    const chainId = params.chainId ?? getLedgerChainForAction(params.action, params.targetToken);
+    // target token (and user-profile context) if the caller didn't specify one.
+    const chainId = params.chainId ?? getLedgerChainForAction(params.action, params.targetToken, params.routingContext);
     const config = getLedgerConfig(chainId);
     if (!config) {
         return { status: 'failed', error: `Unsupported ledger chainId: ${chainId}`, chainId };

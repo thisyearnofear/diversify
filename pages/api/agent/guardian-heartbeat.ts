@@ -13,6 +13,7 @@
  *   1. Fetch live market data (DeFiLlama yields, CoinGecko prices, World Bank inflation)
  *   2. Generate an advisory recommendation via the AI service
  *   3. Record on the chain-aware primary ledger (Celo for savings, Arbitrum for yield)
+ *      — plus an APAC-cohort savings advisory on HashKey when the rail is configured
  *   4. Mirror to 0G mainnet as evidence anchor
  *
  * Called by server-side cron every 30 minutes on Hetzner.
@@ -157,6 +158,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       confidence: Math.round(rec.confidence * 10000),
     });
 
+    // 2b. APAC rail advisory: when the HashKey ledger is configured, also
+    // record the savings-stance advisory for the APAC plan cohort
+    // (Confucian / Gotong Royong). Routed via the same chain-aware logic —
+    // the routingContext sends this HOLD to the HashKey ledger, keeping the
+    // APAC savings home continuously attested (docs/apac-rail.md).
+    const apacPromise = process.env.HASHKEY_LEDGER_CONTRACT
+      ? recommendationLedgerService.recordRecommendation({
+          user: GUARDIAN_AGENT_ADDRESS,
+          action: 'ADVISORY_HEARTBEAT',
+          targetToken: 'USDC',
+          reasoning: `APAC savings advisory (Confucian/Gotong Royong cohort): hold stablecoin core on the APAC rail. ${rec.reasoning}`,
+          evidenceCid: '',
+          servingModel: 'guardian-heartbeat',
+          confidence: Math.round(rec.confidence * 10000),
+          routingContext: { philosophy: 'confucian', region: 'Asia' },
+        }).catch((err: any) => {
+          console.warn(`[guardian-heartbeat] APAC rail advisory failed: ${err.message}`);
+          return null;
+        })
+      : Promise.resolve(null);
+
     // 3. Mirror to 0G mainnet as evidence anchor (fire-and-forget)
     const mirrorPromise = recommendationLedgerService.mirrorRecommendationToZeroG({
       user: GUARDIAN_AGENT_ADDRESS,
@@ -172,7 +194,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return null;
     });
 
-    const mirrorResult = await mirrorPromise;
+    const [mirrorResult, apacResult] = await Promise.all([mirrorPromise, apacPromise]);
 
     return res.status(200).json({
       success: true,
@@ -195,6 +217,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         chainId: mirrorResult.chainId,
         txHash: mirrorResult.status === 'failed' ? undefined : mirrorResult.txHash,
         explorerUrl: mirrorResult.status === 'failed' ? undefined : (mirrorResult as any).explorerUrl,
+      } : null,
+      apacRail: apacResult ? {
+        status: apacResult.status,
+        chainId: apacResult.chainId,
+        txHash: apacResult.status === 'failed' ? undefined : apacResult.txHash,
+        explorerUrl: apacResult.status === 'failed' ? undefined : (apacResult as any).explorerUrl,
       } : null,
       marketSnapshot: {
         inflation: snapshot.worldBank.current_inflation,

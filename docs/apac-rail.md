@@ -148,21 +148,26 @@ Skip when:
 
 ## Implementation status
 
-**Planned — not shipped.** No APAC rail contracts, env config, or `getLedgerChainForAction` routing exist yet. Celo, Arbitrum, 0G, and Arc remain the active stack.
+**Code shipped (2026-07-10) — deployment pending HSK gas.** The chain selected is **HashKey Chain mainnet (chain 177)**, targeted at the HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, AI track). Everything below is merged; the only remaining step is funding the deployer wallet with HSK and running the deploy.
 
-**Shipped UX (2026-07-10):** Users who choose **Confucian** or **Gotong Royong** with region **Asia** see an honesty banner (`constants/apac-rail.ts`, `ContextualBanner`, `ProtectionNotConnected`) explaining that protection currently executes on Celo/Arbitrum until the dedicated APAC rail lands. No fake chain branding — copy is explicit about the gap.
-
-### Minimal v1 (when prioritized)
-
-| Piece | Scope |
+| Piece | Status |
 |-------|--------|
-| Chain config | RPC, USDC/WHSK addresses, explorer base |
-| `RecommendationLedger` | Deploy on APAC L1; route savings actions for `Asia` region + Confucian/Gotong Royong plans |
-| Settlement | HSP (or equivalent) for structured agent/savings receipts above x402 micropay threshold |
-| Guardian routing | Extend `getLedgerChainForAction()` — APAC savings → APAC ledger; yield tokens → Arbitrum unchanged |
-| UX | Region → plan → chain copy; explorer links on the rail where money actually moved |
+| Chain config | ✅ `HASHKEY_LEDGER_CONTRACT` / `HASHKEY_RPC_URL` in the ledger registry (`recommendation-ledger.service.ts`), `hashkey` RPC endpoint in `foundry.toml`, explorer `https://explorer.hsk.xyz` |
+| `RecommendationLedger` | ⏳ Deploy with `./scripts/deploy-all.sh hashkey` (ledger-only short-circuit; needs HSK on chain 177), then seed via `npx tsx scripts/seed-mainnet-recommendation.ts hashkey` |
+| Guardian routing | ✅ `getLedgerChainForAction(action, token, routingContext)` — APAC-profile (`isApacRailProfile` in `types/strategy.ts`, single source of truth) savings/hold actions → HashKey 177; yield rotations → Arbitrum unchanged; Celo local stables → Celo unchanged |
+| Heartbeat | ✅ `guardian-heartbeat.ts` records an APAC-cohort savings advisory on HashKey each beat when `HASHKEY_LEDGER_CONTRACT` is set — continuous on-chain attestation |
+| UX | ✅ `constants/apac-rail.ts` swaps honest "coming soon" copy for live-rail copy (with explorer link) when `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` is set; proof feed labels chain 177 "HashKey" |
+| Settlement (HSP) | Deferred — structured receipts above the x402 threshold remain the post-v1 step (HSP SDK: github.com/project-hsp/hsp) |
 
 Yield execution stays on Arbitrum. Intelligence stays on Arc. Evidence stays on 0G.
+
+### Go-live runbook
+
+1. Fund the deployer (`LEDGER_PRIVATE_KEY` address) with HSK on chain 177 (bridge: https://bridge.hsk.xyz)
+2. `./scripts/deploy-all.sh hashkey`
+3. Set `HASHKEY_LEDGER_CONTRACT` + `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` in `.env.local`
+4. `npx tsx scripts/seed-mainnet-recommendation.ts hashkey` — first APAC savings record via real routing
+5. `DEPLOY_SYNC_ENV=true ./scripts/deploy-to-hetzner.sh` — banner flips to live, heartbeat starts attesting
 
 ---
 

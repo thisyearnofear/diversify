@@ -336,8 +336,9 @@ area is visible and decisions are intentional rather than reactive.
 
 The onramp table above names SE Asia providers (**StraitsX**, **Coins.ph**) but does not
 define where those stablecoins **settle and get protected** after on-ramp. The **APAC rail**
-(planned) is that landing zone: regulated-market savings and structured settlement for
-**Confucian** and **Gotong Royong** plans, while Arbitrum remains the yield optimizer.
+(HashKey Chain, chain 177 — code shipped 2026-07-10, deploy pending HSK gas) is that landing
+zone: regulated-market savings and structured settlement for **Confucian** and
+**Gotong Royong** plans, while Arbitrum remains the yield optimizer.
 
 | Concern | Owner |
 |---------|--------|

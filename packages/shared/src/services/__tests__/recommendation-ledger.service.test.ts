@@ -240,18 +240,21 @@ describe('getLedgerChainForAction — chain-aware routing', () => {
     const savedCeloMainnet = process.env.CELO_MAINNET_LEDGER_CONTRACT;
     const savedArbMainnet = process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT;
     const savedArbSepolia = process.env.ARBITRUM_LEDGER_CONTRACT;
+    const savedHashkey = process.env.HASHKEY_LEDGER_CONTRACT;
 
     beforeEach(() => {
         vi.resetModules();
         delete process.env.CELO_MAINNET_LEDGER_CONTRACT;
         delete process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT;
         delete process.env.ARBITRUM_LEDGER_CONTRACT;
+        delete process.env.HASHKEY_LEDGER_CONTRACT;
     });
 
     afterEach(() => {
         if (savedCeloMainnet) process.env.CELO_MAINNET_LEDGER_CONTRACT = savedCeloMainnet;
         if (savedArbMainnet) process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = savedArbMainnet;
         if (savedArbSepolia) process.env.ARBITRUM_LEDGER_CONTRACT = savedArbSepolia;
+        if (savedHashkey) process.env.HASHKEY_LEDGER_CONTRACT = savedHashkey;
     });
 
     it('routes Celo savings tokens (cUSD) to Celo mainnet when configured', async () => {
@@ -290,6 +293,57 @@ describe('getLedgerChainForAction — chain-aware routing', () => {
         expect(getLedgerChainForAction('SWAP', 'cusd')).toBe(42220);
         expect(getLedgerChainForAction('SWAP', 'CUSD')).toBe(42220);
         expect(getLedgerChainForAction('SWAP', ' usdy ')).toBe(42161);
+    });
+
+    it('routes APAC-profile savings actions to HashKey mainnet when configured', async () => {
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        process.env.HASHKEY_LEDGER_CONTRACT = '0x' + 'aa'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        const apac = { philosophy: 'confucian', region: 'Asia' };
+        expect(getLedgerChainForAction('HOLD', 'USDC', apac)).toBe(177);
+        expect(getLedgerChainForAction('ADVISORY_HEARTBEAT', 'USDC', apac)).toBe(177);
+        expect(getLedgerChainForAction('HOLD', 'USDC', { philosophy: 'gotong_royong', region: 'Asia' })).toBe(177);
+    });
+
+    it('keeps APAC-profile yield rotations on Arbitrum — the rail is not a yield chain', async () => {
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        process.env.HASHKEY_LEDGER_CONTRACT = '0x' + 'aa'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        const apac = { philosophy: 'confucian', region: 'Asia' };
+        expect(getLedgerChainForAction('SWAP', 'USDY', apac)).toBe(42161);
+        expect(getLedgerChainForAction('AUTONOMOUS_REBALANCE', 'USDC', apac)).toBe(42161);
+    });
+
+    it('requires BOTH an APAC philosophy and the Asia region for HashKey routing', async () => {
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        process.env.HASHKEY_LEDGER_CONTRACT = '0x' + 'aa'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        // Confucian plan outside Asia → Arbitrum
+        expect(getLedgerChainForAction('HOLD', 'USDC', { philosophy: 'confucian', region: 'Africa' })).toBe(42161);
+        // Asia region on a non-APAC plan → Arbitrum
+        expect(getLedgerChainForAction('HOLD', 'USDC', { philosophy: 'islamic', region: 'Asia' })).toBe(42161);
+        // No context at all → Arbitrum (backward compatible)
+        expect(getLedgerChainForAction('HOLD', 'USDC')).toBe(42161);
+    });
+
+    it('keeps Celo savings tokens on Celo even for APAC profiles', async () => {
+        process.env.CELO_MAINNET_LEDGER_CONTRACT = '0x' + 'ce'.repeat(20);
+        process.env.HASHKEY_LEDGER_CONTRACT = '0x' + 'aa'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        expect(getLedgerChainForAction('HOLD', 'PHPm', { philosophy: 'gotong_royong', region: 'Asia' })).toBe(42220);
+    });
+
+    it('falls through to Arbitrum for APAC profiles when HashKey is not configured', async () => {
+        process.env.ARBITRUM_MAINNET_LEDGER_CONTRACT = '0x' + 'ab'.repeat(20);
+        const { getLedgerChainForAction } = await import('../recommendation-ledger.service');
+        expect(getLedgerChainForAction('HOLD', 'USDC', { philosophy: 'confucian', region: 'Asia' })).toBe(42161);
+    });
+});
+
+describe('buildLedgerExplorerUrl — HashKey mainnet support', () => {
+    it('builds HashKey explorer URLs for chainId 177', async () => {
+        const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
+        expect(buildLedgerExplorerUrl('0xdef', 177)).toBe('https://explorer.hsk.xyz/tx/0xdef');
     });
 });
 
