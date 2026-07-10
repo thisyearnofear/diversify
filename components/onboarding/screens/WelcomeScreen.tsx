@@ -407,11 +407,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         </div>
                         <span className="text-xs font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
                     </div>
-                    {/* Identity line — establishes what this is before asking
-                        anything of the visitor. Echoes the "no lock-ups"
-                        promise repeated later so the voice stays consistent. */}
-                    <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500 mb-3 max-w-[240px] mx-auto leading-snug">
-                      Values-driven currency protection. No lock-ups, ever.
+                    {/* Identity line — what DiversiFi is, before we ask the
+                        visitor for anything. One line, one job. */}
+                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-3 max-w-[260px] mx-auto leading-snug">
+                      Currency protection that fits your values — never a lock-up.
                     </p>
                     <GuardianMascot
                       size={100}
@@ -448,10 +447,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   className="w-full max-w-sm"
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                    Understand Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Currency Risk</span>
+                    Is your money quietly <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">losing value?</span>
                   </motion.h2>
-                  <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-                    Your local currency may be losing value. Let&apos;s check how much.
+                  <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                    Find out in 30 seconds — then pick a way to protect it that matches how you think about money.
                   </motion.p>
 
                   {/* Detected country card */}
@@ -478,17 +477,26 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       </div>
                     ) : (
                       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-5 mb-4">
-                        <p className="text-sm font-black text-gray-900 dark:text-white mb-1">
-                          See how your currency is holding up
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2.5">
+                          We&apos;ll measure your currency against the world&apos;s hardest benchmarks:
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                          Pick your country and we&apos;ll show its real depreciation against USD, EUR, and gold.
-                        </p>
+                        {/* Concrete preview of the free check — the actual draw */}
+                        <div className="flex items-center justify-center gap-1.5 mb-4">
+                          {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => (
+                            <span
+                              key={bench}
+                              className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/70 dark:bg-gray-900/40 border border-blue-100 dark:border-blue-900/40 text-gray-700 dark:text-gray-200"
+                            >
+                              <span>{BENCHMARKS[bench].flag}</span>
+                              {BENCHMARKS[bench].label}
+                            </span>
+                          ))}
+                        </div>
                         <button
                           onClick={() => setShowCountryPicker(true)}
-                          className="text-sm text-blue-500 hover:text-blue-600 font-bold"
+                          className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl shadow-sm active:scale-[0.97] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                         >
-                          Select your country →
+                          Pick your country →
                         </button>
                       </div>
                     )}
@@ -540,17 +548,29 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       whileHover={{ y: -2 }}
                       whileTap={{ scale: 0.97 }}
                     >
-                      <ShimmerText>Understand Your Risk →</ShimmerText>
+                      <ShimmerText>Show me the numbers →</ShimmerText>
                     </motion.button>
                   )}
 
-                  {/* Test funds toggle */}
-                  <div className="mt-4">
+                  {/* Friendly secondary path — for the curious, not a chore to skip */}
+                  {onSkip && (
+                    <motion.button
+                      variants={staggerChild}
+                      onClick={onSkip}
+                      className="w-full px-6 py-3 mt-3 text-xs font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/50 rounded-lg"
+                    >
+                      Just looking around? Explore the app →
+                    </motion.button>
+                  )}
+
+                  {/* Developer / testnet options — deliberately faint; normal
+                      visitors never need this, so it must not read as required. */}
+                  <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800/60">
                     <button
                       onClick={() => setShowTestDetails(!showTestDetails)}
-                      className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors font-medium"
+                      className="text-[11px] text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 rounded"
                     >
-                      {showTestDetails ? '− Hide test details' : '+ Need test funds? (advanced)'}
+                      {showTestDetails ? '− Hide developer options' : 'Developer options'}
                     </button>
                     <AnimatePresence>
                       {showTestDetails && (
@@ -562,7 +582,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         >
                           <div className="bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-800 rounded-xl p-3">
                             <p className="text-xs text-violet-600 dark:text-violet-400 mb-2">
-                                Try with test funds (no real money):
+                                Testnet faucets (no real money):
                             </p>
                             <div className="flex gap-2 mb-2">
                                 <a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" className="text-xs text-violet-600 dark:text-violet-400 underline hover:no-underline">Arc faucet →</a>
@@ -588,16 +608,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       )}
                     </AnimatePresence>
                   </div>
-
-                  {onSkip && (
-                    <motion.button
-                      variants={staggerChild}
-                      onClick={onSkip}
-                      className="w-full px-6 py-3 mt-2 text-xs font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                    >
-                      Skip to App
-                    </motion.button>
-                  )}
                 </motion.div>
               )}
 
