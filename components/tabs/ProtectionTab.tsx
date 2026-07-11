@@ -549,9 +549,10 @@ export default function ProtectionTab({
       )}
 
       {/* Personalized best-yield (vaults.fyi + GMX) — the paid layer is
-          engagement-gated; free-tier users see free yields + an unlock prompt. */}
+          engagement-gated server-side (on-chain balance); free-tier users see
+          free yields + an unlock prompt. */}
       {!isBeginner && (
-        <BestYieldCard userAddress={address} savedUsd={displayTotalValue} className="mb-4" />
+        <BestYieldCard userAddress={address} className="mb-4" />
       )}
 
       {/* LI.FI Earn Yield Discovery - Non-beginner only */}

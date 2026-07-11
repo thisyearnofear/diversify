@@ -1,20 +1,23 @@
 /**
  * POST /api/agent/best-yield — personalized best-yield recommendations.
  *
- * Server-side so the paid vaults.fyi call + the insight-tier gate run correctly
- * (the tier is DEFAULT-DENY: without engagement, no paid call). Returns the
- * advisor's ranked recommendations (vaults.fyi personalized + GMX GM pools +
- * free LI.FI), plus the resolved tier so the UI can show an unlock prompt.
+ * Engagement is derived SERVER-SIDE from the address's real on-chain balance
+ * (engagement.service) — never from the request body — so a caller can't lie
+ * their way past the tier gate to force paid vaults.fyi spend. Layered with a
+ * per-IP rate limit here and a process-global daily budget breaker in
+ * vaults-fyi.service. Returns the advisor's ranked recommendations (vaults.fyi
+ * personalized + GMX GM pools + free LI.FI) plus the resolved tier for the UI.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getYieldRecommendations } from '@diversifi/shared/src/services/ai/yield-advisor.service';
 import { resolveInsightTier, TIER_POLICIES } from '@diversifi/shared/src/services/insight-tier';
+import { deriveServerEngagement } from '@diversifi/shared/src/services/engagement.service';
 import { rateLimit, getClientIp } from '../../../lib/rate-limit';
 
-// Per-IP throttle. The endpoint is unauthenticated and its paid-tier gate trusts
-// client-claimed engagement, so this bounds request RATE per caller while the
-// process-global daily budget breaker (in vaults-fyi.service) bounds total SPEND.
+// Per-IP throttle. Engagement is now derived server-side (can't be spoofed), but
+// the endpoint is still unauthenticated: this bounds request RATE per caller
+// while the process-global daily budget breaker (vaults-fyi.service) caps SPEND.
 const RATE_LIMIT = 15; // requests
 const RATE_WINDOW_MS = 60_000; // per minute
 
@@ -31,19 +34,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(429).json({ error: 'Too many requests — slow down' });
   }
 
-  const { userAddress, strategy, savedUsd, streakDays, paidInsightsUsedToday } = req.body ?? {};
+  const { userAddress, strategy } = req.body ?? {};
   if (typeof userAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(userAddress)) {
     return res.status(400).json({ error: 'valid userAddress is required' });
   }
 
-  const engagement = {
-    savedUsd: Number.isFinite(savedUsd) ? Number(savedUsd) : undefined,
-    streakDays: Number.isFinite(streakDays) ? Number(streakDays) : undefined,
-    paidInsightsUsedToday: Number.isFinite(paidInsightsUsedToday) ? Number(paidInsightsUsedToday) : 0,
-  };
-  const tier = resolveInsightTier(engagement);
-
   try {
+    // Engagement is derived from on-chain state, NOT the request body — the
+    // client cannot inflate savedUsd to unlock paid calls. Fails closed to free.
+    const engagement = await deriveServerEngagement(userAddress);
+    const tier = resolveInsightTier(engagement);
+
     const recommendations = await getYieldRecommendations(
       userAddress,
       undefined,

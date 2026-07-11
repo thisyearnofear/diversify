@@ -27,13 +27,12 @@ export interface BestYieldResult {
 
 /**
  * Personalized best-yield recommendations (vaults.fyi + GMX + free LI.FI),
- * fetched server-side so the paid call + engagement tier gate apply. Pass the
- * user's engagement so the paid layer can unlock; omitting it stays free-tier.
+ * fetched server-side. The paid-insight tier is resolved on the server from the
+ * address's real on-chain balance — the client sends only the address, so it
+ * can't inflate engagement to unlock paid calls. The returned `tier`/`tierLabel`
+ * tell the UI what the user has unlocked.
  */
-export function useBestYield(
-  userAddress: string | null,
-  engagement: { savedUsd?: number; streakDays?: number } = {},
-) {
+export function useBestYield(userAddress: string | null) {
   const [data, setData] = useState<BestYieldResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +46,7 @@ export function useBestYield(
       const res = await fetch(`${apiBase}/api/agent/best-yield`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress, savedUsd: engagement.savedUsd, streakDays: engagement.streakDays }),
+        body: JSON.stringify({ userAddress }),
       });
       if (!res.ok) throw new Error(`best-yield ${res.status}`);
       setData(await res.json());
@@ -56,7 +55,7 @@ export function useBestYield(
     } finally {
       setIsLoading(false);
     }
-  }, [userAddress, engagement.savedUsd, engagement.streakDays, apiBase]);
+  }, [userAddress, apiBase]);
 
   useEffect(() => {
     void load();

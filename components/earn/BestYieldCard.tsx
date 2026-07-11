@@ -64,18 +64,17 @@ function sourceOf(rec: BestYieldRecommendation) {
 
 interface BestYieldCardProps {
   userAddress: string | null;
-  savedUsd?: number;
-  streakDays?: number;
   className?: string;
 }
 
 /**
  * "Best yield for you" — the personalized layer (vaults.fyi + GMX + free LI.FI)
  * on top of the free YieldDiscoverySection. Free-tier users see the free yields
- * plus an unlock prompt for the personalized layer (earned by saving OR usage).
+ * plus an unlock prompt for the personalized layer. The tier is resolved
+ * server-side from on-chain balance, so this card just sends the address.
  */
-export function BestYieldCard({ userAddress, savedUsd, streakDays, className = '' }: BestYieldCardProps) {
-  const { data, isLoading, error } = useBestYield(userAddress, { savedUsd, streakDays });
+export function BestYieldCard({ userAddress, className = '' }: BestYieldCardProps) {
+  const { data, isLoading, error } = useBestYield(userAddress);
 
   if (!userAddress) return null;
   if (isLoading && !data) {
