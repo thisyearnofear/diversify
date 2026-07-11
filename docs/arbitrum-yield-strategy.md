@@ -86,11 +86,27 @@ so GMX is a genuinely non-duplicative venue. Split into read (safe) and executio
   - `scripts/gmx-testnet-deposit.ts` — runnable **Arbitrum Sepolia** harness:
     approve USDC → submit the deposit multicall → poll the GM balance until the
     keeper mints. Proves the full round-trip.
-  - **To validate (needs your hand):** a FUNDED Arbitrum Sepolia wallet + the
-    VERIFIED Sepolia GMX addresses (ExchangeRouter, DepositVault, a GM market,
-    testnet USDC — confirm each on Arbiscan/docs) in `.env.local`, then
-    `npx tsx --env-file=.env.local scripts/gmx-testnet-deposit.ts`. A green
-    round-trip is the gate.
+  - **Testnet validation run (2026-07-11) — 3 real bugs caught, 1 open.** Ran the
+    harness against a funded Arbitrum Sepolia wallet. Verified on-chain: the
+    canonical Sepolia addresses (search results had the MAINNET ExchangeRouter —
+    pulled the real ones from the gmx-synthetics deploy repo:
+    ExchangeRouter `0xEd50B2A1…`, Router `0x72F13a44…`, DepositVault `0x809Ea82C…`,
+    Reader `0x4750376b…`, DataStore `0xCF4c2C4c…`), and read the live markets via
+    the Reader (market `0xb6fC4C9e…` = WETH/USDC, short = USDC.SG `0x3253a335…`).
+    Fixes found by running it:
+    1. **Approval must target the base `Router`, not the ExchangeRouter** —
+       otherwise "transfer amount exceeds allowance".
+    2. **Set an explicit `gasLimit`** — GMX's payable multicall reverts under
+       `eth_estimateGas` even when a raw `eth_call` succeeds.
+    3. Execution fee raised (0.001 → 0.01 ETH); still not the blocker.
+    - **OPEN:** the deposit still reverts with EMPTY data (`0x`) at ~190k gas
+      inside `createDeposit`. Leading hypothesis: this market's long token is WNT
+      (WETH) and the execution fee is sent as WNT, so GMX's deposit accounting
+      conflates the fee with a long-token deposit. **To close:** trace the tx via
+      a `debug_traceTransaction`-capable RPC (Tenderly/Alchemy) OR adopt the
+      official `@gmx-io/sdk` deposit encoding (handles the WNT/exec-fee edge
+      cases) — not more blind iteration. Do NOT enable mainnet until a green
+      testnet round-trip passes.
   - **After validation:** wrap the builder in a `GmxGmDepositStrategy`
     (swap orchestrator) behind a mainnet config flag. Do NOT enable mainnet until
     the testnet round-trip passes. Full `@gmx-io/sdk` (15MB, server-only) can

@@ -45,6 +45,9 @@ async function main() {
   const wallet = new ethers.Wallet(reqEnv('GMX_TESTNET_PRIVATE_KEY'), provider);
 
   const exchangeRouter = reqEnv('GMX_EXCHANGE_ROUTER');
+  // GMX v2 pulls tokens via the base Router (approval target), NOT the
+  // ExchangeRouter. Approving the ExchangeRouter reverts with "exceeds allowance".
+  const router = reqEnv('GMX_ROUTER');
   const depositVault = reqEnv('GMX_DEPOSIT_VAULT');
   const market = reqEnv('GMX_MARKET');
   const usdc = reqEnv('GMX_USDC');
@@ -55,11 +58,14 @@ async function main() {
   const usdcC = new ethers.Contract(usdc, ERC20_ABI, wallet);
   const decimals = await usdcC.decimals();
   const shortAmount = ethers.utils.parseUnits(humanUsdc, decimals).toString();
-  const executionFee = ethers.utils.parseEther('0.001').toString(); // keeper fee (ETH)
+  // Keeper execution fee (ETH). Must exceed GMX's min (gasLimit × gasPrice incl.
+  // Arbitrum L1 data cost); excess is auto-refunded on execution. 0.001 was too
+  // low (deposit reverted); 0.01 clears the floor comfortably on testnet.
+  const executionFee = ethers.utils.parseEther('0.01').toString();
 
-  // 1. Approve USDC to the ExchangeRouter (Router pulls into the vault via sendTokens).
-  console.log(`[gmx-testnet] approving ${humanUsdc} USDC to router…`);
-  await (await usdcC.approve(exchangeRouter, shortAmount)).wait();
+  // 1. Approve USDC to the base Router (ExchangeRouter.sendTokens pulls via it).
+  console.log(`[gmx-testnet] approving ${humanUsdc} USDC to base Router ${router}…`);
+  await (await usdcC.approve(router, shortAmount)).wait();
 
   // 2. Build the atomic deposit multicall.
   const gmToken = new ethers.Contract(market, ERC20_ABI, provider);
@@ -73,7 +79,9 @@ async function main() {
   });
 
   console.log('[gmx-testnet] submitting deposit multicall…');
-  const sent = await wallet.sendTransaction({ to: tx.to, data: tx.data, value: tx.value });
+  // GMX's payable multicall reverts under eth_estimateGas even when the tx is
+  // valid (verified via a raw eth_call), so set an explicit gas limit.
+  const sent = await wallet.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, gasLimit: 6_000_000 });
   console.log(`[gmx-testnet] tx ${sent.hash} — waiting for confirmation…`);
   await sent.wait();
 
