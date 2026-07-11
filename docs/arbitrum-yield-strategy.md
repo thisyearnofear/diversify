@@ -88,6 +88,30 @@ so GMX is a genuinely non-duplicative venue. Split into read (safe) and executio
   `GmxGmDepositStrategy` in the swap orchestrator behind a config flag for
   mainnet. Do not enable mainnet execution until the testnet round-trip passes.
 
+## Cost discipline — engagement-gated paid insights (2026-07-11)
+
+Paid insights (vaults.fyi ~$0.20/call) are gated by `insight-tier.ts` so we
+only spend on committed users, and it doubles as a value ladder:
+
+| Tier | Unlocks (savings OR streak) | Paid insights/day |
+|---|---|---|
+| **Free** (everyone) | — | 0 — free data only (DefiLlama, GMX read, LI.FI, TinyFish) |
+| **Saver** | ≥ $100 saved OR ≥ 7-day streak | 3 |
+| **Committed** | ≥ $1,000 saved OR ≥ 30-day streak | 10 |
+
+- **Default-DENY:** with no engagement context the tier resolves to `free`, so
+  the paid vaults.fyi call is skipped unless the caller proves eligibility. We
+  never pay for the unengaged.
+- **Caching:** vaults.fyi results cache `stable` (long TTL) — best-yield doesn't
+  move minute-to-minute and each miss costs ~$0.20, so we cache hard.
+- **Accessibility preserved:** everyone gets the free data + yields; only the
+  *personalized* paid layer is gated — and it's earnable by saving OR by using
+  the app, which is on-mission for a savings product.
+
+Wiring note: `getYieldRecommendations` takes an `engagement` arg
+({ savedUsd, streakDays, paidInsightsUsedToday }); the caller supplies these
+from the portfolio balance + streak store + the daily paid-call counter.
+
 ## Open questions
 
 - Payment auth for vaults.fyi x402 calls (operator wallet vs existing rail).

@@ -100,7 +100,9 @@ export async function getBestDepositOptions(
         options.sort((a, b) => b.apyPct - a.apyPct);
         return { data: options, source: 'vaults.fyi' };
       },
-      'moderate',
+      // 'stable' (long TTL): best-yield rankings don't move minute-to-minute,
+      // and each miss costs ~$0.20 — cache hard to minimize paid re-fetches.
+      'stable',
     );
     return { walletAddress, options: data, fromCache };
   } catch (err) {

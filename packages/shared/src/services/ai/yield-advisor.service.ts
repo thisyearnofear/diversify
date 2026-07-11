@@ -10,6 +10,7 @@
 import { EarnService } from '../../services/earn-service';
 import { vaultsFyiService } from '../../services/vaults-fyi.service';
 import { getStableGmMarkets } from '../../services/gmx-gm.service';
+import { canUsePaidInsight, type EngagementContext } from '../../services/insight-tier';
 import { getTokenAddresses } from '../../config';
 
 function createCorrelationId(prefix: string): string {
@@ -29,7 +30,13 @@ export async function getYieldRecommendations(
     currentVault?: any,
     strategy?: string,
     maxResults: number = 5,
-    correlationId: string = createCorrelationId('yield-reco')
+    correlationId: string = createCorrelationId('yield-reco'),
+    /**
+     * Engagement + usage for the paid-insight gate. Omitting it (or leaving it
+     * empty) resolves to the free tier — so the paid vaults.fyi call is
+     * DEFAULT-DENIED unless the caller proves the user has earned it.
+     */
+    engagement: EngagementContext & { paidInsightsUsedToday?: number } = {}
 ): Promise<any[]> {
     const recommendations: any[] = [];
 
@@ -39,7 +46,10 @@ export async function getYieldRecommendations(
         // ranked across 1,000+ risk-rated vaults. Degrades to the free LI.FI
         // ranking below when unconfigured or on failure. See
         // docs/arbitrum-yield-strategy.md.
-        if (vaultsFyiService.isConfigured()) {
+        // Cost gate: only PAY vaults.fyi ($0.20/call) when the user's engagement
+        // tier unlocks it AND they're under their daily cap. Default-deny.
+        const paidGate = canUsePaidInsight(engagement, engagement.paidInsightsUsedToday ?? 0);
+        if (vaultsFyiService.isConfigured() && paidGate.allowed) {
             const best = await vaultsFyiService.getBestDepositOptions(userAddress, { onlyTransactional: true, maxVaultsPerAsset: 2 });
             for (const opt of (best?.options ?? []).slice(0, maxResults)) {
                 recommendations.push({
