@@ -1,6 +1,8 @@
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { GmxGmDepositStrategy } from '../gmx-gm-deposit.strategy';
-import { getGmxAddresses, getExecutionFeeWei } from '../../gmx/gmx-config';
+import { getGmxAddresses } from '../../gmx/gmx-config';
+import { computeMinMarketTokens } from '../../gmx/gmx-deposit-quote';
+import { ethers } from 'ethers';
 
 const base = {
   fromToken: 'USDC',
@@ -42,10 +44,16 @@ describe('gmx-config', () => {
     expect(getGmxAddresses(1)).toBeNull();
   });
 
-  it('parses the execution fee to wei', () => {
-    const orig = process.env.GMX_EXECUTION_FEE_ETH;
-    process.env.GMX_EXECUTION_FEE_ETH = '0.002';
-    expect(getExecutionFeeWei()).toBe('2000000000000000');
-    process.env.GMX_EXECUTION_FEE_ETH = orig;
+  it('computes a minMarketTokens slippage floor from GM price', () => {
+    // 100 USDC (6dp) at GM price $2.00 (1e30) with 1% slippage → ~49.5 GM (18dp)
+    const usdc = ethers.utils.parseUnits('100', 6);
+    const gmPrice = ethers.BigNumber.from(2).mul(ethers.BigNumber.from(10).pow(30));
+    const min = computeMinMarketTokens(usdc, 6, gmPrice, 100)!;
+    expect(Number(ethers.utils.formatUnits(min, 18))).toBeCloseTo(49.5, 1);
+  });
+
+  it('returns null (no floor) when GM price is unknown — caller must refuse', () => {
+    const usdc = ethers.utils.parseUnits('100', 6);
+    expect(computeMinMarketTokens(usdc, 6, null, 100)).toBeNull();
   });
 });

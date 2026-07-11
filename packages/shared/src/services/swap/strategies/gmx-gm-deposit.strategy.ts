@@ -21,7 +21,8 @@ import {
 } from './base-swap.strategy';
 import { ProviderFactoryService } from '../provider-factory.service';
 import { buildGmDepositMulticall } from '../gmx/gmx-deposit-builder';
-import { getGmxAddresses, isGmDepositEnabled, getExecutionFeeWei } from '../gmx/gmx-config';
+import { getGmxAddresses, isGmDepositEnabled } from '../gmx/gmx-config';
+import { estimateExecutionFeeWei, getGmTokenPriceUsd30, computeMinMarketTokens } from '../gmx/gmx-deposit-quote';
 import { getStableGmMarkets } from '../../gmx-gm.service';
 import { getTokenAddresses } from '../../../config';
 
@@ -103,8 +104,18 @@ export class GmxGmDepositStrategy extends BaseSwapStrategy {
         callbacks?.onApprovalConfirmed?.();
       }
 
-      // 2. Build + submit the deposit multicall.
-      const executionFee = getExecutionFeeWei();
+      // 2. Dynamic execution fee (gas-scaled, refunded excess) + GM-price slippage.
+      const provider = signer.provider ?? (await ProviderFactoryService.getSignerForChain(ARBITRUM)).provider!;
+      const executionFee = (await estimateExecutionFeeWei(provider)).toString();
+
+      const slippageBps = Math.round((params.slippageTolerance ?? 0.01) * 10_000);
+      const gmPrice = await getGmTokenPriceUsd30(provider, ARBITRUM, market.marketToken);
+      const minMarketTokens = computeMinMarketTokens(shortAmount, decimals, gmPrice, slippageBps);
+      if (!minMarketTokens) {
+        // No live GM price ⇒ no slippage floor. Refuse rather than deposit blind.
+        return { success: false, error: 'GMX GM deposit aborted: could not price GM tokens for a slippage floor' };
+      }
+
       const tx = buildGmDepositMulticall({
         exchangeRouter: addrs.exchangeRouter,
         depositVault: addrs.depositVault,
@@ -114,7 +125,7 @@ export class GmxGmDepositStrategy extends BaseSwapStrategy {
         longAmount: '0',
         shortAmount: shortAmount.toString(),
         executionFee,
-        minMarketTokens: '0', // TODO: slippage floor from live GM price before mainnet
+        minMarketTokens: minMarketTokens.toString(),
         receiver: userAddress,
       });
 
