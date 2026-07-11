@@ -1,6 +1,55 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../shared/TabComponents';
 import { useBestYield, type BestYieldRecommendation } from '../../hooks/use-best-yield';
+import { useSwap } from '../../hooks/use-swap';
+
+const ARBITRUM = 42161;
+
+/** Inline "deposit USDC into this GM pool" control for a GMX recommendation. */
+function GmDepositControl() {
+  const { swap, chainId, step, isLoading, error, txHash } = useSwap();
+  const [amount, setAmount] = useState('');
+  const onArbitrum = chainId === ARBITRUM;
+
+  const onDeposit = async () => {
+    const amt = parseFloat(amount);
+    if (!Number.isFinite(amt) || amt <= 0) return;
+    await swap({ fromToken: 'USDC', toToken: 'GM', amount: amount });
+  };
+
+  if (txHash && step !== 'error') {
+    return <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-2">✅ Deposit submitted — GMX mints your GM tokens shortly.</p>;
+  }
+
+  return (
+    <div className="mt-2">
+      {!onArbitrum ? (
+        <p className="text-[11px] text-amber-600 dark:text-amber-400">Switch to Arbitrum to deposit into this GM pool.</p>
+      ) : (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="USDC amount"
+            aria-label="USDC amount to deposit"
+            className="flex-1 min-w-0 text-xs rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-2 py-1.5"
+          />
+          <button
+            type="button"
+            onClick={onDeposit}
+            disabled={isLoading || !amount}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg bg-sky-600 text-white disabled:opacity-50"
+          >
+            {isLoading ? 'Depositing…' : 'Deposit'}
+          </button>
+        </div>
+      )}
+      {error && <p className="text-[11px] text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+}
 
 const SOURCE_BADGE: Record<string, { label: string; cls: string }> = {
   'vaults.fyi': { label: 'Personalized', cls: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200' },
@@ -60,6 +109,7 @@ export function BestYieldCard({ userAddress, savedUsd, streakDays, className = '
                   <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{rec.title}</p>
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{rec.description}</p>
+                {rec.metadata?.source === 'gmx' && rec.metadata?.venue === 'gm-pool' && <GmDepositControl />}
               </div>
               {apy != null && (
                 <div className="text-right shrink-0">

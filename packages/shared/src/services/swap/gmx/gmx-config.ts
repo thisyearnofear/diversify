@@ -42,8 +42,17 @@ export function getGmxAddresses(chainId: number): GmxAddresses | null {
   return GMX_ADDRESSES[chainId] ?? null;
 }
 
-/** GM deposit execution is gated OFF until explicitly enabled for mainnet. */
+/**
+ * GM deposit execution is gated OFF until explicitly enabled. The swap
+ * orchestrator runs CLIENT-SIDE (browser signer), and Next only inlines
+ * NEXT_PUBLIC_* into the client bundle — so the client flag must be
+ * NEXT_PUBLIC_GMX_GM_DEPOSIT_ENABLED. We also honor the server var for any
+ * server-side path (e.g. Guardian loop).
+ */
 export function isGmDepositEnabled(): boolean {
-  return process.env.GMX_GM_DEPOSIT_ENABLED === 'true';
+  return (
+    process.env.NEXT_PUBLIC_GMX_GM_DEPOSIT_ENABLED === 'true' ||
+    process.env.GMX_GM_DEPOSIT_ENABLED === 'true'
+  );
 }
 // Execution fee is now computed dynamically (gas-scaled) in gmx-deposit-quote.ts.
