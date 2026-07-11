@@ -115,8 +115,10 @@ so GMX is a genuinely non-duplicative venue. Split into read (safe) and executio
     deposit trigger (BestYieldCard → useSwap → orchestrator); (3) flag moved to
     `NEXT_PUBLIC_GMX_GM_DEPOSIT_ENABLED` (orchestrator is client-side); (4) explicit
     legacy gasPrice ×1.5 (ethers pads Arbitrum maxFeePerGas ~75× → over-reserves).
-  - **To go live:** set `NEXT_PUBLIC_GMX_GM_DEPOSIT_ENABLED=true` in Vercel env +
-    rebuild (client-bundle flag). Everything else is validated.
+  - **✅ LIVE (2026-07-12):** `NEXT_PUBLIC_GMX_GM_DEPOSIT_ENABLED=true` set in
+    Vercel; the client rebuild bakes the flag in. Users can now deposit USDC into
+    the blue-chip GM pool via the Deposit control on the GMX card in the
+    Protection tab — routed through the mainnet-validated `GmxGmDepositStrategy`.
   - **After validation:** wrap the builder in a `GmxGmDepositStrategy`
     (swap orchestrator) behind a mainnet config flag. Do NOT enable mainnet until
     the testnet round-trip passes. Full `@gmx-io/sdk` (15MB, server-only) can
