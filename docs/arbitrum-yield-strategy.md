@@ -68,6 +68,26 @@ markets, and bridging. But it's the strongest "premium safe yield" option seen.
 5. **ZeroDev / Dune / Fhenix** — park; revisit ZeroDev with the wallet/AA track,
    Dune/Fhenix when a specific need appears.
 
+## GMX venue — status (2026-07-11)
+
+Confirmed vaults.fyi does NOT cover GMX (it has Aave/Morpho/Euler/Sky… not GMX),
+so GMX is a genuinely non-duplicative venue. Split into read (safe) and execution
+(risky):
+
+- **✅ Read side shipped** — `gmx-gm.service.ts` surfaces GM markets + APY from the
+  FREE public GMX API (`arbitrum-api.gmxinfra.io/markets/info` + `/apy`; no key,
+  no SDK, no RPC). Wired into the yield advisor as a free venue (top stable-side
+  GM pools). Verified endpoints return live per-market APY (~10%). 3 tests.
+- **⏳ Execution side — NOT shipped (deliberately).** Depositing into GM pools is
+  GMX v2 ExchangeRouter multicall + an async keeper flow (execution fees, GM
+  token pricing, minMarketTokens slippage). This moves real funds through code
+  that CANNOT be validated without a funded wallet. Shipping it blind would be
+  reckless. **Plan:** build against **Arbitrum Sepolia testnet** first (either the
+  official `@gmx-io/sdk` — 15MB, server-only — or a hand-rolled ExchangeRouter
+  path), validate a full deposit→GM-token round-trip, THEN enable a new
+  `GmxGmDepositStrategy` in the swap orchestrator behind a config flag for
+  mainnet. Do not enable mainnet execution until the testnet round-trip passes.
+
 ## Open questions
 
 - Payment auth for vaults.fyi x402 calls (operator wallet vs existing rail).

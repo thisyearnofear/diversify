@@ -9,6 +9,7 @@
 
 import { EarnService } from '../../services/earn-service';
 import { vaultsFyiService } from '../../services/vaults-fyi.service';
+import { getStableGmMarkets } from '../../services/gmx-gm.service';
 import { getTokenAddresses } from '../../config';
 
 function createCorrelationId(prefix: string): string {
@@ -64,6 +65,34 @@ export async function getYieldRecommendations(
                 });
             }
         }
+
+        // 1b. FREE GMX GM-pool venue (not covered by vaults.fyi/LI.FI). Surfaces
+        // stable-side GM pool yields on Arbitrum. Discovery only — depositing is
+        // a separate testnet-validated build (docs/arbitrum-yield-strategy.md).
+        try {
+            const gmMarkets = (await getStableGmMarkets()).slice(0, 2);
+            for (const gm of gmMarkets) {
+                recommendations.push({
+                    id: `gmx-gm-${gm.marketToken}-${Date.now()}`,
+                    type: 'opportunity',
+                    title: `GMX GM pool: ${gm.name}`,
+                    description: `Provide USDC-side liquidity to the ${gm.name} GM pool for ~${gm.apyPct.toFixed(2)}% APY ` +
+                        `(base ${gm.baseApyPct.toFixed(2)}%${gm.bonusAprPct > 0 ? ` + ${gm.bonusAprPct.toFixed(2)}% bonus` : ''}). ` +
+                        `Earns a share of GMX trading fees.`,
+                    impact: gm.apyPct > 15 ? 'positive' : 'neutral',
+                    impactAsset: 'USDC',
+                    timestamp: 'Autonomous',
+                    metadata: {
+                        correlationId,
+                        source: 'gmx',
+                        marketToken: gm.marketToken,
+                        apy: gm.apyPct,
+                        network: 'arbitrum',
+                        venue: 'gm-pool',
+                    },
+                });
+            }
+        } catch { /* GMX is best-effort; never blocks the advisor */ }
 
         // 2. Fetch current yield opportunities from LI.FI Earn (free layer)
         const vaults = await EarnService.fetchVaults({
