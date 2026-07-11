@@ -8,6 +8,7 @@
  */
 
 import { EarnService } from '../../services/earn-service';
+import { vaultsFyiService } from '../../services/vaults-fyi.service';
 import { getTokenAddresses } from '../../config';
 
 function createCorrelationId(prefix: string): string {
@@ -32,11 +33,39 @@ export async function getYieldRecommendations(
     const recommendations: any[] = [];
 
     try {
-        // 1. Use base yield advisor for general guidance
-        // Note: Base advisor may not be available in this environment
-        // recommendations.push(...baseRecommendations);
+        // 0. PERSONALIZED layer (differentiated, paid): if vaults.fyi is
+        // configured, prepend its per-wallet best-deposit recommendations —
+        // ranked across 1,000+ risk-rated vaults. Degrades to the free LI.FI
+        // ranking below when unconfigured or on failure. See
+        // docs/arbitrum-yield-strategy.md.
+        if (vaultsFyiService.isConfigured()) {
+            const best = await vaultsFyiService.getBestDepositOptions(userAddress, { onlyTransactional: true, maxVaultsPerAsset: 2 });
+            for (const opt of (best?.options ?? []).slice(0, maxResults)) {
+                recommendations.push({
+                    id: `vaultsfyi-${opt.vaultAddress}-${Date.now()}`,
+                    type: 'opportunity',
+                    title: `Best yield for you: ${opt.protocol}`,
+                    description: `${opt.protocol} offers ${opt.apyPct.toFixed(2)}% APY on ${opt.assetSymbol} ` +
+                        `(TVL $${opt.tvlUsd.toLocaleString()}${opt.risk ? `, risk: ${opt.risk}` : ''}). ` +
+                        `Personalized to your holdings across curated vaults.`,
+                    impact: opt.apyPct > 15 ? 'positive' : 'neutral',
+                    impactAsset: opt.assetSymbol,
+                    timestamp: 'Autonomous',
+                    metadata: {
+                        correlationId,
+                        source: 'vaults.fyi',
+                        protocol: opt.protocol,
+                        apy: opt.apyPct,
+                        risk: opt.risk,
+                        tvl: opt.tvlUsd,
+                        vaultAddress: opt.vaultAddress,
+                        network: opt.network,
+                    },
+                });
+            }
+        }
 
-        // 2. Fetch current yield opportunities from LI.FI Earn
+        // 2. Fetch current yield opportunities from LI.FI Earn (free layer)
         const vaults = await EarnService.fetchVaults({
             risk: ['low', 'medium'],
             categories: getPreferredCategories(strategy)
