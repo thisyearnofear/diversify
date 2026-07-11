@@ -24,6 +24,7 @@ import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import YieldDiscoverySection from "../earn/YieldDiscoverySection";
+import { BestYieldCard } from "../earn/BestYieldCard";
 import AssetModal from "./protect/AssetModal";
 import OptimizationInsight from "./protect/OptimizationInsight";
 import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
@@ -545,6 +546,12 @@ export default function ProtectionTab({
           onShowModal={setShowAssetModal}
           experienceMode={experienceMode}
         />
+      )}
+
+      {/* Personalized best-yield (vaults.fyi + GMX) — the paid layer is
+          engagement-gated; free-tier users see free yields + an unlock prompt. */}
+      {!isBeginner && (
+        <BestYieldCard userAddress={address} savedUsd={displayTotalValue} className="mb-4" />
       )}
 
       {/* LI.FI Earn Yield Discovery - Non-beginner only */}
