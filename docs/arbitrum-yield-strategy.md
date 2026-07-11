@@ -78,15 +78,23 @@ so GMX is a genuinely non-duplicative venue. Split into read (safe) and executio
   FREE public GMX API (`arbitrum-api.gmxinfra.io/markets/info` + `/apy`; no key,
   no SDK, no RPC). Wired into the yield advisor as a free venue (top stable-side
   GM pools). Verified endpoints return live per-market APY (~10%). 3 tests.
-- **⏳ Execution side — NOT shipped (deliberately).** Depositing into GM pools is
-  GMX v2 ExchangeRouter multicall + an async keeper flow (execution fees, GM
-  token pricing, minMarketTokens slippage). This moves real funds through code
-  that CANNOT be validated without a funded wallet. Shipping it blind would be
-  reckless. **Plan:** build against **Arbitrum Sepolia testnet** first (either the
-  official `@gmx-io/sdk` — 15MB, server-only — or a hand-rolled ExchangeRouter
-  path), validate a full deposit→GM-token round-trip, THEN enable a new
-  `GmxGmDepositStrategy` in the swap orchestrator behind a config flag for
-  mainnet. Do not enable mainnet execution until the testnet round-trip passes.
+- **🧪 Execution side — builder + testnet harness shipped; NOT mainnet-enabled.**
+  - `swap/gmx/gmx-deposit-builder.ts` — pure builder for the atomic
+    `ExchangeRouter.multicall([sendWnt, sendTokens…, createDeposit])`. Verified by
+    encode→decode round-trip (5 tests). Addresses are inputs, never hardcoded
+    (GMX redeploys the router).
+  - `scripts/gmx-testnet-deposit.ts` — runnable **Arbitrum Sepolia** harness:
+    approve USDC → submit the deposit multicall → poll the GM balance until the
+    keeper mints. Proves the full round-trip.
+  - **To validate (needs your hand):** a FUNDED Arbitrum Sepolia wallet + the
+    VERIFIED Sepolia GMX addresses (ExchangeRouter, DepositVault, a GM market,
+    testnet USDC — confirm each on Arbiscan/docs) in `.env.local`, then
+    `npx tsx --env-file=.env.local scripts/gmx-testnet-deposit.ts`. A green
+    round-trip is the gate.
+  - **After validation:** wrap the builder in a `GmxGmDepositStrategy`
+    (swap orchestrator) behind a mainnet config flag. Do NOT enable mainnet until
+    the testnet round-trip passes. Full `@gmx-io/sdk` (15MB, server-only) can
+    replace the hand-rolled path later if we want its pricing helpers.
 
 ## Cost discipline — engagement-gated paid insights (2026-07-11)
 
