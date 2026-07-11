@@ -30,16 +30,29 @@ const TICKERS_URL: Record<number, string> = {
 /** Deposit execution gas estimate (generous; excess refunded). */
 const DEPOSIT_GAS_ESTIMATE = 3_000_000;
 const EXECUTION_FEE_FLOOR_WEI = ethers.utils.parseEther('0.001'); // Arbitrum L1 floor
+// Absolute ceiling on the attached execution fee. Excess is refunded by GMX, but
+// a hostile/misbehaving RPC returning a huge getGasPrice() would otherwise attach
+// (and lock until refund) an absurd amount of ETH. 0.02 ETH is ~10× a normal
+// Arbitrum deposit fee — generous headroom, bounded downside.
+const EXECUTION_FEE_CEILING_WEI = ethers.utils.parseEther('0.02');
+// Sane band for a GM token price (1e30 USD). These blue-chip pools trade near
+// $1–$5; anything outside a wide band means a bad price feed — refuse rather than
+// derive a bogus (too-low) slippage floor from it.
+const GM_PRICE_MIN_USD30 = ethers.utils.parseUnits('0.05', 30);
+const GM_PRICE_MAX_USD30 = ethers.utils.parseUnits('1000', 30);
+const TICKERS_TIMEOUT_MS = 5_000;
 
 /**
- * Dynamic keeper execution fee: max(gasPrice × depositGas × 2, floor).
- * Overpay is refunded by GMX on execution, so we bias high to avoid reverts.
+ * Dynamic keeper execution fee: clamp(gasPrice × depositGas × 2, floor, ceiling).
+ * Overpay is refunded by GMX on execution, so we bias high to avoid reverts, but
+ * the ceiling caps how much a spoofed gas price can lock up.
  */
 export async function estimateExecutionFeeWei(provider: ethers.providers.Provider): Promise<ethers.BigNumber> {
   try {
     const gasPrice = await provider.getGasPrice();
     const est = gasPrice.mul(DEPOSIT_GAS_ESTIMATE).mul(2);
-    return est.gt(EXECUTION_FEE_FLOOR_WEI) ? est : EXECUTION_FEE_FLOOR_WEI;
+    const floored = est.gt(EXECUTION_FEE_FLOOR_WEI) ? est : EXECUTION_FEE_FLOOR_WEI;
+    return floored.gt(EXECUTION_FEE_CEILING_WEI) ? EXECUTION_FEE_CEILING_WEI : floored;
   } catch {
     return EXECUTION_FEE_FLOOR_WEI;
   }
@@ -57,9 +70,18 @@ export async function getGmTokenPriceUsd30(
   try {
     const reader = new ethers.Contract(addrs.reader, READER_ABI, provider);
     const m = await reader.getMarket(addrs.dataStore, marketToken);
-    const tickers: Array<{ tokenAddress: string; minPrice: string; maxPrice: string }> = await (
-      await fetch(tickersUrl)
-    ).json();
+    // Bounded fetch — a hung/hijacked tickers host must not stall the deposit.
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), TICKERS_TIMEOUT_MS);
+    let tickers: Array<{ tokenAddress: string; minPrice: string; maxPrice: string }>;
+    try {
+      const resp = await fetch(tickersUrl, { signal: ac.signal });
+      if (!resp.ok) return null;
+      tickers = await resp.json();
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!Array.isArray(tickers)) return null;
     const price = (addr: string) => {
       const t = tickers.find((x) => x.tokenAddress.toLowerCase() === addr.toLowerCase());
       return t ? { min: ethers.BigNumber.from(t.minPrice), max: ethers.BigNumber.from(t.maxPrice) } : null;
@@ -68,10 +90,17 @@ export async function getGmTokenPriceUsd30(
     const lp = price(m.longToken);
     const sp = price(m.shortToken);
     if (!ip || !lp || !sp) return null;
+    // maximize:false → the MIN GM price, so expectedGm (and thus minMarketTokens)
+    // is conservative in the user's favour. Using the max price would loosen the
+    // very floor meant to protect them.
     const [gmPrice] = await reader.getMarketTokenPrice(
-      addrs.dataStore, m, ip, lp, sp, MAX_PNL_FACTOR_FOR_DEPOSITS, true,
+      addrs.dataStore, m, ip, lp, sp, MAX_PNL_FACTOR_FOR_DEPOSITS, false,
     );
-    return gmPrice.lte(0) ? null : gmPrice; // int256, 1e30 USD
+    // Sanity-band the price: a compromised/misconfigured RPC returning an inflated
+    // GM price would collapse the slippage floor toward zero. Out-of-band ⇒ treat
+    // as unpriceable so the strategy refuses rather than deposits with no floor.
+    if (gmPrice.lte(0) || gmPrice.lt(GM_PRICE_MIN_USD30) || gmPrice.gt(GM_PRICE_MAX_USD30)) return null;
+    return gmPrice; // int256, 1e30 USD
   } catch {
     return null;
   }

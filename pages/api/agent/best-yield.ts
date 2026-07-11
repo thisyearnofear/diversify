@@ -10,11 +10,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getYieldRecommendations } from '@diversifi/shared/src/services/ai/yield-advisor.service';
 import { resolveInsightTier, TIER_POLICIES } from '@diversifi/shared/src/services/insight-tier';
+import { rateLimit, getClientIp } from '../../../lib/rate-limit';
+
+// Per-IP throttle. The endpoint is unauthenticated and its paid-tier gate trusts
+// client-claimed engagement, so this bounds request RATE per caller while the
+// process-global daily budget breaker (in vaults-fyi.service) bounds total SPEND.
+const RATE_LIMIT = 15; // requests
+const RATE_WINDOW_MS = 60_000; // per minute
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const ip = getClientIp(req);
+  const rl = rateLimit(`best-yield:${ip}`, RATE_LIMIT, RATE_WINDOW_MS);
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfterSec));
+    return res.status(429).json({ error: 'Too many requests — slow down' });
   }
 
   const { userAddress, strategy, savedUsd, streakDays, paidInsightsUsedToday } = req.body ?? {};

@@ -82,7 +82,15 @@ export class GmxGmDepositStrategy extends BaseSwapStrategy {
       }
       const addrs = getGmxAddresses(ARBITRUM)!;
       const signer = params.signer || (await ProviderFactoryService.getSignerForChain(ARBITRUM));
-      const userAddress = params.userAddress || (await signer.getAddress());
+      // Bind the GM receiver to the wallet that actually pays the USDC (the
+      // signer). params.userAddress is caller-supplied; if it disagrees with the
+      // signer, the signer would pay while a DIFFERENT address received the GM
+      // tokens — an unrecoverable loss. Refuse the mismatch instead of trusting it.
+      const signerAddress = await signer.getAddress();
+      if (params.userAddress && params.userAddress.toLowerCase() !== signerAddress.toLowerCase()) {
+        return { success: false, error: 'GMX GM deposit aborted: receiver must equal the funding wallet' };
+      }
+      const userAddress = signerAddress;
 
       // Pick the best-APY BLUE-CHIP (BTC/ETH) USDC-short GM market — never exotic.
       const markets = await getBlueChipStableGmMarkets();

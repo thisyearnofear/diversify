@@ -10,13 +10,24 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateSpeech } from '@diversifi/shared/src/services/ai/ai-service';
+import { rateLimit, getClientIp } from '../../../lib/rate-limit';
 
 const MAX_TEXT_LENGTH = 1200;
+// Unauthenticated paid TTS (Venice/ElevenLabs). Per-IP throttle so one caller
+// can't amplify our per-character voice spend.
+const RATE_LIMIT = 20; // requests
+const RATE_WINDOW_MS = 60_000; // per minute
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const rl = rateLimit(`speak:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS);
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfterSec));
+    return res.status(429).json({ error: 'Too many requests — slow down' });
   }
 
   const hasVenice = !!process.env.VENICE_API_KEY;

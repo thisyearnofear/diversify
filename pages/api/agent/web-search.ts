@@ -8,10 +8,21 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { tinyFishSearch, type TinyFishDomainType } from '@diversifi/shared/src/services/tinyfish-search.service';
+import { rateLimit, getClientIp } from '../../../lib/rate-limit';
 
 const ALLOWED_DOMAINS: TinyFishDomainType[] = ['web', 'news', 'research_paper'];
+// TinyFish is free but quota-limited; per-IP throttle so one caller can't burn
+// the shared search quota (and can't use us as an open search proxy).
+const RATE_LIMIT = 20; // requests
+const RATE_WINDOW_MS = 60_000; // per minute
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const rl = rateLimit(`web-search:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS);
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfterSec));
+    return res.status(429).json({ error: 'Too many requests — slow down' });
+  }
+
   const src = req.method === 'POST' ? req.body : req.query;
   const query = typeof src?.query === 'string' ? src.query : '';
   if (!query.trim()) {

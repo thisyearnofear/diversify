@@ -71,10 +71,12 @@ async function main() {
   console.log(`   `);
   console.log(`   2. OPTIONAL: Scale with Circle Programmable Wallets:`);
   console.log(
-    `      To use Circle's enterprise-grade infrastructure, add these to .env:`,
+    `      To use Circle's enterprise-grade infrastructure, add these to .env`,
   );
-  console.log(`      - NEXT_PUBLIC_CIRCLE_WALLET_ID=your_id`);
-  console.log(`      - NEXT_PUBLIC_CIRCLE_API_KEY=your_key`);
+  console.log(`      (SERVER-ONLY — never NEXT_PUBLIC_*, or the secret is baked`);
+  console.log(`       into the client bundle and exposed to every visitor):`);
+  console.log(`      - CIRCLE_WALLET_ID=your_id`);
+  console.log(`      - CIRCLE_API_KEY=your_key   # secret — server-side only`);
   console.log(`   `);
   console.log(`   3. API KEYS: Add these to your .env file:`);
   console.log(

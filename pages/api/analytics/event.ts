@@ -11,14 +11,23 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '../../../lib/mongodb';
 import { FunnelEvent, FUNNEL_EVENTS, type FunnelEventName } from '../../../models/FunnelEvent';
+import { rateLimit, getClientIp } from '../../../lib/rate-limit';
 
 const MAX_PROPS = 6;
 const MAX_VALUE_LENGTH = 48;
+// Unauthenticated write sink → per-IP throttle so it can't be used to flood
+// Mongo. Silently drop (204) over the limit — analytics never surfaces errors.
+const RATE_LIMIT = 60; // events
+const RATE_WINDOW_MS = 60_000; // per minute
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).end();
+  }
+
+  if (!rateLimit(`analytics:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS).allowed) {
+    return res.status(204).end();
   }
 
   try {

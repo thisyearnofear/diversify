@@ -13,13 +13,25 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { IncomingForm } from 'formidable';
 import * as fs from 'fs';
 import { transcribe } from '@diversifi/shared/src/services/ai/ai-service';
+import { rateLimit, getClientIp } from '../../../lib/rate-limit';
 
 export const config = { api: { bodyParser: false } };
+
+// Unauthenticated paid STT (Whisper). Per-IP throttle so one caller can't
+// amplify our per-minute transcription spend.
+const RATE_LIMIT = 20; // requests
+const RATE_WINDOW_MS = 60_000; // per minute
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const rl = rateLimit(`transcribe:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS);
+  if (!rl.allowed) {
+    res.setHeader('Retry-After', String(rl.retryAfterSec));
+    return res.status(429).json({ error: 'Too many requests — slow down' });
   }
 
   if (!process.env.OPENAI_API_KEY && !process.env.ELEVENLABS_API_KEY) {
