@@ -26,8 +26,8 @@ export const AI_FEATURES = {
   /** AI chat assistant */
   CHAT: !!(process.env.VENICE_API_KEY || process.env.GEMINI_API_KEY),
 
-  /** Web-enriched analysis (Venice only) */
-  WEB_SEARCH: !!process.env.VENICE_API_KEY,
+  /** Real-time web / news / research search — TinyFish (free) or Venice web-enrich */
+  WEB_SEARCH: !!(process.env.TINYFISH_API_KEY || process.env.VENICE_API_KEY),
 } as const;
 
 // Autonomous/Blockchain features (optional, experimental)
