@@ -10,6 +10,7 @@ import type { Archetype } from './tokens';
 import { Card, ConnectWalletPrompt } from '../shared/TabComponents';
 import WalletButton from '../wallet/WalletButton';
 import { TokenIcon } from '../shared/TokenIcon';
+import { TOKEN_DESIGN } from '../../constants/tokens';
 
 function AllocationChips({
   archetype,
@@ -21,20 +22,29 @@ function AllocationChips({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-wrap gap-1.5 ${className}`}>
-      {archetype.allocation.map((asset) => (
-        <span
-          key={asset}
-          className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-bold"
-          style={{
-            background: `${archetype.accentSoft}20`,
-            color: archetype.accentSoft,
-          }}
-        >
-          <TokenIcon symbol={asset} size={size} />
-          {asset}
-        </span>
-      ))}
+    <div className={className}>
+      <div className="flex flex-wrap gap-1.5">
+        {archetype.allocation.map((asset) => (
+          <span
+            key={asset}
+            title={TOKEN_DESIGN[asset]?.description ?? asset}
+            className="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full font-bold"
+            style={{
+              background: `${archetype.accentSoft}20`,
+              color: archetype.accentSoft,
+            }}
+          >
+            <TokenIcon symbol={asset} size={size} />
+            {asset}
+          </span>
+        ))}
+      </div>
+      <p
+        className="text-[10px] mt-1.5"
+        style={{ color: archetype.accentSoft, opacity: 0.75 }}
+      >
+        Digital versions of everyday money — dollars, euros, local currencies, gold.
+      </p>
     </div>
   );
 }

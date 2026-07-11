@@ -42,6 +42,20 @@ function shortAddress(addr: string | null | undefined): string {
     return m ? `${m[1]}…${m[2]}` : addr;
 }
 
+// Ledger actions are machine vocabulary; the ticker is read by people
+// doing a legitimacy check, so translate rather than shout enum names.
+const ACTION_LABELS: Record<string, string> = {
+    ADVISORY_HEARTBEAT: 'Guardian check-in',
+    REBALANCE: 'Rebalance',
+    SWAP: 'Swap',
+    HOLD: 'Hold steady',
+};
+
+function humanizeAction(action: string): string {
+    const key = action.toUpperCase();
+    return ACTION_LABELS[key] ?? action.replace(/_/g, ' ').toLowerCase();
+}
+
 function timeAgo(iso: string, nowMs: number = Date.now()): string {
     const t = new Date(iso).getTime();
     if (!Number.isFinite(t)) return '';
@@ -133,7 +147,7 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                         </h3>
                         {stats && (
                             <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
-                                {stats.totalRecommendations.toLocaleString()} savings moves recorded
+                                {stats.totalRecommendations.toLocaleString()} Guardian decisions recorded on-chain
                                 {latest ? ` · latest ${timeAgo(new Date(latest.timestamp * 1000).toISOString())}` : ''}
                             </p>
                         )}
@@ -275,16 +289,19 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                         <span className="font-mono text-emerald-600 dark:text-emerald-400">
                             #{rec.id}
                         </span>
-                        <span className="font-bold uppercase tracking-wider">
-                            {rec.action.replace(/_/g, ' ')}
+                        <span className="font-bold">
+                            {humanizeAction(rec.action)}
                         </span>
                         {rec.targetToken && (
                             <span className="text-emerald-700 dark:text-emerald-300">
                                 → {rec.targetToken}
                             </span>
                         )}
-                        <span className="ml-auto text-emerald-600/60 dark:text-emerald-400/60 font-bold tabular-nums">
-                            {Math.round(rec.confidence * 100)}%
+                        <span
+                            className="ml-auto text-emerald-600/60 dark:text-emerald-400/60 font-bold tabular-nums"
+                            title={`Guardian confidence in this decision: ${Math.round(rec.confidence * 100)}%`}
+                        >
+                            {Math.round(rec.confidence * 100)}% conf.
                         </span>
                     </li>
                 ))}

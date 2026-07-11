@@ -136,7 +136,7 @@ describe('LiveProofCard', () => {
         const card = container.querySelector('[data-testid="live-proof-card"][data-variant="compact"]');
         expect(card).not.toBeNull();
         expect(screen.getByText('Protection is happening')).toBeInTheDocument();
-        expect(screen.getByText(/247 savings moves recorded/)).toBeInTheDocument();
+        expect(screen.getByText(/247 Guardian decisions recorded on-chain/)).toBeInTheDocument();
         expect(screen.getByText('See proof →')).toBeInTheDocument();
         expect(screen.queryByText('View on-chain →')).not.toBeInTheDocument();
     });
@@ -172,11 +172,12 @@ describe('LiveProofTicker', () => {
         );
         const ticker = screen.getByTestId('live-proof-ticker');
         expect(ticker).toBeInTheDocument();
-        expect(ticker.textContent).toContain('SWAP');
-        expect(ticker.textContent).toContain('REBALANCE');
+        // Ledger enum names are humanized for the legitimacy-check reader
+        expect(ticker.textContent).toContain('Swap');
+        expect(ticker.textContent).toContain('Rebalance');
         expect(ticker.textContent).toContain('cUSD');
         expect(ticker.textContent).toContain('cEUR');
-        expect(ticker.textContent).toContain('82%');
-        expect(ticker.textContent).toContain('71%');
+        expect(ticker.textContent).toContain('82% conf.');
+        expect(ticker.textContent).toContain('71% conf.');
     });
 });

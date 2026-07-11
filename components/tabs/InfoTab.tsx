@@ -240,7 +240,7 @@ function VerifiabilitySection() {
               </div>
               <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
                 <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">0G Chain</div>
-                <p className="text-gray-600 dark:text-gray-400">RecommendationLedger contract on Galileo testnet</p>
+                <p className="text-gray-600 dark:text-gray-400">RecommendationLedger evidence anchor on 0G mainnet</p>
               </div>
               <div className="bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl">
                 <div className="font-bold text-gray-400 uppercase tracking-wide mb-1">Arc x402</div>

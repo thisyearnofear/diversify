@@ -19,6 +19,7 @@ import {
   BENCHMARKS,
   type Benchmark,
   CURRENCY_RISK_DATA,
+  exampleSavingsFor,
 } from '../../../constants/currency-risk';
 import { showTestnetUi, optIntoTestnetUi } from '../../../constants/testnet';
 
@@ -360,9 +361,12 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       );
     }, [manualCountrySearch]);
 
-    // Precompute counterfactual for the risk card
+    // Precompute counterfactual for the risk card, denominated in the
+    // visitor's own currency so no mental FX is required.
+    const localExample = riskData ? exampleSavingsFor(riskData.code) : 10000;
+    const localPrefix = riskData && riskData.code !== 'USD' ? `${riskData.code} ` : '$';
     const xauPreserved = riskData
-      ? calculateCounterfactual(10000, 20, 'XAU', '5yr')
+      ? calculateCounterfactual(localExample, 20, 'XAU', '5yr')
       : 0;
 
     const planPreview = selectedArchetype
@@ -678,12 +682,12 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     {/* Counterfactual with animated count-up */}
                     <motion.div variants={staggerChild} className="mt-4 pt-3 border-t border-red-200 dark:border-red-800">
                       <p className="text-xs text-red-500 dark:text-red-300">
-                        If <strong>20%</strong> of $10,000 had been in gold-backed assets 5 years ago,
+                        If <strong>20%</strong> of {localPrefix}{localExample.toLocaleString()} had been in gold-backed assets 5 years ago,
                         you would have preserved{' '}
                         <AnimatedNumber
                           value={xauPreserved}
                           decimals={0}
-                          prefix="$"
+                          prefix={localPrefix}
                           duration={1.8}
                           delay={600}
                           className="text-base font-black text-red-600 dark:text-red-400"
@@ -691,7 +695,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         in real value.
                       </p>
                       <p className="text-[10px] text-red-400 dark:text-red-500 mt-1">
-                        That&apos;s ~${(xauPreserved / (365 * 5)).toFixed(1)}/day — gone. Every day you wait.
+                        That&apos;s ~{localPrefix}{Math.max(1, Math.round(xauPreserved / (365 * 5))).toLocaleString()}/day — gone. Every day you wait.
                       </p>
                       <p className="text-[10px] text-red-400 dark:text-red-500 mt-1.5">
                         Buy stock in dollars and sell in {currencyCode}? That same gap comes out of

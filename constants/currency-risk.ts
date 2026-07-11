@@ -500,6 +500,43 @@ export function calculatePreservedValue(
 }
 
 /**
+ * Rounded local-currency example savings ≈ $10,000, so risk-moment
+ * counterfactuals read in the visitor's own money instead of forcing
+ * mental FX ("KES 1,500,000" rather than "$10,000"). Example amounts,
+ * not conversions — roundness matters more than precision.
+ * Generated from mid rates on 2026-07-11 (fawazahmed0 open dataset).
+ */
+export const EXAMPLE_SAVINGS_LOCAL: Record<string, number> = {
+  ARS: 15_000_000,
+  TRY: 450_000,
+  EGP: 500_000,
+  NGN: 15_000_000,
+  GHS: 100_000,
+  PKR: 3_000_000,
+  LKR: 3_500_000,
+  KES: 1_500_000,
+  ZAR: 150_000,
+  RUB: 750_000,
+  BRL: 50_000,
+  COP: 35_000_000,
+  THB: 350_000,
+  INR: 950_000,
+  IDR: 200_000_000,
+  PHP: 600_000,
+  TZS: 25_000_000,
+  VND: 250_000_000,
+  MXN: 200_000,
+  UGX: 35_000_000,
+  GBP: 7_500,
+  EUR: 8_500,
+  USD: 10_000,
+};
+
+export function exampleSavingsFor(code: string): number {
+  return EXAMPLE_SAVINGS_LOCAL[code] ?? 10_000;
+}
+
+/**
  * Get a summary risk label for a currency.
  * Used for color-coding and quick visual scan.
  */
