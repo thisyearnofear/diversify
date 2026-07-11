@@ -55,7 +55,7 @@ describe('catalog', () => {
   });
 
   it('uses the default markup where entries do not override', () => {
-    expect(getMarketplaceEntry('parallel-web-research')?.markupBps).toBe(DEFAULT_MARKUP_BPS);
+    expect(getMarketplaceEntry('surf-prediction-markets')?.markupBps).toBe(DEFAULT_MARKUP_BPS);
   });
 });
 
@@ -66,16 +66,18 @@ describe('free-first gate', () => {
     }
   });
 
-  it('flags commodity data (prices/FX/news) as free-covered, not paid', () => {
+  it('flags commodity data + web search/news as free-covered, not paid', () => {
     expect(shouldPayFor(getMarketplaceEntry('blockrun-fx')!)).toBe(false);
     expect(shouldPayFor(getMarketplaceEntry('blockrun-crypto')!)).toBe(false);
     expect(shouldPayFor(getMarketplaceEntry('aisa-coingecko')!)).toBe(false);
     expect(shouldPayFor(getMarketplaceEntry('gloria-news')!)).toBe(false);
+    // web search + news are now free via TinyFish
+    expect(shouldPayFor(getMarketplaceEntry('parallel-web-research')!)).toBe(false);
   });
 
-  it('only pays for genuinely differentiated capabilities', () => {
+  it('only pays for genuinely differentiated capabilities (thin set)', () => {
     const paid = recommendedPaidServices().map((e) => e.id).sort();
-    expect(paid).toEqual(['parallel-web-research', 'surf-prediction-markets']);
+    expect(paid).toEqual(['surf-prediction-markets']);
   });
 
   it('freeCoveredServices names the free source to use instead', () => {

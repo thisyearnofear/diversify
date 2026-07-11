@@ -22,15 +22,30 @@ duplicate these are **not** resale candidates — we serve them from the free
 source and pass the saving to the user.
 
 Encoded in code: every catalog entry has a `freeAlternative` field.
-`shouldPayFor()` returns true **only** when it's `null`. Audit of the initial
-picks found **all four commodity services (FX, crypto price, CoinGecko proxy,
-news) are free-covered** — they stay in the catalog only so the "use free
-instead" decision is explicit and auditable. The genuinely payable set is small:
+`shouldPayFor()` returns true **only** when it's `null`.
 
-| Pay + mark up (no free alternative) | Wholesale | Why |
+**Free stack (what we never pay to duplicate):** CoinGecko + CoinPaprika
+(crypto prices), Frankfurter + Alpha Vantage (FX), World Bank (economic),
+DefiLlama (yield), SoSoValue, our governance/news feeds, Firecrawl monitors,
+and now **TinyFish Search API** (`TINYFISH_API_KEY`) — free web search + news +
+research-paper search, verified live (returns relevant EM/cedi news).
+
+**Honest marketplace finding (2026-07-11):** searched ~13 categories (prices,
+FX, news, web search, sentiment, prediction markets, remittance, country risk,
+trade finance, stablecoin yield, wallet risk, credit score, commodities). The
+marketplace is **thin on services that are BOTH differentiated AND useful to EM
+savers/importers** — most is commodity data we get free, or web search/news now
+covered by TinyFish. After the free-first gate, the payable set is a single,
+marginally-relevant service:
+
+| Pay + mark up (survives free-first gate) | Wholesale | Relevance |
 |---|---|---|
-| Parallel — web search + async deep-research | $0.010 | general web research isn't in our free stack |
-| Surf — prediction-market metrics | $0.0075 | prediction-market data not available free |
+| Surf — prediction-market metrics | $0.0075 | differentiated, but low relevance to savers |
+
+**Implication:** don't build payment/resale plumbing for a near-empty payable
+catalog. The real near-term win here was **free** (TinyFish web search/news).
+Revisit the marketplace periodically as it grows; wire resale only when a
+genuinely useful+differentiated service appears.
 
 ## The resale (markup) business model
 

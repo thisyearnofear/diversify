@@ -66,18 +66,10 @@ export const DEFAULT_MARKUP_BPS = 3000; // 30%
  */
 export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
   // ── Genuinely differentiated: NO free alternative → pay + mark up ──────────
-  {
-    id: 'parallel-web-research',
-    resource: 'https://api.parallel.ai/search',
-    providerName: 'Parallel',
-    category: 'WEB_SEARCH_RESEARCH',
-    useCase: 'web-search',
-    wholesaleUsd: 0.01,
-    markupBps: DEFAULT_MARKUP_BPS,
-    networks: ['eip155:8453'],
-    freeAlternative: null, // general web search + async deep-research is not in our free stack
-    description: 'Web search, extraction, and async deep-research with structured results',
-  },
+  // (Currently only prediction-market data survives the free-first gate, and
+  // even its relevance to EM savers is marginal. The marketplace is thin on
+  // services that are BOTH differentiated AND useful to our users — most is
+  // commodity data we get free, or web search/news now covered by TinyFish.)
   {
     id: 'surf-prediction-markets',
     resource: 'https://nano.blockrun.ai/api/v1/surf/prediction-markets',
@@ -87,7 +79,7 @@ export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
     wholesaleUsd: 0.0075,
     markupBps: DEFAULT_MARKUP_BPS,
     networks: ['eip155:8453'],
-    freeAlternative: null, // prediction-market category metrics — not available in our free sources
+    freeAlternative: null, // prediction-market metrics — not in our free sources (but low relevance to savers)
     description: 'Prediction-market category metrics and onchain intelligence',
   },
 
@@ -139,8 +131,20 @@ export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
     wholesaleUsd: 0.05,
     markupBps: 2000,
     networks: ['eip155:8453'],
-    freeAlternative: 'Our own governance/news feeds + Firecrawl monitors',
+    freeAlternative: 'TinyFish search (domain_type=news) + our governance feeds + Firecrawl',
     description: 'Real-time crypto news by keyword',
+  },
+  {
+    id: 'parallel-web-research',
+    resource: 'https://api.parallel.ai/search',
+    providerName: 'Parallel',
+    category: 'WEB_SEARCH_RESEARCH',
+    useCase: 'web-search',
+    wholesaleUsd: 0.01,
+    markupBps: DEFAULT_MARKUP_BPS,
+    networks: ['eip155:8453'],
+    freeAlternative: 'TinyFish Search API (web + news + research_paper) — free key configured',
+    description: 'Web search, extraction, and async deep-research',
   },
 ];
 
