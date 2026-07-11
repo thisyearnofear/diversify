@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { NETWORKS } from '../../../config';
 import { useWalletContext } from '../../wallet/WalletProvider';
 import { useCurrencyRisk } from '../../../hooks/use-currency-risk';
 import { regionForCountry } from '../../../hooks/use-user-region';
+import { trackFunnelEvent } from '../../../lib/analytics';
 import { useStrategy } from '../../../context/app/StrategyContext';
 import { useTilt } from '../../../hooks/use-tilt';
 import { AnimatedNumber } from '../../shared/AnimatedNumber';
@@ -322,6 +323,14 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
 
     const phase: Phase = step;
 
+    // Cold-start funnel: one event per phase view so we learn where
+    // legitimacy-check visitors drop off. Anonymous + fire-and-forget.
+    useEffect(() => {
+      const event = phase === 'detect' ? 'onboarding_viewed' : phase === 'risk' ? 'risk_moment_viewed' : null;
+      if (event) trackFunnelEvent(event, countryCode ? { country: countryCode } : undefined);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [phase]);
+
     const handleSwitchToTestnet = async () => {
         if (isSwitching) return;
         setIsSwitching(true);
@@ -337,6 +346,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const handleArchetypeSelect = (id: ArchetypeId) => {
       setSelectedArchetype(id);
       setFinancialStrategy(STRATEGY_ID[id]);
+      trackFunnelEvent('philosophy_chosen', {
+        philosophy: id,
+        ...(countryCode ? { country: countryCode } : {}),
+      });
     };
 
     const handleFinish = (country?: string | null) => {

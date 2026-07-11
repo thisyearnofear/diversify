@@ -37,6 +37,14 @@ export function GuardianStreakWidget() {
     window.dispatchEvent(celebrationEvent);
   }, [daysActive, isCelebration, isLoading, reducedMotion]);
 
+  // Gamification before value confuses first-time visitors: "0 Days —
+  // Reward in 7 days" was the first card they saw. Earn the surface first.
+  // Checked before the loading state so first-timers never get a skeleton
+  // that resolves to nothing; streak holders enter via the motion animation.
+  if (daysActive === 0 && !canClaim) {
+    return null;
+  }
+
   if (isLoading) {
     return <div className="h-24 animate-pulse bg-gray-100 dark:bg-gray-800 rounded-3xl" />;
   }

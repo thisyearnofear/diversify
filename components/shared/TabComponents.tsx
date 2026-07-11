@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { trackFunnelEvent } from "../../lib/analytics";
 import { motion } from "framer-motion";
 import { useAnimatedNumber } from "../../hooks/use-animation";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
@@ -985,6 +986,12 @@ export const ConnectWalletPrompt = ({
 }) => {
   const isBeginner = experienceMode === "beginner";
   const homeInflation = inflationData?.[userRegion || "Global"]?.avgRate || 15.4;
+
+  // Funnel: the wallet prompt is the last cold-start milestone before
+  // connect — mount = the visitor reached it without bouncing.
+  useEffect(() => {
+    trackFunnelEvent('wallet_prompt_viewed');
+  }, []);
   
   // Popular stablecoins and their typical inflation rates
   const STABLECOIN_RATES: Record<string, number> = {

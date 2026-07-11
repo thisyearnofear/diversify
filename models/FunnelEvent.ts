@@ -1,0 +1,44 @@
+/**
+ * FunnelEvent Model — first-party cold-start funnel analytics.
+ *
+ * Privacy-lean by design: no IP, no wallet address, no user agent — just an
+ * anonymous per-browser session id, an allowlisted event name, and coarse
+ * context (country/philosophy). Events auto-expire after 90 days via TTL
+ * index so the collection can't become a shadow profile store.
+ *
+ * Follows the existing model pattern (mongoose.models.X || mongoose.model).
+ */
+
+import mongoose, { Schema, Document } from 'mongoose';
+
+export const FUNNEL_EVENTS = [
+  'onboarding_viewed',
+  'risk_moment_viewed',
+  'philosophy_chosen',
+  'wallet_prompt_viewed',
+  'demo_opened',
+] as const;
+export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
+
+export interface IFunnelEvent extends Document {
+  sessionId: string;
+  event: FunnelEventName;
+  /** Coarse context only — e.g. { country: 'KE', philosophy: 'africapitalism' } */
+  props: Record<string, string>;
+  createdAt: Date;
+}
+
+const FunnelEventSchema = new Schema<IFunnelEvent>({
+  sessionId: { type: String, required: true, maxlength: 64 },
+  event: { type: String, required: true, enum: FUNNEL_EVENTS },
+  props: { type: Map, of: String, default: {} },
+  createdAt: { type: Date, default: Date.now },
+});
+
+FunnelEventSchema.index({ event: 1, createdAt: -1 });
+// TTL: funnel data is for product decisions, not retention profiling.
+FunnelEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
+
+export const FunnelEvent =
+  mongoose.models.FunnelEvent ||
+  mongoose.model<IFunnelEvent>('FunnelEvent', FunnelEventSchema);

@@ -14,8 +14,8 @@ const AIChat = dynamic(() => import("../components/agent/AIChat"), {
 
 const headMeta = (
   <Head>
-    <title>DiversiFi - Stablecoin Portfolio Diversification</title>
-    <meta name="description" content="Visualize and manage your stablecoin portfolio diversification" />
+    <title>DiversiFi - Shield Your Savings</title>
+    <meta name="description" content="Protect your savings from inflation and currency risk with verifiable, on-chain proof" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

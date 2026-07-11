@@ -39,6 +39,24 @@ export function getLedgerProofLabel(chainId: number | undefined | null): string 
   return LEDGER_CHAIN_LABELS[chainId] ?? 'verified ledger';
 }
 
+/**
+ * Explorer URL for a receipt's settlement tx. Derives the chain's explorer
+ * base from its contract URL (the feed carries no per-chain base directly);
+ * returns null for missing/zero hashes so callers render plain rows.
+ */
+export function getProofTxUrl(
+  contractExplorers: Record<number, string> | undefined,
+  explorerBase: string | undefined,
+  chainId: number | undefined | null,
+  txHash: string | undefined,
+): string | null {
+  if (!txHash || /^0x0*$/.test(txHash)) return null;
+  const contractUrl = chainId != null ? contractExplorers?.[chainId] : undefined;
+  const base = contractUrl ? contractUrl.replace(/\/address\/.*$/, '') : explorerBase;
+  if (!base) return null;
+  return `${base.replace(/\/+$/, '')}/tx/${txHash}`;
+}
+
 /** Headline for the full LiveProofCard — neutral, not testnet-centric. */
 export function getLedgerProofTitle(chainId: number | undefined | null): string {
   const label = getLedgerProofLabel(chainId);

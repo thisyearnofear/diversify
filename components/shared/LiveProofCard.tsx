@@ -32,6 +32,7 @@ import {
   getMultiChainProofTitle,
   getMultiChainFreshnessLabel,
   getLedgerProofLabel,
+  getProofTxUrl,
 } from '@/constants/proof-feed';
 
 const SHORT_ADDRESS_RE = /^(0x[0-9a-fA-F]{4})[0-9a-fA-F]+(0x[0-9a-fA-F]{4})$/;
@@ -275,36 +276,59 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                 Recent on-chain activity
             </h4>
             <ul className="space-y-1.5" aria-live="polite" aria-atomic="true">
-                {recent.map((rec) => (
-                    <li
-                        key={`${rec.chainId ?? 0}-${rec.id}`}
-                        className="flex items-center gap-2 text-[11px] text-emerald-900 dark:text-emerald-100"
-                    >
-                        <span className="size-1.5 rounded-full bg-emerald-500" />
-                        {rec.chainId != null && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80 shrink-0">
-                                {getLedgerProofLabel(rec.chainId)}
+                {recent.map((rec) => {
+                    const txUrl = getProofTxUrl(
+                        data?.contractExplorers,
+                        data?.explorerBase,
+                        rec.chainId,
+                        rec.settlementTxHash,
+                    );
+                    const row = (
+                        <>
+                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                            {rec.chainId != null && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80 shrink-0">
+                                    {getLedgerProofLabel(rec.chainId)}
+                                </span>
+                            )}
+                            <span className="font-mono text-emerald-600 dark:text-emerald-400">
+                                #{rec.id}
                             </span>
-                        )}
-                        <span className="font-mono text-emerald-600 dark:text-emerald-400">
-                            #{rec.id}
-                        </span>
-                        <span className="font-bold">
-                            {humanizeAction(rec.action)}
-                        </span>
-                        {rec.targetToken && (
-                            <span className="text-emerald-700 dark:text-emerald-300">
-                                → {rec.targetToken}
+                            <span className="font-bold">
+                                {humanizeAction(rec.action)}
                             </span>
-                        )}
-                        <span
-                            className="ml-auto text-emerald-600/60 dark:text-emerald-400/60 font-bold tabular-nums"
-                            title={`Guardian confidence in this decision: ${Math.round(rec.confidence * 100)}%`}
-                        >
-                            {Math.round(rec.confidence * 100)}% conf.
-                        </span>
-                    </li>
-                ))}
+                            {rec.targetToken && (
+                                <span className="text-emerald-700 dark:text-emerald-300">
+                                    → {rec.targetToken}
+                                </span>
+                            )}
+                            <span
+                                className="ml-auto text-emerald-600/60 dark:text-emerald-400/60 font-bold tabular-nums"
+                                title={`Guardian confidence in this decision: ${Math.round(rec.confidence * 100)}%`}
+                            >
+                                {Math.round(rec.confidence * 100)}% conf.
+                            </span>
+                            {txUrl && <span aria-hidden="true" className="text-emerald-600/60 dark:text-emerald-400/60">↗</span>}
+                        </>
+                    );
+                    return (
+                        <li key={`${rec.chainId ?? 0}-${rec.id}`} className="text-[11px] text-emerald-900 dark:text-emerald-100">
+                            {txUrl ? (
+                                <a
+                                    href={txUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title="View this receipt on the block explorer"
+                                    className="flex items-center gap-2 hover:underline"
+                                >
+                                    {row}
+                                </a>
+                            ) : (
+                                <span className="flex items-center gap-2">{row}</span>
+                            )}
+                        </li>
+                    );
+                })}
             </ul>
         </div>
     );
