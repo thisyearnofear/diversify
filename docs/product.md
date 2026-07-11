@@ -132,6 +132,10 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | **Agent memory** | Cognee for cross-session persistent context |
 | **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — deploy pending HSK), 0G (evidence/anchoring), Arc (x402 nanopayment rail) |
 | **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |
+| **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), GMX GM-pool deposits (`GmxGmDepositStrategy`, testnet-validated, mainnet-hardened, gated), free LI.FI Earn + DefiLlama base. Surfaced via `BestYieldCard`. See `docs/arbitrum-yield-strategy.md`. |
+| **Voice** | Advisor voice output (ElevenLabs TTS) + voice input (ElevenLabs Scribe STT) — runs on ElevenLabs alone, no OpenAI. Live in prod. |
+| **Free web/news search** | TinyFish Search (web/news/research) feeds the Guardian region-specific context (FX news, central-bank moves) — free, replaces paid marketplace search. |
+| **Cost discipline** | Paid insights (e.g. vaults.fyi) are engagement-gated (`insight-tier.ts`): Free → Saver (≥$100 or 7-day streak) → Committed. Default-deny; free data open to all. |
 
 ## Product Principles
 

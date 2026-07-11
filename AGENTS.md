@@ -89,5 +89,25 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 **APAC rail — HashKey Chain (2026-07-10, code shipped):**
 Fourth grant track: HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, AI track, submission deadline **July 11 23:59 GMT+8**). The APAC rail from `docs/apac-rail.md` is implemented against HashKey mainnet (chain 177): ledger registry + explorer, `getLedgerChainForAction` routing (`isApacRailProfile` in `types/strategy.ts`), heartbeat APAC leg, multi-chain proof feed (Arbitrum + Celo + HashKey), config-aware `apac-rail` banner, guardian-loop `routingContext`, deploy/seed tooling. **Deployment gated on HSK gas** — runbook in `docs/apac-rail.md`, BUIDL copy in `docs/hackathon-hashkey-buidl.md`. Alignment: HashKey holds APAC savings core; Arbitrum stays yield engine.
 
+**North star + growth, integrations, yield engine (2026-07-11/12):**
+
+*Strategy — SME FX north star.* A real Ghanaian-importer conversation crystallized the long-term market: DiversiFi as the **FX-risk intelligence + autonomous protection layer** on top of Africa's crowded stablecoin rails, with the retail savings app as **top-of-funnel** into an importer/exporter business tier. Authoritative doc: `docs/sme-fx-strategy.md` (roadmap Track 4). Concierge tool shipped: `npx tsx scripts/fx-drag-report.ts <cycles.json>` quantifies a trader's FX drag (timing + spread + fees) vs converting on arrival, real historical rates.
+
+*Legitimacy + performance.* Trader-persona browser audit → fixed the cold-start path (the two CRITICALs: `undefined` hero copy, unreadable plan preview; region-detection stored ISO2 where a region was expected; **CSP `connect-src` was blocking `ipapi.co`, silently killing geolocation in prod**; local-currency risk-moment copy so KES/GHS visitors see their own money). First-party funnel analytics (`lib/analytics.ts`, `/api/analytics/event`, `models/FunnelEvent.ts` — anonymous, DNT, 90-day TTL). **Bundle: first-load JS 4.24 MB → 0.90 MB gz** by deep-importing around the CommonJS `@diversifi/shared` barrel (all 7 heavy libs — openai/gemini/ethers×2/lifi/circle/web3 — out of `_app`); a `no-restricted-imports` lint guard keeps it out. Dependency-leverage audit: `docs/dependency-architecture-audit.md`.
+
+*Voice (live).* Was dead 3 ways (missing `/api/agent/{speak,transcribe}` routes, ElevenLabs mock, dead fallback-orchestrator routing that also broke chat `preferredProvider`). Now real end-to-end on **ElevenLabs alone** (TTS + Scribe STT — no OpenAI needed; verified round-trip in prod). Feature flags gate on providers that actually work.
+
+*Free web search (live).* `TINYFISH_API_KEY` → `tinyfish-search.service.ts` + `/api/agent/web-search` (web/news/research). Free-first: it covers the paid marketplace search/news services.
+
+*Circle Agent Stack (explored + foundation).* `docs/circle-agent-stack-options.md`. Key finding: Agent Wallets' wallet-layer **policy engine is human-OTP (CLI)**; Developer-Controlled Wallets are programmatic but app-layer — so per-user wallet-layer policy doesn't scale. `CircleSmartAccountProvider` registered + selectable (was orphaned); `circle-agent-policy.ts` maps guardian bounds → Circle policy spec. Marketplace resale explored (`docs/circle-marketplace-resale.md`) — **free-first gate** (`circle-marketplace.ts::shouldPayFor`) killed most of it as free-covered.
+
+*Yield engine — the Arbitrum upgrade (`docs/arbitrum-yield-strategy.md`).* From a hardcoded 3-token menu → a best-yield engine:
+- **vaults.fyi** (`VAULTS_FYI_API_KEY`, live): per-wallet best-deposit recommendations across 1,000+ risk-rated vaults, prepended in `yield-advisor.service.ts`. Free-first: raw APY stays free (LI.FI Earn + DefiLlama); we pay only for the personalized layer.
+- **GMX GM-pool deposits**: `GmxGmDepositStrategy` in the swap orchestrator, **gated `GMX_GM_DEPOSIT_ENABLED`**. Deposit builder testnet-validated on Arbitrum Sepolia (5 USDC → 6.327 GM; caught a Router-approval bug, an estimateGas quirk, and a stale `CreateDepositParams` struct). Hardened for mainnet: dynamic execution fee + `minMarketTokens` slippage floor from the live GM price (Reader). Read side (GM APYs) surfaced free.
+- **Cost discipline**: `insight-tier.ts` gates paid insights by engagement (Free / Saver ≥$100 or 7-day streak / Committed ≥$1000 or 30-day) — default-deny, so we never pay for the unengaged; free data open to all.
+- **UI**: `BestYieldCard` in ProtectionTab (via `/api/agent/best-yield` + `use-best-yield`) shows personalized/GMX/free picks with a tier-unlock prompt.
+
+Env keys live in gitignored `.env.local` and on the server; activate a feature by setting its key (ElevenLabs, TinyFish, vaults.fyi done). **639 tests green.**
+
 ## Tool Notes
 - **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.
