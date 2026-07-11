@@ -25,12 +25,18 @@ describe('getBestDepositOptions', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('maps rows and converts raw-decimal APY to a percentage', async () => {
+  it('flattens userBalances[].depositOptions[], converts APY, ranks best-first', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
-          data: [
-            { name: 'Aave USDC', protocol: 'Aave', network: 'arbitrum', asset: { symbol: 'USDC' }, apy: { total: 0.054 }, tvl: { usd: 1000000 }, riskRating: 'low', vaultAddress: '0xabc' },
+          userBalances: [
+            {
+              asset: { symbol: 'USDC' },
+              depositOptions: [
+                { name: 'Aave USDC', protocol: { displayName: 'Aave' }, network: { name: 'arbitrum' }, apy: { total: 0.054 }, tvl: { usd: 1000000 }, address: '0xabc' },
+                { name: 'IPOR USDC', protocol: { displayName: 'IPOR' }, network: { name: 'arbitrum' }, apy: { total: 0.1495 }, tvl: { usd: 500000 }, address: '0xdef' },
+              ],
+            },
           ],
         }),
         { status: 200 },
@@ -38,14 +44,10 @@ describe('getBestDepositOptions', () => {
     );
     const r = await getBestDepositOptions(WALLET, { onlyTransactional: true });
     expect(r).not.toBeNull();
-    expect(r!.options[0]).toMatchObject({
-      vaultName: 'Aave USDC',
-      protocol: 'Aave',
-      assetSymbol: 'USDC',
-      apyPct: 5.4, // 0.054 × 100
-      tvlUsd: 1000000,
-      risk: 'low',
-    });
+    expect(r!.options).toHaveLength(2);
+    // ranked best-APY first
+    expect(r!.options[0]).toMatchObject({ vaultName: 'IPOR USDC', protocol: 'IPOR', assetSymbol: 'USDC', apyPct: 14.95, tvlUsd: 500000 });
+    expect(r!.options[1]).toMatchObject({ vaultName: 'Aave USDC', apyPct: 5.4 });
   });
 
   it('sends x-api-key and the wallet address in the path', async () => {

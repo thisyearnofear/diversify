@@ -75,19 +75,29 @@ export async function getBestDepositOptions(
         );
         if (!res.ok) throw new Error(`vaults.fyi ${res.status}`);
         const body = (await res.json()) as any;
-        const rows: any[] = body?.data ?? body?.options ?? body ?? [];
 
-        const options: BestDepositOption[] = (Array.isArray(rows) ? rows : []).map((r) => ({
-          vaultName: r.name ?? r.vaultName ?? 'Unknown vault',
-          protocol: r.protocol ?? r.curator ?? 'unknown',
-          network: r.network ?? r.chain ?? 'unknown',
-          assetSymbol: r.asset?.symbol ?? r.assetSymbol ?? '',
-          // vaults.fyi APY fields are raw decimals — ×100 for a percentage.
-          apyPct: num(r.apy?.total ?? r.apy ?? r.apyPct) * (r.apyPct != null ? 1 : 100),
-          tvlUsd: num(r.tvl?.usd ?? r.tvlUsd ?? r.tvl),
-          risk: r.riskRating ?? r.risk ?? undefined,
-          vaultAddress: r.vaultAddress ?? r.address ?? '',
-        }));
+        // Real shape: { userBalances: [{ asset, depositOptions: [{ name,
+        // address, network:{name}, protocol:{displayName}, tvl:{usd},
+        // apy:{total} (raw decimal), tags }] }] }. Flatten to a ranked list.
+        const balances: any[] = Array.isArray(body?.userBalances) ? body.userBalances : [];
+        const options: BestDepositOption[] = [];
+        for (const bal of balances) {
+          const assetSymbol = bal?.asset?.symbol ?? '';
+          for (const o of (Array.isArray(bal?.depositOptions) ? bal.depositOptions : [])) {
+            options.push({
+              vaultName: o.name ?? 'Unknown vault',
+              protocol: o.protocol?.displayName ?? o.protocol?.name ?? 'unknown',
+              network: o.network?.name ?? 'unknown',
+              assetSymbol,
+              apyPct: num(o.apy?.total) * 100, // raw decimal → percentage
+              tvlUsd: num(o.tvl?.usd),
+              risk: o.riskRating ?? o.risk ?? undefined,
+              vaultAddress: o.address ?? o.vaultId ?? '',
+            });
+          }
+        }
+        // Best APY first — the "best deposit" ranking.
+        options.sort((a, b) => b.apyPct - a.apyPct);
         return { data: options, source: 'vaults.fyi' };
       },
       'moderate',
