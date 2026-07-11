@@ -89,7 +89,57 @@ false and the factory default stays Privy — zero risk to the live path.
 + its policy API. Then feed `sessionPermissionToCirclePolicy(permission)` output
 to the Agent Stack to enforce Guardian bounds at the wallet layer.
 
-## Recommendation
+## ⚠️⚠️ Auth research finding (2026-07-11): the fork that decides fit
+
+Two Circle wallet products, and **you cannot get both "unattended-programmatic"
+AND "wallet-layer policy enforcement" at once** today:
+
+| | Agent Wallets (CLI) | Developer-Controlled Wallets (API) |
+|---|---|---|
+| Auth | Interactive **email-OTP** → 28-day agent session, tied to the login email | **API key + entity secret** (fully programmatic, server-side) |
+| Policy engine | ✅ `wallet limit` — real wallet-layer spending limits/allowlists | ❌ enforcement is **app-layer** (your own checks) + console Gas-Station limits |
+| Setting a policy | **Human OTP required** every time | n/a (no wallet-layer policy object) |
+| Executing (transfer/swap) | Autonomous within the session (no per-tx OTP) | Autonomous (API key) |
+| Circle's own words | *"Your agent can only operate the wallet if it has access to the email used during authentication"* — human-in-the-loop by design | *"enforce your own policies (limits, KYC) before any onchain action"* — app-layer |
+
+**Consequence for DiversiFi's per-user model:** wallet-layer policy is human-OTP
+per policy. Enforcing a *per-user* wallet-layer policy would make **every user**
+complete a Circle email-OTP — a UX non-starter. So Circle Agent Wallet policy
+enforcement does **not** scale to per-user savings execution.
+
+**Where it genuinely fits (single-wallet, operator-set policy):**
+- The **Guardian's own operational wallet** — paying for intelligence/data via
+  `services` (x402 marketplace) + `gateway` (nanopayments), one operator-set
+  OTP policy, autonomous execution within it. Strong, achievable-now fit.
+- Listing the DiversiFi intelligence gateway *on* the Circle services marketplace.
+
+**Where it does NOT fit:** per-user savings execution with per-user wallet-layer
+policy (per-user OTP). Keep Privy/Safe + app-layer there; pursue on-chain
+ERC-7710 if wallet-layer per-user enforcement is wanted.
+
+Wallet is live on **Arbitrum** (ARB 42161) at
+`0xdd6204dd1b7e0311e184dbe458dcc268715ea061`, default policy
+`TRANSFER_LIMIT monthly 100`. Same address across EVM chains.
+
+## Recommendation (revised after auth research)
+
+Refocus Circle from "per-user execution enforcement" (doesn't scale) to the
+**agent-operational / x402 layer** where it's purpose-built and achievable now:
+
+1. **Guardian operational wallet on Arbitrum** — operator sets one spending
+   policy via OTP (`wallet limit set`), Guardian pays for intelligence/data
+   services autonomously within it. Uses `services` + `gateway`.
+2. **x402 rail**: DiversiFi already runs an x402 intelligence toll — evaluate
+   Circle `gateway` nanopayments as the gas-free settlement path, and list the
+   gateway on the Circle services marketplace (distribution).
+3. **Keep the shipped foundation** (`circle-agent-policy.ts`,
+   `CircleSmartAccountProvider`) for the DCW programmatic path if/when a
+   single-wallet execution model is wanted; it stays dormant until keys are set.
+
+Prior "make Circle the per-user execution backend with wallet-layer policy" is
+**deprioritized** — the per-user OTP requirement makes it not scale.
+
+## (superseded) earlier recommendation
 
 Lead with **D → A**: first de-orphan and make Circle selectable/mainnet-ready
 (small, unblocks everything), then pursue **A** as the flagship — because it's not
