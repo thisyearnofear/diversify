@@ -131,8 +131,12 @@ export class GmxGmDepositStrategy extends BaseSwapStrategy {
       });
 
       callbacks?.onStatusUpdate?.('Submitting GM deposit…');
-      // GMX's payable multicall reverts under eth_estimateGas even when valid.
-      const sent = await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, gasLimit: 3_500_000 });
+      // GMX's payable multicall reverts under eth_estimateGas even when valid, so
+      // set an explicit gasLimit. Use the legacy gasPrice (×1.5 over base fee) —
+      // ethers' EIP-1559 maxFeePerGas is padded ~75× on Arbitrum and over-reserves
+      // gasLimit × maxFee + value. Validated on mainnet (tx 0x9004d233…).
+      const gasPrice = (await provider.getGasPrice()).mul(3).div(2);
+      const sent = await signer.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, gasLimit: 3_000_000, gasPrice });
       callbacks?.onSwapSubmitted?.(sent.hash);
       await sent.wait();
 

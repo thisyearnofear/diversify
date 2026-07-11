@@ -104,11 +104,19 @@ so GMX is a genuinely non-duplicative venue. Split into read (safe) and executio
        and adds a reserved `dataList` (bytes32[]). The old flat struct mis-encodes
        → the contract reverts with EMPTY data. Fixed the builder to the current
        struct (from GMX's own `gmx-io/gmx-ai` liquidity reference).
-  - **✅ GATE PASSED (2026-07-11):** full round-trip validated on Arbitrum
-    Sepolia — deposited 5 USDC, keeper minted +6.327 GM tokens
-    (tx `0xf5d8f3fd8b48291a4936fc7d7b8fa02b0ee49f7064d9675146d8192bdab08c5b`).
-    The deposit builder is now proven. Mainnet `GmxGmDepositStrategy` can follow
-    (behind a config flag; verify mainnet addresses from the deploy repo).
+  - **✅ Testnet gate passed (2026-07-11):** Arbitrum Sepolia round-trip —
+    5 USDC → +6.327 GM (tx `0xf5d8f3fd…`).
+  - **✅ MAINNET validated (2026-07-12):** real deposit on Arbitrum One via the
+    exact production helpers — blue-chip ETH/USD [ETH-USDC] pool (17.55%),
+    dynamic exec fee, GM-price slippage floor (min 3.02, minted 3.19), 5 USDC →
+    +3.193 GM (tx `0x9004d233ed7091717d169238eef7fd8d382ed68390a79d471dc12f5d0a446f07`).
+  - **Pre-flight fixes before go-live:** (1) blue-chip-only market filter — the
+    strategy had been picking the highest-APY pool (a 92% memecoin); (2) wired a
+    deposit trigger (BestYieldCard → useSwap → orchestrator); (3) flag moved to
+    `NEXT_PUBLIC_GMX_GM_DEPOSIT_ENABLED` (orchestrator is client-side); (4) explicit
+    legacy gasPrice ×1.5 (ethers pads Arbitrum maxFeePerGas ~75× → over-reserves).
+  - **To go live:** set `NEXT_PUBLIC_GMX_GM_DEPOSIT_ENABLED=true` in Vercel env +
+    rebuild (client-bundle flag). Everything else is validated.
   - **After validation:** wrap the builder in a `GmxGmDepositStrategy`
     (swap orchestrator) behind a mainnet config flag. Do NOT enable mainnet until
     the testnet round-trip passes. Full `@gmx-io/sdk` (15MB, server-only) can

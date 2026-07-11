@@ -89,7 +89,10 @@ async function main() {
   });
 
   console.log('[gmx-mainnet] submitting deposit multicall…');
-  const sent = await wallet.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, gasLimit: 3_500_000 });
+  // Use the legacy gasPrice — ethers' EIP-1559 maxFeePerGas is padded ~75× on
+  // Arbitrum, which over-reserves gasLimit × maxFee + value.
+  const gasPrice = (await provider.getGasPrice()).mul(3).div(2); // ×1.5 buffer over base fee
+  const sent = await wallet.sendTransaction({ to: tx.to, data: tx.data, value: tx.value, gasLimit: 3_000_000, gasPrice });
   console.log(`[gmx-mainnet] tx ${sent.hash} — waiting…`);
   await sent.wait();
 
