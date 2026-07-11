@@ -13,11 +13,15 @@ import { SettlementNetwork } from '../settlement-service';
 import type { IntelligenceItem } from '../../types/intelligence';
 import type { MarketPulse } from '../../utils/market-pulse-service';
 import type { VoiceInsightResult } from './voice-insights.service';
+import {
+    saveVoiceInsight,
+    getVoiceInsightHistory,
+    type VoiceInsightHistoryEntry,
+} from './voice-insights-history';
 
 const SEEN_INSIGHTS_KEY = 'diversifi_seen_insights';
 const VOICE_INSIGHTS_HISTORY_KEY = 'diversifi_voice_insights_history';
 const MAX_SEEN_AGE = 1000 * 60 * 60 * 24; // 24 hours
-const MAX_HISTORY_SIZE = 10;
 
 export class IntelligenceService {
     /**
@@ -153,48 +157,20 @@ export class IntelligenceService {
     }
 
     /**
-     * Persist a Voice Insight result to the history
+     * Persist a Voice Insight result to the history.
+     * Delegates to the leaf persistence module (single source of truth) so
+     * client code can import it without dragging AIService into the bundle.
      */
     public static saveVoiceInsight(insight: VoiceInsightResult): void {
-        if (typeof window === 'undefined') return;
-
-        try {
-            const historyRaw = localStorage.getItem(VOICE_INSIGHTS_HISTORY_KEY);
-            const history: (VoiceInsightResult & { timestamp: number })[] = historyRaw ? JSON.parse(historyRaw) : [];
-
-            // Add new insight with timestamp
-            const newEntry = {
-                ...insight,
-                timestamp: Date.now()
-            };
-
-            // Deduplicate: Don't add if identical to the latest entry
-            if (history.length > 0) {
-                const latest = history[0];
-                if (latest.summary === insight.summary) return;
-            }
-
-            // Keep history lean (PREVENT BLOAT)
-            const updatedHistory = [newEntry, ...history].slice(0, MAX_HISTORY_SIZE);
-            localStorage.setItem(VOICE_INSIGHTS_HISTORY_KEY, JSON.stringify(updatedHistory));
-        } catch (e) {
-            console.warn('[IntelligenceService] Failed to save voice insight:', e);
-        }
+        saveVoiceInsight(insight);
     }
 
     /**
-     * Retrieve voice insight history
+     * Retrieve voice insight history.
+     * @see voice-insights-history.ts
      */
-    public static getVoiceInsightHistory(): (VoiceInsightResult & { timestamp: number })[] {
-        if (typeof window === 'undefined') return [];
-
-        try {
-            const historyRaw = localStorage.getItem(VOICE_INSIGHTS_HISTORY_KEY);
-            return historyRaw ? JSON.parse(historyRaw) : [];
-        } catch (e) {
-            console.warn('[IntelligenceService] Failed to load voice insight history:', e);
-            return [];
-        }
+    public static getVoiceInsightHistory(): VoiceInsightHistoryEntry[] {
+        return getVoiceInsightHistory();
     }
 
     public static clearVoiceInsightHistory(): void {

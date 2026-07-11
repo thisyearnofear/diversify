@@ -8,7 +8,9 @@ import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
 import { useClaimFlowContext, useOnClaimSuccess } from "../../hooks/claim-flow-context";
-import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — so this constant doesn't drag the
+// shared AI/swap/ethers stack into the chunk.
+import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from "@diversifi/shared/src/config/celo-tokens";
 import { useWalletContext } from "../wallet/WalletProvider";
 import VoiceButton from "../ui/VoiceButton";
 import FreemiumPanel from "./FreemiumPanel";

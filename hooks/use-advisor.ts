@@ -4,7 +4,9 @@ import { useAgentChat } from './use-agent-chat';
 import { useAgentStatus } from './use-agent-status';
 import { useAgentVoice } from './use-agent-voice';
 import { useAgentConfig } from './use-agent-config';
-import { IntelligenceService } from '@diversifi/shared';
+// Deep leaf import — NOT the barrel — so the AI provider stack (openai,
+// gemini, ethers, lifi…) stays out of the app's first-load bundle.
+import { saveVoiceInsight } from '@diversifi/shared/src/services/ai/voice-insights-history';
 import type { AIMessage } from './agent-types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -49,7 +51,7 @@ export function useAdvisor() {
         }
 
         const { insights } = await response.json();
-        IntelligenceService.saveVoiceInsight(insights);
+        saveVoiceInsight(insights);
 
         addMessage({
             role: 'assistant',

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { IntelligenceService } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the AI provider stack out of
+// this component's chunk.
+import { getVoiceInsightHistory } from "@diversifi/shared/src/services/ai/voice-insights-history";
 import { useResearchAccount } from "../../hooks/use-research-account";
 
 interface Insight {
@@ -17,7 +19,7 @@ export default function IntelligenceHistory() {
   const researchPayments = researchAccount.researchPayments;
 
   useEffect(() => {
-    const data = IntelligenceService.getVoiceInsightHistory();
+    const data = getVoiceInsightHistory();
     setHistory(data);
   }, []);
 

@@ -10,17 +10,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
+// Deep leaf imports — NOT the barrel. These wallet-core modules are light
+// (farcaster SDK is lazy-loaded inside), but importing them via the
+// @diversifi/shared barrel drags the whole AI/swap/ethers stack into
+// first-load. See docs/internal/bundle-analysis-2026-07-11.md.
 import {
   getAddChainParameter,
   getDefaultChainId,
   isSupportedChainId,
   DEFAULT_CHAIN_ID,
   toHexChainId,
+} from "@diversifi/shared/src/modules/wallet/core/chains";
+import {
   getWalletEnvironment,
   getWalletProvider,
   setupWalletEventListenersForProvider,
-  type WalletProviderType
-} from "@diversifi/shared";
+  type WalletProviderType,
+} from "@diversifi/shared/src/modules/wallet/core/provider-registry";
 import { NETWORKS } from "../config";
 import { WALLET_FEATURES } from "../config/features";
 
