@@ -40,6 +40,33 @@ to manually monitor macro data, risk signals, and yield opportunities.
 They want one practical answer — hold, rebalance, or de-risk — with
 attached proof, not a verbose AI explanation.
 
+## North Star — The Importer & the Retail→Business Funnel (2026-07-11)
+
+The long-term market opportunity is the **import/export SME in a
+volatile-currency market** — crystallized by a real Ghanaian importer who
+buys in USD abroad (China, US, UK), sells locally in cedis, and bleeds
+margin invisibly in the window between local sales and the next supplier
+payment. The rails for moving that money (Waza, Juicyway, Cedar Money,
+Yellow Card…) are crowded and well-capitalized; **the FX risk
+quantification + autonomous protection layer on top of them is unserved
+— and it is exactly what DiversiFi has built.**
+
+Retail and enterprise are not competing priorities; they are one funnel:
+
+1. **Retail (trust)** — the individual entrepreneur tries the Guardian
+   with personal savings, sees their currency risk quantified, builds
+   trust in the autonomy and the on-chain proof.
+2. **Business (revenue)** — the same person graduates their working
+   capital: a cycle-aware Importer/Trader archetype with a per-cycle FX
+   drag report. For this persona, personal savings *is* working capital —
+   the funnel is one person at two levels of trust.
+3. **Protocol (scale)** — rails players license the intelligence +
+   Guardian via the enterprise gateway (Track 1d) as embedded "treasury
+   autopilot."
+
+Market evidence, competitive gap, archetype design, regulatory posture
+(Ghana VASP Act 1154), and sequencing: [`sme-fx-strategy.md`](./sme-fx-strategy.md).
+
 ## How It Works (Guardian app)
 
 1. **Connect** — Privy creates a Safe smart account (email, social login, or existing wallet)
@@ -151,6 +178,11 @@ People in emerging and APAC markets who:
 - Want to protect savings, not speculate
 - Need guidance without DeFi complexity
 - Value cultural alignment with their financial philosophy (Africapitalism, Buen Vivir, Confucian, Gotong Royong, etc.)
+
+**North-star persona (funnel target):** the individual entrepreneur /
+importer / exporter whose "savings" are actually cyclical working capital
+— local-currency proceeds exposed between purchase cycles. They enter as
+retail savers and graduate their business. See [`sme-fx-strategy.md`](./sme-fx-strategy.md).
 
 **Regional execution:** EM savers route through Celo (local Mento stables). Global yield legs route through Arbitrum. APAC savers on Confucian or Gotong Royong plans route savings decisions to **HashKey Chain** (when deployed); until mainnet go-live, an honest banner explains that protection still runs on global chains today. See [`apac-rail.md`](./apac-rail.md).
 

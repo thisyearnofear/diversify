@@ -107,3 +107,6 @@ scripts/setup-mongodb.sh
 # Misc credentials / local CLI state
 .synthesis-credentials
 .blackboxcli/
+
+# FX drag report local rate cache
+scripts/fx-drag/.rate-cache.json

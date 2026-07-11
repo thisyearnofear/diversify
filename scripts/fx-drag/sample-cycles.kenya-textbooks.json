@@ -1,0 +1,48 @@
+{
+  "business": "Sample — Kenya textbook importer (illustrative numbers, real historical rates)",
+  "currency": "KES",
+  "cycles": [
+    {
+      "label": "Term 2 2025 order (May intake)",
+      "revenues": [
+        { "date": "2025-02-20", "amountLocal": 1600000 },
+        { "date": "2025-03-20", "amountLocal": 2200000 },
+        { "date": "2025-04-10", "amountLocal": 1900000 }
+      ],
+      "payment": {
+        "date": "2025-04-28",
+        "amountUsd": 42000,
+        "achievedRate": 131.5,
+        "feesLocal": 38000
+      }
+    },
+    {
+      "label": "Term 3 2025 order (Sep intake)",
+      "revenues": [
+        { "date": "2025-06-16", "amountLocal": 1500000 },
+        { "date": "2025-07-15", "amountLocal": 2000000 },
+        { "date": "2025-08-05", "amountLocal": 1300000 }
+      ],
+      "payment": {
+        "date": "2025-08-20",
+        "amountUsd": 35000,
+        "achievedRate": 131.2,
+        "feesLocal": 38000
+      }
+    },
+    {
+      "label": "Term 1 2026 order (Jan intake — biggest of the year)",
+      "revenues": [
+        { "date": "2025-10-10", "amountLocal": 2400000 },
+        { "date": "2025-11-12", "amountLocal": 3000000 },
+        { "date": "2025-12-08", "amountLocal": 3200000 }
+      ],
+      "payment": {
+        "date": "2026-01-07",
+        "amountUsd": 65000,
+        "achievedRate": 132.4,
+        "feesLocal": 50000
+      }
+    }
+  ]
+}

@@ -430,6 +430,49 @@ Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–8 ship
 
 ---
 
+## Track 4 — North Star: SME FX Working Capital & the Retail→Business Funnel (2026-07-11)
+
+A real user conversation — a Ghanaian importer buying in USD (China, US,
+UK) and selling in cedis — surfaced the persona the Track 3 reframe was
+always pointing at, one step further: **the trader whose "savings" are
+cyclical working capital**, exposed to cedi slippage in the 2–8 week
+window between local sales and the next supplier payment. Their three
+pains (volatility, cognitive burden, inability to quantify) map directly
+onto shipped surfaces (currency-risk dataset, autonomous Guardian,
+verifiable ledger).
+
+**Market:** China–Africa trade $348B (2025, +20% YoY); SSA stablecoin
+volume $50B in Q1 2026 (+340% YoY, large B2B share); ~$5B/yr lost to
+currency conversion (AfCFTA). The rails war (Waza, Juicyway, Cedar Money,
+Verto, Yellow Card, Visa pilots) is crowded — **nobody offers the FX risk
+quantification / automated protection layer.** That layer is DiversiFi's
+lane: not another rail, the driver on top of the rails.
+
+**Funnel model (retail and enterprise serve one vision):**
+
+| Stage | Role | Surface |
+|---|---|---|
+| Retail | Trust — entrepreneur tries Guardian with personal savings, sees risk quantified | Existing Guardian app |
+| Business | Revenue — same person graduates working capital | Importer/Trader archetype (cycle-aware) + per-cycle FX drag report |
+| Protocol | Scale — rails players embed the intelligence | Track 1d enterprise gateway ("treasury autopilot") |
+
+**Sequencing (gated):** 1) concierge validation — manual FX drag reports
+for the Ghana user + 10–20 traders; 2) Importer archetype inside the
+existing app (no new product surface); 3) GHS ramp via partner (Yellow
+Card / Accrue / Kotani — never build ramps); 4) one rails design partner
+via Track 1d; 5) split into its own product only when demand forces it.
+
+**Regulatory note:** Ghana's VASP Act 1154 (signed 2025-12-29, BoG
+licensing from Q1 2026) + BoG anti-dollarization posture make the
+non-prescriptive philosophy framing regulatory protection, not just brand
+ethos. Position as intelligence/software; licensed partners hold custody
+and conversion.
+
+Full strategy, market data with sources, competitive table, archetype
+design, honesty guardrails, and risks: [`sme-fx-strategy.md`](./sme-fx-strategy.md).
+
+---
+
 ## Deferred (Correct but Wrong Timing)
 
 | Task | Why deferred |

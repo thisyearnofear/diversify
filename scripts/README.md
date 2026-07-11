@@ -2,6 +2,19 @@
 
 This directory contains utility scripts for development, testing, and deployment.
 
+## FX Drag Report (concierge analysis)
+
+`npx tsx scripts/fx-drag-report.ts <cycles.json> [--ramp-bps 50] [--out report.md]`
+
+Quantifies what FX movement, bank spread, and fees cost an import business
+across its purchase cycles vs converting proceeds to USD-pegged value on
+arrival. The Phase 0 validation instrument from `docs/sme-fx-strategy.md`.
+Input format documented in the script header; sample:
+`scripts/fx-drag/sample-cycles.kenya-textbooks.json`. Historical mid-market
+rates are fetched once and cached in `scripts/fx-drag/.rate-cache.json`
+(gitignored). Math lives in `scripts/fx-drag/calc.ts` with tests in
+`scripts/__tests__/fx-drag-calc.test.ts`.
+
 ## Deploying
 
 The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (local build + rsync to Hetzner with a healthz gate and automatic rollback). See the script's header for env overrides (`DEPLOY_SKIP_BUILD`, `DEPLOY_SYNC_ENV`, `DEPLOY_SKIP_GATE`).

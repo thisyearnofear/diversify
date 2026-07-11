@@ -16,6 +16,7 @@ Index for `docs/`. Start at the top, drill down by need.
 - **APAC rail (HashKey Chain — Asia savings ledger)** → [`apac-rail.md`](./apac-rail.md) (routing rules, go-live runbook) · [`hackathon-hashkey-buidl.md`](./hackathon-hashkey-buidl.md) (DoraHacks submission copy)
 - **Agent identity (ERC-8004 + Self Protocol)** → [`agent-identity.md`](./agent-identity.md) (registration, signing, verification)
 - **Roadmap & active grant tracks** → [`roadmap.md`](./roadmap.md) (product quality plan + grant tracks: 0G Bridge, Celo Prezenti, Arbitrum Open House, HashKey Horizon) + [`0g-bridge-plan.md`](./0g-bridge-plan.md) (authoritative 0G file-by-file plan)
+- **North star — SME FX working capital & the retail→business funnel** → [`sme-fx-strategy.md`](./sme-fx-strategy.md) (Ghana importer persona, market research with sources, competitive gap, Importer archetype design, sequencing)
 
 ## Deploy ops
 
