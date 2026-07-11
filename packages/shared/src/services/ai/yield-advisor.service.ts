@@ -9,7 +9,7 @@
 
 import { EarnService } from '../../services/earn-service';
 import { vaultsFyiService } from '../../services/vaults-fyi.service';
-import { getStableGmMarkets } from '../../services/gmx-gm.service';
+import { getBlueChipStableGmMarkets } from '../../services/gmx-gm.service';
 import { canUsePaidInsight, type EngagementContext } from '../../services/insight-tier';
 import { getTokenAddresses } from '../../config';
 
@@ -80,7 +80,7 @@ export async function getYieldRecommendations(
         // stable-side GM pool yields on Arbitrum. Discovery only — depositing is
         // a separate testnet-validated build (docs/arbitrum-yield-strategy.md).
         try {
-            const gmMarkets = (await getStableGmMarkets()).slice(0, 2);
+            const gmMarkets = (await getBlueChipStableGmMarkets()).slice(0, 2);
             for (const gm of gmMarkets) {
                 recommendations.push({
                     id: `gmx-gm-${gm.marketToken}-${Date.now()}`,

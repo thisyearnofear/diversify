@@ -25,6 +25,7 @@ const ARBITRUM_CHAIN_ID = 42161;
 export interface GmMarket {
   marketToken: string;
   name: string;
+  indexToken: string;
   longToken: string;
   shortToken: string;
   /** APY as a percentage (GMX returns a raw decimal; we ×100). */
@@ -77,6 +78,7 @@ export async function getGmMarkets(): Promise<GmMarket[]> {
           return {
             marketToken: m.marketToken,
             name: m.name ?? 'GM',
+            indexToken: m.indexToken,
             longToken: m.longToken,
             shortToken: m.shortToken,
             apyPct: toPct(apy.apy),
@@ -105,8 +107,29 @@ export async function getStableGmMarkets(): Promise<GmMarket[]> {
   );
 }
 
+// Blue-chip GM index tokens on Arbitrum — WBTC + WETH only. A savings product
+// must NOT deposit user USDC into (or surface) exotic/memecoin GM pools whose
+// 90%+ APYs ARE the risk. GM pools carry the index token's price exposure.
+const BLUE_CHIP_INDEX_TOKENS = new Set(
+  [
+    '0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f', // WBTC
+    '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1', // WETH
+  ].map((a) => a.toLowerCase()),
+);
+
+/**
+ * Blue-chip USDC-short GM markets only (BTC/ETH index). This is the set the
+ * app surfaces AND deposits into — never the memecoin pools.
+ */
+export async function getBlueChipStableGmMarkets(): Promise<GmMarket[]> {
+  return (await getStableGmMarkets()).filter((m) =>
+    BLUE_CHIP_INDEX_TOKENS.has((m.indexToken ?? '').toLowerCase()),
+  );
+}
+
 export const gmxGmService = {
   chainId: ARBITRUM_CHAIN_ID,
   getGmMarkets,
   getStableGmMarkets,
+  getBlueChipStableGmMarkets,
 };

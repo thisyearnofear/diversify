@@ -6,9 +6,10 @@
  * Async by nature: this submits a deposit ORDER; a GMX keeper executes it and
  * mints the GM token shortly after. success/txHash reflect the order submission.
  *
- * GATED OFF by default (GMX_GM_DEPOSIT_ENABLED=true to enable). Before enabling
- * on mainnet, harden: dynamic execution-fee estimation and minMarketTokens
- * slippage from live GM pricing (currently 0 = accept any).
+ * GATED OFF by default (GMX_GM_DEPOSIT_ENABLED=true to enable). Mainnet-hardened:
+ * blue-chip markets only (BTC/ETH, never memecoin pools), dynamic execution fee,
+ * and a minMarketTokens slippage floor from the live GM price (refuses if it
+ * can't price GM).
  */
 
 import { ethers } from 'ethers';
@@ -23,7 +24,7 @@ import { ProviderFactoryService } from '../provider-factory.service';
 import { buildGmDepositMulticall } from '../gmx/gmx-deposit-builder';
 import { getGmxAddresses, isGmDepositEnabled } from '../gmx/gmx-config';
 import { estimateExecutionFeeWei, getGmTokenPriceUsd30, computeMinMarketTokens } from '../gmx/gmx-deposit-quote';
-import { getStableGmMarkets } from '../../gmx-gm.service';
+import { getBlueChipStableGmMarkets } from '../../gmx-gm.service';
 import { getTokenAddresses } from '../../../config';
 
 const ARBITRUM = 42161;
@@ -54,14 +55,14 @@ export class GmxGmDepositStrategy extends BaseSwapStrategy {
     if (!this.supports(params)) return false;
     const amt = Number(params.amount);
     if (!Number.isFinite(amt) || amt <= 0) return false;
-    const markets = await getStableGmMarkets();
+    const markets = await getBlueChipStableGmMarkets();
     return markets.length > 0;
   }
 
   async getEstimate(params: SwapParams): Promise<SwapEstimate> {
     // GM tokens ≈ deposited USD / GM token price. Precise pricing needs the
     // Reader; surface a neutral estimate (1:1 USD) until pricing is wired.
-    const markets = await getStableGmMarkets();
+    const markets = await getBlueChipStableGmMarkets();
     return {
       fromAmount: params.amount,
       toAmount: params.amount,
@@ -83,9 +84,9 @@ export class GmxGmDepositStrategy extends BaseSwapStrategy {
       const signer = params.signer || (await ProviderFactoryService.getSignerForChain(ARBITRUM));
       const userAddress = params.userAddress || (await signer.getAddress());
 
-      // Pick the best-APY stable (USDC-short) GM market.
-      const markets = await getStableGmMarkets();
-      if (markets.length === 0) return { success: false, error: 'No stable GM market available' };
+      // Pick the best-APY BLUE-CHIP (BTC/ETH) USDC-short GM market — never exotic.
+      const markets = await getBlueChipStableGmMarkets();
+      if (markets.length === 0) return { success: false, error: 'No blue-chip GM market available' };
       const market = markets[0];
 
       const tokens = getTokenAddresses(ARBITRUM);
