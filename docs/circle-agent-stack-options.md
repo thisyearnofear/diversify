@@ -60,6 +60,35 @@ enforcement while ERC-7710 stays the long-term trustless path.
 | C | **Agent Marketplace listing** | List the DiversiFi intelligence gateway as a discoverable agentic service — agent-to-agent distribution (consumers #2+). | Low–Med / Low — GTM, not core architecture |
 | D | **Mainnet + de-orphan cleanup** | Move Circle off ARC-TESTNET, register the provider, remove the vestigial `circleExecutor` naming, make `walletProvider: "CIRCLE_MPC"` actually do something. Prereq for A. | Low–Med / Low |
 
+## ⚠️ Critical finding: installed SDK does execution, NOT policy
+
+The installed `@circle-fin/developer-controlled-wallets@10.0.1` exposes
+execution (`createContractExecutionTransaction`, `createWallet`, `listWallets`,
+`getWalletTokenBalance`) but **no policy/spending-limit/allowlist methods**.
+Wallet-layer policy enforcement — the strategic win of Option A — is a **Circle
+Agent Stack** capability (Circle CLI / newer API), a separate product surface
+from this SDK. So:
+- **Execution (D) is buildable now** with the installed SDK. ✅ built (below).
+- **Policy enforcement (A) requires a Circle Agent Stack account + its API.**
+  The app-layer→wallet-layer mapping logic is built and tested; *applying* it
+  needs the Agent Stack.
+
+## What's built (2026-07-11)
+
+| Piece | File | Status |
+|---|---|---|
+| Guardian bounds → Circle policy spec (pure, tested) | `services/vault/circle-agent-policy.ts` (+ 9 tests) | ✅ done, verifiable now |
+| Circle execution provider (SmartAccountProvider) | `services/vault/providers/circle-smart-account-provider.ts` | ✅ built, env-gated, **untested vs live Circle** |
+| Registered + selectable (`SMART_ACCOUNT_PROVIDER=circle`) | `services/vault/smart-account-provider.ts` | ✅ done (was "Unknown provider") |
+
+**Activation (execution):** `SMART_ACCOUNT_PROVIDER=circle`, `CIRCLE_API_KEY`,
+`CIRCLE_ENTITY_SECRET`, `CIRCLE_WALLET_SET_ID`. Until set, `isConfigured()` is
+false and the factory default stays Privy — zero risk to the live path.
+
+**Activation (policy enforcement, Option A):** a **Circle Agent Stack account**
++ its policy API. Then feed `sessionPermissionToCirclePolicy(permission)` output
+to the Agent Stack to enforce Guardian bounds at the wallet layer.
+
 ## Recommendation
 
 Lead with **D → A**: first de-orphan and make Circle selectable/mainnet-ready
