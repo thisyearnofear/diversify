@@ -75,9 +75,9 @@ describe('free-first gate', () => {
     expect(shouldPayFor(getMarketplaceEntry('parallel-web-research')!)).toBe(false);
   });
 
-  it('only pays for genuinely differentiated capabilities (thin set)', () => {
+  it('only pays for genuinely differentiated capabilities', () => {
     const paid = recommendedPaidServices().map((e) => e.id).sort();
-    expect(paid).toEqual(['surf-prediction-markets']);
+    expect(paid).toEqual(['surf-prediction-markets', 'vaultsfyi-best-deposit']);
   });
 
   it('freeCoveredServices names the free source to use instead', () => {

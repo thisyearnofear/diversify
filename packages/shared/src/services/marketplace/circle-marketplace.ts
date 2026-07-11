@@ -32,7 +32,8 @@ export type MarketplaceUseCase =
   | 'news'
   | 'research'
   | 'web-search'
-  | 'prediction-market';
+  | 'prediction-market'
+  | 'yield-recommendation';
 
 export interface MarketplaceServiceEntry {
   id: string;
@@ -81,6 +82,23 @@ export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
     networks: ['eip155:8453'],
     freeAlternative: null, // prediction-market metrics — not in our free sources (but low relevance to savers)
     description: 'Prediction-market category metrics and onchain intelligence',
+  },
+  {
+    // ★ The first genuinely on-thesis paid service: per-wallet best-yield
+    // recommendations across 1,000+ risk-rated vaults. We have raw APY/TVL free
+    // (DefiLlama), but NOT curated risk ratings + personalized best-deposit
+    // recommendations + idle-asset detection. Resell as a "find my best yield"
+    // premium. See docs/arbitrum-yield-strategy.md.
+    id: 'vaultsfyi-best-deposit',
+    resource: 'https://api.vaults.fyi/v2/portfolio/best-deposit-options/{address}',
+    providerName: 'vaults.fyi',
+    category: 'FINANCIAL_ANALYSIS',
+    useCase: 'yield-recommendation',
+    wholesaleUsd: 0.2020,
+    markupBps: DEFAULT_MARKUP_BPS,
+    networks: ['eip155:8453', 'eip155:42161'],
+    freeAlternative: null, // per-wallet risk-rated best-deposit recommendations aren't free
+    description: 'Ranked best-yield deposit options for a wallet across 1,000+ curated vaults',
   },
 
   // ── Covered by our existing FREE stack: DO NOT PAY — use the free source ──
