@@ -2,8 +2,12 @@ import { settleOnChain, getAgentUSDCBalance, getAgentAddress, getSettlementStats
 import { circleService, CircleService } from './services/circle-service';
 import { AgentService } from './services/agent-service';
 import { ArcAgent } from './services/arc-agent';
-import { SocialConnectService } from './services/social-connect-service';
-// ... existing imports ...
+// NOTE: SocialConnectService is intentionally NOT imported/re-exported here.
+// It statically pulls @celo/identity → web3.js (~2.5MB) + @ethereumjs, and
+// its only consumers (agent-service, agent-action.service) load it via
+// dynamic import(). Keeping it out of the barrel stops that heavy graph from
+// riding along with any `@diversifi/shared` import. Import it directly from
+// './services/social-connect-service' if ever needed statically.
 import { SessionKeyProvider } from "./services/wallet-service";
 
 import { RWAService, rwaService } from './services/rwa-service';
@@ -50,7 +54,6 @@ export {
   AgentService,
   ArcAgent,
   SessionKeyProvider,
-  SocialConnectService,
   RWAService,
   rwaService,
   ZapierMCPService,

@@ -60,7 +60,28 @@ leak. The highest-value work is *deletion and consolidation*, not optimization.
   `use-x402-payment`) still statically `import { ethers }` and genuinely use it
   (e.g. `use-multichain-balances.ts:186,281`). Worth confirming per-route.
 
-### C. LiFi — under-leveraged; Circle — orphaned
+> **Corrections after review (2026-07-11):**
+> - **Circle is NOT dead weight — keep it.** It is already server-only + lazily
+>   imported (0 bytes in any client chunk — verified), so removing it gives zero
+>   mobile benefit, and it is **strategic infrastructure** for the planned Circle
+>   Agent Stack / Agent Wallets direction (agents.circle.com/services,
+>   developers.circle.com/agent-stack/agent-wallets). It is *underutilized*, not
+>   useless. Action changes from "drop" to "keep, wire up per the Agent Stack
+>   roadmap, clean up vestigial naming." The audit judged it on current
+>   code-reachability, blind to roadmap intent.
+> - **Privy is not the only wallet entry.** `use-wallet.ts:247` connects injected
+>   wallets (MetaMask/Coinbase) as PRIORITY 1; Privy is the social-login fallback
+>   (PRIORITY 2), plus Farcaster/MiniPay auto-connect. So Circle does not "duplicate
+>   the only wallet layer" — the user-wallet layer is injected/Privy/Farcaster,
+>   and Circle is a separate *agent/smart-account execution* backend.
+> - **Voice speech/transcribe DO have callers** (audit was wrong): `VoiceButton.tsx:282`
+>   (`transcribeAudio`), `use-agent-chat.ts:294,623` + `use-advisor.ts:102`
+>   (`generateSpeech`), all via the `useAgentVoice` hook → an API route (server-side).
+>   Voice is a real, if secondary, feature. The AI cleanup must therefore trace the
+>   voice API path before deleting anything — `ElevenLabsProvider` being a mock may
+>   mean TTS is currently degraded, which is a bug to investigate, not a safe delete.
+
+### C. LiFi — under-leveraged; Circle — underutilized (not orphaned — see corrections)
 
 - **LiFi:** full cross-chain route/bridge/execute integration (3 strategies + API
   proxy), but the lowest-scored same-chain option and its unique value (Celo↔
@@ -80,11 +101,11 @@ leak. The highest-value work is *deletion and consolidation*, not optimization.
 
 Ranked by (impact × inverse-risk). Each is independently shippable.
 
-| # | Action | Removes | Effort / Risk |
-|---|--------|---------|---------------|
-| 1 | **Drop the Circle SDK.** Keep `create-circle-wallet.ts` as a dev tool; split the still-live non-SDK methods out of `circle-service.ts`; delete `circle-wallet-provider-real.ts`; de-"Circle" the vault executor naming. | `@circle-fin/*` (~590 KB), an orphaned wallet backend | Low / Low |
-| 2 | **Lazy-load or drop SocialConnect.** Remove the static `SocialConnectService` re-export from the barrel (`index.ts:5,53`); keep only the existing dynamic `import()` in `agent-service.ts:612`, or feature-flag the whole send-to-contact path off. | `@celo/identity` → **web3.js 2.5 MB + @ethereumjs**, and the `next.config.js` crypto polyfills | Low–Med / Low |
-| 3 | **Delete AI dead code.** Remove `ElevenLabsProvider` (mock) and the unused speech/transcribe orchestrators; either wire `orderedProviders` into `executeWithFallback` or delete `getProviderOrderFor*`. | Dead routing bug, a mock provider, ~unused adapters | Low / Low |
+| # | Action | Removes | Effort / Risk | Status |
+|---|--------|---------|---------------|--------|
+| 1 | ~~Drop the Circle SDK~~ → **KEEP.** Server-only, 0 client bytes, strategic for Circle Agent Stack. Instead: wire it up per the Agent Wallets roadmap and de-"Circle" the *vestigial* naming where it misleads (the `circleExecutor` that actually runs on Privy). | (nothing — revised) | — | Revised: keep |
+| 2 | **Decouple SocialConnect from the barrel.** Removed the static `SocialConnectService` import/re-export from `index.ts`; the two real consumers already use dynamic `import()`. Feature preserved; web3.js no longer rides the barrel's synchronous graph. | `@celo/identity` → web3.js/@ethereumjs from the barrel graph (defense against re-leak; already 0 in client first-load) | Low / Low | **✅ Done** |
+| 3 | **Delete AI dead code — with care.** The dead routing layer (`getProviderOrderFor*` computed then discarded) is a real bug: wire `orderedProviders` into `executeWithFallback` OR delete it. `ElevenLabsProvider` is a mock returning fake audio — but voice HAS callers (see corrections), so first trace the voice API route: if the mock is the only TTS path, voice is already degraded (fix), not dead (delete). | Dead routing bug, a mock provider | Low–Med / Med (touches live voice path) | Pending — needs voice-flow trace |
 | 4 | **★ Durable root fix: make `@diversifi/shared` tree-shakeable.** ESM output (`module: ESNext`), `sideEffects: false` (after auditing module-scope singletons like `circleService`/`feeEngine`), `exports` map. Then the barrel can't leak — no future import reintroduces the whack-a-mole. Add `import 'server-only'` to `ai-service.ts` + circle/social services to enforce the boundary in the bundler. | The *class* of bundle-leak problem | Med / Med |
 | 5 | **Collapse the 5 OpenAI-compat AI providers into one** parameterized `OpenAICompatProvider` + config table. Optionally add a Claude adapter as primary (aligns inference with the Guardian's own model, native JSON mode). | ~5 duplicate adapter files; quality upgrade | Med / Low–Med |
 | 6 | **Migrate `recommendation-ledger.service.ts` v6 → viem.** Confines `ethers6` to the server-only `packages/shared-0g` 0G island. | `ethers6` from the main package | Med / Low–Med |
