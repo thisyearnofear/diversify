@@ -4,6 +4,9 @@ import {
   entryResale,
   getMarketplaceEntry,
   marketplaceByUseCase,
+  shouldPayFor,
+  recommendedPaidServices,
+  freeCoveredServices,
   CIRCLE_MARKETPLACE_CATALOG,
   DEFAULT_MARKUP_BPS,
 } from '../circle-marketplace';
@@ -52,6 +55,32 @@ describe('catalog', () => {
   });
 
   it('uses the default markup where entries do not override', () => {
-    expect(getMarketplaceEntry('blockrun-fx')?.markupBps).toBe(DEFAULT_MARKUP_BPS);
+    expect(getMarketplaceEntry('parallel-web-research')?.markupBps).toBe(DEFAULT_MARKUP_BPS);
+  });
+});
+
+describe('free-first gate', () => {
+  it('never recommends paying for anything with a free alternative', () => {
+    for (const entry of recommendedPaidServices()) {
+      expect(entry.freeAlternative).toBeNull();
+    }
+  });
+
+  it('flags commodity data (prices/FX/news) as free-covered, not paid', () => {
+    expect(shouldPayFor(getMarketplaceEntry('blockrun-fx')!)).toBe(false);
+    expect(shouldPayFor(getMarketplaceEntry('blockrun-crypto')!)).toBe(false);
+    expect(shouldPayFor(getMarketplaceEntry('aisa-coingecko')!)).toBe(false);
+    expect(shouldPayFor(getMarketplaceEntry('gloria-news')!)).toBe(false);
+  });
+
+  it('only pays for genuinely differentiated capabilities', () => {
+    const paid = recommendedPaidServices().map((e) => e.id).sort();
+    expect(paid).toEqual(['parallel-web-research', 'surf-prediction-markets']);
+  });
+
+  it('freeCoveredServices names the free source to use instead', () => {
+    const covered = freeCoveredServices();
+    const fx = covered.find((c) => c.id === 'blockrun-fx');
+    expect(fx?.useFree).toMatch(/Frankfurter/);
   });
 });

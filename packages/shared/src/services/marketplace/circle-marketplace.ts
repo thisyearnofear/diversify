@@ -30,7 +30,9 @@ export type MarketplaceUseCase =
   | 'crypto-price'
   | 'market-data'
   | 'news'
-  | 'research';
+  | 'research'
+  | 'web-search'
+  | 'prediction-market';
 
 export interface MarketplaceServiceEntry {
   id: string;
@@ -45,6 +47,13 @@ export interface MarketplaceServiceEntry {
   markupBps: number;
   /** Chains the service accepts USDC on (CAIP-2), for routing the payment. */
   networks: string[];
+  /**
+   * FREE-FIRST PRINCIPLE: the free source DiversiFi already has that covers
+   * this, or `null` if the capability is genuinely NOT available free. We only
+   * ever PAY (and mark up) when this is null — otherwise use the free source
+   * and pass the saving to the user. See `shouldPayFor`.
+   */
+  freeAlternative: string | null;
   description: string;
 }
 
@@ -56,6 +65,35 @@ export const DEFAULT_MARKUP_BPS = 3000; // 30%
  * Modeled on ARC_RESEARCH_SOURCE_REGISTRY — a curated, priced source list.
  */
 export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
+  // ── Genuinely differentiated: NO free alternative → pay + mark up ──────────
+  {
+    id: 'parallel-web-research',
+    resource: 'https://api.parallel.ai/search',
+    providerName: 'Parallel',
+    category: 'WEB_SEARCH_RESEARCH',
+    useCase: 'web-search',
+    wholesaleUsd: 0.01,
+    markupBps: DEFAULT_MARKUP_BPS,
+    networks: ['eip155:8453'],
+    freeAlternative: null, // general web search + async deep-research is not in our free stack
+    description: 'Web search, extraction, and async deep-research with structured results',
+  },
+  {
+    id: 'surf-prediction-markets',
+    resource: 'https://nano.blockrun.ai/api/v1/surf/prediction-markets',
+    providerName: 'Surf (BlockRun.AI)',
+    category: 'FINANCIAL_ANALYSIS',
+    useCase: 'prediction-market',
+    wholesaleUsd: 0.0075,
+    markupBps: DEFAULT_MARKUP_BPS,
+    networks: ['eip155:8453'],
+    freeAlternative: null, // prediction-market category metrics — not available in our free sources
+    description: 'Prediction-market category metrics and onchain intelligence',
+  },
+
+  // ── Covered by our existing FREE stack: DO NOT PAY — use the free source ──
+  // Kept in the catalog so the free-first logic is explicit and auditable;
+  // shouldPayFor() returns false for all of these.
   {
     id: 'blockrun-fx',
     resource: 'https://nano.blockrun.ai/api/v1/fx/price/{symbol}',
@@ -65,7 +103,8 @@ export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
     wholesaleUsd: 0.008,
     markupBps: DEFAULT_MARKUP_BPS,
     networks: ['eip155:8453'],
-    description: 'Multi-asset FX spot exchange rates for trading agents',
+    freeAlternative: 'Frankfurter + Alpha Vantage (FX rates, free)',
+    description: 'Multi-asset FX spot exchange rates',
   },
   {
     id: 'blockrun-crypto',
@@ -76,6 +115,7 @@ export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
     wholesaleUsd: 0.008,
     markupBps: DEFAULT_MARKUP_BPS,
     networks: ['eip155:8453'],
+    freeAlternative: 'CoinGecko + CoinPaprika (free tier)',
     description: 'Multi-asset crypto spot prices and OHLC',
   },
   {
@@ -87,7 +127,8 @@ export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
     wholesaleUsd: 0.008,
     markupBps: DEFAULT_MARKUP_BPS,
     networks: ['eip155:1', 'eip155:8453'],
-    description: 'CoinGecko market data (coin categories, market caps)',
+    freeAlternative: 'CoinGecko directly (we already have a key)',
+    description: 'CoinGecko market data — literally re-sold CoinGecko',
   },
   {
     id: 'gloria-news',
@@ -96,9 +137,10 @@ export const CIRCLE_MARKETPLACE_CATALOG: MarketplaceServiceEntry[] = [
     category: 'NEWS',
     useCase: 'news',
     wholesaleUsd: 0.05,
-    markupBps: 2000, // 20% — higher wholesale, keep resale digestible
+    markupBps: 2000,
     networks: ['eip155:8453'],
-    description: 'Real-time crypto news, ticker summaries, and recaps by keyword',
+    freeAlternative: 'Our own governance/news feeds + Firecrawl monitors',
+    description: 'Real-time crypto news by keyword',
   },
 ];
 
@@ -133,6 +175,28 @@ export function computeResale(wholesaleUsd: number, markupBps: number): ResalePr
 /** Resale pricing for a catalog entry. */
 export function entryResale(entry: MarketplaceServiceEntry): ResalePricing {
   return computeResale(entry.wholesaleUsd, entry.markupBps);
+}
+
+/**
+ * FREE-FIRST GATE. Only pay a marketplace service when there is NO free
+ * alternative in our stack. Everything with a `freeAlternative` should be
+ * served from that free source instead (and the saving passed to the user).
+ */
+export function shouldPayFor(entry: MarketplaceServiceEntry): boolean {
+  return entry.freeAlternative === null;
+}
+
+/** The subset of the catalog actually worth paying for + reselling. */
+export function recommendedPaidServices(): MarketplaceServiceEntry[] {
+  return CIRCLE_MARKETPLACE_CATALOG.filter(shouldPayFor);
+}
+
+/** Services we deliberately do NOT pay for, with the free source to use instead. */
+export function freeCoveredServices(): Array<{ id: string; useFree: string }> {
+  return CIRCLE_MARKETPLACE_CATALOG.filter((e) => !shouldPayFor(e)).map((e) => ({
+    id: e.id,
+    useFree: e.freeAlternative as string,
+  }));
 }
 
 export function getMarketplaceEntry(id: string): MarketplaceServiceEntry | undefined {

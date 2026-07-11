@@ -12,6 +12,26 @@ DiversiFi already: (1) runs an x402 gateway, (2) consumes external x402 sources
 scale — a directory of x402-paid APIs. So consumption reuses the payment rail;
 the marketplace is just discovery.
 
+## FREE-FIRST PRINCIPLE (non-negotiable)
+
+**Never pay for what we can get free.** DiversiFi already has a deep free/keyed
+data stack — CoinGecko + CoinPaprika (crypto prices), Frankfurter + Alpha
+Vantage (FX), World Bank (economic), DefiLlama (yield), SoSoValue, plus our own
+governance/news feeds and Firecrawl monitors. Marketplace services that
+duplicate these are **not** resale candidates — we serve them from the free
+source and pass the saving to the user.
+
+Encoded in code: every catalog entry has a `freeAlternative` field.
+`shouldPayFor()` returns true **only** when it's `null`. Audit of the initial
+picks found **all four commodity services (FX, crypto price, CoinGecko proxy,
+news) are free-covered** — they stay in the catalog only so the "use free
+instead" decision is explicit and auditable. The genuinely payable set is small:
+
+| Pay + mark up (no free alternative) | Wholesale | Why |
+|---|---|---|
+| Parallel — web search + async deep-research | $0.010 | general web research isn't in our free stack |
+| Surf — prediction-market metrics | $0.0075 | prediction-market data not available free |
+
 ## The resale (markup) business model
 
 ```
