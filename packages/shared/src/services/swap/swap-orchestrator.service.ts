@@ -12,6 +12,7 @@ import {
     SwapCallbacks,
     SwapEstimate,
 } from './strategies/base-swap.strategy';
+import { GmxGmDepositStrategy } from './strategies/gmx-gm-deposit.strategy';
 import { MentoSwapStrategy } from './strategies/mento-swap.strategy';
 import { LiFiSwapStrategy } from './strategies/lifi-swap.strategy';
 import { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
@@ -44,6 +45,7 @@ export class SwapOrchestratorService {
         new HyperliquidPerpStrategy(),    // Hyperliquid commodity perps (GOLD, SILVER, OIL, COPPER)
         new OneInchSwapStrategy(),        // Multi-chain same-chain (best rates)
         new UniswapV3Strategy(),          // Direct Uniswap V3 (reliable fallback)
+        new GmxGmDepositStrategy(),       // GMX GM-pool deposits (gated: GMX_GM_DEPOSIT_ENABLED)
         new LiFiEarnStrategy(),           // LiFi Earn (vault deposits)
         new LiFiSwapStrategy(),           // LiFi same-chain (fallback)
         new LiFiBridgeStrategy(),         // Cross-chain bridging
