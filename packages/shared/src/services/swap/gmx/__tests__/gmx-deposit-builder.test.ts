@@ -47,11 +47,12 @@ describe('buildGmDepositMulticall', () => {
     expect(sendTokens.args.amount.toString()).toBe('100000000');
 
     const dep = calls[2].args.params;
-    expect(dep.market).toBe(MARKET);
-    expect(dep.receiver.toLowerCase()).toBe(RECEIVER.toLowerCase()); // ethers checksums on decode
-    expect(dep.initialShortToken).toBe(USDC);
+    expect(dep.addresses.market).toBe(MARKET);
+    expect(dep.addresses.receiver.toLowerCase()).toBe(RECEIVER.toLowerCase()); // ethers checksums on decode
+    expect(dep.addresses.initialShortToken).toBe(USDC);
     expect(dep.executionFee.toString()).toBe('1000000000000000');
     expect(dep.callbackGasLimit.toString()).toBe('200000');
+    expect(dep.dataList).toEqual([]); // current struct includes the reserved dataList
   });
 
   it('includes both token sides when both amounts are non-zero', () => {

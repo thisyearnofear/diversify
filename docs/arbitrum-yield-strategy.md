@@ -99,14 +99,16 @@ so GMX is a genuinely non-duplicative venue. Split into read (safe) and executio
     2. **Set an explicit `gasLimit`** — GMX's payable multicall reverts under
        `eth_estimateGas` even when a raw `eth_call` succeeds.
     3. Execution fee raised (0.001 → 0.01 ETH); still not the blocker.
-    - **OPEN:** the deposit still reverts with EMPTY data (`0x`) at ~190k gas
-      inside `createDeposit`. Leading hypothesis: this market's long token is WNT
-      (WETH) and the execution fee is sent as WNT, so GMX's deposit accounting
-      conflates the fee with a long-token deposit. **To close:** trace the tx via
-      a `debug_traceTransaction`-capable RPC (Tenderly/Alchemy) OR adopt the
-      official `@gmx-io/sdk` deposit encoding (handles the WNT/exec-fee edge
-      cases) — not more blind iteration. Do NOT enable mainnet until a green
-      testnet round-trip passes.
+    4. **ROOT CAUSE of the empty revert: stale `CreateDepositParams` struct.**
+       GMX now nests the addresses in a `CreateDepositParamsAddresses` sub-struct
+       and adds a reserved `dataList` (bytes32[]). The old flat struct mis-encodes
+       → the contract reverts with EMPTY data. Fixed the builder to the current
+       struct (from GMX's own `gmx-io/gmx-ai` liquidity reference).
+  - **✅ GATE PASSED (2026-07-11):** full round-trip validated on Arbitrum
+    Sepolia — deposited 5 USDC, keeper minted +6.327 GM tokens
+    (tx `0xf5d8f3fd8b48291a4936fc7d7b8fa02b0ee49f7064d9675146d8192bdab08c5b`).
+    The deposit builder is now proven. Mainnet `GmxGmDepositStrategy` can follow
+    (behind a config flag; verify mainnet addresses from the deploy repo).
   - **After validation:** wrap the builder in a `GmxGmDepositStrategy`
     (swap orchestrator) behind a mainnet config flag. Do NOT enable mainnet until
     the testnet round-trip passes. Full `@gmx-io/sdk` (15MB, server-only) can

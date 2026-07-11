@@ -21,11 +21,15 @@
 import { ethers } from 'ethers';
 
 // Minimal ExchangeRouter ABI for the deposit multicall.
+// NOTE: the current CreateDepositParams NESTS the addresses in a
+// CreateDepositParamsAddresses sub-struct and adds a `dataList` (bytes32[])
+// field. The older flat struct silently mis-encodes and the contract reverts
+// with EMPTY data — verified on Arbitrum Sepolia (2026-07-11).
 export const EXCHANGE_ROUTER_ABI = [
   'function multicall(bytes[] calldata data) external payable returns (bytes[] memory results)',
   'function sendWnt(address receiver, uint256 amount) external payable',
   'function sendTokens(address token, address receiver, uint256 amount) external payable',
-  'function createDeposit((address receiver,address callbackContract,address uiFeeReceiver,address market,address initialLongToken,address initialShortToken,address[] longTokenSwapPath,address[] shortTokenSwapPath,uint256 minMarketTokens,bool shouldUnwrapNativeToken,uint256 executionFee,uint256 callbackGasLimit) params) external payable returns (bytes32)',
+  'function createDeposit(((address receiver,address callbackContract,address uiFeeReceiver,address market,address initialLongToken,address initialShortToken,address[] longTokenSwapPath,address[] shortTokenSwapPath) addresses,uint256 minMarketTokens,bool shouldUnwrapNativeToken,uint256 executionFee,uint256 callbackGasLimit,bytes32[] dataList) params) external payable returns (bytes32)',
 ];
 
 export interface GmDepositInput {
@@ -81,20 +85,24 @@ export function buildGmDepositMulticall(input: GmDepositInput): BuiltTransaction
     calls.push(iface.encodeFunctionData('sendTokens', [input.initialShortToken, input.depositVault, input.shortAmount]));
   }
 
-  // 3. Create the deposit order (executed later by a keeper).
+  // 3. Create the deposit order (executed later by a keeper). Current struct:
+  // nested `addresses` + top-level minMarketTokens/flags/fee/gas + `dataList`.
   const params = {
-    receiver: input.receiver,
-    callbackContract: ethers.constants.AddressZero,
-    uiFeeReceiver: ethers.constants.AddressZero,
-    market: input.market,
-    initialLongToken: input.initialLongToken,
-    initialShortToken: input.initialShortToken,
-    longTokenSwapPath: [],
-    shortTokenSwapPath: [],
+    addresses: {
+      receiver: input.receiver,
+      callbackContract: ethers.constants.AddressZero,
+      uiFeeReceiver: ethers.constants.AddressZero,
+      market: input.market,
+      initialLongToken: input.initialLongToken,
+      initialShortToken: input.initialShortToken,
+      longTokenSwapPath: [],
+      shortTokenSwapPath: [],
+    },
     minMarketTokens: input.minMarketTokens,
     shouldUnwrapNativeToken: false,
     executionFee: input.executionFee,
     callbackGasLimit: input.callbackGasLimit ?? '200000',
+    dataList: [],
   };
   calls.push(iface.encodeFunctionData('createDeposit', [params]));
 
