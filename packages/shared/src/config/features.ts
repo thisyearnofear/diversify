@@ -15,8 +15,8 @@ export const AI_FEATURES = {
   /** Portfolio analysis and recommendations via Venice/Gemini */
   ANALYSIS: !!(process.env.VENICE_API_KEY || process.env.GEMINI_API_KEY),
 
-  /** Voice transcription via OpenAI Whisper (the only implemented STT path). */
-  VOICE_INPUT: !!process.env.OPENAI_API_KEY,
+  /** Voice transcription via OpenAI Whisper or ElevenLabs Scribe. */
+  VOICE_INPUT: !!(process.env.OPENAI_API_KEY || process.env.ELEVENLABS_API_KEY),
 
   /** Text-to-speech via ElevenLabs (the only implemented TTS path — Venice's
    *  provider throws "not implemented", so gating on it showed a button that

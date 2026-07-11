@@ -22,8 +22,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return res.status(503).json({ error: 'Voice input not configured (OPENAI_API_KEY)' });
+  if (!process.env.OPENAI_API_KEY && !process.env.ELEVENLABS_API_KEY) {
+    return res.status(503).json({ error: 'Voice input not configured (OPENAI_API_KEY or ELEVENLABS_API_KEY)' });
   }
 
   let tempPath: string | null = null;

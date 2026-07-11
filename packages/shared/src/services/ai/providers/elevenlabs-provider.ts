@@ -81,12 +81,38 @@ export class ElevenLabsProvider extends BaseAIProvider {
     };
   }
 
-  // ElevenLabs speech-to-text is not wired here; transcription routes through
-  // the OpenAI (Whisper) provider. Throw so the fallback chain skips this one.
+  // ElevenLabs Scribe speech-to-text — lets voice input run on ElevenLabs
+  // instead of requiring OpenAI Whisper credits.
   async transcribeAudio(
-    _filePath: string
+    filePath: string
   ): Promise<TranscriptionResult> {
-    throw new Error('ElevenLabs provider does not implement transcription; use OpenAI/Whisper');
+    if (!this.isAvailable()) {
+      throw new Error('ElevenLabs provider not available for transcription');
+    }
+
+    const fs = require('fs') as typeof import('fs');
+    const audio = fs.readFileSync(filePath);
+    const form = new FormData();
+    form.append('file', new Blob([audio]), 'audio.webm');
+    form.append('model_id', 'scribe_v1');
+
+    const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
+      method: 'POST',
+      headers: { 'xi-api-key': this.apiKey! },
+      body: form,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => '');
+      throw new Error(`ElevenLabs STT failed: ${response.status} ${detail.slice(0, 200)}`);
+    }
+
+    const result = (await response.json()) as { text?: string };
+    return {
+      data: result.text ?? '',
+      text: result.text ?? '',
+      provider: 'elevenlabs',
+    };
   }
 
   getName(): string {
