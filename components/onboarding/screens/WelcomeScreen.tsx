@@ -4,6 +4,7 @@ import { OnboardingScreenProps } from './types';
 import { NETWORKS } from '../../../config';
 import { useWalletContext } from '../../wallet/WalletProvider';
 import { useCurrencyRisk } from '../../../hooks/use-currency-risk';
+import { regionForCountry } from '../../../hooks/use-user-region';
 import { useStrategy } from '../../../context/app/StrategyContext';
 import { useTilt } from '../../../hooks/use-tilt';
 import { AnimatedNumber } from '../../shared/AnimatedNumber';
@@ -337,11 +338,15 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       setFinancialStrategy(STRATEGY_ID[id]);
     };
 
-    const handleFinish = (region?: string | null) => {
-      if (region && typeof window !== 'undefined') {
-        localStorage.setItem('user-region', region);
+    const handleFinish = (country?: string | null) => {
+      if (country && typeof window !== 'undefined') {
+        // Callers pass an ISO2 country code; use-user-region persists
+        // geographic regions, so map before storing or the saved value
+        // fails its REGIONS guard and detection falls back to locale.
+        const region = regionForCountry(country);
+        if (region) localStorage.setItem('user-region', region);
       }
-      onComplete?.(countryCode ?? region ?? null);
+      onComplete?.(countryCode ?? country ?? null);
     };
 
     const filteredCountries = useMemo(() => {
@@ -463,10 +468,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       </div>
                     ) : riskData ? (
                       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-5 mb-4">
-                        <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-2">Detected</p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-2">Your country</p>
                         <div className="text-4xl mb-2">{riskData.flag}</div>
                         <p className="text-lg font-black text-gray-900 dark:text-white">{riskData.countryName}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">{riskData.code} — {currencyCode}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Currency: {riskData.code}</p>
                         <button
                           onClick={() => setShowCountryPicker(!showCountryPicker)}
                           className="mt-2 text-xs text-blue-500 hover:text-blue-600 font-medium"
@@ -687,6 +692,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       </p>
                       <p className="text-[10px] text-red-400 dark:text-red-500 mt-1">
                         That&apos;s ~${(xauPreserved / (365 * 5)).toFixed(1)}/day — gone. Every day you wait.
+                      </p>
+                      <p className="text-[10px] text-red-400 dark:text-red-500 mt-1.5">
+                        Buy stock in dollars and sell in {currencyCode}? That same gap comes out of
+                        your margin between one restock and the next.
                       </p>
                     </motion.div>
                   </motion.div>

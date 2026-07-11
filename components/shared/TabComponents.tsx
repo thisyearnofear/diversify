@@ -1014,8 +1014,10 @@ export const ConnectWalletPrompt = ({
               Connect Wallet to Start Protecting
             </h3>
             <p className="text-xs text-blue-700 dark:text-blue-300 font-medium leading-relaxed">
-              {isBeginner 
-                ? `Your money in ${userRegion} is losing ${(homeInflation).toFixed(1)}% value per year. Let's fix that!`
+              {isBeginner
+                ? userRegion && inflationData?.[userRegion]
+                  ? `Your money in ${userRegion} is losing ${homeInflation.toFixed(1)}% value per year. Let's fix that!`
+                  : `Money sitting in cash quietly loses value to inflation every year. Let's fix that!`
                 : message
               }
             </p>

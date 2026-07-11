@@ -151,11 +151,13 @@ export default function StrategyModal({
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                         className="fixed inset-4 md:inset-0 md:m-auto md:w-full md:max-w-lg md:h-fit md:max-h-[90vh] z-50 backdrop-blur-xl rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10 overflow-y-auto overscroll-contain custom-scrollbar flex flex-col bg-white/95 dark:bg-slate-900/90"
                         style={{
-                            // Theme-aware default surface comes from the bg classes;
-                            // inline background only when celebrating a chosen philosophy.
+                            // Theme-aware surface color comes from the bg classes;
+                            // celebrate a chosen philosophy with a translucent tint
+                            // via backgroundImage only, so card content styled for
+                            // the light/dark surface stays readable underneath.
                             ...(archetype
                                 ? {
-                                      background: `linear-gradient(135deg, ${archetype.surface.start}cc 0%, ${archetype.surface.mid}cc 50%, ${archetype.surface.end}cc 100%)`,
+                                      backgroundImage: `linear-gradient(135deg, ${archetype.surface.start}33 0%, ${archetype.surface.mid}33 50%, ${archetype.surface.end}33 100%)`,
                                   }
                                 : {}),
                             transition: 'background 600ms cubic-bezier(0.23, 1, 0.32, 1)',

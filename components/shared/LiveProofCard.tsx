@@ -200,8 +200,8 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                     Contract address
                 </summary>
                 <div className="mt-2 flex items-center justify-between gap-2">
-                    <div className="font-mono text-emerald-700 dark:text-emerald-300">
-                        {shortAddress(contractExplorer ?? stats?.contractAddress)}
+                    <div className="font-mono text-emerald-700 dark:text-emerald-300 break-all">
+                        {shortAddress(stats?.contractAddress ?? contractExplorer)}
                     </div>
                     {contractExplorer && (
                         <a

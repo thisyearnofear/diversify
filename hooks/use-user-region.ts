@@ -52,6 +52,15 @@ const COUNTRY_TO_REGION: Record<string, Region> = {
   'HK': 'Asia', 'TW': 'Asia', 'AE': 'Asia', 'SA': 'Asia', 'IL': 'Asia',
 };
 
+/**
+ * Map an ISO2 country code to its geographic region. Accepts an existing
+ * region name unchanged so callers can pass either form safely.
+ */
+export function regionForCountry(countryOrRegion: string): Region | null {
+  if (REGIONS.includes(countryOrRegion as Region)) return countryOrRegion as Region;
+  return COUNTRY_TO_REGION[countryOrRegion.toUpperCase()] ?? null;
+}
+
 // Language code to region mapping
 const LANGUAGE_TO_REGION: Record<string, Region> = {
   // English variants
