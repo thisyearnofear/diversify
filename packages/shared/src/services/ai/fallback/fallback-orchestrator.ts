@@ -25,11 +25,17 @@ export class FallbackOrchestrator {
    */
   async executeWithFallback<T>(
     operation: (provider: BaseAIProvider) => Promise<T>,
-    operationName: string
+    operationName: string,
+    orderedProviders?: BaseAIProvider[]
   ): Promise<T> {
-    const errors: Error[] = [];
+    // Honor the caller's computed preference order; fall back to registration
+    // order only when no order was supplied (or it filtered to empty).
+    const providers = orderedProviders && orderedProviders.length > 0
+      ? orderedProviders
+      : this.providers;
+    const errors: Array<{ name: string; message: string }> = [];
 
-    for (const provider of this.providers) {
+    for (const provider of providers) {
       if (!provider.isAvailable()) {
         continue;
       }
@@ -37,19 +43,19 @@ export class FallbackOrchestrator {
       try {
         // Initialize provider if needed
         await provider.initialize();
-        
+
         // Execute the operation
         const result = await operation(provider);
         return result;
       } catch (error: any) {
-        errors.push(error);
-        console.warn(`[Fallback Orchestrator] ${operationName} failed with ${provider.getName()}:`, error.message);
+        errors.push({ name: provider.getName(), message: error?.message ?? String(error) });
+        console.warn(`[Fallback Orchestrator] ${operationName} failed with ${provider.getName()}:`, error?.message);
         continue;
       }
     }
 
     // If we got here, all providers failed
-    const errorMessages = errors.map((err, i) => `${this.providers[i]?.getName() || 'unknown'}: ${err.message}`).join(' | ');
+    const errorMessages = errors.map((e) => `${e.name}: ${e.message}`).join(' | ');
     throw new Error(`All AI providers failed for ${operationName}. Details: ${errorMessages}`);
   }
 
@@ -62,10 +68,11 @@ export class FallbackOrchestrator {
   ): Promise<ChatCompletionResult> {
     // Determine provider order based on preference and JSON requirement
     const orderedProviders = this.getProviderOrderForChat(options, preferredProvider);
-    
+
     return await this.executeWithFallback(
       (provider) => provider.generateChatCompletion(options),
-      'chat completion'
+      'chat completion',
+      orderedProviders
     );
   }
 
@@ -76,12 +83,13 @@ export class FallbackOrchestrator {
     options: TTSOptions,
     preferredProvider?: "venice" | "elevenlabs" | "auto"
   ): Promise<TTSResult> {
-    // Determine provider order for TTS
-    const orderedProviders = this.getProviderOrderForSpeech(options, preferredProvider);
-    
+    // Determine provider order for TTS (default to auto when unspecified).
+    const orderedProviders = this.getProviderOrderForSpeech(options, preferredProvider ?? 'auto');
+
     return await this.executeWithFallback(
       (provider) => provider.generateSpeech(options),
-      'speech generation'
+      'speech generation',
+      orderedProviders
     );
   }
 
@@ -92,13 +100,13 @@ export class FallbackOrchestrator {
     filePath: string,
     preferredProvider?: "openai" | "elevenlabs" | "auto"
   ): Promise<TranscriptionResult> {
-    // Determine provider order for transcription
-    // For transcription, we don't need transcription-specific ordering logic
-    // since it's a simple file-based operation
-    
+    // Determine provider order for transcription (default to auto → OpenAI first).
+    const orderedProviders = this.getProviderOrderForTranscription(preferredProvider ?? 'auto');
+
     return await this.executeWithFallback(
       (provider) => provider.transcribeAudio(filePath),
-      'transcription'
+      'transcription',
+      orderedProviders
     );
   }
 

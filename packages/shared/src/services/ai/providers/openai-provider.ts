@@ -31,7 +31,11 @@ export class OpenAIProvider extends BaseAIProvider {
   }
 
   isAvailable(): boolean {
-    return !!this.apiKey && !!this.client;
+    // Availability reflects "can work once initialized" — the client is
+    // created lazily in initialize(), which the orchestrator calls before
+    // use. Requiring `client` here would filter the provider out before it
+    // ever gets initialized.
+    return !!this.apiKey;
   }
 
   // OpenAI doesn't currently support chat completion in this implementation
