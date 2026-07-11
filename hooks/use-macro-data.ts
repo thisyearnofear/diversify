@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
+// Deep leaf import — NOT the barrel. Reached in first-load via
+// use-multichain-balances → use-app-shell; the barrel would pull
+// @celo/identity (web3, ~2.5MB) + Circle wallets in.
 import {
   macroService,
   type MacroIndicator,
-} from "@diversifi/shared";
+} from "@diversifi/shared/src/utils/macro-economic-service";
 
 export function useMacroData(countries?: string[]) {
   const [macroData, setMacroData] = useState<Record<string, MacroIndicator>>(

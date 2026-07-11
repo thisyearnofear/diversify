@@ -8,7 +8,8 @@
 import { useMemo } from 'react';
 import { useStrategy } from '@/context/app/StrategyContext';
 import type { FinancialStrategy as SharedFinancialStrategy } from '@diversifi/shared';
-import { StrategyService } from '@diversifi/shared';
+// Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
+import { StrategyService } from '@diversifi/shared/src/services/strategy/strategy.service';
 import { loadPhilosophy } from './use-protection-profile';
 
 /** Single source of truth — re-exported from @diversifi/shared */

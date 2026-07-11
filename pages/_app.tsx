@@ -6,11 +6,18 @@ import dynamic from "next/dynamic";
 
 import { useAppInit } from "../hooks/use-app-init";
 import ProviderTree from "../components/app/ProviderTree";
-import { ProactiveAgentRunner } from "../components/agent/ProactiveAgentRunner";
 
 const AIChat = dynamic(() => import("../components/agent/AIChat"), {
   ssr: false,
 });
+
+// Headless effect runner (renders null). Loaded dynamically so its agent
+// chain (use-advisor → use-agent-chat → IntentDiscovery/AgentAction/ledger
+// → ethers + AI providers) stays out of the first-load bundle.
+const ProactiveAgentRunner = dynamic(
+  () => import("../components/agent/ProactiveAgentRunner").then((m) => m.ProactiveAgentRunner),
+  { ssr: false },
+);
 
 const headMeta = (
   <Head>

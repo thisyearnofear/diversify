@@ -5,7 +5,13 @@ import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useAgentConfig } from "./use-agent-config";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useAgentChatContext } from "../context/app/AgentChatContext";
-import { IntentDiscoveryService, AgentActionService, recordRecommendation, type AppIntent, type ResponseFormat } from "@diversifi/shared";
+// Deep leaf imports — NOT the barrel. Reached in first-load via
+// use-app-shell → use-advisor; the barrel would pull the whole AI/ledger/
+// ethers/web3 stack in. IntentDiscovery + AgentAction are light and used
+// synchronously; recordRecommendation pulls ethers and is dynamically
+// imported at its async call site below.
+import { IntentDiscoveryService, type AppIntent, type ResponseFormat } from "@diversifi/shared/src/services/ai/intent-discovery.service";
+import { AgentActionService } from "@diversifi/shared/src/services/ai/agent-action.service";
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
@@ -523,7 +529,9 @@ export function useAgentChat({
           ) {
             const messageId = assistantMessage.id;
             const anchorTimestamp = messageTimestamp;
-            void recordRecommendation({
+            // Dynamic import keeps ethers (ledger dep) out of first-load.
+            void import("@diversifi/shared/src/services/recommendation-ledger.service")
+              .then(({ recordRecommendation }) => recordRecommendation({
               user: address,
               action: String(result.action?.type ?? result.type ?? "ADVICE"),
               targetToken: result.targetToken ?? "",
@@ -568,7 +576,7 @@ export function useAgentChat({
                     },
                   },
                 );
-              });
+              }));
           }
 
           if (x402Receipt) {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { type GeographicRegion } from '../config';
-import { exchangeRateService } from '@diversifi/shared';
+// Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
+import { exchangeRateService } from '@diversifi/shared/src/utils/improved-data-services';
 
 interface CurrencyPerformance {
   symbol: string;

@@ -15,7 +15,10 @@ import { useNavigation } from '../context/app/NavigationContext';
 import { useDemoMode } from '../context/app/DemoModeContext';
 import { useAdvisor } from './use-advisor';
 import { useToast } from '../components/ui/Toast';
-import { IntentDiscoveryService, AgentActionService } from '@diversifi/shared';
+// Deep leaf imports — NOT the barrel — keeps the AI/ledger/ethers/web3 stack
+// out of first-load (reached via use-app-shell).
+import { IntentDiscoveryService } from '@diversifi/shared/src/services/ai/intent-discovery.service';
+import { AgentActionService } from '@diversifi/shared/src/services/ai/agent-action.service';
 
 interface VoiceIntentOptions {
   /** Called when the user asks for wallet/connection help */

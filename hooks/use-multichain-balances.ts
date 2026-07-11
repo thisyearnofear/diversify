@@ -18,11 +18,14 @@ import {
   type AssetRegion,
   REGION_COLORS,
 } from "../config";
-import { executeMulticall, type ContractCall } from "@diversifi/shared";
+// Deep leaf import for analyzePortfolio (pure math). executeMulticall pulls
+// ethers, so it's dynamically imported inside the async fetch below to keep
+// ethers out of first-load. Types are erased, safe to import statically.
+import type { ContractCall } from "@diversifi/shared/src/utils/multicall";
 import {
   analyzePortfolio,
   type PortfolioAnalysis,
-} from "@diversifi/shared";
+} from "@diversifi/shared/src/utils/portfolio-analysis";
 import { useInflationData } from "./use-inflation-data";
 import { useMacroData } from "./use-macro-data";
 
@@ -226,6 +229,8 @@ async function fetchChainBalances(
   }
 
   try {
+    // Dynamic import keeps ethers (multicall's dep) out of first-load.
+    const { executeMulticall } = await import("@diversifi/shared/src/utils/multicall");
     const results = await executeMulticall(provider, calls, chain.chainId);
 
     const balances: TokenBalance[] = [];

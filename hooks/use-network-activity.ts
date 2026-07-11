@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCurrencyPerformance } from './use-currency-performance';
-import { marketMomentumService, type MarketMomentum } from '@diversifi/shared';
+// Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
+import { marketMomentumService, type MarketMomentum } from '@diversifi/shared/src/utils/market-momentum-service';
 
 /**
  * useNetworkActivity - Adaptive Behavioral & Social Proof Hook
