@@ -14,6 +14,8 @@
  *   forget(userId)         — clear a user's memory graph
  */
 
+import { fetchWithTimeout } from '../utils/promise-utils';
+
 const COGNEE_API_URL = process.env.COGNEE_API_URL || 'https://api.cognee.ai';
 const COGNEE_API_KEY = process.env.COGNEE_API_KEY || '';
 const COGNEE_TENANT_ID = process.env.COGNEE_TENANT_ID || '';
@@ -136,11 +138,11 @@ class CogneeMemoryServiceImpl {
         top_k: options.limit || 5,
       };
 
-      const response = await fetch(`${this.apiUrl}/v1/search`, {
+      const response = await fetchWithTimeout(`${this.apiUrl}/v1/search`, {
         method: 'POST',
         headers: this.authHeaders(),
         body: JSON.stringify(payload),
-      });
+      }, 2500);
 
       if (!response.ok) {
         console.warn(`[Cognee] recall failed: ${response.status}`);

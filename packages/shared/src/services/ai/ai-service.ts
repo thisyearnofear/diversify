@@ -271,12 +271,17 @@ class AIServiceImpl {
       .map(p => p.getName());
   }
 
-  /** Finalize an already-generated streamed result through the 0G policy. */
+  /** Finalize an already-generated streamed result through the 0G + ledger policy. */
   finalizeStreamedChat(
     options: ChatCompletionOptions,
     result: ChatCompletionResult,
   ): ChatCompletionResult {
-    return this.zeroGAnchoringDecorator.finalizeChatCompletion(options, result);
+    const anchored = this.zeroGAnchoringDecorator.finalizeChatCompletion(options, result);
+    // Fire-and-forget the ledger record — the 0G anchor is the critical
+    // path; the on-chain ledger is a side-effect that must not block the
+    // stream completion event.
+    void this.recommendationLedgerDecorator.decorateChatCompletion(options, async () => anchored);
+    return anchored;
   }
 }
 

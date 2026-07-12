@@ -23,6 +23,17 @@ import type {
   AIMessage,
 } from "./agent-types";
 
+/**
+ * Detect whether the user's input is a question (not a command).
+ * Used to prevent the regex fast-path from hijacking short questions
+ * like "how to earn?" or "what is PAXG?" with canned responses.
+ */
+function contentIncludesQuestion(text: string): boolean {
+  if (text.includes('?')) return true;
+  const firstWord = text.trim().split(/\s+/)[0]?.toLowerCase() || '';
+  return ['what', 'how', 'why', 'should', 'when', 'where', 'who', 'which', 'can', 'could', 'would', 'is', 'are', 'do', 'does'].includes(firstWord);
+}
+
 type ChatStoreState = {
   isChatting: boolean;
   thinkingStep: string;
@@ -221,13 +232,14 @@ export function useAgentChat({
       // Never fast-path ONBOARDING questions or QUERY — those go to the LLM so
       // the user gets a real answer instead of canned marketing copy.
       const isUnambiguousCommand =
+        !contentIncludesQuestion(effectiveContent) && (
         intent.type === 'NAVIGATE' ||
         intent.type === 'SWAP_SHORTCUT' ||
         intent.type === 'SEND_TO_PHONE' ||
         intent.type === 'YIELD_EARN' ||
         (intent.type === 'GOODDOLLAR' && (intent as any).topic === 'claim') ||
         (intent.type === 'WDK_ACTION' && (intent as any).topic === 'switch') ||
-        (intent.type === 'ONBOARDING' && (intent as any).topic === 'demo');
+        (intent.type === 'ONBOARDING' && (intent as any).topic === 'demo'));
       const effectiveIntent: AppIntent = allowFastPath && isUnambiguousCommand
         ? intent
         : { type: "QUERY", context: "general" };

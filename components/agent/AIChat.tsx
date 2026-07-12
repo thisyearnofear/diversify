@@ -450,9 +450,12 @@ export default function AIChat() {
     const onResize = () => {
       // When the keyboard opens, visualViewport.height shrinks. Use it to
       // constrain the drawer so the input stays above the keyboard.
+      // Clamp to 92% of the layout viewport so the drawer can't cover
+      // the entire screen when the keyboard is closed.
+      const maxH = Math.min(vv.height, window.innerHeight * 0.92);
       document.documentElement.style.setProperty(
         '--chat-drawer-max-h',
-        `${vv.height}px`,
+        `${maxH}px`,
       );
     };
 
@@ -542,27 +545,28 @@ export default function AIChat() {
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="relative bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
         >
-          {/* Drag Handle — touch-draggable to dismiss */}
+          {/* Drag Handle — framer-native drag-to-dismiss */}
           <div
             className="w-full flex justify-center py-3 cursor-grab active:cursor-grabbing"
             style={{ touchAction: 'none' }}
-            onTouchStart={(e) => {
-              dragStartYRef.current = e.touches[0].clientY;
+            draggable
+            onDragStart={(e) => e.preventDefault()}
+            onPointerDown={(e) => {
+              dragStartYRef.current = e.clientY;
             }}
-            onTouchMove={(e) => {
+            onPointerMove={(e) => {
               if (dragStartYRef.current === null) return;
-              const deltaY = e.touches[0].clientY - dragStartYRef.current;
+              const deltaY = e.clientY - dragStartYRef.current;
               if (deltaY > 0) {
-                e.currentTarget.parentElement?.setAttribute(
-                  'style',
-                  `transform: translateY(${deltaY}px); transition: none;`,
-                );
+                const parent = e.currentTarget.parentElement;
+                if (parent) parent.style.transform = `translateY(${deltaY}px)`;
               }
             }}
-            onTouchEnd={(e) => {
+            onPointerUp={(e) => {
               if (dragStartYRef.current === null) return;
-              const deltaY = e.changedTouches[0].clientY - dragStartYRef.current;
-              e.currentTarget.parentElement?.removeAttribute('style');
+              const deltaY = e.clientY - dragStartYRef.current;
+              const parent = e.currentTarget.parentElement;
+              if (parent) parent.style.transform = '';
               dragStartYRef.current = null;
               if (deltaY > 80) {
                 setDrawerOpen(false);
@@ -909,7 +913,15 @@ export default function AIChat() {
                   </motion.div>
                 ))}
 
-                {isChatting && (
+                {/* Typing indicator — only shown before the first token arrives.
+                    Once the streaming placeholder has content, the message bubble
+                    itself is the visible feedback, so we hide the dots to avoid
+                    showing an empty bubble + dots side by side. */}
+                {isChatting && (() => {
+                  const lastMsg = messages[messages.length - 1];
+                  const hasStreamingContent = lastMsg?.role === 'assistant' && lastMsg?.content && lastMsg.content.length > 0;
+                  return !hasStreamingContent;
+                })() && (
                   <div className="flex justify-start">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700 shadow-sm max-w-[90%]">
                       <TrustFlow isActive step={thinkingStep} />
