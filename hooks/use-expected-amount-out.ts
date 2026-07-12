@@ -251,11 +251,19 @@ export function useExpectedAmountOut({
       // Create a read-only provider for Celo. The 8s timeout protects the
       // output preview from hanging on a flaky RPC: the inner Promise.race
       // timeouts above already bound the getAmountOut call, but the
-      // provider-level timeout is the last line of defence.
-      const provider = new ethers.providers.JsonRpcProvider({
-        url: networkConfig.rpcUrl,
-        timeout: 8000,
-      });
+      // provider-level timeout is the last line of defence. Passing
+      // `network` as the second arg skips the default `eth_chainId`
+      // auto-detect (~200ms) since we know the chain.
+      const provider = new ethers.providers.JsonRpcProvider(
+        {
+          url: networkConfig.rpcUrl,
+          timeout: 8000,
+        },
+        {
+          chainId: effectiveChainId,
+          name: ChainDetectionService.isArbitrum(effectiveChainId) ? "arbitrum" : "celo",
+        },
+      );
 
       // Convert amount to wei
       const amountInWei = ethers.utils.parseUnits(amount, 18);

@@ -4,6 +4,15 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 // Deep leaf imports — NOT the barrel — keeps the portfolio-analysis + strategy stacks out of first-load.
 import { analyzePortfolio, type PortfolioAnalysis } from "@diversifi/shared/src/utils/portfolio-analysis";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
+import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
+
+// Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
+// full convention). 30s preserves the original AbortController budget for the
+// rotating thinkingStep messages so they don't give up before the LLM
+// finishes; 12s covers the multi-source synthesis for autonomous mode.
+const ADVISOR_ANALYSIS_TIMEOUT_MS = 30000;
+const DEEP_ANALYZE_TIMEOUT_MS = 12000;
+const GUARDIAN_STATE_TIMEOUT_MS = 6000;
 import { useToast } from "../components/ui/Toast";
 import { getPersistedStrategy, getStrategyPrompt } from "./useFinancialStrategies";
 import { agentEventBus } from "./agent-event-bus";
@@ -163,29 +172,31 @@ export function useAgentAnalysis({
           }
         }, 800);
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-        const response = await fetch(`${apiBase}/api/agent/advisor`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
-          body: JSON.stringify({
-            mode: "analysis",
-            portfolio,
-            inflationData,
-            macroData,
-            networkActivity,
-            config: {
-              userGoal: analysisGoal || userGoal || config.goal,
-              riskTolerance: config.riskTolerance,
-              timeHorizon: config.timeHorizon || '3 months',
-            },
-            userRegion: userRegion,
-            strategyPrompt: strategyPrompt || getStrategyPrompt(),
-          }),
-        });
-        clearTimeout(timeoutId);
+        // Long-running synthesis (World Bank / IMF / DefiLlama) — keep the
+        // original 30s budget so the rotating thinkingStep messages don't
+        // give up before the LLM finishes.
+        const response = await fetchWithTimeout(
+          `${apiBase}/api/agent/advisor`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode: "analysis",
+              portfolio,
+              inflationData,
+              macroData,
+              networkActivity,
+              config: {
+                userGoal: analysisGoal || userGoal || config.goal,
+                riskTolerance: config.riskTolerance,
+                timeHorizon: config.timeHorizon || '3 months',
+              },
+              userRegion: userRegion,
+              strategyPrompt: strategyPrompt || getStrategyPrompt(),
+            }),
+          },
+          ADVISOR_ANALYSIS_TIMEOUT_MS,
+        );
 
         if (progressInterval) {
           clearInterval(progressInterval);
@@ -208,25 +219,32 @@ export function useAgentAnalysis({
             timestamp: Date.now(),
           });
           if (address && result.advice) {
-            fetch(`${apiBase}/api/vault/guardian-state`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                userAddress: address,
-                latestRecommendation: {
-                  capturedAt: new Date().toISOString(),
-                  source: "advisor-analysis",
-                  action: result.advice.action,
-                  targetToken: result.advice.targetToken || result.advice.token,
-                  oneLiner: result.advice.oneLiner,
-                  reasoning: result.advice.reasoning,
-                  expectedSavings: result.advice.expectedSavings,
-                  confidence: result.advice.confidence,
-                  riskLevel: result.advice.riskLevel,
-                  researchEvidence: result.advice.researchEvidence,
-                },
-              }),
-            }).catch(() => {});
+            // Best-effort write of the analysis to guardian-state — 6s
+            // budget is plenty for a same-origin POST and a hang here
+            // shouldn't block the user from seeing the analysis result.
+            fetchWithTimeout(
+              `${apiBase}/api/vault/guardian-state`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userAddress: address,
+                  latestRecommendation: {
+                    capturedAt: new Date().toISOString(),
+                    source: "advisor-analysis",
+                    action: result.advice.action,
+                    targetToken: result.advice.targetToken || result.advice.token,
+                    oneLiner: result.advice.oneLiner,
+                    reasoning: result.advice.reasoning,
+                    expectedSavings: result.advice.expectedSavings,
+                    confidence: result.advice.confidence,
+                    riskLevel: result.advice.riskLevel,
+                    researchEvidence: result.advice.researchEvidence,
+                  },
+                }),
+              },
+              GUARDIAN_STATE_TIMEOUT_MS,
+            ).catch(() => {});
           }
           setTimeout(() => {
             updateState({
@@ -398,23 +416,29 @@ export function useAgentAnalysis({
             // Ignore parse errors securely
         }
 
-        const response = await fetch(`${apiBase}/api/agent/deep-analyze`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            portfolio,
-            inflationData,
-            config: {
-              userGoal: config.goal,
-              riskTolerance: config.riskTolerance,
-              timeHorizon: config.timeHorizon || '3 months',
-              zapier: userZapierPrefs // Phase 5D: Inject user-driven Zapier config map
-            },
-            useAutonomousMode: true,
-            userId: user?.id, // Pass authenticated user ID for Guardian Wallet flow
-            signedPermission: signedPermission || undefined, // Phase 2A: Thread session permission
-          }),
-        });
+        // Autonomous deep-analyze pulls multiple macro sources + the LLM
+        // — 12s is the same budget the regular advisor got pre-fetchWithTimeout.
+        const response = await fetchWithTimeout(
+          `${apiBase}/api/agent/deep-analyze`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              portfolio,
+              inflationData,
+              config: {
+                userGoal: config.goal,
+                riskTolerance: config.riskTolerance,
+                timeHorizon: config.timeHorizon || '3 months',
+                zapier: userZapierPrefs // Phase 5D: Inject user-driven Zapier config map
+              },
+              useAutonomousMode: true,
+              userId: user?.id, // Pass authenticated user ID for Guardian Wallet flow
+              signedPermission: signedPermission || undefined, // Phase 2A: Thread session permission
+            }),
+          },
+          DEEP_ANALYZE_TIMEOUT_MS,
+        );
 
         if (response.ok) {
           const result = await response.json();

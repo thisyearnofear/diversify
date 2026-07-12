@@ -4,6 +4,7 @@ import { useStreakRewards } from './use-streak-rewards';
 import { useAgentConfig } from './use-agent-config';
 import { useAdvisor } from './use-advisor';
 import { useWalletContext } from '../components/wallet/WalletProvider';
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 
 type YieldOpportunity = {
   protocol: string;
@@ -19,6 +20,11 @@ type YieldOpportunity = {
 const EXECUTABLE_YIELD_TOKENS = new Set(['USDY', 'PAXG', 'SYRUPUSDC', 'CUSD', 'CEUR', 'USDC', 'USDT']);
 /** Must match the server-side cooldown in `pages/api/vault/guardian-state.ts`. */
 const YIELD_ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000;
+
+// Proactive monitoring loop runs every 5 min — budget the underlying fetches
+// so a hung upstream doesn't back up the interval or hold a stale signal.
+const MONITORING_FETCH_TIMEOUT_MS = 8000;  // /api/agent/intelligence, /api/agent/yield-monitor
+const GUARDIAN_STATE_FETCH_TIMEOUT_MS = 6000;  // /api/vault/guardian-state GET/POST
 
 function getExecutableTargetToken(symbol: string): string | null {
   const normalized = symbol.trim().toUpperCase();
@@ -62,7 +68,11 @@ function useAlertCooldown(userAddress: string | null | undefined): {
         }
 
         let cancelled = false;
-        fetch(`${API_BASE}/api/vault/guardian-state?userAddress=${encodeURIComponent(userAddress)}`)
+        fetchWithTimeout(
+            `${API_BASE}/api/vault/guardian-state?userAddress=${encodeURIComponent(userAddress)}`,
+            {},
+            GUARDIAN_STATE_FETCH_TIMEOUT_MS,
+        )
             .then((res) => res.ok ? res.json() : null)
             .then((data) => {
                 if (cancelled || !data?.state?.alertCooldowns) return;
@@ -92,14 +102,18 @@ function useAlertCooldown(userAddress: string | null | undefined): {
             if (!userAddress) return;
             const firedAt = Date.now();
             setCooldowns((prev) => ({ ...prev, [alertId]: firedAt }));
-            fetch(`${API_BASE}/api/vault/guardian-state`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userAddress,
-                    recordAlert: { alertId, firedAt },
-                }),
-            }).catch(() => {
+            fetchWithTimeout(
+                `${API_BASE}/api/vault/guardian-state`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userAddress,
+                        recordAlert: { alertId, firedAt },
+                    }),
+                },
+                GUARDIAN_STATE_FETCH_TIMEOUT_MS,
+            ).catch(() => {
                 // Best-effort only.
             });
         },
@@ -184,7 +198,11 @@ export function useProactiveAgent() {
         // 1. Market Volatility Check — routed through /api/agent/intelligence
         // (prevents direct external API calls from the browser, which would
         //  expose CORS keys and fire once per open tab independently).
-        const intelligenceRes = await fetch(`${API_BASE}/api/agent/intelligence?horizon=1h`);
+        const intelligenceRes = await fetchWithTimeout(
+          `${API_BASE}/api/agent/intelligence?horizon=1h`,
+          {},
+          MONITORING_FETCH_TIMEOUT_MS,
+        );
         if (!intelligenceRes.ok) return;
         const intelligenceData = await intelligenceRes.json();
         const pulse = intelligenceData.pulse;
@@ -214,7 +232,11 @@ export function useProactiveAgent() {
         // 2. DeFi Yield Spike Check (real DeFiLlama data via yield-monitor endpoint)
         if (!yieldAlerted.current) {
           try {
-            const yieldRes = await fetch(`${API_BASE}/api/agent/yield-monitor`);
+            const yieldRes = await fetchWithTimeout(
+              `${API_BASE}/api/agent/yield-monitor`,
+              {},
+              MONITORING_FETCH_TIMEOUT_MS,
+            );
             if (yieldRes.ok) {
               const yieldData = await yieldRes.json();
               if (yieldData._stale) {
@@ -249,29 +271,33 @@ export function useProactiveAgent() {
                   : `$${(best.tvl / 1e3).toFixed(0)}k`;
 
                 if (targetToken && address) {
-                  fetch(`${API_BASE}/api/vault/guardian-state`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      userAddress: address,
-                      latestRecommendation: {
-                        capturedAt: new Date().toISOString(),
-                        source: 'proactive-yield',
-                        action: 'REBALANCE',
-                        targetToken,
-                        oneLiner: `Review moving idle stablecoins toward ${targetToken} yield.`,
-                        reasoning: `${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} with TVL ${formattedTvl}.`,
-                        confidence: best.tvl >= 1_000_000 ? 0.72 : 0.55,
-                        riskLevel: best.tvl >= 1_000_000 ? 'MEDIUM' : 'HIGH',
-                        protocol: best.protocol,
-                        chain: best.chain,
-                        marketSymbol: best.symbol,
-                        apy: best.apy,
-                        tvl: best.tvl,
-                        expectedSavings: Math.max(25, Math.round(best.apy)),
-                      },
-                    }),
-                  }).catch(() => {});
+                  fetchWithTimeout(
+                    `${API_BASE}/api/vault/guardian-state`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        userAddress: address,
+                        latestRecommendation: {
+                          capturedAt: new Date().toISOString(),
+                          source: 'proactive-yield',
+                          action: 'REBALANCE',
+                          targetToken,
+                          oneLiner: `Review moving idle stablecoins toward ${targetToken} yield.`,
+                          reasoning: `${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} with TVL ${formattedTvl}.`,
+                          confidence: best.tvl >= 1_000_000 ? 0.72 : 0.55,
+                          riskLevel: best.tvl >= 1_000_000 ? 'MEDIUM' : 'HIGH',
+                          protocol: best.protocol,
+                          chain: best.chain,
+                          marketSymbol: best.symbol,
+                          apy: best.apy,
+                          tvl: best.tvl,
+                          expectedSavings: Math.max(25, Math.round(best.apy)),
+                        },
+                      }),
+                    },
+                    GUARDIAN_STATE_FETCH_TIMEOUT_MS,
+                  ).catch(() => {});
 
                   const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold. Should I have Guardian review a dry-run rebalance for this opportunity?`;
 

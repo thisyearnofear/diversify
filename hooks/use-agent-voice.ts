@@ -1,5 +1,11 @@
 import { useCallback } from "react";
 import type { AgentVoiceActions, AgentVoiceDependencies } from "./agent-types";
+// Deep leaf import — keeps the promise utils (and any upstream deps) out of first-load.
+import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
+
+// Voice TTS/STT routes are write-heavy + upstream-bound (ElevenLabs) — give
+// them the 8s budget so a busy API doesn't clip a user's spoken query.
+const VOICE_FETCH_TIMEOUT_MS = 8000;
 
 export function useAgentVoice({
   apiBase,
@@ -13,11 +19,15 @@ export function useAgentVoice({
       }
 
       try {
-        const response = await fetch(`${apiBase}/api/agent/speak`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
+        const response = await fetchWithTimeout(
+          `${apiBase}/api/agent/speak`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          },
+          VOICE_FETCH_TIMEOUT_MS,
+        );
 
         if (response.ok) {
           return await response.blob();
@@ -41,10 +51,14 @@ export function useAgentVoice({
         const formData = new FormData();
         formData.append("audio", audioBlob);
 
-        const response = await fetch(`${apiBase}/api/agent/transcribe`, {
-          method: "POST",
-          body: formData,
-        });
+        const response = await fetchWithTimeout(
+          `${apiBase}/api/agent/transcribe`,
+          {
+            method: "POST",
+            body: formData,
+          },
+          VOICE_FETCH_TIMEOUT_MS,
+        );
 
         if (response.ok) {
           const result = await response.json();

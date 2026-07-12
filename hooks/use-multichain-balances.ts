@@ -186,11 +186,19 @@ async function fetchChainBalances(
   // Bound each underlying RPC call so a hung upstream can't leave the UI in
   // a permanent "Loading..." state. ethers v5 honours `timeout` on the
   // ConnectionInfo: it applies to every individual request made on this
-  // provider (e.g. multicall .call(), balance reads).
-  const provider = new ethers.providers.JsonRpcProvider({
-    url: chain.rpcUrl,
-    timeout: 8000,
-  });
+  // provider (e.g. multicall .call(), balance reads). Passing `network` as
+  // the second arg skips the default `eth_chainId` auto-detect round-trip
+  // (~200ms) on every fresh provider instance — we already know the chain.
+  const provider = new ethers.providers.JsonRpcProvider(
+    {
+      url: chain.rpcUrl,
+      timeout: 8000,
+    },
+    {
+      chainId: chain.chainId,
+      name: chain.name,
+    },
+  );
   const tokensToFetch = NETWORK_TOKENS[chain.chainId] || [];
 
   if (tokensToFetch.length === 0) {
