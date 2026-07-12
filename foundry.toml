@@ -9,6 +9,7 @@ optimizer_runs = 200
 
 [rpc_endpoints]
 rh_testnet = "https://rpc.testnet.chain.robinhood.com"
+rh_mainnet = "${ROBINHOOD_MAINNET_RPC_URL}"
 celo = "${CELO_RPC_URL}"
 celo_sepolia = "${CELO_SEPOLIA_RPC_URL}"
 arbitrum_one = "${ARBITRUM_ONE_RPC_URL}"

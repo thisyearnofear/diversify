@@ -63,10 +63,18 @@ export const NETWORKS = {
     },
     RH_TESTNET: {
         chainId: 46630,
-        name: 'Robinhood Chain',
+        name: 'Robinhood Chain Testnet',
         rpcUrl: process.env.NEXT_PUBLIC_RH_RPC || 'https://rpc.testnet.chain.robinhood.com',
         explorerUrl: 'https://explorer.testnet.chain.robinhood.com',
         devOnly: true,
+    },
+    RH_MAINNET: {
+        chainId: 4663,
+        name: 'Robinhood Chain',
+        rpcUrl: process.env.NEXT_PUBLIC_RH_MAINNET_RPC || process.env.ROBINHOOD_MAINNET_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
+        explorerUrl: 'https://robinhoodchain.blockscout.com',
+        // Production RWA / stock-token rail. RecommendationLedger lives here (after deploy).
+        // See docs/arbitrum-yield-strategy.md § Robinhood Earn.
     },
     HYPERLIQUID: {
         chainId: 998, // Virtual chain ID for Hyperliquid perp markets (not EVM)
@@ -255,6 +263,22 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     // Inflation Hedges (store of value, no yield)
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
 
+    // Robinhood Chain native RWA tokens (tokenized stocks, ETFs, and stablecoin)
+    USDG: { name: 'Robinhood USDG', region: REGIONS.USA, decimals: 18, apy: 0 },
+    AAPL: { name: 'Apple Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    AMD: { name: 'AMD Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    AMZN: { name: 'Amazon Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    COIN: { name: 'Coinbase Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    GOOGL: { name: 'Alphabet Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    META: { name: 'Meta Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    MSFT: { name: 'Microsoft Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    NVDA: { name: 'NVIDIA Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    TSLA: { name: 'Tesla Stock Token', region: REGIONS.USA, decimals: 18, apy: 0 },
+    QQQ: { name: 'Invesco QQQ Trust', region: REGIONS.USA, decimals: 18, apy: 0 },
+    SGOV: { name: 'iShares 0-3 Month Treasury Bond', region: REGIONS.USA, decimals: 18, apy: 0 },
+    SLV: { name: 'iShares Silver Trust', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
+    SPY: { name: 'SPDR S&P 500 ETF Trust', region: REGIONS.USA, decimals: 18, apy: 0 },
+
     // Hyperliquid Perpetual Commodity Markets (synthetic 1x long exposure)
     // These represent perp positions on Hyperliquid, collateralized in USDC
     GOLD: { name: 'Gold Perpetual (Hyperliquid)', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
@@ -307,6 +331,10 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.ARC_MAINNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH'],
+    [NETWORKS.RH_MAINNET.chainId]: [
+        'USDG', 'WETH', 'SPY', 'QQQ', 'SGOV', 'SLV',
+        'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'AMD', 'COIN',
+    ],
     [NETWORKS.HYPERLIQUID.chainId]: ['GOLD', 'SILVER', 'OIL', 'COPPER'],
 };
 
@@ -352,6 +380,21 @@ export const EXCHANGE_RATES: Record<string, number> = {
     USDY: 1,
     SYRUPUSDC: 1,
     ETH: 3500,
+    // Robinhood Chain RWA tokens (fallback only; live prices from Chainlink feeds)
+    USDG: 1,
+    AAPL: 228.45,
+    AMD: 160,
+    AMZN: 200,
+    COIN: 240,
+    GOOGL: 168.22,
+    META: 500,
+    MSFT: 450,
+    NVDA: 181.84,
+    TSLA: 260.10,
+    QQQ: 500,
+    SGOV: 100,
+    SLV: 31,
+    SPY: 600,
 
 } as const;
 
@@ -538,6 +581,26 @@ export const RH_TESTNET_TOKENS = {
     WETH: '0x95fa0c32181d073FA9b07F0eC3961C845d00bE21',
 } as const;
 
+export const RH_MAINNET_TOKENS = {
+    WETH: '0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73',
+    USDG: '0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168',
+    // Stock tokens (ERC-20) — curated set most relevant to savings/RWA hedging
+    AAPL: '0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9',
+    AMD: '0x86923f96303D656E4aa86D9d42D1e57ad2023fdC',
+    AMZN: '0x12f190a9F9d7D37a250758b26824B97CE941bF54',
+    COIN: '0x6330D8C3178a418788dF01a47479c0ce7CCF450b',
+    GOOGL: '0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3',
+    META: '0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35',
+    MSFT: '0xe93237C50D904957Cf27E7B1133b510C669c2e74',
+    NVDA: '0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC',
+    TSLA: '0x322F0929c4625eD5bAd873c95208D54E1c003b2d',
+    // ETFs
+    QQQ: '0xD5f3879160bc7c32ebb4dC785F8a4F505888de68',
+    SGOV: '0x92FD66527192E3e61d4DDd13322Aa222DE86F9B5',
+    SLV: '0x411eFb0E7f985935DAec3D4C3ebaEa0d0AD7D89f',
+    SPY: '0x117cc2133c37B721F49dE2A7a74833232B3B4C0C',
+} as const;
+
 export const BROKER_ADDRESSES = {
     MAINNET: '0x777a8255ca72412f0d706dc03c9d1987306b4cad',
     CELO_SEPOLIA: '0xD3Dff18E465bCa6241A244144765b4421Ac14D09',
@@ -548,6 +611,7 @@ export const BROKER_ADDRESSES = {
 // Helper: Get token addresses by chain
 export function getTokenAddresses(chainId: number): Record<string, string> {
     if (chainId === NETWORKS.RH_TESTNET.chainId) return RH_TESTNET_TOKENS;
+    if (chainId === NETWORKS.RH_MAINNET.chainId) return RH_MAINNET_TOKENS;
     if (chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.ARC_MAINNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) return ARBITRUM_SEPOLIA_TOKENS;

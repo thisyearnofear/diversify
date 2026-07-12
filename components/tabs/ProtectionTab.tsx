@@ -23,6 +23,7 @@ import { ProtectionPlanCard } from "./protect/ProtectionPlanCard";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
+import RobinhoodRwaCard from "./protect/RobinhoodRwaCard";
 import YieldDiscoverySection from "../earn/YieldDiscoverySection";
 import { BestYieldCard } from "../earn/BestYieldCard";
 import AssetModal from "./protect/AssetModal";
@@ -545,6 +546,17 @@ export default function ProtectionTab({
           onSwap={openProtectionFlow}
           onShowModal={setShowAssetModal}
           experienceMode={experienceMode}
+        />
+      )}
+
+      {/* Robinhood Chain RWA expansion — stock tokens + USDG on an Arbitrum L2 */}
+      {!isBeginner && (
+        <RobinhoodRwaCard
+          onLearnMore={() => {
+            askAdvisor(
+              "How can I use Robinhood Chain tokenized stocks and USDG to protect my savings against local currency depreciation?"
+            );
+          }}
         />
       )}
 

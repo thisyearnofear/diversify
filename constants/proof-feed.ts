@@ -2,6 +2,7 @@
 const LEDGER_CHAIN_LABELS: Record<number, string> = {
   42220: 'Celo',
   42161: 'Arbitrum',
+  4663: 'Robinhood Chain',
   177: 'HashKey',
   16661: '0G',
   16602: '0G testnet',
@@ -10,13 +11,13 @@ const LEDGER_CHAIN_LABELS: Record<number, string> = {
 };
 
 /** Mainnet ledger chains — get the confident "Verified on X" headline. */
-const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 177, 16661]);
+const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 4663, 177, 16661]);
 
 /**
  * Savings/yield mainnet rails merged into the global proof feed when no
- * user or explicit chainId is requested (Arbitrum yield, Celo EM, HashKey APAC).
+ * user or explicit chainId is requested (Arbitrum yield, Celo EM, HashKey APAC, Robinhood RWA).
  */
-export const PROOF_FEED_CHAIN_IDS = [42161, 42220, 177] as const;
+export const PROOF_FEED_CHAIN_IDS = [42161, 42220, 4663, 177] as const;
 
 export interface ProofFeedRecommendationBase {
   id: number;

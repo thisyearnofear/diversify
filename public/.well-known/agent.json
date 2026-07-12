@@ -66,6 +66,11 @@
       "role": "execution-and-yield-primary"
     },
     {
+      "chainId": 4663,
+      "name": "Robinhood Chain",
+      "role": "rwa-stock-token-rail"
+    },
+    {
       "chainId": 42220,
       "name": "Celo Mainnet",
       "role": "savings-and-local-stables"

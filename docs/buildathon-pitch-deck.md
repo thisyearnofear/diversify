@@ -89,7 +89,7 @@ Three layers, each a differentiator:
 |---|---|
 | **One painful workflow** | "My margin is evaporating in the window between local sales and supplier payment" |
 | **One core action** | Define purchase cycle → Guardian monitors → autonomous protection → per-cycle drag report |
-| **One proof point** | Per-cycle drag report showing margin preserved, verifiable on Arbitrum ledger |
+| **One proof point** | Per-cycle drag report showing margin preserved, verifiable on Arbitrum + Robinhood Chain ledger |
 
 **Live wedge today:**
 - One ICP: EM diaspora professional / individual entrepreneur whose savings are working capital
@@ -136,7 +136,7 @@ The philosophy shapes every recommendation. It's not a one-time onboarding check
 | **Composability** | GMX GM-pool deposits for blue-chip yield, vaults.fyi for best-yield routing across 1,000+ Arbitrum vaults |
 | **Transparency** | 0G evidence anchoring — AI reasoning is immutable and auditable, not a black box |
 
-**Arbitrum specifically:** lowest fees for small-ticket EM savings, deepest DeFi liquidity (GMX, Aave, Morpho, Pendle), and the Guardian's primary execution layer.
+**Arbitrum specifically:** lowest fees for small-ticket EM savings, deepest DeFi liquidity (GMX, Aave, Morpho, Pendle), and the Guardian's primary execution layer. **Robinhood Chain** (an Arbitrum Dedicated Blockchain) extends this into tokenized RWAs — USDG, SGOV, SPY/QQQ — as additional hedging instruments.
 
 ---
 
@@ -154,10 +154,11 @@ The philosophy shapes every recommendation. It's not a one-time onboarding check
 
 ## Slide 8: The Multi-Chain Story
 
-**One agent, three chains, verifiable receipts.**
+**One agent, four chains, verifiable receipts.**
 
 | Action | Chain | Why |
 |---|---|---|
+| RWA / stock-token hedging | **Robinhood Chain** | Tokenized stocks, ETFs, and USDG on an Arbitrum Dedicated Blockchain — additional hedge layer for FX-risk protection |
 | APAC savings / hold decisions | **HashKey Chain** | Regulated-market savings home for Confucian / Gotong Royong philosophy users — immutable audit trail APAC users recognize |
 | RWA / yield rotations | **Arbitrum** | Deep DeFi liquidity, GMX yield, best-yield engine |
 | EM local stables (cUSD, KESm, …) | **Celo** | Local stablecoins, low-cost savings for African / Latin American users |
@@ -189,6 +190,7 @@ Chain-aware routing: the Guardian picks the right chain for the right action bas
 | **Arbitrum mainnet** | RecommendationLedger deployed (`0x3BCf…369C`), GMX real deposits validated (tx `0x9004d233…`) |
 | **Celo mainnet** | RecommendationLedger deployed, Guardian heartbeat + Guardian loop (5-min cron) |
 | **0G mainnet** | Evidence anchoring live, ledger mirror deployed |
+| **Robinhood Chain mainnet** | RecommendationLedger deployed (`0x3BCf…369C`), first recommendation recorded (`HOLD → USDG`) |
 | **HashKey mainnet** | APAC rail — ledger deployed, "coming soon" honesty until mainnet gas funded |
 | **AI** | Real SSE streaming (Gemini + Venice), intent fast-path, mobile sheet, analytics |
 | **Voice** | ElevenLabs TTS + Scribe STT, feature-flagged |
@@ -208,7 +210,7 @@ Chain-aware routing: the Guardian picks the right chain for the right action bas
 - **Next.js frontend** (standalone build, deployed to Hetzner, PM2-managed)
 - **Shared package** (`@diversifi/shared`): AI service (multi-provider failover), market pulse service, Cognee memory, vault services, swap orchestrator
 - **Guardian loop** (`/api/agent/guardian-loop`): 5-min cron, auto-executes within user permission bounds
-- **RecommendationLedger**: Solidity contract on Arbitrum + Celo + HashKey mainnets
+- **RecommendationLedger**: Solidity contract on Arbitrum + Robinhood Chain + Celo + HashKey mainnets
 - **0G Storage**: evidence anchoring for AI reasoning
 - **x402 nanopayments**: paid intelligence marketplace (vaults.fyi, future providers)
 

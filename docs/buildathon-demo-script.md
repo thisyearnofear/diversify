@@ -101,7 +101,7 @@ Show the concierge tool output (or walk through the business flow):
 
 **If the tool isn't ready, describe it:**
 
-> "The per-cycle drag report is the signature surface. The importer defines their purchase cycle, the Guardian monitors and rebalances autonomously, and delivers a quantified report: 'This cycle, protection preserved ₵X.' The accountant can verify every tx on the Arbitrum ledger."
+> "The per-cycle drag report is the signature surface. The importer defines their purchase cycle, the Guardian monitors and rebalances autonomously, and delivers a quantified report: 'This cycle, protection preserved ₵X.' The accountant can verify every tx on the Arbitrum or Robinhood Chain ledger."
 
 ---
 
@@ -115,13 +115,13 @@ Show:
 - **RecommendationLedger records** — recent Guardian decisions, each with an Arbitrum tx hash and explorer link.
 - **0G evidence anchors** — the AI reasoning behind each decision, immutably stored.
 
-> "This is what 'verifiable AI' means. Not 'trust our algorithm.' Here's the Arbitrum transaction. Here's the 0G evidence. You can check it yourself."
+> "This is what 'verifiable AI' means. Not 'trust our algorithm.' Here's the Arbitrum or Robinhood Chain transaction. Here's the 0G evidence. You can check it yourself."
 
 > "And here's the philosophy layer: the Guardian's decisions are aligned with the user's values. A user who chose 'Islamic Finance' will never be recommended interest-based yield. A user who chose 'Africapitalism' will see African stablecoins prioritized. The philosophy is the lens, not a one-time checkbox."
 
 **If the zero-g-ledger endpoint returns records:**
 
-> "And this is live. These are real recommendations the Guardian made, recorded on Arbitrum mainnet, anchored to 0G Storage. The contract is at `0x3BCf…369C` — you can look it up on Arbiscan."
+> "And this is live. These are real recommendations the Guardian made, recorded on Arbitrum and Robinhood Chain mainnets, anchored to 0G Storage. The contract is at `0x3BCf…369C` — you can look it up on Arbiscan or Robinhood Chain explorer."
 
 **If the ledger is empty (no records yet):**
 
@@ -141,7 +141,7 @@ Show (if visible):
 
 **Briefly mention the multi-chain story:**
 
-> "DiversiFi is one agent, three chains. APAC savings decisions settle on HashKey Chain — a regulated market that APAC users trust. EM local stables (cUSD, KESm) settle on Celo — low-cost, community-aligned. Yield rotations execute on Arbitrum — deepest liquidity, best yield. And every AI reasoning step is anchored to 0G Storage."
+> "DiversiFi is one agent, four chains. RWA / stock-token hedging settles on Robinhood Chain — tokenized stocks, ETFs, and USDG on an Arbitrum Dedicated Blockchain. APAC savings decisions settle on HashKey Chain — a regulated market that APAC users trust. EM local stables (cUSD, KESm) settle on Celo — low-cost, community-aligned. Yield rotations execute on Arbitrum — deepest liquidity, best yield. And every AI reasoning step is anchored to 0G Storage."
 
 > "We're not deploying everywhere for the sake of it. We're deploying where it matters, based on the user's philosophy and region."
 
@@ -154,7 +154,7 @@ Show (if visible):
 > "Three key differentiators:"
 > 1. **FX-risk intelligence layer** — per-cycle drag quantification, autonomous protection, audit trail. No player offers this. Not in Africa. Not in America. Not anywhere. *(Self-serve purchase-cycle UI is the north star; the concierge FX drag report is already validating the math with real traders.)*
 > 2. **Philosophy/values system** — identity-based retention, cultural resonance, structural moat. No other product has this. *(Live today.)*
-> 3. **Verifiable on-chain execution** — every recommendation on Arbitrum ledger, anchored on 0G. Not "trust our AI" — you can check. *(Live today.)*
+> 3. **Verifiable on-chain execution** — every recommendation on Arbitrum + Robinhood Chain ledgers, anchored on 0G. Not "trust our AI" — you can check. *(Live today.)*
 
 > "What we're asking for this weekend:"
 > 1. **Mentorship on the wedge** — should we go deeper on diaspora retail first, or push directly to SME importers?
@@ -213,6 +213,7 @@ Then pivot to the philosophy system:
 | x402 metrics | https://api.diversifi.famile.xyz/api/agent/x402-metrics |
 | Zero-G ledger | https://api.diversifi.famile.xyz/api/agent/zero-g-ledger |
 | Arbitrum contract | `0x3BCf…369C` (RecommendationLedger) |
+| Robinhood Chain contract | `0x3BCf…369C` (RecommendationLedger) |
 | Celo contract | `0x3BCf…369C` (RecommendationLedger) |
 | 0G contract | `0x3BCf…369C` (RecommendationLedger) |
 | Self Protocol | Agent `0xE8cDb7CA…f170` (Celo mainnet) |

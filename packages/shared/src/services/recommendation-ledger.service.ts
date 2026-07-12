@@ -130,6 +130,7 @@ export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string
     if (resolvedChainId === 16602) return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
     if (resolvedChainId === 16661) return `https://chainscan.0g.ai/tx/${txHash}`;
     if (resolvedChainId === 177) return `https://explorer.hsk.xyz/tx/${txHash}`;
+    if (resolvedChainId === 4663) return `https://robinhoodchain.blockscout.com/tx/${txHash}`;
     return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
 }
 
@@ -182,6 +183,7 @@ const ARBITRUM_SEPOLIA_CHAIN_ID = 421614;
 const ZERO_G_GALILEO_CHAIN_ID = 16602;
 const ZERO_G_MAINNET_CHAIN_ID = 16661;
 const HASHKEY_MAINNET_CHAIN_ID = 177;
+const ROBINHOOD_MAINNET_CHAIN_ID = 4663;
 
 /**
  * Tokens that settle on Celo (savings / local stablecoins via Mento).
@@ -191,6 +193,15 @@ const HASHKEY_MAINNET_CHAIN_ID = 177;
 const CELO_SAVINGS_TOKENS = new Set([
     'CUSD', 'CEUR', 'CREAL', 'KESM', 'COPM', 'PHPM', 'GHSM', 'CKES', 'CCOP',
     'CELO', 'G$', 'GOOD',
+]);
+
+/**
+ * RWA / stock-token tokens native to Robinhood Chain mainnet.
+ * Used by `getLedgerChainForAction` to route recommendations to the RH ledger.
+ */
+const ROBINHOOD_RWA_TOKENS = new Set([
+    'USDG', 'AAPL', 'AMD', 'AMZN', 'COIN', 'GOOGL', 'META', 'MSFT', 'NVDA', 'TSLA',
+    'QQQ', 'SGOV', 'SLV', 'SPY',
 ]);
 
 /**
@@ -237,6 +248,11 @@ function getLedgerRegistry(): Record<number, LedgerConfig> {
             contractAddress: process.env.HASHKEY_LEDGER_CONTRACT || '',
             rpcUrl: process.env.HASHKEY_RPC_URL || 'https://mainnet.hsk.xyz',
             chainId: HASHKEY_MAINNET_CHAIN_ID,
+        },
+        [ROBINHOOD_MAINNET_CHAIN_ID]: {
+            contractAddress: process.env.ROBINHOOD_MAINNET_LEDGER_CONTRACT || '',
+            rpcUrl: process.env.ROBINHOOD_MAINNET_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
+            chainId: ROBINHOOD_MAINNET_CHAIN_ID,
         },
     };
 }
@@ -295,6 +311,12 @@ export function getLedgerChainForAction(
     if (CELO_SAVINGS_TOKENS.has(token)) {
         const celoConfig = resolveLedgerConfig(CELO_MAINNET_CHAIN_ID);
         if (celoConfig?.contractAddress) return CELO_MAINNET_CHAIN_ID;
+    }
+
+    // Robinhood Chain native RWA / stock-token actions → RH mainnet ledger
+    if (ROBINHOOD_RWA_TOKENS.has(token)) {
+        const rhConfig = resolveLedgerConfig(ROBINHOOD_MAINNET_CHAIN_ID);
+        if (rhConfig?.contractAddress) return ROBINHOOD_MAINNET_CHAIN_ID;
     }
 
     // APAC savings home: hold/save decisions for Confucian / Gotong Royong

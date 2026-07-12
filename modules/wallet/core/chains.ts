@@ -12,8 +12,10 @@ export const SUPPORTED_CHAIN_IDS = [
   NETWORKS.CELO_MAINNET.chainId,
   NETWORKS.CELO_SEPOLIA.chainId,
   NETWORKS.ARBITRUM_ONE.chainId,
+  NETWORKS.ARBITRUM_SEPOLIA.chainId,
   NETWORKS.ARC_TESTNET.chainId,
   NETWORKS.RH_TESTNET.chainId,
+  NETWORKS.RH_MAINNET.chainId,
 ] as const;
 
 // Default chain selection is environment-sensitive for onboarding/test-drive.
@@ -70,6 +72,16 @@ export function getAddChainParameter(targetChainId: number): AddEthereumChainPar
       nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
       rpcUrls: [NETWORKS.RH_TESTNET.rpcUrl],
       blockExplorerUrls: [NETWORKS.RH_TESTNET.explorerUrl],
+    };
+  }
+
+  if (targetChainId === NETWORKS.RH_MAINNET.chainId) {
+    return {
+      chainId: `0x${NETWORKS.RH_MAINNET.chainId.toString(16)}`,
+      chainName: 'Robinhood Chain',
+      nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+      rpcUrls: [NETWORKS.RH_MAINNET.rpcUrl],
+      blockExplorerUrls: [NETWORKS.RH_MAINNET.explorerUrl],
     };
   }
 

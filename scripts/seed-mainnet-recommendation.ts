@@ -82,6 +82,25 @@ const PRESETS: Record<string, ChainPreset> = {
       routingContext: { philosophy: 'confucian', region: 'Asia' },
     },
   },
+  robinhood: {
+    label: 'Robinhood Chain Mainnet',
+    contractEnvVar: 'ROBINHOOD_MAINNET_LEDGER_CONTRACT',
+    rpcUrl: process.env.ROBINHOOD_MAINNET_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
+    gasSymbol: 'ETH',
+    explorerName: 'Robinhood Chain explorer',
+    rec: {
+      action: 'HOLD',
+      targetToken: 'USDG',
+      reasoning:
+        'RWA / stock-token savings rail: hold USDG on Robinhood Chain mainnet. Paxos-issued USD stablecoin on an Arbitrum Dedicated Blockchain, providing a regulated USD parking spot and gateway to tokenized stocks (SPY, QQQ, SGOV) for users hedging local-currency depreciation. Evidence anchored to 0G Storage.',
+      evidenceCid: `diversifi-evidence-${Date.now()}`,
+      servingModel: 'diversifi-guardian-v1',
+      settlementTxHash: '0x0000000000000000000000000000000000000000',
+      confidence: 8500,
+      // Explicit chainId: route to the Robinhood Chain mainnet ledger.
+      chainId: 4663,
+    },
+  },
 };
 
 async function main() {

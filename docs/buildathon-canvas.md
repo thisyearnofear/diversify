@@ -90,6 +90,10 @@ On-chain is not decorative — the entire value proposition breaks without it:
 
 **Arbitrum specifically:** lowest fees for high-frequency SME transactions, deepest DeFi liquidity (GMX, Aave, Morpho, Pendle), and the Guardian's primary execution layer. The business doesn't care about the chain — they care about the quantified drag report and the audit trail.
 
+### Robinhood Chain RWA Expansion (live)
+
+Robinhood Chain is an Arbitrum Dedicated Blockchain now on mainnet. It brings tokenized real-world assets — USDG (Paxos-backed USD stablecoin), SGOV (short-term Treasury ETF), SPY/QQQ, and individual stock tokens — on-chain as standard ERC-20s with Chainlink price feeds. The Guardian now recognizes chain 4663, the proof feed includes it, the Protection tab surfaces a Robinhood Chain RWA card, and the `RecommendationLedger` is deployed at `0x3BCf7dFd68ce98880618c89A351168960724369C` with the first recommendation recorded (`HOLD → USDG`, tx `0x982c…8079`). This makes the project eligible for the Robinhood Chain Founder-in-Residence / Innovation Award tracks while deepening the RWA story for Arbitrum judges.
+
 ### First 5–10 Users
 
 **Target business users (validation / north star):**
@@ -110,9 +114,10 @@ On-chain is not decorative — the entire value proposition breaks without it:
 1. Visitor lands → auto-detected country → sees their currency's depreciation vs gold/USD/EUR
 2. Picks a savings philosophy (Africapitalism, Buen Vivir, Islamic Finance, etc.) — the values system is a key differentiator
 3. Shield tab shows Protection Scorecard with philosophy-aware recommendations
-4. AI Advisor explains the plan in plain language (streaming, real SSE)
-5. Guardian auto-executes on Arbitrum within permission bounds
-6. Every decision recorded on the Arbitrum RecommendationLedger + 0G evidence anchor
+4. Protection tab surfaces the Robinhood Chain RWA card: USDG, SGOV, SPY/QQQ, and stock tokens as an Arbitrum L2 RWA expansion
+5. AI Advisor explains the plan in plain language (streaming, real SSE)
+6. Guardian auto-executes on Arbitrum within permission bounds
+7. Every decision recorded on the Arbitrum RecommendationLedger + 0G evidence anchor
 
 **North-star demo path (SME importer) — what we are building toward:**
 
