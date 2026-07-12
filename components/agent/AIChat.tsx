@@ -545,17 +545,29 @@ export default function AIChat() {
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="relative bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
         >
-          {/* Drag Handle — framer-native drag-to-dismiss */}
+          {/* Drag Handle — pointer-capture drag-to-dismiss */}
           <div
             className="w-full flex justify-center py-3 cursor-grab active:cursor-grabbing"
             style={{ touchAction: 'none' }}
-            draggable
-            onDragStart={(e) => e.preventDefault()}
             onPointerDown={(e) => {
+              // Capture the pointer so pointerup always reaches us even if
+              // the cursor leaves the handle strip. Without this, a desktop
+              // mouse drag that releases outside the element never fires
+              // onPointerUp, leaving dragStartYRef stale — subsequent hovers
+              // would then translate the sheet.
+              e.currentTarget.setPointerCapture(e.pointerId);
               dragStartYRef.current = e.clientY;
             }}
             onPointerMove={(e) => {
               if (dragStartYRef.current === null) return;
+              // Belt-and-suspenders: if the button was released without
+              // capture delivering a pointerup (edge case), bail out.
+              if (e.pointerType === 'mouse' && e.buttons === 0) {
+                dragStartYRef.current = null;
+                const parent = e.currentTarget.parentElement;
+                if (parent) parent.style.transform = '';
+                return;
+              }
               const deltaY = e.clientY - dragStartYRef.current;
               if (deltaY > 0) {
                 const parent = e.currentTarget.parentElement;
