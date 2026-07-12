@@ -1,10 +1,10 @@
 import React from "react";
-import RegionalIconography from "../regional/RegionalIconography";
-import type { Region } from "@/hooks/use-user-region";
-import { REGION_COLORS, TOKEN_METADATA } from "../../config";
+import { motion, useReducedMotion } from "framer-motion";
+import { TokenIcon } from "../shared/TokenIcon";
+import TokenPickerSheet, { type TokenPickerItem } from "./TokenPickerSheet";
+import { REGION_COLORS, TOKEN_METADATA, EXCHANGE_RATES } from "../../config";
 import type { UserExperienceMode } from "@/context/app/types";
 import { StrategyService, type FinancialStrategy } from "@diversifi/shared";
-
 
 interface Token {
   symbol: string;
@@ -39,7 +39,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   onAmountChange,
   availableTokens,
   tokenRegion,
-  inflationRate = 0,
   disabled = false,
   showAmountInput = true,
   tokenBalances = {},
@@ -49,20 +48,15 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   financialStrategy,
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
-  const showRegionalInfo = experienceMode !== "beginner";
-  const selectorId = React.useId();
-  const amountInputId = React.useId();
-  const amountHintId = React.useId();
-
-  // Beginner: show educational tooltip about why to swap
-  const [showWhySwapTooltip, setShowWhySwapTooltip] = React.useState(false);
+  const reducedMotion = useReducedMotion();
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+  const [showWhySwap, setShowWhySwap] = React.useState(false);
 
   // Smart default: auto-select token with highest balance
   React.useEffect(() => {
     if (!selectedToken && availableTokens.length > 0 && Object.keys(tokenBalances).length > 0) {
       let highestBalanceToken = availableTokens[0].symbol;
       let highestBalance = 0;
-      
       for (const token of availableTokens) {
         const balance = tokenBalances[token.symbol];
         if (balance && parseFloat(balance.formattedBalance) > highestBalance) {
@@ -70,446 +64,286 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           highestBalanceToken = token.symbol;
         }
       }
-      
-      if (highestBalance > 0) {
-        onTokenChange(highestBalanceToken);
-      }
+      if (highestBalance > 0) onTokenChange(highestBalanceToken);
     }
   }, [availableTokens, tokenBalances, selectedToken, onTokenChange]);
 
-  // Check if token violates strategy
+  // --- compliance + badge helpers (unchanged logic, now feeds the picker) ---
+
   const getComplianceInfo = (tokenSymbol: string) => {
     if (!financialStrategy) return { isCompliant: true };
     return StrategyService.getAssetCompliance(financialStrategy, tokenSymbol);
   };
 
-  // Check if token is recommended for strategy
   const isRecommended = (tokenSymbol: string): boolean => {
     if (!financialStrategy) return false;
     const recommended = StrategyService.getRecommendedAssets(financialStrategy);
-    return recommended.some(rec =>
-      tokenSymbol.toUpperCase().includes(rec.toUpperCase()) ||
-      rec.toUpperCase().includes(tokenSymbol.toUpperCase())
+    return recommended.some(
+      (rec) =>
+        tokenSymbol.toUpperCase().includes(rec.toUpperCase()) ||
+        rec.toUpperCase().includes(tokenSymbol.toUpperCase()),
     );
   };
 
-  // Get strategy badge for token
-  const getStrategyBadge = (tokenSymbol: string): { emoji: string; label: string } | null => {
+  const getStrategyBadge = (tokenSymbol: string): { label: string } | null => {
     if (!financialStrategy || !isRecommended(tokenSymbol)) return null;
-
     switch (financialStrategy) {
-      case 'africapitalism':
-        if (tokenSymbol.match(/KES|GHS|ZAR|NGN|XOF/i)) {
-          return { emoji: '🌍', label: 'Builds Africa' };
-        }
+      case "africapitalism":
+        if (tokenSymbol.match(/KES|GHS|ZAR|NGN|XOF/i)) return { label: "Builds Africa" };
         break;
-      case 'buen_vivir':
-        if (tokenSymbol.match(/BRL|COP|MXN|ARS/i)) {
-          return { emoji: '🌎', label: 'LatAm Unity' };
-        }
+      case "buen_vivir":
+        if (tokenSymbol.match(/BRL|COP|MXN|ARS/i)) return { label: "LatAm Unity" };
         break;
-      case 'confucian':
-        if (tokenSymbol.match(/USD|EUR|USDY/i)) {
-          return { emoji: '🏮', label: 'Stable Wealth' };
-        }
+      case "pan_caribbean":
+        if (tokenSymbol.match(/USDC|USDm|USDY|PAXG/i)) return { label: "Caribbean Hedge" };
         break;
-      case 'gotong_royong':
-        if (tokenSymbol.match(/PHP|IDR|THB|VND/i)) {
-          return { emoji: '🤝', label: 'Community' };
-        }
+      case "confucian":
+        if (tokenSymbol.match(/USD|EUR|USDY/i)) return { label: "Stable Wealth" };
         break;
-      case 'islamic':
-        if (tokenSymbol.match(/PAXG|USDm|EURm/i)) {
-          return { emoji: '☪️', label: 'Halal' };
-        }
+      case "gotong_royong":
+        if (tokenSymbol.match(/PHP|IDR|THB|VND/i)) return { label: "Community" };
         break;
-      case 'global':
-        // All assets are good for global diversification
-        return { emoji: '🌐', label: 'Diversifies' };
+      case "islamic":
+        if (tokenSymbol.match(/PAXG|USDm|EURm/i)) return { label: "Halal" };
+        break;
+      case "halo":
+        if (tokenSymbol.match(/PAXG|USDY/i)) return { label: "Hard Assets" };
+        break;
+      case "taco":
+        if (tokenSymbol.match(/USDC|USDm|EURC|EURm/i)) return { label: "Neutral Hedge" };
+        break;
+      case "global":
+      case "custom":
+      default:
+        return { label: "Aligned" };
     }
     return null;
   };
 
-  const selectedTokenCompliance = getComplianceInfo(selectedToken);
-  const selectedTokenCompliant = selectedTokenCompliance.isCompliant;
-  const selectedTokenBadge = getStrategyBadge(selectedToken);
+  const getYieldBadge = (symbol: string): { text: string; color: string } | null => {
+    if (symbol === "USDY") return { text: "+5% APY", color: "text-emerald-600 bg-emerald-100" };
+    if (symbol === "SYRUPUSDC") return { text: "+4.5% APY", color: "text-purple-600 bg-purple-100" };
+    if (symbol === "PAXG") return { text: "Gold", color: "text-amber-600 bg-amber-100" };
+    return null;
+  };
 
-  // Determine if this is a cross-chain scenario
+  // Build picker items from available tokens
+  const pickerItems: TokenPickerItem[] = React.useMemo(
+    () =>
+      availableTokens.map((token) => {
+        const compliance = getComplianceInfo(token.symbol);
+        const metadata = TOKEN_METADATA[token.symbol];
+        return {
+          symbol: token.symbol,
+          name: metadata?.name || token.name || token.symbol,
+          region: token.region,
+          balance: tokenBalances[token.symbol]?.formattedBalance,
+          balanceValue: tokenBalances[token.symbol]?.value ?? 0,
+          compliant: compliance.isCompliant,
+          complianceReason: compliance.reason,
+          badge: getStrategyBadge(token.symbol),
+          yieldBadge: getYieldBadge(token.symbol),
+        };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [availableTokens, tokenBalances, financialStrategy],
+  );
+
+  // --- balance / cross-chain ---
   const isCrossChain = currentChainId && tokenChainId && currentChainId !== tokenChainId;
-
-  // Get the current token balance if available
   const tokenBalance = tokenBalances[selectedToken];
   const hasBalance = tokenBalance && parseFloat(tokenBalance.formattedBalance) > 0;
 
-  // Determine what to show for balance
-  const getBalanceDisplay = () => {
-    if (isCrossChain) {
-      if (hasBalance) {
-        return `${parseFloat(tokenBalance.formattedBalance).toFixed(4)} ${selectedToken}`;
-      } else {
-        return `— ${selectedToken}`;
-      }
-    } else {
-      const balance = tokenBalance?.formattedBalance || "0";
-      return `${parseFloat(balance).toFixed(4)} ${selectedToken}`;
-    }
-  };
+  const balanceNum = hasBalance ? parseFloat(tokenBalance.formattedBalance) : 0;
+  const balanceDisplay = isCrossChain
+    ? hasBalance
+      ? `${balanceNum.toFixed(4)} ${selectedToken}`
+      : `— ${selectedToken}`
+    : `${balanceNum.toFixed(4)} ${selectedToken}`;
 
-  const getBalanceLabel = () => {
-    if (isCrossChain) {
-      return hasBalance ? "Balance (other chain):" : "Balance (switch to check):";
-    }
-    return "Balance:";
-  };
-
-  // Get region color for styling
-  const regionColor = tokenRegion && tokenRegion !== 'Unknown'
-    ? REGION_COLORS[tokenRegion as keyof typeof REGION_COLORS]
-    : null;
-
-  // Function to set max amount
   const setMaxAmount = () => {
-    if (onAmountChange && hasBalance) {
+    if (onAmountChange && hasBalance && !isCrossChain) {
       onAmountChange(tokenBalance.formattedBalance);
     }
   };
 
-  // Simplified token display for beginners
-  const getSimplifiedTokenName = (symbol: string) => {
-    const metadata = TOKEN_METADATA[symbol];
-    if (!metadata) return symbol;
+  // USD equivalent of the input amount
+  const usdEquivalent = React.useMemo(() => {
+    if (!showAmountInput || !amount) return null;
+    const parsed = parseFloat(amount);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    const rate = EXCHANGE_RATES[selectedToken];
+    if (!rate) return null;
+    return parsed * rate;
+  }, [amount, selectedToken, showAmountInput]);
 
-    // For beginners, show friendly names without technical suffixes
-    if (isBeginnerMode) {
-      // Remove 'm' suffix from Mento tokens
-      if (symbol.endsWith('m')) {
-        const base = symbol.slice(0, -1);
-        // Map to currency names
-        const currencyNames: Record<string, string> = {
-          'USD': 'US Dollar',
-          'EUR': 'Euro',
-          'BRL': 'Brazilian Real',
-          'KES': 'Kenyan Shilling',
-          'COP': 'Colombian Peso',
-          'PHP': 'Philippine Peso',
-          'GHS': 'Ghana Cedi',
-          'XOF': 'CFA Franc',
-          'GBP': 'British Pound',
-          'ZAR': 'South African Rand',
-          'CAD': 'Canadian Dollar',
-          'AUD': 'Australian Dollar',
-          'CHF': 'Swiss Franc',
-          'JPY': 'Japanese Yen',
-          'NGN': 'Nigerian Naira',
-        };
-        return currencyNames[base] || metadata.name;
-      }
-      // For other tokens, use friendly names
-      if (symbol === 'USDC') return 'US Dollar';
-      if (symbol === 'USDT') return 'US Dollar (Tether)';
-      if (symbol === 'PAXG') return 'Gold';
+  // Region color for the token pill border
+  const regionColor =
+    tokenRegion && tokenRegion !== "Unknown"
+      ? REGION_COLORS[tokenRegion as keyof typeof REGION_COLORS]
+      : null;
+
+  const selectedCompliance = getComplianceInfo(selectedToken);
+  const isNonCompliant = !selectedCompliance.isCompliant;
+
+  // --- amount input handlers (text, not type=number, to avoid scroll-wheel hijack) ---
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!onAmountChange) return;
+    const val = e.target.value;
+    // allow only valid decimal patterns
+    if (val === "" || /^\d*\.?\d*$/.test(val)) {
+      onAmountChange(val);
     }
-
-    return `${symbol} - ${metadata.name}`;
-  };
-
-  // ENHANCEMENT: Get yield badge for Arbitrum RWA tokens
-  const getYieldBadge = (symbol: string): { text: string; color: string } | null => {
-    if (symbol === 'USDY') return { text: '+5% APY', color: 'text-emerald-600 bg-emerald-100' };
-    if (symbol === 'SYRUPUSDC') return { text: '+4.5% APY', color: 'text-purple-600 bg-purple-100' };
-    if (symbol === 'PAXG') return { text: 'Gold', color: 'text-amber-600 bg-amber-100' };
-    return null;
   };
 
   return (
     <div>
-      <label htmlFor={selectorId} className="text-sm font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
-        <span className="mr-2">{label}</span>
-        {/* Beginner mode: show "Why swap?" tooltip */}
-        {isBeginnerMode && label === 'From' && (
+      {/* Label row */}
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-sm font-bold text-gray-900 dark:text-gray-100">
+          {label}
+        </label>
+        {isBeginnerMode && label === "From" && (
           <button
             type="button"
-            onClick={() => setShowWhySwapTooltip(!showWhySwapTooltip)}
-            className="ml-1 flex min-h-[44px] items-center rounded-full bg-blue-100 px-2.5 py-1 text-sm text-blue-700 transition-colors hover:bg-blue-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:bg-blue-900 dark:text-blue-200 dark:hover:bg-blue-800 dark:focus-visible:ring-offset-gray-900"
-            title="Why should I swap?"
+            onClick={() => setShowWhySwap((s) => !s)}
+            className="flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-1 text-xs font-semibold text-blue-600 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           >
-            💡 Why swap?
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Why swap?
           </button>
         )}
-        {showRegionalInfo && tokenRegion && tokenRegion !== 'Unknown' && (
-          <div
-            className="flex items-center px-2 py-1 rounded-md"
-            style={{ backgroundColor: `${regionColor}30` }}
-          >
-            <RegionalIconography
-              region={tokenRegion as Region}
-              size="sm"
-              className="mr-1"
-            />
-            <span
-              className="text-xs font-bold"
-              style={{ color: regionColor || '#374151' }}
-            >
-              {tokenRegion}
-            </span>
-          </div>
-        )}
-      </label>
+      </div>
 
-      {/* Beginner: Educational tooltip about why to swap */}
-      {isBeginnerMode && showWhySwapTooltip && (
+      {/* Beginner educational tooltip */}
+      {isBeginnerMode && showWhySwap && (
         <div className="mb-3 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-xl">
-          <div className="flex items-start gap-2">
-            <span className="text-lg">🛡️</span>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-blue-900 dark:text-blue-100 mb-1">
-                Protect Your Savings
-              </p>
-              <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
-                Different currencies lose value at different rates. By swapping to more stable currencies, 
-                you can protect your savings from losing purchasing power over time.
-              </p>
-              <button
-                onClick={() => setShowWhySwapTooltip(false)}
-                className="mt-2 text-xs font-bold text-blue-500 hover:text-blue-700"
-              >
-                Got it! →
-              </button>
-            </div>
-          </div>
+          <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+            Different currencies lose value at different rates. Swapping to more stable currencies protects your savings from losing purchasing power.
+          </p>
+          <button
+            onClick={() => setShowWhySwap(false)}
+            className="mt-2 text-xs font-bold text-blue-500 hover:text-blue-700"
+          >
+            Got it
+          </button>
         </div>
       )}
 
-      {/* Balance display - Essential for all users to understand their position */}
-      <div className="mb-2 flex justify-end">
-        <button
-          type="button"
-          onClick={setMaxAmount}
-          disabled={disabled || !hasBalance || Boolean(isCrossChain)}
-          className={`flex min-h-[44px] items-center rounded-lg px-3 py-2 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 ${isCrossChain && !hasBalance
-            ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-            : hasBalance
-              ? 'bg-blue-50 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-800 border border-blue-100 dark:border-blue-800'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-            }`}
-          title={isCrossChain ? "Balance on other chain" : "Click to use maximum amount"}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="size-3 mr-1"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
-            />
-          </svg>
-          <span className="mr-1">{getBalanceLabel()}</span>
-          {getBalanceDisplay()}
-          {hasBalance && !isCrossChain && (
-            <span className="ml-1.5 text-xs bg-blue-500 text-white px-1 rounded uppercase">MAX</span>
-          )}
-        </button>
-      </div>
-
-      <div className="flex space-x-2">
-        <select
-          id={selectorId}
-          value={selectedToken}
-          onChange={(e) => {
-            const newToken = e.target.value;
-            onTokenChange(newToken);
-          }}
-          aria-invalid={!selectedTokenCompliant}
-          className={`${showAmountInput ? "w-1/3" : "w-full"
-            } rounded-xl border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800 min-h-[52px] px-3 ${!selectedTokenCompliant ? 'border-red-500 dark:border-red-500' : ''
-            }`}
-          style={regionColor && selectedTokenCompliant ? {
-            borderColor: regionColor,
-          } : {}}
-          disabled={disabled}
-        >
-          {availableTokens.map((token) => {
-            const displayName = getSimplifiedTokenName(token.symbol);
-            const compliance = getComplianceInfo(token.symbol);
-            const badge = getStrategyBadge(token.symbol);
-            const yieldBadge = getYieldBadge(token.symbol);
-            
-            // Build display label with all badges
-            let label = displayName;
-            if (!compliance.isCompliant) {
-              label = `⚠️ ${displayName} (Not compliant)`;
-            } else if (badge) {
-              label = `${badge.emoji} ${displayName} • ${badge.label}`;
-            }
-            
-            return (
-              <option
-                key={token.symbol}
-                value={token.symbol}
-                className={`font-medium bg-white dark:bg-gray-900 ${compliance.isCompliant
-                  ? 'text-gray-900 dark:text-gray-100'
-                  : 'text-gray-400 dark:text-gray-600'
-                  }`}
-                disabled={!compliance.isCompliant}
-                data-yield={yieldBadge?.text || ''}
-              >
-                {label}
-              </option>
-            );
-          })}
-        </select>
-
-        {showAmountInput && onAmountChange && (
-          <div className="relative w-2/3">
-            <label htmlFor={amountInputId} className="sr-only">
-              {`${label} amount`}
-            </label>
+      {/* Amount-as-hero layout */}
+      <div
+        className={`relative rounded-2xl border-2 bg-white dark:bg-gray-900 transition-colors ${
+          isNonCompliant
+            ? "border-red-300 dark:border-red-800"
+            : regionColor
+              ? "border-transparent"
+              : "border-gray-200 dark:border-gray-700 focus-within:border-blue-500"
+        }`}
+        style={regionColor && !isNonCompliant ? { borderColor: regionColor, borderWidth: 2 } : {}}
+      >
+        <div className="flex items-stretch">
+          {/* Amount input (hero) */}
+          {showAmountInput && onAmountChange && (
             <input
-              id={amountInputId}
-              type="number"
-              value={amount}
-              onChange={(e) => onAmountChange(e.target.value)}
-              aria-describedby={isCrossChain ? amountHintId : undefined}
-              className="w-full rounded-xl border-2 shadow-sm focus:ring-2 text-gray-900 dark:text-gray-100 font-semibold pr-16 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:ring-blue-200 dark:focus:ring-blue-800 min-h-[52px] px-3"
-              placeholder="Amount"
-              min="0"
-              step="0.01"
-              disabled={disabled}
+              type="text"
+              value={amount ?? ""}
+              onChange={handleAmountChange}
+              placeholder="0.00"
               inputMode="decimal"
+              disabled={disabled}
+              className="flex-1 min-w-0 bg-transparent text-2xl font-black text-gray-900 dark:text-gray-100 placeholder:text-gray-300 dark:placeholder:text-gray-600 px-4 py-3.5 focus:outline-none"
+              aria-label={`${label} amount`}
             />
-            <button
-              type="button"
-              onClick={setMaxAmount}
-              className={`absolute right-2 top-1/2 transform -translate-y-1/2 rounded-md px-2 py-1 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 ${!hasBalance || isCrossChain
-                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800'
-                }`}
-              disabled={disabled || !hasBalance || Boolean(isCrossChain)}
-              title={
-                isCrossChain
-                  ? "MAX not available for cross-chain swaps"
-                  : !hasBalance
-                    ? "No balance available"
-                    : "Use maximum balance"
-              }
-            >
-              MAX
-            </button>
+          )}
+
+          {/* When no amount input (To field), show balance/region info instead */}
+          {!showAmountInput && (
+            <div className="flex-1 min-w-0 px-4 py-3.5 flex items-center gap-2">
+              {regionColor && tokenRegion && tokenRegion !== "Unknown" && (
+                <span
+                  className="inline-block w-2 h-2 rounded-full shrink-0"
+                  style={{ backgroundColor: regionColor }}
+                  aria-hidden
+                />
+              )}
+              <span className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                {TOKEN_METADATA[selectedToken]?.name || selectedToken}
+                {tokenRegion && tokenRegion !== "Unknown" ? ` · ${tokenRegion}` : ""}
+              </span>
+            </div>
+          )}
+
+          {/* Token pill button */}
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            disabled={disabled}
+            aria-label={`Select ${label} token`}
+            className="flex items-center gap-2 px-3 my-1.5 mr-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <TokenIcon symbol={selectedToken} size={24} />
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
+              {selectedToken}
+            </span>
+            <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Balance line */}
+        <div className="flex items-center justify-between px-4 pb-2.5">
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-gray-400 dark:text-gray-500">
+              {isCrossChain ? (hasBalance ? "Balance (other chain):" : "Balance (switch to check):") : "Balance:"}
+            </span>
+            <span className="font-semibold text-gray-600 dark:text-gray-300">
+              {balanceDisplay}
+            </span>
+            {hasBalance && !isCrossChain && (
+              <button
+                type="button"
+                onClick={setMaxAmount}
+                disabled={disabled}
+                className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded"
+              >
+                MAX
+              </button>
+            )}
           </div>
-        )}
+          {usdEquivalent != null && (
+            <span className="text-xs text-gray-400 dark:text-gray-500">
+              ≈ ${usdEquivalent < 1 ? usdEquivalent.toFixed(4) : usdEquivalent.toFixed(2)}
+            </span>
+          )}
+        </div>
       </div>
 
-      {showAmountInput && isCrossChain && (
-        <p id={amountHintId} className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-300">
-          Cross-chain quotes can shift with bridge fees and final destination liquidity. Start with a deliberate amount.
+      {/* Non-compliant inline warning (compact, one line) */}
+      {isNonCompliant && selectedCompliance.reason && (
+        <p className="mt-1.5 text-xs text-red-600 dark:text-red-400 leading-relaxed">
+          {selectedCompliance.reason}
+          {selectedCompliance.alternatives?.length ? ` · Try: ${selectedCompliance.alternatives.join(", ")}` : ""}
         </p>
       )}
 
-      {/* Strategy Violation Warning */}
-      {!selectedTokenCompliant && selectedTokenCompliance.reason && (
-        <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border-2 border-red-200 dark:border-red-800 rounded-xl">
-          <div className="flex items-start gap-2">
-            <span className="text-lg shrink-0">⚠️</span>
-            <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-black text-red-900 dark:text-red-100 uppercase tracking-wide">
-                Strategy Violation
-              </h4>
-              <p className="text-xs text-red-800 dark:text-red-200 mt-1 leading-relaxed">
-                {selectedTokenCompliance.reason}
-              </p>
-              {selectedTokenCompliance.alternatives && selectedTokenCompliance.alternatives.length > 0 && (
-                <p className="text-xs text-red-700 dark:text-red-300 mt-2 leading-relaxed">
-                  <strong>Recommended alternatives:</strong> {selectedTokenCompliance.alternatives.join(', ')}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Cross-chain hint (compact) */}
+      {showAmountInput && isCrossChain && (
+        <p className="mt-1.5 text-xs text-amber-600 dark:text-amber-400">
+          Cross-chain quotes may shift with bridge fees.
+        </p>
       )}
 
-      {/* Positive Reinforcement Badge */}
-      {selectedTokenCompliant && selectedTokenBadge && (
-        <div className="mt-2 p-2.5 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-900/20 dark:to-green-900/20 border-2 border-emerald-200 dark:border-emerald-800 rounded-xl">
-          <div className="flex items-center gap-2">
-            <span className="text-lg shrink-0">{selectedTokenBadge.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-emerald-900 dark:text-emerald-100 leading-relaxed">
-                <span className="uppercase tracking-wide">{selectedTokenBadge.label}</span> • Aligned with your {financialStrategy?.replace('_', ' ')} strategy
-              </p>
-            </div>
-            <span className="text-emerald-600 dark:text-emerald-400 shrink-0">✓</span>
-          </div>
-        </div>
-      )}
-
-      {/* Token info card - compact version, hide in beginner mode */}
-      {selectedToken && showRegionalInfo && (
-        <div
-          className="relative mt-1.5 text-sm px-2 py-1.5 rounded-lg border-2 shadow-sm bg-white dark:bg-gray-900"
-          style={regionColor ? { borderColor: regionColor } : {}}
-        >
-          <div className="flex w-full justify-between items-center gap-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {regionColor && (
-                <div
-                  className="size-6 rounded-full flex items-center justify-center shadow-sm flex-shrink-0"
-                  style={{ backgroundColor: regionColor }}
-                >
-                  <RegionalIconography
-                    region={tokenRegion as Region}
-                    size="sm"
-                    className="text-white scale-75"
-                  />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block leading-tight">
-                  {TOKEN_METADATA[selectedToken]?.name || selectedToken}
-                </span>
-                <span className="font-bold text-xs text-gray-900 dark:text-gray-100 block leading-tight">
-                  {tokenRegion && tokenRegion !== 'Unknown' ? tokenRegion : "Unknown"}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* ENHANCEMENT: Yield badge for Arbitrum RWA tokens */}
-              {(() => {
-                const yieldBadge = getYieldBadge(selectedToken);
-                if (yieldBadge) {
-                  return (
-                    <div className={`px-2 py-1 rounded-md shadow-sm flex-shrink-0 ${yieldBadge.color}`}>
-                      <span className="text-xs font-black block leading-tight">
-                        {yieldBadge.text}
-                      </span>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              <div className="bg-gray-50 dark:bg-gray-800 px-2 py-1 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium block leading-tight">
-                  Inflation
-                </span>
-                <span
-                  className={`font-bold text-xs block leading-tight ${inflationRate > 5
-                    ? "text-red-600 dark:text-red-400"
-                    : inflationRate > 3
-                      ? "text-amber-600 dark:text-amber-400"
-                      : "text-green-600 dark:text-green-400"
-                    }`}
-                >
-                  {isNaN(inflationRate) || inflationRate === undefined ? '—' : inflationRate.toFixed(1) + '%'}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <TokenPickerSheet
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onSelect={onTokenChange}
+        items={pickerItems}
+        selectedToken={selectedToken}
+        title={`Select ${label} token`}
+      />
     </div>
   );
 };

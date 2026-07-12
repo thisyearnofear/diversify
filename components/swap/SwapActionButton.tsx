@@ -16,7 +16,6 @@ interface SwapActionButtonProps {
     isBeginner?: boolean;
     zapMode?: boolean; // When true, changes button text to 'Deposit'
     disabledReason?: string | null;
-    helperText?: string;
     /** When true, renders as a fixed bottom button on mobile for always-visible CTA */
     stickyMobile?: boolean;
 }
@@ -33,7 +32,6 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
     isBeginner = false,
     zapMode = false,
     disabledReason,
-    helperText,
     stickyMobile = false,
 }) => {
     // Common button content
@@ -141,18 +139,18 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
                     <button
                         onClick={onClick}
                         aria-disabled={disabled || isLoading}
-                        aria-describedby={disabledReason || helperText ? "swap-cta-helper-mobile" : undefined}
+                        aria-describedby={disabledReason ? "swap-cta-helper-mobile" : undefined}
                         className="relative w-full py-4 px-6 min-h-[56px] border-2 border-blue-700 rounded-xl shadow-lg text-base font-bold text-white overflow-hidden bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] motion-reduce:transition-none"
                         disabled={disabled || isLoading}
                     >
                         {buttonContent}
                     </button>
-                    {(disabledReason || helperText) && (
+                    {disabledReason && (
                         <p
                             id="swap-cta-helper-mobile"
-                            className={`mt-2 text-xs leading-5 ${disabledReason ? "text-amber-700 dark:text-amber-300" : "text-gray-600 dark:text-gray-400"}`}
+                            className="mt-2 text-xs leading-5 text-amber-700 dark:text-amber-300"
                         >
-                            {disabledReason || helperText}
+                            {disabledReason}
                         </p>
                     )}
                 </div>
@@ -166,18 +164,18 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
             <button
                 onClick={onClick}
                 aria-disabled={disabled || isLoading}
-                aria-describedby={disabledReason || helperText ? "swap-cta-helper" : undefined}
+                aria-describedby={disabledReason ? "swap-cta-helper" : undefined}
                 className="relative w-full py-4 px-6 min-h-[56px] border-2 border-blue-700 rounded-lg shadow-lg text-base font-bold text-white overflow-hidden bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none"
                 disabled={disabled || isLoading}
             >
                 {buttonContent}
             </button>
-            {(disabledReason || helperText) && (
+            {disabledReason && (
                 <p
                     id="swap-cta-helper"
-                    className={`mt-2 text-sm leading-6 ${disabledReason ? "text-amber-700 dark:text-amber-300" : "text-gray-600 dark:text-gray-400"}`}
+                    className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-300"
                 >
-                    {disabledReason || helperText}
+                    {disabledReason}
                 </p>
             )}
         </div>

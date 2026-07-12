@@ -1,12 +1,12 @@
-import { forwardRef, useImperativeHandle } from "react";
+import { forwardRef, useImperativeHandle, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { useSwapController } from "../../hooks/use-swap-controller";
 import { ChainDetectionService } from "@diversifi/shared";
 import { NETWORKS } from "../../config";
 import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";
-import SwapAIInsight from "./SwapAIInsight";
 import ExpectedOutputCard from "./ExpectedOutputCard";
-import InflationBenefitCard from "./InflationBenefitCard";
+import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import SwapActionButton from "./SwapActionButton";
 import { RegionalPattern } from "../regional/RegionalIconography";
@@ -19,7 +19,6 @@ import { useAdvisor } from "@/hooks/use-advisor";
 interface Token {
   symbol: string;
   name: string;
-  icon?: string;
   region: string;
 }
 
@@ -85,6 +84,8 @@ const SwapInterface = forwardRef<
   const { askAdvisor } = useAdvisor();
   const isBeginner = experienceMode === "beginner";
   const isMobile = useMobile();
+  const reducedMotion = useReducedMotion();
+  const [switchRotated, setSwitchRotated] = useState(false);
 
   const {
     fromToken,
@@ -139,33 +140,30 @@ const SwapInterface = forwardRef<
     Object.values(NETWORKS).find((network) => network.chainId === selectedChainId)?.name;
 
   const getSwapDisabledReason = () => {
-    if (!address) return "Connect your wallet to review and execute this route.";
-    if (!fromToken || !toToken) return "Select both source and destination assets.";
-    if (fromToken === toToken) return "Choose a different destination asset to continue.";
-    if (!amount) return "Enter the amount you want to move before reviewing the route.";
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      return "Enter a valid amount greater than zero.";
-    }
-    if (parsedAmount > availableBalance) {
-      return `Amount exceeds your available ${fromToken} balance.`;
-    }
+    if (!address) return "Connect wallet";
+    if (!fromToken || !toToken) return "Select tokens";
+    if (fromToken === toToken) return "Different destination needed";
+    if (!amount) return "Enter amount";
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return "Invalid amount";
+    if (parsedAmount > availableBalance) return `Exceeds ${fromToken} balance`;
     return null;
   };
 
   const ctaDisabledReason = getSwapDisabledReason();
-  const ctaHelperText = isCrossChainRoute
-    ? "This route may bridge funds before the final swap or deposit. Review destination chain details before submitting."
-    : "Review the estimated output and confirm the destination asset before submitting.";
 
-  // Expose methods to parent
+  const handleSwitch = () => {
+    if (reducedMotion) {
+      handleSwitchTokens();
+      return;
+    }
+    setSwitchRotated((r) => !r);
+    // Swap values after the rotation animation kicks off
+    setTimeout(() => handleSwitchTokens(), 150);
+  };
+
   useImperativeHandle(ref, () => ({
-    refreshBalances: () => {
-      refreshBalances();
-    },
-    getSelectedTokens: () => ({
-      fromToken,
-      toToken,
-    }),
+    refreshBalances: () => refreshBalances(),
+    getSelectedTokens: () => ({ fromToken, toToken }),
     setTokens: (
       from: string,
       to: string,
@@ -175,72 +173,60 @@ const SwapInterface = forwardRef<
       phoneNumber?: string,
       recipientAddress?: string,
     ) => {
-      console.log(
-        `[SwapInterface] Setting tokens: ${from} → ${to}, amount: ${inputAmount}, chains: ${fromChainId}→${toChainId}, phone: ${phoneNumber}`,
-      );
-
       if (fromChainId) setFromChainId(fromChainId);
       if (toChainId) setToChainId(toChainId);
-
-      // Directly set tokens to support cross-chain prefilling where tokens might
-      // not be in the current chain's availableTokens list.
-      // useSwapController will validate/reset these if invalid for the selected chain.
       setFromToken(from.toUpperCase());
       setToToken(to.toUpperCase());
-
       if (inputAmount !== undefined) setAmount(inputAmount);
       if (phoneNumber !== undefined) setPhoneNumber(phoneNumber || null);
       if (recipientAddress !== undefined) setRecipientAddress(recipientAddress || null);
     },
-    }));
+  }));
 
   return (
     <div className="relative bg-white dark:bg-gray-900 p-4 rounded-lg shadow-md overflow-hidden SwapInterface border border-gray-200 dark:border-gray-700">
       {fromTokenRegion && toTokenRegion && (
         <div className="absolute inset-0">
-          <RegionalPattern
-            region={toTokenRegion as Region}
-            className="opacity-5"
-          />
+          <RegionalPattern region={toTokenRegion as Region} className="opacity-5" />
         </div>
       )}
       <div className="relative">
+        {/* Header */}
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
-            {isBeginner ? "Protect Your Savings" : title}
+            {isBeginner ? "Protect Savings" : title}
           </h3>
-          {!isBeginner && inflationDataSource === "api" && (
+          {shouldShowIntermediateFeatures() && inflationDataSource === "api" && (
             <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
               Live Data
             </span>
           )}
         </div>
 
+        {/* One banner slot — pick the most relevant per state */}
         {isBeginner && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-              Choose what you have and what you want to move into.
-            </p>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-              DiversiFi helps you shift savings toward more stable currencies with a simple, guided protection flow.
+          <div className="mb-3 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
+            <p className="text-xs font-semibold text-blue-900 dark:text-blue-100">
+              Choose what you have and what to move into.
             </p>
           </div>
         )}
 
+        {/* Cross-chain panel (advanced only) */}
         {enableCrossChain && shouldShowIntermediateFeatures() && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-blue-600 dark:text-blue-400">🌉</span>
-              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                Cross-Chain Transfer
-              </span>
-              {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
-                <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-1 rounded-full">
-                  Transfer Needed
+          <div className="mb-3 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+              <span className="text-xs font-medium text-blue-800 dark:text-blue-200">Cross-Chain</span>
+              {isCrossChainRoute && (
+                <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                  Bridge
                 </span>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-2">
               <ChainSelector
                 selectedChainId={fromChainId}
                 onChainSelect={setFromChainId}
@@ -258,60 +244,30 @@ const SwapInterface = forwardRef<
                 isBridgeMode={enableCrossChain}
               />
             </div>
-            {ChainDetectionService.isCrossChain(fromChainId, toChainId) && (
-              <div className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                ⚠️ Cross-network moves may take longer and may cost more
-              </div>
-            )}
           </div>
         )}
 
-        {shouldShowIntermediateFeatures() && (
-          <SwapAIInsight
-            toToken={toToken}
-            inflationDifference={inflationDifference}
-            onAskAI={() => {
-              // Open the Advisor with a context-aware question about the swap
-              askAdvisor(`What's the best strategy for swapping to ${toToken}?`);
-            }}
-          />
-        )}
-
+        {/* SocialConnect recipient — compact chip */}
         {phoneNumber && (
-          <section
-            className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 shadow-sm dark:border-emerald-900/50 dark:bg-emerald-950/20"
-            aria-label="SocialConnect recipient"
-          >
-            <div className="flex items-start gap-3">
-              <span className="text-xl" aria-hidden="true">📱</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
-                  SocialConnect recipient selected
-                </p>
-                <p className="mt-1 text-sm leading-6 text-emerald-800 dark:text-emerald-200">
-                  Tokens will be sent to <span className="font-bold">{phoneNumber}</span> after the route completes.
-                </p>
-                {recipientAddress && (
-                  <p className="mt-1 truncate text-xs text-emerald-700/80 dark:text-emerald-300/80">
-                    Resolved address: {recipientAddress}
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setPhoneNumber(null);
-                  setRecipientAddress(null);
-                }}
-                className="rounded-lg px-2 py-1.5 text-sm font-semibold text-emerald-800 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-emerald-100 dark:hover:bg-emerald-900/40 dark:focus-visible:ring-offset-gray-900"
-              >
-                Clear
-              </button>
-            </div>
-          </section>
+          <div className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50">
+            <svg className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+            <span className="text-xs text-emerald-800 dark:text-emerald-200 truncate">
+              Sending to <strong>{phoneNumber}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => { setPhoneNumber(null); setRecipientAddress(null); }}
+              className="ml-auto text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 shrink-0"
+            >
+              Clear
+            </button>
+          </div>
         )}
 
-        <div className="space-y-3">
+        {/* Main form */}
+        <div className="space-y-1">
           <TokenSelector
             label="From"
             selectedToken={fromToken}
@@ -329,30 +285,22 @@ const SwapInterface = forwardRef<
             financialStrategy={financialStrategy ?? undefined}
           />
 
-          <div className="flex justify-center my-2">
-            <button
-              onClick={handleSwitchTokens}
-              className={`p-3 rounded-full transition-colors shadow-md ${fromTokenRegion && toTokenRegion
-                ? `bg-gradient-to-b from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-gray-200`
-                : "bg-gradient-to-b from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 border-2 border-gray-300"
-                } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900 motion-reduce:transition-none`}
+          {/* Switch button with rotation animation */}
+          <div className="flex justify-center -my-1 relative z-10">
+            <motion.button
+              onClick={handleSwitch}
+              animate={{ rotate: switchRotated ? 180 : 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="p-2.5 rounded-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-blue-400 dark:hover:border-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isLoading}
               aria-label="Switch tokens"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="size-7 text-gray-800"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <polyline points="19 12 12 19 5 12"></polyline>
+              <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
               </svg>
-            </button>
+            </motion.button>
           </div>
 
           <TokenSelector
@@ -371,13 +319,12 @@ const SwapInterface = forwardRef<
             financialStrategy={financialStrategy ?? undefined}
           />
 
+          {/* Compact live quote row */}
           <ExpectedOutputCard
             expectedOutput={expectedOutput}
             amount={amount}
             fromToken={fromToken}
             toToken={toToken}
-            fromTokenRegion={fromTokenRegion}
-            toTokenRegion={toTokenRegion}
             fromChainName={getChainName(fromChainId)}
             toChainName={getChainName(toChainId)}
             slippageTolerance={slippageTolerance}
@@ -385,49 +332,36 @@ const SwapInterface = forwardRef<
             mounted={mounted}
           />
 
-          {shouldShowIntermediateFeatures() && (
-            <InflationBenefitCard
+          {/* Unified inflation differentiator — one line, one moment */}
+          {shouldShowIntermediateFeatures() && hasInflationBenefit && (
+            <InflationInsightRow
               fromToken={fromToken}
               toToken={toToken}
-              fromTokenRegion={fromTokenRegion}
-              toTokenRegion={toTokenRegion}
               inflationDifference={inflationDifference}
-              hasInflationBenefit={hasInflationBenefit}
+              fromInflationRate={fromTokenInflationRate}
+              toInflationRate={toTokenInflationRate}
+              onAskAI={() => askAdvisor(`What's the best strategy for swapping to ${toToken}?`)}
             />
           )}
 
+          {/* Slippage — advanced only, compact */}
           {shouldShowAdvancedFeatures() && (
-            <div className="bg-gray-50 dark:bg-gray-800 p-2.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <label className="text-xs font-bold text-gray-900 dark:text-gray-100 mb-1.5 flex items-center">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="size-4 mr-1 text-gray-700"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
+            <div className="flex items-center gap-2 px-1 py-1">
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0">Slippage</span>
+              {[0.1, 0.5, 1.0, 2.0].map((tolerance) => (
+                <button
+                  key={tolerance}
+                  onClick={() => setSlippageTolerance(tolerance)}
+                  className={`px-2 py-1 text-xs rounded-md font-medium transition-colors ${
+                    slippageTolerance === tolerance
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  }`}
+                  disabled={isLoading}
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1v-3a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Slippage Tolerance
-              </label>
-              <div className="flex space-x-2">
-                {[0.1, 0.5, 1.0, 2.0].map((tolerance) => (
-                  <button
-                    key={tolerance}
-                    onClick={() => setSlippageTolerance(tolerance)}
-                    className={`px-3 py-1.5 text-xs rounded-md shadow-md ${slippageTolerance === tolerance
-                      ? `bg-blue-600 text-white border-2 border-blue-700 font-bold`
-                      : "bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      }`}
-                    disabled={isLoading}
-                  >
-                    {tolerance}%
-                  </button>
-                ))}
-              </div>
+                  {tolerance}%
+                </button>
+              ))}
             </div>
           )}
 
@@ -449,10 +383,10 @@ const SwapInterface = forwardRef<
             zapMode={zapMode}
             disabled={Boolean(ctaDisabledReason)}
             disabledReason={ctaDisabledReason}
-            helperText={ctaHelperText}
             onClick={() => executeSwap(onSwap, contractCall)}
-            stickyMobile={isMobile && isBeginner}
-          />        </div>
+            stickyMobile={isMobile}
+          />
+        </div>
       </div>
     </div>
   );
