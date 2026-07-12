@@ -1,0 +1,3 @@
+echo "🔎 Pre-push: typecheck + tests"
+npx tsc --noEmit
+npx vitest run
