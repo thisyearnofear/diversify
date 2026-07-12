@@ -2,16 +2,18 @@ import React, { useEffect, useRef } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
-import { useInflationData } from "@/hooks/use-inflation-data";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { useExperience } from "../../../context/app/ExperienceContext";
 import { useProtectionProfile } from "../../../hooks/use-protection-profile";
 import { useMarketRegime } from "@/hooks/use-market-regime";
+import { useNavigation } from "@/context/app/NavigationContext";
 import { getRegimeTip } from "@/lib/market-regime";
 import { classifyAssets } from "../../portfolio/asset-classification";
 import WalletButton from "../../wallet/WalletButton";
 import CurrencyPerformanceChart from "../../portfolio/CurrencyPerformanceChart";
 import ProtectionAnalysis from "../../portfolio/ProtectionAnalysis";
+import InflationProtectionInfo from "../../inflation/InflationProtectionInfo";
+import DiversificationHealthCard from "../../trade/DiversificationHealthCard";
 import { StreakRewardsCard, RewardsStats } from "../../rewards/StreakRewardsCard";
 import SimplePieChart from "../../portfolio/SimplePieChart";
 import { AssetInventory } from "../../portfolio/AssetInventory";
@@ -81,7 +83,6 @@ export function ConnectedOverview({
   onEnableDemo,
   currencyPerformanceData,
 }: ConnectedOverviewProps) {
-  const { inflationData } = useInflationData();
   const { experienceMode } = useExperience();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
   const marketRegime = useMarketRegime();
@@ -89,6 +90,7 @@ export function ConnectedOverview({
   const hasTrackedRegimeTip = useRef(false);
   const { isMiniPay } = useWalletContext();
   const { openAdvisor } = useAdvisor();
+  const { navigateToSwap } = useNavigation();
   const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
   // ── Single source of truth for what the home page should show ──────────
@@ -430,20 +432,47 @@ export function ConnectedOverview({
               </div>
             </Section>
           ) : (
-            <ProtectionAnalysis
-              regionData={regionData}
-              totalValue={totalValue}
-              goalScores={portfolio.goalScores}
-              diversificationScore={diversificationScore}
-              diversificationRating={diversificationRating}
-              onOptimize={() => setActiveTab("protect")}
-              onSwap={() => setActiveTab("exchange")}
-              chainId={chainId}
-              onNetworkChange={refreshChainId ? handleRefresh : undefined}
-              refreshBalances={refreshBalances}
-              yieldSummary={portfolio}
-            />
+            <>
+              <ProtectionAnalysis
+                regionData={regionData}
+                totalValue={totalValue}
+                goalScores={portfolio.goalScores}
+                diversificationScore={diversificationScore}
+                diversificationRating={diversificationRating}
+                onOptimize={() => setActiveTab("protect")}
+                onSwap={() => setActiveTab("exchange")}
+                chainId={chainId}
+                onNetworkChange={refreshChainId ? handleRefresh : undefined}
+                refreshBalances={refreshBalances}
+                yieldSummary={portfolio}
+              />
+              <DiversificationHealthCard
+                analysis={activePortfolio}
+                isLoading={activePortfolio.isLoading}
+                onTakeAction={(opp) =>
+                  navigateToSwap({
+                    fromToken: opp.fromToken,
+                    toToken: opp.toToken,
+                    amount: String(opp.suggestedAmount),
+                    reason: `Rebalance ${opp.fromRegion} → ${opp.toRegion}`,
+                  })
+                }
+                className="mt-4"
+              />
+            </>
           )}
+        </section>
+      )}
+
+      {!home.isBeginner && hasHoldings && (
+        <section id="inflation-protection" data-home-section="inflation-protection" className="scroll-mt-20">
+          <InflationProtectionInfo
+            homeRegion={userRegion}
+            currentRegions={regionData
+              .filter((r) => REGIONS.includes(r.region as any))
+              .map((r) => r.region as Region)}
+            onChangeHomeRegion={setUserRegion}
+          />
         </section>
       )}
 

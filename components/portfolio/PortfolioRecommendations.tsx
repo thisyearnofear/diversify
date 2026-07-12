@@ -289,7 +289,7 @@ export default function PortfolioRecommendations({
             </div>
           </div>
           <span className="text-xs text-gray-500 bg-gray-800 px-2 py-1 rounded-full shadow-inner">
-            World Bank • Alpha Vantage
+            Model Allocations
           </span>
         </div>
       </div>

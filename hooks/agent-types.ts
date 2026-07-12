@@ -275,6 +275,12 @@ export interface AIMessage {
     url: string;
     cost: number;
   }>;
+  /** Research bundle confidence/coverage, alongside researchSources */
+  billing?: {
+    totalCost: number;
+    confidence: number; // 0-1
+    sourceCount: number;
+  };
   insights?: {
     summary: string;
     tags: string[];

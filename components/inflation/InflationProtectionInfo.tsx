@@ -155,6 +155,11 @@ export default function InflationProtectionInfo({
     ? getRegionInsights(selectedRegion)
     : getRegionInsights(homeRegion);
 
+  // useInflationData() always includes a "Global" aggregate key, but the
+  // Region type only covers the 5 geographic regions — filter it out so
+  // it can't be cast into Region and passed to onChangeHomeRegion.
+  const regionKeys = Object.keys(inflationData).filter((r) => r !== "Global");
+
 
 
   // Get savings example
@@ -200,7 +205,7 @@ export default function InflationProtectionInfo({
         </div>
 
         <div className="grid grid-cols-5 gap-1 mb-3">
-          {Object.keys(inflationData).map((region) => (
+          {regionKeys.map((region) => (
             <button
               key={region}
               className={`p-2 text-xs rounded-md transition-colors flex flex-col items-center ${
@@ -277,8 +282,9 @@ export default function InflationProtectionInfo({
           Available Stablecoins
         </h3>
         <div className="grid grid-cols-2 gap-2">
-          {Object.entries(inflationData).map(
-            ([region, data]: [string, InflationDataEntry]) => (
+          {regionKeys.map((region: string) => {
+            const data = inflationData[region] as InflationDataEntry;
+            return (
               <div
                 key={region}
                 className={`relative overflow-hidden p-3 rounded-card border cursor-pointer transition-colors ${
@@ -320,8 +326,8 @@ export default function InflationProtectionInfo({
                   ))}
                 </div>
               </div>
-            )
-          )}
+            );
+          })}
         </div>
       </div>
 

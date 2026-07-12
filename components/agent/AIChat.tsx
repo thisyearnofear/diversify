@@ -819,6 +819,11 @@ export default function AIChat() {
                                   ${msg.researchSources.reduce((sum, s) => sum + (s.cost || 0), 0).toFixed(3)} USDC
                                 </span>
                               )}
+                              {msg.billing?.confidence != null && (
+                                <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                                  {(msg.billing.confidence * 100).toFixed(0)}% confidence
+                                </span>
+                              )}
                             </div>
                             {msg.x402Receipt?.explorer && (
                               <a

@@ -561,6 +561,7 @@ export function useAgentChat({
               provider: result.provider,
               x402Receipt: patchedReceipt,
               researchSources: result.researchSources || [],
+              billing: result.billing,
             },
           );
 
