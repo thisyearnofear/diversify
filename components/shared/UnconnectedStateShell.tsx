@@ -42,6 +42,8 @@ export interface UnconnectedStateShellProps {
   showDemoCta?: boolean;
   /** Callback for enabling demo mode — required when showDemoCta is true */
   onEnableDemo?: () => void;
+  /** Place the demo action before supporting proof and education content. */
+  demoCtaSide?: 'above' | 'below';
   /** "How it works" steps — optional but recommended for consistency */
   howItWorks?: HowItWorksStep[];
   /** Whether to hide the "How it works" section when it exists (e.g. when onboarding is active) */
@@ -62,6 +64,7 @@ export function UnconnectedStateShell({
   proofCardVariant = 'full',
   showDemoCta = true,
   onEnableDemo,
+  demoCtaSide = 'below',
   howItWorks,
   hideHowItWorks = false,
   howItWorksCardClassName = '',
@@ -72,9 +75,12 @@ export function UnconnectedStateShell({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* 1. Tab-specific hero card + proof card (order controlled by proofCardSide) */}
-      {proofCardSide === 'above' && proofCard}
+      {/* 1. Tab-specific hero card + its primary next action */}
       {heroCard}
+      {showDemoCta && onEnableDemo && demoCtaSide === 'above' && (
+        <DemoCta onEnableDemo={onEnableDemo} className={demoCtaCardClassName} />
+      )}
+      {proofCardSide === 'above' && proofCard}
       {proofCardSide === 'below' && proofCard}
 
       {/* 3. How it works steps */}
@@ -104,27 +110,29 @@ export function UnconnectedStateShell({
       )}
 
       {/* 4. Demo mode CTA — strip pattern, no container */}
-      {showDemoCta && onEnableDemo && (
-        <div className={`flex items-center justify-between gap-3 px-1 ${demoCtaCardClassName}`}>
-          <div>
-            <p className="text-sm font-bold text-gray-900 dark:text-white">
-              🎮 Try Demo Mode
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Explore the full flow with sample data — no wallet needed
-            </p>
-          </div>
-          <button
-            onClick={onEnableDemo}
-            className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
-          >
-            Open Demo
-          </button>
-        </div>
+      {showDemoCta && onEnableDemo && demoCtaSide === 'below' && (
+        <DemoCta onEnableDemo={onEnableDemo} className={demoCtaCardClassName} />
       )}
 
       {/* 5. Additional tab-specific content */}
       {children}
+    </div>
+  );
+}
+
+function DemoCta({ onEnableDemo, className = '' }: { onEnableDemo: () => void; className?: string }) {
+  return (
+    <div className={`flex items-center justify-between gap-3 px-1 ${className}`}>
+      <div>
+        <p className="text-sm font-bold text-gray-900 dark:text-white">Explore a sample plan</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">See the flow with sample data — no wallet needed</p>
+      </div>
+      <button
+        onClick={onEnableDemo}
+        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+      >
+        Open demo
+      </button>
     </div>
   );
 }

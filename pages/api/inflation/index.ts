@@ -42,6 +42,7 @@ export default async function handler(
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400');
 
   const { countries } = req.query;
   const countriesStr = countries as string || '';

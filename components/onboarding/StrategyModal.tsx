@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProtectionProfile, deriveProfileFromPhilosophy } from '@/hooks/use-protection-profile';
 import { useStrategy } from '@/context/app/StrategyContext';
+import { useNavigation } from '@/context/app/NavigationContext';
 import { dismissFirstRunTour } from '@/constants/onboarding';
 import {
   ARCHETYPES,
@@ -43,6 +44,7 @@ export default function StrategyModal({
 }: StrategyModalProps) {
     const { setMultipleConfig } = useProtectionProfile();
     const { financialStrategy } = useStrategy();
+    const { setActiveTab } = useNavigation();
     const dialogRef = useRef<HTMLDivElement>(null);
 
     // Map strategy to archetype for the celebration background
@@ -93,12 +95,15 @@ export default function StrategyModal({
             localStorage.setItem('user-region', region);
         }
         dismissFirstRunTour();
+        // A visitor choosing “Explore the app” should arrive at Shield, not at
+        // an unrelated tab restored from a prior browser session.
+        setActiveTab('protect');
         if (typeof document !== 'undefined') {
             document.documentElement.removeAttribute('data-pending-onboarding');
         }
         onClose();
         onComplete?.();
-    }, [onClose, onComplete, setMultipleConfig, financialStrategy]);
+    }, [onClose, onComplete, setMultipleConfig, financialStrategy, setActiveTab]);
 
     return (
         <AnimatePresence>

@@ -36,6 +36,12 @@ export default async function handler(
 
   const fromCurrency = from as string;
   const toCurrency = to as string;
+  res.setHeader(
+    'Cache-Control',
+    historical === 'true'
+      ? 'public, s-maxage=3600, stale-while-revalidate=86400'
+      : 'public, s-maxage=300, stale-while-revalidate=900',
+  );
 
   try {
     // Check if both currencies are supported by Frankfurter
@@ -145,7 +151,8 @@ function getFallbackRate(from: string, to: string, historical: boolean) {
   }
 
   if (historical) {
-    // Generate 30 days of mock historical data
+    // Keep fallback deterministic. Synthetic fluctuations would look like
+    // historical market data and change on every retry.
     const dates: string[] = [];
     const rates: number[] = [];
     const today = new Date();
@@ -155,9 +162,7 @@ function getFallbackRate(from: string, to: string, historical: boolean) {
       date.setDate(date.getDate() - i);
       dates.push(date.toISOString().split('T')[0]);
       
-      // Add small random variation
-      const variation = 0.95 + Math.random() * 0.1;
-      rates.push(rate * variation);
+      rates.push(rate);
     }
 
     return {

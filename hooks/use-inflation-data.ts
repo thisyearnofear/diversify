@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-// Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
-import { inflationService } from '@diversifi/shared/src/utils/improved-data-services';
 import {
   FALLBACK_INFLATION_DATA,
   COUNTRY_TO_REGION,
@@ -84,12 +82,15 @@ export function useInflationData() {
         setIsLoading(true);
         setError(null);
 
-        // Try improved multi-source service (IMF → World Bank → fallback)
-        const improvedData = await inflationService.getInflationData();
+        // Browser code must use the same-origin proxy: direct IMF requests are
+        // blocked in production by the provider's CORS policy.
+        const response = await fetch('/api/inflation');
+        if (!response.ok) throw new Error(`Inflation API error: ${response.status}`);
+        const improvedData = await response.json();
 
-        if (improvedData.data?.countries) {
+        if (improvedData.countries) {
           // Process the improved data - ensure countries array exists
-          const countryData: InflationData[] = (improvedData.data.countries || []).map((item: any) => {
+          const countryData: InflationData[] = (improvedData.countries || []).map((item: any) => {
             // Special handling for WEOWORLD (global inflation)
             const isGlobal = item.countryCode === 'WEOWORLD' || item.isGlobal;
 
@@ -106,7 +107,7 @@ export function useInflationData() {
           // Group by region (same logic as before)
           const regionalData = processCountryDataIntoRegions(countryData);
           setInflationData(regionalData);
-          setDataSource(improvedData.source as 'api' | 'cache' | 'fallback');
+          setDataSource(improvedData.source === 'fallback' ? 'fallback' : 'api');
           return;
         }
 

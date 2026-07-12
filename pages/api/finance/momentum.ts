@@ -12,8 +12,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             fetch("https://api.alternative.me/fng/", { signal: AbortSignal.timeout(5000) })
         ]);
 
-        const stableData = stableRes.ok ? await stableRes.json() : [];
-        const sentimentData = sentimentRes.ok ? await sentimentRes.json() : null;
+        if (!stableRes.ok || !sentimentRes.ok) {
+            throw new Error('One or more market-momentum providers failed');
+        }
+        const stableData = await stableRes.json();
+        const sentimentData = await sentimentRes.json();
 
         // Process data on server to minimize payload
         const latest = stableData.slice(-1)[0] || { totalCirculating: { usd: 160000000000 } };
@@ -23,6 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         const sentiment = sentimentData?.data?.[0]?.value ? parseInt(sentimentData.data[0].value) : 50;
 
+        res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');
         res.status(200).json({
             data: {
                 globalStablecoinCap: stableCap,
@@ -35,16 +39,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
     } catch (error) {
         console.error("[Momentum Proxy] Failed to fetch:", error);
-        res.status(200).json({ 
-            error: "Failed to fetch momentum data",
-            data: {
-                globalStablecoinCap: 162400000000,
-                stablecoin24hChange: 0.12,
-                marketSentiment: 65,
-                rwaGrowth7d: 0.8,
-                lastUpdated: Date.now()
-            },
-            source: "proxy-fallback"
+        res.status(503).json({
+            error: "Market momentum is temporarily unavailable",
+            data: null,
+            source: "unavailable"
         });
     }
 }

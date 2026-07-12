@@ -2,7 +2,7 @@
  * Tests for UnconnectedStateShell.
  *
  * The shell is a pure presentational component. It renders its props in a
- * fixed order: heroCard → LiveProofCard → howItWorks → Demo CTA → children.
+ * configurable order around a hero-first conversion surface.
  *
  * We verify:
  *   1. All props render in the correct order.
@@ -121,8 +121,8 @@ describe('UnconnectedStateShell', () => {
                 onEnableDemo={onEnableDemo}
             />,
         );
-        expect(screen.getByText('🎮 Try Demo Mode')).toBeInTheDocument();
-        expect(screen.getByText('Open Demo')).toBeInTheDocument();
+        expect(screen.getByText('Explore a sample plan')).toBeInTheDocument();
+        expect(screen.getByText('Open demo')).toBeInTheDocument();
     });
 
     it('hides the demo CTA when showDemoCta is false', () => {
@@ -133,7 +133,7 @@ describe('UnconnectedStateShell', () => {
                 showDemoCta={false}
             />,
         );
-        expect(screen.queryByText('🎮 Try Demo Mode')).not.toBeInTheDocument();
+        expect(screen.queryByText('Explore a sample plan')).not.toBeInTheDocument();
     });
 
     it('renders children below the shared sections', () => {
@@ -165,13 +165,12 @@ describe('UnconnectedStateShell', () => {
         );
 
         const children = container.children[0]?.children;
-        // Should have at least 5 children: heroCard wrapper, LiveProofCard wrapper,
-        // howItWorks wrapper, demo CTA wrapper, children wrapper
+        // Hero, proof, education, demo and child content are all present.
         expect(children.length).toBeGreaterThanOrEqual(5);
         expect(screen.getByTestId('hero')).toBeInTheDocument();
         expect(screen.getByTestId('mock-proof-card')).toBeInTheDocument();
         expect(screen.getByText('How It Works')).toBeInTheDocument();
-        expect(screen.getByText('🎮 Try Demo Mode')).toBeInTheDocument();
+        expect(screen.getByText('Explore a sample plan')).toBeInTheDocument();
         expect(screen.getByTestId('child')).toBeInTheDocument();
     });
 });

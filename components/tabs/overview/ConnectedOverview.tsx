@@ -28,7 +28,8 @@ import { useHomeSections } from "@/hooks/use-home-sections";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useAdvisor } from "@/hooks/use-advisor";
-import { StrategyService, getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared";
+import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
+import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { ProtectionScorecard } from "./ProtectionScorecard";
 
 interface ConnectedOverviewProps {
@@ -526,8 +527,8 @@ export function ConnectedOverview({
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-xs mx-auto">
               {home.isBeginner
-                ? "Your savings lose value every day due to inflation. Let's fix that."
-                : "Convert local currency into diversified stablecoins to protect against inflation."}
+                ? "Inflation can reduce purchasing power over time. Review the context before choosing an approach."
+                : "Review diversification options across currencies and asset types."}
             </p>
           </div>
 

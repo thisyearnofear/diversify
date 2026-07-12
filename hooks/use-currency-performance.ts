@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { type GeographicRegion } from '../config';
-// Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
-import { exchangeRateService } from '@diversifi/shared/src/utils/improved-data-services';
 
 interface CurrencyPerformance {
   symbol: string;
@@ -67,15 +65,17 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
           .filter(currency => currency.symbol !== baseCurrency) // Skip base currency
           .map(async (currency) => {
             try {
-              // Get historical exchange rates using new centralized service
-              const result = await exchangeRateService.getHistoricalRates(
-                baseCurrency,
-                currency.symbol
+              // The route owns the external provider request. Frankfurter
+              // rejects browser-originated calls in production.
+              const response = await fetch(
+                `/api/exchange-rates?from=${encodeURIComponent(baseCurrency)}&to=${encodeURIComponent(currency.symbol)}&historical=true`,
               );
+              if (!response.ok) throw new Error(`Exchange-rate API error: ${response.status}`);
+              const historicalData = await response.json();
 
               return {
                 symbol: currency.symbol,
-                historicalData: result.data
+                historicalData
               };
             } catch (error) {
               console.error(`Error fetching data for ${currency.symbol}:`, error);
@@ -139,7 +139,9 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
             dates: last30Dates,
             currencies: currencyData,
             baseCurrency,
-            source: 'api'
+            source: results.some((item) => item.historicalData?.source === 'fallback')
+              ? 'fallback'
+              : 'api'
           };
 
           setData(result);

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCurrencyPerformance } from './use-currency-performance';
-// Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
-import { marketMomentumService, type MarketMomentum } from '@diversifi/shared/src/utils/market-momentum-service';
+import type { MarketMomentum } from '@diversifi/shared/src/utils/market-momentum-service';
 
 /**
  * useNetworkActivity - Adaptive Behavioral & Social Proof Hook
@@ -43,7 +42,24 @@ export function useNetworkActivity() {
     const [globalMomentum, setGlobalMomentum] = useState<MarketMomentum | null>(null);
 
     useEffect(() => {
-        marketMomentumService.getMomentum().then(setGlobalMomentum);
+        let cancelled = false;
+
+        fetch('/api/finance/momentum')
+            .then(async (response) => {
+                if (!response.ok) throw new Error(`Momentum API error: ${response.status}`);
+                return response.json();
+            })
+            .then((result) => {
+                // Never display fabricated market momentum as live proof.
+                if (!cancelled && result.source === 'live-aggregators-proxy' && result.data) {
+                    setGlobalMomentum(result.data);
+                }
+            })
+            .catch(() => {
+                if (!cancelled) setGlobalMomentum(null);
+            });
+
+        return () => { cancelled = true; };
     }, []);
 
     // 3. Platform Stats (Internal)

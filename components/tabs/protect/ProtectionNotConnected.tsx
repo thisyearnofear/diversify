@@ -6,7 +6,7 @@ import React from "react";
 import { Card, ConnectWalletPrompt } from "../../shared/TabComponents";
 import WalletButton from "../../wallet/WalletButton";
 import type { UserExperienceMode } from "@/context/app/types";
-import { WALLET_CONNECT_COPY } from "@diversifi/shared";
+import { WALLET_CONNECT_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { LiveProofTicker } from "../../shared/LiveProofCard";
 import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
 import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
@@ -28,18 +28,18 @@ interface Props {
 const HOW_IT_WORKS: HowItWorksStep[] = [
   {
     icon: "📈",
-    title: "Analyze Your Risk",
-    text: "Your portfolio is scanned against real-time global inflation data.",
+    title: "Review risk context",
+    text: "After you connect, compare portfolio information with available market and inflation data.",
   },
   {
     icon: "🎯",
-    title: "Set Your Goal",
-    text: "Choose a protection strategy that fits your needs and risk tolerance.",
+    title: "Choose a values lens",
+    text: "Explore approaches that reflect your goals and relationship with money.",
   },
   {
     icon: "🔄",
-    title: "Diversify Assets",
-    text: "Move into stable currencies and real-world assets to preserve value.",
+    title: "Review your options",
+    text: "Consider diversification across currencies and asset types before acting.",
   },
 ];
 
@@ -66,10 +66,10 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
       <div className="flex items-start justify-between mb-4">
         <div>
           <h3 className="text-xl font-black uppercase tracking-tight">
-            Protection Plan
+            Shield your purchasing power
           </h3>
           <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-            Build your inflation protection plan
+            Explore risk context and values-led protection approaches.
           </p>
         </div>
         <span className="text-3xl">🤖</span>
@@ -86,10 +86,11 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
     <UnconnectedStateShell
       heroCard={heroCard}
       showProofCard={true}
-      proofCardSide="above"
+      proofCardSide="below"
       proofCardVariant={experienceMode === 'beginner' ? 'compact' : 'full'}
       showDemoCta={true}
       onEnableDemo={onEnableDemo}
+      demoCtaSide="above"
       howItWorks={HOW_IT_WORKS}
     >
       {!archetype && (

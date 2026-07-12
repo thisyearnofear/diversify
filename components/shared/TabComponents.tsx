@@ -3,7 +3,7 @@ import { trackFunnelEvent } from "../../lib/analytics";
 import { motion } from "framer-motion";
 import { useAnimatedNumber } from "../../hooks/use-animation";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
-import { ChainDetectionService } from "@diversifi/shared";
+import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import AskAIButton from "../ui/AskAIButton";
 
 // ============================================================================
@@ -1023,8 +1023,8 @@ export const ConnectWalletPrompt = ({
             <p className="text-xs text-blue-700 dark:text-blue-300 font-medium leading-relaxed">
               {isBeginner
                 ? userRegion && inflationData?.[userRegion]
-                  ? `Your money in ${userRegion} is losing ${homeInflation.toFixed(1)}% value per year. Let's fix that!`
-                  : `Money sitting in cash quietly loses value to inflation every year. Let's fix that!`
+                  ? `Inflation data indicates a ${homeInflation.toFixed(1)}% reference rate for ${userRegion}. Consider how it relates to your purchasing-power goals.`
+                  : `Inflation can reduce purchasing power over time. Review the context before choosing an approach.`
                 : message
               }
             </p>
@@ -1036,13 +1036,13 @@ export const ConnectWalletPrompt = ({
         </p>
       </div>
 
-      {/* Beginner: Simple savings calculator */}
+      {/* Beginner: neutral reference-rate comparison, not a return projection. */}
       {isBeginner && recommendations.length > 0 && (
         <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 p-4 rounded-2xl border-2 border-emerald-200 dark:border-emerald-800">
           <div className="flex items-center gap-2 mb-3">
             <span className="text-xl">💰</span>
             <h4 className="text-sm font-black text-emerald-900 dark:text-emerald-100">
-              Potential Savings
+              Reference-rate comparison
             </h4>
           </div>
           <div className="space-y-2">
@@ -1054,18 +1054,18 @@ export const ConnectWalletPrompt = ({
                   </div>
                   <div>
                     <div className="text-xs font-bold text-gray-900 dark:text-white">{rec.symbol}</div>
-                    <div className="text-xs text-gray-500">{rec.region} • {(STABLECOIN_RATES[rec.symbol] || 0).toFixed(1)}% inflation</div>
+                  <div className="text-xs text-gray-500">{rec.region} reference rate • {(STABLECOIN_RATES[rec.symbol] || 0).toFixed(1)}%</div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">+{rec.savings.toFixed(1)}%/yr</div>
-                  <div className="text-xs text-gray-500">on $100</div>
+                  <div className="text-sm font-black text-emerald-700 dark:text-emerald-300">{rec.savings.toFixed(1)} pts</div>
+                  <div className="text-xs text-gray-500">reference difference</div>
                 </div>
               </div>
             ))}
           </div>
           <p className="text-xs text-emerald-700 dark:text-emerald-400 mt-3 text-center font-medium italic">
-            💡 Connect wallet to start saving — takes 2 minutes
+            Illustrative context only — not a return estimate or recommendation.
           </p>
         </div>
       )}

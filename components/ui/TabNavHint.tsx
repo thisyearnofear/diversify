@@ -16,8 +16,9 @@
 import React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTabDiscovery } from '@/hooks/use-tab-discovery';
+import type { TabId } from '@/constants/tabs';
 
-export function TabNavHint() {
+export function TabNavHint({ activeTab }: { activeTab: TabId }) {
     const { showHint, dismiss } = useTabDiscovery();
     const prefersReducedMotion = useReducedMotion();
 
@@ -27,7 +28,7 @@ export function TabNavHint() {
 
     return (
         <AnimatePresence>
-            {showHint && (
+            {showHint && activeTab !== 'protect' && (
                 <motion.div
                     key="tab-nav-hint"
                     {...motionProps}
@@ -43,8 +44,8 @@ export function TabNavHint() {
                         >
                             ←
                         </motion.span>
-                        <span aria-hidden="true">Tap Shield to start protecting</span>
-                        <span className="sr-only">Tap the Shield tab to start protecting your savings.</span>
+                        <span aria-hidden="true">Tap Shield to explore protection</span>
+                        <span className="sr-only">Tap the Shield tab to explore protection approaches.</span>
                         <motion.span
                             aria-hidden="true"
                             animate={prefersReducedMotion ? { x: 0 } : { x: [2, -2, 2] }}

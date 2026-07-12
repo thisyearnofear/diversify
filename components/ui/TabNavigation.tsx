@@ -104,7 +104,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
 
   return (
     <>
-      <TabNavHint />
+      <TabNavHint activeTab={activeTab} />
       <div
         role="tablist"
         aria-label="Main navigation"
