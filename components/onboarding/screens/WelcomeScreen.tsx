@@ -563,7 +563,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         </div>
                         <button
                           onClick={() => setShowCountryPicker(true)}
-                          className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl shadow-sm active:scale-[0.97] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+                          className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl shadow-sm active:scale-[0.97] transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                         >
                           Choose your country →
                         </button>
@@ -622,7 +622,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                                 setShowCountryPicker(false);
                                 setManualCountrySearch('');
                               }}
-                              className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                              className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                             >
                               <span className="text-lg">{c.flag}</span>
                               <div>
@@ -688,7 +688,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                                 <button
                                     onClick={handleSwitchToTestnet}
                                     disabled={isSwitching}
-                                    className={`w-full py-2 rounded-xl text-xs font-black transition-all ${
+                                    className={`w-full py-2 rounded-xl text-xs font-black transition-colors ${
                                         switchDone
                                             ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
                                             : 'bg-violet-600 hover:bg-violet-700 text-white active:scale-95'
@@ -738,7 +738,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                             key={horizon}
                             type="button"
                             onClick={() => setSelectedHorizon(horizon)}
-                            className={`px-2 py-1 rounded-md text-[10px] font-black transition-colors ${
+                            className={`px-2 min-h-[44px] py-1 rounded-md text-[10px] font-black transition-colors ${
                               selectedHorizon === horizon ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
                             }`}
                           >
@@ -873,7 +873,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           variants={staggerChild}
                           type="button"
                           onClick={() => setSelectedLens(lens.id)}
-                          className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-slate-800/70 p-3 text-left transition-all hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                          className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-slate-800/70 p-3 text-left transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
                         >
                           <p className="text-sm font-black text-gray-900 dark:text-white">{lens.label}</p>
                           <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-1">{lens.description}</p>
@@ -970,7 +970,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         enableDemoMode();
                         handleFinish(countryCode);
                       }}
-                      className={`w-full px-6 py-3 font-bold rounded-2xl active:scale-[0.97] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 ${
+                      className={`w-full px-6 py-3 font-bold rounded-2xl active:scale-[0.97] transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 ${
                         selectedArchetype
                           ? 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm'
                           : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white'

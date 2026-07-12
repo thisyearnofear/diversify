@@ -26,7 +26,7 @@ export function DepositHub({ className = "", compact = false }: DepositHubProps)
                 <p className="text-xs text-blue-700 dark:text-blue-300 mb-4 font-medium">Connect your wallet to see options for adding funds.</p>
                 <button
                     onClick={connect}
-                    className="px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all"
+                    className="px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors"
                 >
                     Connect Wallet
                 </button>

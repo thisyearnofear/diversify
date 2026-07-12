@@ -92,7 +92,7 @@ export default function GoodDollarInfoCard({
         return (
             <button
                 onClick={onClaim}
-                className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/15 dark:to-teal-900/15 rounded-xl border border-emerald-200 dark:border-emerald-800 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/25 dark:hover:to-teal-900/25 transition-all group"
+                className="w-full flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/15 dark:to-teal-900/15 rounded-xl border border-emerald-200 dark:border-emerald-800 hover:from-emerald-100 hover:to-teal-100 dark:hover:from-emerald-900/25 dark:hover:to-teal-900/25 transition-colors group"
             >
                 <div className="flex items-center gap-2.5">
                     <span className="text-lg">💚</span>
@@ -127,7 +127,7 @@ export default function GoodDollarInfoCard({
                         <motion.div
                             initial={{ opacity: 0, y: -4 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                            className={`flex items-center justify-between p-3 rounded-xl border transition-colors ${
                                 canClaim
                                     ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700"
                                     : "bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-800"
@@ -158,14 +158,14 @@ export default function GoodDollarInfoCard({
                             {!isWhitelisted && streak && streak.daysActive > 0 ? (
                                 <button
                                     onClick={onVerify}
-                                    className="text-xs font-black px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    className="text-xs font-black px-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                 >
                                     Verify →
                                 </button>
                             ) : canClaim ? (
                                 <button
                                     onClick={onClaim}
-                                    className="text-xs font-black px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all shadow-sm"
+                                    className="text-xs font-black px-3 min-h-[44px] bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-colors shadow-sm"
                                 >
                                     Claim →
                                 </button>
@@ -247,7 +247,7 @@ export default function GoodDollarInfoCard({
                         <div className="flex gap-2 pt-1">
                             <button
                                 onClick={onLearnMore}
-                                className="flex-1 text-xs font-black py-2 px-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-emerald-700 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors"
+                                className="flex-1 text-xs font-black min-h-[44px] px-3 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-emerald-700 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800 transition-colors"
                             >
                                 Docs →
                             </button>

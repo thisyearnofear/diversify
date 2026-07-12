@@ -85,7 +85,7 @@ export function GoalAlignmentBanner({
             </div>
             <div className="h-1.5 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-700 ${score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-blue-500" : "bg-amber-500"}`}
+                className={`h-full rounded-full transition-colors duration-700 ${score >= 80 ? "bg-emerald-500" : score >= 60 ? "bg-blue-500" : "bg-amber-500"}`}
                 style={{ width: `${score}%` }}
               />
             </div>

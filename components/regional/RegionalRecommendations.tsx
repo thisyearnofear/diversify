@@ -249,7 +249,7 @@ export default function RegionalRecommendations({
                 onClick={() => setSelectedRegion(region)}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-all ${selectedRegion === region
+                className={`flex-shrink-0 px-4 py-2 rounded-xl text-sm font-bold whitespace-nowrap transition-colors ${selectedRegion === region
                     ? `bg-gradient-to-r ${design.gradient} text-white shadow-lg`
                     : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                   }`}
@@ -384,7 +384,7 @@ export default function RegionalRecommendations({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
                 onClick={() => onSelectToken?.(token.symbol)}
-                className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg hover:shadow-xl transition-all cursor-pointer"
+                className="bg-white dark:bg-gray-800 rounded-xl p-3 shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -467,7 +467,7 @@ export default function RegionalRecommendations({
         {/* Considerations Accordion */}
         <motion.button
           onClick={() => setShowConsiderations(!showConsiderations)}
-          className="w-full p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-md hover:shadow-lg transition-all"
+          className="w-full p-3 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-md hover:shadow-lg transition-shadow"
         >
           <div className="flex items-center justify-between">
             <span className="font-bold text-gray-900 dark:text-white text-sm">

@@ -178,7 +178,7 @@ function AssetDetailModal({ asset, price, onClose }: AssetDetailModalProps) {
 
         <button
           onClick={onClose}
-          className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-gray-200 transition-all"
+          className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-gray-200 transition-colors"
         >
           Close
         </button>

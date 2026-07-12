@@ -314,7 +314,7 @@ function MtPelerinModal({ widgetUrl, onClose }: MtPelerinModalProps) {
                 href={widgetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all"
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors"
               >
                 Open in New Window
               </a>

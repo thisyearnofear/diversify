@@ -19,7 +19,7 @@ export function StreakProgressVisualizer({ daysActive }: { daysActive: number })
           return (
             <div
               key={i}
-              className={`flex-1 rounded-full transition-all duration-500 ${
+              className={`flex-1 rounded-full transition-colors duration-500 ${
                 isActive
                   ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
                   : 'bg-gray-200 dark:bg-gray-800'

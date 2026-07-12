@@ -189,7 +189,7 @@ export default function IntelligenceHistory() {
                   {item.actionItems.map((ai, i) => (
                     <li key={i} className="text-[11px] flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <div className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
-                      <span className="line-clamp-1 group-hover:line-clamp-none transition-all">{ai}</span>
+                      <span className="line-clamp-1 group-hover:line-clamp-none transition-colors">{ai}</span>
                     </li>
                   ))}
                 </ul>

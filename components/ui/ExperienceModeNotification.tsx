@@ -108,7 +108,7 @@ export default function ExperienceModeNotification() {
                             <div className="flex gap-2">
                                 <button
                                     onClick={handleAction}
-                                    className="px-4 py-2 text-xs font-black rounded-xl bg-white text-gray-900 hover:bg-gray-100 transition-all shadow-md hover:shadow-lg hover:scale-105"
+                                    className="px-4 py-2 min-h-[44px] text-xs font-black rounded-xl bg-white text-gray-900 hover:bg-gray-100 transition-colors shadow-md hover:shadow-lg"
                                 >
                                     {content.buttonText} →
                                 </button>

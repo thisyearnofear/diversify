@@ -129,7 +129,7 @@ function DemoCta({ onEnableDemo, className = '' }: { onEnableDemo: () => void; c
       </div>
       <button
         onClick={onEnableDemo}
-        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
+        className="px-4 min-h-[44px] bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-xs font-bold transition-colors whitespace-nowrap"
       >
         Open demo
       </button>

@@ -930,7 +930,7 @@ export const AgentTierStatus: React.FC<{
                 role="tab"
                 aria-selected={guardianTab === tab}
                 onClick={() => setGuardianTab(tab)}
-                className={`flex-1 text-xs font-bold py-2 px-3 rounded-lg transition-all capitalize ${
+                className={`flex-1 text-xs font-bold py-2 px-3 rounded-lg transition-colors capitalize ${
                   guardianTab === tab
                     ? "bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-300 shadow-sm"
                     : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"

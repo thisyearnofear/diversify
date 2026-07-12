@@ -132,7 +132,7 @@ export default function ChainBalancesHeader({
             <button
               key={chain.chainId}
               onClick={() => onSwitchChain(chain.chainId)}
-              className={`relative p-2.5 rounded-lg border-2 text-left transition-all ${isCurrentChain
+              className={`relative p-2.5 rounded-lg border-2 text-left transition-colors ${isCurrentChain
                   ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-sm'
                   : 'border-gray-200 bg-gray-50 dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}

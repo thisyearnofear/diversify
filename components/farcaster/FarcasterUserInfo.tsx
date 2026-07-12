@@ -30,7 +30,7 @@ export default function FarcasterUserInfo() {
   const pfp = { url, verified: !!url };
 
   return (
-    <div className="farcaster-user-info bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3 mb-4 transition-all">
+    <div className="farcaster-user-info bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3 mb-4 transition-colors">
       <div className="flex items-center gap-3">
         {/* Farcaster Profile Picture */}
         {pfp?.url ? (

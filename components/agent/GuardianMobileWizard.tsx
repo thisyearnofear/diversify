@@ -235,7 +235,7 @@ export function GuardianMobileWizard({
               key={s.id}
               onClick={() => setSelectedStrategy(s.id)}
               aria-pressed={isSelected}
-              className={`relative text-left p-3 rounded-xl border-2 transition-all min-h-[104px] ${
+              className={`relative text-left p-3 rounded-xl border-2 transition-colors min-h-[104px] ${
                 isSelected
                   ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-sm"
                   : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
@@ -339,7 +339,7 @@ export function GuardianMobileWizard({
                     : [...prev, t.symbol]
                 );
               }}
-              className={`px-3 py-2 min-h-[44px] rounded-lg text-sm font-bold transition-all ${
+              className={`px-3 py-2 min-h-[44px] rounded-lg text-sm font-bold transition-colors ${
                 allowedTokens.includes(t.symbol)
                   ? "bg-purple-600 text-white"
                   : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
@@ -527,7 +527,7 @@ export function GuardianMobileWizard({
         {steps.map((step, idx) => (
           <div key={step} className="flex items-center">
             <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                 idx === currentIndex
                   ? "bg-purple-600 text-white scale-110"
                   : idx < currentIndex
@@ -539,7 +539,7 @@ export function GuardianMobileWizard({
             </div>
             {idx < steps.length - 1 && (
               <div
-                className={`w-8 h-1 mx-1 rounded transition-all ${
+                className={`w-8 h-1 mx-1 rounded transition-colors ${
                   idx < currentIndex ? "bg-green-500" : "bg-gray-200 dark:bg-gray-700"
                 }`}
               />

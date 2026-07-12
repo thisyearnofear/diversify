@@ -116,7 +116,7 @@ function RwaFlipCard({
                             {Array.from({ length: total }).map((_, i) => (
                                 <motion.div
                                     key={i}
-                                    className={`h-1.5 rounded-full transition-all ${
+                                    className={`h-1.5 rounded-full transition-colors ${
                                         i === index ? "w-6 bg-white/80" : "w-1.5 bg-white/30"
                                     }`}
                                     animate={{ width: i === index ? 24 : 6 }}
@@ -271,7 +271,7 @@ export default function RwaAssetCards({
                 {isCelo ? (
                     <button
                         onClick={() => onSwap(activeAsset.symbol)}
-                        className={`flex-1 py-3 bg-gradient-to-r ${activeAsset.gradient} text-white rounded-xl text-xs font-black uppercase tracking-widest hover:shadow-lg transition-all flex items-center justify-center gap-2`}
+                        className={`flex-1 py-3 bg-gradient-to-r ${activeAsset.gradient} text-white rounded-xl text-xs font-black uppercase tracking-widest hover:shadow-lg transition-shadow flex items-center justify-center gap-2`}
                     >
                         <span>Get {activeAsset.symbol}</span>
                         {apyBadge && (
@@ -283,7 +283,7 @@ export default function RwaAssetCards({
                 ) : null}
                 <button
                     onClick={() => onShowModal(activeAsset.symbol)}
-                    className={`${isCelo ? 'flex-0' : 'flex-1'} py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-gray-700 transition-all`}
+                    className={`${isCelo ? 'flex-0' : 'flex-1'} py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors`}
                 >
                     Learn More
                 </button>
@@ -296,7 +296,7 @@ export default function RwaAssetCards({
                         <button
                             key={asset.symbol}
                             onClick={() => setActiveIndex(idx)}
-                            className={`p-1.5 rounded-full transition-all ${
+                            className={`p-1.5 rounded-full transition-colors ${
                                 idx === activeIndex
                                     ? "bg-gray-800 dark:bg-white"
                                     : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"

@@ -205,7 +205,7 @@ export default function SoSoActionModal({
                 <button
                   onClick={handleConfirm}
                   disabled={status !== 'idle'}
-                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-colors ${
                     suggestedAction === 'BUY' 
                       ? 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-500/20'
                       : suggestedAction === 'SELL'

@@ -254,7 +254,7 @@ export default function RealWorldUseCases({
                 whileTap={{ scale: 0.95 }}
               >
                 <div 
-                  className={`flex flex-col items-center p-2 rounded-2xl transition-all duration-300 border ${
+                  className={`flex flex-col items-center p-2 rounded-2xl transition-colors duration-300 border ${
                     isActive 
                       ? `bg-white dark:bg-gray-700 border-purple-200 dark:border-purple-500 shadow-lg shadow-purple-500/10 scale-105 z-10` 
                       : `bg-gray-50/50 dark:bg-gray-800/50 border-transparent hover:bg-white dark:hover:bg-gray-700 hover:border-gray-200 dark:hover:border-gray-600`
@@ -378,7 +378,7 @@ export default function RealWorldUseCases({
                 <div className="mt-auto space-y-3">
                   <motion.button
                     onClick={() => setShowCalculator(!showCalculator)}
-                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-all duration-300 ${
+                    className={`w-full flex items-center justify-between p-3 rounded-2xl border transition-colors duration-300 ${
                       showCalculator 
                         ? 'bg-purple-600 border-purple-500 shadow-lg shadow-purple-600/20' 
                         : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700 hover:border-purple-300'
@@ -418,7 +418,7 @@ export default function RealWorldUseCases({
                                   type="number"
                                   value={goalAmount}
                                   onChange={(e) => setGoalAmount(Number(e.target.value))}
-                                  className="w-full pl-6 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-black outline-none focus:border-purple-400 transition-all"
+                                  className="w-full pl-6 pr-3 py-2 text-sm border-2 border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-black outline-none focus:border-purple-400 transition-colors"
                                   inputMode="decimal"
                                 />
                               </div>

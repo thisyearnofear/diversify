@@ -60,7 +60,7 @@ export default function YieldBridgePrompt({ onBridgeCTA }: YieldBridgePromptProp
       <div className="flex items-center justify-between mt-4">
         <button
           onClick={onBridgeCTA}
-          className="flex-1 py-3 bg-white text-blue-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+          className="flex-1 py-3 bg-white text-blue-700 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
         >
           <span>Bridge to Arbitrum &amp; Earn</span>
           <span>→</span>

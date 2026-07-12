@@ -97,7 +97,7 @@ export function SavingsLoopCard() {
           <React.Fragment key={step.label}>
             <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-all ${statusColor[step.status]}`}
+                className={`w-9 h-9 rounded-full flex items-center justify-center text-base transition-colors ${statusColor[step.status]}`}
               >
                 {step.status === 'done' ? '✓' : step.icon}
               </div>

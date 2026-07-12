@@ -72,7 +72,7 @@ export default function HoldersWidget({
           {topHolders.map((holder, i) => (
             <div
               key={holder.address}
-              className={`${BAR_COLORS[i]} transition-all`}
+              className={`${BAR_COLORS[i]} transition-colors`}
               style={{ width: `${holder.percentage}%` }}
               title={`#${i + 1} — ${holder.percentage.toFixed(2)}%`}
             />

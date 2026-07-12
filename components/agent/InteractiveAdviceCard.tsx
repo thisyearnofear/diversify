@@ -216,7 +216,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                     <button
                                         key={pct}
                                         onClick={() => setSelectedPercentage(pct)}
-                                        className={`text-xs font-bold px-3 py-1 rounded-full transition-all ${selectedPercentage === pct
+                                        className={`text-xs font-bold px-3 py-1 rounded-full transition-colors ${selectedPercentage === pct
                                             ? 'bg-indigo-600 text-white shadow-md'
                                             : 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/30'
                                             }`}
@@ -238,7 +238,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                             {/* Why This? */}
                             <motion.button
                                 onClick={() => toggleSection('why')}
-                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all shadow-sm"
+                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-colors shadow-sm"
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -276,7 +276,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                             {advice.portfolioAnalysis?.topOpportunity && (
                                 <motion.button
                                     onClick={() => toggleSection('calculation')}
-                                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 transition-all shadow-sm"
+                                    className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-green-300 dark:hover:border-green-600 transition-colors shadow-sm"
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
@@ -339,7 +339,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                             {/* Show Risks */}
                             <motion.button
                                 onClick={() => toggleSection('risks')}
-                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 transition-all"
+                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-bold text-gray-900 dark:text-white">
@@ -377,7 +377,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                             {/* Timing */}
                             <motion.button
                                 onClick={() => toggleSection('timing')}
-                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 transition-all"
+                                className="w-full text-left p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-600 transition-colors"
                             >
                                 <div className="flex items-center justify-between">
                                     <span className="text-sm font-bold text-gray-900 dark:text-white">
@@ -429,7 +429,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                 <div className="space-y-3">
                     <button
                         onClick={() => setShowAlternatives(!showAlternatives)}
-                        className="w-full p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:shadow-md transition-all"
+                        className="w-full p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800 hover:shadow-md transition-shadow"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -566,7 +566,7 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                             }}
                                             whileHover={{ scale: 1.02 }}
                                             whileTap={{ scale: 0.98 }}
-                                            className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-all"
+                                            className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
                                         >
                                             Choose This Instead
                                         </motion.button>

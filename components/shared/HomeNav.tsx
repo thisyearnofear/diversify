@@ -114,7 +114,7 @@ export function HomeNav({
         className={`
           fixed left-1/2 -translate-x-1/2 z-30
           top-[max(0.5rem,env(safe-area-inset-top))]
-          transition-all duration-200
+          transition-colors duration-200
           ${isVisible ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 -translate-y-2 pointer-events-none"}
         `}
       >

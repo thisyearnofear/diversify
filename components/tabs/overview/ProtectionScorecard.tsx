@@ -211,7 +211,7 @@ export function ProtectionScorecard({
           {/* Progress bar */}
           <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden mb-4">
             <div
-              className="h-full rounded-full transition-all duration-500"
+              className="h-full rounded-full transition-colors duration-500"
               style={{
                 width: `${Math.min(100, alignmentScore)}%`,
                 background: framing.accent,
@@ -261,7 +261,7 @@ export function ProtectionScorecard({
           {alignmentScore < 80 && (
             <button
               onClick={() => setActiveTab("protect")}
-              className="w-full mt-3 py-2.5 rounded-xl text-xs font-bold transition-all"
+              className="w-full mt-3 py-2.5 rounded-xl text-xs font-bold transition-colors"
               style={{
                 background: `${framing.accent}15`,
                 color: framing.accent,

@@ -195,7 +195,7 @@ export default function SwapSuccessCelebration({
                     <div className="mt-2 h-1 w-full bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
                       <div className="flex h-full w-full bg-gray-200 dark:bg-gray-600">
                         <div
-                          className={`h-full transition-all duration-1000 ${goalScore >= 80 ? "bg-emerald-500" : goalScore >= 60 ? "bg-blue-500" : "bg-amber-500"}`}
+                          className={`h-full transition-colors duration-1000 ${goalScore >= 80 ? "bg-emerald-500" : goalScore >= 60 ? "bg-blue-500" : "bg-amber-500"}`}
                           style={{ width: `${goalScore}%` }}
                         />
                       </div>

@@ -184,7 +184,7 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
                         <Chevron expanded={!!isExpanded} />
                       </div>
                     </div>
-                    <p className={`text-xs text-gray-500 dark:text-gray-400 leading-relaxed transition-all font-medium ${isExpanded ? '' : 'line-clamp-2'}`}>
+                    <p className={`text-xs text-gray-500 dark:text-gray-400 leading-relaxed transition-colors font-medium ${isExpanded ? '' : 'line-clamp-2'}`}>
                       {item.description}
                     </p>
 

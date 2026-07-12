@@ -25,14 +25,14 @@ const ThemeToggle: React.FC = () => {
   return (
     <button
       onClick={toggleDarkMode}
-      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105 active:scale-95"
+      className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200 active:scale-95"
       aria-label={getTooltip()}
       title={getTooltip()}
     >
       <div className="relative w-5 h-5">
         {/* Sun icon */}
         <svg 
-          className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${
+          className={`absolute inset-0 w-5 h-5 transition-colors duration-300 ${
             darkMode 
               ? 'opacity-100 rotate-0 scale-100' 
               : 'opacity-0 rotate-90 scale-50'
@@ -55,7 +55,7 @@ const ThemeToggle: React.FC = () => {
         
         {/* Moon icon */}
         <svg 
-          className={`absolute inset-0 w-5 h-5 transition-all duration-300 ${
+          className={`absolute inset-0 w-5 h-5 transition-colors duration-300 ${
             darkMode 
               ? 'opacity-0 -rotate-90 scale-50' 
               : 'opacity-100 rotate-0 scale-100'

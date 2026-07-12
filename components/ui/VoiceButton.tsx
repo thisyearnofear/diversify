@@ -413,7 +413,7 @@ export default function VoiceButton({
                 className={`
                     ${sizeClasses[size]} 
                     ${stateClass}
-                    rounded-full flex items-center justify-center transition-all duration-200
+                    rounded-full flex items-center justify-center transition-opacity duration-200
                     disabled:opacity-50 disabled:cursor-not-allowed relative
                 `}
                 whileTap={{ scale: 0.95 }}

@@ -165,7 +165,7 @@ export default function RealLifeScenario({
                   const swapElement = document.querySelector(".SwapInterface");
                   if (swapElement) swapElement.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="px-2.5 py-1.5 text-xs rounded-lg bg-blue-600 text-white font-black shadow-sm hover:bg-blue-700 transition-all hover:scale-105 active:scale-95 uppercase tracking-wide whitespace-nowrap"
+                className="px-2.5 py-1.5 min-h-[44px] text-xs rounded-lg bg-blue-600 text-white font-black shadow-sm hover:bg-blue-700 transition-colors active:scale-95 uppercase tracking-wide whitespace-nowrap"
               >
                 {scenarioContent.action}
               </button>

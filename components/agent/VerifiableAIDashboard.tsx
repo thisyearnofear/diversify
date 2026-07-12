@@ -175,7 +175,7 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`pb-3 text-xs font-black uppercase tracking-widest transition-all border-b-2 flex items-center gap-1.5 ${
+                  className={`pb-3 text-xs font-black uppercase tracking-widest transition-colors border-b-2 flex items-center gap-1.5 ${
                     activeTab === tab.id
                       ? 'text-purple-700 dark:text-purple-400 border-purple-600'
                       : 'text-gray-400 dark:text-gray-600 border-transparent hover:text-gray-600 dark:hover:text-gray-400'
@@ -251,7 +251,7 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
             <div className="p-5 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-white/5 shrink-0">
               <button
                 onClick={onClose}
-                className="w-full py-3.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-black rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.15)] hover:scale-[1.01] active:scale-95 transition-all"
+                className="w-full py-3.5 min-h-[44px] bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-sm font-black rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.15)] active:scale-95 transition-transform"
               >
                 Close Dashboard
               </button>
@@ -468,7 +468,7 @@ function StatusView({
           <div className="mt-3 flex items-center gap-2">
             <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-1000 ${
+                className={`h-full rounded-full transition-colors duration-1000 ${
                   entry.status === 'active'
                     ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 w-full'
                     : 'bg-gradient-to-r from-gray-400 to-gray-300 w-1/4'
@@ -556,7 +556,7 @@ function LedgerView({
               key={rec.id}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              className="bg-gray-50 dark:bg-white/[0.04] p-4 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-purple-400/20 transition-all"
+              className="bg-gray-50 dark:bg-white/[0.04] p-4 rounded-2xl border border-gray-100 dark:border-white/5 hover:border-purple-400/20 transition-colors"
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">

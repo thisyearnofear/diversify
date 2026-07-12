@@ -85,7 +85,7 @@ export function GuardianStateScrollytelling({
             return (
               <div
                 key={step.key}
-                className={`flex-1 rounded-xl p-3 border text-left transition-all ${
+                className={`flex-1 rounded-xl p-3 border text-left transition-colors ${
                   isCurrent
                     ? 'border-indigo-300 dark:border-indigo-600 bg-white dark:bg-indigo-950/30 shadow-sm'
                     : isPast
@@ -136,7 +136,7 @@ export function GuardianStateScrollytelling({
                 className="relative flex items-start gap-3 pl-8"
               >
                 <div
-                  className={`absolute left-0 top-0.5 w-[30px] h-[30px] rounded-full flex items-center justify-center text-sm transition-all duration-300 ${
+                  className={`absolute left-0 top-0.5 w-[30px] h-[30px] rounded-full flex items-center justify-center text-sm transition-colors duration-300 ${
                     isCurrent
                       ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 scale-110 ring-4 ring-indigo-100 dark:ring-indigo-900'
                       : isPast

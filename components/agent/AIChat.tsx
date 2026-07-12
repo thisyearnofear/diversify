@@ -129,7 +129,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
       <button
         onClick={status === 'error' ? handleRetry : handleExecute}
         disabled={status === 'executing' || status === 'success'}
-        className={`w-full py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+        className={`w-full py-2.5 rounded-lg text-xs font-black uppercase tracking-widest transition-colors ${
           status === 'success' ? 'bg-green-500 text-white' :
           status === 'executing' ? 'bg-blue-400 text-white cursor-wait' :
           status === 'error' ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20' :
@@ -655,7 +655,7 @@ export default function AIChat() {
             </button>
             <button
               onClick={() => setCurrentView(currentView === 'chat' ? 'history' : 'chat')}
-              className={`text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-all ${
+              className={`text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-colors ${
                 currentView === 'history' 
                   ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-500/20' 
                   : 'bg-white/50 dark:bg-gray-800/50 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-700/30'
@@ -766,7 +766,7 @@ export default function AIChat() {
                     )}
                     
                     <div
-                      className={`relative max-w-[80%] px-4 py-3 rounded-2xl text-sm transition-all duration-300 ${
+                      className={`relative max-w-[80%] px-4 py-3 rounded-2xl text-sm transition-colors duration-300 ${
                         msg.role === "user"
                           ? "bg-blue-600 text-white rounded-br-md shadow-lg shadow-blue-500/10"
                           : "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md border border-gray-200 dark:border-gray-700 shadow-sm"

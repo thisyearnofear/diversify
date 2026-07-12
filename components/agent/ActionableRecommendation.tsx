@@ -176,7 +176,7 @@ function PrimaryRecommendation({
                                     step.tokens!.amount.replace('$', ''),
                                     step.description
                                 )}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold text-white transition-all ${isHighImpact
+                                className={`px-4 py-2 rounded-lg text-xs font-bold text-white transition-colors ${isHighImpact
                                     ? 'bg-amber-600 hover:bg-amber-700'
                                     : 'bg-blue-600 hover:bg-blue-700'
                                     }`}
@@ -258,7 +258,7 @@ function BitsoMxnbOpportunity({
                                 suggestedAmount.toFixed(2),
                                 'Bitso/Juno MXNB hedge: use Arbitrum MXNB for Mexico peso exposure, with Juno API support for balances, SPEI issuance, USD stablecoin conversion, and redemption.'
                             )}
-                            className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-all"
+                            className="px-4 py-2 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors"
                         >
                             Review Swap
                         </button>

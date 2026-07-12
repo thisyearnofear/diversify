@@ -193,7 +193,7 @@ const RegionFilter: React.FC<RegionFilterProps> = ({ activeRegion, onRegionChang
           key={region.key}
           onClick={() => onRegionChange(region.key as any)}
           className={`
-            flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-all
+            flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors
             ${activeRegion === region.key
               ? 'bg-white dark:bg-gray-700 shadow-sm text-gray-900 dark:text-white'
               : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'

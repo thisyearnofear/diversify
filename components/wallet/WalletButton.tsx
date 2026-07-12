@@ -230,7 +230,7 @@ export default function WalletButton({
                     <div className="flex items-center justify-between mb-2">
                       <button
                         onClick={() => setShowChainSelector(true)}
-                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded hover:opacity-80 transition-opacity ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
+                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 min-h-[44px] py-1 rounded hover:opacity-80 transition-opacity ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
                       >
                         {isTestnet ? 'TESTNET' : 'MAINNET'}
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -368,7 +368,7 @@ export default function WalletButton({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleConnect}
-        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 rounded-full font-medium text-sm sm:text-base transition-all duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
+        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
         title={hasInjectedWallet ? "Connect with MetaMask/Coinbase or other browser wallet" : "Connect via WalletConnect, Email, or Social login"}
       >
         {variant === 'primary' && (

@@ -70,7 +70,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
             href={`${NETWORKS.CELO_MAINNET.explorerUrl}/tx/${txHash}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl text-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all border border-gray-100 dark:border-gray-700"
+            className="flex items-center justify-center gap-2 mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-2xl text-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-700"
           >
             🔗 View on Celoscan
           </a>
@@ -86,7 +86,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
               onProtect();
               onClose();
             }}
-            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-black rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-600/20 mb-2"
+            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-black rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-colors shadow-lg shadow-indigo-600/20 mb-2"
           >
             🛡️ Protect your G$ from inflation →
           </button>
@@ -94,7 +94,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
 
         <button
           onClick={onClose}
-          className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+          className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm font-bold rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
           Maybe later
         </button>

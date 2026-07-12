@@ -82,7 +82,7 @@ export function GuardarianOnramp({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={openGuardarian}
-            className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all border ${getButtonStyles()} ${className}`}
+            className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-colors border ${getButtonStyles()} ${className}`}
         >
             <span className="text-lg">{getModeIcon()}</span>
             <span>{getModeLabel()}</span>

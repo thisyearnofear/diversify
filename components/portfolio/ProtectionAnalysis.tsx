@@ -344,7 +344,7 @@ export default function ProtectionAnalysis({
                         {regionData.map((region, index) => (
                             <div
                                 key={index}
-                                className={`p-2 rounded-lg border text-center transition-all ${
+                                className={`p-2 rounded-lg border text-center transition-colors ${
                                     highlightedRegionIndex === index
                                         ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-500 scale-105'
                                         : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'

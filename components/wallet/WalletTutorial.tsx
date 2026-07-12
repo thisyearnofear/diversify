@@ -303,7 +303,7 @@ export const WalletTutorial: React.FC<{
                   <motion.button
                     onClick={() => setStep(step + 1)}
                     whileHover={{ y: -1 }}
-                    className="px-6 md:px-8 py-3 md:py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl md:rounded-[1.5rem] font-black text-sm shadow-lg active:scale-95 transition-all"
+                    className="px-6 md:px-8 py-3 md:py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl md:rounded-[1.5rem] font-black text-sm shadow-lg active:scale-95 transition-transform"
                   >
                     Next
                   </motion.button>
@@ -311,7 +311,7 @@ export const WalletTutorial: React.FC<{
                   <motion.button
                     onClick={handleConnect}
                     whileHover={{ y: -1 }}
-                    className="px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl md:rounded-[1.5rem] font-black text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-all"
+                    className="px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl md:rounded-[1.5rem] font-black text-sm shadow-lg shadow-blue-500/20 active:scale-95 transition-transform"
                   >
                     Connect Wallet
                   </motion.button>

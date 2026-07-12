@@ -203,7 +203,7 @@ export default function MultichainPortfolioBreakdown({
                             {/* Progress bar with gradient */}
                             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 mb-3">
                                 <div
-                                    className={`h-2.5 rounded-full transition-all duration-500 bg-gradient-to-r ${data.chainId === NETWORKS.CELO_MAINNET.chainId
+                                    className={`h-2.5 rounded-full transition-colors duration-500 bg-gradient-to-r ${data.chainId === NETWORKS.CELO_MAINNET.chainId
                                         ? 'from-green-500 to-emerald-500'
                                         : data.chainId === NETWORKS.RH_TESTNET.chainId
                                         ? 'from-emerald-500 to-teal-500'

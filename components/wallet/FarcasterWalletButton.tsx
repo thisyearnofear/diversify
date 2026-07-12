@@ -34,7 +34,7 @@ export default function FarcasterWalletButton() {
         {/* Connected State - Farcaster Style */}
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center gap-2 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 text-purple-700 dark:text-purple-300 min-h-[40px] px-3 py-1.5 rounded-full transition-all duration-200 font-bold shadow-sm"
+          className="flex items-center gap-2 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 text-purple-700 dark:text-purple-300 min-h-[40px] px-3 py-1.5 rounded-full transition-colors duration-200 font-bold shadow-sm"
           disabled={isConnecting}
           aria-label="Farcaster wallet menu"
           aria-expanded={showDropdown}
@@ -80,7 +80,7 @@ export default function FarcasterWalletButton() {
     <button
       onClick={connectFarcasterWallet}
       disabled={isConnecting}
-      className={`flex items-center gap-2 min-h-[40px] px-4 py-1.5 rounded-full transition-all font-bold shadow-sm ${isConnecting
+      className={`flex items-center gap-2 min-h-[40px] px-4 py-1.5 rounded-full transition-colors font-bold shadow-sm ${isConnecting
         ? 'bg-purple-100 text-purple-400 cursor-not-allowed border border-purple-200'
         : 'bg-purple-600 hover:bg-purple-700 text-white'
         }`}

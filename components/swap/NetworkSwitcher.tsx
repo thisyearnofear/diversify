@@ -253,7 +253,7 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                             key={network.chainId}
                             onClick={() => !isActive && switchNetwork(network.chainId)}
                             disabled={isActive || isSwitching}
-                            className={`p-2 rounded-xl border-2 transition-all text-left flex items-center justify-between ${isActive
+                            className={`p-2 rounded-xl border-2 transition-colors text-left flex items-center justify-between ${isActive
                                 ? `${colors.bg} ${colors.text} border-blue-500/50 cursor-default shadow-inner`
                                 : `bg-white/40 dark:bg-gray-800/40 border-gray-100 dark:border-gray-700/50 ${colors.hover} text-gray-700 dark:text-gray-300 cursor-pointer`
                                 } ${isSwitching ? 'opacity-50 cursor-not-allowed' : ''}`}

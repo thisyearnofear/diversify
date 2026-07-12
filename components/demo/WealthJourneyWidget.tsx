@@ -57,7 +57,7 @@ export default function WealthJourneyWidget({
       {/* Progress Bar Background */}
       <div className="absolute top-0 left-0 h-1.5 bg-gray-50 dark:bg-gray-900 w-full">
         <div
-          className="h-full bg-blue-600 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(37,99,235,0.5)]"
+          className="h-full bg-blue-600 transition-colors duration-1000 ease-out shadow-[0_0_10px_rgba(37,99,235,0.5)]"
           style={{ width: `${progress}%` }}
         />
       </div>
@@ -73,7 +73,7 @@ export default function WealthJourneyWidget({
               {stage === 'accumulation' ? 'START' : stage === 'fortification' ? 'RECOMMENDED' : 'ACTIVE'}
             </span>
           </div>
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4 leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-all">
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-4 leading-relaxed line-clamp-2 group-hover:line-clamp-none transition-colors">
             {description}
           </p>
           <button

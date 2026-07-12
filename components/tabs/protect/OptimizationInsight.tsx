@@ -39,7 +39,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
   const isUrgent = variant === 'urgent';
   
   return (
-    <div className={`rounded-2xl overflow-hidden border transition-all duration-500 shadow-sm ${
+    <div className={`rounded-2xl overflow-hidden border transition-colors duration-500 shadow-sm ${
       isUrgent 
         ? 'border-orange-200 bg-white dark:bg-gray-800 dark:border-orange-900/30 shadow-orange-500/5' 
         : 'border-blue-100 bg-white dark:bg-gray-800 dark:border-blue-900/30 shadow-blue-500/5'
@@ -121,7 +121,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
           onClick={action.onClick}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="w-full mt-4 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 group"
+          className="w-full mt-4 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 transition-colors flex items-center justify-center gap-2 group"
         >
           {action.label}
           <span className="group-hover:translate-x-1 transition-transform">→</span>
@@ -140,7 +140,7 @@ const OptimizationInsight: React.FC<OptimizationInsightProps> = ({
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * idx }}
-                  className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 rounded-xl border border-transparent hover:border-gray-100 dark:hover:border-gray-700 transition-all group cursor-pointer"
+                  className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 rounded-xl border border-transparent hover:border-gray-100 dark:hover:border-gray-700 transition-colors group cursor-pointer"
                   onClick={opt.onClick}
                 >
                   <div className="flex items-center gap-2">

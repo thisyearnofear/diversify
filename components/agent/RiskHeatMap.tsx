@@ -70,7 +70,7 @@ export function RiskHeatMap({ riskData }: RiskHeatMapProps) {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
                             whileHover={{ y: -4, scale: 1.05 }}
-                            className={`relative p-2 rounded-2xl border-b-4 text-center transition-all cursor-default ${getRiskColor(risk)}`}
+                            className={`relative p-2 rounded-2xl border-b-4 text-center transition-colors cursor-default ${getRiskColor(risk)}`}
                         >
                             {isCritical && (
                                 <motion.div 

@@ -240,7 +240,7 @@ function DemoVariant({
             {onDisableDemo && (
               <button
                 onClick={onDisableDemo}
-                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
+                className="px-3 min-h-[44px] py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
               >
                 Exit Demo
               </button>
@@ -295,7 +295,7 @@ function DailyClaimVariant({
   return (
     <button
       onClick={onAction}
-      className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.005] active:scale-[0.99] transition-all"
+      className="w-full flex items-center justify-between gap-3 px-4 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 active:scale-[0.99] transition-[transform,box-shadow]"
       aria-label="Claim your daily GoodDollar reward"
     >
       <div className="flex items-center gap-3 min-w-0">

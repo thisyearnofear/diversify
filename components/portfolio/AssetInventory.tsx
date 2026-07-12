@@ -51,7 +51,7 @@ const GroupedAssetList: React.FC<{ tokens: TokenBalance[] }> = ({ tokens }) => {
     const renderRow = (token: TokenBalance, index: number) => (
         <div
             key={`${token.symbol}-${index}`}
-            className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl shadow-md hover:shadow-lg transition-all"
+            className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl shadow-md hover:shadow-lg transition-shadow"
         >
             <div className="flex items-center gap-3">
                 <div className="size-8 bg-white dark:bg-gray-900 rounded-xl flex items-center justify-center text-sm shadow-md">

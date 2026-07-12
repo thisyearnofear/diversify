@@ -303,7 +303,7 @@ export default function PortfolioRecommendations({
               onClick={() => handleStrategyChange(key as keyof typeof PORTFOLIO_STRATEGIES)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className={`relative p-3 rounded-xl border-2 transition-all text-left ${selectedStrategy === key
+              className={`relative p-3 rounded-xl border-2 transition-colors text-left ${selectedStrategy === key
                   ? `border-transparent bg-gradient-to-br ${strategy.color} text-white shadow-lg`
                   : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
@@ -446,7 +446,7 @@ export default function PortfolioRecommendations({
         {/* Strategy Benefits */}
         <motion.button
           onClick={() => setShowBenefits(!showBenefits)}
-          className="w-full p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all"
+          className="w-full p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-md transition-shadow"
         >
           <div className="flex items-center justify-between">
             <span className="font-bold text-blue-900 dark:text-blue-100 text-sm">

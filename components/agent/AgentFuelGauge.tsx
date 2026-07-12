@@ -143,7 +143,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
         </div>
         <button 
           onClick={handleTopUp}
-          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg ${showDepositGuide ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'}`}
+          className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors shadow-lg ${showDepositGuide ? 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200' : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20'}`}
         >
           {showDepositGuide ? 'Close' : 'Add Funds'}
         </button>
@@ -183,7 +183,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
                     </code>
                     <button
                       onClick={handleCopyAddress}
-                      className={`mt-2 px-2 py-1 rounded text-[10px] font-bold uppercase transition-all ${isCopying ? 'bg-green-100 text-green-600 dark:bg-green-900/40' : 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/40'}`}
+                      className={`mt-2 px-2 py-1 rounded text-[10px] font-bold uppercase transition-colors ${isCopying ? 'bg-green-100 text-green-600 dark:bg-green-900/40' : 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/40'}`}
                     >
                       {isCopying ? '✓ Copied' : 'Copy Address'}
                     </button>
@@ -296,7 +296,7 @@ const AgentFuelGauge: React.FC<AgentFuelGaugeProps> = ({ status }) => {
           <div className="flex items-center gap-1.5">
             <button 
               onClick={handleCopyAddress}
-              className={`p-2 rounded-lg transition-all ${isCopying ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400' : 'bg-white dark:bg-gray-800 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-700'}`}
+              className={`p-2 rounded-lg transition-colors ${isCopying ? 'bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-400' : 'bg-white dark:bg-gray-800 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-gray-200 dark:border-gray-700'}`}
               title="Copy address"
             >
               {isCopying ? (

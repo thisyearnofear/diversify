@@ -221,7 +221,7 @@ export const DiversificationHealthCard: React.FC<DiversificationHealthCardProps>
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
               onClick={() => onTakeAction?.(opp)}
-              className={`w-full flex items-center gap-3 p-3 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 text-left transition-all hover:shadow-sm ${
+              className={`w-full flex items-center gap-3 p-3 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700 text-left transition-shadow hover:shadow-sm ${
                 opp.priority === "HIGH" ? "ring-2 ring-red-500/20" : ""
               }`}
             >

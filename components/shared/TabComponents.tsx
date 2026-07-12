@@ -100,7 +100,7 @@ export const StepCard = ({
       <button
         onClick={onNext}
         disabled={!canProceed}
-        className={`w-full mt-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all ${canProceed
+        className={`w-full mt-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors ${canProceed
             ? 'bg-blue-600 text-white hover:bg-blue-700'
             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
@@ -177,7 +177,7 @@ export const InsightCard = ({
         <button
           onClick={action.onClick}
           disabled={action.disabled || action.loading}
-          className={`w-full mt-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${action.disabled
+          className={`w-full mt-3 py-3 rounded-xl text-xs font-bold uppercase tracking-wide transition-colors flex items-center justify-center gap-2 ${action.disabled
               ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
               : variant === 'reward'
                 ? 'bg-green-600 hover:bg-green-700 text-white'
@@ -226,7 +226,7 @@ export const QuickSelect = <T extends string>({
         <button
           key={opt.value}
           onClick={() => onChange(opt.value)}
-          className={`p-3 border-2 rounded-xl text-center transition-all ${value === opt.value
+          className={`p-3 border-2 rounded-xl text-center transition-colors ${value === opt.value
               ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-600/10'
               : 'border-gray-100 bg-white hover:border-gray-200'
             }`}
@@ -338,7 +338,7 @@ export const ProtectionScore = ({
                   </div>
                   <div className="h-1.5 w-full bg-black/10 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
+                      className={`h-full rounded-full transition-colors duration-500 ${
                         factor.value >= 80 ? 'bg-emerald-500' :
                         factor.value >= 60 ? 'bg-amber-500' : 'bg-red-500'
                       }`}
@@ -550,7 +550,7 @@ export const ProtectionDashboard = ({
                   type="button"
                   onClick={() => factor.description ? setActiveFactor(activeFactor === idx ? null : idx) : undefined}
                   className={`size-6 bg-gray-50 dark:bg-gray-700/50 rounded-lg flex items-center justify-center text-xs transition-all shrink-0 ${
-                    factor.description ? 'cursor-pointer hover:scale-125 hover:bg-indigo-50 dark:hover:bg-indigo-900/40' : ''
+                    factor.description ? 'cursor-pointer hover:scale-110 hover:bg-indigo-50 dark:hover:bg-indigo-900/40' : ''
                   } ${activeFactor === idx ? 'scale-125 bg-indigo-50 dark:bg-indigo-900/40 ring-2 ring-indigo-400' : ''}`}
                   title={factor.description ? 'Tap for details' : undefined}
                 >

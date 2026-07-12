@@ -392,7 +392,7 @@ export default function ProtectionTab({
             </div>
             <div className="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5">
               <div
-                className="bg-indigo-600 dark:bg-indigo-400 h-1.5 rounded-full transition-all duration-500"
+                className="bg-indigo-600 dark:bg-indigo-400 h-1.5 rounded-full transition-colors duration-500"
                 style={{ width: `${Math.min(strategyAlignmentScore, 100)}%` }}
               />
             </div>
