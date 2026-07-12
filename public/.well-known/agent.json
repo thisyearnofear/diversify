@@ -1,8 +1,8 @@
 {
   "protocol_version": "1.0",
-  "name": "DiversiFi",
-  "tagline": "Protecting global wealth through culturally-aware AI Agents and Celo-native liquidity.",
-  "description": "DiversiFi is an autonomous AI-powered financial guardian designed to protect wealth for users in volatile economies. It leverages Celo's Mento stablecoins and multi-chain RWAs to hedge against local inflation using culturally-aligned financial strategies like Africapitalism and Islamic Finance.",
+  "name": "DiversiFi Guardian",
+  "tagline": "FX-risk intelligence and autonomous protection for businesses that earn in one currency and must purchase in another.",
+  "description": "DiversiFi is an FX-risk intelligence and autonomous protection layer. The Guardian app is the reference consumer: it detects a visitor's country/currency, surfaces their real FX risk, lets them choose a values-aligned protection philosophy, and auto-executes within user-signed permission bounds. The business layer is the north star: per-purchase-cycle FX drag quantification for SME importers/traders, with every decision recorded on the chain-aware RecommendationLedger and anchored to 0G Storage. The philosophy/values system (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, and Custom) is the structural moat that drives identity-based retention.",
   "author": "thisyearnofear",
   "version": "1.0.0",
   "homepage": "https://diversifiapp.vercel.app",
@@ -12,34 +12,39 @@
   "agent_type": "autonomous-guardian",
   "capabilities": [
     {
-      "id": "inflation_hedging",
-      "name": "Inflation Hedging",
-      "description": "Monitors macro-economic data and local inflation rates to recommend swaps into stable assets."
+      "id": "fx_risk_intelligence",
+      "name": "FX-Risk Intelligence",
+      "description": "Quantifies currency drag per purchase cycle for SMEs and surfaces a real-time, country-specific risk moment for retail users."
     },
     {
-      "id": "mento_integration",
-      "name": "Mento Native Liquidity",
-      "description": "Deep integration with Celo Mento for regional stablecoins (cUSD, cEUR, cKES, cGHS, cBRL, cREAL)."
+      "id": "autonomous_protection",
+      "name": "Autonomous Protection",
+      "description": "The Guardian loop monitors macro/FX/inflation signals and auto-executes rebalancing within user-signed ERC-7715-style permission bounds."
     },
     {
-      "id": "agent_fuel_model",
-      "name": "Agent Fuel (Circle MPC)",
-      "description": "Autonomous gas management using USDC-funded sub-wallets, removing the need for users to hold native gas tokens."
+      "id": "verifiable_ai",
+      "name": "Verifiable AI",
+      "description": "Every recommendation is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage, producing an auditable proof trail."
     },
     {
-      "id": "cultural_strategies",
-      "name": "Cultural Financial Strategies",
-      "description": "Portfolio rebalancing based on 7 unique cultural philosophies including Africapitalism and Buen Vivir."
+      "id": "philosophy_system",
+      "name": "Philosophy / Values System",
+      "description": "Identity-based protection strategies that shape asset filtering, AI prompts, and scoring — including Africapitalism, Buen Vivir, Islamic Finance, Confucian, Gotong Royong, Pan-Caribbean, Global Diversification, and Custom."
     },
     {
-      "id": "cross_chain_rwa",
-      "name": "Cross-Chain RWA Access",
-      "description": "Automated access to tokenized Gold, Treasury yields, and Commodities across Celo and Arbitrum."
+      "id": "chain_aware_routing",
+      "name": "Chain-Aware Routing",
+      "description": "Routes savings to Celo/Mento (local stablecoins), yield to Arbitrum (deep liquidity / RWA), and APAC savings to HashKey Chain."
     },
     {
-      "id": "metamask_smart_accounts",
-      "name": "MetaMask Smart Accounts (ERC-7715/7710)",
-      "description": "Non-custodial agent delegation via MetaMask Smart Accounts Kit. Users grant scoped ERC-7715 permissions from their smart account; the agent redeems via ERC-7710 without ever holding user keys."
+      "id": "best_yield_engine",
+      "name": "Best-Yield Engine",
+      "description": "Personalized vault recommendations via vaults.fyi and GMX GM-pool deposits on Arbitrum."
+    },
+    {
+      "id": "enterprise_gateway",
+      "name": "Enterprise Gateway",
+      "description": "API-key authenticated audit export and x402 marketplace for rails players and B2B licensing."
     }
   ],
   "api": {
@@ -49,24 +54,31 @@
       "status": "/status",
       "activities": "/activities",
       "analyze": "/analyze",
-      "yield_monitor": "/yield-monitor"
+      "yield_monitor": "/yield-monitor",
+      "best_yield": "/best-yield",
+      "enterprise_audit": "/enterprise/audit"
     }
   },
   "networks": [
     {
+      "chainId": 42161,
+      "name": "Arbitrum One",
+      "role": "execution-and-yield-primary"
+    },
+    {
       "chainId": 42220,
       "name": "Celo Mainnet",
-      "role": "primary"
+      "role": "savings-and-local-stables"
+    },
+    {
+      "chainId": 177,
+      "name": "HashKey Chain",
+      "role": "apac-savings-spoke"
     },
     {
       "chainId": 44787,
       "name": "Celo Sepolia",
       "role": "testing"
-    },
-    {
-      "chainId": 42161,
-      "name": "Arbitrum One",
-      "role": "rwa-spoke"
     }
   ],
   "platforms": {

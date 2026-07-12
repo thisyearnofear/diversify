@@ -1,7 +1,7 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "DiversiFi Guardian",
-  "description": "Autonomous AI-powered financial guardian for people in volatile economies. Monitors markets, detects inflation shifts, and protects stablecoin savings by routing capital between Celo/Mento (local stablecoins) and Arbitrum (liquidity / RWA yield) — with on-chain proof of every decision via 0G Storage. Executes within user-signed ERC-7715-style permission bounds. Supports 7 culturally-aligned protection strategies: Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Global Diversification, and Custom.",
+  "description": "FX-risk intelligence and autonomous protection layer for businesses that earn in one currency and must purchase in another. The DiversiFi Guardian is the reference consumer app that demonstrates the full loop: FX risk quantification → autonomous decision → chain-aware settlement → verifiable 0G evidence. The philosophy/values system (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, and Custom) is the structural moat that drives identity-based retention. Monitors macro/FX/inflation signals and routes capital between Celo/Mento (local stablecoins), Arbitrum (deep liquidity / RWA yield), and HashKey Chain (APAC regulated-market savings). Every decision is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage. Executes within user-signed ERC-7715-style permission bounds.",
   "image": "https://diversifiapp.vercel.app/icon.png",
   "services": [
     {
