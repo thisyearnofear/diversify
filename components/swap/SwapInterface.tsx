@@ -260,7 +260,7 @@ const SwapInterface = forwardRef<
             <button
               type="button"
               onClick={() => { setPhoneNumber(null); setRecipientAddress(null); }}
-              className="ml-auto text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 shrink-0"
+              className="ml-auto text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               Clear
             </button>

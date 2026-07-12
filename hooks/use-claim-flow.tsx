@@ -23,6 +23,7 @@ import { useStreakRewards } from './use-streak-rewards';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { NETWORKS } from '@/config';
 import { STREAK_CONFIG } from '../modules/rewards/streak/types';
+import { haptic } from '@/lib/haptics';
 
 // Lazy-load the celebration so consumers that don't reach success never
 // pay the bundle cost.
@@ -133,11 +134,13 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
   // celebration overlay on success.
   const handleClaim = useCallback(async () => {
     if (!canClaim || claimStatus === 'claiming') return;
+    haptic("medium");
     setClaimStatus('claiming');
     setClaimError(null);
     try {
       const result = await claimG();
       if (result.success) {
+        haptic("success");
         setLastClaim({
           txHash: result.txHash,
           amount: result.amount && result.amount !== '0' ? `${result.amount} G$` : estimatedReward,
@@ -161,6 +164,7 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
         recordSwap(claimUsd, 'claim').catch(() => {});
         onClaimSuccess?.();
       } else {
+        haptic("error");
         setClaimError(result.error || 'Claim failed. Please try again.');
         setClaimStatus('error');
         setTimeout(() => {
@@ -169,6 +173,7 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
         }, 6_000);
       }
     } catch (err) {
+      haptic("error");
       setClaimError(err instanceof Error ? err.message : 'Unexpected error');
       setClaimStatus('error');
       setTimeout(() => {

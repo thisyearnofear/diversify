@@ -3,6 +3,7 @@ import RegionalIconography from "../regional/RegionalIconography";
 import { RegionalPattern } from "../regional/RegionalIconography";
 import { REGION_COLORS } from "../../config";
 import type { Region } from "../../hooks/use-user-region";
+import { haptic } from "@/lib/haptics";
 
 interface SwapActionButtonProps {
     isLoading: boolean;
@@ -137,10 +138,10 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
             <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t-2 border-gray-200 dark:border-gray-700 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] md:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
                 <div className="p-3">
                     <button
-                        onClick={onClick}
+                        onClick={() => { haptic("medium"); onClick(); }}
                         aria-disabled={disabled || isLoading}
                         aria-describedby={disabledReason ? "swap-cta-helper-mobile" : undefined}
-                        className="relative w-full py-4 px-6 min-h-[56px] border-2 border-blue-700 rounded-xl shadow-lg text-base font-bold text-white overflow-hidden bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] motion-reduce:transition-none"
+                        className="relative w-full py-4 px-6 min-h-[56px] border-2 border-blue-700 rounded-xl shadow-lg text-base font-bold text-white overflow-hidden bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 transition-[color,transform] disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] motion-reduce:transition-none"
                         disabled={disabled || isLoading}
                     >
                         {buttonContent}
@@ -162,10 +163,10 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
     return (
         <div className="pt-4">
             <button
-                onClick={onClick}
+                onClick={() => { haptic("medium"); onClick(); }}
                 aria-disabled={disabled || isLoading}
                 aria-describedby={disabledReason ? "swap-cta-helper" : undefined}
-                className="relative w-full py-4 px-6 min-h-[56px] border-2 border-blue-700 rounded-lg shadow-lg text-base font-bold text-white overflow-hidden bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none"
+                className="relative w-full py-4 px-6 min-h-[56px] border-2 border-blue-700 rounded-lg shadow-lg text-base font-bold text-white overflow-hidden bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none"
                 disabled={disabled || isLoading}
             >
                 {buttonContent}

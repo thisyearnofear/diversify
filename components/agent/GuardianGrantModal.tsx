@@ -7,6 +7,7 @@
 
 import React from "react";
 import Scrim from "../shared/Scrim";
+import { haptic } from "@/lib/haptics";
 
 export const GuardianGrantModal: React.FC<{
   pendingDailyLimit: number;
@@ -92,8 +93,8 @@ export const GuardianGrantModal: React.FC<{
             Cancel
           </button>
           <button
-            onClick={onContinue}
-            className="flex-1 text-sm font-black bg-orange-600 hover:bg-orange-700 text-white rounded-2xl py-4 shadow-lg shadow-orange-200 dark:shadow-orange-900/30 transition-all active:scale-95"
+            onClick={() => { haptic("medium"); onContinue(); }}
+            className="flex-1 text-sm font-black bg-orange-600 hover:bg-orange-700 text-white rounded-2xl py-4 min-h-[44px] shadow-lg shadow-orange-200 dark:shadow-orange-900/30 transition-[color,transform] active:scale-95"
           >
             Continue to MetaMask
           </button>

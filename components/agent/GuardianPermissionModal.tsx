@@ -7,6 +7,7 @@
 
 import React, { useEffect, useRef } from "react";
 import Scrim from "../shared/Scrim";
+import { haptic } from "@/lib/haptics";
 
 const MIN_AUTO_SAVER_FUNDS_USD = 5;
 const ARBITRUM_CHAIN_ID = 42161;
@@ -136,14 +137,14 @@ export const GuardianPermissionModal: React.FC<{
                 <button
                   type="button"
                   onClick={() => switchToChain(42220)}
-                  className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg py-1.5 transition-colors"
+                  className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
                 >
                   Switch to Celo
                 </button>
                 <button
                   type="button"
                   onClick={() => switchToChain(ARBITRUM_CHAIN_ID)}
-                  className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg py-1.5 transition-colors"
+                  className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
                 >
                   Switch to Arbitrum
                 </button>
@@ -169,7 +170,7 @@ export const GuardianPermissionModal: React.FC<{
                         onCancel();
                         onNavigateToFund();
                       }}
-                      className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg py-1.5 transition-colors"
+                      className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
                     >
                       Convert to stables
                     </button>
@@ -180,7 +181,7 @@ export const GuardianPermissionModal: React.FC<{
                       onCancel();
                       onNavigateToFund();
                     }}
-                    className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg py-1.5 transition-colors"
+                    className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
                   >
                     Add funds
                   </button>
@@ -274,9 +275,9 @@ export const GuardianPermissionModal: React.FC<{
             Cancel
           </button>
           <button
-            onClick={onApprove}
+            onClick={() => { haptic("medium"); onApprove(); }}
             disabled={!isChainSupported}
-            className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-all active:scale-95"
+            className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 min-h-[44px] shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-[color,transform] active:scale-95"
           >
             {isChainSupported ? "Approve in wallet" : "Switch network first"}
           </button>
