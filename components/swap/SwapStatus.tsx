@@ -119,10 +119,13 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                             Transaction ID:
                         </span>
                         <button
-                            onClick={() => {
+                            onClick={(e) => {
                                 navigator.clipboard.writeText(txHash);
-                                // In a real app we'd use a toast, but keeping consistent with original code
-                                alert("Transaction hash copied to clipboard!");
+                                // Brief inline feedback instead of alert()
+                                const btn = e.currentTarget;
+                                const orig = btn.textContent;
+                                btn.textContent = 'Copied!';
+                                setTimeout(() => { btn.textContent = orig; }, 1500);
                             }}
                             className="rounded-md bg-white px-2 py-1 text-xs text-gray-700 transition-colors hover:bg-gray-100 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
                             title="Copy to clipboard"

@@ -145,9 +145,9 @@ export default function ProtectionTab({
     fromToken?: string,
     amount?: string,
   ) => {
-    // In demo mode, show connect prompt
+    // In demo mode, show connect prompt via toast (not browser alert)
     if (isDemo) {
-      alert("Connect your wallet to execute real swaps!");
+      showToast("Connect your wallet to execute real swaps.", "info");
       return;
     }
 

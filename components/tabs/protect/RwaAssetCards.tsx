@@ -94,8 +94,7 @@ function RwaFlipCard({
     return (
         <div
             className="relative w-full aspect-[3/4] sm:aspect-[4/3] cursor-pointer"
-            onClick={(e) => {
-                console.log('Flip card clicked!');
+            onClick={() => {
                 onFlip();
             }}
         >

@@ -191,12 +191,12 @@ describe("AppShell AI Chat FAB", () => {
     cleanup();
   });
 
-  it("does not render the Advisor FAB in beginner mode", () => {
+  it("renders the Advisor FAB in beginner mode", () => {
     mockUseAppShell.mockReturnValue({ ...baseShellState, experienceMode: "beginner" });
 
     render(<AppShell />);
 
-    expect(screen.queryByLabelText("Ask the Advisor — chat about your savings")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Ask the Advisor — chat about your savings")).toBeInTheDocument();
   });
 
   it("renders the AI Chat FAB button", () => {

@@ -32,7 +32,9 @@ export default function FloatingControls({ openAdvisor, unreadCount, experienceM
     setPrevUnread(unreadCount);
   }, [unreadCount, prevUnread]);
 
-  const showAdvisorFab = experienceMode !== 'beginner';
+  // Always show the FAB — beginner mode previously hid it, making the
+  // flagship AI Advisor unreachable for first-time visitors.
+  const showAdvisorFab = true;
 
   return (
     <>
@@ -42,7 +44,7 @@ export default function FloatingControls({ openAdvisor, unreadCount, experienceM
         <GuidedTour />
       </AnimatePresence>
 
-      {/* Ask the Advisor FAB — hidden in beginner mode (Advisor via More options) */}
+      {/* Ask the Advisor FAB */}
       {showAdvisorFab && (
       <motion.button
         key={bounceKey}

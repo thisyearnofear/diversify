@@ -370,7 +370,7 @@ export default function SwapTab({
       }
       return result;
     } catch (err) {
-      setSwapStatus(`Error: ${(err as Error).message || "Unknown error"}`);
+      setSwapStatus("Swap failed — please check your wallet and network, then try again.");
       setSwapStep("error");
       throw err;
     }

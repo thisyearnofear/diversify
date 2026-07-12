@@ -7,6 +7,7 @@ import { useCurrencyRisk } from '../../../hooks/use-currency-risk';
 import { regionForCountry } from '../../../hooks/use-user-region';
 import { trackFunnelEvent } from '../../../lib/analytics';
 import { useStrategy } from '../../../context/app/StrategyContext';
+import { useDemoMode } from '../../../context/app/DemoModeContext';
 import { useTilt } from '../../../hooks/use-tilt';
 import { AnimatedNumber } from '../../shared/AnimatedNumber';
 import { ShimmerText } from '../../shared/ShimmerText';
@@ -349,6 +350,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       getPlanPreview,
     } = useCurrencyRisk();
     const { setFinancialStrategy } = useStrategy();
+    const { enableDemoMode } = useDemoMode();
 
     const [isSwitching, setIsSwitching] = useState(false);
     const [switchDone, setSwitchDone] = useState(false);
@@ -961,7 +963,13 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       </>
                     )}
                     <button
-                      onClick={() => handleFinish(countryCode)}
+                      onClick={() => {
+                        // Actually enable demo mode so the user gets the
+                        // mock wallet + demo data, not just a route to
+                        // Protect with an unconnected wallet.
+                        enableDemoMode();
+                        handleFinish(countryCode);
+                      }}
                       className={`w-full px-6 py-3 font-bold rounded-2xl active:scale-[0.97] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 ${
                         selectedArchetype
                           ? 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm'

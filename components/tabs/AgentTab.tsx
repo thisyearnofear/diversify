@@ -352,11 +352,8 @@ export default function AgentTab({
                 We couldn't reach the protection service. Your Auto-Saver status is
                 unavailable right now — this is usually a temporary network issue.
               </p>
-              {statusError && (
-                <p className="text-xs text-red-500 dark:text-red-400 mt-2 font-mono">
-                  {statusError}
-                </p>
-              )}
+              {/* Raw error string hidden — the friendly copy above is
+                  sufficient; projector/console noise is worse than useful. */}
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={() => retryStatus()}

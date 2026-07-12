@@ -1024,11 +1024,12 @@ export default function AIChat() {
           onClose={() => { setSoSoModalOpen(false); setSoSoTradeProposal(null); }}
           proposal={soSoTradeProposal}
           onConfirm={(proposal) => {
-            // Log the trade proposal for now
-            console.log('Trade proposal confirmed:', proposal);
-            addUserMessage(`Trade proposal confirmed: ${proposal.suggestedAction} based on "${proposal.newsItem.title}"`);
+            // Don't pretend the trade executed — route through the advisor instead
             setSoSoModalOpen(false);
             setSoSoTradeProposal(null);
+            const q = `I'm interested in ${proposal.suggestedAction} based on this news: ${proposal.newsItem.title}. What should I consider?`;
+            addUserMessage(q);
+            sendChatMessage(q);
           }}
         />
       )}

@@ -14,6 +14,7 @@ import type { Region } from "@/hooks/use-user-region";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useMobile } from "@/hooks/use-mobile";
+import { useAdvisor } from "@/hooks/use-advisor";
 
 interface Token {
   symbol: string;
@@ -81,6 +82,7 @@ const SwapInterface = forwardRef<
 ) {
   const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useExperience();
   const { financialStrategy } = useStrategy();
+  const { askAdvisor } = useAdvisor();
   const isBeginner = experienceMode === "beginner";
   const isMobile = useMobile();
 
@@ -158,7 +160,6 @@ const SwapInterface = forwardRef<
   // Expose methods to parent
   useImperativeHandle(ref, () => ({
     refreshBalances: () => {
-      console.log("Refreshing token balances from SwapInterface");
       refreshBalances();
     },
     getSelectedTokens: () => ({
@@ -269,7 +270,10 @@ const SwapInterface = forwardRef<
           <SwapAIInsight
             toToken={toToken}
             inflationDifference={inflationDifference}
-            onAskAI={() => console.log("AI insight requested")}
+            onAskAI={() => {
+              // Open the Advisor with a context-aware question about the swap
+              askAdvisor(`What's the best strategy for swapping to ${toToken}?`);
+            }}
           />
         )}
 
