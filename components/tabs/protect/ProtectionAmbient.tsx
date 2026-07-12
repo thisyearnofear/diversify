@@ -1,24 +1,36 @@
 /**
- * ProtectionAmbient — the philosophy takes over the entire app.
+ * ProtectionAmbient — the philosophy is felt, not seen.
  *
  * Mounted at the provider-tree level (not inside any one tab), this
  * component covers the entire viewport with a per-archetype ambient
  * that activates whenever the user has selected a Protection Plan.
- * The whole app — every tab, every panel — adopts that philosophy's
- * register: gradient surface, cultural pattern overlay, accent halo,
- * accent bar at the top of the viewport.
+ *
+ * The design principle: the philosophy should feel like a change in
+ * the room's lighting, not a change of wallpaper. A user who selected
+ * Confucian should sense warmth and order — never think "why is
+ * everything red?" The existing night-vault surface is the app's
+ * canvas; the philosophy is a subtle tint on top of it, not a
+ * replacement for it.
+ *
+ * Four layers per slot (both slots permanently mounted, only "active"
+ * via opacity + clip-path):
+ *   • Accent radial wash — one-color, ~6% opacity, upper-center anchor.
+ *     Not a 3-stop gradient ramp (that reads as a CSS tutorial); a
+ *     single soft glow that warms the vault without covering it.
+ *   • Cultural pattern overlay (kente / chakana / tessellation / etc.)
+ *     at ~9% opacity — the one layer that carries cultural identity.
+ *   • Neutral focus vignette — dark, hue-less, just pulls the eye
+ *     toward content. Never the philosophy's own color.
+ *   • Accent halo — barely perceptible warm glow in the upper third.
+ *
+ * No accent bar. No hard color edges. No saturated ramps. The vault
+ * stays the vault; the philosophy is ambient light.
  *
  * Origin-aware bloom (Codrops `BackgroundScaleHoverEffect` pattern,
  * adapted for tap): the new archetype's surface ripples outward from
  * the position of the card the user tapped via animated
  * `clip-path: circle(R% at X% Y%)`. The outgoing surface collapses
  * inward on its own origin. Per-slot origin tracking, no morphing.
- *
- * Three visible layers per slot (both slots permanently mounted, only
- * "active" via opacity + clip-path):
- *   • Gradient surface (per-archetype)
- *   • Cultural pattern overlay (kente / chakana / tessellation / etc.)
- *   • Vignette + edge accent
  *
  * Pure CSS / GPU-composited. Zero shaders, zero Lottie, zero JS at
  * animation time. Runs flawlessly on emerging-market Android phones.
@@ -66,9 +78,13 @@ const PATTERN_FOR: Record<
   custom: CustomScatterPattern,
 };
 
-function gradientFor(a: Archetype | null): string {
+/** A single-color radial wash — the accent as ambient light, not a
+ *  3-stop gradient ramp. Anchored upper-center to warm the vault
+ *  without covering it. The opacity is controlled by the slot layer,
+ *  not baked in here, so transitions can cross-fade cleanly. */
+function washFor(a: Archetype | null): string {
   if (!a) return 'transparent';
-  return `linear-gradient(135deg, ${a.surface.start} 0%, ${a.surface.mid} 50%, ${a.surface.end} 100%)`;
+  return `radial-gradient(ellipse 70% 50% at 50% 15%, ${a.accent} 0%, transparent 70%)`;
 }
 
 interface Origin {
@@ -176,7 +192,6 @@ export function ProtectionAmbient({ children }: Props) {
 
   const activeArchetype =
     slots.active === 'a' ? slots.a.archetype : slots.b.archetype;
-  const accent = activeArchetype?.accent;
   const accentSoft = activeArchetype?.accentSoft;
 
   const renderSlot = (key: SlotKey) => {
@@ -204,17 +219,19 @@ export function ProtectionAmbient({ children }: Props) {
         }}
         className="motion-reduce:!transition-none"
       >
-        {/* Philosophy is a contextual tint, not an alternate app theme. */}
+        {/* Accent radial wash — the philosophy as ambient light. A
+            single soft glow at low opacity, not a saturated gradient
+            ramp. The vault shows through; the philosophy is felt. */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
-            background: gradientFor(slot.archetype),
-            opacity: 0.18,
+            background: washFor(slot.archetype),
+            opacity: 0.06,
           }}
         />
-        {/* Cultural pattern overlay stays textural and edge-safe behind the
-            readable vault canvas. */}
+        {/* Cultural pattern overlay — the one layer that carries
+            cultural identity. Stays textural at low opacity. */}
         {Pattern && slot.archetype && (
           <div
             className="motion-reduce:!animation-none"
@@ -243,15 +260,15 @@ export function ProtectionAmbient({ children }: Props) {
             `}</style>
           </div>
         )}
-        {/* A restrained vignette keeps content readable without turning the
-            viewport into a philosophy-coloured wallpaper. */}
+        {/* Neutral focus vignette — dark and hue-less, just pulls the
+            eye toward content. Never the philosophy's own color. */}
         {slot.archetype && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
-              background: `radial-gradient(ellipse at center, transparent 40%, ${slot.archetype.surface.start}cc 100%)`,
-              opacity: 0.38,
+              background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.55) 100%)',
+              opacity: 0.30,
             }}
           />
         )}
@@ -275,44 +292,27 @@ export function ProtectionAmbient({ children }: Props) {
         {renderSlot('a')}
         {renderSlot('b')}
 
-        {/* Soft accent bar at top of viewport (above the app header). */}
+        {/* Accent halo — barely perceptible warm glow in the upper
+            third. Like sunlight through a window, not a searchlight.
+            No accent bar — the top of the viewport stays clean. */}
         <div
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 120,
-            background: accent
-              ? `linear-gradient(180deg, ${accent}66 0%, transparent 100%)`
-              : 'transparent',
-            opacity: accent ? 0.9 : 0,
-            transition:
-              'background 360ms cubic-bezier(0.23, 1, 0.32, 1), opacity 360ms ease',
-            transform: 'translateZ(0)',
-            pointerEvents: 'none',
-          }}
-        />
-
-        {/* Halo — subtle, always-on, anchored upper-third. */}
-        <div
-          style={{
-            position: 'fixed',
-            top: '20%',
+            top: '15%',
             left: '50%',
-            width: 780,
-            height: 780,
-            marginLeft: -390,
+            width: 600,
+            height: 600,
+            marginLeft: -300,
             background: accentSoft
-              ? `radial-gradient(circle at center, ${accentSoft}55 0%, transparent 65%)`
+              ? `radial-gradient(circle at center, ${accentSoft} 0%, transparent 60%)`
               : 'transparent',
-            opacity: accentSoft ? 0.7 : 0,
+            opacity: accentSoft ? 0.12 : 0,
             transition:
               'background 700ms cubic-bezier(0.23, 1, 0.32, 1), opacity 700ms ease',
             transform: 'translateZ(0)',
             pointerEvents: 'none',
           }}
-          className="motion-reduce:!opacity-40"
+          className="motion-reduce:!opacity-60"
         />
       </div>
       {/* Wrap children in a positioned context with z-index 10 so they
