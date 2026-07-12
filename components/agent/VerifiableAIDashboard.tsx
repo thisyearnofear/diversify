@@ -11,6 +11,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scrim } from '../shared/Scrim';
+import EmptyState from '@/components/ui/EmptyState';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -540,14 +541,11 @@ function LedgerView({
 
       {/* Recommendation entries */}
       {recent.length === 0 ? (
-        <div className="text-center py-8">
-          <p className="text-sm text-gray-400 dark:text-gray-500 font-bold">
-            No recommendations recorded yet.
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-600 mt-1">
-            Recommendations will appear here once the agent makes autonomous decisions.
-          </p>
-        </div>
+        <EmptyState
+          icon="📋"
+          title="No recommendations yet"
+          description="Recommendations will appear here once the agent makes autonomous decisions."
+        />
       ) : (
         <div className="space-y-3">
           <h4 className="text-[10px] text-gray-400 font-black uppercase tracking-widest">

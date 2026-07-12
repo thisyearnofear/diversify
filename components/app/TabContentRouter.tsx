@@ -14,56 +14,33 @@ import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { GuardianStreakWidget } from "@/components/agent/GuardianStreakWidget";
-
-// ── Skeleton loaders ──
-
-const tabSkeleton = (rows: number = 3) => (
-  <div className="animate-pulse space-y-4 pt-4">
-    {Array.from({ length: rows }).map((_, i) => {
-      const heightClass = i === 0 ? "h-10" : i === 1 ? "h-8" : "h-40";
-      const radiusClass = i === 2 ? "rounded-2xl" : "rounded-xl";
-      const widthClass = i === 1 ? "w-3/4" : "w-full";
-      return (
-        <div
-          key={i}
-          className={`${heightClass} ${radiusClass} ${widthClass} bg-gray-100 dark:bg-gray-800`}
-        />
-      );
-    })}
-  </div>
-);
+import { TabSkeleton } from "@/components/ui/Skeleton";
 
 // ── Dynamic tab imports ──
 
 const OverviewTab = dynamic(() => import("@/components/tabs/OverviewTab"), {
   ssr: false,
-  loading: () => tabSkeleton(3),
+  loading: () => <TabSkeleton rows={3} />,
 });
 
 const ProtectionTab = dynamic(() => import("@/components/tabs/ProtectionTab"), {
   ssr: false,
-  loading: () => tabSkeleton(3),
+  loading: () => <TabSkeleton rows={3} />,
 });
 
 const ExchangeTab = dynamic(() => import("@/components/tabs/ExchangeTab"), {
   ssr: false,
-  loading: () => tabSkeleton(3),
+  loading: () => <TabSkeleton rows={3} />,
 });
 
 const AgentTab = dynamic(() => import("@/components/tabs/AgentTab"), {
   ssr: false,
-  loading: () => (
-    <div className="animate-pulse space-y-4 pt-4">
-      <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded-xl w-3/4 mx-auto" />
-      <div className="h-32 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
-      <div className="h-40 bg-gray-100 dark:bg-gray-800 rounded-2xl" />
-    </div>
-  ),
+  loading: () => <TabSkeleton rows={3} />,
 });
 
 const InfoTab = dynamic(() => import("@/components/tabs/InfoTab"), {
   ssr: false,
-  loading: () => tabSkeleton(2),
+  loading: () => <TabSkeleton rows={2} />,
 });
 
 // ── TabPane + transition ──

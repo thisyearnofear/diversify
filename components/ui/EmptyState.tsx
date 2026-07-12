@@ -17,12 +17,15 @@ interface EmptyStateProps {
   action?: EmptyStateAction;
   /** Additional CSS classes for the outer card */
   className?: string;
+  /** Optional secondary action link */
+  secondaryAction?: EmptyStateAction;
 }
 
 /**
  * EmptyState — Centered empty-state card with icon, title, description and optional action.
  *
  * Used for: "No wallet connected", "No protection plan yet", "No portfolio data", etc.
+ * Consistent hierarchy: icon (emoji) → title (h3) → description (p) → CTA (button).
  *
  * Usage:
  * ```tsx
@@ -31,6 +34,7 @@ interface EmptyStateProps {
  *   title="No protection plan yet"
  *   description="Start by connecting a wallet and exploring your options."
  *   action={{ label: "Connect Wallet", onClick: handleConnect }}
+ *   secondaryAction={{ label: "Learn more", onClick: handleLearn }}
  * />
  * ```
  */
@@ -39,6 +43,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
   title,
   description,
   action,
+  secondaryAction,
   className = '',
 }) => {
   return (
@@ -68,9 +73,19 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         {action && (
           <button
             onClick={action.onClick}
-            className="mt-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-md"
+            className="mt-2 min-h-[44px] px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-md"
           >
             {action.label}
+          </button>
+        )}
+
+        {/* Optional secondary action link */}
+        {secondaryAction && (
+          <button
+            onClick={secondaryAction.onClick}
+            className="min-h-[44px] px-5 py-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+          >
+            {secondaryAction.label}
           </button>
         )}
       </div>

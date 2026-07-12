@@ -1,3 +1,5 @@
+import EmptyState from "@/components/ui/EmptyState";
+
 interface PortfolioGridProps {
   portfolioItems: {
     token: string;
@@ -75,9 +77,11 @@ export default function PortfolioGrid({
       </div>
       
       {portfolioItems.length === 0 && (
-        <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-          No portfolio data available. Connect your wallet to view your holdings.
-        </div>
+        <EmptyState
+          icon="📊"
+          title="No portfolio data"
+          description="Connect your wallet to view your holdings."
+        />
       )}
     </div>
   );
