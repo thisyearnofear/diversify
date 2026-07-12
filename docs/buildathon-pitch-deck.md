@@ -185,6 +185,7 @@ Chain-aware routing: the Guardian picks the right chain for the right action bas
 
 | Signal | Status |
 |---|---|
+| **Prior live usage** | Shipped as a Farcaster mini app — real users onboarded and transacted, enough to receive **Arbitrum funding** from that usage. Retention was low; the current reframe (the philosophy/values system, the currency risk moment, the verifiable Guardian, the values-driven product quality pass) is the direct response to what retention data taught us. |
 | **Prod deployment** | Live on Hetzner, healthz gate passing, all endpoints HTTP 200 |
 | **Tests** | 651 passing |
 | **Arbitrum mainnet** | RecommendationLedger deployed (`0x3BCf…369C`), GMX real deposits validated (tx `0x9004d233…`) |
@@ -216,10 +217,17 @@ Chain-aware routing: the Guardian picks the right chain for the right action bas
 
 ## Appendix: Team
 
-*(Fill in before submission)*
+**Solo build by papa** — Nairobi, Kenya 🇰🇪
 
-| Name | Role | Background |
-|---|---|---|
-|  |  |  |
-|  |  |  |
-|  |  |  |
+| Handle | Profile |
+|---|---|
+| [@papa](https://farcaster.xyz/papa) | Farcaster |
+| [@papajams](https://palus.app/u/papajams) | Lens |
+
+DiversiFi is built end-to-end by one developer — the Solidity contracts,
+the five-chain mainnet ledger deployments (Arbitrum, Celo, 0G, HashKey,
+Robinhood Chain), the Guardian autonomous loop, the GMX integration, the
+multi-provider AI service with 0G anchoring, the 650+ tests, and the
+3-agent security review. The problem is personal: Kenyan shillings lose
+value against the dollar, and the people hurt most are the least equipped
+to defend against it.
