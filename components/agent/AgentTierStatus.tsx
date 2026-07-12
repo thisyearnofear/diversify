@@ -68,11 +68,19 @@ export interface GuardianStatusChipProps {
   className?: string;
 }
 
-/** Shared Guardian tier derivation for compact status surfaces. */
-export function useGuardianTierSnapshot() {
+/**
+ * Guardian tier derivation from an already-fetched vault/session-key pair.
+ * Use this (instead of `useGuardianTierSnapshot`) when the caller already
+ * holds its own `useVault()`/`useSessionKey()` instances, so a second copy
+ * of those hooks — each with its own polling — doesn't get mounted just to
+ * read the derived state.
+ */
+export function useGuardianTierSnapshotFrom(
+  vault: ReturnType<typeof useVault>,
+  sessionKey: Pick<ReturnType<typeof useSessionKey>, "signedPermission" | "sessionInfo" | "deriveGuardianState">,
+) {
   const { address } = useWalletContext();
-  const vault = useVault();
-  const { signedPermission, sessionInfo, deriveGuardianState } = useSessionKey();
+  const { signedPermission, sessionInfo, deriveGuardianState } = sessionKey;
 
   const guardianState = useMemo(() => {
     const totalDepositedUSD = vault.vault?.totalDepositedUSD ?? 0;
@@ -99,6 +107,19 @@ export function useGuardianTierSnapshot() {
   const lastActivity = sessionInfo?.recentExecutions?.[0];
 
   return { address, guardianState, copy, isActive, lastActivity };
+}
+
+/**
+ * Shared Guardian tier derivation for compact status surfaces that don't
+ * already hold their own vault/session-key instances (e.g. GuardianStatusChip).
+ * Mounts its own `useVault()`/`useSessionKey()` — callers that already have
+ * these (e.g. ProtectionTab) should use `useGuardianTierSnapshotFrom` instead
+ * to avoid a second set of instances polling in parallel.
+ */
+export function useGuardianTierSnapshot() {
+  const vault = useVault();
+  const sessionKey = useSessionKey();
+  return useGuardianTierSnapshotFrom(vault, sessionKey);
 }
 
 /** Compact Auto-Saver status — one headline, one CTA. */

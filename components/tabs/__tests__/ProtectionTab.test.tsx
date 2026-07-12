@@ -100,7 +100,7 @@ vi.mock("@/hooks/use-agent-status", () => ({
 vi.mock("@/components/agent/AgentTierStatus", () => ({
   GuardianStatusChip: () =>
     React.createElement("div", { "data-testid": "guardian-status-chip" }),
-  useGuardianTierSnapshot: () => ({ guardianState: "idle" }),
+  useGuardianTierSnapshotFrom: () => ({ guardianState: "idle" }),
   AgentTierStatus: () => null,
 }));
 

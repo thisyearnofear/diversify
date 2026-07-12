@@ -148,7 +148,7 @@ export function ConfucianColumnPattern({ cardWidth, cardHeight, accent, accentSo
   const gap = 48;
   const total = Math.ceil(cardWidth / gap);
   const cols: React.ReactNode[] = [];
-  for (let i = 0; i < total; i++) {
+  for (let i = 0; i < total && cols.length < MAX_ELEMENTS; i++) {
     const tall = i % 2 === 0;
     const x = 20 + i * gap;
     cols.push(
@@ -292,7 +292,7 @@ export function IslamicTessellationPattern({ cardWidth, cardHeight, accent, acce
 export function GlobalMeridianPattern({ cardWidth, cardHeight, accent, accentSoft }: PatternProps) {
   const lines: React.ReactNode[] = [];
   const cols = 14;
-  for (let i = 0; i < cols; i++) {
+  for (let i = 0; i < cols && lines.length < MAX_ELEMENTS; i++) {
     lines.push(
       <rect
         key={`v-${i}`}
@@ -405,7 +405,7 @@ export function CaribbeanSwellPattern({ cardWidth, cardHeight, accent, accentSof
   // rendered ocean current charts.
   const bandGap = 72;
   const rows = Math.ceil(cardHeight / bandGap) + 2;
-  for (let i = 0; i < rows; i++) {
+  for (let i = 0; i < rows && parts.length < MAX_ELEMENTS; i++) {
     const tilt = i % 2 === 0 ? -2.5 : 2.5;
     const y = i * bandGap;
     parts.push(

@@ -281,7 +281,9 @@ export function useAgentChat({
         if (intent.type === "NAVIGATE") {
           navAction = { type: "navigate", tab: intent.tab, delay: 1500 };
         } else if (intent.type === "YIELD_EARN") {
-          navAction = { type: "navigate", tab: "earn", delay: 1500 };
+          // Yield/earn content (BestYieldCard, YieldDiscoverySection) lives
+          // inside the Protect tab — there is no standalone "earn" tab.
+          navAction = { type: "navigate", tab: "protect", delay: 1500 };
         } else if (intent.type === "GOODDOLLAR") {
           navAction = { 
             type: intent.topic === 'claim' ? 'claim_ubi' : 'verify_identity', 

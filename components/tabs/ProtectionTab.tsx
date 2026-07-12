@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import MultichainPortfolioBreakdown from "../portfolio/MultichainPortfolioBreakdown";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
@@ -24,8 +24,6 @@ import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import RobinhoodRwaCard from "./protect/RobinhoodRwaCard";
-import YieldDiscoverySection from "../earn/YieldDiscoverySection";
-import { BestYieldCard } from "../earn/BestYieldCard";
 import AssetModal from "./protect/AssetModal";
 import OptimizationInsight from "./protect/OptimizationInsight";
 import PortfolioRecommendations from "../portfolio/PortfolioRecommendations";
@@ -35,14 +33,24 @@ import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
-import { GuardianStatusChip, useGuardianTierSnapshot } from "../agent/AgentTierStatus";
+import { GuardianStatusChip, useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
 import { GuardianStateScrollytelling } from "./protect/GuardianStateScrollytelling";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useVault } from "@/hooks/use-vault";
 import { useSessionKey } from "@/hooks/use-session-key";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
-import { SavingsLoopCard } from "../rewards/SavingsLoopCard";
+
+// Lazy-load heavy sub-sections that fire network requests on mount.
+// These are below-the-fold and shouldn't block the initial render.
+const SavingsLoopCard = lazy(() => import("../rewards/SavingsLoopCard").then(mod => ({ default: mod.SavingsLoopCard })));
+const BestYieldCard = lazy(() => import("../earn/BestYieldCard").then(mod => ({ default: mod.BestYieldCard })));
+const YieldDiscoverySection = lazy(() => import("../earn/YieldDiscoverySection").then(mod => ({ default: mod.default })));
+
+// Skeleton placeholder for lazy-loaded sections
+const LazySectionSkeleton = () => (
+  <div className="animate-pulse rounded-2xl bg-gray-100 dark:bg-gray-800 h-24" />
+);
 
 // ============================================================================
 // MAIN COMPONENT
@@ -79,10 +87,14 @@ export default function ProtectionTab({
   // Guardian onboarding state — lives here so the Protect tab owns setup
   const { isLoading: isGuardianStatusLoading } = useAgentStatus();
   const [showMobileWizard, setShowMobileWizard] = useState(false);
-  const { guardianState } = useGuardianTierSnapshot();
   const { financialStrategy } = useStrategy();
   const vault = useVault();
-  const { requestPermission } = useSessionKey();
+  const { requestPermission, signedPermission, sessionInfo, deriveGuardianState } = useSessionKey();
+  const { guardianState } = useGuardianTierSnapshotFrom(vault, {
+    signedPermission,
+    sessionInfo,
+    deriveGuardianState,
+  });
 
   const {
     totalValue,
@@ -397,7 +409,11 @@ export default function ProtectionTab({
           This is the explicit loop GoodBuilders S4 reviewers asked for.
           ===================================================================== */}
       {/* G$ savings loop — after first deposit, standard+ only */}
-      {!isBeginner && displayTotalValue > 0 && <SavingsLoopCard />}
+      {!isBeginner && displayTotalValue > 0 && (
+        <Suspense fallback={<LazySectionSkeleton />}>
+          <SavingsLoopCard />
+        </Suspense>
+      )}
 
       {!hasChosenPlan && (
         <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
@@ -564,24 +580,28 @@ export default function ProtectionTab({
           engagement-gated server-side (on-chain balance); free-tier users see
           free yields + an unlock prompt. */}
       {!isBeginner && (
-        <BestYieldCard userAddress={address} className="mb-4" />
+        <Suspense fallback={<LazySectionSkeleton />}>
+          <BestYieldCard userAddress={address} className="mb-4" />
+        </Suspense>
       )}
 
       {/* LI.FI Earn Yield Discovery - Non-beginner only */}
       {!isBeginner && (
-        <YieldDiscoverySection
-          chainId={chainId ?? undefined}
-          title="Protection Yield Opportunities"
-          description="Low-to-medium risk vaults ranked for protection plans. Review the route, confirm the amount, and then deposit through LI.FI."
-          actionLabel="Review in Protect"
-          onSelectVault={(vault) => {
-            openProtectionFlow(
-              `lifi-earn:${vault.id}`,
-              vault.asset.symbol,
-              ""
-            );
-          }}
-        />
+        <Suspense fallback={<LazySectionSkeleton />}>
+          <YieldDiscoverySection
+            chainId={chainId ?? undefined}
+            title="Protection Yield Opportunities"
+            description="Low-to-medium risk vaults ranked for protection plans. Review the route, confirm the amount, and then deposit through LI.FI."
+            actionLabel="Review in Protect"
+            onSelectVault={(vault) => {
+              openProtectionFlow(
+                `lifi-earn:${vault.id}`,
+                vault.asset.symbol,
+                ""
+              );
+            }}
+          />
+        </Suspense>
       )}
 
       {/* =====================================================================

@@ -59,9 +59,13 @@ export function useSharedMultichainBalances(
   userGoal?: string,
 ): PortfolioContextValue {
   const ctx = usePortfolio();
-  // If the context exists, use it — the address and goal are already
-  // wired up at the provider level. Only fall back to a direct call if
-  // we're outside the provider (tests, storybook, etc.).
-  const fallback = useMultichainBalances(address, userGoal);
-  return ctx ?? fallback;
+  if (ctx) return ctx;
+
+  // No PortfolioProvider in the tree — tests/storybook only; the real app
+  // always mounts one in AppProviders. A component's provider ancestry
+  // can't change across its own lifetime, so this branch is stable for any
+  // given mounted instance (never toggles render-to-render), which is what
+  // makes the conditional hook call below safe despite the lint rule.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  return useMultichainBalances(address, userGoal);
 }

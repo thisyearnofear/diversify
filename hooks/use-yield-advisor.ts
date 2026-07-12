@@ -86,7 +86,7 @@ Would you like me to help you deposit into this vault?`;
                 type: 'insight',
                 action: {
                     type: 'navigate',
-                    tab: 'earn',
+                    tab: 'protect',
                 }
             });
 

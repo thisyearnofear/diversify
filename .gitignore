@@ -110,3 +110,6 @@ scripts/setup-mongodb.sh
 
 # FX drag report local rate cache
 scripts/fx-drag/.rate-cache.json
+
+# HyperFrames video output / scratch directories
+videos/
