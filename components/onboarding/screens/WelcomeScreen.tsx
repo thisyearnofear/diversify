@@ -363,6 +363,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
     const [showHistoricalExample, setShowHistoricalExample] = useState(false);
     const [showBusinessContext, setShowBusinessContext] = useState(false);
+    const [waitlistEmail, setWaitlistEmail] = useState('');
+    const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+    const [waitlistError, setWaitlistError] = useState<string | null>(null);
 
     // Local step state — user taps to advance (no auto-advance on detect).
     const [step, setStep] = useState<Phase>('detect');
@@ -396,6 +399,40 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
         philosophy: id,
         ...(countryCode ? { country: countryCode } : {}),
       });
+    };
+
+    const handleJoinWaitlist = async () => {
+      if (waitlistStatus === 'submitting' || waitlistStatus === 'success') return;
+      setWaitlistStatus('submitting');
+      setWaitlistError(null);
+      try {
+        const res = await fetch('/api/waitlist/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: waitlistEmail,
+            feature: 'sme_fx',
+            source: 'onboarding_business_hint',
+            userRegion: countryCode ? regionForCountry(countryCode) ?? undefined : undefined,
+            consentAcknowledged: true,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setWaitlistError(data.error || "Couldn't join the waitlist — please try again.");
+          setWaitlistStatus('error');
+          return;
+        }
+        setWaitlistStatus('success');
+        setWaitlistEmail('');
+        trackFunnelEvent('waitlist_joined', {
+          feature: 'sme_fx',
+          ...(countryCode ? { country: countryCode } : {}),
+        });
+      } catch {
+        setWaitlistError("Couldn't join the waitlist — please try again.");
+        setWaitlistStatus('error');
+      }
     };
 
     const handleFinish = (country?: string | null) => {
@@ -796,16 +833,67 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     </AnimatePresence>
                     <button
                       type="button"
-                      onClick={() => setShowBusinessContext((shown) => !shown)}
+                      onClick={() => {
+                        const opening = !showBusinessContext;
+                        setShowBusinessContext(opening);
+                        if (opening) {
+                          trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
+                        }
+                      }}
                       className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
                     >
                       {showBusinessContext ? '− Hide business context' : '+ How this can affect a business'}
                     </button>
-                    {showBusinessContext && (
-                      <p className="px-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                        When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
-                      </p>
-                    )}
+                    <AnimatePresence initial={false}>
+                      {showBusinessContext && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                          <p className="px-3 pb-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                            When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
+                          </p>
+                          <div className="px-3 pb-3 space-y-2">
+                            {waitlistStatus === 'success' ? (
+                              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                ✓ You&apos;re on the list — we&apos;ll email you when it&apos;s ready.
+                              </p>
+                            ) : (
+                              <>
+                                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                  Want early access when business protection launches?
+                                </p>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="email"
+                                    inputMode="email"
+                                    autoComplete="email"
+                                    aria-label="Email address for waitlist"
+                                    placeholder="you@business.com"
+                                    value={waitlistEmail}
+                                    onChange={(e) => { setWaitlistEmail(e.target.value); if (waitlistStatus === 'error') setWaitlistStatus('idle'); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)) handleJoinWaitlist(); }}
+                                    disabled={waitlistStatus === 'submitting'}
+                                    className="flex-1 min-w-0 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleJoinWaitlist}
+                                    disabled={waitlistStatus === 'submitting' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)}
+                                    className="shrink-0 min-h-[44px] rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
+                                  >
+                                    {waitlistStatus === 'submitting' ? 'Joining…' : 'Join waitlist'}
+                                  </button>
+                                </div>
+                                {waitlistStatus === 'error' && waitlistError && (
+                                  <p className="text-[11px] font-semibold text-red-500">{waitlistError}</p>
+                                )}
+                                <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500">
+                                  We&apos;ll only use this to invite you to early access when business protection launches — no other emails, ever. You can ask us to delete it anytime.
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
 
                   {riskEvents.length > 0 && (
