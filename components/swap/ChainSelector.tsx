@@ -53,6 +53,13 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
             color: 'purple',
             isTestnet: true,
         },
+        {
+            ...NETWORKS.HASHKEY_MAINNET,
+            label: NETWORKS.HASHKEY_MAINNET.name,
+            icon: '⛩️',
+            color: 'red',
+            isTestnet: false,
+        },
     ];
     
     // Filter out dev-only networks in production

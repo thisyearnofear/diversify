@@ -5,6 +5,8 @@
 Copy-paste sections below into the DoraHacks BUIDL form. Update explorer links after mainnet deploy.
 
 > **Status note (2026-07-12):** This BUIDL submission focuses on the **APAC savings rail on HashKey Chain**, which is implemented and awaiting mainnet gas funding. The **SME business FX-risk intelligence layer** is the long-term north star; the consumer-facing purchase-cycle UI is not yet shipped. See `docs/sme-fx-implementation-plan.md` for the phased plan.
+>
+> **Post-deadline addendum (same day):** the submission window (July 11 23:59 GMT+8) had already passed before this note was added. Rather than rush a late upload, the follow-on work used the hackathon's own principles — use HSP, deploy on HashKey — as a design constraint for the product, not a deadline to chase. The result: a real HSP settlement rail + a paid, HashKey-settled "FX Protection Insight" (per-cycle FX drag report), built with **no mocks, no SDK dependency, no git-URL installs** — a from-scratch EIP-712 client verified against the protocol's own vendored typehashes. 675/675 tests passing. HSP mandate/receipt settlement itself is blocked on Coordinator KYC (submitted, pending) — but the region-canonical ledger anchor needed no Coordinator and **is live on HashKey mainnet**: [recommendation #25](https://hashkey.blockscout.com/tx/0xb9c924ae5f7ace287d8a3222addd1831dad55cac6407f6134c8b40481142329b), a real per-cycle FX drag report for a PHP importer computed from live mid-market rates, recorded for HSK gas only. Full writeup: [`hsp-fx-protection.md`](./hsp-fx-protection.md).
 
 ---
 
@@ -55,9 +57,10 @@ HashKey holds the **trust-sensitive savings core** for APAC-regulated markets. A
 | Proof | URL |
 |-------|-----|
 | Live app | https://diversifiapp.vercel.app |
-| Contract | `https://explorer.hsk.xyz/address/0x3BCf7dFd68ce98880618c89A351168960724369C` |
-| Seed tx (Confucian HOLD → chain 177) | `https://explorer.hsk.xyz/tx/0xc220dc0f991242ecef75086e625c24c889f93a9103daa996667f1d542011f1f8` |
-| Heartbeat APAC advisory tx | `https://explorer.hsk.xyz/tx/<HEARTBEAT_TX_HASH>` |
+| Contract | `https://hashkey.blockscout.com/address/0x3BCf7dFd68ce98880618c89A351168960724369C` |
+| Seed tx (Confucian HOLD → chain 177) | `https://hashkey.blockscout.com/tx/0xc220dc0f991242ecef75086e625c24c889f93a9103daa996667f1d542011f1f8` |
+| FX Protection Insight tx (rec #25, real PHP drag report) | `https://hashkey.blockscout.com/tx/0xb9c924ae5f7ace287d8a3222addd1831dad55cac6407f6134c8b40481142329b` |
+| Heartbeat APAC advisory tx | `https://hashkey.blockscout.com/tx/<HEARTBEAT_TX_HASH>` |
 | Arbitrum yield receipt (same beat) | `https://arbiscan.io/tx/<ARB_TX_HASH>` |
 | GitHub | https://github.com/<org>/diversifi |
 
@@ -128,3 +131,4 @@ Add after routing logic:
 - [`apac-rail.md`](./apac-rail.md) — rail rationale, routing table, go-live runbook
 - [`architecture.md`](./architecture.md) — Guardian loop, ledger decorators
 - [`integration-guide.md`](./integration-guide.md) — external agent x402 integration
+- [`hsp-fx-protection.md`](./hsp-fx-protection.md) — the post-deadline HSP settlement work described in the addendum above

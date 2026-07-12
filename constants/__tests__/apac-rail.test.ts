@@ -40,7 +40,7 @@ describe('apac-rail constants', () => {
       await importApacRail();
     expect(isApacRailLive()).toBe(true);
     expect(getApacRailCopy()).toBe(APAC_RAIL_LIVE_COPY);
-    expect(HASHKEY_EXPLORER_ADDRESS_URL).toBe(`https://explorer.hsk.xyz/address/${LEDGER}`);
+    expect(HASHKEY_EXPLORER_ADDRESS_URL).toBe(`https://hashkey.blockscout.com/address/${LEDGER}`);
   });
 
   it('gates messaging on the shared APAC profile predicate', async () => {

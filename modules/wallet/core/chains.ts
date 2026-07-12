@@ -16,6 +16,8 @@ export const SUPPORTED_CHAIN_IDS = [
   NETWORKS.ARC_TESTNET.chainId,
   NETWORKS.RH_TESTNET.chainId,
   NETWORKS.RH_MAINNET.chainId,
+  NETWORKS.HASHKEY_MAINNET.chainId,
+  NETWORKS.HASHKEY_TESTNET.chainId,
 ] as const;
 
 // Default chain selection is environment-sensitive for onboarding/test-drive.
@@ -82,6 +84,26 @@ export function getAddChainParameter(targetChainId: number): AddEthereumChainPar
       nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
       rpcUrls: [NETWORKS.RH_MAINNET.rpcUrl],
       blockExplorerUrls: [NETWORKS.RH_MAINNET.explorerUrl],
+    };
+  }
+
+  if (targetChainId === NETWORKS.HASHKEY_MAINNET.chainId) {
+    return {
+      chainId: `0x${NETWORKS.HASHKEY_MAINNET.chainId.toString(16)}`,
+      chainName: 'HashKey Chain',
+      nativeCurrency: { name: 'HSK', symbol: 'HSK', decimals: 18 },
+      rpcUrls: [NETWORKS.HASHKEY_MAINNET.rpcUrl],
+      blockExplorerUrls: [NETWORKS.HASHKEY_MAINNET.explorerUrl],
+    };
+  }
+
+  if (targetChainId === NETWORKS.HASHKEY_TESTNET.chainId) {
+    return {
+      chainId: `0x${NETWORKS.HASHKEY_TESTNET.chainId.toString(16)}`,
+      chainName: 'HashKey Testnet',
+      nativeCurrency: { name: 'HSK', symbol: 'HSK', decimals: 18 },
+      rpcUrls: [NETWORKS.HASHKEY_TESTNET.rpcUrl],
+      blockExplorerUrls: [NETWORKS.HASHKEY_TESTNET.explorerUrl],
     };
   }
 

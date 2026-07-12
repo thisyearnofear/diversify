@@ -12,6 +12,12 @@ import {
     settleOnChain,
     DEFAULT_SETTLEMENT_NETWORK,
     getSettlementConfig,
+    getHspRailConfig,
+    resolveHspRuntime,
+    verifyHspSettlement,
+    getHspChainInfo,
+    registerMandate,
+    type WireSignedMandate,
     SETTLEMENT_ENV,
     generateChatCompletion,
     startBrightDataWarming,
@@ -24,6 +30,16 @@ import {
     x402Analytics
 } from '@diversifi/shared';
 import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey, constantTimeEqual } from '@diversifi/shared';
+import {
+    analyzeCycles,
+    requiredDates,
+    validateCycles,
+    buildServerlessRateProvider,
+    fxRegionForCurrency,
+    GHANA_IMPORTER_SAMPLE,
+    type DragInput,
+} from '@diversifi/shared';
+import { CURRENCY_BY_CODE } from '../../../constants/currency-risk';
 import { indexRecommendation } from '../../../lib/audit-index';
 import { getClientStore, type ClientState } from '../../../lib/client-store';
 import connectDB from '../../../lib/mongodb';
@@ -56,15 +72,27 @@ const USDC_DECIMALS = 6;
 const CREDIT_EPSILON_MICRO_USDC = 1;
 const FREE_TIER_DAILY_CAP = parseInt(process.env.FREE_TIER_DAILY_CAP || '100', 10);
 
+// FX Protection audit trail "follows the money": the recommendation anchors on the
+// importer's REGION-canonical ledger, decoupled from whichever rail settlement rode.
+// (docs/apac-rail.md chain roles.) `undefined` → let recordRecommendation's default
+// routing pick Arbitrum. The RecommendationLedger is deployed at the same address on
+// all of these chains.
+const FX_ANCHOR_CHAIN_BY_REGION: Record<string, number | undefined> = {
+    asia: 177,      // HashKey — APAC rail
+    africa: 42220,  // Celo — Africa / EM savings ledger
+    latam: 42220,   // Celo — LatAm shares the EM ledger
+    other: undefined, // default routing (Arbitrum)
+};
+
 // Durable replay protection for payment proofs (tx hashes and Circle Gateway IDs).
 // The old in-memory Set has been replaced by a MongoDB collection with a unique
 // index on (txHash, network, env).
-async function isProofProcessed(txHash: string): Promise<boolean> {
+async function isProofProcessed(txHash: string, network: string = DEFAULT_SETTLEMENT_NETWORK): Promise<boolean> {
     try {
         await connectDB();
         const existing = await ProcessedPaymentProof.findOne({
             txHash,
-            network: DEFAULT_SETTLEMENT_NETWORK,
+            network,
             env: SETTLEMENT_ENV,
         }).lean();
         return !!existing;
@@ -75,12 +103,12 @@ async function isProofProcessed(txHash: string): Promise<boolean> {
     }
 }
 
-async function markProofProcessed(txHash: string, amountUSDC: number): Promise<void> {
+async function markProofProcessed(txHash: string, amountUSDC: number, network: string = DEFAULT_SETTLEMENT_NETWORK): Promise<void> {
     try {
         await connectDB();
         await ProcessedPaymentProof.create({
             txHash,
-            network: DEFAULT_SETTLEMENT_NETWORK,
+            network,
             env: SETTLEMENT_ENV,
             amountUSDC,
         });
@@ -362,11 +390,19 @@ export default async function handler(
     res: NextApiResponse
 ) {
     const start = Date.now();
+    // On-chain payer + settlement tx, captured during verify for the region-canonical
+    // ledger anchor. Set on the HSP path (mandate signer) and the plain on-chain path
+    // (tx sender) — both give us a wallet to attribute the recommendation to.
+    let settlementPayer: string | undefined;
+    let settlementTxHash: string | undefined;
     const requestedSources = parseRequestedSources(req.query.source, req.query.sources);
     const quoteOnly = req.query.quote === '1' || req.query.quote === 'true';
     const paymentProof = getHeader(req, 'x-payment-proof');
     const paymentMandate = getHeader(req, 'x-payment-mandate');
     const paymentNonce = getHeader(req, 'x-payment-nonce');
+    // Distinct header for HSP settlement — never overload x-payment-proof, whose
+    // 32-byte-hex tx hashes route into the Arc/0G on-chain verifier.
+    const hspProof = getHeader(req, 'x-payment-hsp');
 
     const clientIP = (req.headers['x-forwarded-for'] as string) || req.connection.remoteAddress || 'unknown';
     const clientKey = Array.isArray(clientIP) ? clientIP[0] : clientIP;
@@ -416,6 +452,17 @@ export default async function handler(
         return sendResearchQuote(res, user, sourcePlans, totalCost, bundleRequested);
     }
 
+    // Parse + validate FX cycle records BEFORE charging, so malformed input returns a
+    // clean 400 rather than debiting credit and then failing to compute.
+    let fxInput: DragInput | undefined;
+    if (sourcePlans.some((plan) => plan.source.id === 'fx_protection')) {
+        try {
+            fxInput = parseFxProtectionInput(req);
+        } catch (error) {
+            return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid FX cycle records' });
+        }
+    }
+
     if (paymentMandate) {
         try {
             const mandate = JSON.parse(paymentMandate) as PaymentMandatePayload;
@@ -443,6 +490,35 @@ export default async function handler(
         }
     }
 
+    if (hspProof) {
+        try {
+            const hsp = JSON.parse(hspProof) as { paymentId?: string; txHash?: string; nonce?: string; mandate?: WireSignedMandate };
+            if (!hsp.paymentId) {
+                return res.status(400).json({ error: 'Missing paymentId in HSP proof' });
+            }
+            if (hsp.nonce) {
+                const nonceCheck = UserManager.consumeNonce(user, hsp.nonce);
+                if (!nonceCheck.valid) {
+                    return res.status(401).json({ error: nonceCheck.reason });
+                }
+            }
+
+            const { amountUSDC: amountCredited, payer } = await verifyHspPayment(hsp.paymentId, hsp.txHash, hsp.mandate);
+            if (amountCredited > 0) {
+                settlementPayer = payer;
+                settlementTxHash = hsp.txHash;
+                UserManager.addCredit(user, toMicroUSDC(amountCredited));
+                console.log(`[Data Hub] HSP settlement verified on HashKey: $${amountCredited}`);
+                x402Analytics.recordPayment(requestedSourceLabel, amountCredited, Date.now() - start, 'HASHKEY_HSP');
+            } else {
+                return res.status(401).json({ error: 'HSP settlement not verified' });
+            }
+        } catch (error: unknown) {
+            const msg = error instanceof Error ? error.message : String(error);
+            return res.status(401).json({ error: `HSP verification failed: ${msg}` });
+        }
+    }
+
     if (paymentProof) {
         try {
             if (paymentNonce) {
@@ -452,9 +528,15 @@ export default async function handler(
                 }
             }
 
-            const amountCredited = await verifyCircleGatewayPayment(paymentProof);
+            const { amountUSDC: amountCredited, payer } = await verifyCircleGatewayPayment(paymentProof);
             if (amountCredited > 0) {
                 UserManager.addCredit(user, toMicroUSDC(amountCredited));
+                if (payer) {
+                    // Plain on-chain settlement (e.g. USDT on HashKey): the tx sender is
+                    // the payer, so the region-canonical anchor can fire without HSP.
+                    settlementPayer = payer;
+                    settlementTxHash = paymentProof;
+                }
                 const paymentMethod = paymentProof.startsWith('circle-gateway-') ? 'CIRCLE_GATEWAY' : 'ON_CHAIN';
                 x402Analytics.recordPayment(requestedSourceLabel, amountCredited, Date.now() - start, paymentMethod);
             }
@@ -467,6 +549,8 @@ export default async function handler(
         return sendPaymentRequired(res, user, sourcePlans, totalCost, bundleRequested);
     }
 
+    // fxInput was parsed + validated before charging (above).
+
     const payloads: SourcePayload[] = [];
     for (const plan of sourcePlans) {
         if (plan.isFreeEligible) {
@@ -478,7 +562,7 @@ export default async function handler(
 
         UserManager.trackUsage(user, plan.source.id);
 
-        const data = await getActualPremiumData(plan.source.id, plan.isFreeEligible);
+        const data = await getActualPremiumData(plan.source.id, plan.isFreeEligible, fxInput);
         const payload: SourcePayload = {
             sourceId: plan.source.id,
             label: plan.source.label,
@@ -519,8 +603,11 @@ export default async function handler(
     // Fires a real USDC micro-tx on the configured settlement rail for every paid request.
     // Settlement runs in background — gateway response is not delayed.
     // Enterprise API-key clients skip x402 settlement (billed via their tenant quota).
+    // On the HASHKEY rail the USER already settled on-chain via HSP (their wallet →
+    // merchant transfer, observed + receipted), so the agent-side settleOnChain would
+    // double-pay. Skip it — the HSP tx is the settlement of record.
     const settlements: SettlementResult[] = [];
-    if (totalCost > 0 && !user.enterprise) {
+    if (totalCost > 0 && !user.enterprise && DEFAULT_SETTLEMENT_NETWORK !== 'HASHKEY') {
         const settlementPromises = sourcePlans
             .filter(p => p.cost > 0)
             .map(p => settleOnChain(p.cost, p.source.id, DEFAULT_SETTLEMENT_NETWORK));
@@ -557,6 +644,36 @@ export default async function handler(
                     console.warn('[Data Hub] Enterprise audit record skipped:', err?.message ?? err),
                 );
             }
+        }
+    }
+
+    // --- Region-canonical ledger anchor for the FX Protection Insight (fire-and-forget) ---
+    // The audit trail "follows the money": the recommendation anchors on the importer's
+    // REGION-canonical ledger (APAC currency → HashKey, Africa/LatAm → Celo, else →
+    // Arbitrum), independent of the rail settlement rode. The settlement tx is recorded
+    // as the cross-chain reference. Fires whenever we know the on-chain payer — the HSP
+    // mandate signer OR the plain on-chain tx sender. Best-effort; never blocks; anchor
+    // writes need only gas on the destination ledger chain (no stablecoin).
+    if (settlementPayer) {
+        const fxIndex = payloads.findIndex((p, i) => p.sourceId === 'fx_protection' && (sourcePlans[i]?.cost ?? 0) > 0);
+        if (fxIndex >= 0) {
+            const currency = (payloads[fxIndex].data as { currency?: string } | undefined)?.currency ?? 'USD';
+            const region = fxRegionForCurrency(currency);
+            const anchorChainId = FX_ANCHOR_CHAIN_BY_REGION[region];
+            recordRecommendation({
+                user: settlementPayer,
+                action: 'PROTECT',
+                targetToken: 'USDC',
+                reasoning: `FX Protection Insight — quantified per-cycle import FX drag for ${currency} working capital (${region} rail); settled on ${getSettlementConfig().name}.`,
+                evidenceCid: evidenceCidsBySource.get('fx_protection') ?? '',
+                servingModel: 'fx-drag/v1',
+                confidence: 9000,
+                settlementTxHash: settlementTxHash,
+                // Region-canonical anchor; omit to let default routing pick Arbitrum.
+                ...(anchorChainId ? { chainId: anchorChainId } : {}),
+            }).catch((err: unknown) =>
+                console.warn('[Data Hub] FX ledger anchor skipped:', err instanceof Error ? err.message : err),
+            );
         }
     }
 
@@ -627,6 +744,29 @@ function buildQuoteLineItems(sourcePlans: SourcePlan[]) {
     }));
 }
 
+/**
+ * When the active rail is HashKey, advertise the HSP handshake params so the
+ * buyer can build + sign a Mandate. verifyingContract is a fallback only — the
+ * client bootstraps the authoritative value from the Coordinator `GET /chains`
+ * (which is why the challenge stays synchronous). Returns {} on every other rail
+ * so the Arc/0G/Arbitrum challenge shape is byte-for-byte unchanged.
+ */
+function buildHspChallengeBlock(settlementConfig: ReturnType<typeof getSettlementConfig>): Record<string, unknown> {
+    if (DEFAULT_SETTLEMENT_NETWORK !== 'HASHKEY') return {};
+    const rail = getHspRailConfig(settlementConfig.chainId);
+    if (!rail || !rail.coordinatorUrl) return {};
+    return {
+        hsp: {
+            coordinatorUrl: rail.coordinatorUrl,
+            chainName: rail.chainName,
+            verifyingContract: rail.verifyingContract ?? null,
+            chainId: settlementConfig.chainId,
+            token: settlementConfig.usdcAddress,
+            recipient: settlementConfig.recipientAddress,
+        },
+    };
+}
+
 function sendResearchQuote(
     res: NextApiResponse,
     user: UserState,
@@ -655,6 +795,7 @@ function sendResearchQuote(
         bundle_requested: bundleRequested,
         settlement_network: DEFAULT_SETTLEMENT_NETWORK,
         settlement_env: SETTLEMENT_ENV,
+        ...buildHspChallengeBlock(settlementConfig),
         reason: totalCost > 0
             ? `Premium research will use ${totalCost.toFixed(3)} USDC on ${settlementConfig.name} for ${paidSourceCount} paid source${paidSourceCount === 1 ? '' : 's'}.`
             : `This research is covered by the free tier. No USDC will be spent on ${settlementConfig.name}.`,
@@ -693,6 +834,7 @@ function sendPaymentRequired(
         bundle_requested: bundleRequested,
         settlement_network: DEFAULT_SETTLEMENT_NETWORK,
         settlement_env: SETTLEMENT_ENV,
+        ...buildHspChallengeBlock(settlementConfig),
         circle_gateway: {
             enabled: Boolean(process.env.CIRCLE_API_KEY),
             description: 'Opaque Circle Gateway proof IDs are not accepted in the judge-facing path unless server-side verification is explicitly configured.',
@@ -702,7 +844,10 @@ function sendPaymentRequired(
 }
 
 // --- Verification Logic ---
-async function verifyOnChainPayment(txHash: string): Promise<number> {
+// Verifies a plain ERC-20 stablecoin transfer to the merchant wallet on the active
+// settlement rail (USDC on Arc/0G/Arbitrum, USDT on HashKey). Returns the credited
+// amount and the tx sender (payer) for the ledger anchor.
+async function verifyOnChainPayment(txHash: string): Promise<{ amountUSDC: number; payer?: string }> {
     if (await isProofProcessed(txHash)) {
         throw new Error('Transaction already processed');
     }
@@ -710,7 +855,7 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
     const settlementConfig = getSettlementConfig();
     const usdcAddress = settlementConfig.usdcAddress;
     if (!usdcAddress) {
-        throw new Error(`Settlement USDC not configured for ${DEFAULT_SETTLEMENT_NETWORK} (${SETTLEMENT_ENV})`);
+        throw new Error(`Settlement token not configured for ${DEFAULT_SETTLEMENT_NETWORK} (${SETTLEMENT_ENV})`);
     }
 
     const provider = new ethers.providers.JsonRpcProvider(settlementConfig.rpcUrl);
@@ -745,11 +890,82 @@ async function verifyOnChainPayment(txHash: string): Promise<number> {
     // means another concurrent request verified the same hash first.
     await markProofProcessed(txHash, amountUSDC);
 
-    return amountUSDC;
+    return { amountUSDC, payer: tx.from };
+}
+
+/**
+ * HSP settlement verification (HashKey rail). The buyer already registered the
+ * mandate, broadcast the USDC transfer, and observed it; we independently confirm
+ * the payment SETTLED and that its mandate matches what we challenged (authoritative
+ * token/chain from the Coordinator `GET /chains`; recipient = our merchant wallet),
+ * so a payer cannot claim credit for a payment addressed elsewhere. Credits the
+ * settled mandate amount (top-up model, mirroring verifyOnChainPayment). Replay is
+ * keyed on the HSP paymentId (mandateHash), scoped to the HASHKEY network bucket.
+ */
+async function verifyHspPayment(paymentId: string, txHash?: string, mandate?: WireSignedMandate): Promise<{ amountUSDC: number; payer?: string }> {
+    if (DEFAULT_SETTLEMENT_NETWORK !== 'HASHKEY') {
+        throw new Error('HSP settlement is not the active rail');
+    }
+    if (!ethers.utils.isHexString(paymentId, 32)) {
+        throw new Error('HSP paymentId must be a 32-byte hex string');
+    }
+    if (await isProofProcessed(paymentId, 'HASHKEY')) {
+        throw new Error('HSP payment already processed');
+    }
+
+    const settlementConfig = getSettlementConfig('HASHKEY');
+    if (!settlementConfig.recipientAddress) {
+        throw new Error('HashKey settlement recipient not configured');
+    }
+
+    const runtime = resolveHspRuntime();
+
+    // Register the browser-signed mandate server-side (the browser never holds the
+    // Coordinator API key). Idempotent on paymentId — a re-submit returns existing.
+    if (mandate) {
+        const registered = await registerMandate(runtime, mandate);
+        if (registered.paymentId?.toLowerCase() !== paymentId.toLowerCase()) {
+            throw new Error('HSP paymentId does not match the registered mandate');
+        }
+    }
+
+    // Authoritative token + chainId from the Coordinator (docs disagree on the token address).
+    const chainInfo = await getHspChainInfo(runtime);
+
+    const result = await verifyHspSettlement(
+        runtime,
+        paymentId as `0x${string}`,
+        {
+            recipient: settlementConfig.recipientAddress as `0x${string}`,
+            token: chainInfo.stablecoin,
+            chainId: chainInfo.chainId,
+            minAmount: 1n, // reject zero/dust; credit is the settled mandate amount
+        },
+        txHash && ethers.utils.isHexString(txHash, 32) ? (txHash as `0x${string}`) : undefined,
+    );
+
+    if (!result.settled) {
+        throw new Error('HSP payment not settled');
+    }
+
+    const amountUSDC = parseFloat(ethers.utils.formatUnits(result.amount.toString(), 6));
+    await markProofProcessed(paymentId, amountUSDC, 'HASHKEY');
+
+    // Best-effort payer extraction (mandate signer payload = abi.encode(address))
+    // for the on-chain recommendation anchor.
+    let payer: string | undefined;
+    try {
+        const signerPayload = (result.payment.mandate?.body as { signer?: { payload?: string } } | undefined)?.signer?.payload;
+        if (signerPayload) {
+            payer = ethers.utils.getAddress(ethers.utils.defaultAbiCoder.decode(['address'], signerPayload)[0]);
+        }
+    } catch { /* best-effort — anchor simply skips without a payer */ }
+
+    return { amountUSDC, payer };
 }
 
 // Payment proofs must be real on-chain tx hashes or verified signed mandates.
-async function verifyCircleGatewayPayment(paymentProof: string): Promise<number> {
+async function verifyCircleGatewayPayment(paymentProof: string): Promise<{ amountUSDC: number; payer?: string }> {
     try {
         if (await isProofProcessed(paymentProof)) {
             throw new Error('Payment proof already processed');
@@ -768,7 +984,7 @@ async function verifyCircleGatewayPayment(paymentProof: string): Promise<number>
             const parsedAmount = parseGatewayProofAmount(paymentProof);
             const amountUSDC = parsedAmount ?? 0.01;
             await markProofProcessed(paymentProof, amountUSDC);
-            return amountUSDC;
+            return { amountUSDC }; // Circle Gateway proofs carry no on-chain payer address
         }
 
         throw new Error('Unsupported payment proof format');
@@ -791,8 +1007,15 @@ function parseGatewayProofAmount(paymentProof: string): number | null {
 
 // --- Data Fetching (Preserved & Cleaned) ---
 
-async function getActualPremiumData(source: string, isFreeTier: boolean = false) {
+async function getActualPremiumData(source: string, isFreeTier: boolean = false, fxInput?: DragInput) {
     const resolvedSource = normalizeArcResearchSource(source);
+
+    // FX Protection Insight is computed on demand from the caller's cycle records
+    // (or a representative sample) — handled before the eager map so its live
+    // rate fetch doesn't run on unrelated source requests.
+    if (resolvedSource === 'fx_protection') {
+        return await getFxProtection(isFreeTier, fxInput);
+    }
 
     const data: Record<string, Record<string, unknown>> = {
         'alpha_vantage_enhanced': await getAlphaVantageData(isFreeTier),
@@ -819,6 +1042,73 @@ async function getActualPremiumData(source: string, isFreeTier: boolean = false)
         message: `Data source '${source}' (resolved: '${resolvedSource}') not available`,
         tier: isFreeTier ? 'free' : 'premium'
     };
+}
+
+/**
+ * FX Protection Insight — the paid, HashKey-settled product. Runs the REAL
+ * production fx-drag computation (analyzeCycles) against live mid-market rates.
+ * No LLM, no canned fallback: the numbers either compute from the caller's cycle
+ * records or the report errors honestly. Free tier returns a teaser.
+ */
+async function getFxProtection(isFreeTier: boolean, fxInput?: DragInput): Promise<Record<string, unknown>> {
+    if (isFreeTier) {
+        return {
+            status: 'Premium only',
+            tier: 'free',
+            message: 'FX Protection Insight quantifies per-cycle FX drag (timing/spread/fees) on your import working capital, with an on-chain audit trail.',
+            upgrade_cost: '1.000 USDC',
+        };
+    }
+
+    const input: DragInput = fxInput ?? GHANA_IMPORTER_SAMPLE;
+    const isSample = !fxInput;
+    try {
+        const dates = requiredDates(input);
+        const provider = await buildServerlessRateProvider(input.currency, dates);
+        const summary = analyzeCycles(input, provider.getRate);
+
+        const risk = CURRENCY_BY_CODE[input.currency.toUpperCase()];
+        return {
+            tier: 'premium',
+            is_sample: isSample,
+            business: input.business ?? null,
+            currency: input.currency,
+            summary,
+            currency_risk: risk
+                ? { code: risk.code, country: risk.countryName, vsUSD: risk.depreciation.vsUSD, riskEvents: risk.riskEvents }
+                : null,
+            source_note: provider.sourceNote,
+            methodology: 'Counterfactual: each revenue receipt converted to USD-pegged value on arrival, net of a ramp cost, until the USD obligation is covered. Drag = actual local cost − counterfactual. Protection is measured, not prescribed.',
+            disclaimer: isSample
+                ? 'Representative sample cycle (see docs/sme-fx-strategy.md). POST your own `cycles` for a report on your books. Rates, math, settlement and anchor are real.'
+                : undefined,
+        };
+    } catch (err) {
+        // Structure is validated before charging (validateCycles); this only trips on
+        // live rate-data gaps. Return a clean error payload — never a 500.
+        return {
+            tier: 'error',
+            currency: input.currency,
+            is_sample: isSample,
+            error: 'FX drag computation could not complete — mid-market rate data was unavailable for one or more cycle dates.',
+            detail: err instanceof Error ? err.message : String(err),
+        };
+    }
+}
+
+/** Parse the caller's FX cycle records from the request body; undefined → sample. */
+/** Parse + validate the caller's FX cycle records; undefined → sample. Throws on malformed input. */
+function parseFxProtectionInput(req: NextApiRequest): DragInput | undefined {
+    const body = (req.body && typeof req.body === 'object') ? req.body as Record<string, unknown> : {};
+    const cycles = body.cycles;
+    if (!Array.isArray(cycles) || cycles.length === 0) return undefined;
+    const input: DragInput = {
+        business: typeof body.business === 'string' ? body.business : undefined,
+        currency: typeof body.currency === 'string' && body.currency ? body.currency : 'GHS',
+        cycles: cycles as DragInput['cycles'],
+    };
+    validateCycles(input); // structural + date validation (no rate fetch) — throws on bad input
+    return input;
 }
 
 // ... [Keep existing individual data fetch functions below unchanged] ...

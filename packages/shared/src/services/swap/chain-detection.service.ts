@@ -8,7 +8,7 @@ import { NETWORKS } from '../../config';
 // Helper to check if we're in development mode
 const isDev = typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
 
-export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'unknown';
+export type ChainType = 'celo' | 'arbitrum' | 'arc' | 'hashkey' | 'unknown';
 export type SwapProtocol = 'mento' | 'lifi' | 'none';
 
 export class ChainDetectionService {
@@ -17,6 +17,13 @@ export class ChainDetectionService {
      */
     static isArbitrum(chainId: number | null): boolean {
         return chainId === NETWORKS.ARBITRUM_ONE.chainId;
+    }
+
+    /**
+     * Check if chain is HashKey Chain mainnet
+     */
+    static isHashKey(chainId: number | null): boolean {
+        return chainId === NETWORKS.HASHKEY_MAINNET.chainId;
     }
 
     /**
@@ -50,6 +57,7 @@ export class ChainDetectionService {
     static getChainType(chainId: number | null): ChainType {
         if (this.isCelo(chainId)) return 'celo';
         if (this.isArbitrum(chainId)) return 'arbitrum';
+        if (this.isHashKey(chainId)) return 'hashkey';
         if (isDev && this.isArc(chainId)) return 'arc';
         return 'unknown';
     }

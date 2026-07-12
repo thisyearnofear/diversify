@@ -1,7 +1,9 @@
 # SME FX Layer Implementation Plan
 
-**Status:** Drafted 2026-07-12 (sequenced plan, not yet implemented)  
+**Status:** Drafted 2026-07-12 (sequenced plan). Phase 0's shared-service move is now done via an adjacent track — see the note below.  
 **Purpose:** Close the gap between the aligned docs vision (FX-risk intelligence + philosophy moat) and the actual app. The importer wedge stays inside the existing app as an archetype until forced by demand, per `docs/sme-fx-strategy.md` §8.
+
+> **2026-07-12 update:** a separate, paid proof of the FX-risk intelligence layer shipped via the x402 gateway — pay a stablecoin (USDT on HashKey; HSP mandate settlement pending Coordinator KYC), unlock a real FX drag report, anchored on the importer's region-canonical ledger (APAC → HashKey, Africa → Celo, else Arbitrum — "follows the money"). **The anchor is live**: [a real HashKey mainnet tx](https://hashkey.blockscout.com/tx/0xb9c924ae5f7ace287d8a3222addd1831dad55cac6407f6134c8b40481142329b) recorded a PHP importer's FX drag report computed from live rates, for HSK gas only — no Coordinator needed. See [`hsp-fx-protection.md`](./hsp-fx-protection.md). It is **not** the in-app importer-archetype surface this plan describes (that's still Phase 1–4 below, free-to-view for onboarded users) — it's an agent-facing, pay-per-report proof that reuses the exact same `analyzeCycles` engine, now moved to shared per Phase 0. The two surfaces will likely converge (an importer-archetype user's own cycles could power both the free in-app report and a resellable paid one), but that convergence isn't built yet.
 
 ## Guiding constraint
 
@@ -15,9 +17,9 @@ Goal: make the existing code safe to extend before adding business logic.
 |---|---|---|
 | **Audit `FinancialStrategy`** | `packages/shared/src/types/strategy.ts` | PREVENT BLOAT |
 | Delete `halo`/`taco` if they are not real product strategies | `packages/shared/src/services/strategy/strategy.service.ts`, `components/protection-cards/tokens.ts` | CONSOLIDATION |
-| **Move FX drag logic into `@diversifi/shared`** | New: `packages/shared/src/services/fx-drag/fx-drag.service.ts` (from `scripts/fx-drag/calc.ts`) | DRY |
-| Move rate provider into shared | New: `packages/shared/src/services/fx-drag/fx-rate-provider.ts` (from `scripts/fx-drag/rates.ts`) | DRY |
-| Move report renderer into shared | New: `packages/shared/src/services/fx-drag/fx-drag-report-renderer.ts` (from `scripts/fx-drag-report.ts` render functions) | DRY |
+| ✅ **Move FX drag logic into `@diversifi/shared`** — done 2026-07-12 | `packages/shared/src/services/fx-drag/calc.ts` (canonical; `scripts/fx-drag/calc.ts` now re-exports it) | DRY |
+| ✅ Add a serverless-safe rate provider (the filesystem-cached CLI one doesn't work in an API route) | `packages/shared/src/services/fx-drag/rates-serverless.ts` | DRY |
+| Move report renderer into shared | New: `packages/shared/src/services/fx-drag/fx-drag-report-renderer.ts` (from `scripts/fx-drag-report.ts` render functions) — **not yet done**, only the calc engine moved | DRY |
 | Keep `scripts/fx-drag-report.ts` as a thin CLI wrapper that delegates to the shared service | `scripts/fx-drag-report.ts` | ENHANCEMENT FIRST |
 | **Delete or replace fake business scenarios** | `components/demo/RealWorldUseCases.tsx`, `components/demo/RealLifeScenario.tsx` | CONSOLIDATION |
 | **Verification** | `pnpm test`, `pnpm lint`, `pnpm build` | — |
@@ -97,7 +99,7 @@ Goal: turn the concierge script into an in-app, self-serve report.
 | Action | File(s) | Principle |
 |---|---|---|
 | Add API to compute drag report from cycles | `pages/api/agent/business/drag-report.ts` | MODULAR |
-| Reuse `FxDragCalculator` and `FxDragReportRenderer` from shared | `packages/shared/src/services/fx-drag/*` | DRY |
+| Reuse `analyzeCycles` (shared, done) + a report renderer (shared, not yet done) | `packages/shared/src/services/fx-drag/*` — `calc.ts` and `rates-serverless.ts` are ready to import; see `pages/api/agent/x402-gateway.ts`'s `getFxProtection()` for a working (paid, agent-facing) reference of the same pattern | DRY |
 | Create `BusinessDragReport` component | `components/business/BusinessDragReport.tsx` (or `components/tabs/overview/BusinessDragReport.tsx`) | ENHANCEMENT FIRST |
 | Mount it in the Overview/Protection tab for importer users | `components/tabs/overview/ConnectedOverview.tsx` or `components/tabs/ProtectionTab.tsx` | ENHANCEMENT FIRST |
 | Add Markdown/CSV export | reuse `FxDragReportRenderer` | DRY |
@@ -183,3 +185,4 @@ Goal: give rails players and larger SMEs a business view.
 - `docs/product.md` — product positioning and the two differentiators
 - `docs/roadmap.md` — active tracks and the product quality plan
 - `scripts/fx-drag-report.ts` — existing concierge validation tool
+- `docs/hsp-fx-protection.md` — the paid, HSP-settled proof of this layer (adjacent surface, see the 2026-07-12 note above)

@@ -129,7 +129,7 @@ export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string
     if (resolvedChainId === 421614) return `https://sepolia.arbiscan.io/tx/${txHash}`;
     if (resolvedChainId === 16602) return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
     if (resolvedChainId === 16661) return `https://chainscan.0g.ai/tx/${txHash}`;
-    if (resolvedChainId === 177) return `https://explorer.hsk.xyz/tx/${txHash}`;
+    if (resolvedChainId === 177) return `https://hashkey.blockscout.com/tx/${txHash}`;
     if (resolvedChainId === 4663) return `https://robinhoodchain.blockscout.com/tx/${txHash}`;
     return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
 }

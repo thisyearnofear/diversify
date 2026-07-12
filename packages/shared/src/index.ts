@@ -242,3 +242,15 @@ export type { StreamInfo } from './services/gooddollar-service';
 export * from './config/index';
 export * from './config/features';
 export * from './config/emerging-markets';
+
+// Export HSP (HashKey Settlement Protocol) — settlement rail metadata + REST/EIP-712 client
+export { getHspRailConfig, HSP_CONFIG, type HspRailConfig } from './services/settlement-service';
+export * from './services/hsp/eip712';
+export * from './services/hsp/hsp-settlement.service';
+
+// Export FX-drag engine (import working-capital protection insight)
+export * from './services/fx-drag/calc';
+export * from './services/fx-drag/rates-serverless';
+export * from './services/fx-drag/regions';
+export { GHANA_IMPORTER_SAMPLE } from './services/fx-drag/sample-ghana';
+export { MANILA_IMPORTER_SAMPLE } from './services/fx-drag/sample-apac';

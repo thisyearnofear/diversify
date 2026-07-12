@@ -13,7 +13,7 @@ export { APAC_PHILOSOPHIES };
 export const HASHKEY_LEDGER_ADDRESS = process.env.NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT || '';
 
 export const HASHKEY_EXPLORER_ADDRESS_URL = HASHKEY_LEDGER_ADDRESS
-  ? `https://explorer.hsk.xyz/address/${HASHKEY_LEDGER_ADDRESS}`
+  ? `https://hashkey.blockscout.com/address/${HASHKEY_LEDGER_ADDRESS}`
   : '';
 
 /** Shortened contract address for inline explorer links. */

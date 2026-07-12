@@ -64,6 +64,23 @@ export const NETWORKS = {
         explorerUrl: 'https://robinhoodchain.blockscout.com',
         // Production RWA / stock-token rail. RecommendationLedger lives here (after deploy).
     },
+    HASHKEY_MAINNET: {
+        chainId: 177,
+        name: 'HashKey Chain',
+        rpcUrl: process.env.NEXT_PUBLIC_HASHKEY_RPC_URL || process.env.HASHKEY_RPC_URL || 'https://mainnet.hsk.xyz',
+        explorerUrl: 'https://hashkey.blockscout.com',
+        // Production APAC savings rail. RecommendationLedger lives here (0x3BCf…369C).
+        // See docs/apac-rail.md.
+    },
+    HASHKEY_TESTNET: {
+        chainId: 133,
+        name: 'HashKey Testnet',
+        rpcUrl: process.env.NEXT_PUBLIC_HASHKEY_TESTNET_RPC_URL || process.env.HASHKEY_TESTNET_RPC_URL || 'https://testnet.hsk.xyz',
+        explorerUrl: 'https://hashkey-testnet.blockscout.com',
+        devOnly: true,
+        // HSP settlement testnet (chain 133). Faucet-funded. See docs/apac-rail.md / HSP integration.
+        // NOTE: token + verifyingContract are authoritative from the HSP Coordinator `GET /chains`, not here.
+    },
     HYPERLIQUID: {
         chainId: 998, // Virtual chain ID for Hyperliquid perp markets (not EVM)
         name: 'Hyperliquid',
@@ -553,6 +570,23 @@ export const ARC_TOKENS = {
     EURC: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
 } as const;
 
+// HashKey Chain mainnet settlement tokens — verified on-chain (both 6 decimals):
+// USDT is the canonical stablecoin (OptimismMintableERC20); bridged USDC also exists.
+// Source: docs.hashkeychain.net Token-Contracts + on-chain decimals()/symbol() checks.
+// NOTE: for the HSP path the settlement token is read authoritatively from the
+// Coordinator `GET /chains` at runtime; these are the addresses for the plain-transfer
+// settlement path (no Coordinator required).
+export const HASHKEY_TOKENS = {
+    USDT: process.env.HASHKEY_MAINNET_USDT || '0xf1b50ed67a9e2cc94ad3c477779e2d4cbfff9029',
+    USDC: process.env.HASHKEY_MAINNET_USDC || '0x054ed45810DbBAb8B27668922D110669c9D88D0a',
+} as const;
+
+export const HASHKEY_TESTNET_TOKENS = {
+    // No committed default — testnet tokens are resolved from the Coordinator `GET /chains`.
+    USDT: process.env.HASHKEY_TESTNET_USDT || '',
+    USDC: process.env.HASHKEY_TESTNET_USDC || '',
+} as const;
+
 export const RH_TESTNET_TOKENS = {
     WETH: '0x95fa0c32181d073FA9b07F0eC3961C845d00bE21',
 } as const;
@@ -590,6 +624,8 @@ export function getTokenAddresses(chainId: number): Record<string, string> {
     if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) return ARBITRUM_SEPOLIA_TOKENS;
+    if (chainId === NETWORKS.HASHKEY_MAINNET.chainId) return HASHKEY_TOKENS;
+    if (chainId === NETWORKS.HASHKEY_TESTNET.chainId) return HASHKEY_TESTNET_TOKENS;
     return chainId === NETWORKS.CELO_SEPOLIA.chainId ? CELO_SEPOLIA_TOKENS : MAINNET_TOKENS;
 }
 

@@ -12,7 +12,7 @@
  */
 
 import { ethers } from 'ethers';
-import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS, ARBITRUM_TOKENS, ARBITRUM_SEPOLIA_TOKENS } from '../config';
+import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS, ARBITRUM_TOKENS, ARBITRUM_SEPOLIA_TOKENS, HASHKEY_TOKENS, HASHKEY_TESTNET_TOKENS } from '../config';
 
 // Minimal ERC-20 ABI — transfer only
 const ERC20_TRANSFER_ABI = [
@@ -26,7 +26,7 @@ const TRANSFER_EVENT_ABI = [
 const transferInterface = new ethers.utils.Interface(TRANSFER_EVENT_ABI);
 const transferTopic = transferInterface.getEventTopic('Transfer');
 
-export type SettlementNetwork = 'ARC' | 'ZERO_G' | 'ARBITRUM';
+export type SettlementNetwork = 'ARC' | 'ZERO_G' | 'ARBITRUM' | 'HASHKEY';
 export type SettlementEnv = 'testnet' | 'mainnet';
 
 export interface SettlementConfig {
@@ -198,8 +198,69 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 name: 'Arbitrum',
             },
         },
+        // HashKey Chain settlement rail — settled zero-custody via HSP (see hsp/).
+        // usdcAddress here is a fallback; the authoritative token comes from the HSP
+        // Coordinator `GET /chains` at verify time. recipient = merchant/data-hub wallet.
+        // The plain-transfer settlement token defaults to USDT (canonical on HashKey);
+        // set HASHKEY_SETTLEMENT_TOKEN to a specific address (e.g. bridged USDC) to override.
+        // The HSP path ignores this and uses the Coordinator's GET /chains token instead.
+        HASHKEY: {
+            testnet: {
+                rpcUrl: process.env.HASHKEY_TESTNET_RPC_URL || NETWORKS.HASHKEY_TESTNET.rpcUrl,
+                usdcAddress: process.env.HASHKEY_SETTLEMENT_TOKEN || HASHKEY_TESTNET_TOKENS.USDT || HASHKEY_TESTNET_TOKENS.USDC,
+                recipientAddress: process.env.HASHKEY_PAY_RECIPIENT || process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.HASHKEY_TESTNET.explorerUrl,
+                chainId: NETWORKS.HASHKEY_TESTNET.chainId,
+                name: 'HashKey Testnet',
+            },
+            mainnet: {
+                rpcUrl: process.env.HASHKEY_MAINNET_RPC_URL || NETWORKS.HASHKEY_MAINNET.rpcUrl,
+                usdcAddress: process.env.HASHKEY_SETTLEMENT_TOKEN || HASHKEY_TOKENS.USDT,
+                recipientAddress: process.env.HASHKEY_PAY_RECIPIENT || process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
+                explorerBase: NETWORKS.HASHKEY_MAINNET.explorerUrl,
+                chainId: NETWORKS.HASHKEY_MAINNET.chainId,
+                name: 'HashKey Chain',
+            },
+        },
     };
-    return { ARC: variants.ARC[env], ZERO_G: variants.ZERO_G[env], ARBITRUM: variants.ARBITRUM[env] };
+    return {
+        ARC: variants.ARC[env],
+        ZERO_G: variants.ZERO_G[env],
+        ARBITRUM: variants.ARBITRUM[env],
+        HASHKEY: variants.HASHKEY[env],
+    };
+}
+
+/**
+ * HSP-specific settlement metadata, kept OUT of SettlementConfig so the other
+ * rails' config shape is untouched. Keyed by chainId. `verifyingContract` is a
+ * convenience fallback only — the HSP client bootstraps the authoritative
+ * verifyingContract/adapter/token from the Coordinator `GET /chains` at runtime.
+ */
+export interface HspRailConfig {
+    coordinatorUrl: string;
+    /** Coordinator chain name, e.g. "hashkey-testnet" | "hashkey". */
+    chainName: string;
+    /** EIP-712 domain verifyingContract fallback (authoritative value from GET /chains). */
+    verifyingContract?: string;
+}
+
+export const HSP_CONFIG: Record<number, HspRailConfig> = {
+    [NETWORKS.HASHKEY_TESTNET.chainId]: {
+        coordinatorUrl: process.env.HSP_COORDINATOR_URL || '',
+        chainName: process.env.HSP_CHAIN_NAME_TESTNET || 'hashkey-testnet',
+        verifyingContract: process.env.HSP_VERIFYING_CONTRACT_TESTNET,
+    },
+    [NETWORKS.HASHKEY_MAINNET.chainId]: {
+        coordinatorUrl: process.env.HSP_COORDINATOR_URL || '',
+        chainName: process.env.HSP_CHAIN_NAME_MAINNET || 'hashkey',
+        verifyingContract: process.env.HSP_VERIFYING_CONTRACT_MAINNET,
+    },
+};
+
+/** HSP rail metadata for a settlement chainId (177/133), or undefined for non-HashKey rails. */
+export function getHspRailConfig(chainId: number): HspRailConfig | undefined {
+    return HSP_CONFIG[chainId];
 }
 
 const NETWORK_CONFIGS: Record<SettlementNetwork, SettlementConfig> = buildNetworkConfigs(SETTLEMENT_ENV);

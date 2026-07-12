@@ -190,6 +190,22 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     freshnessWindowMinutes: 15,
     description: 'Autonomous execution planning and control',
   },
+  fx_protection: {
+    id: 'fx_protection',
+    label: 'FX Protection Insight',
+    aliases: ['fx_drag', 'fx-protection', 'import_fx'],
+    category: 'premium',
+    // Priced as a per-report insight (1 USDC) rather than a micro-source — settled
+    // zero-custody on HashKey via HSP, with the recommendation anchored on-chain.
+    price: '1.000',
+    freeLimit: 0,
+    dataType: 'exchange',
+    fetchKey: 'fx_protection',
+    priority: 10,
+    reputation: 0.9,
+    freshnessWindowMinutes: 1440,
+    description: 'Per-cycle FX drag on import working capital (timing/spread/fees), quantified against live mid-market rates with an on-chain audit trail.',
+  },
   real_time_inflation: {
     id: 'real_time_inflation',
     label: 'Real-Time Inflation',

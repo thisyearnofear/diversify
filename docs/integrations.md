@@ -83,9 +83,17 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 ## x402 Research Payments (Env-Gated Settlement Rail)
 
 DiversiFi’s x402 gateway is the single billing surface for premium intelligence.
-The underlying settlement rail is configurable: `ZERO_G` (interim default) or
-`ARC`, in `testnet` or `mainnet` mode. This lets the same gateway serve hackathon
-judges on testnet and production consumers on mainnet without code changes.
+The underlying settlement rail is configurable: `ZERO_G` (interim default),
+`ARC`, `ARBITRUM`, or `HASHKEY`, in `testnet` or `mainnet` mode. This lets the
+same gateway serve hackathon judges on testnet and production consumers on
+mainnet without code changes.
+
+`HASHKEY` is a distinct rail: settlement happens zero-custody via **HSP
+(HashKey Settlement Protocol)** — the buyer's wallet signs an EIP-712 mandate
+and broadcasts the USDC transfer itself, rather than the gateway's usual
+agent-side `settleOnChain` fire-and-forget tx. See
+[`hsp-fx-protection.md`](./hsp-fx-protection.md) for the full flow and the
+`fx_protection` source it powers.
 
 | Component | Responsibility |
 |-----------|-----------------|
@@ -108,12 +116,15 @@ Set in `.env.local` or on the server (see `.env.example` → "MAINNET FLIP"):
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `SETTLEMENT_NETWORK` | `ZERO_G` | Rail: `ZERO_G`, `ARC`, or `ARBITRUM` |
+| `SETTLEMENT_NETWORK` | `ZERO_G` | Rail: `ZERO_G`, `ARC`, `ARBITRUM`, or `HASHKEY` |
 | `SETTLEMENT_ENV` | `testnet` | Environment: `testnet` or `mainnet` |
 | `ZERO_G_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ZERO_G SETTLEMENT_ENV=mainnet` |
 | `ARC_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet` |
 | `ARBITRUM_MAINNET_USDC` | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` | Circle-native USDC on Arbitrum One (override optional) |
 | `ARBITRUM_TESTNET_USDC` | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` | Arbitrum Sepolia USDC (override optional) |
+| `HSP_COORDINATOR_URL`, `HSP_API_KEY` | — | Required when `SETTLEMENT_NETWORK=HASHKEY` — from the HSP Coordinator's self-service `/register` |
+| `HASHKEY_TESTNET_USDC`, `HASHKEY_MAINNET_USDC` | — | Fallbacks only — the authoritative token address is read from the Coordinator's `GET /chains` at verify time |
+| `HASHKEY_PAY_RECIPIENT` | `DATA_HUB_RECIPIENT_ADDRESS` | Merchant payout wallet on HashKey |
 
 To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet USDC address, and set `SETTLEMENT_ENV=mainnet`.
 

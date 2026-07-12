@@ -370,7 +370,7 @@ describe('getLedgerChainForAction — chain-aware routing', () => {
 describe('buildLedgerExplorerUrl — HashKey mainnet support', () => {
     it('builds HashKey explorer URLs for chainId 177', async () => {
         const { buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
-        expect(buildLedgerExplorerUrl('0xdef', 177)).toBe('https://explorer.hsk.xyz/tx/0xdef');
+        expect(buildLedgerExplorerUrl('0xdef', 177)).toBe('https://hashkey.blockscout.com/tx/0xdef');
     });
 });
 

@@ -143,7 +143,13 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                     {receipt.status === 'failed' ? '!' : '✓'}
                   </span>
                   <span className={`${statusColor} font-bold text-[10px]`}>
-                    {receipt.txHash ? 'Verified on Arc' : statusLabel}
+                    {receipt.txHash
+                      ? `Verified on ${
+                          receipt.explorer?.includes('hashkey') || receipt.settlementNetwork === 'HASHKEY'
+                            ? 'HashKey'
+                            : 'Arc'
+                        }`
+                      : statusLabel}
                   </span>
                 </div>
                 {provider && (

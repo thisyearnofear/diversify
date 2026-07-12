@@ -149,11 +149,11 @@ Skip when:
 
 ## Implementation status
 
-**Deployed on HashKey mainnet (2026-07-10).** Chain **177**, contract `0x3BCf7dFd68ce98880618c89A351168960724369C`. First APAC seed: [explorer tx](https://explorer.hsk.xyz/tx/0xc220dc0f991242ecef75086e625c24c889f93a9103daa996667f1d542011f1f8). Hetzner API runtime synced; Vercel frontend needs `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` for live banner.
+**Deployed on HashKey mainnet (2026-07-10).** Chain **177**, contract `0x3BCf7dFd68ce98880618c89A351168960724369C`. First APAC seed: [explorer tx](https://hashkey.blockscout.com/tx/0xc220dc0f991242ecef75086e625c24c889f93a9103daa996667f1d542011f1f8). Hetzner API runtime synced; Vercel frontend needs `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` for live banner. **FX Protection Insight #25** (2026-07-12, real per-cycle FX drag for a PHP importer, computed from live rates): [explorer tx](https://hashkey.blockscout.com/tx/0xb9c924ae5f7ace287d8a3222addd1831dad55cac6407f6134c8b40481142329b) — see [`hsp-fx-protection.md`](./hsp-fx-protection.md).
 
 | Piece | Status |
 |-------|--------|
-| Chain config | ✅ `HASHKEY_LEDGER_CONTRACT` / `HASHKEY_RPC_URL` in the ledger registry (`recommendation-ledger.service.ts`), `hashkey` RPC endpoint in `foundry.toml`, explorer `https://explorer.hsk.xyz` |
+| Chain config | ✅ `HASHKEY_LEDGER_CONTRACT` / `HASHKEY_RPC_URL` in the ledger registry (`recommendation-ledger.service.ts`), `hashkey` RPC endpoint in `foundry.toml`, explorer `https://hashkey.blockscout.com` |
 | `RecommendationLedger` | ✅ `0x3BCf7dFd68ce98880618c89A351168960724369C` on chain 177 — seeded rec #1 (Confucian HOLD → USDC) |
 | Guardian routing | ✅ `getLedgerChainForAction(action, token, routingContext)` — APAC-profile (`isApacRailProfile` in `types/strategy.ts`, single source of truth) savings/hold actions → HashKey 177; yield rotations → Arbitrum unchanged; Celo local stables → Celo unchanged |
 | Guardian loop | ✅ `guardian-loop.ts` passes `deriveLedgerRoutingContextFromVault(vault.strategy)` on ledger writes (Asia region assumed for APAC philosophies until vault persists region) |
@@ -161,7 +161,7 @@ Skip when:
 | Proof feed | ✅ `GET /api/agent/zero-g-ledger` fans out across Arbitrum + Celo + HashKey when no user/chainId filter; `LiveProofCard` shows multi-chain headlines and per-receipt chain labels |
 | UX | ✅ `constants/apac-rail.ts` + `apac-rail` contextual banner on Home/Shield — honest "coming soon" until `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` is set, then live copy + HashKey explorer link |
 | Plan preview | ✅ Confucian / Gotong Royong allocations show APAC savings home (HashKey) + Arbitrum yield split in onboarding and Guardian wizard |
-| Settlement (HSP) | Deferred — structured receipts above the x402 threshold remain the post-v1 step (HSP SDK: github.com/project-hsp/hsp) |
+| Settlement (HSP) | ✅ Code complete, tests green (675/675) — see [`hsp-fx-protection.md`](./hsp-fx-protection.md). `HASHKEY` added as a fourth x402 settlement rail; a paid `fx_protection` insight settles zero-custody via HSP (EIP-712 mandate, REST-only client — no SDK dependency). Its ledger anchor is **region-canonical** (follows the money): an **APAC**-currency importer's record lands here on HashKey (payment + proof on one chain); an African importer's on Celo; else Arbitrum. **The anchor is proven live** — [rec #25](https://hashkey.blockscout.com/tx/0xb9c924ae5f7ace287d8a3222addd1831dad55cac6407f6134c8b40481142329b), HSK gas only, no Coordinator needed. HSP mandate/receipt settlement itself is blocked on Coordinator KYC (submitted, pending), not on more code; a plain-transfer settlement path (USDT on HashKey) is ready and needs only a funded payer wallet. |
 
 Yield execution stays on Arbitrum. Intelligence stays on Arc. Evidence stays on 0G.
 
@@ -184,3 +184,4 @@ BUIDL copy, demo script, and checklist: [`hackathon-hashkey-buidl.md`](./hackath
 - [`product.md`](./product.md) — Protection plans, personas, multi-chain table
 - [`architecture.md`](./architecture.md) — Guardian loop, ledger decorators, external services diagram
 - [`roadmap.md`](./roadmap.md) — Post-9/10 fintech infrastructure and onramp provider map
+- [`hsp-fx-protection.md`](./hsp-fx-protection.md) — HSP settlement rail + the paid FX Protection Insight that anchors here

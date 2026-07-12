@@ -14,19 +14,120 @@
 
 import { useCallback, useState } from 'react';
 import { ethers } from 'ethers';
+import { createWalletClient, custom, parseUnits, type Hex, type Address } from 'viem';
 import { useWallets } from '@privy-io/react-auth';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { ARC_TOKENS, NETWORKS } from '../config';
+import {
+    buildMandateMessage,
+    buildDomain,
+    MANDATE_TYPES,
+    mandateHash,
+} from '@diversifi/shared/src/services/hsp/eip712';
+import {
+    getHspChains,
+    randomNonce32,
+    toWireSignedMandate,
+} from '@diversifi/shared/src/services/hsp/hsp-settlement.service';
 import type { ResearchQuote, ResearchReceipt, ResearchSourceLineItem } from '@diversifi/shared';
 
 const GATEWAY_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 const ARC_CHAIN_ID = NETWORKS.ARC_TESTNET.chainId; // 5042002
+const HSP_CHAIN_IDS: number[] = [NETWORKS.HASHKEY_TESTNET.chainId, NETWORKS.HASHKEY_MAINNET.chainId];
 
 // Minimal ERC-20 transfer ABI
 const USDC_ABI = [
     'function transfer(address to, uint256 amount) returns (bool)',
     'function balanceOf(address owner) view returns (uint256)',
 ] as const;
+
+type HspChallengeBlock = {
+    coordinatorUrl: string;
+    chainName: string;
+    verifyingContract: string | null;
+    chainId: number;
+    token: string;
+    recipient: string;
+};
+
+/**
+ * HSP (HashKey) settlement path. Zero-custody: the user's wallet signs the EIP-712
+ * Mandate and broadcasts the USDC transfer; the Coordinator's authenticated writes
+ * (register/observe) happen server-side (the browser never holds the API key). We
+ * bootstrap the authoritative verifyingContract + token from `GET /chains` so the
+ * signature verifies and the backend's token check matches.
+ */
+async function payViaHsp(
+    challenge: X402Challenge,
+    rawProvider: unknown,
+    signer: ethers.Signer,
+    address: string,
+): Promise<{ headers: Record<string, string>; payment: X402PaymentResult }> {
+    const hsp = challenge.hsp as HspChallengeBlock;
+    if (!hsp?.coordinatorUrl) {
+        throw new Error('HSP settlement is not configured (missing coordinator) — try again later');
+    }
+
+    // Switch the wallet to HashKey.
+    await (rawProvider as { request: (a: unknown) => Promise<unknown> }).request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${challenge.chainId.toString(16)}` }],
+    });
+
+    // Authoritative chain trust roots (verifyingContract, settlement token).
+    const chains = await getHspChains({ coordinatorUrl: hsp.coordinatorUrl });
+    const info = chains.find((c) => c.name === hsp.chainName);
+    if (!info) throw new Error(`HSP chain "${hsp.chainName}" not found on the Coordinator`);
+    const token = info.stablecoin as Address;
+
+    const amountBaseUnits = parseUnits(parseFloat(challenge.amount).toFixed(6), 6);
+    const deadline = Math.floor(Date.now() / 1000) + 3600;
+
+    const message = buildMandateMessage({
+        payer: address as Address,
+        recipient: hsp.recipient as Address,
+        token,
+        amount: amountBaseUnits,
+        chainId: challenge.chainId,
+        deadline,
+        nonce: randomNonce32(),
+    });
+    const domain = { chainId: challenge.chainId, verifyingContract: info.verifyingContract };
+    const paymentId = mandateHash(domain, message);
+
+    // Sign the Mandate in-wallet (eth_signTypedData_v4 over the EIP-712 digest).
+    const walletClient = createWalletClient({ account: address as Hex, transport: custom(rawProvider as never) });
+    // viem's signTypedData generics collapse on our runtime-built types map; the
+    // shapes are validated by the eip712 unit test, so cast the params through.
+    const signerProof = await walletClient.signTypedData({
+        account: address as Hex,
+        domain: buildDomain(domain),
+        types: MANDATE_TYPES,
+        primaryType: 'Mandate',
+        message,
+    } as never);
+    const mandate = toWireSignedMandate({ body: message, signerProof, requiredCapabilities: [] });
+
+    // Broadcast the USDC transfer on HashKey (zero-custody — user's own wallet).
+    const usdc = new ethers.Contract(token, USDC_ABI, signer);
+    const tx = await usdc.transfer(hsp.recipient, ethers.BigNumber.from(amountBaseUnits.toString()), { gasLimit: 100_000 });
+
+    const explorerBase = challenge.chainId === NETWORKS.HASHKEY_MAINNET.chainId
+        ? NETWORKS.HASHKEY_MAINNET.explorerUrl
+        : NETWORKS.HASHKEY_TESTNET.explorerUrl;
+
+    const payment: X402PaymentResult = {
+        txHash: tx.hash,
+        amount: challenge.amount,
+        nonce: challenge.nonce,
+        explorer: `${explorerBase}/tx/${tx.hash}`,
+    };
+
+    return {
+        headers: { 'x-payment-hsp': JSON.stringify({ paymentId, txHash: tx.hash, nonce: challenge.nonce, mandate }) },
+        payment,
+    };
+}
 
 export interface X402PaymentResult {
     txHash: string;
@@ -49,6 +150,8 @@ type X402Challenge = {
     bundle_requested?: boolean;
     reason?: string;
     sources?: Array<ResearchSourceLineItem & { freeRemaining?: number }>;
+    settlement_network?: string;
+    hsp?: HspChallengeBlock;
 };
 
 export interface X402PaymentState {
@@ -150,6 +253,14 @@ export function useX402Payment() {
             const web3Provider = new ethers.providers.Web3Provider(rawProvider as any);
             const signer = web3Provider.getSigner();
 
+            // HashKey settlement via HSP (chain 133 testnet / 177 mainnet) — distinct
+            // path from the Arc default below, which stays byte-for-byte unchanged.
+            if (challenge.hsp && HSP_CHAIN_IDS.includes(challenge.chainId)) {
+                const result = await payViaHsp(challenge, rawProvider, signer, address);
+                setState(s => ({ ...s, isPaying: false, lastPayment: result.payment }));
+                return result;
+            }
+
             // Step 3: switch to Arc testnet if needed
             const network = await web3Provider.getNetwork();
             if (network.chainId !== ARC_CHAIN_ID) {
@@ -238,7 +349,10 @@ export function useX402Payment() {
      * Fetch a paid source end-to-end: handle 402 → pay → re-fetch with proof.
      * Drop-in replacement for a plain fetch() call to the gateway.
      */
-    const fetchPaidSource = useCallback(async (source: string): Promise<{
+    const fetchPaidSource = useCallback(async (
+        source: string,
+        opts?: { body?: unknown },
+    ): Promise<{
         data: any;
         payment: X402PaymentResult | null;
         quote: ResearchQuote | null;
@@ -248,8 +362,14 @@ export function useX402Payment() {
         const paramKey = source.includes(',') ? 'sources' : 'source';
         const url = `${GATEWAY_BASE}/api/agent/x402-gateway?${paramKey}=${encodeURIComponent(source)}`;
 
+        // When a body is supplied (e.g. FX Protection cycle records), POST it on
+        // every attempt so the paid re-fetch carries the same inputs.
+        const method = opts?.body ? 'POST' : 'GET';
+        const baseHeaders: Record<string, string> = opts?.body ? { 'content-type': 'application/json' } : {};
+        const body = opts?.body ? JSON.stringify(opts.body) : undefined;
+
         // First attempt — may return 200 (free tier) or 402 (needs payment)
-        const firstAttempt = await fetch(url);
+        const firstAttempt = await fetch(url, { method, headers: baseHeaders, body });
 
         if (firstAttempt.ok) {
             // Free tier — return data directly
@@ -267,8 +387,8 @@ export function useX402Payment() {
         const quote = toQuote(challenge);
         const { headers, payment } = await payChallenge(challenge);
 
-        // Re-fetch with payment proof
-        const res = await fetch(url, { headers: { ...headers } });
+        // Re-fetch with payment proof (carrying the same method/body)
+        const res = await fetch(url, { method, headers: { ...baseHeaders, ...headers }, body });
 
         if (!res.ok) {
             throw new Error(`Gateway request failed after payment: ${res.status}`);
