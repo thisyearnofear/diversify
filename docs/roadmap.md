@@ -442,6 +442,13 @@ pains (volatility, cognitive burden, inability to quantify) map directly
 onto shipped surfaces (currency-risk dataset, autonomous Guardian,
 verifiable ledger).
 
+**Current state honesty:** The SME business layer is the north star. The
+Importer/Trader archetype, purchase-cycle model, per-cycle drag report,
+and cycle-aware Guardian execution are **designed but not yet shipped** in
+the consumer app. The concierge FX drag report (`scripts/fx-drag-report.ts`)
+validates the math with real trader data. The phased implementation plan is
+in [`docs/sme-fx-implementation-plan.md`](./sme-fx-implementation-plan.md).
+
 **Market:** China–Africa trade $348B (2025, +20% YoY); SSA stablecoin
 volume $50B in Q1 2026 (+340% YoY, large B2B share); ~$5B/yr lost to
 currency conversion (AfCFTA). The rails war (Waza, Juicyway, Cedar Money,
@@ -457,11 +464,7 @@ lane: not another rail, the driver on top of the rails.
 | Business | Revenue — same person graduates working capital | Importer/Trader archetype (cycle-aware) + per-cycle FX drag report |
 | Protocol | Scale — rails players embed the intelligence | Track 1d enterprise gateway ("treasury autopilot") |
 
-**Sequencing (gated):** 1) concierge validation — manual FX drag reports
-for the Ghana user + 10–20 traders; 2) Importer archetype inside the
-existing app (no new product surface); 3) GHS ramp via partner (Yellow
-Card / Accrue / Kotani — never build ramps); 4) one rails design partner
-via Track 1d; 5) split into its own product only when demand forces it.
+**Sequencing (gated):** See `docs/sme-fx-implementation-plan.md` for the full phased plan. Summary: 1) concierge validation — manual FX drag reports for the Ghana user + 10–20 traders *(tooling shipped)*; 2) Importer archetype inside the existing app as a `FinancialStrategy` value *(planned)*; 3) self-serve per-cycle FX drag report in the app *(planned)*; 4) cycle-aware Guardian execution as payment dates approach *(planned)*; 5) GHS ramp via partner (Yellow Card / Accrue / Kotani — never build ramps); 6) one rails design partner via Track 1d; 7) split into its own product only when demand forces it.
 
 **Regulatory note:** Ghana's VASP Act 1154 (signed 2025-12-29, BoG
 licensing from Q1 2026) + BoG anti-dollarization posture make the

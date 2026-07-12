@@ -4,6 +4,8 @@
 
 Copy-paste sections below into the DoraHacks BUIDL form. Update explorer links after mainnet deploy.
 
+> **Status note (2026-07-12):** This BUIDL submission focuses on the **APAC savings rail on HashKey Chain**, which is implemented and awaiting mainnet gas funding. The **SME business FX-risk intelligence layer** is the long-term north star; the consumer-facing purchase-cycle UI is not yet shipped. See `docs/sme-fx-implementation-plan.md` for the phased plan.
+
 ---
 
 ## Project name
@@ -12,7 +14,7 @@ Copy-paste sections below into the DoraHacks BUIDL form. Update explorer links a
 
 ## One-liner
 
-AI-automated treasury protection where APAC savings decisions settle on HashKey Chain, yield executes on Arbitrum, and every Guardian reasoning step anchors to 0G — one agent, three chains, verifiable receipts.
+Risk-aware, values-driven treasury management for APAC savers and the businesses they run — savings decisions settle on HashKey Chain, yield executes on Arbitrum, and every Guardian reasoning step anchors to 0G. The business FX-risk intelligence layer is the north-star direction; the APAC savings rail is the live submission.
 
 ## Track
 
@@ -20,7 +22,7 @@ AI-automated treasury protection where APAC savings decisions settle on HashKey 
 
 ## Problem
 
-East and Southeast Asian savers choose culturally aligned protection plans (Confucian prudence, Gotong Royong community resilience) but today those plans still settle on chains built for emerging markets (Celo) or global DeFi yield (Arbitrum). There is no **regulated-market savings home** where trust-sensitive holdings get an immutable audit trail APAC users and partners recognize.
+East and Southeast Asian businesses and savers face the same FX-risk problem as everyone else: they earn in one currency and must purchase in another. They also choose culturally aligned protection plans (Confucian prudence, Gotong Royong community resilience) that reflect their values. But today they lack two things: an **FX-risk intelligence layer** that quantifies and autonomously protects their working capital, and a **regulated-market savings home** where trust-sensitive holdings get an immutable audit trail APAC users and partners recognize.
 
 ## Solution
 
@@ -46,7 +48,7 @@ The app honestly labeled the rail **"coming soon"** until mainnet deploy — the
 
 ## Why HashKey + Arbitrum together (not either/or)
 
-HashKey holds the **trust-sensitive savings core** for APAC-regulated markets. Arbitrum remains the **yield engine** — deeper RWA liquidity, unchanged. One Guardian decision can produce receipts on **both** chains plus 0G evidence. CCIP connects the broader mesh for future fund movement; v1 is ledger routing, not bridging.
+HashKey holds the **trust-sensitive savings core** for APAC-regulated markets. Arbitrum remains the **yield engine**. Together they form the execution home for DiversiFi's **FX-risk intelligence and autonomous protection layer**. One Guardian decision can produce receipts on **both** chains plus 0G evidence. CCIP connects the broader mesh for future fund movement; v1 is ledger routing, not bridging.
 
 ## Demo links (fill after deploy)
 
@@ -71,7 +73,7 @@ Next.js 15 · TypeScript monorepo · Guardian cron on Hetzner · `Recommendation
 
 ### 0:00–0:10 — Hook
 
-> "Nobody wakes up wanting premium macro research. They wake up wanting to know their savings won't evaporate. DiversiFi's Guardian is an AI that protects stablecoin savings — and for APAC users, we built a dedicated savings rail on HashKey Chain."
+> "Nobody wakes up wanting premium macro research. They wake up wanting to know their working capital won't evaporate. DiversiFi is an FX-risk intelligence and autonomous protection layer — and for APAC users, we built a dedicated savings and settlement rail on HashKey Chain."
 
 *[Show app: Confucian plan + Asia region detected]*
 

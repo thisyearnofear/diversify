@@ -2,36 +2,73 @@
 
 ## Core Story
 
-DiversiFi is a **multi-chain agent intelligence protocol** that makes
-stablecoin and yield markets agent-readable. Autonomous agents consume
-real-time depeg, inflation, and yield intelligence via x402 nanopayments,
-settle every decision on a verified ledger on the chain where the money
-moves, and anchor reasoning to 0G — with the DiversiFi Guardian as the
-reference consumer and an open SDK for any agent to subscribe.
+DiversiFi is an **FX-risk intelligence and autonomous protection layer**
+for businesses that earn in one currency and must purchase in another.
 
-The **DiversiFi Guardian** is the first agent built on the protocol. It is
-a proactive AI that monitors markets, detects inflation shifts, and
-protects stablecoin savings by routing capital between **Celo/Mento**
-(local stablecoins, low-cost savings) and **Arbitrum** (deep liquidity,
-RWA yield) — with on-chain proof of every decision.
+Two things make DiversiFi unique. Everything else is commodity:
 
-**What it is:** An intelligence protocol with a reference consumer (the
-Guardian savings app) that demonstrates the full loop: intelligence →
-decision → on-chain settlement → verifiable evidence.
-**What it is not:** A trading terminal, DeFi control panel, or yield
-farming dashboard.
+1. **FX-risk intelligence layer** — the ability to quantify and
+   autonomously flatten currency risk for a business that earns in one
+   currency and must purchase in another. A Ghanaian importer buying from
+   China in USD. A US retailer sourcing from the Eurozone. A UK business
+   paying suppliers in USD. The currencies change; the problem is identical.
+   The SME bleeds margin in the window between local sales and the next
+   supplier payment. **No player in the market offers FX risk
+   quantification + autonomous protection.**
+
+2. **The philosophy/values system** — no other product in DeFi or fintech
+   has this. It's not a feature; it's a structural moat that creates
+   identity-based retention and cultural community. When a user chooses
+   Africapitalism, Buen Vivir, or Islamic Finance, they are declaring a
+   cultural identity, not just a risk tolerance. **This is the reason
+   someone stays when the yield is identical elsewhere.**
+
+The **retail savings app is top-of-funnel.** It proves the technology,
+builds trust, and surfaces the risk moment to individual entrepreneurs and
+diaspora professionals whose personal savings are also working capital. The
+**business intelligence layer is the real product.** The **philosophy
+system is the retention moat.**
+
+The **DiversiFi Guardian** is the autonomous agent that executes this
+protection. It monitors markets, detects inflation and FX shifts, and
+protects capital by routing between **Celo/Mento** (local stablecoins,
+low-cost savings), **Arbitrum** (deep liquidity, RWA yield), and **HashKey
+Chain** (APAC regulated-market savings) — with on-chain proof of every
+decision.
+
+**What it is:** An FX-risk intelligence layer with a reference consumer
+(the Guardian savings app) that demonstrates the full loop: risk
+quantification → autonomous decision → on-chain settlement → verifiable
+evidence.
+**What it is not:** A payment rail, a trading terminal, a DeFi control panel,
+or a yield farming dashboard.
+
+## Current State vs. Vision (2026-07-12)
+
+**Delivered today:**
+- **Philosophy/values system** — live and deeply integrated. Strategy configs, AI prompts, asset filtering, compliance, and the Protection Scorecard all adapt to the user's chosen philosophy.
+- **Retail FX-risk awareness** — the country/currency risk moment, the curated depreciation dataset, the Protection Scorecard, and the counterfactual calculator are live in the app.
+- **Autonomous execution** — the Guardian loop auto-rebalances within user-signed permission bounds and records every decision on the chain-aware ledger + 0G evidence.
+- **Best-yield engine** — vaults.fyi and GMX GM-pool deposits are integrated on Arbitrum.
+- **Enterprise audit** — the `x-api-key` enterprise gateway and audit export are implemented for B2B licensing.
+
+**North star / in progress:**
+- **SME FX-risk intelligence layer** — the importer/trader archetype, purchase-cycle model, per-cycle FX drag report, and cycle-aware Guardian execution are designed and sequenced in `docs/sme-fx-implementation-plan.md` but not yet shipped in the consumer app. The concierge FX drag report (`scripts/fx-drag-report.ts`) is already validating the math with real traders.
+- **Retail → business graduation** — signal detection and a self-serve graduation CTA are planned; today the app only surfaces a small "How this can affect a business" hint in onboarding.
+
+The retail app is the proof surface and top-of-funnel. The business intelligence layer is the real product we are building toward.
 
 ## Two layers, one product
 
 | Layer | What it is | Who consumes it |
 |---|---|---|
-| **Intelligence protocol** | x402-gated Mento depeg + inflation + yield intelligence, chain-aware settlement ledger, 0G evidence anchoring. Open to any agent via SDK. | External Celo/Arbitrum agents that pay via x402 and consume intelligence payloads |
-| **Reference consumer (Guardian app)** | The DiversiFi Guardian — a savings protection agent for volatile economies. Uses the protocol to monitor, decide, and execute on behalf of users. | End users in emerging markets who want protection without complexity |
+| **FX-risk intelligence layer (the real product)** | Quantifies per-purchase-cycle currency drag for SMEs and autonomously flattens it. Chain-aware settlement ledger, 0G evidence anchoring, open SDK, and enterprise gateway for rails players. | SME importers/traders; external agents and rails players that license the intelligence |
+| **Reference consumer (Guardian app — top-of-funnel)** | The DiversiFi Guardian — a savings protection agent for volatile economies. Proves the intelligence layer end-to-end and funnels retail trust into the business tier. | End users in emerging markets who want protection without complexity; individual entrepreneurs who graduate to the importer archetype |
 
-The intelligence protocol is the product. The Guardian app is consumer
-#1. External agents are consumers #2+. This is what makes DiversiFi
-infrastructure other teams depend on, not a consumer app with
-infrastructure framing.
+The FX-risk intelligence layer is the product. The Guardian app is the
+proof surface and top-of-funnel. External agents and rails players are
+consumers #2+. This is what makes DiversiFi infrastructure other teams
+depend on, not a consumer app with infrastructure framing.
 
 ## Primary Persona (Guardian app)
 
@@ -89,23 +126,25 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 ## What Makes It Different
 
-1. **Protocol, not just an app.** The intelligence gateway is open. Any agent can consume Mento depeg intelligence via x402 and settle decisions on-chain. The Guardian is the reference consumer — proof that the protocol works end-to-end, not the only consumer.
+1. **FX-risk intelligence layer — the real product.** We quantify the currency drag on a business's working capital and autonomously protect it per purchase cycle. The retail savings app is the proof surface and top-of-funnel; the business intelligence layer is what scales.
 
-2. **Chain-aware verifiability.** Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings actions, Arbitrum for yield actions. The user sees the decision on the explorer where their money actually moved. Reasoning is anchored to 0G Storage as tamper-proof evidence.
+2. **The philosophy/values system — a structural moat.** No other DeFi or fintech product builds cultural identity into the product. Africapitalism, Buen Vivir, Islamic Finance, Confucian, Gotong Royong — these are not risk-tolerance sliders; they are identity markers that drive retention and community. This is the reason someone stays when the yield is identical elsewhere.
 
-3. **Autonomous Guardian.** A server-side cron loop monitors markets 24/7 via Firecrawl, synthesizes signals with multi-provider AI (Gemini → Venice → 0G Serving → Modal), and auto-executes rebalancing within user-signed permission bounds — no manual intervention needed.
+3. **Chain-aware verifiability.** Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings actions, Arbitrum for yield actions. The user sees the decision on the explorer where their money actually moved. Reasoning is anchored to 0G Storage as tamper-proof evidence.
 
-4. **Chain-aware optimization.** Celo/Mento provide local stablecoin access with near-zero fees; Arbitrum provides deep liquidity and RWA yield; the **APAC rail** (HashKey Chain) provides regulated-market savings settlement for East/SE Asia (Confucian / Gotong Royong plans). The Guardian routes each action to the chain that best serves the user's goal. Each chain has a genuine, irreplaceable role — neither is a vanity deployment. See [`apac-rail.md`](./apac-rail.md).
+4. **Autonomous Guardian.** A server-side cron loop monitors markets 24/7 via Firecrawl, synthesizes signals with multi-provider AI (Gemini → Venice → 0G Serving → Modal), and auto-executes rebalancing within user-signed permission bounds — no manual intervention needed.
 
-5. **Regional inflation awareness.** Protection plans are culturally aligned (Africapitalism, Buen Vivir, etc.) and target specific emerging-market inflation profiles, not generic "crypto yields."
+5. **Chain-aware optimization.** Celo/Mento provide local stablecoin access with near-zero fees; Arbitrum provides deep liquidity and RWA yield; the **APAC rail** (HashKey Chain) provides regulated-market savings settlement for East/SE Asia (Confucian / Gotong Royong plans). The Guardian routes each action to the chain that best serves the user's goal. Each chain has a genuine, irreplaceable role — neither is a vanity deployment. See [`apac-rail.md`](./apac-rail.md).
 
-6. **Calm UX.** Designed as a savings protection app, not a trading terminal. The Guardian proposes one clear action at a time. **Simple mode** (default for new users) shows three tabs — Shield, Home, Learn — and hides the experience toggle, chain pill, Exchange tab, and Advisor FAB until the user opts into Standard mode.
+6. **Regional inflation awareness.** Protection plans are culturally aligned (Africapitalism, Buen Vivir, etc.) and target specific emerging-market inflation profiles, not generic "crypto yields."
 
-7. **Guided first run.** Philosophy onboarding (`StrategyModal` → detect country → show risk → choose plan) is the primary first-run flow. A lightweight **3-step** `GuidedTour` (risk moment → Shield tab → connect wallet) only runs when philosophy onboarding was skipped. Region, goal, and philosophy persist in `ProtectionProfileProvider` / `use-protection-profile` (`diversifi-protection-profile-v2`); `useStrategy()` reads `config.philosophy` from the same provider.
+7. **Calm UX.** Designed as a savings protection app, not a trading terminal. The Guardian proposes one clear action at a time. **Simple mode** (default for new users) shows three tabs — Shield, Home, Learn — and hides the experience toggle, chain pill, Exchange tab, and Advisor FAB until the user opts into Standard mode.
 
-8. **Tab discoverability.** First-visit users get an action-oriented hint above the tab bar. Tab visits are tracked via `useTabDiscovery` — the hint auto-dismisses after **2** tabs visited or the first swipe.
+8. **Guided first run.** Philosophy onboarding (`StrategyModal` → detect country → show risk → choose plan) is the primary first-run flow. A lightweight **3-step** `GuidedTour` (risk moment → Shield tab → connect wallet) only runs when philosophy onboarding was skipped. Region, goal, and philosophy persist in `ProtectionProfileProvider` / `use-protection-profile` (`diversifi-protection-profile-v2`); `useStrategy()` reads `config.philosophy` from the same provider.
 
-9. **Verifiable trust surface.** LiveProofCard shows recent Guardian receipts merged across mainnet ledgers (Celo, Arbitrum, HashKey when configured) on Protect and Overview before wallet connect — proof-first, not splash-first.
+9. **Tab discoverability.** First-visit users get an action-oriented hint above the tab bar. Tab visits are tracked via `useTabDiscovery` — the hint auto-dismisses after **2** tabs visited or the first swipe.
+
+10. **Verifiable trust surface.** LiveProofCard shows recent Guardian receipts merged across mainnet ledgers (Celo, Arbitrum, HashKey when configured) on Protect and Overview before wallet connect — proof-first, not splash-first.
 
 ## Terminology Guide
 

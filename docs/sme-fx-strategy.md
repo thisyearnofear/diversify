@@ -1,14 +1,15 @@
 # SME FX Strategy — Importer Working Capital & the Retail→Business Funnel
 
-**Status:** Drafted 2026-07-11 (north-star direction)
+**Status:** Drafted 2026-07-11 (north-star direction). Updated 2026-07-12 with current-state honesty labels and a link to the phased implementation plan.
 **Purpose:** Capture the strategic direction that emerged from a real user
 conversation — a Ghanaian importer who buys in USD abroad (China, US, UK)
 and sells locally in cedis — plus the market research, competitive gap,
 and funnel model that make this the long-term market opportunity.
 
-This doc is strategic design. The Importer/Trader archetype design is in
-§5; code follows the existing protection-plan pattern when the wedge is
-validated (§8).
+**Implementation plan:** `docs/sme-fx-implementation-plan.md` — the phased build plan that turns this strategy into code, aligned with the Core Principles.
+
+**Current-state honesty:** This doc is strategic design. The Importer/Trader archetype design is in
+§5; it is **not yet implemented in the consumer app**. The concierge FX drag report (`scripts/fx-drag-report.ts`) is the current validation tool. Code follows the existing protection-plan pattern when the wedge is validated (§8).
 
 ---
 
@@ -126,6 +127,8 @@ detectable: cyclical deposit/withdraw patterns, larger amounts,
 corridor-shaped swaps (GHS↔USD-pegged). Track these as
 graduation-candidate signals before building any business tier.
 
+**Current-state honesty:** The graduation signal detection and CTA are not yet implemented in the consumer app. A small business-context hint is live in onboarding; the full graduation funnel is planned in `docs/sme-fx-implementation-plan.md` Phase 4.
+
 ---
 
 ## 5. The Importer/Trader archetype (design, not yet implemented)
@@ -146,6 +149,8 @@ Reuses wholesale: Guardian loop, ERC-7715 permissions, swap orchestrator,
 `RecommendationLedger`, currency-risk dataset, archetype card system.
 Follows the ENHANCEMENT FIRST pattern (~same footprint as the
 Pan-Caribbean plan in `caribbean-strategy.md` §6, plus the cycle model).
+
+**Status:** Design only. The implementation plan is in `docs/sme-fx-implementation-plan.md` Phase 1–2.
 
 ---
 
@@ -190,15 +195,17 @@ Two implications:
 
 ## 8. Sequencing
 
-| Step | What | Gate to next step |
-|---|---|---|
-| 1. **Concierge validation** | Produce the Ghana user's personal FX drag report manually from their real cycle numbers (`currency-risk.ts` has the GHS data). Repeat with 10–20 traders (Accra, Lagos, Nairobi). **Tooling shipped:** `npx tsx scripts/fx-drag-report.ts <cycles.json>` — real historical mid rates, timing/spread/fees decomposition, honest negative-drag handling. Sample input: `scripts/fx-drag/sample-cycles.kenya-textbooks.json`. | "I want this running automatically" from ≥ a third of them |
-| 2. **Importer archetype** | Ship §5 inside the existing app — an archetype, not a new product. Instrument graduation signals (§4). | Real cycles protected; drag reports generated from live data |
-| 3. **Ramp partner** | One GHS on/off-ramp integration via partner. No ramp building. | Cedis→protection→cedis loop works end-to-end for a pilot user |
-| 4. **Rails design partner** | Pitch one Waza/Juicyway-tier player on embedding the intelligence + Guardian via the Track 1d gateway. | Signed design partner or LOI |
-| 5. **Promote to own track** | Split SME product from the retail app only when forced by demand. | Repeated trader demand or the design-partner deal |
+| Step | Status | What | Gate to next step |
+|---|---|---|---|
+| 1. **Concierge validation** | **Tooling shipped.** | Produce the Ghana user's personal FX drag report manually from their real cycle numbers (`currency-risk.ts` has the GHS data). Repeat with 10–20 traders (Accra, Lagos, Nairobi). `npx tsx scripts/fx-drag-report.ts <cycles.json>` — real historical mid rates, timing/spread/fees decomposition, honest negative-drag handling. Sample input: `scripts/fx-drag/sample-cycles.kenya-textbooks.json`. | "I want this running automatically" from ≥ a third of them |
+| 2. **Importer archetype** | **Planned.** Detailed in `docs/sme-fx-implementation-plan.md` Phase 1–2. | Ship §5 inside the existing app — an archetype, not a new product. Instrument graduation signals (§4). | Real cycles protected; drag reports generated from live data |
+| 3. **Self-serve drag report** | **Planned.** `docs/sme-fx-implementation-plan.md` Phase 3. | Turn the concierge script into an in-app, per-cycle report for importer users. | Users generate reports from their own cycle data without manual support |
+| 4. **Cycle-aware Guardian execution** | **Planned.** `docs/sme-fx-implementation-plan.md` Phase 5. | Guardian reads active purchase cycles and autonomously converts local proceeds to USD-pegged stables as the payment date approaches. | Real payments protected end-to-end on a pilot cycle |
+| 5. **Ramp partner** | **Planned.** | One GHS on/off-ramp integration via partner. No ramp building. | Cedis→protection→cedis loop works end-to-end for a pilot user |
+| 6. **Rails design partner** | **Planned.** | Pitch one Waza/Juicyway-tier player on embedding the intelligence + Guardian via the Track 1d gateway. | Signed design partner or LOI |
+| 7. **Promote to own track** | **Planned.** | Split SME product from the retail app only when forced by demand. | Repeated trader demand or the design-partner deal |
 
-Until step 5, the importer wedge lives inside the existing app as an
+Until step 7, the importer wedge lives inside the existing app as an
 archetype — no new tabs, no new product surface, per the prevent-bloat
 principle.
 
@@ -208,6 +215,9 @@ principle.
 
 - We are NOT building a payment rail, ramp, or supplier-payout leg —
   partners own the licensed money movement.
+- We are NOT claiming the importer archetype or purchase-cycle UI is live
+  in the consumer app today — it is design and sequenced in
+  `docs/sme-fx-implementation-plan.md`.
 - We are NOT claiming GHSm has sufficient Mento liquidity today — early
   cycles run cUSD/USDC with partner fiat legs.
 - We are NOT offering hedging derivatives (forwards/options). Protection
@@ -226,7 +236,8 @@ principle.
 | Rails players build the risk layer themselves | Speed; the verifiable-evidence moat (none can show on-chain proof of every decision); their DNA is liquidity ops, not intelligence. Licensing to them (§4 protocol stage) converts the threat into the channel. |
 | Off-ramp cost eats the value proposition | Quantify all-in cycle cost in the drag report — honesty is the product. Partner selection on off-ramp spread. |
 | BoG anti-dollarization posture tightens | Non-prescriptive framing (§7); intelligence/software positioning; licensed partner holds custody. |
-| Solo-dev attention split (retail polish vs business wedge) | The wedge is an archetype inside the existing app until §8 step 5 forces a split. |
+| Solo-dev attention split (retail polish vs business wedge) | The wedge is an archetype inside the existing app until §8 step 7 forces a split. |
+| Docs outrun the code | Current-state honesty labels and a public implementation plan (`docs/sme-fx-implementation-plan.md`) keep claims aligned with reality. |
 
 ---
 

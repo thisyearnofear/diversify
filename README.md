@@ -1,10 +1,18 @@
-# DiversiFi: Agent Intelligence Protocol for Stablecoin Markets
+# DiversiFi: Risk-Aware, Values-Driven Treasury Management
 
-## Multi-chain intelligence + verifiable settlement for autonomous agents
+## FX-risk intelligence and autonomous protection for businesses that earn in one currency and must purchase in another
 
-> *DiversiFi is a multi-chain agent intelligence protocol that makes stablecoin and yield markets agent-readable. Autonomous agents consume real-time depeg, inflation, and yield intelligence via x402 nanopayments, settle every decision on a verified ledger on the chain where the money moves, and anchor reasoning to 0G — with the DiversiFi Guardian as the reference consumer and an open SDK for any agent to subscribe. Full pitch: [`docs/product.md`](./docs/product.md).*
+> *DiversiFi is an FX-risk intelligence and autonomous protection layer for businesses that earn in one currency and must purchase in another. We quantify the currency drag on working capital and autonomously flatten it — every decision recorded on the chain where the money moves, with AI reasoning anchored to 0G. The retail savings app is top-of-funnel; the business intelligence layer is the real product. The philosophy/values system is the retention moat. Full pitch: [`docs/product.md`](./docs/product.md).*
 
-The **DiversiFi Guardian** is the first agent built on the protocol — a proactive AI that monitors markets, detects inflation shifts, and protects stablecoin savings by routing capital between Celo/Mento (local stablecoins) and Arbitrum (deep liquidity, RWA yield), with on-chain proof of every decision.
+Two things make DiversiFi unique. Everything else is commodity:
+
+1. **FX-risk intelligence layer** — the ability to quantify and autonomously flatten currency risk for a business that earns in one currency and must purchase in another. A Ghanaian importer buying from China in USD. A US retailer sourcing from the Eurozone. A UK business paying suppliers in USD. The currencies change; the problem is identical. No player in the market offers FX risk quantification + autonomous protection.
+
+2. **The philosophy/values system** — no other product in DeFi or fintech has this. It's not a feature; it's a structural moat that creates identity-based retention and cultural community.
+
+**Current state (2026-07-12):** The philosophy/values system and the retail FX-risk moment are live in the app. The SME business layer (importer archetype, purchase cycles, per-cycle drag reports, cycle-aware Guardian execution) is the north star and is sequenced in [`docs/sme-fx-implementation-plan.md`](./docs/sme-fx-implementation-plan.md). The concierge FX drag report is already validating the math with real traders.
+
+The **DiversiFi Guardian** is the autonomous agent that executes this protection — routing capital between Celo/Mento (local stablecoins, low-cost savings), Arbitrum (deep liquidity, RWA yield), and HashKey Chain (APAC regulated-market savings), with on-chain proof of every decision.
 
 **Live App:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app)
 
